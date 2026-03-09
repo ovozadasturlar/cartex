@@ -13,9 +13,9 @@ public class StocksController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("stocks.view")]
-    public async Task<IActionResult> GetStocks([FromQuery] long warehouseId, [FromQuery] string? search)
+    public async Task<IActionResult> GetStocks([FromQuery] GetStocksQuery query)
     {
-        var result = await sender.Send(new GetStocksQuery(warehouseId, search));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 }

@@ -13,12 +13,9 @@ public class AuditLogsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("audit.view")]
-    public async Task<IActionResult> GetAuditLogs(
-        [FromQuery] string? tableName,
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate)
+    public async Task<IActionResult> GetAuditLogs([FromQuery] GetAuditLogsQuery query)
     {
-        var result = await sender.Send(new GetAuditLogsQuery(tableName, fromDate, toDate));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 }

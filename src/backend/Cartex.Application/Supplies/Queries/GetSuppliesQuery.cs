@@ -1,27 +1,26 @@
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
+using Cartex.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 
 namespace Cartex.Application.Supplies.Queries;
 
-public record GetSuppliesQuery(long? WarehouseId) : IRequest<List<SupplyDto>>;
+public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplyDto>>;
 
 public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string SupplierName, string WarehouseName, string UserName);
 
-public sealed class GetSuppliesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSuppliesQuery, List<SupplyDto>>
+public sealed class GetSuppliesQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetSuppliesQuery, IReadOnlyCollection<SupplyDto>>
 {
-    public async Task<List<SupplyDto>> Handle(GetSuppliesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<SupplyDto>> Handle(GetSuppliesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Supplies
+        return await db.Supplies
             .Include(s => s.Supplier)
             .Include(s => s.Warehouse)
             .Include(s => s.User)
-            .AsQueryable();
-
-        if (request.WarehouseId is not null)
-            query = query.Where(s => s.WarehouseId == request.WarehouseId);
-
-        return await query
             .Select(s => new SupplyDto(
                 s.Id,
                 s.SupplyDate,
@@ -29,6 +28,6 @@ public sealed class GetSuppliesQueryHandler(IApplicationDbContext db) : IRequest
                 s.Supplier.Name,
                 s.Warehouse.Name,
                 s.User.FullName))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

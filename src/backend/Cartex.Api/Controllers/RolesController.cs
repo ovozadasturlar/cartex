@@ -14,9 +14,9 @@ public class RolesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("roles.view")]
-    public async Task<IActionResult> GetRoles()
+    public async Task<IActionResult> GetRoles([FromQuery] GetRolesQuery query)
     {
-        var result = await sender.Send(new GetRolesQuery());
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

@@ -13,9 +13,9 @@ public class AccountsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("accounts.view")]
-    public async Task<IActionResult> GetAccounts([FromQuery] string? ownerType, [FromQuery] long? ownerId)
+    public async Task<IActionResult> GetAccounts([FromQuery] GetAccountsQuery query)
     {
-        var result = await sender.Send(new GetAccountsQuery(ownerType, ownerId));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 }

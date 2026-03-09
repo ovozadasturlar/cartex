@@ -1,19 +1,23 @@
-using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using MediatR;
 
 namespace Cartex.Application.Units.Queries;
 
-public record GetUnitsQuery : IRequest<List<UnitDto>>;
+public record GetUnitsQuery : FilteringRequest, IRequest<IReadOnlyCollection<UnitDto>>;
 
 public record UnitDto(long Id, string Name, string ShortName);
 
-public sealed class GetUnitsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetUnitsQuery, List<UnitDto>>
+public sealed class GetUnitsQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetUnitsQuery, IReadOnlyCollection<UnitDto>>
 {
-    public async Task<List<UnitDto>> Handle(GetUnitsQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<UnitDto>> Handle(GetUnitsQuery request, CancellationToken cancellationToken)
     {
         return await db.Units
             .Select(u => new UnitDto(u.Id, u.Name, u.ShortName))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

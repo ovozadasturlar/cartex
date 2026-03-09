@@ -14,12 +14,9 @@ public class SalesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("sales.view")]
-    public async Task<IActionResult> GetSales(
-        [FromQuery] long? warehouseId,
-        [FromQuery] DateTime? fromDate,
-        [FromQuery] DateTime? toDate)
+    public async Task<IActionResult> GetSales([FromQuery] GetSalesQuery query)
     {
-        var result = await sender.Send(new GetSalesQuery(warehouseId, fromDate, toDate));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

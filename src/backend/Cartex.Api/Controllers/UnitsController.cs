@@ -14,9 +14,9 @@ public class UnitsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("products.view")]
-    public async Task<IActionResult> GetUnits()
+    public async Task<IActionResult> GetUnits([FromQuery] GetUnitsQuery query)
     {
-        var result = await sender.Send(new GetUnitsQuery());
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

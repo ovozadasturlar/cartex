@@ -14,9 +14,9 @@ public class WarehousesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("warehouses.view")]
-    public async Task<IActionResult> GetWarehouses([FromQuery] long? shopId)
+    public async Task<IActionResult> GetWarehouses([FromQuery] GetWarehousesQuery query)
     {
-        var result = await sender.Send(new GetWarehousesQuery(shopId));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

@@ -14,9 +14,9 @@ public class SuppliersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("suppliers.view")]
-    public async Task<IActionResult> GetSuppliers()
+    public async Task<IActionResult> GetSuppliers([FromQuery] GetSuppliersQuery query)
     {
-        var result = await sender.Send(new GetSuppliersQuery());
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

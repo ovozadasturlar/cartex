@@ -1,10 +1,13 @@
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
+using Cartex.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 
 namespace Cartex.Application.Sales.Queries;
 
-public record GetSalesQuery(long? WarehouseId, DateTime? FromDate, DateTime? ToDate) : IRequest<List<SaleDto>>;
+public record GetSalesQuery : FilteringRequest, IRequest<IReadOnlyCollection<SaleDto>>;
 
 public record SaleDto(
     long Id,
@@ -18,25 +21,15 @@ public record SaleDto(
     string? CustomerName,
     string UserName);
 
-public sealed class GetSalesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSalesQuery, List<SaleDto>>
+public sealed class GetSalesQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetSalesQuery, IReadOnlyCollection<SaleDto>>
 {
-    public async Task<List<SaleDto>> Handle(GetSalesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<SaleDto>> Handle(GetSalesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Sales
+        return await db.Sales
             .Include(s => s.Customer)
             .Include(s => s.User)
-            .AsQueryable();
-
-        if (request.WarehouseId is not null)
-            query = query.Where(s => s.WarehouseId == request.WarehouseId);
-
-        if (request.FromDate is not null)
-            query = query.Where(s => s.CreatedAt >= request.FromDate);
-
-        if (request.ToDate is not null)
-            query = query.Where(s => s.CreatedAt <= request.ToDate);
-
-        return await query
             .Select(s => new SaleDto(
                 s.Id,
                 s.CreatedAt,
@@ -48,6 +41,6 @@ public sealed class GetSalesQueryHandler(IApplicationDbContext db) : IRequestHan
                 s.Status.ToString(),
                 s.Customer != null ? s.Customer.FullName : null,
                 s.User.FullName))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

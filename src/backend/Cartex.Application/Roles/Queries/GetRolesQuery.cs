@@ -1,16 +1,21 @@
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
+using Cartex.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 
 namespace Cartex.Application.Roles.Queries;
 
-public record GetRolesQuery : IRequest<List<RoleDto>>;
+public record GetRolesQuery : FilteringRequest, IRequest<IReadOnlyCollection<RoleDto>>;
 
 public record RoleDto(long Id, string Name, string? Description, List<string> Permissions);
 
-public sealed class GetRolesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetRolesQuery, List<RoleDto>>
+public sealed class GetRolesQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetRolesQuery, IReadOnlyCollection<RoleDto>>
 {
-    public async Task<List<RoleDto>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<RoleDto>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
     {
         return await db.Roles
             .Include(r => r.RolePermissions)
@@ -23,6 +28,6 @@ public sealed class GetRolesQueryHandler(IApplicationDbContext db) : IRequestHan
                     .Where(rp => rp.Permission.IsEnabled)
                     .Select(rp => rp.Permission.Name)
                     .ToList()))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

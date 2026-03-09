@@ -1,26 +1,22 @@
-using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using MediatR;
 
 namespace Cartex.Application.Accounts.Queries;
 
-public record GetAccountsQuery(string? OwnerType, long? OwnerId) : IRequest<List<AccountDto>>;
+public record GetAccountsQuery : FilteringRequest, IRequest<IReadOnlyCollection<AccountDto>>;
 
 public record AccountDto(long Id, string OwnerType, long OwnerId, string Name, string Type, decimal Balance);
 
-public sealed class GetAccountsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetAccountsQuery, List<AccountDto>>
+public sealed class GetAccountsQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetAccountsQuery, IReadOnlyCollection<AccountDto>>
 {
-    public async Task<List<AccountDto>> Handle(GetAccountsQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<AccountDto>> Handle(GetAccountsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Accounts.AsQueryable();
-
-        if (request.OwnerType is not null)
-            query = query.Where(a => a.OwnerType.ToString() == request.OwnerType);
-
-        if (request.OwnerId is not null)
-            query = query.Where(a => a.OwnerId == request.OwnerId);
-
-        return await query
+        return await db.Accounts
             .Select(a => new AccountDto(
                 a.Id,
                 a.OwnerType.ToString(),
@@ -28,6 +24,6 @@ public sealed class GetAccountsQueryHandler(IApplicationDbContext db) : IRequest
                 a.Name,
                 a.Type.ToString(),
                 a.Balance))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

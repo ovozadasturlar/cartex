@@ -14,9 +14,9 @@ public class StockTransfersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("stock_transfers.view")]
-    public async Task<IActionResult> GetStockTransfers([FromQuery] long? warehouseId)
+    public async Task<IActionResult> GetStockTransfers([FromQuery] GetStockTransfersQuery query)
     {
-        var result = await sender.Send(new GetStockTransfersQuery(warehouseId));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

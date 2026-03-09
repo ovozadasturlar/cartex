@@ -14,9 +14,9 @@ public class UsersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("users.view")]
-    public async Task<IActionResult> GetUsers([FromQuery] long? shopId)
+    public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
     {
-        var result = await sender.Send(new GetUsersQuery(shopId));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

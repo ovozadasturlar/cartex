@@ -13,9 +13,9 @@ public class TransactionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("transactions.view")]
-    public async Task<IActionResult> GetTransactions([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
+    public async Task<IActionResult> GetTransactions([FromQuery] GetTransactionsQuery query)
     {
-        var result = await sender.Send(new GetTransactionsQuery(fromDate, toDate));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 }

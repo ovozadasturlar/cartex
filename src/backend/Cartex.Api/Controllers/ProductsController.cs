@@ -14,9 +14,9 @@ public class ProductsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("products.view")]
-    public async Task<IActionResult> GetProducts([FromQuery] long? categoryId, [FromQuery] string? search)
+    public async Task<IActionResult> GetProducts([FromQuery] GetProductsQuery query)
     {
-        var result = await sender.Send(new GetProductsQuery(categoryId, search));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

@@ -1,16 +1,21 @@
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
+using Cartex.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 
 namespace Cartex.Application.Categories.Queries;
 
-public record GetCategoriesQuery : IRequest<List<CategoryDto>>;
+public record GetCategoriesQuery : FilteringRequest, IRequest<IReadOnlyCollection<CategoryDto>>;
 
 public record CategoryDto(long Id, string Name, long? ParentId, string? ParentName);
 
-public sealed class GetCategoriesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCategoriesQuery, List<CategoryDto>>
+public sealed class GetCategoriesQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetCategoriesQuery, IReadOnlyCollection<CategoryDto>>
 {
-    public async Task<List<CategoryDto>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<CategoryDto>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
     {
         return await db.Categories
             .Include(c => c.Parent)
@@ -19,6 +24,6 @@ public sealed class GetCategoriesQueryHandler(IApplicationDbContext db) : IReque
                 c.Name,
                 c.ParentId,
                 c.Parent != null ? c.Parent.Name : null))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

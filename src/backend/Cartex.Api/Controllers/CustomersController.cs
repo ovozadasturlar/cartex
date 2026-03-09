@@ -14,9 +14,9 @@ public class CustomersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("customers.view")]
-    public async Task<IActionResult> GetCustomers([FromQuery] string? search)
+    public async Task<IActionResult> GetCustomers([FromQuery] GetCustomersQuery query)
     {
-        var result = await sender.Send(new GetCustomersQuery(search));
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

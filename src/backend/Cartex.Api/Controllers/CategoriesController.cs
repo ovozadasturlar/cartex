@@ -14,9 +14,9 @@ public class CategoriesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("categories.view")]
-    public async Task<IActionResult> GetCategories()
+    public async Task<IActionResult> GetCategories([FromQuery] GetCategoriesQuery query)
     {
-        var result = await sender.Send(new GetCategoriesQuery());
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

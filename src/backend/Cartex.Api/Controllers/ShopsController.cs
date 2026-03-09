@@ -14,9 +14,9 @@ public class ShopsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission("shops.view")]
-    public async Task<IActionResult> GetShops()
+    public async Task<IActionResult> GetShops([FromQuery] GetShopsQuery query)
     {
-        var result = await sender.Send(new GetShopsQuery());
+        var result = await sender.Send(query);
         return Ok(result);
     }
 

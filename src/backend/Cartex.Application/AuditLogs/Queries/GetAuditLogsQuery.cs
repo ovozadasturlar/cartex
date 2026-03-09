@@ -1,10 +1,13 @@
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
+using Cartex.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 
 namespace Cartex.Application.AuditLogs.Queries;
 
-public record GetAuditLogsQuery(string? TableName, DateTime? FromDate, DateTime? ToDate) : IRequest<List<AuditLogDto>>;
+public record GetAuditLogsQuery : FilteringRequest, IRequest<IReadOnlyCollection<AuditLogDto>>;
 
 public record AuditLogDto(
     long Id,
@@ -16,24 +19,14 @@ public record AuditLogDto(
     string? NewData,
     DateTime CreatedAt);
 
-public sealed class GetAuditLogsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetAuditLogsQuery, List<AuditLogDto>>
+public sealed class GetAuditLogsQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetAuditLogsQuery, IReadOnlyCollection<AuditLogDto>>
 {
-    public async Task<List<AuditLogDto>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<AuditLogDto>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.AuditLogs
+        return await db.AuditLogs
             .Include(a => a.User)
-            .AsQueryable();
-
-        if (request.TableName is not null)
-            query = query.Where(a => a.TableName == request.TableName);
-
-        if (request.FromDate is not null)
-            query = query.Where(a => a.CreatedAt >= request.FromDate);
-
-        if (request.ToDate is not null)
-            query = query.Where(a => a.CreatedAt <= request.ToDate);
-
-        return await query
             .Select(a => new AuditLogDto(
                 a.Id,
                 a.User != null ? a.User.FullName : null,
@@ -43,6 +36,6 @@ public sealed class GetAuditLogsQueryHandler(IApplicationDbContext db) : IReques
                 a.OldData,
                 a.NewData,
                 a.CreatedAt))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }

@@ -1,19 +1,23 @@
-using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using MediatR;
 
 namespace Cartex.Application.Suppliers.Queries;
 
-public record GetSuppliersQuery : IRequest<List<SupplierDto>>;
+public record GetSuppliersQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplierDto>>;
 
 public record SupplierDto(long Id, string Name, string? Phone);
 
-public sealed class GetSuppliersQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSuppliersQuery, List<SupplierDto>>
+public sealed class GetSuppliersQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetSuppliersQuery, IReadOnlyCollection<SupplierDto>>
 {
-    public async Task<List<SupplierDto>> Handle(GetSuppliersQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<SupplierDto>> Handle(GetSuppliersQuery request, CancellationToken cancellationToken)
     {
         return await db.Suppliers
             .Select(s => new SupplierDto(s.Id, s.Name, s.Phone))
-            .ToListAsync(cancellationToken);
+            .ToPagedListAsync(request, writer, cancellationToken);
     }
 }
