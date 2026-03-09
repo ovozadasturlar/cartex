@@ -26,7 +26,7 @@
                         HorizontalContentAlignment="Center" />
             </WrapPanel>
 
-            <Grid ColumnDefinitions="*,*,*" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
                 <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
                         <TextBlock Text="🛒" FontSize="36" HorizontalAlignment="Center" />
@@ -34,27 +34,37 @@
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="—" FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource BrandBrush}" />
+                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
                     </StackPanel>
                 </Border>
                 <Border Classes="card" Grid.Column="1" Margin="4,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="📦" FontSize="36" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding L[total_products]}" Classes="muted"
+                        <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding L[today_profit]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="—" FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource SuccessBrush}" />
                     </StackPanel>
                 </Border>
-                <Border Classes="card" Grid.Column="2" Margin="8,0,0,0">
+                <Border Classes="card" Grid.Column="2" Margin="4,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="👥" FontSize="36" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding L[total_customers]}" Classes="muted"
+                        <TextBlock Text="⚠️" FontSize="36" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding L[low_stock]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="—" FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource WarningBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="📦" FontSize="36" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding L[total_products]}" Classes="muted"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="—" FontSize="28" FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource InfoBrush}" />
                     </StackPanel>
                 </Border>
             </Grid>

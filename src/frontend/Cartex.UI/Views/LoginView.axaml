@@ -4,7 +4,7 @@
              x:Class="Cartex.UI.Views.LoginView"
              x:CompileBindings="False">
 
-    <Grid Background="{DynamicResource AppBgBrush}"
+    <Grid Background="{DynamicResource AppBg}"
           HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
         <Border Classes="card" VerticalAlignment="Center" HorizontalAlignment="Center"

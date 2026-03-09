@@ -17,14 +17,14 @@
         </Grid>
 
         <DataGrid Grid.Row="1"
+                  x:Name="ProductsGrid"
                   ItemsSource="{Binding Products}"
-                  SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
                   GridLinesVisibility="Horizontal"
                   BorderThickness="1"
-                  BorderBrush="{DynamicResource AppBorderBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />

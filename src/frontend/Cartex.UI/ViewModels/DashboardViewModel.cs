@@ -8,8 +8,7 @@ public partial class DashboardViewModel : ViewModelBase
 {
     private readonly NavigationService _navigationService;
 
-    [ObservableProperty]
-    private string _welcomeMessage = string.Empty;
+    [ObservableProperty] private string _welcomeMessage = "";
 
     public DashboardViewModel(NavigationService navigationService)
     {
@@ -18,11 +17,11 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void GoToSales() => _navigationService.NavigateTo<SalesViewModel>();
+    private void GoToSales() => _navigationService.RequestMenuNavigation("pos");
 
     [RelayCommand]
-    private void GoToProducts() => _navigationService.NavigateTo<ProductsViewModel>();
+    private void GoToProducts() => _navigationService.RequestMenuNavigation("products");
 
     [RelayCommand]
-    private void GoToCustomers() => _navigationService.NavigateTo<CustomersViewModel>();
+    private void GoToCustomers() => _navigationService.RequestMenuNavigation("settings");
 }

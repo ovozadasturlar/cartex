@@ -5,7 +5,7 @@
         Title="Cartex POS"
         Width="1400" Height="900"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource AppBgBrush}">
+        Background="{DynamicResource AppBg}">
 
     <ContentControl Content="{Binding CurrentView}" />
 

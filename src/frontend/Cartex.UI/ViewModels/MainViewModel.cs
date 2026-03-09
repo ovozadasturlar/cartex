@@ -1,43 +1,24 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
-
-public partial class MenuItem(string key, string icon, Func<ViewModelBase> factory)
-{
-    public string Key { get; } = key;
-    public string Icon { get; } = icon;
-    public Func<ViewModelBase> Factory { get; } = factory;
-    public string Label => LocalizationManager.Instance[Key];
-}
 
 public partial class MainViewModel : ViewModelBase
 {
     private readonly AuthService _authService;
     private readonly NavigationService _navigationService;
 
-    [ObservableProperty]
-    private ViewModelBase? _currentPage;
-
-    [ObservableProperty]
-    private MenuItem? _selectedMenuItem;
-
-    [ObservableProperty]
-    private bool _isTouchMode;
-
-    [ObservableProperty]
-    private string _currentTheme;
-
-    [ObservableProperty]
-    private string _currentLanguage;
-
-    [ObservableProperty]
-    private string _userDisplayName = string.Empty;
-
-    [ObservableProperty]
-    private string _userRole = string.Empty;
+    [ObservableProperty] private ViewModelBase? _currentPage;
+    [ObservableProperty] private MenuItem? _selectedMenuItem;
+    [ObservableProperty] private bool _isTouchMode;
+    [ObservableProperty] private bool _isDarkTheme;
+    [ObservableProperty] private string _currentLanguage;
+    [ObservableProperty] private string _userDisplayName = "";
+    [ObservableProperty] private string _userRole = "";
+    [ObservableProperty] private string _currentPageTitle = "";
 
     public ObservableCollection<MenuItem> MenuItems { get; } = [];
     public string[] AvailableLanguages => LocalizationManager.AvailableLanguages;
@@ -46,9 +27,11 @@ public partial class MainViewModel : ViewModelBase
     {
         _authService = authService;
         _navigationService = navigationService;
-        _isTouchMode = SettingsService.Instance.IsTouchMode;
-        _currentTheme = SettingsService.Instance.Theme;
+        IsTouchMode = SettingsService.Instance.IsTouchMode;
+        _isDarkTheme = SettingsService.Instance.Theme == "Dark";
         _currentLanguage = SettingsService.Instance.Language;
+
+        _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
     }
 
     public void Initialize()
@@ -56,71 +39,84 @@ public partial class MainViewModel : ViewModelBase
         UserDisplayName = _authService.UserInfo?.FullName ?? _authService.UserInfo?.Username ?? "";
         UserRole = _authService.UserInfo?.Role ?? "";
 
+        TouchModeManager.Instance.IsTouchMode = IsTouchMode;
+
         MenuItems.Clear();
-        MenuItems.Add(new MenuItem("dashboard", "📊", () => ServiceLocator.Resolve<DashboardViewModel>()));
-        MenuItems.Add(new MenuItem("products", "📦", () => ServiceLocator.Resolve<ProductsViewModel>()));
-        MenuItems.Add(new MenuItem("sales", "🛒", () => ServiceLocator.Resolve<SalesViewModel>()));
-        MenuItems.Add(new MenuItem("customers", "👥", () => ServiceLocator.Resolve<CustomersViewModel>()));
-        MenuItems.Add(new MenuItem("warehouse", "🏭", () => ServiceLocator.Resolve<WarehouseViewModel>()));
+        AddMenuItem("dashboard", "📊", typeof(DashboardViewModel), null);
+        AddMenuItem("pos", "🛒", typeof(SalesViewModel), "sales.create");
+        AddMenuItem("products", "📦", typeof(ProductsViewModel), "products.view");
+        AddMenuItem("inventory", "🏭", typeof(WarehouseViewModel), "stocks.view");
+        AddMenuItem("sales", "💰", typeof(SalesHistoryViewModel), "sales.view");
+        AddMenuItem("reports", "📈", typeof(ReportsViewModel), "reports.view");
+        AddMenuItem("settings", "⚙️", typeof(SettingsViewModel), null);
 
-        if (_authService.HasPermission("users.view") || _authService.UserInfo?.Role == "Admin")
-            MenuItems.Add(new MenuItem("users", "👤", () => ServiceLocator.Resolve<UsersViewModel>()));
-
-        if (_authService.HasPermission("roles.view") || _authService.UserInfo?.Role == "Admin")
-            MenuItems.Add(new MenuItem("roles", "🔑", () => ServiceLocator.Resolve<RolesViewModel>()));
-
-        MenuItems.Add(new MenuItem("settings", "⚙️", () => ServiceLocator.Resolve<SettingsViewModel>()));
+        UpdateMenuTitles();
 
         if (MenuItems.Count > 0)
-        {
             SelectedMenuItem = MenuItems[0];
-        }
     }
 
-    partial void OnSelectedMenuItemChanged(MenuItem? value)
+    private void AddMenuItem(string key, string icon, Type vmType, string? permission)
     {
-        if (value is not null)
-            CurrentPage = value.Factory();
+        if (permission is not null && !_authService.HasPermission(permission) && _authService.UserInfo?.Role != "Admin")
+            return;
+
+        MenuItems.Add(new MenuItem { Key = key, Icon = icon, ViewModelType = vmType, Permission = permission });
+    }
+
+    private void UpdateMenuTitles()
+    {
+        foreach (var item in MenuItems)
+            item.Title = L[item.Key];
+    }
+
+    private void OnMenuNavigationRequested(string menuKey)
+    {
+        var item = MenuItems.FirstOrDefault(m => m.Key == menuKey);
+        if (item is not null)
+            SelectedMenuItem = item;
+    }
+
+    partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)
+    {
+        if (oldValue is not null) oldValue.IsActive = false;
+        if (newValue is not null)
+        {
+            newValue.IsActive = true;
+            CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
+            CurrentPageTitle = newValue.Title;
+        }
     }
 
     partial void OnIsTouchModeChanged(bool value)
     {
         SettingsService.Instance.IsTouchMode = value;
+        TouchModeManager.Instance.IsTouchMode = value;
     }
 
-    partial void OnCurrentThemeChanged(string value)
+    partial void OnIsDarkThemeChanged(bool value)
     {
-        SettingsService.Instance.Theme = value;
-        ThemeManager.ApplyTheme?.Invoke(value);
+        var theme = value ? "Dark" : "Light";
+        SettingsService.Instance.Theme = theme;
+        ThemeManager.ApplyTheme?.Invoke(theme);
     }
 
     partial void OnCurrentLanguageChanged(string value)
     {
         SettingsService.Instance.Language = value;
-        L.CurrentLanguage = value;
-        OnPropertyChanged(nameof(L));
-
-        var selected = SelectedMenuItem;
-        var items = MenuItems.ToList();
-        MenuItems.Clear();
-        foreach (var item in items)
-            MenuItems.Add(item);
-
-        if (selected is not null)
-            SelectedMenuItem = MenuItems.FirstOrDefault(m => m.Key == selected.Key);
+        LocalizationManager.Instance.CurrentLanguage = value;
+        UpdateMenuTitles();
+        if (SelectedMenuItem is not null)
+            CurrentPageTitle = SelectedMenuItem.Title;
     }
 
     [RelayCommand]
-    private void ToggleTheme()
-    {
-        CurrentTheme = CurrentTheme == "Dark" ? "Light" : "Dark";
-    }
+    private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
 
     [RelayCommand]
     private void Logout()
     {
         _authService.Logout();
-        var loginVm = ServiceLocator.Resolve<LoginViewModel>();
-        _navigationService.NavigateTo(loginVm);
+        _navigationService.NavigateTo(ServiceLocator.Resolve<LoginViewModel>());
     }
 }

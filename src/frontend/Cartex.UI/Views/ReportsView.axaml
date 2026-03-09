@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.ReportsView"
+             x:CompileBindings="False">
+
+    <Grid Margin="24" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <StackPanel Spacing="16" HorizontalAlignment="Center">
+            <TextBlock Text="📈" FontSize="64" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding L[reports]}" Classes="title" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding L[no_data]}" Classes="muted" FontSize="16"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</UserControl>

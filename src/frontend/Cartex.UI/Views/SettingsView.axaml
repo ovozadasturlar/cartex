@@ -4,54 +4,32 @@
              x:Class="Cartex.UI.Views.SettingsView"
              x:CompileBindings="False">
 
-    <ScrollViewer Padding="24">
-        <StackPanel Spacing="16" MaxWidth="600">
-
-            <TextBlock Text="{Binding L[settings]}" Classes="title" Margin="0,0,0,8" />
-
-            <Border Classes="card">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding L[theme]}" Classes="subtitle" />
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Button Content="{Binding L[light]}" Classes="outline"
-                                Command="{Binding ToggleThemeCommand}"
-                                MinWidth="120" HorizontalContentAlignment="Center" />
-                        <TextBlock Text="{Binding CurrentTheme}" VerticalAlignment="Center"
-                                   FontWeight="SemiBold" FontSize="16"
-                                   Foreground="{DynamicResource BrandBrush}" />
-                    </StackPanel>
+    <TabControl Margin="16">
+        <TabItem Header="{Binding L[users]}">
+            <ContentControl Content="{Binding UsersVm}" Margin="0,8,0,0" />
+        </TabItem>
+        <TabItem Header="{Binding L[customers]}">
+            <ContentControl Content="{Binding CustomersVm}" Margin="0,8,0,0" />
+        </TabItem>
+        <TabItem Header="{Binding L[roles]}">
+            <ContentControl Content="{Binding RolesVm}" Margin="0,8,0,0" />
+        </TabItem>
+        <TabItem Header="{Binding L[general]}">
+            <ScrollViewer Padding="24">
+                <StackPanel Spacing="16" MaxWidth="600">
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{Binding L[api_url]}" Classes="subtitle" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Text="{Binding ApiUrl, Mode=TwoWay}" Classes="search" />
+                                <Button Grid.Column="1" Content="{Binding L[save]}"
+                                        Classes="brand" Margin="8,0,0,0"
+                                        Command="{Binding SaveApiUrlCommand}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </Border>
-
-            <Border Classes="card">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding L[language]}" Classes="subtitle" />
-                    <ComboBox ItemsSource="{Binding AvailableLanguages}"
-                              SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch" MinHeight="40" />
-                </StackPanel>
-            </Border>
-
-            <Border Classes="card">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding L[touch_mode]}" Classes="subtitle" />
-                    <ToggleSwitch IsChecked="{Binding IsTouchMode, Mode=TwoWay}"
-                                  OnContent="ON" OffContent="OFF" />
-                </StackPanel>
-            </Border>
-
-            <Border Classes="card">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding L[api_url]}" Classes="subtitle" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBox Text="{Binding ApiUrl, Mode=TwoWay}" Classes="search" />
-                        <Button Grid.Column="1" Content="{Binding L[save]}"
-                                Classes="brand" Margin="8,0,0,0"
-                                Command="{Binding SaveApiUrlCommand}" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-        </StackPanel>
-    </ScrollViewer>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
 </UserControl>

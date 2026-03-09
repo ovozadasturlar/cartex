@@ -13,13 +13,13 @@
         </Grid>
 
         <DataGrid Grid.Row="1"
+                  x:Name="UsersGrid"
                   ItemsSource="{Binding Users}"
-                  SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
                   BorderThickness="1"
-                  BorderBrush="{DynamicResource AppBorderBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />

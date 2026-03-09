@@ -12,13 +12,11 @@
             <x:Double x:Key="NormalButtonMinHeight">36</x:Double>
             <x:Double x:Key="TouchFontSize">18</x:Double>
             <x:Double x:Key="NormalFontSize">14</x:Double>
-            <x:Double x:Key="TouchSidebarItemHeight">80</x:Double>
-            <x:Double x:Key="NormalSidebarItemHeight">60</x:Double>
         </ResourceDictionary>
     </Styles.Resources>
 
     <Style Selector="Button.brand">
-        <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+        <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="16,8" />
@@ -27,7 +25,7 @@
         <Setter Property="Cursor" Value="Hand" />
     </Style>
     <Style Selector="Button.brand:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource BrandHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource BrandPrimaryHoverBrush}" />
     </Style>
 
     <Style Selector="Button.danger">
@@ -68,7 +66,7 @@
 
     <Style Selector="Button.outline">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="16,8" />
@@ -79,25 +77,25 @@
     <Style Selector="TextBlock.title">
         <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Foreground" Value="{DynamicResource AppFgBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
 
     <Style Selector="TextBlock.subtitle">
         <Setter Property="FontSize" Value="16" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{DynamicResource AppFgBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
 
     <Style Selector="TextBlock.muted">
-        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
         <Setter Property="FontSize" Value="13" />
     </Style>
 
     <Style Selector="Border.card">
-        <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBg}" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="20" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
@@ -105,6 +103,30 @@
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Padding" Value="12,8" />
+    </Style>
+
+    <Style Selector="Button.touch-mode">
+        <Setter Property="MinHeight" Value="56" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="Padding" Value="20,12" />
+    </Style>
+
+    <Style Selector="TextBox.touch-mode">
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+
+    <Style Selector="TextBlock.touch-title">
+        <Setter Property="FontSize" Value="28" />
+    </Style>
+
+    <Style Selector="TextBlock.touch-subtitle">
+        <Setter Property="FontSize" Value="20" />
+    </Style>
+
+    <Style Selector="DataGridRow.touch-mode">
+        <Setter Property="MinHeight" Value="52" />
+        <Setter Property="FontSize" Value="16" />
     </Style>
 
 </Styles>
