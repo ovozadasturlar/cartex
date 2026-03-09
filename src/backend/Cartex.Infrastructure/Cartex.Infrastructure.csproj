@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\Cartex.Domain\Cartex.Domain.csproj" />
     <ProjectReference Include="..\Cartex.Persistence\Cartex.Persistence.csproj" />
   </ItemGroup>

@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
 using Cartex.Api.Middleware;
 using Cartex.Application;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Auth;
 using Cartex.Auth.Services;
+using Cartex.Infrastructure.Web;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +18,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

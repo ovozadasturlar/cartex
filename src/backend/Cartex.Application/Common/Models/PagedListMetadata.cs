@@ -1,0 +1,3 @@
+namespace Cartex.Application.Common.Models;
+
+public record PagedListMetadata(int TotalCount, int Page, int PageSize, int TotalPages);
