@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Cartex.Api/Cartex.Api.csproj" />
+    <Project Path="src/backend/Cartex.Application/Cartex.Application.csproj" />
+    <Project Path="src/backend/Cartex.Auth/Cartex.Auth.csproj" />
+    <Project Path="src/backend/Cartex.Domain/Cartex.Domain.csproj" />
+    <Project Path="src/backend/Cartex.Infrastructure/Cartex.Infrastructure.csproj" />
+    <Project Path="src/backend/Cartex.Persistence/Cartex.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/src/frontend/">
+    <Project Path="src/frontend/Cartex.Desktop/Cartex.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
+    <Project Path="src/shared/Cartex.Shared/Cartex.Shared.csproj" />
+  </Folder>
+</Solution>

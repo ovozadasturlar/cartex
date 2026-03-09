@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.Desktop.ViewModels"
+             x:Class="Cartex.Desktop.Views.RolesView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="24">
+
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBlock Text="{Binding L[roles]}" Classes="title" />
+            <Button Grid.Column="1" Content="{Binding L[refresh]}" Classes="outline"
+                    Command="{Binding LoadCommand}" />
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,*">
+
+            <DataGrid ItemsSource="{Binding Roles}"
+                      SelectedItem="{Binding SelectedRole, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="Horizontal"
+                      BorderThickness="1"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
+                      CornerRadius="6"
+                      Margin="0,0,8,0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                    <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:RolesViewModel)DataContext).L[name]}"
+                                        Binding="{Binding Name}" Width="*" />
+                    <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:RolesViewModel)DataContext).L[description]}"
+                                        Binding="{Binding Description}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Border Grid.Column="1" Classes="card" Margin="8,0,0,0" Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding L[permissions]}" Classes="subtitle" />
+
+                    <TextBlock Text="{Binding SelectedRole.Name}"
+                               FontWeight="SemiBold" FontSize="16"
+                               Foreground="{DynamicResource BrandBrush}" />
+
+                    <ScrollViewer MaxHeight="400">
+                        <ItemsControl ItemsSource="{Binding SelectedRole.Permissions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="8,4" Margin="0,0,0,2"
+                                            Background="{DynamicResource BrandLightBrush}"
+                                            CornerRadius="4">
+                                        <TextBlock Text="{Binding}" FontSize="13" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Top" Height="4" Margin="0,8,0,0" />
+    </Grid>
+</UserControl>

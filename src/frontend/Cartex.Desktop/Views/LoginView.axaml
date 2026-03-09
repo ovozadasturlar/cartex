@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.Desktop.ViewModels"
+             x:Class="Cartex.Desktop.Views.LoginView"
+             x:CompileBindings="False">
+
+    <Grid Background="{DynamicResource AppBgBrush}"
+          HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+        <Border Classes="card" VerticalAlignment="Center" HorizontalAlignment="Center"
+                Width="400" Padding="40">
+            <StackPanel Spacing="20">
+
+                <TextBlock Text="Cartex POS"
+                           Classes="title"
+                           HorizontalAlignment="Center"
+                           FontSize="32" />
+
+                <TextBlock Text="{Binding L[login]}"
+                           Classes="subtitle"
+                           HorizontalAlignment="Center" />
+
+                <TextBox Watermark="{Binding L[username]}"
+                         Text="{Binding Username, Mode=TwoWay}"
+                         Classes="search"
+                         FontSize="16" />
+
+                <TextBox Watermark="{Binding L[password]}"
+                         Text="{Binding Password, Mode=TwoWay}"
+                         PasswordChar="●"
+                         RevealPassword="False"
+                         Classes="search"
+                         FontSize="16" />
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="{DynamicResource DangerBrush}"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center" />
+
+                <Button Content="{Binding L[login_button]}"
+                        Command="{Binding LoginCommand}"
+                        Classes="brand"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        MinHeight="48"
+                        FontSize="18"
+                        IsEnabled="{Binding !IsLoading}" />
+
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}"
+                             Height="4" />
+
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

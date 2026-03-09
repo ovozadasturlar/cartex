@@ -1,0 +1,18 @@
+using Cartex.Domain.Common;
+
+namespace Cartex.Domain.Entities;
+
+public class Product : BaseEntity
+{
+    public long? CategoryId { get; set; }
+    public Category? Category { get; set; }
+
+    public long UnitId { get; set; }
+    public Unit Unit { get; set; } = null!;
+
+    public string Name { get; set; } = null!;
+    public decimal MinStock { get; set; }
+
+    public ICollection<Barcode> Barcodes { get; set; } = [];
+    public ICollection<Stock> Stocks { get; set; } = [];
+}

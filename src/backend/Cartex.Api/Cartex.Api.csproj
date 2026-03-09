@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.0.36" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cartex.Application\Cartex.Application.csproj" />
+    <ProjectReference Include="..\Cartex.Auth\Cartex.Auth.csproj" />
+    <ProjectReference Include="..\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />
+    <ProjectReference Include="..\Cartex.Persistence\Cartex.Persistence.csproj" />
+    <ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
