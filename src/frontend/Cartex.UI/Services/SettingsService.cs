@@ -8,15 +8,26 @@ public sealed class SettingsService
     private static readonly Lazy<SettingsService> _instance = new(() => new SettingsService());
     public static SettingsService Instance => _instance.Value;
 
-    private readonly string _settingsPath;
+    private readonly string? _settingsPath;
     private SettingsData _data;
 
     private SettingsService()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var dir = Path.Combine(appData, "Cartex");
-        Directory.CreateDirectory(dir);
-        _settingsPath = Path.Combine(dir, "settings.json");
+        if (!OperatingSystem.IsBrowser())
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var dir = Path.Combine(appData, "Cartex");
+                Directory.CreateDirectory(dir);
+                _settingsPath = Path.Combine(dir, "settings.json");
+            }
+            catch
+            {
+                _settingsPath = null;
+            }
+        }
+
         _data = Load();
     }
 
@@ -48,7 +59,7 @@ public sealed class SettingsService
     {
         try
         {
-            if (File.Exists(_settingsPath))
+            if (_settingsPath is not null && File.Exists(_settingsPath))
             {
                 var json = File.ReadAllText(_settingsPath);
                 return JsonSerializer.Deserialize<SettingsData>(json) ?? new SettingsData();
@@ -61,6 +72,7 @@ public sealed class SettingsService
 
     private void Save()
     {
+        if (_settingsPath is null) return;
         try
         {
             var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions { WriteIndented = true });
