@@ -21,13 +21,14 @@ public sealed class GetProductsQueryHandler(
             .Include(p => p.Category)
             .Include(p => p.Unit)
             .Include(p => p.Barcodes)
-            .Select(p => new ProductDto(
-                p.Id,
-                p.Name,
-                p.Category != null ? p.Category.Name : null,
-                p.Unit.Name,
-                p.MinStock,
-                p.Barcodes.Select(b => b.Code).ToList()))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                p => new ProductDto(
+                    p.Id,
+                    p.Name,
+                    p.Category != null ? p.Category.Name : null,
+                    p.Unit.Name,
+                    p.MinStock,
+                    p.Barcodes.Select(b => b.Code).ToList()),
+                writer, cancellationToken);
     }
 }

@@ -17,7 +17,8 @@ public sealed class GetShopsQueryHandler(
     public async Task<IReadOnlyCollection<ShopDto>> Handle(GetShopsQuery request, CancellationToken cancellationToken)
     {
         return await db.Shops
-            .Select(s => new ShopDto(s.Id, s.Name, s.Address, s.Phone, s.CashbackRate, s.IsActive))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                s => new ShopDto(s.Id, s.Name, s.Address, s.Phone, s.CashbackRate, s.IsActive),
+                writer, cancellationToken);
     }
 }

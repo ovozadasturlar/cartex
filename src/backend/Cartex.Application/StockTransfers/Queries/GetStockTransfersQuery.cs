@@ -30,15 +30,16 @@ public sealed class GetStockTransfersQueryHandler(
             .Include(t => t.FromWarehouse)
             .Include(t => t.ToWarehouse)
             .Include(t => t.User)
-            .Select(t => new StockTransferDto(
-                t.Id,
-                t.Product.Name,
-                t.Quantity,
-                t.FromWarehouse.Name,
-                t.ToWarehouse.Name,
-                t.Status.ToString(),
-                t.CreatedAt,
-                t.User.FullName))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                t => new StockTransferDto(
+                    t.Id,
+                    t.Product.Name,
+                    t.Quantity,
+                    t.FromWarehouse.Name,
+                    t.ToWarehouse.Name,
+                    t.Status.ToString(),
+                    t.CreatedAt,
+                    t.User.FullName),
+                writer, cancellationToken);
     }
 }

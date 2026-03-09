@@ -20,14 +20,15 @@ public sealed class GetRolesQueryHandler(
         return await db.Roles
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
-            .Select(r => new RoleDto(
-                r.Id,
-                r.Name,
-                r.Description,
-                r.RolePermissions
-                    .Where(rp => rp.Permission.IsEnabled)
-                    .Select(rp => rp.Permission.Name)
-                    .ToList()))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                r => new RoleDto(
+                    r.Id,
+                    r.Name,
+                    r.Description,
+                    r.RolePermissions
+                        .Where(rp => rp.Permission.IsEnabled)
+                        .Select(rp => rp.Permission.Name)
+                        .ToList()),
+                writer, cancellationToken);
     }
 }

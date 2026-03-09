@@ -17,7 +17,8 @@ public sealed class GetUnitsQueryHandler(
     public async Task<IReadOnlyCollection<UnitDto>> Handle(GetUnitsQuery request, CancellationToken cancellationToken)
     {
         return await db.Units
-            .Select(u => new UnitDto(u.Id, u.Name, u.ShortName))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                u => new UnitDto(u.Id, u.Name, u.ShortName),
+                writer, cancellationToken);
     }
 }

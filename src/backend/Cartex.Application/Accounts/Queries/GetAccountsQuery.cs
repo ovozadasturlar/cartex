@@ -17,13 +17,14 @@ public sealed class GetAccountsQueryHandler(
     public async Task<IReadOnlyCollection<AccountDto>> Handle(GetAccountsQuery request, CancellationToken cancellationToken)
     {
         return await db.Accounts
-            .Select(a => new AccountDto(
-                a.Id,
-                a.OwnerType.ToString(),
-                a.OwnerId,
-                a.Name,
-                a.Type.ToString(),
-                a.Balance))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                a => new AccountDto(
+                    a.Id,
+                    a.OwnerType.ToString(),
+                    a.OwnerId,
+                    a.Name,
+                    a.Type.ToString(),
+                    a.Balance),
+                writer, cancellationToken);
     }
 }

@@ -19,7 +19,8 @@ public sealed class GetWarehousesQueryHandler(
     {
         return await db.Warehouses
             .Include(w => w.Shop)
-            .Select(w => new WarehouseDto(w.Id, w.Name, w.ShopId, w.Shop.Name))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                w => new WarehouseDto(w.Id, w.Name, w.ShopId, w.Shop.Name),
+                writer, cancellationToken);
     }
 }

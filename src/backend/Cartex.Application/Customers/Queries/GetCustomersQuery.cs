@@ -17,7 +17,8 @@ public sealed class GetCustomersQueryHandler(
     public async Task<IReadOnlyCollection<CustomerDto>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
         return await db.Customers
-            .Select(c => new CustomerDto(c.Id, c.FullName, c.Phone, c.CardBarcode, c.DiscountPct, c.CashbackBalance))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                c => new CustomerDto(c.Id, c.FullName, c.Phone, c.CardBarcode, c.DiscountPct, c.CashbackBalance),
+                writer, cancellationToken);
     }
 }

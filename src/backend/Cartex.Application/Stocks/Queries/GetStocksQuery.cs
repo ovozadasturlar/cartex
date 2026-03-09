@@ -20,14 +20,15 @@ public sealed class GetStocksQueryHandler(
         return await db.Stocks
             .Include(s => s.Product)
                 .ThenInclude(p => p.Unit)
-            .Select(s => new StockDto(
-                s.Id,
-                s.Product.Name,
-                s.Product.Unit.Name,
-                s.Quantity,
-                s.PurchasePrice,
-                s.SellingPrice,
-                s.ExpiredAt))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                s => new StockDto(
+                    s.Id,
+                    s.Product.Name,
+                    s.Product.Unit.Name,
+                    s.Quantity,
+                    s.PurchasePrice,
+                    s.SellingPrice,
+                    s.ExpiredAt),
+                writer, cancellationToken);
     }
 }

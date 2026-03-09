@@ -30,17 +30,18 @@ public sealed class GetSalesQueryHandler(
         return await db.Sales
             .Include(s => s.Customer)
             .Include(s => s.User)
-            .Select(s => new SaleDto(
-                s.Id,
-                s.CreatedAt,
-                s.TotalAmount,
-                s.PaidCash,
-                s.PaidCard,
-                s.PaidBonus,
-                s.DebtAmount,
-                s.Status.ToString(),
-                s.Customer != null ? s.Customer.FullName : null,
-                s.User.FullName))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                s => new SaleDto(
+                    s.Id,
+                    s.CreatedAt,
+                    s.TotalAmount,
+                    s.PaidCash,
+                    s.PaidCard,
+                    s.PaidBonus,
+                    s.DebtAmount,
+                    s.Status.ToString(),
+                    s.Customer != null ? s.Customer.FullName : null,
+                    s.User.FullName),
+                writer, cancellationToken);
     }
 }

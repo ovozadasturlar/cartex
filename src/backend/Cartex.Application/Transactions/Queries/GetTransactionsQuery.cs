@@ -28,14 +28,15 @@ public sealed class GetTransactionsQueryHandler(
             .Include(t => t.FromAccount)
             .Include(t => t.ToAccount)
             .Include(t => t.User)
-            .Select(t => new TransactionDto(
-                t.Id,
-                t.Amount,
-                t.OperationType.ToString(),
-                t.FromAccount != null ? t.FromAccount.Name : null,
-                t.ToAccount != null ? t.ToAccount.Name : null,
-                t.CreatedAt,
-                t.User.FullName))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                t => new TransactionDto(
+                    t.Id,
+                    t.Amount,
+                    t.OperationType.ToString(),
+                    t.FromAccount != null ? t.FromAccount.Name : null,
+                    t.ToAccount != null ? t.ToAccount.Name : null,
+                    t.CreatedAt,
+                    t.User.FullName),
+                writer, cancellationToken);
     }
 }

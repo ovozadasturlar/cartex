@@ -17,7 +17,8 @@ public sealed class GetPermissionsQueryHandler(
     public async Task<IReadOnlyCollection<PermissionDto>> Handle(GetPermissionsQuery request, CancellationToken cancellationToken)
     {
         return await db.Permissions
-            .Select(p => new PermissionDto(p.Id, p.Name, p.Description, p.IsEnabled))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                p => new PermissionDto(p.Id, p.Name, p.Description, p.IsEnabled),
+                writer, cancellationToken);
     }
 }

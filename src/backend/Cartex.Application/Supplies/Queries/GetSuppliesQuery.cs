@@ -21,13 +21,14 @@ public sealed class GetSuppliesQueryHandler(
             .Include(s => s.Supplier)
             .Include(s => s.Warehouse)
             .Include(s => s.User)
-            .Select(s => new SupplyDto(
-                s.Id,
-                s.SupplyDate,
-                s.TotalAmount,
-                s.Supplier.Name,
-                s.Warehouse.Name,
-                s.User.FullName))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                s => new SupplyDto(
+                    s.Id,
+                    s.SupplyDate,
+                    s.TotalAmount,
+                    s.Supplier.Name,
+                    s.Warehouse.Name,
+                    s.User.FullName),
+                writer, cancellationToken);
     }
 }

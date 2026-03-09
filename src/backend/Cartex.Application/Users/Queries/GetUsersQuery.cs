@@ -20,7 +20,8 @@ public sealed class GetUsersQueryHandler(
         return await db.Users
             .Include(u => u.Role)
             .Include(u => u.Shop)
-            .Select(u => new UserDto(u.Id, u.FullName, u.Username, u.Role.Name, u.Shop.Name, u.IsActive))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                u => new UserDto(u.Id, u.FullName, u.Username, u.Role.Name, u.Shop.Name, u.IsActive),
+                writer, cancellationToken);
     }
 }

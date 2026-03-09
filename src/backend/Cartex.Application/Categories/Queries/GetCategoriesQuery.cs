@@ -19,11 +19,12 @@ public sealed class GetCategoriesQueryHandler(
     {
         return await db.Categories
             .Include(c => c.Parent)
-            .Select(c => new CategoryDto(
-                c.Id,
-                c.Name,
-                c.ParentId,
-                c.Parent != null ? c.Parent.Name : null))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                c => new CategoryDto(
+                    c.Id,
+                    c.Name,
+                    c.ParentId,
+                    c.Parent != null ? c.Parent.Name : null),
+                writer, cancellationToken);
     }
 }

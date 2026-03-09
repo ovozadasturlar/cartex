@@ -27,15 +27,16 @@ public sealed class GetAuditLogsQueryHandler(
     {
         return await db.AuditLogs
             .Include(a => a.User)
-            .Select(a => new AuditLogDto(
-                a.Id,
-                a.User != null ? a.User.FullName : null,
-                a.Action,
-                a.TableName,
-                a.RecordId,
-                a.OldData,
-                a.NewData,
-                a.CreatedAt))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                a => new AuditLogDto(
+                    a.Id,
+                    a.User != null ? a.User.FullName : null,
+                    a.Action,
+                    a.TableName,
+                    a.RecordId,
+                    a.OldData,
+                    a.NewData,
+                    a.CreatedAt),
+                writer, cancellationToken);
     }
 }

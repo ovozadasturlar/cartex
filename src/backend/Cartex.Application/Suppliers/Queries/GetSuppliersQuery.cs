@@ -17,7 +17,8 @@ public sealed class GetSuppliersQueryHandler(
     public async Task<IReadOnlyCollection<SupplierDto>> Handle(GetSuppliersQuery request, CancellationToken cancellationToken)
     {
         return await db.Suppliers
-            .Select(s => new SupplierDto(s.Id, s.Name, s.Phone))
-            .ToPagedListAsync(request, writer, cancellationToken);
+            .ToPagedListAsync(request,
+                s => new SupplierDto(s.Id, s.Name, s.Phone),
+                writer, cancellationToken);
     }
 }

@@ -42,7 +42,7 @@ public class ExceptionMiddleware(RequestDelegate next)
             ),
             _ => (
                 StatusCodes.Status500InternalServerError,
-                (object)new { message = "An internal server error occurred" }
+                (object)new { message = "An internal error occurred" }
             )
         };
 
