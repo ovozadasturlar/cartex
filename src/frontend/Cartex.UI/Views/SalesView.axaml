@@ -34,7 +34,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Content="+" Classes="brand" Padding="8,2"
-                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).AddStockToCartCommand}"
+                                            Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
                                             CommandParameter="{Binding}" MinHeight="28" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -116,7 +116,7 @@
                                                            Width="100" Margin="8,0" MinHeight="32" />
                                             <Button Grid.Column="2" Content="✕" Classes="danger"
                                                     Padding="6,2" MinHeight="28"
-                                                    Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).RemoveCartItemCommand}"
+                                                    Command="{Binding $parent[UserControl].DataContext.RemoveCartItemCommand}"
                                                     CommandParameter="{Binding}" />
                                         </Grid>
                                     </Border>
@@ -156,7 +156,7 @@
                                         CornerRadius="10" HorizontalContentAlignment="Center"
                                         Background="{DynamicResource CardBg}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                        Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).AddStockToCartCommand}"
+                                        Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
                                         CommandParameter="{Binding}">
                                     <StackPanel Spacing="4" HorizontalAlignment="Center">
                                         <TextBlock Text="{Binding ProductName}" FontSize="16"
@@ -221,7 +221,7 @@
                                                             HorizontalContentAlignment="Center"
                                                             VerticalContentAlignment="Center"
                                                             Classes="outline"
-                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DecrementCartItemCommand}"
+                                                            Command="{Binding $parent[UserControl].DataContext.DecrementCartItemCommand}"
                                                             CommandParameter="{Binding}" />
                                                     <TextBlock Text="{Binding Quantity}" FontSize="18"
                                                                FontWeight="Bold" VerticalAlignment="Center"
@@ -233,7 +233,7 @@
                                                             HorizontalContentAlignment="Center"
                                                             VerticalContentAlignment="Center"
                                                             Classes="brand"
-                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).IncrementCartItemCommand}"
+                                                            Command="{Binding $parent[UserControl].DataContext.IncrementCartItemCommand}"
                                                             CommandParameter="{Binding}" />
                                                 </StackPanel>
                                             </Grid>

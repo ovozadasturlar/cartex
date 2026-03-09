@@ -130,7 +130,7 @@
                                         Padding="4,6" MinHeight="60"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                         HorizontalContentAlignment="Center"
-                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectMenuItemCommand}"
+                                        Command="{Binding $parent[UserControl].DataContext.SelectMenuItemCommand}"
                                         CommandParameter="{Binding}">
                                     <StackPanel Spacing="2" HorizontalAlignment="Center">
                                         <TextBlock Text="{Binding Icon}" FontSize="24"
