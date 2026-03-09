@@ -9,9 +9,9 @@ public static class DependencyInjection
 {
     public static void RegisterServices(IServiceCollection services, SettingsService settings)
     {
-        services.AddApiClients(settings.ApiBaseUrl);
-
         services.AddSingleton<AuthService>();
+        services.AddApiClients(settings.ApiBaseUrl, () => ServiceLocator.Resolve<AuthService>().Token);
+
         services.AddSingleton<NavigationService>();
         services.AddSingleton(LocalizationManager.Instance);
 

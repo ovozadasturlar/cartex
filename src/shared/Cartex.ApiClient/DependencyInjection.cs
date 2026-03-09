@@ -8,7 +8,7 @@ namespace Cartex.ApiClient;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApiClients(this IServiceCollection services, string baseUrl)
+    public static IServiceCollection AddApiClients(this IServiceCollection services, string baseUrl, Func<string?> tokenProvider)
     {
         var settings = new RefitSettings
         {
@@ -19,26 +19,35 @@ public static class DependencyInjection
             })
         };
 
-        services.AddRefitClient<IAuthApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IShopsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IUsersApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IRolesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IPermissionsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IProductsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ICategoriesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IUnitsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IBarcodesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IWarehousesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IStocksApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IStockTransfersApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ISalesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ISuppliesApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ICustomersApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ISuppliersApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IAccountsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<ITransactionsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
-        services.AddRefitClient<IAuditLogsApi>(settings).ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
+        services.AddTransient(_ => new AuthTokenHandler(tokenProvider));
+
+        services.AddRefitClient<IAuthApi>(settings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
+
+        RegisterAuthorized<IShopsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IUsersApi>(services, settings, baseUrl);
+        RegisterAuthorized<IRolesApi>(services, settings, baseUrl);
+        RegisterAuthorized<IPermissionsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IProductsApi>(services, settings, baseUrl);
+        RegisterAuthorized<ICategoriesApi>(services, settings, baseUrl);
+        RegisterAuthorized<IUnitsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IBarcodesApi>(services, settings, baseUrl);
+        RegisterAuthorized<IWarehousesApi>(services, settings, baseUrl);
+        RegisterAuthorized<IStocksApi>(services, settings, baseUrl);
+        RegisterAuthorized<IStockTransfersApi>(services, settings, baseUrl);
+        RegisterAuthorized<ISalesApi>(services, settings, baseUrl);
+        RegisterAuthorized<ISuppliesApi>(services, settings, baseUrl);
+        RegisterAuthorized<ICustomersApi>(services, settings, baseUrl);
+        RegisterAuthorized<ISuppliersApi>(services, settings, baseUrl);
+        RegisterAuthorized<IAccountsApi>(services, settings, baseUrl);
+        RegisterAuthorized<ITransactionsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IAuditLogsApi>(services, settings, baseUrl);
 
         return services;
     }
+
+    private static void RegisterAuthorized<T>(IServiceCollection services, RefitSettings settings, string baseUrl) where T : class =>
+        services.AddRefitClient<T>(settings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .AddHttpMessageHandler<AuthTokenHandler>();
 }
