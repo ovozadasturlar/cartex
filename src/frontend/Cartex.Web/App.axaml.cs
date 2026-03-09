@@ -5,9 +5,10 @@ using Avalonia.Styling;
 using Cartex.UI;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels;
+using Cartex.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cartex.Desktop;
+namespace Cartex.Web;
 
 public partial class App : Application
 {
@@ -36,14 +37,12 @@ public partial class App : Application
 
         LocalizationManager.Instance.LoadLanguage(settings.Language);
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             var nav = provider.GetRequiredService<NavigationService>();
             var loginVm = provider.GetRequiredService<LoginViewModel>();
-
-            var window = new MainWindow { DataContext = nav };
             nav.NavigateTo(loginVm);
-            desktop.MainWindow = window;
+            singleView.MainView = new LoginView { DataContext = nav };
         }
 
         base.OnFrameworkInitializationCompleted();

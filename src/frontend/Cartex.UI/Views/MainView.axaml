@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.MainView"
+             x:CompileBindings="False">
+
+    <Grid ColumnDefinitions="240,*" Background="{DynamicResource AppBgBrush}">
+
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+
+                <StackPanel DockPanel.Dock="Top" Margin="16,20,16,12" Spacing="4">
+                    <TextBlock Text="Cartex POS" FontSize="22" FontWeight="Bold"
+                               Foreground="{DynamicResource BrandBrush}" />
+                    <TextBlock Text="{Binding UserDisplayName}"
+                               Foreground="{DynamicResource AppFgBrush}" FontSize="14" />
+                    <TextBlock Text="{Binding UserRole}"
+                               Classes="muted" FontSize="12" />
+                </StackPanel>
+
+                <Separator DockPanel.Dock="Top" Background="{DynamicResource AppBorderBrush}" Height="1" />
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="8,8" Spacing="4">
+                    <Separator Background="{DynamicResource AppBorderBrush}" Height="1" Margin="0,0,0,4" />
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="8,0">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ToggleSwitch IsChecked="{Binding IsTouchMode, Mode=TwoWay}"
+                                          OnContent="👆" OffContent="🖱️"
+                                          FontSize="14" Padding="0"
+                                          VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                            <Button Content="{Binding CurrentTheme}"
+                                    Command="{Binding ToggleThemeCommand}"
+                                    Classes="outline" Padding="8,4" FontSize="12" MinHeight="30" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                              SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch" Margin="8,0" MinHeight="32" />
+
+                    <Button Content="{Binding L[logout]}"
+                            Command="{Binding LogoutCommand}"
+                            Classes="danger" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Margin="8,4" />
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding MenuItems}"
+                         SelectedItem="{Binding SelectedMenuItem, Mode=TwoWay}"
+                         Margin="0,8" Padding="4"
+                         Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="12"
+                                        Margin="8,6" Height="36">
+                                <TextBlock Text="{Binding Icon}" FontSize="18"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Label}" FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AppFgBrush}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </DockPanel>
+        </Border>
+
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}"
+                         Margin="0" />
+
+    </Grid>
+</UserControl>

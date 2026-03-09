@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.WarehouseView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,*" Margin="24">
+
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,16">
+            <ComboBox ItemsSource="{Binding Warehouses}"
+                      SelectedItem="{Binding SelectedWarehouse, Mode=TwoWay}"
+                      MinWidth="200" MinHeight="36"
+                      PlaceholderText="{Binding L[select_warehouse]}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBox Grid.Column="1" Watermark="{Binding L[search]}"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     Classes="search" Margin="12,0" />
+
+            <Button Grid.Column="2" Content="{Binding L[refresh]}" Classes="outline"
+                    Command="{Binding LoadStocksCommand}" />
+        </Grid>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Stocks}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource AppBorderBrush}"
+                  CornerRadius="6">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[name]}"
+                                    Binding="{Binding ProductName}" Width="*" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[unit]}"
+                                    Binding="{Binding UnitName}" Width="80" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[quantity]}"
+                                    Binding="{Binding Quantity}" Width="100" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[purchase_price]}"
+                                    Binding="{Binding PurchasePrice}" Width="120" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[selling_price]}"
+                                    Binding="{Binding SellingPrice}" Width="120" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[expired_at]}"
+                                    Binding="{Binding ExpiredAt}" Width="120" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ProgressBar Grid.Row="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Top" Height="4" />
+    </Grid>
+</UserControl>

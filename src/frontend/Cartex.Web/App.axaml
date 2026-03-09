@@ -1,7 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="using:Cartex.UI"
-             x:Class="Cartex.Desktop.App"
+             x:Class="Cartex.Web.App"
              RequestedThemeVariant="Light">
 
     <Application.DataTemplates>

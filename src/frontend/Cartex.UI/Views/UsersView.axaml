@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.UsersView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,*" Margin="24">
+
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBlock Text="{Binding L[users]}" Classes="title" />
+            <Button Grid.Column="1" Content="{Binding L[refresh]}" Classes="outline"
+                    Command="{Binding LoadCommand}" />
+        </Grid>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Users}"
+                  SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource AppBorderBrush}"
+                  CornerRadius="6">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[full_name]}"
+                                    Binding="{Binding FullName}" Width="*" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[username]}"
+                                    Binding="{Binding Username}" Width="150" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[role]}"
+                                    Binding="{Binding RoleName}" Width="120" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[shop]}"
+                                    Binding="{Binding ShopName}" Width="150" />
+                <DataGridCheckBoxColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[active]}"
+                                        Binding="{Binding IsActive}" Width="80" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ProgressBar Grid.Row="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Top" Height="4" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.CustomersView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="24">
+
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBox Watermark="{Binding L[search]}"
+                     Text="{Binding SearchText, Mode=TwoWay}"
+                     Classes="search" MinWidth="300" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="{Binding L[add]}" Classes="brand"
+                        Command="{Binding ToggleAddNewCommand}" />
+                <Button Content="{Binding L[refresh]}" Classes="outline"
+                        Command="{Binding LoadCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Classes="card" Margin="0,0,0,12"
+                IsVisible="{Binding IsAddingNew}" Padding="16">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding L[add]}" Classes="subtitle" />
+                <TextBox Watermark="{Binding L[full_name]}"
+                         Text="{Binding NewFullName, Mode=TwoWay}" Classes="search" />
+                <TextBox Watermark="{Binding L[phone]}"
+                         Text="{Binding NewPhone, Mode=TwoWay}" Classes="search" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="{Binding L[save]}" Classes="success"
+                            Command="{Binding SaveNewCommand}" />
+                    <Button Content="{Binding L[cancel]}" Classes="outline"
+                            Command="{Binding ToggleAddNewCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Customers}"
+                  SelectedItem="{Binding SelectedCustomer, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource AppBorderBrush}"
+                  CornerRadius="6">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[full_name]}"
+                                    Binding="{Binding FullName}" Width="*" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[phone]}"
+                                    Binding="{Binding Phone}" Width="150" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[card_barcode]}"
+                                    Binding="{Binding CardBarcode}" Width="150" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[discount_pct]}"
+                                    Binding="{Binding DiscountPct}" Width="100" />
+                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[cashback_balance]}"
+                                    Binding="{Binding CashbackBalance}" Width="120" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Top" Height="4" />
+    </Grid>
+</UserControl>
