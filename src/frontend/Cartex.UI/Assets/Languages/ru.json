@@ -96,5 +96,12 @@
   "date_from": "Дата от",
   "date_to": "Дата до",
   "no_data": "Нет данных",
-  "sale_history": "История продаж"
+  "sale_history": "История продаж",
+  "low_stock_alert": "Мало на складе",
+  "operation_type": "Тип операции",
+  "time": "Время",
+  "total_sales": "Общие продажи",
+  "total_transactions": "Всего транзакций",
+  "load_report": "Загрузить отчёт",
+  "product_name": "Название товара"
 }

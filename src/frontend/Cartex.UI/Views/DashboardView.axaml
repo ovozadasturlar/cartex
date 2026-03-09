@@ -9,6 +9,9 @@
 
             <TextBlock Text="{Binding WelcomeMessage}" Classes="title" />
 
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                         Height="4" Margin="0,0,0,4" />
+
             <TextBlock Text="{Binding L[quick_actions]}" Classes="subtitle" Margin="0,12,0,0" />
 
             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -32,7 +35,8 @@
                         <TextBlock Text="🛒" FontSize="36" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding L[today_sales]}" Classes="muted"
                                    HorizontalAlignment="Center" />
-                        <TextBlock Text="—" FontSize="28" FontWeight="Bold"
+                        <TextBlock Text="{Binding TodaySales, StringFormat={}{0:N0}}"
+                                   FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource BrandPrimaryBrush}" />
                     </StackPanel>
@@ -42,7 +46,8 @@
                         <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding L[today_profit]}" Classes="muted"
                                    HorizontalAlignment="Center" />
-                        <TextBlock Text="—" FontSize="28" FontWeight="Bold"
+                        <TextBlock Text="{Binding TodayProfit, StringFormat={}{0:N0}}"
+                                   FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource SuccessBrush}" />
                     </StackPanel>
@@ -52,7 +57,8 @@
                         <TextBlock Text="⚠️" FontSize="36" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding L[low_stock]}" Classes="muted"
                                    HorizontalAlignment="Center" />
-                        <TextBlock Text="—" FontSize="28" FontWeight="Bold"
+                        <TextBlock Text="{Binding LowStockCount}"
+                                   FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource WarningBrush}" />
                     </StackPanel>
@@ -62,11 +68,82 @@
                         <TextBlock Text="📦" FontSize="36" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding L[total_products]}" Classes="muted"
                                    HorizontalAlignment="Center" />
-                        <TextBlock Text="—" FontSize="28" FontWeight="Bold"
+                        <TextBlock Text="{Binding TotalProducts}"
+                                   FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    Foreground="{DynamicResource InfoBrush}" />
                     </StackPanel>
                 </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+
+                <Border Classes="card" Grid.Column="0" Margin="0,0,8,0" Padding="16">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[recent_transactions]}"
+                                   Classes="subtitle" Margin="0,0,0,12" />
+                        <ScrollViewer MaxHeight="300">
+                            <ItemsControl ItemsSource="{Binding RecentTransactions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,6" Padding="10"
+                                                Background="{DynamicResource AppBg}"
+                                                CornerRadius="6" BorderThickness="1"
+                                                BorderBrush="{DynamicResource BorderBrush}">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding OperationType}"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimary}" />
+                                                    <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:HH:mm}}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource TextSecondary}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Amount, StringFormat={}{0:N0}}"
+                                                           FontWeight="Bold" FontSize="16"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
+                <Border Classes="card" Grid.Column="1" Margin="8,0,0,0" Padding="16">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[low_stock_alert]}"
+                                   Classes="subtitle" Margin="0,0,0,12" />
+                        <ScrollViewer MaxHeight="300">
+                            <ItemsControl ItemsSource="{Binding LowStockItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,6" Padding="10"
+                                                Background="{DynamicResource AppBg}"
+                                                CornerRadius="6" BorderThickness="1"
+                                                BorderBrush="{DynamicResource BorderBrush}">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding ProductName}"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextPrimary}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Quantity, StringFormat={}{0:N0}}"
+                                                           FontWeight="Bold" FontSize="16"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource WarningBrush}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
             </Grid>
 
         </StackPanel>

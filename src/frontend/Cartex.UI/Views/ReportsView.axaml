@@ -4,12 +4,76 @@
              x:Class="Cartex.UI.Views.ReportsView"
              x:CompileBindings="False">
 
-    <Grid Margin="24" VerticalAlignment="Center" HorizontalAlignment="Center">
-        <StackPanel Spacing="16" HorizontalAlignment="Center">
-            <TextBlock Text="📈" FontSize="64" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding L[reports]}" Classes="title" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding L[no_data]}" Classes="muted" FontSize="16"
-                       HorizontalAlignment="Center" />
-        </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,*" Margin="24">
+
+        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimary}" />
+                <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}"
+                            MinWidth="160" MinHeight="36" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0"
+                        VerticalAlignment="Center">
+                <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimary}" />
+                <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}"
+                            MinWidth="160" MinHeight="36" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="{Binding L[load_report]}" Classes="brand"
+                    Margin="16,0,0,0" MinHeight="36"
+                    Command="{Binding LoadCommand}" />
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,0,0,16">
+            <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="💰" FontSize="32" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding L[total_sales]}" Classes="muted"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding TotalSales, StringFormat={}{0:N0}}"
+                               FontSize="24" FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Classes="card" Grid.Column="1" Margin="8,0,0,0">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="📊" FontSize="32" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding L[total_transactions]}" Classes="muted"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding TotalTransactions}"
+                               FontSize="24" FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource InfoBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <DataGrid Grid.Row="2"
+                  x:Name="SalesGrid"
+                  ItemsSource="{Binding Sales}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserResizeColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  CornerRadius="6">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                <DataGridTextColumn Header="Date" Binding="{Binding SaleDate, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="160" />
+                <DataGridTextColumn Header="Total" Binding="{Binding TotalAmount, StringFormat={}{0:N0}}" Width="120" />
+                <DataGridTextColumn Header="Cash" Binding="{Binding PaidCash, StringFormat={}{0:N0}}" Width="100" />
+                <DataGridTextColumn Header="Card" Binding="{Binding PaidCard, StringFormat={}{0:N0}}" Width="100" />
+                <DataGridTextColumn Header="Debt" Binding="{Binding DebtAmount, StringFormat={}{0:N0}}" Width="100" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150" />
+                <DataGridTextColumn Header="Sold By" Binding="{Binding UserName}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Top" Height="4" />
     </Grid>
 </UserControl>

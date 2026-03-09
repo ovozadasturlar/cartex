@@ -96,5 +96,12 @@
   "date_from": "Date From",
   "date_to": "Date To",
   "no_data": "No data available",
-  "sale_history": "Sales History"
+  "sale_history": "Sales History",
+  "low_stock_alert": "Low Stock Alert",
+  "operation_type": "Operation Type",
+  "time": "Time",
+  "total_sales": "Total Sales",
+  "total_transactions": "Total Transactions",
+  "load_report": "Load Report",
+  "product_name": "Product Name"
 }

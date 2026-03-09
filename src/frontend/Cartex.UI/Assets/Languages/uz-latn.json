@@ -96,5 +96,12 @@
   "date_from": "Sanadan",
   "date_to": "Sanagacha",
   "no_data": "Ma'lumot yo'q",
-  "sale_history": "Sotuv tarixi"
+  "sale_history": "Sotuv tarixi",
+  "low_stock_alert": "Kam qoldiq ogohlantirish",
+  "operation_type": "Amal turi",
+  "time": "Vaqt",
+  "total_sales": "Jami sotuvlar",
+  "total_transactions": "Jami tranzaksiyalar",
+  "load_report": "Hisobotni yuklash",
+  "product_name": "Mahsulot nomi"
 }

@@ -96,5 +96,12 @@
   "date_from": "Санадан",
   "date_to": "Санагача",
   "no_data": "Маълумот йўқ",
-  "sale_history": "Сотув тарихи"
+  "sale_history": "Сотув тарихи",
+  "low_stock_alert": "Кам қолдиқ огоҳлантириш",
+  "operation_type": "Амал тури",
+  "time": "Вақт",
+  "total_sales": "Жами сотувлар",
+  "total_transactions": "Жами транзакциялар",
+  "load_report": "Ҳисоботни юклаш",
+  "product_name": "Маҳсулот номи"
 }
