@@ -22,10 +22,11 @@ public class PermissionsController(ISender sender) : ControllerBase
 
     [HttpPut("{id:long}/toggle")]
     [HasPermission("roles.manage")]
-    public async Task<IActionResult> TogglePermission(long id, TogglePermissionCommand command)
+    public async Task<IActionResult> TogglePermission(long id, [FromBody] TogglePermissionRequest request)
     {
-        if (id != command.Id) return BadRequest();
-        await sender.Send(command);
+        await sender.Send(new TogglePermissionCommand(id, request.IsEnabled));
         return NoContent();
     }
 }
+
+public record TogglePermissionRequest(bool IsEnabled);

@@ -42,7 +42,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    await db.Database.EnsureCreatedAsync();
 
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     await DatabaseSeeder.SeedAsync(db, hasher.Hash);
