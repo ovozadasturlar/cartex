@@ -103,5 +103,6 @@
   "total_sales": "Jami sotuvlar",
   "total_transactions": "Jami tranzaksiyalar",
   "load_report": "Hisobotni yuklash",
-  "product_name": "Mahsulot nomi"
+  "product_name": "Mahsulot nomi",
+  "exact": "Aniq"
 }

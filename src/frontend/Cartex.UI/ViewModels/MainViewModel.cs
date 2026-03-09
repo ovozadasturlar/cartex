@@ -114,6 +114,9 @@ public partial class MainViewModel : ViewModelBase
     private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
 
     [RelayCommand]
+    private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;
+
+    [RelayCommand]
     private void Logout()
     {
         _authService.Logout();

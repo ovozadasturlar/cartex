@@ -4,135 +4,365 @@
              x:Class="Cartex.UI.Views.SalesView"
              x:CompileBindings="False">
 
-    <Grid ColumnDefinitions="*,360" Margin="16">
+    <Panel>
 
-        <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,12,0">
+        <!-- ===== DESKTOP MODE ===== -->
+        <Grid ColumnDefinitions="*,360" Margin="16"
+              IsVisible="{Binding !IsTouchMode}">
 
-            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-                <TextBox Watermark="{Binding L[scan_barcode]}"
-                         Text="{Binding BarcodeInput, Mode=TwoWay}"
-                         Classes="search" MinHeight="44" FontSize="16" />
-                <Button Grid.Column="1" Content="{Binding L[add]}"
-                        Classes="brand" Margin="8,0,0,0" MinHeight="44"
-                        Command="{Binding AddByBarcodeCommand}" />
+            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,12,0">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                    <TextBox Watermark="{Binding L[scan_barcode]}"
+                             Text="{Binding BarcodeInput, Mode=TwoWay}"
+                             Classes="search" MinHeight="44" FontSize="16" />
+                    <Button Grid.Column="1" Content="{Binding L[add]}"
+                            Classes="brand" Margin="8,0,0,0" MinHeight="44"
+                            Command="{Binding AddByBarcodeCommand}" />
+                </Grid>
+
+                <DataGrid Grid.Row="1" x:Name="StocksGrid"
+                          ItemsSource="{Binding AvailableStocks}"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                          CornerRadius="6">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding ProductName}" Width="*" />
+                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="80" />
+                        <DataGridTextColumn Header="Price" Binding="{Binding SellingPrice}" Width="100" />
+                        <DataGridTemplateColumn Header="" Width="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="+" Classes="brand" Padding="8,2"
+                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).AddStockToCartCommand}"
+                                            CommandParameter="{Binding}" MinHeight="28" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
 
-            <DataGrid Grid.Row="1"
-                      x:Name="StocksGrid" ItemsSource="{Binding AvailableStocks}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      GridLinesVisibility="Horizontal"
-                      BorderThickness="1"
-                      BorderBrush="{DynamicResource BorderBrush}"
-                      CornerRadius="6">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{Binding ProductName}" Width="*" />
-                    <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="80" />
-                    <DataGridTextColumn Header="Price" Binding="{Binding SellingPrice}" Width="100" />
-                    <DataGridTemplateColumn Header="" Width="70">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="+" Classes="brand" Padding="8,2"
-                                        Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).AddStockToCartCommand}"
-                                        CommandParameter="{Binding}" MinHeight="28" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+            <Border Grid.Column="1" Classes="card" Padding="16">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[cart]}"
+                               Classes="subtitle" Margin="0,0,0,12" />
+
+                    <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+                        <Separator Background="{DynamicResource BorderBrush}" Height="1" />
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,4">
+                            <TextBlock Text="{Binding L[total]}" FontWeight="Bold" FontSize="16"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding TotalAmount, StringFormat={}{0:N2}}"
+                                       Grid.Column="1" FontWeight="Bold" FontSize="18"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
+
+                            <TextBlock Text="{Binding L[cash]}" Grid.Row="1" Margin="0,8,0,0"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBox Text="{Binding PaidCash, Mode=TwoWay}" Grid.Row="1" Grid.Column="1"
+                                     Margin="0,8,0,0" MinHeight="36" />
+
+                            <TextBlock Text="{Binding L[card]}" Grid.Row="2" Margin="0,6,0,0"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBox Text="{Binding PaidCard, Mode=TwoWay}" Grid.Row="2" Grid.Column="1"
+                                     Margin="0,6,0,0" MinHeight="36" />
+
+                            <TextBlock Text="{Binding L[bonus]}" Grid.Row="3" Margin="0,6,0,0"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBox Text="{Binding PaidBonus, Mode=TwoWay}" Grid.Row="3" Grid.Column="1"
+                                     Margin="0,6,0,0" MinHeight="36" />
+
+                            <TextBlock Text="{Binding L[change]}" Grid.Row="4" Margin="0,8,0,0"
+                                       VerticalAlignment="Center" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding ChangeAmount, StringFormat={}{0:N2}}"
+                                       Grid.Row="4" Grid.Column="1" Margin="0,8,0,0"
+                                       HorizontalAlignment="Right" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SuccessBrush}" FontSize="16" />
+                        </Grid>
+
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Margin="0,4" />
+
+                        <Button Content="{Binding L[complete_sale]}" Classes="success"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                MinHeight="56" FontSize="18" FontWeight="Bold"
+                                Command="{Binding CompleteSaleCommand}" IsEnabled="{Binding !IsLoading}" />
+                    </StackPanel>
+
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding CartItems}" Margin="0,0,0,8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,6" Padding="8"
+                                            Background="{DynamicResource AppBg}" CornerRadius="6"
+                                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" />
+                                                <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondary}">
+                                                    <Run Text="{Binding Quantity}" />
+                                                    <Run Text=" × " />
+                                                    <Run Text="{Binding UnitPrice, StringFormat={}{0:N2}}" />
+                                                    <Run Text=" = " />
+                                                    <Run Text="{Binding LineTotal, StringFormat={}{0:N2}}" FontWeight="Bold" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <NumericUpDown Grid.Column="1" Value="{Binding Quantity, Mode=TwoWay}"
+                                                           Minimum="0.01" Increment="1" FormatString="N2"
+                                                           Width="100" Margin="8,0" MinHeight="32" />
+                                            <Button Grid.Column="2" Content="✕" Classes="danger"
+                                                    Padding="6,2" MinHeight="28"
+                                                    Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).RemoveCartItemCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
         </Grid>
 
-        <Border Grid.Column="1" Classes="card" Padding="16">
-            <DockPanel>
+        <!-- ===== TOUCH MODE ===== -->
+        <Grid ColumnDefinitions="*,380" IsVisible="{Binding IsTouchMode}">
 
-                <TextBlock DockPanel.Dock="Top" Text="{Binding L[cart]}"
-                           Classes="subtitle" Margin="0,0,0,12" />
+            <!-- Left: Product search + grid -->
+            <Grid RowDefinitions="Auto,*" Margin="8,8,4,8">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                    <TextBox Watermark="{Binding L[scan_barcode]}"
+                             Text="{Binding SearchQuery, Mode=TwoWay}"
+                             MinHeight="56" FontSize="20" Padding="16,12"
+                             CornerRadius="8" />
+                    <Button Grid.Column="1" Content="🔍" FontSize="24"
+                            Classes="brand" Margin="8,0,0,0" MinHeight="56" MinWidth="56"
+                            Command="{Binding AddByBarcodeCommand}" />
+                </Grid>
 
-                <StackPanel DockPanel.Dock="Bottom" Spacing="8">
-                    <Separator Background="{DynamicResource BorderBrush}" Height="1" />
-
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,4">
-                        <TextBlock Text="{Binding L[total]}" FontWeight="Bold" FontSize="16"
-                                   Grid.Row="0" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextPrimary}" />
-                        <TextBlock Text="{Binding TotalAmount, StringFormat={}{0:N2}}"
-                                   Grid.Row="0" Grid.Column="1" FontWeight="Bold" FontSize="18"
-                                   HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
-
-                        <TextBlock Text="{Binding L[cash]}" Grid.Row="1" Margin="0,8,0,0"
-                                   VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
-                        <TextBox Text="{Binding PaidCash, Mode=TwoWay}" Grid.Row="1" Grid.Column="1"
-                                 Margin="0,8,0,0" MinHeight="36" />
-
-                        <TextBlock Text="{Binding L[card]}" Grid.Row="2" Margin="0,6,0,0"
-                                   VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
-                        <TextBox Text="{Binding PaidCard, Mode=TwoWay}" Grid.Row="2" Grid.Column="1"
-                                 Margin="0,6,0,0" MinHeight="36" />
-
-                        <TextBlock Text="{Binding L[bonus]}" Grid.Row="3" Margin="0,6,0,0"
-                                   VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
-                        <TextBox Text="{Binding PaidBonus, Mode=TwoWay}" Grid.Row="3" Grid.Column="1"
-                                 Margin="0,6,0,0" MinHeight="36" />
-
-                        <TextBlock Text="{Binding L[change]}" Grid.Row="4" Margin="0,8,0,0"
-                                   VerticalAlignment="Center" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary}" />
-                        <TextBlock Text="{Binding ChangeAmount, StringFormat={}{0:N2}}"
-                                   Grid.Row="4" Grid.Column="1" Margin="0,8,0,0"
-                                   HorizontalAlignment="Right" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SuccessBrush}" FontSize="16" />
-                    </Grid>
-
-                    <TextBlock Text="{Binding StatusMessage}"
-                               IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                               Foreground="{DynamicResource WarningBrush}"
-                               TextWrapping="Wrap" Margin="0,4" />
-
-                    <Button Content="{Binding L[complete_sale]}"
-                            Classes="success"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            MinHeight="56" FontSize="18" FontWeight="Bold"
-                            Command="{Binding CompleteSaleCommand}"
-                            IsEnabled="{Binding !IsLoading}" />
-                </StackPanel>
-
-                <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding CartItems}" Margin="0,0,0,8">
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl ItemsSource="{Binding FilteredStocks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,6" Padding="8"
-                                        Background="{DynamicResource AppBg}"
-                                        CornerRadius="6" BorderThickness="1"
-                                        BorderBrush="{DynamicResource BorderBrush}">
-                                    <Grid ColumnDefinitions="*,Auto,Auto">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextPrimary}" />
-                                            <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondary}">
-                                                <Run Text="{Binding Quantity}" />
-                                                <Run Text=" × " />
-                                                <Run Text="{Binding UnitPrice, StringFormat={}{0:N2}}" />
-                                                <Run Text=" = " />
-                                                <Run Text="{Binding LineTotal, StringFormat={}{0:N2}}" FontWeight="Bold" />
-                                            </TextBlock>
-                                        </StackPanel>
-                                        <NumericUpDown Grid.Column="1" Value="{Binding Quantity, Mode=TwoWay}"
-                                                       Minimum="0.01" Increment="1" FormatString="N2"
-                                                       Width="100" Margin="8,0" MinHeight="32" />
-                                        <Button Grid.Column="2" Content="✕" Classes="danger"
-                                                Padding="6,2" MinHeight="28"
-                                                Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).RemoveCartItemCommand}"
-                                                CommandParameter="{Binding}" />
-                                    </Grid>
-                                </Border>
+                                <Button MinWidth="140" MinHeight="100" Padding="12" Margin="4"
+                                        CornerRadius="10" HorizontalContentAlignment="Center"
+                                        Background="{DynamicResource CardBg}"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                        Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).AddStockToCartCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding ProductName}" FontSize="16"
+                                                   FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   HorizontalAlignment="Center" MaxWidth="120"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock FontSize="14" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextSecondary}">
+                                            <Run Text="{Binding Quantity}" />
+                                            <Run Text=" pcs" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding SellingPrice, StringFormat={}{0:N0}}"
+                                                   FontSize="20" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    </StackPanel>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+            </Grid>
 
-            </DockPanel>
-        </Border>
-    </Grid>
+            <!-- Right: Cart + Numpad + Payment -->
+            <Border Grid.Column="1" Background="{DynamicResource CardBg}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
+                <Grid RowDefinitions="*,Auto,Auto">
+
+                    <!-- Cart items -->
+                    <DockPanel Margin="8,8,8,0">
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,4,4,8">
+                            <TextBlock Text="{Binding L[cart]}" FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <Button Grid.Column="1" Content="🗑️" FontSize="18"
+                                    Classes="danger" Padding="8,4" MinHeight="40"
+                                    Command="{Binding ClearCartCommand}" />
+                        </Grid>
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding CartItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,4" Padding="10,8"
+                                                Background="{DynamicResource AppBg}" CornerRadius="8"
+                                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding ProductName}" FontSize="15"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimary}" />
+                                                    <TextBlock FontSize="14" Foreground="{DynamicResource TextSecondary}">
+                                                        <Run Text="{Binding Quantity}" />
+                                                        <Run Text=" × " />
+                                                        <Run Text="{Binding UnitPrice, StringFormat={}{0:N0}}" />
+                                                        <Run Text=" = " />
+                                                        <Run Text="{Binding LineTotal, StringFormat={}{0:N0}}" FontWeight="Bold" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                                            VerticalAlignment="Center">
+                                                    <Button Content="−" FontSize="20" FontWeight="Bold"
+                                                            MinWidth="44" MinHeight="44" Padding="0"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalContentAlignment="Center"
+                                                            Classes="outline"
+                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DecrementCartItemCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                    <TextBlock Text="{Binding Quantity}" FontSize="18"
+                                                               FontWeight="Bold" VerticalAlignment="Center"
+                                                               Margin="4,0" MinWidth="30"
+                                                               TextAlignment="Center"
+                                                               Foreground="{DynamicResource TextPrimary}" />
+                                                    <Button Content="+" FontSize="20" FontWeight="Bold"
+                                                            MinWidth="44" MinHeight="44" Padding="0"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalContentAlignment="Center"
+                                                            Classes="brand"
+                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).IncrementCartItemCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+
+                    <!-- Numpad -->
+                    <Border Grid.Row="1" Padding="8,4" Background="{DynamicResource SidebarBg}">
+                        <StackPanel Spacing="4">
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="8" Padding="12,8"
+                                    Margin="0,0,0,4">
+                                <TextBlock Text="{Binding NumpadDisplay}" FontSize="28" FontWeight="Bold"
+                                           HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="4" RowSpacing="4">
+                                <Button Grid.Row="0" Grid.Column="0" Content="7" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="7" />
+                                <Button Grid.Row="0" Grid.Column="1" Content="8" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="8" />
+                                <Button Grid.Row="0" Grid.Column="2" Content="9" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="9" />
+                                <Button Grid.Row="0" Grid.Column="3" Content="⌫" FontSize="20" MinHeight="50"
+                                        Classes="warning" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="⌫" />
+
+                                <Button Grid.Row="1" Grid.Column="0" Content="4" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="4" />
+                                <Button Grid.Row="1" Grid.Column="1" Content="5" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="5" />
+                                <Button Grid.Row="1" Grid.Column="2" Content="6" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="6" />
+                                <Button Grid.Row="1" Grid.Column="3" Content="C" FontSize="20" MinHeight="50"
+                                        Classes="danger" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="C" />
+
+                                <Button Grid.Row="2" Grid.Column="0" Content="1" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="1" />
+                                <Button Grid.Row="2" Grid.Column="1" Content="2" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="2" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="3" FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="3" />
+                                <Button Grid.Row="2" Grid.Column="3" Content="." FontSize="22" MinHeight="50"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="." />
+
+                                <Button Grid.Row="3" Grid.Column="0" Content="0" FontSize="22" MinHeight="50"
+                                        Grid.ColumnSpan="2"
+                                        Classes="outline" HorizontalContentAlignment="Center"
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="0" />
+                                <Button Grid.Row="3" Grid.Column="2" Content="💵" FontSize="18" MinHeight="50"
+                                        Classes="brand" HorizontalContentAlignment="Center"
+                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="cash" />
+                                <Button Grid.Row="3" Grid.Column="3" Content="💳" FontSize="18" MinHeight="50"
+                                        Classes="brand" HorizontalContentAlignment="Center"
+                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="card" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Payment summary + Complete -->
+                    <Border Grid.Row="2" Padding="8" Background="{DynamicResource HeaderBg}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="*,*">
+                                <TextBlock Text="{Binding L[total]}" FontSize="18" FontWeight="Bold"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Grid.Column="1" Text="{Binding TotalAmount, StringFormat={}{0:N0}}"
+                                           FontSize="24" FontWeight="Bold" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource BrandPrimaryBrush}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding L[cash]}" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Text="{Binding PaidCash, StringFormat={}{0:N0}}" FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding L[card]}" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Text="{Binding PaidCard, StringFormat={}{0:N0}}" FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{Binding L[change]}" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Text="{Binding ChangeAmount, StringFormat={}{0:N0}}" FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SuccessBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" />
+
+                            <Grid ColumnDefinitions="*,2*" ColumnSpacing="6">
+                                <Button Content="{Binding L[exact]}" FontSize="16" FontWeight="Bold"
+                                        Classes="outline" MinHeight="56"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Command="{Binding PayExactCommand}" />
+                                <Button Grid.Column="1" Content="{Binding L[complete_sale]}"
+                                        FontSize="18" FontWeight="Bold"
+                                        Classes="success" MinHeight="56"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Command="{Binding CompleteSaleCommand}" IsEnabled="{Binding !IsLoading}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Panel>
 </UserControl>

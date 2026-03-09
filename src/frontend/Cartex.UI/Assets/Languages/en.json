@@ -103,5 +103,6 @@
   "total_sales": "Total Sales",
   "total_transactions": "Total Transactions",
   "load_report": "Load Report",
-  "product_name": "Product Name"
+  "product_name": "Product Name",
+  "exact": "Exact"
 }

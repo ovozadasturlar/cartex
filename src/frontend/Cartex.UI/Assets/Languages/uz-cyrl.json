@@ -103,5 +103,6 @@
   "total_sales": "Жами сотувлар",
   "total_transactions": "Жами транзакциялар",
   "load_report": "Ҳисоботни юклаш",
-  "product_name": "Маҳсулот номи"
+  "product_name": "Маҳсулот номи",
+  "exact": "Аниқ"
 }

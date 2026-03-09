@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -11,28 +12,16 @@ namespace Cartex.UI.ViewModels;
 
 public partial class CartItem : ObservableObject
 {
-    [ObservableProperty]
-    private string _productName = string.Empty;
-
-    [ObservableProperty]
-    private long _productId;
-
-    [ObservableProperty]
-    private long _stockId;
-
-    [ObservableProperty]
-    private decimal _unitPrice;
-
-    [ObservableProperty]
-    private decimal _quantity = 1;
+    [ObservableProperty] private string _productName = string.Empty;
+    [ObservableProperty] private long _productId;
+    [ObservableProperty] private long _stockId;
+    [ObservableProperty] private decimal _unitPrice;
+    [ObservableProperty] private decimal _quantity = 1;
 
     public decimal LineTotal => UnitPrice * Quantity;
 
-    partial void OnQuantityChanged(decimal value) =>
-        OnPropertyChanged(nameof(LineTotal));
-
-    partial void OnUnitPriceChanged(decimal value) =>
-        OnPropertyChanged(nameof(LineTotal));
+    partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+    partial void OnUnitPriceChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
 }
 
 public partial class SalesViewModel : ViewModelBase
@@ -42,32 +31,23 @@ public partial class SalesViewModel : ViewModelBase
     private readonly ICustomersApi _customersApi;
     private readonly AuthService _authService;
 
-    [ObservableProperty]
-    private string _barcodeInput = string.Empty;
-
-    [ObservableProperty]
-    private decimal _paidCash;
-
-    [ObservableProperty]
-    private decimal _paidCard;
-
-    [ObservableProperty]
-    private decimal _paidBonus;
-
-    [ObservableProperty]
-    private CustomerDto? _selectedCustomer;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string? _statusMessage;
-
-    [ObservableProperty]
-    private long _selectedWarehouseId = 1;
+    [ObservableProperty] private string _barcodeInput = string.Empty;
+    [ObservableProperty] private decimal _paidCash;
+    [ObservableProperty] private decimal _paidCard;
+    [ObservableProperty] private decimal _paidBonus;
+    [ObservableProperty] private CustomerDto? _selectedCustomer;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string? _statusMessage;
+    [ObservableProperty] private long _selectedWarehouseId = 1;
+    [ObservableProperty] private bool _isTouchMode;
+    [ObservableProperty] private string _numpadDisplay = "0";
+    [ObservableProperty] private string _numpadTarget = "cash";
+    [ObservableProperty] private string _searchQuery = string.Empty;
+    [ObservableProperty] private CartItem? _selectedCartItem;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockDto> AvailableStocks { get; } = [];
+    public ObservableCollection<StockDto> FilteredStocks { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
 
     public decimal TotalAmount => CartItems.Sum(i => i.LineTotal);
@@ -83,6 +63,14 @@ public partial class SalesViewModel : ViewModelBase
         _authService = authService;
 
         CartItems.CollectionChanged += (_, _) => NotifyTotals();
+        IsTouchMode = TouchModeManager.Instance.IsTouchMode;
+        TouchModeManager.Instance.PropertyChanged += OnTouchModeChanged;
+    }
+
+    private void OnTouchModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TouchModeManager.IsTouchMode))
+            IsTouchMode = TouchModeManager.Instance.IsTouchMode;
     }
 
     private void NotifyTotals()
@@ -97,6 +85,17 @@ public partial class SalesViewModel : ViewModelBase
     partial void OnPaidCardChanged(decimal value) => NotifyTotals();
     partial void OnPaidBonusChanged(decimal value) => NotifyTotals();
 
+    partial void OnSearchQueryChanged(string value)
+    {
+        FilteredStocks.Clear();
+        var query = value?.Trim() ?? "";
+        var source = string.IsNullOrEmpty(query)
+            ? AvailableStocks
+            : AvailableStocks.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase));
+        foreach (var s in source)
+            FilteredStocks.Add(s);
+    }
+
     [RelayCommand]
     private async Task LoadStocksAsync()
     {
@@ -104,8 +103,12 @@ public partial class SalesViewModel : ViewModelBase
         {
             var stocks = await _stocksApi.GetAllAsync(SelectedWarehouseId);
             AvailableStocks.Clear();
+            FilteredStocks.Clear();
             foreach (var s in stocks)
+            {
                 AvailableStocks.Add(s);
+                FilteredStocks.Add(s);
+            }
         }
         catch { }
     }
@@ -138,25 +141,8 @@ public partial class SalesViewModel : ViewModelBase
             return;
         }
 
-        var existing = CartItems.FirstOrDefault(c => c.StockId == stock.Id);
-        if (existing is not null)
-        {
-            existing.Quantity += 1;
-        }
-        else
-        {
-            CartItems.Add(new CartItem
-            {
-                ProductName = stock.ProductName,
-                ProductId = stock.Id,
-                StockId = stock.Id,
-                UnitPrice = stock.SellingPrice,
-                Quantity = 1
-            });
-        }
-
+        AddStockToCart(stock);
         BarcodeInput = string.Empty;
-        NotifyTotals();
     }
 
     [RelayCommand]
@@ -164,11 +150,8 @@ public partial class SalesViewModel : ViewModelBase
     {
         var existing = CartItems.FirstOrDefault(c => c.StockId == stock.Id);
         if (existing is not null)
-        {
             existing.Quantity += 1;
-        }
         else
-        {
             CartItems.Add(new CartItem
             {
                 ProductName = stock.ProductName,
@@ -177,7 +160,6 @@ public partial class SalesViewModel : ViewModelBase
                 UnitPrice = stock.SellingPrice,
                 Quantity = 1
             });
-        }
         NotifyTotals();
     }
 
@@ -185,6 +167,90 @@ public partial class SalesViewModel : ViewModelBase
     private void RemoveCartItem(CartItem item)
     {
         CartItems.Remove(item);
+        NotifyTotals();
+    }
+
+    [RelayCommand]
+    private void IncrementCartItem(CartItem item)
+    {
+        item.Quantity += 1;
+        NotifyTotals();
+    }
+
+    [RelayCommand]
+    private void DecrementCartItem(CartItem item)
+    {
+        if (item.Quantity <= 1)
+            CartItems.Remove(item);
+        else
+            item.Quantity -= 1;
+        NotifyTotals();
+    }
+
+    [RelayCommand]
+    private void NumpadPress(string key)
+    {
+        switch (key)
+        {
+            case "C":
+                NumpadDisplay = "0";
+                break;
+            case "⌫":
+                NumpadDisplay = NumpadDisplay.Length > 1 ? NumpadDisplay[..^1] : "0";
+                break;
+            case ".":
+                if (!NumpadDisplay.Contains('.'))
+                    NumpadDisplay += ".";
+                break;
+            default:
+                NumpadDisplay = NumpadDisplay == "0" ? key : NumpadDisplay + key;
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private void NumpadApply()
+    {
+        if (!decimal.TryParse(NumpadDisplay, out var value)) return;
+
+        switch (NumpadTarget)
+        {
+            case "cash": PaidCash = value; break;
+            case "card": PaidCard = value; break;
+            case "bonus": PaidBonus = value; break;
+            case "qty" when SelectedCartItem is not null:
+                SelectedCartItem.Quantity = value;
+                NotifyTotals();
+                break;
+        }
+        NumpadDisplay = "0";
+    }
+
+    [RelayCommand]
+    private void SetNumpadTarget(string target)
+    {
+        NumpadTarget = target;
+        NumpadDisplay = "0";
+    }
+
+    [RelayCommand]
+    private void PayExact()
+    {
+        PaidCash = TotalAmount;
+        PaidCard = 0;
+        PaidBonus = 0;
+    }
+
+    [RelayCommand]
+    private void ClearCart()
+    {
+        CartItems.Clear();
+        PaidCash = 0;
+        PaidCard = 0;
+        PaidBonus = 0;
+        SelectedCustomer = null;
+        StatusMessage = null;
+        NumpadDisplay = "0";
         NotifyTotals();
     }
 
@@ -209,12 +275,7 @@ public partial class SalesViewModel : ViewModelBase
                 items);
 
             await _salesApi.CreateAsync(request);
-
-            CartItems.Clear();
-            PaidCash = 0;
-            PaidCard = 0;
-            PaidBonus = 0;
-            SelectedCustomer = null;
+            ClearCart();
             StatusMessage = L["success"];
         }
         catch (Exception ex)

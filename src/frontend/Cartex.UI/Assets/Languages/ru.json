@@ -103,5 +103,6 @@
   "total_sales": "Общие продажи",
   "total_transactions": "Всего транзакций",
   "load_report": "Загрузить отчёт",
-  "product_name": "Название товара"
+  "product_name": "Название товара",
+  "exact": "Точно"
 }

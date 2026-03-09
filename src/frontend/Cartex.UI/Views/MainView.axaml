@@ -5,99 +5,160 @@
              x:Class="Cartex.UI.Views.MainView"
              x:CompileBindings="False">
 
-    <Grid ColumnDefinitions="250,*" Background="{DynamicResource AppBg}">
+    <Panel Background="{DynamicResource AppBg}">
 
-        <Border Grid.Column="0" Background="{DynamicResource SidebarBg}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-            <DockPanel>
+        <!-- ===== DESKTOP MODE ===== -->
+        <Grid ColumnDefinitions="250,*" IsVisible="{Binding !IsTouchMode}">
 
-                <StackPanel DockPanel.Dock="Top" Margin="20,24,20,16" Spacing="2">
-                    <TextBlock Text="Cartex POS" FontSize="22" FontWeight="Bold"
-                               Foreground="{DynamicResource BrandPrimaryBrush}" />
-                </StackPanel>
-
-                <Separator DockPanel.Dock="Top" Background="{DynamicResource BorderBrush}" Height="1" />
-
-                <StackPanel DockPanel.Dock="Bottom" Margin="12,8" Spacing="6">
-                    <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="0,0,0,4" />
-
-                    <Grid ColumnDefinitions="*,Auto" Margin="4,0">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="☀️" FontSize="14" VerticalAlignment="Center" />
-                            <ToggleSwitch IsChecked="{Binding IsDarkTheme, Mode=TwoWay}"
-                                          OnContent="🌙" OffContent=""
-                                          Padding="0" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                            <TextBlock Text="👆" FontSize="14" VerticalAlignment="Center" />
-                            <ToggleSwitch IsChecked="{Binding IsTouchMode, Mode=TwoWay}"
-                                          OnContent="" OffContent=""
-                                          Padding="0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Grid>
-
-                    <ComboBox ItemsSource="{Binding AvailableLanguages}"
-                              SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch" Margin="4,0" MinHeight="32">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-
-                <ListBox ItemsSource="{Binding MenuItems}"
-                         SelectedItem="{Binding SelectedMenuItem, Mode=TwoWay}"
-                         Margin="0,8" Padding="4"
-                         Background="Transparent">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="12,10" CornerRadius="6">
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <TextBlock Text="{Binding Icon}" FontSize="18"
-                                               VerticalAlignment="Center" Margin="0,0,12,0" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource TextPrimary}" />
-                                    <Border Grid.Column="2" Width="4" Height="20" CornerRadius="2"
-                                            Background="{DynamicResource BrandPrimaryBrush}"
-                                            IsVisible="{Binding IsActive}" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-            </DockPanel>
-        </Border>
-
-        <Grid Grid.Column="1" RowDefinitions="Auto,*">
-
-            <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-                    Padding="24,14">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <StackPanel Spacing="0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding UserDisplayName}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimary}" FontSize="14"
-                                       HorizontalAlignment="Right" />
-                            <TextBlock Text="{Binding UserRole}"
-                                       Foreground="{DynamicResource TextSecondary}" FontSize="12"
-                                       HorizontalAlignment="Right" />
-                        </StackPanel>
-                        <Button Content="{Binding L[logout]}"
-                                Command="{Binding LogoutCommand}"
-                                Classes="danger" Padding="12,6" />
+            <Border Grid.Column="0" Background="{DynamicResource SidebarBg}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="20,24,20,16" Spacing="2">
+                        <TextBlock Text="Cartex POS" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
                     </StackPanel>
-                </Grid>
+
+                    <Separator DockPanel.Dock="Top" Background="{DynamicResource BorderBrush}" Height="1" />
+
+                    <StackPanel DockPanel.Dock="Bottom" Margin="12,8" Spacing="6">
+                        <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="0,0,0,4" />
+
+                        <Grid ColumnDefinitions="*,Auto" Margin="4,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="☀️" FontSize="14" VerticalAlignment="Center" />
+                                <ToggleSwitch IsChecked="{Binding IsDarkTheme, Mode=TwoWay}"
+                                              OnContent="🌙" OffContent=""
+                                              Padding="0" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="👆" FontSize="14" VerticalAlignment="Center" />
+                                <ToggleSwitch IsChecked="{Binding IsTouchMode, Mode=TwoWay}"
+                                              OnContent="" OffContent=""
+                                              Padding="0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+
+                        <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                                  SelectedItem="{Binding CurrentLanguage, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch" Margin="4,0" MinHeight="32">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <ListBox ItemsSource="{Binding MenuItems}"
+                             SelectedItem="{Binding SelectedMenuItem, Mode=TwoWay}"
+                             Margin="0,8" Padding="4" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="12,10" CornerRadius="6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Text="{Binding Icon}" FontSize="18"
+                                                   VerticalAlignment="Center" Margin="0,0,12,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <Border Grid.Column="2" Width="4" Height="20" CornerRadius="2"
+                                                Background="{DynamicResource BrandPrimaryBrush}"
+                                                IsVisible="{Binding IsActive}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
             </Border>
 
-            <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" Margin="0" />
+            <Grid Grid.Column="1" RowDefinitions="Auto,*">
+                <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                        Padding="24,14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                            <StackPanel Spacing="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding UserDisplayName}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" FontSize="14"
+                                           HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding UserRole}"
+                                           Foreground="{DynamicResource TextSecondary}" FontSize="12"
+                                           HorizontalAlignment="Right" />
+                            </StackPanel>
+                            <Button Content="{Binding L[logout]}" Command="{Binding LogoutCommand}"
+                                    Classes="danger" Padding="12,6" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" Margin="0" />
+            </Grid>
         </Grid>
 
-    </Grid>
+        <!-- ===== TOUCH MODE ===== -->
+        <Grid RowDefinitions="*,Auto" IsVisible="{Binding IsTouchMode}">
+
+            <ContentControl Content="{Binding CurrentPage}" />
+
+            <!-- Bottom tab bar -->
+            <Border Grid.Row="1" Background="{DynamicResource SidebarBg}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+                    Padding="4,2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <ItemsControl ItemsSource="{Binding MenuItems}" Grid.ColumnSpan="7">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Background="Transparent" BorderThickness="0"
+                                        Padding="4,6" MinHeight="60"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectMenuItemCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Icon}" FontSize="24"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding Title}" FontSize="11"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextSecondary}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="80" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Grid.Column="7" Background="Transparent" BorderThickness="0"
+                            Padding="8,6" MinHeight="60" VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding LogoutCommand}">
+                        <StackPanel Spacing="2" HorizontalAlignment="Center">
+                            <TextBlock Text="🚪" FontSize="24" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding L[logout]}" FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource DangerBrush}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Panel>
 </UserControl>
