@@ -11,7 +11,6 @@ public partial class ProductsView : UserControl
     public ProductsView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         var grid = this.FindControl<DataGrid>("ProductsGrid");
@@ -24,6 +23,7 @@ public partial class ProductsView : UserControl
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is ProductsViewModel vm)
                 await vm.LoadCommand.ExecuteAsync(null);
         };
@@ -36,6 +36,7 @@ public partial class ProductsView : UserControl
 
     private void UpdateHeaders()
     {
+        if (ProductsGrid.Columns.Count < 6) return;
         var l = LocalizationManager.Instance;
         ProductsGrid.Columns[1].Header = l["name"];
         ProductsGrid.Columns[2].Header = l["category"];

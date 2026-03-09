@@ -10,11 +10,11 @@ public partial class SalesHistoryView : UserControl
     public SalesHistoryView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is SalesHistoryViewModel vm)
                 await vm.LoadCommand.ExecuteAsync(null);
         };
@@ -27,6 +27,7 @@ public partial class SalesHistoryView : UserControl
 
     private void UpdateHeaders()
     {
+        if (SalesGrid.Columns.Count < 9) return;
         var l = LocalizationManager.Instance;
         SalesGrid.Columns[1].Header = l["sale_date"];
         SalesGrid.Columns[2].Header = l["total"];

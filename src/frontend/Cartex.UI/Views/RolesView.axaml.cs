@@ -11,7 +11,6 @@ public partial class RolesView : UserControl
     public RolesView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         var grid = this.FindControl<DataGrid>("RolesGrid");
@@ -24,6 +23,7 @@ public partial class RolesView : UserControl
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is RolesViewModel vm)
                 await vm.LoadCommand.ExecuteAsync(null);
         };
@@ -36,6 +36,7 @@ public partial class RolesView : UserControl
 
     private void UpdateHeaders()
     {
+        if (RolesGrid.Columns.Count < 3) return;
         var l = LocalizationManager.Instance;
         RolesGrid.Columns[1].Header = l["name"];
         RolesGrid.Columns[2].Header = l["description"];

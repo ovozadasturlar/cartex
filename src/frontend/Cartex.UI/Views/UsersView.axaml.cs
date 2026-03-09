@@ -11,7 +11,6 @@ public partial class UsersView : UserControl
     public UsersView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         var grid = this.FindControl<DataGrid>("UsersGrid");
@@ -24,6 +23,7 @@ public partial class UsersView : UserControl
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is UsersViewModel vm)
                 await vm.LoadCommand.ExecuteAsync(null);
         };
@@ -36,6 +36,7 @@ public partial class UsersView : UserControl
 
     private void UpdateHeaders()
     {
+        if (UsersGrid.Columns.Count < 6) return;
         var l = LocalizationManager.Instance;
         UsersGrid.Columns[1].Header = l["full_name"];
         UsersGrid.Columns[2].Header = l["username"];

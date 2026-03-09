@@ -10,11 +10,11 @@ public partial class WarehouseView : UserControl
     public WarehouseView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is WarehouseViewModel vm)
                 await vm.LoadWarehousesCommand.ExecuteAsync(null);
         };
@@ -27,6 +27,7 @@ public partial class WarehouseView : UserControl
 
     private void UpdateHeaders()
     {
+        if (StocksGrid.Columns.Count < 7) return;
         var l = LocalizationManager.Instance;
         StocksGrid.Columns[1].Header = l["name"];
         StocksGrid.Columns[2].Header = l["unit"];

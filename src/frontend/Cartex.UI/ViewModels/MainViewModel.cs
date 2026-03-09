@@ -15,6 +15,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private MenuItem? _selectedMenuItem;
     [ObservableProperty] private bool _isTouchMode;
     [ObservableProperty] private bool _isDarkTheme;
+    [ObservableProperty] private bool _isTouchSettingsVisible;
     [ObservableProperty] private string _currentLanguage;
     [ObservableProperty] private string _userDisplayName = "";
     [ObservableProperty] private string _userRole = "";
@@ -112,6 +113,9 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand]
     private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
+
+    [RelayCommand]
+    private void ToggleTouchSettings() => IsTouchSettingsVisible = !IsTouchSettingsVisible;
 
     [RelayCommand]
     private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;

@@ -10,11 +10,11 @@ public partial class SalesView : UserControl
     public SalesView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is SalesViewModel vm)
             {
                 await vm.LoadStocksCommand.ExecuteAsync(null);
@@ -30,6 +30,7 @@ public partial class SalesView : UserControl
 
     private void UpdateHeaders()
     {
+        if (StocksGrid.Columns.Count < 3) return;
         var l = LocalizationManager.Instance;
         StocksGrid.Columns[0].Header = l["name"];
         StocksGrid.Columns[1].Header = l["quantity"];

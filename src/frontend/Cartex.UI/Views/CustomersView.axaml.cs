@@ -11,7 +11,6 @@ public partial class CustomersView : UserControl
     public CustomersView()
     {
         InitializeComponent();
-        UpdateHeaders();
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
 
         var grid = this.FindControl<DataGrid>("CustomersGrid");
@@ -24,6 +23,7 @@ public partial class CustomersView : UserControl
 
         Loaded += async (_, _) =>
         {
+            UpdateHeaders();
             if (DataContext is CustomersViewModel vm)
                 await vm.LoadCommand.ExecuteAsync(null);
         };
@@ -36,6 +36,7 @@ public partial class CustomersView : UserControl
 
     private void UpdateHeaders()
     {
+        if (CustomersGrid.Columns.Count < 6) return;
         var l = LocalizationManager.Instance;
         CustomersGrid.Columns[1].Header = l["full_name"];
         CustomersGrid.Columns[2].Header = l["phone"];
