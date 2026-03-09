@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.CustomersView"
              x:CompileBindings="False">
 
@@ -46,16 +45,11 @@
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[full_name]}"
-                                    Binding="{Binding FullName}" Width="*" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[phone]}"
-                                    Binding="{Binding Phone}" Width="150" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[card_barcode]}"
-                                    Binding="{Binding CardBarcode}" Width="150" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[discount_pct]}"
-                                    Binding="{Binding DiscountPct}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).L[cashback_balance]}"
-                                    Binding="{Binding CashbackBalance}" Width="120" />
+                <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="150" />
+                <DataGridTextColumn Header="Card Barcode" Binding="{Binding CardBarcode}" Width="150" />
+                <DataGridTextColumn Header="Discount" Binding="{Binding DiscountPct}" Width="100" />
+                <DataGridTextColumn Header="Cashback" Binding="{Binding CashbackBalance}" Width="120" />
             </DataGrid.Columns>
         </DataGrid>
 

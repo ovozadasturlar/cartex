@@ -18,7 +18,7 @@
             </Grid>
 
             <DataGrid Grid.Row="1"
-                      ItemsSource="{Binding AvailableStocks}"
+                      x:Name="StocksGrid" ItemsSource="{Binding AvailableStocks}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       GridLinesVisibility="Horizontal"
@@ -26,12 +26,9 @@
                       BorderBrush="{DynamicResource BorderBrush}"
                       CornerRadius="6">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).L[name]}"
-                                        Binding="{Binding ProductName}" Width="*" />
-                    <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).L[quantity]}"
-                                        Binding="{Binding Quantity}" Width="80" />
-                    <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).L[selling_price]}"
-                                        Binding="{Binding SellingPrice}" Width="100" />
+                    <DataGridTextColumn Header="Name" Binding="{Binding ProductName}" Width="*" />
+                    <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="80" />
+                    <DataGridTextColumn Header="Price" Binding="{Binding SellingPrice}" Width="100" />
                     <DataGridTemplateColumn Header="" Width="70">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>

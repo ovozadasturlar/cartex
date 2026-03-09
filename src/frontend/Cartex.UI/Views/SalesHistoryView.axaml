@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.SalesHistoryView"
              x:CompileBindings="False">
 
@@ -18,7 +17,7 @@
         </Grid>
 
         <DataGrid Grid.Row="1"
-                  ItemsSource="{Binding Sales}"
+                  x:Name="SalesGrid" ItemsSource="{Binding Sales}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
@@ -27,22 +26,14 @@
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[sale_date]}"
-                                    Binding="{Binding SaleDate, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="160" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[total]}"
-                                    Binding="{Binding TotalAmount, StringFormat={}{0:N2}}" Width="120" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[cash]}"
-                                    Binding="{Binding PaidCash, StringFormat={}{0:N2}}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[card]}"
-                                    Binding="{Binding PaidCard, StringFormat={}{0:N2}}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[debt]}"
-                                    Binding="{Binding DebtAmount, StringFormat={}{0:N2}}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[status]}"
-                                    Binding="{Binding Status}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[customer]}"
-                                    Binding="{Binding CustomerName}" Width="150" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:SalesHistoryViewModel)DataContext).L[sold_by]}"
-                                    Binding="{Binding UserName}" Width="*" />
+                <DataGridTextColumn Header="Date" Binding="{Binding SaleDate, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="160" />
+                <DataGridTextColumn Header="Total" Binding="{Binding TotalAmount, StringFormat={}{0:N2}}" Width="120" />
+                <DataGridTextColumn Header="Cash" Binding="{Binding PaidCash, StringFormat={}{0:N2}}" Width="100" />
+                <DataGridTextColumn Header="Card" Binding="{Binding PaidCard, StringFormat={}{0:N2}}" Width="100" />
+                <DataGridTextColumn Header="Debt" Binding="{Binding DebtAmount, StringFormat={}{0:N2}}" Width="100" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150" />
+                <DataGridTextColumn Header="Sold By" Binding="{Binding UserName}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>
 

@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.UsersView"
              x:CompileBindings="False">
 
@@ -23,16 +22,11 @@
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[full_name]}"
-                                    Binding="{Binding FullName}" Width="*" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[username]}"
-                                    Binding="{Binding Username}" Width="150" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[role]}"
-                                    Binding="{Binding RoleName}" Width="120" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[shop]}"
-                                    Binding="{Binding ShopName}" Width="150" />
-                <DataGridCheckBoxColumn Header="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).L[active]}"
-                                        Binding="{Binding IsActive}" Width="80" />
+                <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
+                <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="150" />
+                <DataGridTextColumn Header="Role" Binding="{Binding RoleName}" Width="120" />
+                <DataGridTextColumn Header="Shop" Binding="{Binding ShopName}" Width="150" />
+                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
             </DataGrid.Columns>
         </DataGrid>
 

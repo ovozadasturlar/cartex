@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.WarehouseView"
              x:CompileBindings="False">
 
@@ -27,7 +26,7 @@
         </Grid>
 
         <DataGrid Grid.Row="1"
-                  ItemsSource="{Binding Stocks}"
+                  x:Name="StocksGrid" ItemsSource="{Binding Stocks}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"
@@ -36,18 +35,12 @@
                   CornerRadius="6">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[name]}"
-                                    Binding="{Binding ProductName}" Width="*" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[unit]}"
-                                    Binding="{Binding UnitName}" Width="80" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[quantity]}"
-                                    Binding="{Binding Quantity}" Width="100" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[purchase_price]}"
-                                    Binding="{Binding PurchasePrice}" Width="120" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[selling_price]}"
-                                    Binding="{Binding SellingPrice}" Width="120" />
-                <DataGridTextColumn Header="{Binding $parent[UserControl].((vm:WarehouseViewModel)DataContext).L[expired_at]}"
-                                    Binding="{Binding ExpiredAt}" Width="120" />
+                <DataGridTextColumn Header="Name" Binding="{Binding ProductName}" Width="*" />
+                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName}" Width="80" />
+                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="100" />
+                <DataGridTextColumn Header="Purchase Price" Binding="{Binding PurchasePrice}" Width="120" />
+                <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice}" Width="120" />
+                <DataGridTextColumn Header="Expired At" Binding="{Binding ExpiredAt}" Width="120" />
             </DataGrid.Columns>
         </DataGrid>
 
