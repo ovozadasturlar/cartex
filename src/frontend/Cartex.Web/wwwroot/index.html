@@ -13,6 +13,7 @@
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
         #out { width: 100%; height: 100%; }
+        #out canvas { touch-action: none; }
         #splash { display: flex; align-items: center; justify-content: center; height: 100vh; background: #111318; color: #F1F5F9; font-family: sans-serif; font-size: 24px; }
     </style>
 </head>
@@ -23,16 +24,61 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js');
         }
-        // Ensure Avalonia canvas gets focus for mobile virtual keyboard
+
+        // Avalonia WASM canvas needs tabindex for keyboard focus
         const observer = new MutationObserver(() => {
             const canvas = document.querySelector('canvas');
             if (canvas && !canvas.dataset.avlSetup) {
                 canvas.dataset.avlSetup = '1';
                 canvas.setAttribute('tabindex', '0');
-                canvas.addEventListener('touchstart', () => canvas.focus(), { passive: true });
             }
         });
         observer.observe(document.getElementById('out'), { childList: true, subtree: true });
+
+        // Mobile IME fix for Avalonia WASM 11.3.x
+        // Problem 1: some keyboards send null data in compositionend → supply delta from value change
+        // Problem 2: Avalonia's SetCursorRect calls focus() mid-composition → cancels IME
+        (function() {
+            if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) return;
+
+            let isComposing = false;
+
+            // Guard: prevent focus() calls on avalonia-input-element during active composition
+            const _originalFocus = HTMLElement.prototype.focus;
+            HTMLElement.prototype.focus = function(opts) {
+                if (isComposing && this.classList && this.classList.contains('avalonia-input-element')) return;
+                return _originalFocus.call(this, opts);
+            };
+
+            function patchAvaloniaInput(el) {
+                if (el.dataset.cartexPatched) return;
+                el.dataset.cartexPatched = '1';
+
+                let preComposeValue = '';
+
+                el.addEventListener('compositionstart', function() {
+                    isComposing = true;
+                    preComposeValue = el.value || '';
+                }, true);
+
+                el.addEventListener('compositionend', function(e) {
+                    isComposing = false;
+                    if (e.data != null && e.data !== '') return;
+
+                    const delta = (el.value || '').slice(preComposeValue.length);
+                    if (!delta) return;
+
+                    e.stopImmediatePropagation();
+                    el.dispatchEvent(new CompositionEvent('compositionend', {
+                        data: delta, bubbles: true, cancelable: true
+                    }));
+                }, true);
+            }
+
+            new MutationObserver(function() {
+                document.querySelectorAll('.avalonia-input-element').forEach(patchAvaloniaInput);
+            }).observe(document.body, { childList: true, subtree: true });
+        })();
     </script>
 </body>
 </html>
