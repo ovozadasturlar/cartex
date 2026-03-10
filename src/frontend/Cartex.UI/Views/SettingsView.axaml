@@ -28,6 +28,28 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{Binding L[appearance]}" Classes="subtitle" />
+                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding L[theme]}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableThemes}"
+                                          SelectedItem="{Binding SelectedTheme}" MinWidth="200" />
+
+                                <TextBlock Grid.Row="1" Text="{Binding L[mode]}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AvailableModes}"
+                                          SelectedItem="{Binding SelectedMode}" MinWidth="200" Margin="0,8,0,0" />
+
+                                <TextBlock Grid.Row="2" Text="{Binding L[language]}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" />
+                                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding AvailableLanguages}"
+                                          SelectedItem="{Binding SelectedLanguage}" MinWidth="200" Margin="0,8,0,0" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
