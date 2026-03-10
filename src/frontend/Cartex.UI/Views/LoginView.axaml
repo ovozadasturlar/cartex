@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.LoginView"
              x:CompileBindings="False">
 
@@ -58,5 +59,111 @@
 
             </StackPanel>
         </Border>
+
+        <!-- Bottom-right quick settings -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Orientation="Horizontal" Margin="20,16" Spacing="2">
+            <Panel>
+                <Button Background="Transparent" BorderThickness="0"
+                        Padding="8,6" Cursor="Hand" Opacity="0.7"
+                        Command="{Binding ToggleThemePopupCommand}" ToolTip.Tip="Theme">
+                    <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18"
+                                     Foreground="{DynamicResource TextSecondary}" />
+                </Button>
+                <Popup IsOpen="{Binding IsThemePopupOpen, Mode=TwoWay}"
+                       Placement="Top" IsLightDismissEnabled="True">
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="4" MinWidth="160">
+                        <StackPanel Spacing="2">
+                            <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" Padding="12,8"
+                                    Command="{Binding SelectThemeCommand}" CommandParameter="Light">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <mi:MaterialIcon Kind="WeatherSunny" Width="18" Height="18" />
+                                    <TextBlock Text="Light" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" Padding="12,8"
+                                    Command="{Binding SelectThemeCommand}" CommandParameter="Dark">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <mi:MaterialIcon Kind="WeatherNight" Width="18" Height="18" />
+                                    <TextBlock Text="Dark" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Panel>
+
+            <Panel>
+                <Button Background="Transparent" BorderThickness="0"
+                        Padding="8,6" Cursor="Hand" Opacity="0.7"
+                        Command="{Binding ToggleModePopupCommand}" ToolTip.Tip="Mode">
+                    <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18"
+                                     Foreground="{DynamicResource TextSecondary}" />
+                </Button>
+                <Popup IsOpen="{Binding IsModePopupOpen, Mode=TwoWay}"
+                       Placement="Top" IsLightDismissEnabled="True">
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="4" MinWidth="160">
+                        <StackPanel Spacing="2">
+                            <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" Padding="12,8"
+                                    Command="{Binding SelectModeCommand}" CommandParameter="Desktop">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <mi:MaterialIcon Kind="Monitor" Width="18" Height="18" />
+                                    <TextBlock Text="Desktop" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" Padding="12,8"
+                                    Command="{Binding SelectModeCommand}" CommandParameter="Touch">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <mi:MaterialIcon Kind="GestureTap" Width="18" Height="18" />
+                                    <TextBlock Text="Touch" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Panel>
+
+            <Panel>
+                <Button Background="Transparent" BorderThickness="0"
+                        Padding="8,6" Cursor="Hand" Opacity="0.7"
+                        Command="{Binding ToggleLanguagePopupCommand}" ToolTip.Tip="Language">
+                    <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="16"
+                               VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Button>
+                <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
+                       Placement="Top" IsLightDismissEnabled="True">
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Padding="4" MinWidth="200">
+                        <ItemsControl ItemsSource="{Binding AvailableLanguages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left" Padding="12,8"
+                                            Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageFlagConverter.Instance}}"
+                                                       FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </Popup>
+            </Panel>
+        </StackPanel>
+
     </Grid>
 </UserControl>

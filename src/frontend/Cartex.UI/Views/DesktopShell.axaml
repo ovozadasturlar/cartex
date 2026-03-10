@@ -202,6 +202,7 @@
                                                 ToolTip.Tip="{Binding Title}">
                                             <Grid ColumnDefinitions="22,*">
                                                 <mi:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
+                                                    Classes.nav-active="{Binding IsActive}"
                                                     Foreground="{DynamicResource TextSecondary}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14"
                                                     VerticalAlignment="Center" Margin="14,0,0,0"

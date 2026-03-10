@@ -28,6 +28,7 @@
                                 CommandParameter="{Binding}">
                             <StackPanel Spacing="2" HorizontalAlignment="Center">
                                 <mi:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
+                                                 Classes.nav-active="{Binding IsActive}"
                                                  Foreground="{DynamicResource TextSecondary}"
                                                  HorizontalAlignment="Center" />
                                 <TextBlock Text="{Binding Title}" FontSize="11"

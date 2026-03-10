@@ -1,5 +1,6 @@
-<Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mi="using:Material.Icons.Avalonia">
 
     <Styles.Resources>
         <ResourceDictionary>
@@ -129,4 +130,8 @@
         <Setter Property="FontSize" Value="16" />
     </Style>
 
+
+    <Style Selector="mi|MaterialIcon.nav-active">
+        <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+    </Style>
 </Styles>
