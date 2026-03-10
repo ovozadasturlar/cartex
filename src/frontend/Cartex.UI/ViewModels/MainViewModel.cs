@@ -24,6 +24,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isThemePopupOpen;
     [ObservableProperty] private bool _isModePopupOpen;
     [ObservableProperty] private bool _isLanguagePopupOpen;
+    [ObservableProperty] private bool _isSidebarCollapsed;
+
+    public string UserInitial => string.IsNullOrEmpty(UserDisplayName) ? "?" : UserDisplayName[..1].ToUpper();
 
     public bool IsTouchMode
     {
@@ -63,6 +66,7 @@ public partial class MainViewModel : ViewModelBase
     {
         UserDisplayName = _authService.UserInfo?.FullName ?? _authService.UserInfo?.Username ?? "";
         UserRole = _authService.UserInfo?.Role ?? "";
+        OnPropertyChanged(nameof(UserInitial));
 
         TouchModeManager.Instance.Mode = CurrentMode;
 
@@ -196,6 +200,9 @@ public partial class MainViewModel : ViewModelBase
         CurrentLanguage = lang;
         IsLanguagePopupOpen = false;
     }
+
+    [RelayCommand]
+    private void ToggleSidebar() => IsSidebarCollapsed = !IsSidebarCollapsed;
 
     [RelayCommand]
     private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;
