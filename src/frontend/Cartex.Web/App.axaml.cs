@@ -1,13 +1,12 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Cartex.UI;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels;
+using Cartex.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cartex.Web;
@@ -45,12 +44,7 @@ public partial class App : Application
             var loginVm = provider.GetRequiredService<LoginViewModel>();
             nav.NavigateTo(loginVm);
 
-            var host = new ContentControl
-            {
-                DataContext = nav,
-                [!ContentControl.ContentProperty] = new Binding("CurrentView")
-            };
-            singleView.MainView = host;
+            singleView.MainView = new AppShell { DataContext = nav };
         }
 
         base.OnFrameworkInitializationCompleted();
