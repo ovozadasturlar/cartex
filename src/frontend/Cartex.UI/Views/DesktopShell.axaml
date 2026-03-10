@@ -7,18 +7,18 @@
              x:Class="Cartex.UI.Views.DesktopShell"
              x:CompileBindings="False">
 
-    <DockPanel Background="{DynamicResource AppBg}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <Border DockPanel.Dock="Left"
-                Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.Instance}}"
+        <Border x:Name="SidebarBorder"
+                Grid.Column="0"
+                Width="240"
                 Background="{DynamicResource SidebarBg}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
                 ClipToBounds="True">
-            <Border.Transitions>
-                <Transitions>
-                    <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseInOut" />
-                </Transitions>
-            </Border.Transitions>
             <DockPanel>
 
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="12,12,8,10">
@@ -235,20 +235,24 @@
             </DockPanel>
         </Border>
 
-        <Border DockPanel.Dock="Top"
-                Background="{DynamicResource HeaderBg}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-                Padding="24,14">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" FontSize="14"
-                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
-                           Text="{Binding Source={x:Static sys:DateTime.Now}, StringFormat='{}{0:dddd, dd MMMM yyyy}'}" />
-            </Grid>
-        </Border>
+        <DockPanel Grid.Column="1" Background="{DynamicResource AppBg}">
 
-        <ContentControl Content="{Binding CurrentPage}" />
+            <Border DockPanel.Dock="Top"
+                    Background="{DynamicResource HeaderBg}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                    Padding="24,14">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" FontSize="14"
+                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
+                               Text="{Binding Source={x:Static sys:DateTime.Now}, StringFormat='{}{0:dddd, dd MMMM yyyy}'}" />
+                </Grid>
+            </Border>
 
-    </DockPanel>
+            <ContentControl Content="{Binding CurrentPage}" />
+
+        </DockPanel>
+
+    </Grid>
 </UserControl>

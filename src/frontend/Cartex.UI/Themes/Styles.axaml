@@ -134,4 +134,5 @@
     <Style Selector="mi|MaterialIcon.nav-active">
         <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
     </Style>
+
 </Styles>
