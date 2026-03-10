@@ -16,7 +16,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private MenuItem? _selectedMenuItem;
     [ObservableProperty] private AppMode _currentMode;
     [ObservableProperty] private AppTheme _currentTheme;
-    [ObservableProperty] private string _currentLanguage;
+    [ObservableProperty] private AppLanguage _currentLanguage;
     [ObservableProperty] private string _userDisplayName = "";
     [ObservableProperty] private string _userRole = "";
     [ObservableProperty] private string _currentPageTitle = "";
@@ -49,7 +49,7 @@ public partial class MainViewModel : ViewModelBase
         : MaterialIconKind.Monitor;
 
     public ObservableCollection<MenuItem> MenuItems { get; } = [];
-    public string[] AvailableLanguages => LocalizationManager.AvailableLanguages;
+    public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
     public MainViewModel(AuthService authService, NavigationService navigationService)
     {
@@ -68,7 +68,7 @@ public partial class MainViewModel : ViewModelBase
         UserRole = _authService.UserInfo?.Role ?? "";
         OnPropertyChanged(nameof(UserInitial));
 
-        TouchModeManager.Instance.Mode = CurrentMode;
+        ModeManager.Instance.Mode = CurrentMode;
 
         MenuItems.Clear();
         AddMenuItem("dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), null);
@@ -134,7 +134,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentModeChanged(AppMode value)
     {
         SettingsService.Instance.Mode = value;
-        TouchModeManager.Instance.Mode = value;
+        ModeManager.Instance.Mode = value;
         OnPropertyChanged(nameof(IsTouchMode));
         OnPropertyChanged(nameof(ModeIcon));
     }
@@ -142,12 +142,12 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentThemeChanged(AppTheme value)
     {
         SettingsService.Instance.Theme = value;
-        ThemeManager.ApplyTheme?.Invoke(value);
+        ThemeManager.Instance.Theme = value;
         OnPropertyChanged(nameof(IsDarkTheme));
         OnPropertyChanged(nameof(ThemeIcon));
     }
 
-    partial void OnCurrentLanguageChanged(string value)
+    partial void OnCurrentLanguageChanged(AppLanguage value)
     {
         SettingsService.Instance.Language = value;
         LocalizationManager.Instance.CurrentLanguage = value;
@@ -195,7 +195,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SelectLanguage(string lang)
+    private void SelectLanguage(AppLanguage lang)
     {
         CurrentLanguage = lang;
         IsLanguagePopupOpen = false;

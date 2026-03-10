@@ -10,7 +10,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _apiUrl;
     [ObservableProperty] private AppTheme _selectedTheme;
     [ObservableProperty] private AppMode _selectedMode;
-    [ObservableProperty] private string _selectedLanguage;
+    [ObservableProperty] private AppLanguage _selectedLanguage;
 
     private UsersViewModel? _usersVm;
     private CustomersViewModel? _customersVm;
@@ -22,7 +22,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     public AppTheme[] AvailableThemes => Enum.GetValues<AppTheme>();
     public AppMode[] AvailableModes => Enum.GetValues<AppMode>();
-    public string[] AvailableLanguages => LocalizationManager.AvailableLanguages;
+    public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
     public SettingsViewModel()
     {
@@ -35,16 +35,16 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnSelectedThemeChanged(AppTheme value)
     {
         SettingsService.Instance.Theme = value;
-        ThemeManager.ApplyTheme?.Invoke(value);
+        ThemeManager.Instance.Theme = value;
     }
 
     partial void OnSelectedModeChanged(AppMode value)
     {
         SettingsService.Instance.Mode = value;
-        TouchModeManager.Instance.Mode = value;
+        ModeManager.Instance.Mode = value;
     }
 
-    partial void OnSelectedLanguageChanged(string value)
+    partial void OnSelectedLanguageChanged(AppLanguage value)
     {
         SettingsService.Instance.Language = value;
         LocalizationManager.Instance.CurrentLanguage = value;

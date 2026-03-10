@@ -3,9 +3,9 @@ using Cartex.UI.Models;
 
 namespace Cartex.UI.Services;
 
-public sealed class TouchModeManager : INotifyPropertyChanged
+public sealed class ModeManager : INotifyPropertyChanged
 {
-    public static TouchModeManager Instance { get; } = new();
+    public static ModeManager Instance { get; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -23,4 +23,6 @@ public sealed class TouchModeManager : INotifyPropertyChanged
     }
 
     public bool IsTouchMode => Mode == AppMode.Touch;
+
+    private ModeManager() { }
 }

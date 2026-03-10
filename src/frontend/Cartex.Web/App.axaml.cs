@@ -18,7 +18,7 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
 
-        ThemeManager.ApplyTheme = theme =>
+        ThemeManager.Instance.ThemeChanged += theme =>
             RequestedThemeVariant = theme == AppTheme.Dark ? ThemeVariant.Dark : ThemeVariant.Light;
     }
 

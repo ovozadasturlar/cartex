@@ -38,7 +38,7 @@ public sealed class SettingsService
         set { _data.Theme = value; Save(); }
     }
 
-    public string Language
+    public AppLanguage Language
     {
         get => _data.Language;
         set { _data.Language = value; Save(); }
@@ -85,7 +85,7 @@ public sealed class SettingsService
     private sealed class SettingsData
     {
         public AppTheme Theme { get; set; } = AppTheme.Light;
-        public string Language { get; set; } = "en";
+        public AppLanguage Language { get; set; } = AppLanguage.En;
         public AppMode Mode { get; set; }
         public string ApiBaseUrl { get; set; } = "http://localhost:5015";
     }

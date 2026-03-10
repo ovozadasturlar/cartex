@@ -115,7 +115,7 @@
 
                         <Panel>
                             <Button Background="Transparent" BorderThickness="0"
-                                    Padding="8,6" Cursor="Hand" HorizontalAlignment="Center"
+                                    Padding="8,6" Cursor="Hand" HorizontalAlignment="Left"
                                     Command="{Binding ToggleModePopupCommand}"
                                     ToolTip.Tip="Mode">
                                 <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18" />

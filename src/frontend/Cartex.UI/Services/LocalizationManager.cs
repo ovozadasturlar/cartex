@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
+using Cartex.UI.Models;
 
 namespace Cartex.UI.Services;
 
@@ -10,8 +11,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public static LocalizationManager Instance => _instance.Value;
 
     private Dictionary<string, string> _strings = new();
-    private string _currentLanguage = "en";
-    private readonly Dictionary<string, Dictionary<string, string>> _cache = new();
+    private AppLanguage _currentLanguage = AppLanguage.En;
+    private readonly Dictionary<AppLanguage, Dictionary<string, string>> _cache = new();
     private readonly List<WeakReference<Action>> _weakHandlers = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -27,7 +28,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         LoadLanguage(_currentLanguage);
     }
 
-    public string CurrentLanguage
+    public AppLanguage CurrentLanguage
     {
         get => _currentLanguage;
         set
@@ -55,18 +56,27 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string this[string key] =>
         _strings.TryGetValue(key, out var value) ? value : $"[{key}]";
 
-    public static string[] AvailableLanguages => ["en", "ru", "uz-latn", "uz-cyrl"];
+    public static AppLanguage[] AvailableLanguages => [AppLanguage.En, AppLanguage.Ru, AppLanguage.UzLatn, AppLanguage.UzCyrl];
 
-    public static string GetLanguageDisplayName(string code) => code switch
+    public static string GetLanguageDisplayName(AppLanguage lang) => lang switch
     {
-        "en" => "English",
-        "ru" => "Русский",
-        "uz-latn" => "O'zbek (Lotin)",
-        "uz-cyrl" => "Ўзбек (Кирилл)",
-        _ => code
+        AppLanguage.En => "English",
+        AppLanguage.Ru => "Русский",
+        AppLanguage.UzLatn => "O'zbek (Lotin)",
+        AppLanguage.UzCyrl => "Ўзбек (Кирилл)",
+        _ => lang.ToString()
     };
 
-    public void LoadLanguage(string lang)
+    private static string GetLanguageCode(AppLanguage lang) => lang switch
+    {
+        AppLanguage.En => "en",
+        AppLanguage.Ru => "ru",
+        AppLanguage.UzLatn => "uz-latn",
+        AppLanguage.UzCyrl => "uz-cyrl",
+        _ => "en"
+    };
+
+    public void LoadLanguage(AppLanguage lang)
     {
         if (_cache.TryGetValue(lang, out var cached))
         {
@@ -75,7 +85,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         }
 
         var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = $"Cartex.UI.Assets.Languages.{lang}.json";
+        var resourceName = $"Cartex.UI.Assets.Languages.{GetLanguageCode(lang)}.json";
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is null)

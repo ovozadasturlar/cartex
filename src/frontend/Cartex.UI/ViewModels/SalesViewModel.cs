@@ -69,14 +69,14 @@ public partial class SalesViewModel : ViewModelBase
         _authService = authService;
 
         CartItems.CollectionChanged += (_, _) => NotifyTotals();
-        IsTouchMode = TouchModeManager.Instance.IsTouchMode;
-        TouchModeManager.Instance.PropertyChanged += OnTouchModeChanged;
+        IsTouchMode = ModeManager.Instance.IsTouchMode;
+        ModeManager.Instance.PropertyChanged += OnTouchModeChanged;
     }
 
     private void OnTouchModeChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(TouchModeManager.IsTouchMode))
-            IsTouchMode = TouchModeManager.Instance.IsTouchMode;
+        if (e.PropertyName == nameof(ModeManager.IsTouchMode))
+            IsTouchMode = ModeManager.Instance.IsTouchMode;
     }
 
     private void NotifyTotals()
