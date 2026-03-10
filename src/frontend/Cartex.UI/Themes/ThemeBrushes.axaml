@@ -2,40 +2,40 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="AppBg" Color="#0F172A" />
-            <SolidColorBrush x:Key="SidebarBg" Color="#1E293B" />
-            <SolidColorBrush x:Key="CardBg" Color="#1E293B" />
-            <SolidColorBrush x:Key="HeaderBg" Color="#1E293B" />
+            <SolidColorBrush x:Key="AppBg" Color="#111318" />
+            <SolidColorBrush x:Key="SidebarBg" Color="#1A1D24" />
+            <SolidColorBrush x:Key="CardBg" Color="#1A1D24" />
+            <SolidColorBrush x:Key="HeaderBg" Color="#1A1D24" />
             <SolidColorBrush x:Key="TextPrimary" Color="#F1F5F9" />
             <SolidColorBrush x:Key="TextSecondary" Color="#94A3B8" />
             <SolidColorBrush x:Key="TextMuted" Color="#64748B" />
-            <SolidColorBrush x:Key="BorderBrush" Color="#334155" />
-            <SolidColorBrush x:Key="InputBg" Color="#0F172A" />
-            <SolidColorBrush x:Key="InputBorder" Color="#334155" />
-            <SolidColorBrush x:Key="SidebarItemHover" Color="#334155" />
-            <SolidColorBrush x:Key="SidebarItemActive" Color="#202563EB" />
-            <SolidColorBrush x:Key="SuccessBg" Color="#2016A34A" />
+            <SolidColorBrush x:Key="BorderBrush" Color="#2D3139" />
+            <SolidColorBrush x:Key="InputBg" Color="#111318" />
+            <SolidColorBrush x:Key="InputBorder" Color="#2D3139" />
+            <SolidColorBrush x:Key="SidebarItemHover" Color="#2D3139" />
+            <SolidColorBrush x:Key="SidebarItemActive" Color="#20166534" />
+            <SolidColorBrush x:Key="SuccessBg" Color="#20059669" />
             <SolidColorBrush x:Key="DangerBg" Color="#20DC2626" />
             <SolidColorBrush x:Key="WarningBg" Color="#20F59E0B" />
-            <SolidColorBrush x:Key="InfoBg" Color="#202563EB" />
+            <SolidColorBrush x:Key="InfoBg" Color="#200EA5E9" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="AppBg" Color="#F8FAFC" />
+            <SolidColorBrush x:Key="AppBg" Color="#F5F5F0" />
             <SolidColorBrush x:Key="SidebarBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="CardBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TextPrimary" Color="#0F172A" />
+            <SolidColorBrush x:Key="TextPrimary" Color="#111318" />
             <SolidColorBrush x:Key="TextSecondary" Color="#475569" />
             <SolidColorBrush x:Key="TextMuted" Color="#94A3B8" />
             <SolidColorBrush x:Key="BorderBrush" Color="#E2E8F0" />
             <SolidColorBrush x:Key="InputBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="InputBorder" Color="#CBD5E1" />
             <SolidColorBrush x:Key="SidebarItemHover" Color="#F1F5F9" />
-            <SolidColorBrush x:Key="SidebarItemActive" Color="#152563EB" />
-            <SolidColorBrush x:Key="SuccessBg" Color="#1516A34A" />
+            <SolidColorBrush x:Key="SidebarItemActive" Color="#15166534" />
+            <SolidColorBrush x:Key="SuccessBg" Color="#15059669" />
             <SolidColorBrush x:Key="DangerBg" Color="#15DC2626" />
             <SolidColorBrush x:Key="WarningBg" Color="#15F59E0B" />
-            <SolidColorBrush x:Key="InfoBg" Color="#152563EB" />
+            <SolidColorBrush x:Key="InfoBg" Color="#150EA5E9" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

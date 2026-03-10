@@ -25,15 +25,15 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="Date" Binding="{Binding DisplayDate}" Width="160" />
-                <DataGridTextColumn Header="Total" Binding="{Binding DisplayTotal}" Width="120" />
-                <DataGridTextColumn Header="Cash" Binding="{Binding DisplayCash}" Width="100" />
-                <DataGridTextColumn Header="Card" Binding="{Binding DisplayCard}" Width="100" />
-                <DataGridTextColumn Header="Debt" Binding="{Binding DisplayDebt}" Width="100" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
-                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="150" />
-                <DataGridTextColumn Header="Sold By" Binding="{Binding UserName}" Width="*" />
+                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
+                <DataGridTextColumn Header="Date" Binding="{Binding SaleDate, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="160" />
+                <DataGridTextColumn Header="Total" Binding="{Binding TotalAmount, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
+                <DataGridTextColumn Header="Cash" Binding="{Binding PaidCash, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
+                <DataGridTextColumn Header="Card" Binding="{Binding PaidCard, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
+                <DataGridTextColumn Header="Debt" Binding="{Binding DebtAmount, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" Width="100" />
+                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Sold By" Binding="{Binding UserName, Mode=OneWay}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>
 
