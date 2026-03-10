@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Cartex.UI.Views;
 
-public partial class DashboardView : UserControl
+public partial class DesktopShell : UserControl
 {
-    public DashboardView()
+    public DesktopShell()
     {
         InitializeComponent();
     }

@@ -11,22 +11,31 @@ public partial class RolesView : UserControl
     public RolesView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
+        UpdateHeaders();
 
-        var grid = this.FindControl<DataGrid>("RolesGrid");
-        if (grid is not null)
-            grid.SelectionChanged += (s, _) =>
-            {
-                if (s is DataGrid dg && DataContext is RolesViewModel vm)
-                    vm.SelectedRole = dg.SelectedItem as RoleDto;
-            };
+        if (this.FindControl<DataGrid>("RolesGrid") is { } grid)
+            grid.SelectionChanged += OnGridSelectionChanged;
+    }
 
-        Loaded += async (_, _) =>
-        {
-            UpdateHeaders();
-            if (DataContext is RolesViewModel vm)
-                await vm.LoadCommand.ExecuteAsync(null);
-        };
+    private void OnUnloaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        LocalizationManager.Instance.PropertyChanged -= OnLanguageChanged;
+
+        if (this.FindControl<DataGrid>("RolesGrid") is { } grid)
+            grid.SelectionChanged -= OnGridSelectionChanged;
+    }
+
+    private void OnGridSelectionChanged(object? s, SelectionChangedEventArgs e)
+    {
+        if (s is DataGrid dg && DataContext is RolesViewModel vm)
+            vm.SelectedRole = dg.SelectedItem as RoleDto;
     }
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)

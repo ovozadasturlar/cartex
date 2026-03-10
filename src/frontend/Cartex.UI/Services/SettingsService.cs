@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using Cartex.UI.Models;
 
 namespace Cartex.UI.Services;
 
@@ -31,7 +32,7 @@ public sealed class SettingsService
         _data = Load();
     }
 
-    public string Theme
+    public AppTheme Theme
     {
         get => _data.Theme;
         set { _data.Theme = value; Save(); }
@@ -43,10 +44,10 @@ public sealed class SettingsService
         set { _data.Language = value; Save(); }
     }
 
-    public bool IsTouchMode
+    public AppMode Mode
     {
-        get => _data.IsTouchMode;
-        set { _data.IsTouchMode = value; Save(); }
+        get => _data.Mode;
+        set { _data.Mode = value; Save(); }
     }
 
     public string ApiBaseUrl
@@ -83,9 +84,9 @@ public sealed class SettingsService
 
     private sealed class SettingsData
     {
-        public string Theme { get; set; } = "Light";
+        public AppTheme Theme { get; set; } = AppTheme.Light;
         public string Language { get; set; } = "en";
-        public bool IsTouchMode { get; set; }
+        public AppMode Mode { get; set; }
         public string ApiBaseUrl { get; set; } = "http://localhost:5015";
     }
 }

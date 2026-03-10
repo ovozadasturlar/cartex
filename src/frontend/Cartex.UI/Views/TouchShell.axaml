@@ -1,0 +1,164 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:conv="using:Cartex.UI.Converters"
+             x:Class="Cartex.UI.Views.TouchShell"
+             x:CompileBindings="False">
+
+    <DockPanel Background="{DynamicResource AppBg}">
+
+        <!-- Bottom tab bar -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource SidebarBg}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+                Padding="4,2">
+            <ItemsControl ItemsSource="{Binding MenuItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Background="Transparent" BorderThickness="0"
+                                Padding="4,6" MinHeight="60"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding $parent[UserControl].DataContext.SelectMenuItemCommand}"
+                                CommandParameter="{Binding}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Center">
+                                <mi:MaterialIcon Kind="{Binding Icon}" Width="28" Height="28"
+                                                 Foreground="{DynamicResource TextSecondary}"
+                                                 HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding Title}" FontSize="11"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="80" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <!-- Top header with 3 settings popups -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource HeaderBg}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="12,6">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+
+                <!-- Theme popup -->
+                <Panel Grid.Column="1" Margin="0,0,4,0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="10,8" MinHeight="48" Cursor="Hand"
+                            Command="{Binding ToggleThemePopupCommand}">
+                        <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="24" Height="24" />
+                    </Button>
+                    <Popup IsOpen="{Binding IsThemePopupOpen, Mode=TwoWay}"
+                           Placement="Bottom" IsLightDismissEnabled="True">
+                        <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                Padding="4" MinWidth="160">
+                            <StackPanel Spacing="2">
+                                <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left" Padding="14,10"
+                                        Command="{Binding SelectThemeCommand}" CommandParameter="Light">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <mi:MaterialIcon Kind="WeatherSunny" Width="22" Height="22" />
+                                        <TextBlock Text="Light" FontSize="16" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left" Padding="14,10"
+                                        Command="{Binding SelectThemeCommand}" CommandParameter="Dark">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <mi:MaterialIcon Kind="WeatherNight" Width="22" Height="22" />
+                                        <TextBlock Text="Dark" FontSize="16" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Panel>
+
+                <!-- Mode popup -->
+                <Panel Grid.Column="2" Margin="0,0,4,0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="10,8" MinHeight="48" Cursor="Hand"
+                            Command="{Binding ToggleModePopupCommand}">
+                        <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="24" Height="24" />
+                    </Button>
+                    <Popup IsOpen="{Binding IsModePopupOpen, Mode=TwoWay}"
+                           Placement="Bottom" IsLightDismissEnabled="True">
+                        <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                Padding="4" MinWidth="160">
+                            <StackPanel Spacing="2">
+                                <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left" Padding="14,10"
+                                        Command="{Binding SelectModeCommand}" CommandParameter="Desktop">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <mi:MaterialIcon Kind="Monitor" Width="22" Height="22" />
+                                        <TextBlock Text="Desktop" FontSize="16" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left" Padding="14,10"
+                                        Command="{Binding SelectModeCommand}" CommandParameter="Touch">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <mi:MaterialIcon Kind="GestureTap" Width="22" Height="22" />
+                                        <TextBlock Text="Touch" FontSize="16" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Panel>
+
+                <!-- Language popup -->
+                <Panel Grid.Column="3" Margin="0,0,4,0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="10,8" MinHeight="48" Cursor="Hand"
+                            Command="{Binding ToggleLanguagePopupCommand}">
+                        <mi:MaterialIcon Kind="Translate" Width="24" Height="24" />
+                    </Button>
+                    <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
+                           Placement="Bottom" IsLightDismissEnabled="True">
+                        <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                Padding="4" MinWidth="200">
+                            <ItemsControl ItemsSource="{Binding AvailableLanguages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Background="Transparent" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left" Padding="14,10"
+                                                Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
+                                                       FontSize="16" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Popup>
+                </Panel>
+
+                <!-- Logout -->
+                <Button Grid.Column="4" Background="Transparent" BorderThickness="0"
+                        Command="{Binding LogoutCommand}"
+                        Padding="10,8" MinHeight="48">
+                    <mi:MaterialIcon Kind="Logout" Width="24" Height="24"
+                                     Foreground="{DynamicResource DangerBrush}" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <ContentControl Content="{Binding CurrentPage}" />
+
+    </DockPanel>
+</UserControl>

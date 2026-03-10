@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.SalesView"
              x:CompileBindings="False">
 
@@ -114,10 +115,12 @@
                                             <NumericUpDown Grid.Column="1" Value="{Binding Quantity, Mode=TwoWay}"
                                                            Minimum="0.01" Increment="1" FormatString="N2"
                                                            Width="100" Margin="8,0" MinHeight="32" />
-                                            <Button Grid.Column="2" Content="✕" Classes="danger"
+                                            <Button Grid.Column="2" Classes="danger"
                                                     Padding="6,2" MinHeight="28"
                                                     Command="{Binding $parent[UserControl].DataContext.RemoveCartItemCommand}"
-                                                    CommandParameter="{Binding}" />
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14" />
+                                            </Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -138,9 +141,11 @@
                              Text="{Binding SearchQuery, Mode=TwoWay}"
                              MinHeight="56" FontSize="20" Padding="16,12"
                              CornerRadius="8" />
-                    <Button Grid.Column="1" Content="🔍" FontSize="24"
+                    <Button Grid.Column="1"
                             Classes="brand" Margin="8,0,0,0" MinHeight="56" MinWidth="56"
-                            Command="{Binding AddByBarcodeCommand}" />
+                            Command="{Binding AddByBarcodeCommand}">
+                        <mi:MaterialIcon Kind="Magnify" Width="28" Height="28" />
+                    </Button>
                 </Grid>
 
                 <ScrollViewer Grid.Row="1">
@@ -190,9 +195,11 @@
                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,4,4,8">
                             <TextBlock Text="{Binding L[cart]}" FontSize="20" FontWeight="Bold"
                                        Foreground="{DynamicResource TextPrimary}" />
-                            <Button Grid.Column="1" Content="🗑️" FontSize="18"
+                            <Button Grid.Column="1"
                                     Classes="danger" Padding="8,4" MinHeight="40"
-                                    Command="{Binding ClearCartCommand}" />
+                                    Command="{Binding ClearCartCommand}">
+                                <mi:MaterialIcon Kind="Delete" Width="20" Height="20" />
+                            </Button>
                         </Grid>
                         <ScrollViewer>
                             <ItemsControl ItemsSource="{Binding CartItems}">
@@ -263,9 +270,11 @@
                                 <Button Grid.Row="0" Grid.Column="2" Content="9" FontSize="22" MinHeight="50"
                                         Classes="outline" HorizontalContentAlignment="Center"
                                         Command="{Binding NumpadPressCommand}" CommandParameter="9" />
-                                <Button Grid.Row="0" Grid.Column="3" Content="⌫" FontSize="20" MinHeight="50"
+                                <Button Grid.Row="0" Grid.Column="3" FontSize="20" MinHeight="50"
                                         Classes="warning" HorizontalContentAlignment="Center"
-                                        Command="{Binding NumpadPressCommand}" CommandParameter="⌫" />
+                                        Command="{Binding NumpadPressCommand}" CommandParameter="⌫">
+                                    <mi:MaterialIcon Kind="BackspaceOutline" Width="22" Height="22" />
+                                </Button>
 
                                 <Button Grid.Row="1" Grid.Column="0" Content="4" FontSize="22" MinHeight="50"
                                         Classes="outline" HorizontalContentAlignment="Center"
@@ -297,12 +306,16 @@
                                         Grid.ColumnSpan="2"
                                         Classes="outline" HorizontalContentAlignment="Center"
                                         Command="{Binding NumpadPressCommand}" CommandParameter="0" />
-                                <Button Grid.Row="3" Grid.Column="2" Content="💵" FontSize="18" MinHeight="50"
+                                <Button Grid.Row="3" Grid.Column="2" FontSize="18" MinHeight="50"
                                         Classes="brand" HorizontalContentAlignment="Center"
-                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="cash" />
-                                <Button Grid.Row="3" Grid.Column="3" Content="💳" FontSize="18" MinHeight="50"
+                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="cash">
+                                    <mi:MaterialIcon Kind="Cash" Width="22" Height="22" />
+                                </Button>
+                                <Button Grid.Row="3" Grid.Column="3" FontSize="18" MinHeight="50"
                                         Classes="brand" HorizontalContentAlignment="Center"
-                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="card" />
+                                        Command="{Binding SetNumpadTargetCommand}" CommandParameter="card">
+                                    <mi:MaterialIcon Kind="CreditCardOutline" Width="22" Height="22" />
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Border>

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.DashboardView"
              x:CompileBindings="False">
 
@@ -32,7 +33,8 @@
             <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
                 <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="🛒" FontSize="36" HorizontalAlignment="Center" />
+                        <mi:MaterialIcon Kind="Cart" Width="36" Height="36" HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource BrandPrimaryBrush}" />
                         <TextBlock Text="{Binding L[today_sales]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding TodaySales, StringFormat={}{0:N0}}"
@@ -43,7 +45,8 @@
                 </Border>
                 <Border Classes="card" Grid.Column="1" Margin="4,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="💰" FontSize="36" HorizontalAlignment="Center" />
+                        <mi:MaterialIcon Kind="CashMultiple" Width="36" Height="36" HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource SuccessBrush}" />
                         <TextBlock Text="{Binding L[today_profit]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding TodayProfit, StringFormat={}{0:N0}}"
@@ -54,7 +57,8 @@
                 </Border>
                 <Border Classes="card" Grid.Column="2" Margin="4,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="⚠️" FontSize="36" HorizontalAlignment="Center" />
+                        <mi:MaterialIcon Kind="AlertCircleOutline" Width="36" Height="36" HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource WarningBrush}" />
                         <TextBlock Text="{Binding L[low_stock]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding LowStockCount}"
@@ -65,7 +69,8 @@
                 </Border>
                 <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
                     <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <TextBlock Text="📦" FontSize="36" HorizontalAlignment="Center" />
+                        <mi:MaterialIcon Kind="Package" Width="36" Height="36" HorizontalAlignment="Center"
+                                         Foreground="{DynamicResource InfoBrush}" />
                         <TextBlock Text="{Binding L[total_products]}" Classes="muted"
                                    HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding TotalProducts}"

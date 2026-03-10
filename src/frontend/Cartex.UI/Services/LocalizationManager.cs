@@ -12,8 +12,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     private Dictionary<string, string> _strings = new();
     private string _currentLanguage = "en";
     private readonly Dictionary<string, Dictionary<string, string>> _cache = new();
+    private readonly List<WeakReference<Action>> _weakHandlers = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public event Action LanguageChanged
+    {
+        add => _weakHandlers.Add(new WeakReference<Action>(value));
+        remove { }
+    }
 
     private LocalizationManager()
     {
@@ -30,6 +37,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             LoadLanguage(value);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentLanguage)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            NotifyWeakHandlers();
+        }
+    }
+
+    private void NotifyWeakHandlers()
+    {
+        for (int i = _weakHandlers.Count - 1; i >= 0; i--)
+        {
+            if (_weakHandlers[i].TryGetTarget(out var handler))
+                handler();
+            else
+                _weakHandlers.RemoveAt(i);
         }
     }
 

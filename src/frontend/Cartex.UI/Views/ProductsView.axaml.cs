@@ -11,22 +11,31 @@ public partial class ProductsView : UserControl
     public ProductsView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
+        UpdateHeaders();
 
-        var grid = this.FindControl<DataGrid>("ProductsGrid");
-        if (grid is not null)
-            grid.SelectionChanged += (s, _) =>
-            {
-                if (s is DataGrid dg && DataContext is ProductsViewModel vm)
-                    vm.SelectedProduct = dg.SelectedItem as ProductDto;
-            };
+        if (this.FindControl<DataGrid>("ProductsGrid") is { } grid)
+            grid.SelectionChanged += OnGridSelectionChanged;
+    }
 
-        Loaded += async (_, _) =>
-        {
-            UpdateHeaders();
-            if (DataContext is ProductsViewModel vm)
-                await vm.LoadCommand.ExecuteAsync(null);
-        };
+    private void OnUnloaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        LocalizationManager.Instance.PropertyChanged -= OnLanguageChanged;
+
+        if (this.FindControl<DataGrid>("ProductsGrid") is { } grid)
+            grid.SelectionChanged -= OnGridSelectionChanged;
+    }
+
+    private void OnGridSelectionChanged(object? s, SelectionChangedEventArgs e)
+    {
+        if (s is DataGrid dg && DataContext is ProductsViewModel vm)
+            vm.SelectedProduct = dg.SelectedItem as ProductDto;
     }
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)

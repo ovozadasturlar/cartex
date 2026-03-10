@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.ReportsView"
              x:CompileBindings="False">
 
@@ -28,7 +29,8 @@
         <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,0,0,16">
             <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
                 <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="💰" FontSize="32" HorizontalAlignment="Center" />
+                    <mi:MaterialIcon Kind="CashMultiple" Width="32" Height="32" HorizontalAlignment="Center"
+                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
                     <TextBlock Text="{Binding L[total_sales]}" Classes="muted"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="{Binding TotalSales, StringFormat={}{0:N0}}"
@@ -39,7 +41,8 @@
             </Border>
             <Border Classes="card" Grid.Column="1" Margin="8,0,0,0">
                 <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="📊" FontSize="32" HorizontalAlignment="Center" />
+                    <mi:MaterialIcon Kind="ChartPie" Width="32" Height="32" HorizontalAlignment="Center"
+                                     Foreground="{DynamicResource InfoBrush}" />
                     <TextBlock Text="{Binding L[total_transactions]}" Classes="muted"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="{Binding TotalTransactions}"

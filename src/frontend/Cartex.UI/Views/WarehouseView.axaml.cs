@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Cartex.UI.Services;
-using Cartex.UI.ViewModels;
 using System.ComponentModel;
 
 namespace Cartex.UI.Views;
@@ -10,14 +9,19 @@ public partial class WarehouseView : UserControl
     public WarehouseView()
     {
         InitializeComponent();
-        LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
 
-        Loaded += async (_, _) =>
-        {
-            UpdateHeaders();
-            if (DataContext is WarehouseViewModel vm)
-                await vm.LoadWarehousesCommand.ExecuteAsync(null);
-        };
+    private void OnLoaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
+        UpdateHeaders();
+    }
+
+    private void OnUnloaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        LocalizationManager.Instance.PropertyChanged -= OnLanguageChanged;
     }
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)

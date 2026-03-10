@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Cartex.UI.Models;
 
 namespace Cartex.UI.Services;
 
@@ -8,15 +9,18 @@ public sealed class TouchModeManager : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private bool _isTouchMode;
-    public bool IsTouchMode
+    private AppMode _mode;
+    public AppMode Mode
     {
-        get => _isTouchMode;
+        get => _mode;
         set
         {
-            if (_isTouchMode == value) return;
-            _isTouchMode = value;
+            if (_mode == value) return;
+            _mode = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Mode)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsTouchMode)));
         }
     }
+
+    public bool IsTouchMode => Mode == AppMode.Touch;
 }

@@ -16,16 +16,13 @@ public abstract class ViewModelBase : ObservableObject
 
     protected ViewModelBase()
     {
-        LocalizationManager.Instance.PropertyChanged += OnLocalizationChanged;
+        LocalizationManager.Instance.LanguageChanged += RefreshLocalization;
     }
 
-    private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)
+    private void RefreshLocalization()
     {
-        if (e.PropertyName == "Item[]")
-        {
-            _l = new LocalizationLookup();
-            OnPropertyChanged(nameof(L));
-        }
+        _l = new LocalizationLookup();
+        OnPropertyChanged(nameof(L));
     }
 }
 

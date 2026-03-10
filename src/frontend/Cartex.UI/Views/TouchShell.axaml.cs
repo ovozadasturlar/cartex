@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Cartex.UI.Views;
 
-public partial class DashboardView : UserControl
+public partial class TouchShell : UserControl
 {
-    public DashboardView()
+    public TouchShell()
     {
         InitializeComponent();
     }

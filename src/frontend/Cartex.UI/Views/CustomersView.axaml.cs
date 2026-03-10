@@ -11,22 +11,31 @@ public partial class CustomersView : UserControl
     public CustomersView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
         LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
+        UpdateHeaders();
 
-        var grid = this.FindControl<DataGrid>("CustomersGrid");
-        if (grid is not null)
-            grid.SelectionChanged += (s, _) =>
-            {
-                if (s is DataGrid dg && DataContext is CustomersViewModel vm)
-                    vm.SelectedCustomer = dg.SelectedItem as CustomerDto;
-            };
+        if (this.FindControl<DataGrid>("CustomersGrid") is { } grid)
+            grid.SelectionChanged += OnGridSelectionChanged;
+    }
 
-        Loaded += async (_, _) =>
-        {
-            UpdateHeaders();
-            if (DataContext is CustomersViewModel vm)
-                await vm.LoadCommand.ExecuteAsync(null);
-        };
+    private void OnUnloaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        LocalizationManager.Instance.PropertyChanged -= OnLanguageChanged;
+
+        if (this.FindControl<DataGrid>("CustomersGrid") is { } grid)
+            grid.SelectionChanged -= OnGridSelectionChanged;
+    }
+
+    private void OnGridSelectionChanged(object? s, SelectionChangedEventArgs e)
+    {
+        if (s is DataGrid dg && DataContext is CustomersViewModel vm)
+            vm.SelectedCustomer = dg.SelectedItem as CustomerDto;
     }
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)

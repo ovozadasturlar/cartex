@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Cartex.UI;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
 
         ThemeManager.ApplyTheme = theme =>
-            RequestedThemeVariant = theme == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+            RequestedThemeVariant = theme == AppTheme.Dark ? ThemeVariant.Dark : ThemeVariant.Light;
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -30,7 +31,7 @@ public partial class App : Application
         var provider = services.BuildServiceProvider();
         ServiceLocator.Initialize(provider);
 
-        RequestedThemeVariant = settings.Theme == "Dark"
+        RequestedThemeVariant = settings.Theme == AppTheme.Dark
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
 
