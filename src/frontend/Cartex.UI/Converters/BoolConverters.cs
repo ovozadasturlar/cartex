@@ -45,7 +45,7 @@ public sealed class LanguageFlagConverter : IValueConverter
     public static readonly LanguageFlagConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is AppLanguage lang ? LocalizationManager.GetLanguageFlagEmoji(lang) : value!;
+        value is AppLanguage lang ? LocalizationManager.GetLanguageShortCode(lang) : value!;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

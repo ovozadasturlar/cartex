@@ -41,7 +41,7 @@ public partial class MainViewModel : ViewModelBase
         set => CurrentTheme = value ? AppTheme.Dark : AppTheme.Light;
     }
 
-    public string CurrentLanguageFlag => LocalizationManager.GetLanguageFlagEmoji(CurrentLanguage);
+    public string CurrentLanguageFlag => LocalizationManager.GetLanguageShortCode(CurrentLanguage);
 
     public MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark
         ? MaterialIconKind.WeatherNight

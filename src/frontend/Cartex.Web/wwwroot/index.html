@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cartex POS</title>
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#166534" />
@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        #out { width: 100%; height: 100%; }
         #splash { display: flex; align-items: center; justify-content: center; height: 100vh; background: #111318; color: #F1F5F9; font-family: sans-serif; font-size: 24px; }
     </style>
 </head>
@@ -22,6 +23,16 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js');
         }
+        // Ensure Avalonia canvas gets focus for mobile virtual keyboard
+        const observer = new MutationObserver(() => {
+            const canvas = document.querySelector('canvas');
+            if (canvas && !canvas.dataset.avlSetup) {
+                canvas.dataset.avlSetup = '1';
+                canvas.setAttribute('tabindex', '0');
+                canvas.addEventListener('touchstart', () => canvas.focus(), { passive: true });
+            }
+        });
+        observer.observe(document.getElementById('out'), { childList: true, subtree: true });
     </script>
 </body>
 </html>

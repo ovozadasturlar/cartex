@@ -64,7 +64,7 @@ public partial class LoginViewModel : ViewModelBase
         ? MaterialIconKind.GestureTap
         : MaterialIconKind.Monitor;
 
-    public string CurrentLanguageFlag => LocalizationManager.GetLanguageFlagEmoji(CurrentLanguage);
+    public string CurrentLanguageFlag => LocalizationManager.GetLanguageShortCode(CurrentLanguage);
 
     public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
