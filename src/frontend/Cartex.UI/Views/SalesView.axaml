@@ -8,7 +8,7 @@
     <Panel>
 
         <!-- ===== DESKTOP MODE ===== -->
-        <Grid ColumnDefinitions="*,360" Margin="16"
+        <Grid ColumnDefinitions="*,420" Margin="16"
               IsVisible="{Binding !IsTouchMode}">
 
             <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,12,0">
@@ -132,7 +132,7 @@
         </Grid>
 
         <!-- ===== TOUCH MODE ===== -->
-        <Grid ColumnDefinitions="*,380" IsVisible="{Binding IsTouchMode}">
+        <Grid ColumnDefinitions="*,420" IsVisible="{Binding IsTouchMode}">
 
             <!-- Left: Product search + grid -->
             <Grid RowDefinitions="Auto,*" Margin="8,8,4,8">
