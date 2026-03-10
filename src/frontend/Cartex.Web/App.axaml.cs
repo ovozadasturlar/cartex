@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
@@ -23,28 +24,44 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var services = new ServiceCollection();
-        var settings = SettingsService.Instance;
-
-        services.AddSingleton(settings);
-        DependencyInjection.RegisterServices(services, settings);
-
-        var provider = services.BuildServiceProvider();
-        ServiceLocator.Initialize(provider);
-
-        RequestedThemeVariant = settings.Theme == AppTheme.Dark
-            ? ThemeVariant.Dark
-            : ThemeVariant.Light;
-
-        LocalizationManager.Instance.LoadLanguage(settings.Language);
-
-        if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        try
         {
-            var nav = provider.GetRequiredService<NavigationService>();
-            var loginVm = provider.GetRequiredService<LoginViewModel>();
-            nav.NavigateTo(loginVm);
+            var services = new ServiceCollection();
+            var settings = SettingsService.Instance;
 
-            singleView.MainView = new AppShell { DataContext = nav };
+            services.AddSingleton(settings);
+            DependencyInjection.RegisterServices(services, settings);
+
+            var provider = services.BuildServiceProvider();
+            ServiceLocator.Initialize(provider);
+
+            RequestedThemeVariant = settings.Theme == AppTheme.Dark
+                ? ThemeVariant.Dark
+                : ThemeVariant.Light;
+
+            LocalizationManager.Instance.LoadLanguage(settings.Language);
+
+            if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+            {
+                var nav = provider.GetRequiredService<NavigationService>();
+                var loginVm = provider.GetRequiredService<LoginViewModel>();
+                nav.NavigateTo(loginVm);
+
+                singleView.MainView = new AppShell { DataContext = nav };
+            }
+        }
+        catch (Exception ex)
+        {
+            if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+            {
+                singleView.MainView = new TextBlock
+                {
+                    Text = $"Init error: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}",
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    Margin = new Thickness(20),
+                    FontSize = 14
+                };
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
