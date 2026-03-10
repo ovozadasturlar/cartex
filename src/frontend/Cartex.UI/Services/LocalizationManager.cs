@@ -67,6 +67,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         _ => lang.ToString()
     };
 
+    public static string GetLanguageFlagEmoji(AppLanguage lang) => lang switch
+    {
+        AppLanguage.En => "🇬🇧",
+        AppLanguage.Ru => "🇷🇺",
+        AppLanguage.UzLatn => "🇺🇿",
+        AppLanguage.UzCyrl => "🇺🇿",
+        _ => "🌐"
+    };
+
     private static string GetLanguageCode(AppLanguage lang) => lang switch
     {
         AppLanguage.En => "en",

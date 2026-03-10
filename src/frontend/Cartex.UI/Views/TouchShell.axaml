@@ -27,7 +27,7 @@
                                 Command="{Binding $parent[UserControl].DataContext.SelectMenuItemCommand}"
                                 CommandParameter="{Binding}">
                             <StackPanel Spacing="2" HorizontalAlignment="Center">
-                                <mi:MaterialIcon Kind="{Binding Icon}" Width="28" Height="28"
+                                <mi:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
                                                  Foreground="{DynamicResource TextSecondary}"
                                                  HorizontalAlignment="Center" />
                                 <TextBlock Text="{Binding Title}" FontSize="11"
@@ -55,7 +55,7 @@
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleThemePopupCommand}">
-                        <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="24" Height="24" />
+                     <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18" />
                     </Button>
                     <Popup IsOpen="{Binding IsThemePopupOpen, Mode=TwoWay}"
                            Placement="Bottom" IsLightDismissEnabled="True">
@@ -67,16 +67,16 @@
                                         HorizontalContentAlignment="Left" Padding="14,10"
                                         Command="{Binding SelectThemeCommand}" CommandParameter="Light">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <mi:MaterialIcon Kind="WeatherSunny" Width="22" Height="22" />
-                                        <TextBlock Text="Light" FontSize="16" VerticalAlignment="Center" />
+                        <mi:MaterialIcon Kind="WeatherSunny" Width="18" Height="18" />
+                                        <TextBlock Text="Light" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                                 <Button Background="Transparent" HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Left" Padding="14,10"
                                         Command="{Binding SelectThemeCommand}" CommandParameter="Dark">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <mi:MaterialIcon Kind="WeatherNight" Width="22" Height="22" />
-                                        <TextBlock Text="Dark" FontSize="16" VerticalAlignment="Center" />
+                        <mi:MaterialIcon Kind="WeatherNight" Width="18" Height="18" />
+                                        <TextBlock Text="Dark" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -89,7 +89,7 @@
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleModePopupCommand}">
-                        <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="24" Height="24" />
+                     <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18" />
                     </Button>
                     <Popup IsOpen="{Binding IsModePopupOpen, Mode=TwoWay}"
                            Placement="Bottom" IsLightDismissEnabled="True">
@@ -101,16 +101,16 @@
                                         HorizontalContentAlignment="Left" Padding="14,10"
                                         Command="{Binding SelectModeCommand}" CommandParameter="Desktop">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <mi:MaterialIcon Kind="Monitor" Width="22" Height="22" />
-                                        <TextBlock Text="Desktop" FontSize="16" VerticalAlignment="Center" />
+                        <mi:MaterialIcon Kind="Monitor" Width="18" Height="18" />
+                                        <TextBlock Text="Desktop" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                                 <Button Background="Transparent" HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Left" Padding="14,10"
                                         Command="{Binding SelectModeCommand}" CommandParameter="Touch">
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <mi:MaterialIcon Kind="GestureTap" Width="22" Height="22" />
-                                        <TextBlock Text="Touch" FontSize="16" VerticalAlignment="Center" />
+                        <mi:MaterialIcon Kind="GestureTap" Width="18" Height="18" />
+                                        <TextBlock Text="Touch" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -123,7 +123,8 @@
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleLanguagePopupCommand}">
-                        <mi:MaterialIcon Kind="Translate" Width="24" Height="24" />
+                        <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="18"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center" />
                     </Button>
                     <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
                            Placement="Bottom" IsLightDismissEnabled="True">
@@ -137,8 +138,12 @@
                                                 HorizontalContentAlignment="Left" Padding="14,10"
                                                 Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
                                                 CommandParameter="{Binding}">
-                                            <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
-                                                       FontSize="16" />
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageFlagConverter.Instance}}"
+                                                           FontSize="16" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -151,7 +156,7 @@
                 <Button Grid.Column="4" Background="Transparent" BorderThickness="0"
                         Command="{Binding LogoutCommand}"
                         Padding="10,8" MinHeight="48">
-                    <mi:MaterialIcon Kind="Logout" Width="24" Height="24"
+                    <mi:MaterialIcon Kind="Logout" Width="18" Height="18"
                                      Foreground="{DynamicResource DangerBrush}" />
                 </Button>
             </Grid>

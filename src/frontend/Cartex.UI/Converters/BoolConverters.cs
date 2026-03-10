@@ -1,5 +1,7 @@
 using System.Globalization;
+using Avalonia.Controls;
 using Avalonia.Data.Converters;
+using Avalonia.Layout;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
 
@@ -38,12 +40,34 @@ public sealed class StringNotEmptyConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+public sealed class LanguageFlagConverter : IValueConverter
+{
+    public static readonly LanguageFlagConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is AppLanguage lang ? LocalizationManager.GetLanguageFlagEmoji(lang) : value!;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class LanguageDisplayConverter : IValueConverter
 {
     public static readonly LanguageDisplayConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is AppLanguage lang ? LocalizationManager.GetLanguageDisplayName(lang) : value!;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class BoolToOrientationConverter : IValueConverter
+{
+    public static readonly BoolToOrientationConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is true ? Orientation.Vertical : Orientation.Horizontal;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

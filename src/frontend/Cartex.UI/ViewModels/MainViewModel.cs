@@ -11,6 +11,7 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly AuthService _authService;
     private readonly NavigationService _navigationService;
+    private readonly Action _langChangedHandler;
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private MenuItem? _selectedMenuItem;
@@ -40,6 +41,8 @@ public partial class MainViewModel : ViewModelBase
         set => CurrentTheme = value ? AppTheme.Dark : AppTheme.Light;
     }
 
+    public string CurrentLanguageFlag => LocalizationManager.GetLanguageFlagEmoji(CurrentLanguage);
+
     public MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark
         ? MaterialIconKind.WeatherNight
         : MaterialIconKind.WeatherSunny;
@@ -60,6 +63,11 @@ public partial class MainViewModel : ViewModelBase
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
+
+        ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
+        ModeManager.Instance.ModeChanged += OnModeManagedChanged;
+        _langChangedHandler = OnLanguageManagedChanged;
+        LocalizationManager.Instance.LanguageChanged += _langChangedHandler;
     }
 
     public void Initialize()
@@ -134,7 +142,8 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentModeChanged(AppMode value)
     {
         SettingsService.Instance.Mode = value;
-        ModeManager.Instance.Mode = value;
+        if (ModeManager.Instance.Mode != value)
+            ModeManager.Instance.Mode = value;
         OnPropertyChanged(nameof(IsTouchMode));
         OnPropertyChanged(nameof(ModeIcon));
     }
@@ -142,7 +151,8 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentThemeChanged(AppTheme value)
     {
         SettingsService.Instance.Theme = value;
-        ThemeManager.Instance.Theme = value;
+        if (ThemeManager.Instance.Theme != value)
+            ThemeManager.Instance.Theme = value;
         OnPropertyChanged(nameof(IsDarkTheme));
         OnPropertyChanged(nameof(ThemeIcon));
     }
@@ -150,7 +160,42 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentLanguageChanged(AppLanguage value)
     {
         SettingsService.Instance.Language = value;
-        LocalizationManager.Instance.CurrentLanguage = value;
+        if (LocalizationManager.Instance.CurrentLanguage != value)
+            LocalizationManager.Instance.CurrentLanguage = value;
+        OnPropertyChanged(nameof(CurrentLanguageFlag));
+        UpdateMenuTitles();
+        if (SelectedMenuItem is not null)
+            CurrentPageTitle = SelectedMenuItem.Title;
+    }
+
+    private void OnThemeManagedChanged(AppTheme theme)
+    {
+        if (_currentTheme == theme) return;
+        _currentTheme = theme;
+        SettingsService.Instance.Theme = theme;
+        OnPropertyChanged(nameof(CurrentTheme));
+        OnPropertyChanged(nameof(IsDarkTheme));
+        OnPropertyChanged(nameof(ThemeIcon));
+    }
+
+    private void OnModeManagedChanged(AppMode mode)
+    {
+        if (_currentMode == mode) return;
+        _currentMode = mode;
+        SettingsService.Instance.Mode = mode;
+        OnPropertyChanged(nameof(CurrentMode));
+        OnPropertyChanged(nameof(IsTouchMode));
+        OnPropertyChanged(nameof(ModeIcon));
+    }
+
+    private void OnLanguageManagedChanged()
+    {
+        var lang = LocalizationManager.Instance.CurrentLanguage;
+        if (_currentLanguage == lang) return;
+        _currentLanguage = lang;
+        SettingsService.Instance.Language = lang;
+        OnPropertyChanged(nameof(CurrentLanguage));
+        OnPropertyChanged(nameof(CurrentLanguageFlag));
         UpdateMenuTitles();
         if (SelectedMenuItem is not null)
             CurrentPageTitle = SelectedMenuItem.Title;

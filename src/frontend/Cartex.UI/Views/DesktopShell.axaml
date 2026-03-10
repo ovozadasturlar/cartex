@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:conv="using:Cartex.UI.Converters"
@@ -75,11 +75,12 @@
                 </Border>
 
                 <StackPanel DockPanel.Dock="Bottom" Margin="4,4" Spacing="2">
-                    <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="0,0,0,4" />
-                    <Grid ColumnDefinitions="*,*,*" HorizontalAlignment="Center">
+                    <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="0,0,0,2" />
+                    <StackPanel Orientation="{Binding IsSidebarCollapsed, Converter={x:Static conv:BoolToOrientationConverter.Instance}}"
+                                HorizontalAlignment="Center" Spacing="4">
                         <Panel>
                             <Button Background="Transparent" BorderThickness="0"
-                                    Padding="8,6" Cursor="Hand" HorizontalAlignment="Center"
+                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
                                     Command="{Binding ToggleThemePopupCommand}"
                                     ToolTip.Tip="Theme">
                                 <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18" />
@@ -115,7 +116,7 @@
 
                         <Panel>
                             <Button Background="Transparent" BorderThickness="0"
-                                    Padding="8,6" Cursor="Hand" HorizontalAlignment="Left"
+                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
                                     Command="{Binding ToggleModePopupCommand}"
                                     ToolTip.Tip="Mode">
                                 <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18" />
@@ -151,16 +152,17 @@
 
                         <Panel>
                             <Button Background="Transparent" BorderThickness="0"
-                                    Padding="8,6" Cursor="Hand" HorizontalAlignment="Center"
+                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
                                     Command="{Binding ToggleLanguagePopupCommand}"
                                     ToolTip.Tip="Language">
-                                <mi:MaterialIcon Kind="Translate" Width="18" Height="18" />
+                                <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="16"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
                             </Button>
                             <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
                                    Placement="Top" IsLightDismissEnabled="True">
                                 <Border Background="{DynamicResource CardBg}" CornerRadius="8"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                        Padding="4" MinWidth="180">
+                                        Padding="4" MinWidth="200">
                                     <ItemsControl ItemsSource="{Binding AvailableLanguages}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
@@ -168,7 +170,12 @@
                                                         HorizontalContentAlignment="Left" Padding="12,8"
                                                         Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
                                                         CommandParameter="{Binding}">
-                                                    <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageFlagConverter.Instance}}"
+                                                                   FontSize="16" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
                                                 </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -176,7 +183,7 @@
                                 </Border>
                             </Popup>
                         </Panel>
-                    </Grid>
+                    </StackPanel>
                 </StackPanel>
 
                 <Separator DockPanel.Dock="Bottom" Background="{DynamicResource BorderBrush}" Height="1" />

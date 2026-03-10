@@ -19,8 +19,11 @@ public sealed class ModeManager : INotifyPropertyChanged
             _mode = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Mode)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsTouchMode)));
+            ModeChanged?.Invoke(value);
         }
     }
+
+    public event Action<AppMode>? ModeChanged;
 
     public bool IsTouchMode => Mode == AppMode.Touch;
 
