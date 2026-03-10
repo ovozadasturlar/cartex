@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -6,20 +5,12 @@ using Cartex.Shared.Models.Sales;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class SalesHistoryViewModel : ViewModelBase
+public partial class SalesHistoryViewModel(ISalesApi salesApi) : ViewModelBase
 {
-    private readonly ISalesApi _salesApi;
-
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private DateTimeOffset? _dateFrom;
     [ObservableProperty] private DateTimeOffset? _dateTo;
-
-    public ObservableCollection<SaleDto> Sales { get; } = [];
-
-    public SalesHistoryViewModel(ISalesApi salesApi)
-    {
-        _salesApi = salesApi;
-    }
+    [ObservableProperty] private List<SaleDto> _sales = [];
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -27,18 +18,13 @@ public partial class SalesHistoryViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var from = DateFrom?.DateTime;
-            var to = DateTo?.DateTime;
-            var sales = await _salesApi.GetAllAsync(fromDate: from, toDate: to);
-            Sales.Clear();
-            foreach (var s in sales)
-                Sales.Add(s);
+            var result = await salesApi.GetAllAsync(
+                fromDate: DateFrom?.DateTime,
+                toDate: DateTo?.DateTime);
+            Sales = result;
         }
-        catch { }
-        finally
-        {
-            IsLoading = false;
-        }
+        catch { Sales = []; }
+        finally { IsLoading = false; }
     }
 
     [RelayCommand]

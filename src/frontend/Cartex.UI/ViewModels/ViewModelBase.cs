@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -12,11 +11,13 @@ public sealed class LocalizationLookup
 public abstract class ViewModelBase : ObservableObject
 {
     private LocalizationLookup _l = new();
+    private readonly Action _refreshAction;
     public LocalizationLookup L => _l;
 
     protected ViewModelBase()
     {
-        LocalizationManager.Instance.LanguageChanged += RefreshLocalization;
+        _refreshAction = RefreshLocalization;
+        LocalizationManager.Instance.LanguageChanged += _refreshAction;
     }
 
     private void RefreshLocalization()

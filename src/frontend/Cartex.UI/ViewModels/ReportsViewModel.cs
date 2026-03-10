@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -13,8 +12,7 @@ public partial class ReportsViewModel(ISalesApi salesApi) : ViewModelBase
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private decimal _totalSales;
     [ObservableProperty] private int _totalTransactions;
-
-    public ObservableCollection<SaleDto> Sales { get; } = [];
+    [ObservableProperty] private List<SaleDto> _sales = [];
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -24,16 +22,14 @@ public partial class ReportsViewModel(ISalesApi salesApi) : ViewModelBase
         {
             var from = DateFrom.DateTime;
             var to = DateTo.DateTime.Date.AddDays(1);
-            var sales = await salesApi.GetAllAsync(fromDate: from, toDate: to);
-            Sales.Clear();
-            foreach (var s in sales)
-                Sales.Add(s);
-            TotalSales = sales.Sum(s => s.TotalAmount);
-            TotalTransactions = sales.Count;
+            var result = await salesApi.GetAllAsync(fromDate: from, toDate: to);
+            Sales = result;
+            TotalSales = result.Sum(s => s.TotalAmount);
+            TotalTransactions = result.Count;
         }
         catch
         {
-            Sales.Clear();
+            Sales = [];
             TotalSales = 0;
             TotalTransactions = 0;
         }

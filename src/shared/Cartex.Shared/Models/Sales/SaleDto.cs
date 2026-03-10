@@ -10,4 +10,11 @@ public record SaleDto(
     decimal DebtAmount,
     string Status,
     string? CustomerName,
-    string UserName);
+    string UserName)
+{
+    public string DisplayDate => SaleDate.ToString("dd.MM.yyyy HH:mm");
+    public string DisplayTotal => TotalAmount.ToString("N0");
+    public string DisplayCash => PaidCash.ToString("N0");
+    public string DisplayCard => PaidCard.ToString("N0");
+    public string DisplayDebt => DebtAmount.ToString("N0");
+}

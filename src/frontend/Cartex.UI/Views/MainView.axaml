@@ -1,11 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="using:Cartex.UI.Views"
              x:Class="Cartex.UI.Views.MainView"
              x:CompileBindings="False">
 
-    <Panel>
-        <local:DesktopShell DataContext="{Binding}" IsVisible="{Binding !IsTouchMode}" />
-        <local:TouchShell DataContext="{Binding}" IsVisible="{Binding IsTouchMode}" />
-    </Panel>
+    <ContentPresenter x:Name="ShellHost" />
 </UserControl>
