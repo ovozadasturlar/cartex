@@ -104,5 +104,16 @@
   "total_transactions": "Жами транзакциялар",
   "load_report": "Ҳисоботни юклаш",
   "product_name": "Маҳсулот номи",
-  "exact": "Аниқ"
+  "exact": "Аниқ",
+  "revenue_trend": "Даромад динамикаси",
+  "category_breakdown": "Категория бўйича",
+  "sales_chart": "Савдо диаграммаси",
+  "average_sale": "Ўртача савдо",
+  "max_sale": "Энг катта савдо",
+  "hold_sale": "Кутиш",
+  "held_sales": "Кутилаётган савдолар",
+  "sale_held": "Савдо кутишга қўйилди",
+  "resume": "Давом",
+  "appearance": "Кўриниш",
+  "mode": "Режим"
 }

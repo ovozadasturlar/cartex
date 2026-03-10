@@ -104,5 +104,16 @@
   "total_transactions": "Всего транзакций",
   "load_report": "Загрузить отчёт",
   "product_name": "Название товара",
-  "exact": "Точно"
+  "exact": "Точно",
+  "revenue_trend": "Динамика выручки",
+  "category_breakdown": "По категориям",
+  "sales_chart": "Диаграмма продаж",
+  "average_sale": "Средняя продажа",
+  "max_sale": "Макс. продажа",
+  "hold_sale": "Отложить",
+  "held_sales": "Отложенные",
+  "sale_held": "Продажа отложена",
+  "resume": "Продолжить",
+  "appearance": "Оформление",
+  "mode": "Режим"
 }

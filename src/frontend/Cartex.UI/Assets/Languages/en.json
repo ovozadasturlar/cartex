@@ -104,5 +104,16 @@
   "total_transactions": "Total Transactions",
   "load_report": "Load Report",
   "product_name": "Product Name",
-  "exact": "Exact"
+  "exact": "Exact",
+  "revenue_trend": "Revenue Trend",
+  "category_breakdown": "Category Breakdown",
+  "sales_chart": "Sales Chart",
+  "average_sale": "Average Sale",
+  "max_sale": "Max Sale",
+  "hold_sale": "Hold",
+  "held_sales": "Held Sales",
+  "sale_held": "Sale put on hold",
+  "resume": "Resume",
+  "appearance": "Appearance",
+  "mode": "Mode"
 }

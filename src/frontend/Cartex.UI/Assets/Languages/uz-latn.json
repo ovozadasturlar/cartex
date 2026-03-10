@@ -104,5 +104,16 @@
   "total_transactions": "Jami tranzaksiyalar",
   "load_report": "Hisobotni yuklash",
   "product_name": "Mahsulot nomi",
-  "exact": "Aniq"
+  "exact": "Aniq",
+  "revenue_trend": "Daromad dinamikasi",
+  "category_breakdown": "Kategoriya bo'yicha",
+  "sales_chart": "Savdo diagrammasi",
+  "average_sale": "O'rtacha savdo",
+  "max_sale": "Eng katta savdo",
+  "hold_sale": "Kutish",
+  "held_sales": "Kutilayotgan savdolar",
+  "sale_held": "Savdo kutishga qo'yildi",
+  "resume": "Davom",
+  "appearance": "Ko'rinish",
+  "mode": "Rejim"
 }
