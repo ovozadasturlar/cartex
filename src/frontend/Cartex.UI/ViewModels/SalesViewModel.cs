@@ -10,6 +10,8 @@ using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
 
+public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt);
+
 public partial class CartItem : ObservableObject
 {
     [ObservableProperty] private string _productName = string.Empty;
@@ -44,13 +46,17 @@ public partial class SalesViewModel : ViewModelBase
     [ObservableProperty] private string _numpadTarget = "cash";
     [ObservableProperty] private string _searchQuery = string.Empty;
     [ObservableProperty] private CartItem? _selectedCartItem;
+    [ObservableProperty] private decimal _discountAmount;
+    [ObservableProperty] private bool _isHeldSalesVisible;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockDto> AvailableStocks { get; } = [];
     public ObservableCollection<StockDto> FilteredStocks { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
+    public ObservableCollection<HeldSale> HeldSales { get; } = [];
 
-    public decimal TotalAmount => CartItems.Sum(i => i.LineTotal);
+    public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
+    public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount);
     public decimal TotalPaid => PaidCash + PaidCard + PaidBonus;
     public decimal ChangeAmount => TotalPaid > TotalAmount ? TotalPaid - TotalAmount : 0;
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
@@ -75,6 +81,7 @@ public partial class SalesViewModel : ViewModelBase
 
     private void NotifyTotals()
     {
+        OnPropertyChanged(nameof(SubTotal));
         OnPropertyChanged(nameof(TotalAmount));
         OnPropertyChanged(nameof(TotalPaid));
         OnPropertyChanged(nameof(ChangeAmount));
@@ -84,6 +91,7 @@ public partial class SalesViewModel : ViewModelBase
     partial void OnPaidCashChanged(decimal value) => NotifyTotals();
     partial void OnPaidCardChanged(decimal value) => NotifyTotals();
     partial void OnPaidBonusChanged(decimal value) => NotifyTotals();
+    partial void OnDiscountAmountChanged(decimal value) => NotifyTotals();
 
     partial void OnSearchQueryChanged(string value)
     {
@@ -248,11 +256,56 @@ public partial class SalesViewModel : ViewModelBase
         PaidCash = 0;
         PaidCard = 0;
         PaidBonus = 0;
+        DiscountAmount = 0;
         SelectedCustomer = null;
         StatusMessage = null;
         NumpadDisplay = "0";
         NotifyTotals();
     }
+
+    [RelayCommand]
+    private void HoldSale()
+    {
+        if (CartItems.Count == 0) return;
+
+        var label = $"#{HeldSales.Count + 1} - {TotalAmount:N0}";
+        var items = CartItems.Select(c => new CartItem
+        {
+            ProductName = c.ProductName,
+            ProductId = c.ProductId,
+            StockId = c.StockId,
+            UnitPrice = c.UnitPrice,
+            Quantity = c.Quantity
+        }).ToList();
+
+        HeldSales.Add(new HeldSale(label, items, PaidCash, PaidCard, PaidBonus, SelectedCustomer, DateTime.Now));
+        ClearCart();
+        StatusMessage = L["sale_held"];
+    }
+
+    [RelayCommand]
+    private void ResumeSale(HeldSale held)
+    {
+        ClearCart();
+        foreach (var item in held.Items)
+            CartItems.Add(item);
+        PaidCash = held.PaidCash;
+        PaidCard = held.PaidCard;
+        PaidBonus = held.PaidBonus;
+        SelectedCustomer = held.Customer;
+        HeldSales.Remove(held);
+        NotifyTotals();
+        IsHeldSalesVisible = false;
+    }
+
+    [RelayCommand]
+    private void DiscardHeldSale(HeldSale held)
+    {
+        HeldSales.Remove(held);
+    }
+
+    [RelayCommand]
+    private void ToggleHeldSales() => IsHeldSalesVisible = !IsHeldSalesVisible;
 
     [RelayCommand]
     private async Task CompleteSaleAsync()
