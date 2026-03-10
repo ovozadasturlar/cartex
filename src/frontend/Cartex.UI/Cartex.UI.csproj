@@ -25,4 +25,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets\Languages\*.json" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\logo.png" />
+  </ItemGroup>
 </Project>
