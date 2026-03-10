@@ -133,7 +133,9 @@ public static class DatabaseSeeder
         var catHousehold = new Category { Name = "Uy-ro'zg'or" };
         var catPersonalCare = new Category { Name = "Shaxsiy gigiyena" };
 
-        await context.Categories.AddRangeAsync(catFood, catBeverages, catDairy, catBakery, catHousehold, catPersonalCare);
+        var catSnacks = new Category { Name = "Konditeriya" };
+
+        await context.Categories.AddRangeAsync(catFood, catBeverages, catDairy, catBakery, catHousehold, catPersonalCare, catSnacks);
         await context.SaveChangesAsync();
 
         var products = new List<Product>
@@ -153,6 +155,24 @@ public static class DatabaseSeeder
             new() { Name = "Yog' 1L", CategoryId = catFood.Id, UnitId = litr.Id, MinStock = 5 },
             new() { Name = "Sabun", CategoryId = catHousehold.Id, UnitId = dona.Id, MinStock = 5 },
             new() { Name = "Shampun", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Kolbasa", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Smetana 400g", CategoryId = catDairy.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Oq non", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
+            new() { Name = "Patir non", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
+            new() { Name = "Chips Lays 150g", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Shokolad Alpen Gold", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Konfet Karakum 1kg", CategoryId = catSnacks.Id, UnitId = kg.Id, MinStock = 5 },
+            new() { Name = "Pechenye Yubileynoe", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Tish pastasi Colgate", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Sovun Safeguard", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Makaron 400g", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 10 },
+            new() { Name = "Tuz 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 10 },
+            new() { Name = "Sirka 0.5L", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Pomidor pastasi 200g", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Sprite 1L", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Choy Tess 100p", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Kofe Nescafe 3v1", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
+            new() { Name = "Tovuq go'shti 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 5 },
         };
 
         await context.Products.AddRangeAsync(products);
@@ -175,6 +195,24 @@ public static class DatabaseSeeder
             new() { ProductId = products[12].Id, Code = "4780003000047" },
             new() { ProductId = products[13].Id, Code = "4780004000015" },
             new() { ProductId = products[14].Id, Code = "4780004000022" },
+            new() { ProductId = products[15].Id, Code = "4780005000014" },
+            new() { ProductId = products[16].Id, Code = "4780002000048" },
+            new() { ProductId = products[17].Id, Code = "4780001000042" },
+            new() { ProductId = products[18].Id, Code = "4780001000059" },
+            new() { ProductId = products[19].Id, Code = "4780006000013" },
+            new() { ProductId = products[20].Id, Code = "4780006000020" },
+            new() { ProductId = products[21].Id, Code = "4780006000037" },
+            new() { ProductId = products[22].Id, Code = "4780006000044" },
+            new() { ProductId = products[23].Id, Code = "4780004000039" },
+            new() { ProductId = products[24].Id, Code = "4780004000046" },
+            new() { ProductId = products[25].Id, Code = "4780003000054" },
+            new() { ProductId = products[26].Id, Code = "4780003000061" },
+            new() { ProductId = products[27].Id, Code = "4780003000078" },
+            new() { ProductId = products[28].Id, Code = "4780003000085" },
+            new() { ProductId = products[29].Id, Code = "4780002000055" },
+            new() { ProductId = products[30].Id, Code = "4780003000092" },
+            new() { ProductId = products[31].Id, Code = "4780002000062" },
+            new() { ProductId = products[32].Id, Code = "4780005000038" },
         };
 
         await context.Barcodes.AddRangeAsync(barcodes);
@@ -196,6 +234,24 @@ public static class DatabaseSeeder
             new() { ProductId = products[12].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 18000, SellingPrice = 22000 },
             new() { ProductId = products[13].Id, WarehouseId = warehouse.Id, Quantity = 45, PurchasePrice = 5000, SellingPrice = 6500 },
             new() { ProductId = products[14].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 15000, SellingPrice = 19000 },
+            new() { ProductId = products[15].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 15000, SellingPrice = 18000 },
+            new() { ProductId = products[16].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 6000, SellingPrice = 8000 },
+            new() { ProductId = products[17].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 3500, SellingPrice = 5000 },
+            new() { ProductId = products[18].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 4500, SellingPrice = 6000 },
+            new() { ProductId = products[19].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 5500, SellingPrice = 7000 },
+            new() { ProductId = products[20].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 8000, SellingPrice = 10000 },
+            new() { ProductId = products[21].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 16000, SellingPrice = 20000 },
+            new() { ProductId = products[22].Id, WarehouseId = warehouse.Id, Quantity = 2, PurchasePrice = 7000, SellingPrice = 9000 },
+            new() { ProductId = products[23].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 9000, SellingPrice = 12000 },
+            new() { ProductId = products[24].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000, SellingPrice = 5500 },
+            new() { ProductId = products[25].Id, WarehouseId = warehouse.Id, Quantity = 55, PurchasePrice = 4500, SellingPrice = 6000 },
+            new() { ProductId = products[26].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 3000, SellingPrice = 4000 },
+            new() { ProductId = products[27].Id, WarehouseId = warehouse.Id, Quantity = 1, PurchasePrice = 5000, SellingPrice = 7000 },
+            new() { ProductId = products[28].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000, SellingPrice = 5500 },
+            new() { ProductId = products[29].Id, WarehouseId = warehouse.Id, Quantity = 65, PurchasePrice = 5500, SellingPrice = 7500 },
+            new() { ProductId = products[30].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 9000, SellingPrice = 12000 },
+            new() { ProductId = products[31].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 7000, SellingPrice = 9000 },
+            new() { ProductId = products[32].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 20000, SellingPrice = 25000 },
         };
 
         await context.Stocks.AddRangeAsync(stocks);
@@ -345,7 +401,144 @@ public static class DatabaseSeeder
             CreatedAt = now
         };
 
-        await context.Sales.AddRangeAsync(sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10);
+        var sale11 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer1.Id,
+            TotalAmount = 50000,
+            PaidCash = 50000,
+            PaidCard = 0,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-13)
+        };
+
+        var sale12 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            TotalAmount = 38500,
+            PaidCash = 0,
+            PaidCard = 38500,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-12)
+        };
+
+        var sale13 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer3.Id,
+            TotalAmount = 54000,
+            PaidCash = 30000,
+            PaidCard = 24000,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-11)
+        };
+
+        var sale14 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            TotalAmount = 105000,
+            PaidCash = 105000,
+            PaidCard = 0,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-10)
+        };
+
+        var sale15 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer2.Id,
+            TotalAmount = 76000,
+            PaidCash = 0,
+            PaidCard = 76000,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-9)
+        };
+
+        var sale16 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            TotalAmount = 42000,
+            PaidCash = 42000,
+            PaidCard = 0,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-8)
+        };
+
+        var sale17 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer1.Id,
+            TotalAmount = 77000,
+            PaidCash = 40000,
+            PaidCard = 37000,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-6)
+        };
+
+        var sale18 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            TotalAmount = 62000,
+            PaidCash = 0,
+            PaidCard = 62000,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-4)
+        };
+
+        var sale19 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer3.Id,
+            TotalAmount = 68000,
+            PaidCash = 68000,
+            PaidCard = 0,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-2)
+        };
+
+        var sale20 = new Sale
+        {
+            WarehouseId = warehouse.Id,
+            UserId = admin.Id,
+            CustomerId = customer2.Id,
+            TotalAmount = 94000,
+            PaidCash = 50000,
+            PaidCard = 44000,
+            PaidBonus = 0,
+            DebtAmount = 0,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-1)
+        };
+
+        await context.Sales.AddRangeAsync(sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10,
+            sale11, sale12, sale13, sale14, sale15, sale16, sale17, sale18, sale19, sale20);
         await context.SaveChangesAsync();
 
         var saleItems = new List<SaleItem>
@@ -387,6 +580,38 @@ public static class DatabaseSeeder
             new() { SaleId = sale10.Id, ProductId = products[6].Id, StockId = stocks[6].Id, Quantity = 4, UnitPrice = 10000, PurchasePrice = 8000 },
             new() { SaleId = sale10.Id, ProductId = products[8].Id, StockId = stocks[8].Id, Quantity = 3, UnitPrice = 9000, PurchasePrice = 7000 },
             new() { SaleId = sale10.Id, ProductId = products[5].Id, StockId = stocks[5].Id, Quantity = 2, UnitPrice = 5000, PurchasePrice = 4000 },
+
+            new() { SaleId = sale11.Id, ProductId = products[0].Id, StockId = stocks[0].Id, Quantity = 3, UnitPrice = 10000, PurchasePrice = 8000 },
+            new() { SaleId = sale11.Id, ProductId = products[17].Id, StockId = stocks[17].Id, Quantity = 4, UnitPrice = 5000, PurchasePrice = 3500 },
+
+            new() { SaleId = sale12.Id, ProductId = products[16].Id, StockId = stocks[16].Id, Quantity = 2, UnitPrice = 8000, PurchasePrice = 6000 },
+            new() { SaleId = sale12.Id, ProductId = products[29].Id, StockId = stocks[29].Id, Quantity = 3, UnitPrice = 7500, PurchasePrice = 5500 },
+
+            new() { SaleId = sale13.Id, ProductId = products[25].Id, StockId = stocks[25].Id, Quantity = 5, UnitPrice = 6000, PurchasePrice = 4500 },
+            new() { SaleId = sale13.Id, ProductId = products[30].Id, StockId = stocks[30].Id, Quantity = 2, UnitPrice = 12000, PurchasePrice = 9000 },
+
+            new() { SaleId = sale14.Id, ProductId = products[9].Id, StockId = stocks[9].Id, Quantity = 2, UnitPrice = 15000, PurchasePrice = 12000 },
+            new() { SaleId = sale14.Id, ProductId = products[32].Id, StockId = stocks[32].Id, Quantity = 3, UnitPrice = 25000, PurchasePrice = 20000 },
+
+            new() { SaleId = sale15.Id, ProductId = products[18].Id, StockId = stocks[18].Id, Quantity = 6, UnitPrice = 6000, PurchasePrice = 4500 },
+            new() { SaleId = sale15.Id, ProductId = products[21].Id, StockId = stocks[21].Id, Quantity = 2, UnitPrice = 20000, PurchasePrice = 16000 },
+
+            new() { SaleId = sale16.Id, ProductId = products[15].Id, StockId = stocks[15].Id, Quantity = 1, UnitPrice = 18000, PurchasePrice = 15000 },
+            new() { SaleId = sale16.Id, ProductId = products[23].Id, StockId = stocks[23].Id, Quantity = 2, UnitPrice = 12000, PurchasePrice = 9000 },
+
+            new() { SaleId = sale17.Id, ProductId = products[0].Id, StockId = stocks[0].Id, Quantity = 5, UnitPrice = 10000, PurchasePrice = 8000 },
+            new() { SaleId = sale17.Id, ProductId = products[29].Id, StockId = stocks[29].Id, Quantity = 2, UnitPrice = 7500, PurchasePrice = 5500 },
+            new() { SaleId = sale17.Id, ProductId = products[30].Id, StockId = stocks[30].Id, Quantity = 1, UnitPrice = 12000, PurchasePrice = 9000 },
+
+            new() { SaleId = sale18.Id, ProductId = products[25].Id, StockId = stocks[25].Id, Quantity = 3, UnitPrice = 6000, PurchasePrice = 4500 },
+            new() { SaleId = sale18.Id, ProductId = products[12].Id, StockId = stocks[12].Id, Quantity = 2, UnitPrice = 22000, PurchasePrice = 18000 },
+
+            new() { SaleId = sale19.Id, ProductId = products[17].Id, StockId = stocks[17].Id, Quantity = 10, UnitPrice = 5000, PurchasePrice = 3500 },
+            new() { SaleId = sale19.Id, ProductId = products[31].Id, StockId = stocks[31].Id, Quantity = 2, UnitPrice = 9000, PurchasePrice = 7000 },
+
+            new() { SaleId = sale20.Id, ProductId = products[32].Id, StockId = stocks[32].Id, Quantity = 2, UnitPrice = 25000, PurchasePrice = 20000 },
+            new() { SaleId = sale20.Id, ProductId = products[19].Id, StockId = stocks[19].Id, Quantity = 2, UnitPrice = 7000, PurchasePrice = 5500 },
+            new() { SaleId = sale20.Id, ProductId = products[6].Id, StockId = stocks[6].Id, Quantity = 3, UnitPrice = 10000, PurchasePrice = 8000 },
         };
 
         await context.SaleItems.AddRangeAsync(saleItems);
@@ -407,8 +632,25 @@ public static class DatabaseSeeder
         stocks[13].Quantity -= 3;
         stocks[14].Quantity -= 1;
 
-        shopCashAccount.Balance = 363500;
-        shopCardAccount.Balance = 249000;
+        stocks[0].Quantity -= 8;
+        stocks[6].Quantity -= 3;
+        stocks[9].Quantity -= 2;
+        stocks[12].Quantity -= 2;
+        stocks[15].Quantity -= 1;
+        stocks[16].Quantity -= 2;
+        stocks[17].Quantity -= 14;
+        stocks[18].Quantity -= 6;
+        stocks[19].Quantity -= 2;
+        stocks[21].Quantity -= 2;
+        stocks[23].Quantity -= 2;
+        stocks[25].Quantity -= 8;
+        stocks[29].Quantity -= 5;
+        stocks[30].Quantity -= 3;
+        stocks[31].Quantity -= 2;
+        stocks[32].Quantity -= 5;
+
+        shopCashAccount.Balance = 748500;
+        shopCardAccount.Balance = 530500;
 
         var transactions = new List<Transaction>
         {
@@ -424,6 +666,19 @@ public static class DatabaseSeeder
             new() { ToAccountId = shopCardAccount.Id, Amount = 26000, OperationType = OperationType.Sale, SaleId = sale8.Id, UserId = admin.Id, CreatedAt = sale8.CreatedAt },
             new() { ToAccountId = shopCashAccount.Id, Amount = 37500, OperationType = OperationType.Sale, SaleId = sale9.Id, UserId = admin.Id, CreatedAt = sale9.CreatedAt },
             new() { ToAccountId = shopCardAccount.Id, Amount = 77000, OperationType = OperationType.Sale, SaleId = sale10.Id, UserId = admin.Id, CreatedAt = sale10.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 50000, OperationType = OperationType.Sale, SaleId = sale11.Id, UserId = admin.Id, CreatedAt = sale11.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 38500, OperationType = OperationType.Sale, SaleId = sale12.Id, UserId = admin.Id, CreatedAt = sale12.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 30000, OperationType = OperationType.Sale, SaleId = sale13.Id, UserId = admin.Id, CreatedAt = sale13.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 24000, OperationType = OperationType.Sale, SaleId = sale13.Id, UserId = admin.Id, CreatedAt = sale13.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 105000, OperationType = OperationType.Sale, SaleId = sale14.Id, UserId = admin.Id, CreatedAt = sale14.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 76000, OperationType = OperationType.Sale, SaleId = sale15.Id, UserId = admin.Id, CreatedAt = sale15.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 42000, OperationType = OperationType.Sale, SaleId = sale16.Id, UserId = admin.Id, CreatedAt = sale16.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 40000, OperationType = OperationType.Sale, SaleId = sale17.Id, UserId = admin.Id, CreatedAt = sale17.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 37000, OperationType = OperationType.Sale, SaleId = sale17.Id, UserId = admin.Id, CreatedAt = sale17.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 62000, OperationType = OperationType.Sale, SaleId = sale18.Id, UserId = admin.Id, CreatedAt = sale18.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 68000, OperationType = OperationType.Sale, SaleId = sale19.Id, UserId = admin.Id, CreatedAt = sale19.CreatedAt },
+            new() { ToAccountId = shopCashAccount.Id, Amount = 50000, OperationType = OperationType.Sale, SaleId = sale20.Id, UserId = admin.Id, CreatedAt = sale20.CreatedAt },
+            new() { ToAccountId = shopCardAccount.Id, Amount = 44000, OperationType = OperationType.Sale, SaleId = sale20.Id, UserId = admin.Id, CreatedAt = sale20.CreatedAt },
         };
 
         await context.Transactions.AddRangeAsync(transactions);
