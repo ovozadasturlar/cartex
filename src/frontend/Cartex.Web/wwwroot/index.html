@@ -36,48 +36,46 @@
         observer.observe(document.getElementById('out'), { childList: true, subtree: true });
 
         // Mobile IME fix for Avalonia WASM 11.3.x
-        // Problem 1: some keyboards send null data in compositionend → supply delta from value change
-        // Problem 2: Avalonia's SetCursorRect calls focus() mid-composition → cancels IME
+        // Root cause: During active IME composition, Avalonia's managed code calls
+        // setSurroundingText (sets input.value) and focusElement (calls focus()),
+        // which cancels the browser's composition session on mobile.
+        // Fix: Block value/selectionRange/focus writes on the input element while composing.
         (function() {
-            if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) return;
+            const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (!isMobile) return;
 
-            let isComposing = false;
+            let composing = false;
 
-            // Guard: prevent focus() calls on avalonia-input-element during active composition
-            const _originalFocus = HTMLElement.prototype.focus;
+            document.addEventListener('compositionstart', function() { composing = true; }, true);
+            document.addEventListener('compositionend', function() { composing = false; }, true);
+
+            const origFocus = HTMLElement.prototype.focus;
             HTMLElement.prototype.focus = function(opts) {
-                if (isComposing && this.classList && this.classList.contains('avalonia-input-element')) return;
-                return _originalFocus.call(this, opts);
+                if (composing && this.classList && this.classList.contains('avalonia-input-element')) return;
+                return origFocus.call(this, opts);
             };
 
-            function patchAvaloniaInput(el) {
-                if (el.dataset.cartexPatched) return;
-                el.dataset.cartexPatched = '1';
+            function patchInput(el) {
+                if (el._cartexPatched) return;
+                el._cartexPatched = true;
 
-                let preComposeValue = '';
+                const valueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+                Object.defineProperty(el, 'value', {
+                    get() { return valueDesc.get.call(this); },
+                    set(v) { if (!composing) valueDesc.set.call(this, v); },
+                    configurable: true
+                });
 
-                el.addEventListener('compositionstart', function() {
-                    isComposing = true;
-                    preComposeValue = el.value || '';
-                }, true);
-
-                el.addEventListener('compositionend', function(e) {
-                    isComposing = false;
-                    if (e.data != null && e.data !== '') return;
-
-                    const delta = (el.value || '').slice(preComposeValue.length);
-                    if (!delta) return;
-
-                    e.stopImmediatePropagation();
-                    el.dispatchEvent(new CompositionEvent('compositionend', {
-                        data: delta, bubbles: true, cancelable: true
-                    }));
-                }, true);
+                const origSetRange = HTMLInputElement.prototype.setSelectionRange;
+                el.setSelectionRange = function() {
+                    if (composing) return;
+                    return origSetRange.apply(this, arguments);
+                };
             }
 
             new MutationObserver(function() {
-                document.querySelectorAll('.avalonia-input-element').forEach(patchAvaloniaInput);
-            }).observe(document.body, { childList: true, subtree: true });
+                document.querySelectorAll('.avalonia-input-element').forEach(patchInput);
+            }).observe(document.getElementById('out'), { childList: true, subtree: true });
         })();
     </script>
 </body>

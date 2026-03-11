@@ -21,12 +21,12 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
-                <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="150" />
-                <DataGridTextColumn Header="Role" Binding="{Binding RoleName}" Width="120" />
-                <DataGridTextColumn Header="Shop" Binding="{Binding ShopName}" Width="150" />
-                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" />
+                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
+                <DataGridTextColumn Header="Name" Binding="{Binding FullName, Mode=OneWay}" Width="*" />
+                <DataGridTextColumn Header="Username" Binding="{Binding Username, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Role" Binding="{Binding RoleName, Mode=OneWay}" Width="120" />
+                <DataGridTextColumn Header="Shop" Binding="{Binding ShopName, Mode=OneWay}" Width="150" />
+                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive, Mode=OneWay}" Width="80" />
             </DataGrid.Columns>
         </DataGrid>
 

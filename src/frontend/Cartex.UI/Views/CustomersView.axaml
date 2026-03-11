@@ -44,12 +44,12 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="Name" Binding="{Binding FullName}" Width="*" />
-                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="150" />
-                <DataGridTextColumn Header="Card Barcode" Binding="{Binding CardBarcode}" Width="150" />
-                <DataGridTextColumn Header="Discount" Binding="{Binding DiscountPct}" Width="100" />
-                <DataGridTextColumn Header="Cashback" Binding="{Binding CashbackBalance}" Width="120" />
+                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
+                <DataGridTextColumn Header="Name" Binding="{Binding FullName, Mode=OneWay}" Width="*" />
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Card Barcode" Binding="{Binding CardBarcode, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Discount" Binding="{Binding DiscountPct, Mode=OneWay}" Width="100" />
+                <DataGridTextColumn Header="Cashback" Binding="{Binding CashbackBalance, Mode=OneWay}" Width="120" />
             </DataGrid.Columns>
         </DataGrid>
 

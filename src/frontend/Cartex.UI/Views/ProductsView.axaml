@@ -26,12 +26,12 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="150" />
-                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName}" Width="100" />
-                <DataGridTextColumn Header="Min Stock" Binding="{Binding MinStock}" Width="100" />
-                <DataGridTextColumn Header="Barcode" Binding="{Binding Barcodes[0]}" Width="150" />
+                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
+                <DataGridTextColumn Header="Name" Binding="{Binding Name, Mode=OneWay}" Width="*" />
+                <DataGridTextColumn Header="Category" Binding="{Binding CategoryName, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName, Mode=OneWay}" Width="100" />
+                <DataGridTextColumn Header="Min Stock" Binding="{Binding MinStock, Mode=OneWay}" Width="100" />
+                <DataGridTextColumn Header="Barcode" Binding="{Binding Barcodes[0], Mode=OneWay}" Width="150" />
             </DataGrid.Columns>
         </DataGrid>
 

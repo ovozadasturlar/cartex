@@ -12,6 +12,14 @@ namespace Cartex.UI.ViewModels;
 
 public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt);
 
+public partial class CategoryItem : ObservableObject
+{
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private bool _isSelected;
+}
+
+public enum PosLayout { Default, ThreeColumn, Stacked }
+
 public partial class CartItem : ObservableObject
 {
     [ObservableProperty] private string _productName = string.Empty;
@@ -48,12 +56,17 @@ public partial class SalesViewModel : ViewModelBase
     [ObservableProperty] private CartItem? _selectedCartItem;
     [ObservableProperty] private decimal _discountAmount;
     [ObservableProperty] private bool _isHeldSalesVisible;
+    [ObservableProperty] private string? _selectedCategory;
+    [ObservableProperty] private bool _isNumpadVisible = true;
+    [ObservableProperty] private PosLayout _currentLayout = PosLayout.Default;
+    [ObservableProperty] private bool _isLayoutSwapped;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockDto> AvailableStocks { get; } = [];
     public ObservableCollection<StockDto> FilteredStocks { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
     public ObservableCollection<HeldSale> HeldSales { get; } = [];
+    public ObservableCollection<CategoryItem> Categories { get; } = [];
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
     public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount);
@@ -93,13 +106,21 @@ public partial class SalesViewModel : ViewModelBase
     partial void OnPaidBonusChanged(decimal value) => NotifyTotals();
     partial void OnDiscountAmountChanged(decimal value) => NotifyTotals();
 
-    partial void OnSearchQueryChanged(string value)
+    partial void OnSearchQueryChanged(string value) => ApplyFilter();
+    partial void OnSelectedCategoryChanged(string? value) => ApplyFilter();
+
+    private void ApplyFilter()
     {
         FilteredStocks.Clear();
-        var query = value?.Trim() ?? "";
-        var source = string.IsNullOrEmpty(query)
-            ? AvailableStocks
-            : AvailableStocks.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase));
+        var query = SearchQuery?.Trim() ?? "";
+        IEnumerable<StockDto> source = AvailableStocks;
+
+        if (!string.IsNullOrEmpty(SelectedCategory))
+            source = source.Where(s => string.Equals(s.CategoryName, SelectedCategory, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(query))
+            source = source.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase));
+
         foreach (var s in source)
             FilteredStocks.Add(s);
     }
@@ -112,11 +133,18 @@ public partial class SalesViewModel : ViewModelBase
             var stocks = await _stocksApi.GetAllAsync(SelectedWarehouseId);
             AvailableStocks.Clear();
             FilteredStocks.Clear();
+            Categories.Clear();
+            var cats = new HashSet<string>();
             foreach (var s in stocks)
             {
                 AvailableStocks.Add(s);
                 FilteredStocks.Add(s);
+                if (!string.IsNullOrEmpty(s.CategoryName))
+                    cats.Add(s.CategoryName);
             }
+            foreach (var c in cats.OrderBy(c => c))
+                Categories.Add(new CategoryItem { Name = c });
+            SelectedCategory = null;
         }
         catch { }
     }
@@ -237,9 +265,32 @@ public partial class SalesViewModel : ViewModelBase
     [RelayCommand]
     private void SetNumpadTarget(string target)
     {
+        if (decimal.TryParse(NumpadDisplay, out var value) && value > 0)
+        {
+            switch (target)
+            {
+                case "cash": PaidCash = value; break;
+                case "card": PaidCard = value; break;
+                case "bonus": PaidBonus = value; break;
+            }
+        }
         NumpadTarget = target;
         NumpadDisplay = "0";
     }
+
+    [RelayCommand]
+    private void ToggleNumpad() => IsNumpadVisible = !IsNumpadVisible;
+
+    [RelayCommand]
+    private void SelectCategory(string? category)
+    {
+        SelectedCategory = SelectedCategory == category ? null : category;
+        foreach (var c in Categories)
+            c.IsSelected = c.Name == SelectedCategory;
+    }
+
+    [RelayCommand]
+    private void SwapLayout() => IsLayoutSwapped = !IsLayoutSwapped;
 
     [RelayCommand]
     private void PayExact()

@@ -72,3 +72,24 @@ public sealed class BoolToOrientationConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+public sealed class BoolToColumnConverter : IValueConverter
+{
+    public static readonly BoolToColumnConverter Col0Or2 = new(0, 2);
+    public static readonly BoolToColumnConverter Col2Or0 = new(2, 0);
+
+    private readonly int _falseVal;
+    private readonly int _trueVal;
+
+    public BoolToColumnConverter(int falseVal, int trueVal)
+    {
+        _falseVal = falseVal;
+        _trueVal = trueVal;
+    }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is true ? _trueVal : _falseVal;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

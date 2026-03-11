@@ -1,6 +1,7 @@
-using Avalonia.Controls;
-using Cartex.UI.Services;
 using System.ComponentModel;
+using Avalonia;
+using Avalonia.Controls;
+using Cartex.UI.ViewModels;
 
 namespace Cartex.UI.Views;
 
@@ -9,32 +10,61 @@ public partial class SalesView : UserControl
     public SalesView()
     {
         InitializeComponent();
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
+        WireScrollButtons();
     }
 
-    private void OnLoaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    protected override void OnDataContextChanged(EventArgs e)
     {
-        LocalizationManager.Instance.PropertyChanged += OnLanguageChanged;
-        UpdateHeaders();
+        base.OnDataContextChanged(e);
+        if (DataContext is SalesViewModel vm)
+        {
+            vm.PropertyChanged += OnVmPropertyChanged;
+            UpdatePaymentRowHeight(vm.IsNumpadVisible);
+        }
     }
 
-    private void OnUnloaded(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        LocalizationManager.Instance.PropertyChanged -= OnLanguageChanged;
+        if (e.PropertyName == nameof(SalesViewModel.IsNumpadVisible) && sender is SalesViewModel vm)
+            UpdatePaymentRowHeight(vm.IsNumpadVisible);
     }
 
-    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
+    private void UpdatePaymentRowHeight(bool numpadVisible)
     {
-        if (e.PropertyName == "Item[]") UpdateHeaders();
+        if (DesktopRightGrid is null) return;
+        var row = DesktopRightGrid.RowDefinitions[2];
+        row.Height = numpadVisible ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        row.MinHeight = numpadVisible ? 450 : 0;
+        DesktopRightGrid.InvalidateMeasure();
+        DesktopRightGrid.InvalidateArrange();
     }
 
-    private void UpdateHeaders()
+    private void WireScrollButtons()
     {
-        if (StocksGrid.Columns.Count < 3) return;
-        var l = LocalizationManager.Instance;
-        StocksGrid.Columns[0].Header = l["name"];
-        StocksGrid.Columns[1].Header = l["quantity"];
-        StocksGrid.Columns[2].Header = l["selling_price"];
+        WirePair(CatScrollLeft, CatScrollRight, CatScroll);
+        WirePair(TouchCatLeft, TouchCatRight, TouchCatScroll);
+    }
+
+    private static void WirePair(Button? left, Button? right, ScrollViewer? sv)
+    {
+        if (sv is null) return;
+        UpdateArrowStates(left, right, sv);
+        sv.ScrollChanged += (_, _) => UpdateArrowStates(left, right, sv);
+        left?.AddHandler(Button.ClickEvent, (_, _) =>
+        {
+            sv.Offset = sv.Offset.WithX(Math.Max(0, sv.Offset.X - 150));
+            UpdateArrowStates(left, right, sv);
+        });
+        right?.AddHandler(Button.ClickEvent, (_, _) =>
+        {
+            sv.Offset = sv.Offset.WithX(sv.Offset.X + 150);
+            UpdateArrowStates(left, right, sv);
+        });
+    }
+
+    private static void UpdateArrowStates(Button? left, Button? right, ScrollViewer sv)
+    {
+        if (left is not null) left.IsEnabled = sv.Offset.X > 0;
+        if (right is not null) right.IsEnabled = sv.Offset.X + sv.Viewport.Width < sv.Extent.Width - 1;
     }
 }

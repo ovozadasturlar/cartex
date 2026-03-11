@@ -34,13 +34,13 @@
                   BorderBrush="{DynamicResource BorderBrush}"
                   CornerRadius="6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                <DataGridTextColumn Header="Name" Binding="{Binding ProductName}" Width="*" />
-                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName}" Width="80" />
-                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="100" />
-                <DataGridTextColumn Header="Purchase Price" Binding="{Binding PurchasePrice}" Width="120" />
-                <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice}" Width="120" />
-                <DataGridTextColumn Header="Expired At" Binding="{Binding ExpiredAt}" Width="120" />
+                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
+                <DataGridTextColumn Header="Name" Binding="{Binding ProductName, Mode=OneWay}" Width="*" />
+                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName, Mode=OneWay}" Width="80" />
+                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity, Mode=OneWay}" Width="100" />
+                <DataGridTextColumn Header="Purchase Price" Binding="{Binding PurchasePrice, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
+                <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
+                <DataGridTextColumn Header="Expired At" Binding="{Binding ExpiredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}'}" Width="120" />
             </DataGrid.Columns>
         </DataGrid>
 
