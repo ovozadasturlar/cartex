@@ -1,9 +1,10 @@
 using System.Text.Json;
+using Cartex.Domain.Common.Exceptions;
 using FluentValidation;
 
 namespace Cartex.Api.Middleware;
 
-public class ExceptionMiddleware(RequestDelegate next)
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -17,38 +18,38 @@ public class ExceptionMiddleware(RequestDelegate next)
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        context.Response.ContentType = "application/json";
-
-        var (statusCode, response) = exception switch
+        var (statusCode, title, extensions) = exception switch
         {
             ValidationException validationEx => (
                 StatusCodes.Status400BadRequest,
-                new
-                {
-                    message = "Validation failed",
-                    errors = validationEx.Errors
-                        .Select(e => new { field = e.PropertyName, error = e.ErrorMessage })
-                }
+                "Validation failed",
+                (object?)validationEx.Errors.Select(e => new { field = e.PropertyName, error = e.ErrorMessage })
             ),
-            KeyNotFoundException => (
-                StatusCodes.Status404NotFound,
-                (object)new { message = exception.Message }
-            ),
-            UnauthorizedAccessException => (
-                StatusCodes.Status401Unauthorized,
-                (object)new { message = "Unauthorized" }
-            ),
-            _ => (
-                StatusCodes.Status500InternalServerError,
-                (object)new { message = "An internal error occurred" }
-            )
+            NotFoundException => (StatusCodes.Status404NotFound, exception.Message, null),
+            ConflictException => (StatusCodes.Status409Conflict, exception.Message, null),
+            ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message, null),
+            BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message, null),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", null),
+            _ => (StatusCodes.Status500InternalServerError, "An internal error occurred", null)
         };
 
+        if (statusCode == StatusCodes.Status500InternalServerError)
+            logger.LogError(exception, "Unhandled exception");
+
+        var problem = new Dictionary<string, object?>
+        {
+            ["type"] = $"https://httpstatuses.io/{statusCode}",
+            ["title"] = title,
+            ["status"] = statusCode
+        };
+        if (extensions is not null) problem["errors"] = extensions;
+
+        context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = statusCode;
 
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+        var json = JsonSerializer.Serialize(problem, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });

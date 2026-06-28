@@ -11,7 +11,7 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db) : IReq
     public async Task<Unit> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         var product = await db.Products.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
-            ?? throw new Exception("Product not found.");
+            ?? throw new NotFoundException("Product not found.");
 
         product.Name = request.Name;
         product.CategoryId = request.CategoryId;

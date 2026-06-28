@@ -2,7 +2,7 @@ using Cartex.Domain.Common;
 
 namespace Cartex.Domain.Entities;
 
-public class Supply : AuditableEntity
+public class Supply : SoftDeleteEntity
 {
     public long SupplierId { get; set; }
     public Supplier Supplier { get; set; } = null!;

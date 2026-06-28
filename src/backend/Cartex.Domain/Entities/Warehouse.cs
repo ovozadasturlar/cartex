@@ -2,7 +2,7 @@ using Cartex.Domain.Common;
 
 namespace Cartex.Domain.Entities;
 
-public class Warehouse : BaseEntity
+public class Warehouse : SoftDeleteEntity
 {
     public long ShopId { get; set; }
     public Shop Shop { get; set; } = null!;

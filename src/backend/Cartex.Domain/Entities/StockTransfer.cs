@@ -3,7 +3,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
 
-public class StockTransfer : AuditableEntity
+public class StockTransfer : SoftDeleteEntity
 {
     public long FromWarehouseId { get; set; }
     public Warehouse FromWarehouse { get; set; } = null!;

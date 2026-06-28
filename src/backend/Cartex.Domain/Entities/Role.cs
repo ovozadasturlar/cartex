@@ -2,7 +2,7 @@ using Cartex.Domain.Common;
 
 namespace Cartex.Domain.Entities;
 
-public class Role : BaseEntity
+public class Role : SoftDeleteEntity
 {
     public string Name { get; set; } = null!;
     public string? Description { get; set; }

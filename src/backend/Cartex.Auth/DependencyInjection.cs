@@ -14,7 +14,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration configuration)
     {
-        var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()!;
+        var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()
+            ?? throw new InvalidOperationException("Jwt configuration section is missing.");
+
+        if (string.IsNullOrWhiteSpace(jwtSettings.Key) || Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
+            throw new InvalidOperationException("Jwt:Key is missing or shorter than 32 bytes. Set it via user-secrets or environment variables.");
+
         services.AddSingleton(jwtSettings);
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();

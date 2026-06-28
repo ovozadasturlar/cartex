@@ -14,10 +14,10 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
     {
         var transfer = await db.StockTransfers
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
-            ?? throw new Exception("Transfer not found.");
+            ?? throw new NotFoundException("Transfer not found.");
 
         if (transfer.Status != TransferStatus.Sent)
-            throw new Exception("Transfer is not in Sent status.");
+            throw new BusinessRuleException("Transfer is not in Sent status.");
 
         transfer.Status = TransferStatus.Received;
 

@@ -44,7 +44,7 @@ public sealed class CreateSaleCommandHandler(IApplicationDbContext db) : IReques
         foreach (var item in request.Items)
         {
             var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Id == item.StockId, cancellationToken)
-                ?? throw new Exception($"Stock {item.StockId} not found.");
+                ?? throw new NotFoundException($"Stock {item.StockId} not found.");
 
             db.SaleItems.Add(new SaleItem
             {

@@ -14,7 +14,7 @@ public sealed class UpdateUserCommandHandler(
     public async Task<Unit> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken)
-            ?? throw new Exception("User not found.");
+            ?? throw new NotFoundException("User not found.");
 
         user.FullName = request.FullName;
         user.ShopId = request.ShopId;

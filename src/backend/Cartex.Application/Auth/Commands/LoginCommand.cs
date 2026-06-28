@@ -22,13 +22,13 @@ public sealed class LoginCommandHandler(
                 .ThenInclude(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken)
-            ?? throw new Exception("User not found.");
+            ?? throw new UnauthorizedAccessException("Invalid username or password.");
 
         if (!user.IsActive)
-            throw new Exception("User is deactivated.");
+            throw new ForbiddenException("User is deactivated.");
 
         if (!passwordHasher.Verify(request.Password, user.PasswordHash))
-            throw new Exception("Invalid password.");
+            throw new UnauthorizedAccessException("Invalid username or password.");
 
         var permissions = user.Role.RolePermissions
             .Where(rp => rp.Permission.IsEnabled)

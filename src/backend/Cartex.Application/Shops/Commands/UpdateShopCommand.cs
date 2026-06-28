@@ -11,7 +11,7 @@ public sealed class UpdateShopCommandHandler(IApplicationDbContext db) : IReques
     public async Task<Unit> Handle(UpdateShopCommand request, CancellationToken cancellationToken)
     {
         var shop = await db.Shops.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
-            ?? throw new Exception("Shop not found.");
+            ?? throw new NotFoundException("Shop not found.");
 
         shop.Name = request.Name;
         shop.Address = request.Address;

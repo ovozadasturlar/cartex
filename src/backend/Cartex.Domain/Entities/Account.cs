@@ -3,7 +3,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
 
-public class Account : BaseEntity
+public class Account : SoftDeleteEntity
 {
     public AccountOwnerType OwnerType { get; set; }
     public long OwnerId { get; set; }

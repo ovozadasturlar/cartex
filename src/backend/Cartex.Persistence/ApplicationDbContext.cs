@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +32,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (!typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType)) continue;
+
+            var parameter = Expression.Parameter(entityType.ClrType, "e");
+            var isDeleted = Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted));
+            var filter = Expression.Lambda(Expression.Not(isDeleted), parameter);
+            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+        }
+
         base.OnModelCreating(modelBuilder);
     }
 }

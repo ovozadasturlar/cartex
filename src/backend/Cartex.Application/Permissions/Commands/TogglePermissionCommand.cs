@@ -11,7 +11,7 @@ public sealed class TogglePermissionCommandHandler(IApplicationDbContext db) : I
     public async Task<Unit> Handle(TogglePermissionCommand request, CancellationToken cancellationToken)
     {
         var permission = await db.Permissions.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
-            ?? throw new Exception("Permission not found.");
+            ?? throw new NotFoundException("Permission not found.");
 
         permission.IsEnabled = request.IsEnabled;
 
