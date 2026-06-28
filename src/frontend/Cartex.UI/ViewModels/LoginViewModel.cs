@@ -15,9 +15,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private string? _errorMessage;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _rememberMe;
 
     [ObservableProperty] private bool _isThemePopupOpen;
-    [ObservableProperty] private bool _isModePopupOpen;
     [ObservableProperty] private bool _isLanguagePopupOpen;
 
     public AppTheme CurrentTheme
@@ -29,18 +29,6 @@ public partial class LoginViewModel : ViewModelBase
             ThemeManager.Instance.Theme = value;
             OnPropertyChanged(nameof(CurrentTheme));
             OnPropertyChanged(nameof(ThemeIcon));
-        }
-    }
-
-    public AppMode CurrentMode
-    {
-        get => SettingsService.Instance.Mode;
-        set
-        {
-            SettingsService.Instance.Mode = value;
-            ModeManager.Instance.Mode = value;
-            OnPropertyChanged(nameof(CurrentMode));
-            OnPropertyChanged(nameof(ModeIcon));
         }
     }
 
@@ -60,34 +48,24 @@ public partial class LoginViewModel : ViewModelBase
         ? MaterialIconKind.WeatherNight
         : MaterialIconKind.WeatherSunny;
 
-    public MaterialIconKind ModeIcon => CurrentMode == AppMode.Touch
-        ? MaterialIconKind.GestureTap
-        : MaterialIconKind.Monitor;
-
     public string CurrentLanguageFlag => LocalizationManager.GetLanguageShortCode(CurrentLanguage);
-
     public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
     public LoginViewModel(AuthService authService, NavigationService navigationService)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _rememberMe = SettingsService.Instance.RememberMe;
     }
 
     [RelayCommand]
-    private void ToggleThemePopup() { IsThemePopupOpen = !IsThemePopupOpen; IsModePopupOpen = false; IsLanguagePopupOpen = false; }
+    private void ToggleThemePopup() { IsThemePopupOpen = !IsThemePopupOpen; IsLanguagePopupOpen = false; }
 
     [RelayCommand]
-    private void ToggleModePopup() { IsModePopupOpen = !IsModePopupOpen; IsThemePopupOpen = false; IsLanguagePopupOpen = false; }
-
-    [RelayCommand]
-    private void ToggleLanguagePopup() { IsLanguagePopupOpen = !IsLanguagePopupOpen; IsThemePopupOpen = false; IsModePopupOpen = false; }
+    private void ToggleLanguagePopup() { IsLanguagePopupOpen = !IsLanguagePopupOpen; IsThemePopupOpen = false; }
 
     [RelayCommand]
     private void SelectTheme(string theme) { CurrentTheme = Enum.Parse<AppTheme>(theme); IsThemePopupOpen = false; }
-
-    [RelayCommand]
-    private void SelectMode(string mode) { CurrentMode = Enum.Parse<AppMode>(mode); IsModePopupOpen = false; }
 
     [RelayCommand]
     private void SelectLanguage(AppLanguage lang) { CurrentLanguage = lang; IsLanguagePopupOpen = false; }
@@ -100,7 +78,8 @@ public partial class LoginViewModel : ViewModelBase
 
         try
         {
-            await _authService.LoginAsync(Username, Password);
+            SettingsService.Instance.RememberMe = RememberMe;
+            await _authService.LoginAsync(Username, Password, RememberMe);
             var mainVm = ServiceLocator.Resolve<MainViewModel>();
             mainVm.Initialize();
             _navigationService.NavigateTo(mainVm);

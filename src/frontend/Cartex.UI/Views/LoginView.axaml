@@ -5,83 +5,93 @@
              x:Class="Cartex.UI.Views.LoginView"
              x:CompileBindings="False">
 
-    <Grid Background="{DynamicResource AppBg}"
-          HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <Grid Background="{DynamicResource AppBg}">
 
-        <Border Classes="card" VerticalAlignment="Center" HorizontalAlignment="Center"
-                Width="420" Padding="40,36">
-            <StackPanel Spacing="20">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="16"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                BoxShadow="0 18 50 0 #22000000"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                Width="430" Padding="40,38">
+            <StackPanel Spacing="18">
 
                 <Image Source="avares://Cartex.UI/Assets/logo.png"
-                       Width="72" Height="72"
-                       HorizontalAlignment="Center" Margin="0,0,0,4" />
+                       Width="76" Height="76" HorizontalAlignment="Center" />
 
-                <TextBlock Text="Cartex POS"
-                           Classes="title"
-                           HorizontalAlignment="Center"
-                           FontSize="28" />
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Cartex POS" Classes="h1" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding L[login]}" Classes="caption"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
 
-                <TextBlock Text="{Binding L[login]}"
-                           Classes="muted"
-                           HorizontalAlignment="Center"
-                           FontSize="14" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[username]}" Classes="caption" />
+                    <TextBox Text="{Binding Username, Mode=TwoWay}" MinHeight="44" FontSize="15">
+                        <TextBox.InnerLeftContent>
+                            <mi:MaterialIcon Kind="AccountOutline" Width="18" Height="18" Margin="10,0,0,0"
+                                             Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
+                </StackPanel>
 
-                <TextBox Watermark="{Binding L[username]}"
-                         Text="{Binding Username, Mode=TwoWay}"
-                         Classes="search"
-                         FontSize="16" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[password]}" Classes="caption" />
+                    <TextBox x:Name="PasswordBox" Text="{Binding Password, Mode=TwoWay}"
+                             PasswordChar="●" RevealPassword="False" MinHeight="44" FontSize="15">
+                        <TextBox.InnerLeftContent>
+                            <mi:MaterialIcon Kind="LockOutline" Width="18" Height="18" Margin="10,0,0,0"
+                                             Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                        <TextBox.InnerRightContent>
+                            <ToggleButton IsChecked="{Binding #PasswordBox.RevealPassword, Mode=TwoWay}"
+                                          Background="Transparent" BorderThickness="0" Padding="8,0"
+                                          Cursor="Hand" VerticalAlignment="Center">
+                                <mi:MaterialIcon Kind="EyeOutline" Width="18" Height="18"
+                                                 Foreground="{DynamicResource TextMuted}" />
+                            </ToggleButton>
+                        </TextBox.InnerRightContent>
+                    </TextBox>
+                </StackPanel>
 
-                <TextBox Watermark="{Binding L[password]}"
-                         Text="{Binding Password, Mode=TwoWay}"
-                         PasswordChar="●"
-                         RevealPassword="False"
-                         Classes="search"
-                         FontSize="16" />
+                <CheckBox Content="{Binding L[remember_me]}" IsChecked="{Binding RememberMe, Mode=TwoWay}" />
 
                 <TextBlock Text="{Binding ErrorMessage}"
                            Foreground="{DynamicResource DangerBrush}"
                            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                           TextWrapping="Wrap"
-                           HorizontalAlignment="Center" />
+                           TextWrapping="Wrap" HorizontalAlignment="Center" />
 
                 <Button Content="{Binding L[login_button]}"
                         Command="{Binding LoginCommand}"
                         Classes="brand"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"
-                        MinHeight="48"
-                        FontSize="18"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        MinHeight="46" FontSize="16"
+                        IsDefault="True"
                         IsEnabled="{Binding !IsLoading}" />
 
-                <ProgressBar IsIndeterminate="True"
-                             IsVisible="{Binding IsLoading}"
-                             Height="4" />
+                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
 
             </StackPanel>
         </Border>
 
-        <!-- Bottom-right quick settings -->
         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                    Orientation="Horizontal" Margin="20,16" Spacing="2">
+                    Orientation="Horizontal" Margin="20,16" Spacing="4">
             <Panel>
-                <Button Background="Transparent" BorderThickness="0"
-                        Padding="8,6" Cursor="Hand" Opacity="0.7"
-                        Command="{Binding ToggleThemePopupCommand}" ToolTip.Tip="Theme">
+                <Button Background="Transparent" BorderThickness="0" Padding="8,6" Cursor="Hand" Opacity="0.8"
+                        Command="{Binding ToggleThemePopupCommand}" ToolTip.Tip="{Binding L[theme]}">
                     <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18"
                                      Foreground="{DynamicResource TextSecondary}" />
                 </Button>
                 <Popup IsOpen="{Binding IsThemePopupOpen, Mode=TwoWay}"
                        Placement="Top" IsLightDismissEnabled="True">
-                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="10"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="4" MinWidth="160">
+                            Padding="4" MinWidth="160" BoxShadow="0 8 24 0 #22000000">
                         <StackPanel Spacing="2">
                             <Button Background="Transparent" HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Left" Padding="12,8"
                                     Command="{Binding SelectThemeCommand}" CommandParameter="Light">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <mi:MaterialIcon Kind="WeatherSunny" Width="18" Height="18" />
-                                    <TextBlock Text="Light" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding L[light]}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                             <Button Background="Transparent" HorizontalAlignment="Stretch"
@@ -89,7 +99,7 @@
                                     Command="{Binding SelectThemeCommand}" CommandParameter="Dark">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <mi:MaterialIcon Kind="WeatherNight" Width="18" Height="18" />
-                                    <TextBlock Text="Dark" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding L[dark]}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -98,54 +108,18 @@
             </Panel>
 
             <Panel>
-                <Button Background="Transparent" BorderThickness="0"
-                        Padding="8,6" Cursor="Hand" Opacity="0.7"
-                        Command="{Binding ToggleModePopupCommand}" ToolTip.Tip="Mode">
-                    <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18"
-                                     Foreground="{DynamicResource TextSecondary}" />
-                </Button>
-                <Popup IsOpen="{Binding IsModePopupOpen, Mode=TwoWay}"
-                       Placement="Top" IsLightDismissEnabled="True">
-                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="4" MinWidth="160">
-                        <StackPanel Spacing="2">
-                            <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Left" Padding="12,8"
-                                    Command="{Binding SelectModeCommand}" CommandParameter="Desktop">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <mi:MaterialIcon Kind="Monitor" Width="18" Height="18" />
-                                    <TextBlock Text="Desktop" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-                            <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Left" Padding="12,8"
-                                    Command="{Binding SelectModeCommand}" CommandParameter="Touch">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <mi:MaterialIcon Kind="GestureTap" Width="18" Height="18" />
-                                    <TextBlock Text="Touch" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
-            </Panel>
-
-            <Panel>
-                <Button Background="Transparent" BorderThickness="0"
-                        Padding="8,6" Cursor="Hand" Opacity="0.7"
-                        Command="{Binding ToggleLanguagePopupCommand}" ToolTip.Tip="Language">
-                    <Border Background="{DynamicResource BorderBrush}" CornerRadius="3" Padding="5,2">
-                        <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="10" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextPrimary}"
-                                   VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <Button Background="Transparent" BorderThickness="0" Padding="8,6" Cursor="Hand" Opacity="0.8"
+                        Command="{Binding ToggleLanguagePopupCommand}" ToolTip.Tip="{Binding L[language]}">
+                    <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="4" Padding="6,3">
+                        <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="11" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}" />
                     </Border>
                 </Button>
                 <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
                        Placement="Top" IsLightDismissEnabled="True">
-                    <Border Background="{DynamicResource CardBg}" CornerRadius="8"
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="10"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            Padding="4" MinWidth="200">
+                            Padding="4" MinWidth="200" BoxShadow="0 8 24 0 #22000000">
                         <ItemsControl ItemsSource="{Binding AvailableLanguages}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -154,9 +128,9 @@
                                             Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
                                             CommandParameter="{Binding}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Border Background="{DynamicResource BorderBrush}" CornerRadius="3" Padding="5,2">
+                                            <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="4" Padding="6,3">
                                                 <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageFlagConverter.Instance}}"
-                                                           FontSize="10" FontWeight="Bold"
+                                                           FontSize="11" FontWeight="Bold"
                                                            Foreground="{DynamicResource TextPrimary}" />
                                             </Border>
                                             <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"

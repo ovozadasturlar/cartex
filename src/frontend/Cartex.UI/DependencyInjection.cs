@@ -9,6 +9,7 @@ public static class DependencyInjection
 {
     public static void RegisterServices(IServiceCollection services, SettingsService settings)
     {
+        services.AddSingleton<ITokenStore, TokenStore>();
         services.AddSingleton<AuthService>();
         services.AddApiClients(settings.ApiBaseUrl, () => ServiceLocator.Resolve<AuthService>().Token);
 

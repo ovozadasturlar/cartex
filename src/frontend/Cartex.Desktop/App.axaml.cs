@@ -40,10 +40,19 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var nav = provider.GetRequiredService<NavigationService>();
-            var loginVm = provider.GetRequiredService<LoginViewModel>();
-
             var window = new MainWindow { DataContext = nav };
-            nav.NavigateTo(loginVm);
+
+            if (settings.RememberMe && provider.GetRequiredService<AuthService>().TryRestore())
+            {
+                var mainVm = provider.GetRequiredService<MainViewModel>();
+                mainVm.Initialize();
+                nav.NavigateTo(mainVm);
+            }
+            else
+            {
+                nav.NavigateTo(provider.GetRequiredService<LoginViewModel>());
+            }
+
             desktop.MainWindow = window;
         }
 

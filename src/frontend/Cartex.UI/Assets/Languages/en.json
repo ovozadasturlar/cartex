@@ -20,6 +20,7 @@
   "login_button": "Sign In",
   "login_error": "Invalid username or password",
   "logout": "Logout",
+  "remember_me": "Remember me",
   "welcome": "Welcome",
   "search": "Search...",
   "add": "Add",

@@ -56,6 +56,12 @@ public sealed class SettingsService
         set { _data.ApiBaseUrl = value; Save(); }
     }
 
+    public bool RememberMe
+    {
+        get => _data.RememberMe;
+        set { _data.RememberMe = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -88,5 +94,6 @@ public sealed class SettingsService
         public AppLanguage Language { get; set; } = AppLanguage.En;
         public AppMode Mode { get; set; }
         public string ApiBaseUrl { get; set; } = "http://localhost:5015";
+        public bool RememberMe { get; set; }
     }
 }
