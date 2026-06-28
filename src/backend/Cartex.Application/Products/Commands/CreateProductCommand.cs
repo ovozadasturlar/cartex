@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Products.Commands;
 
-public record CreateProductCommand(string Name, long? CategoryId, long UnitId, decimal MinStock, List<string>? Barcodes) : IRequest<long>;
+public record CreateProductCommand(string Name, long? CategoryId, long UnitId, decimal MinStock, List<string>? Barcodes) : ICommand<long>;
 
 public sealed class CreateProductCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateProductCommand, long>
 {

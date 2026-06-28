@@ -4,7 +4,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Branches.Commands;
 
-public record UpdateBranchCommand(long Id, string Name, string? Address, string? Phone, bool IsActive) : IRequest<Unit>;
+public record UpdateBranchCommand(long Id, string Name, string? Address, string? Phone, bool IsActive) : ICommand<Unit>;
 
 public sealed class UpdateBranchCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateBranchCommand, Unit>
 {

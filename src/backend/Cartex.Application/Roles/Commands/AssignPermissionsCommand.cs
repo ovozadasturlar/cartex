@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Roles.Commands;
 
-public record AssignPermissionsCommand(long RoleId, List<long> PermissionIds) : IRequest<MediatR.Unit>;
+public record AssignPermissionsCommand(long RoleId, List<long> PermissionIds) : ICommand<MediatR.Unit>;
 
 public sealed class AssignPermissionsCommandHandler(IApplicationDbContext db) : IRequestHandler<AssignPermissionsCommand, MediatR.Unit>
 {

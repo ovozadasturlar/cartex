@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record CreateSupplierCommand(string Name, string? Phone) : IRequest<long>;
+public record CreateSupplierCommand(string Name, string? Phone) : ICommand<long>;
 
 public sealed class CreateSupplierCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateSupplierCommand, long>
 {

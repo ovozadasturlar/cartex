@@ -4,7 +4,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Products.Commands;
 
-public record UpdateProductCommand(long Id, string Name, long? CategoryId, long UnitId, decimal MinStock) : IRequest<Unit>;
+public record UpdateProductCommand(long Id, string Name, long? CategoryId, long UnitId, decimal MinStock) : ICommand<Unit>;
 
 public sealed class UpdateProductCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateProductCommand, Unit>
 {

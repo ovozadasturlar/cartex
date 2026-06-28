@@ -42,6 +42,21 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SupplyItem> SupplyItems => Set<SupplyItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
+    {
+        if (Database.CurrentTransaction is not null)
+            return await action();
+
+        var strategy = Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+            var result = await action();
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        });
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

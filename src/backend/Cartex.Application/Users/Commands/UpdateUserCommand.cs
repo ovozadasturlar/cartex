@@ -9,7 +9,7 @@ namespace Cartex.Application.Users.Commands;
 
 public record UpdateUserCommand(
     long Id, string FullName, long RoleId, bool IsActive, string? NewPassword,
-    long? DefaultBranchId, List<long> BranchIds) : IRequest<Unit>;
+    long? DefaultBranchId, List<long> BranchIds) : ICommand<Unit>;
 
 public sealed class UpdateUserCommandHandler(
     IApplicationDbContext db,

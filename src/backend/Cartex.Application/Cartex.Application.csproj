@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Using Include="Cartex.Domain.Common.Exceptions" />
+    <Using Include="Cartex.Application.Common.Messaging" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,7 +6,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Application.StockTransfers.Commands;
 
-public record ReceiveStockTransferCommand(long Id) : IRequest<MediatR.Unit>;
+public record ReceiveStockTransferCommand(long Id) : ICommand<MediatR.Unit>;
 
 public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db) : IRequestHandler<ReceiveStockTransferCommand, MediatR.Unit>
 {

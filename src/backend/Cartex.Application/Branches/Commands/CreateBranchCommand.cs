@@ -6,7 +6,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Branches.Commands;
 
-public record CreateBranchCommand(string Name, string? Address, string? Phone) : IRequest<long>;
+public record CreateBranchCommand(string Name, string? Address, string? Phone) : ICommand<long>;
 
 public sealed class CreateBranchCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateBranchCommand, long>
 {

@@ -8,7 +8,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Application.StockTransfers.Commands;
 
-public record CreateStockTransferCommand(long FromWarehouseId, long ToWarehouseId, long ProductId, decimal Quantity) : IRequest<long>;
+public record CreateStockTransferCommand(long FromWarehouseId, long ToWarehouseId, long ProductId, decimal Quantity) : ICommand<long>;
 
 public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateStockTransferCommand, long>
 {

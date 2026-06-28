@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Roles.Commands;
 
-public record CreateRoleCommand(string Name, string? Description) : IRequest<long>;
+public record CreateRoleCommand(string Name, string? Description) : ICommand<long>;
 
 public sealed class CreateRoleCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateRoleCommand, long>
 {

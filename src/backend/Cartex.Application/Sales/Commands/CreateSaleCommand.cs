@@ -16,7 +16,7 @@ public record CreateSaleCommand(
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
-    List<CreateSaleItemDto> Items) : IRequest<long>;
+    List<CreateSaleItemDto> Items) : ICommand<long>;
 
 public sealed class CreateSaleCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateSaleCommand, long>
 {
@@ -28,7 +28,6 @@ public sealed class CreateSaleCommandHandler(IApplicationDbContext db, ICurrentU
             ?? throw new NotFoundException("Warehouse not found.");
 
         var totalAmount = request.Items.Sum(i => i.Quantity * i.UnitPrice);
-        var debtAmount = totalAmount - request.PaidCash - request.PaidCard - request.PaidBonus;
 
         var sale = new Sale
         {
@@ -40,21 +39,17 @@ public sealed class CreateSaleCommandHandler(IApplicationDbContext db, ICurrentU
             PaidCash = request.PaidCash,
             PaidCard = request.PaidCard,
             PaidBonus = request.PaidBonus,
-            DebtAmount = debtAmount,
+            DebtAmount = totalAmount - request.PaidCash - request.PaidCard - request.PaidBonus,
             Status = SaleStatus.Completed
         };
-
-        db.Sales.Add(sale);
-        await db.SaveChangesAsync(cancellationToken);
 
         foreach (var item in request.Items)
         {
             var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Id == item.StockId, cancellationToken)
                 ?? throw new NotFoundException($"Stock {item.StockId} not found.");
 
-            db.SaleItems.Add(new SaleItem
+            sale.Items.Add(new SaleItem
             {
-                SaleId = sale.Id,
                 ProductId = item.ProductId,
                 StockId = item.StockId,
                 Quantity = item.Quantity,
@@ -71,14 +66,14 @@ public sealed class CreateSaleCommandHandler(IApplicationDbContext db, ICurrentU
 
             if (cashbackRate > 0)
             {
-                var customer = await db.Customers
-                    .FirstOrDefaultAsync(c => c.Id == request.CustomerId, cancellationToken);
+                var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, cancellationToken);
 
                 if (customer is not null)
                     customer.CashbackBalance += totalAmount * cashbackRate / 100;
             }
         }
 
+        db.Sales.Add(sale);
         await db.SaveChangesAsync(cancellationToken);
 
         return sale.Id;

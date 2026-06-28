@@ -8,7 +8,7 @@ namespace Cartex.Application.Users.Commands;
 
 public record CreateUserCommand(
     string FullName, string Username, string Password, long RoleId,
-    long? DefaultBranchId, List<long> BranchIds) : IRequest<long>;
+    long? DefaultBranchId, List<long> BranchIds) : ICommand<long>;
 
 public sealed class CreateUserCommandHandler(
     IApplicationDbContext db,

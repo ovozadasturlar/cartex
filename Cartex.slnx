@@ -17,4 +17,7 @@
     <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
     <Project Path="src/shared/Cartex.Shared/Cartex.Shared.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cartex.ArchitectureTests/Cartex.ArchitectureTests.csproj" />
+  </Folder>
 </Solution>

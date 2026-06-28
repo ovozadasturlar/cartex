@@ -4,7 +4,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Permissions.Commands;
 
-public record TogglePermissionCommand(long Id, bool IsEnabled) : IRequest<Unit>;
+public record TogglePermissionCommand(long Id, bool IsEnabled) : ICommand<Unit>;
 
 public sealed class TogglePermissionCommandHandler(IApplicationDbContext db) : IRequestHandler<TogglePermissionCommand, Unit>
 {

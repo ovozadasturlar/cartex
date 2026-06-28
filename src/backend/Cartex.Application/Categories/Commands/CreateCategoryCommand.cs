@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Categories.Commands;
 
-public record CreateCategoryCommand(string Name, long? ParentId) : IRequest<long>;
+public record CreateCategoryCommand(string Name, long? ParentId) : ICommand<long>;
 
 public sealed class CreateCategoryCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateCategoryCommand, long>
 {

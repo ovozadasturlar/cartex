@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Units.Commands;
 
-public record CreateUnitCommand(string Name, string ShortName) : IRequest<long>;
+public record CreateUnitCommand(string Name, string ShortName) : ICommand<long>;
 
 public sealed class CreateUnitCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateUnitCommand, long>
 {

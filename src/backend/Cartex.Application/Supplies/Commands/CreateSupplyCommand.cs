@@ -12,7 +12,7 @@ public record CreateSupplyCommand(
     long SupplierId,
     long WarehouseId,
     DateOnly SupplyDate,
-    List<CreateSupplyItemDto> Items) : IRequest<long>;
+    List<CreateSupplyItemDto> Items) : ICommand<long>;
 
 public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateSupplyCommand, long>
 {
@@ -23,8 +23,6 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
-        var totalAmount = request.Items.Sum(i => i.Quantity * i.PurchasePrice);
-
         var supply = new Supply
         {
             BranchId = warehouse.BranchId,
@@ -32,17 +30,13 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             WarehouseId = request.WarehouseId,
             UserId = userId,
             SupplyDate = request.SupplyDate,
-            TotalAmount = totalAmount
+            TotalAmount = request.Items.Sum(i => i.Quantity * i.PurchasePrice)
         };
-
-        db.Supplies.Add(supply);
-        await db.SaveChangesAsync(cancellationToken);
 
         foreach (var item in request.Items)
         {
-            db.SupplyItems.Add(new SupplyItem
+            supply.Items.Add(new SupplyItem
             {
-                SupplyId = supply.Id,
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
                 PurchasePrice = item.PurchasePrice
@@ -59,6 +53,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             });
         }
 
+        db.Supplies.Add(supply);
         await db.SaveChangesAsync(cancellationToken);
 
         return supply.Id;

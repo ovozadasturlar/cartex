@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Barcodes.Commands;
 
-public record CreateBarcodeCommand(long ProductId, string Code, decimal PackQty) : IRequest<long>;
+public record CreateBarcodeCommand(long ProductId, string Code, decimal PackQty) : ICommand<long>;
 
 public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateBarcodeCommand, long>
 {

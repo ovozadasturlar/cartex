@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct) : IRequest<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateCustomerCommand, long>
 {
