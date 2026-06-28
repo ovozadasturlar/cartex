@@ -24,6 +24,9 @@ public static class DependencyInjection
         services.AddRefitClient<IAuthApi>(settings)
             .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
 
+        services.AddRefitClient<IReceiptApi>(settings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
+
         RegisterAuthorized<IBranchesApi>(services, settings, baseUrl);
         RegisterAuthorized<IUsersApi>(services, settings, baseUrl);
         RegisterAuthorized<IRolesApi>(services, settings, baseUrl);

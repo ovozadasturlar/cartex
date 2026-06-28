@@ -22,6 +22,7 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public decimal PaidBonus { get; set; }
     public decimal DebtAmount { get; set; }
     public SaleStatus Status { get; set; } = SaleStatus.Completed;
+    public string ReceiptToken { get; set; } = null!;
 
     public ICollection<SaleItem> Items { get; set; } = [];
 }

@@ -9,5 +9,6 @@ public record SaleDto(
     decimal PaidBonus,
     decimal DebtAmount,
     string Status,
+    string ReceiptToken,
     string? CustomerName,
     string UserName);

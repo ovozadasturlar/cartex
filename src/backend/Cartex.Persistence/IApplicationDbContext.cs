@@ -32,6 +32,7 @@ public interface IApplicationDbContext
     DbSet<Supply> Supplies { get; }
     DbSet<SupplyItem> SupplyItems { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<NotificationOutbox> NotificationOutbox { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

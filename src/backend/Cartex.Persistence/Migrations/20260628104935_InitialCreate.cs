@@ -79,6 +79,25 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "notification_outbox",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    event_type = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    payload = table.Column<string>(type: "jsonb", nullable: false),
+                    status = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
+                    attempts = table.Column<int>(type: "integer", nullable: false),
+                    occurred_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    processed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    error = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_notification_outbox", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "permissions",
                 columns: table => new
                 {
@@ -558,6 +577,7 @@ namespace Cartex.Persistence.Migrations
                     paid_bonus = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     debt_amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     status = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
+                    receipt_token = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_by = table.Column<long>(type: "bigint", nullable: true),
@@ -933,6 +953,11 @@ namespace Cartex.Persistence.Migrations
                 filter: "\"branch_id\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "ix_notification_outbox_status_occurred_at",
+                table: "notification_outbox",
+                columns: new[] { "status", "occurred_at" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_permissions_name",
                 table: "permissions",
                 column: "name",
@@ -1007,6 +1032,12 @@ namespace Cartex.Persistence.Migrations
                 name: "ix_sales_customer_id",
                 table: "sales",
                 column: "customer_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_sales_receipt_token",
+                table: "sales",
+                column: "receipt_token",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_sales_user_id",
@@ -1156,6 +1187,9 @@ namespace Cartex.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "cashback_rules");
+
+            migrationBuilder.DropTable(
+                name: "notification_outbox");
 
             migrationBuilder.DropTable(
                 name: "product_prices");

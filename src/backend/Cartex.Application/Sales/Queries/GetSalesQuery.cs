@@ -18,6 +18,7 @@ public record SaleDto(
     decimal PaidBonus,
     decimal DebtAmount,
     string Status,
+    string ReceiptToken,
     string? CustomerName,
     string UserName);
 
@@ -40,6 +41,7 @@ public sealed class GetSalesQueryHandler(
                     s.PaidBonus,
                     s.DebtAmount,
                     s.Status.ToString(),
+                    s.ReceiptToken,
                     s.Customer != null ? s.Customer.FullName : null,
                     s.User.FullName),
                 writer, cancellationToken);

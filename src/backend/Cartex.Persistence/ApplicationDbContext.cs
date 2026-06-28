@@ -45,6 +45,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Supply> Supplies => Set<Supply>();
     public DbSet<SupplyItem> SupplyItems => Set<SupplyItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
 
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {

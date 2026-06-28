@@ -29,6 +29,8 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.PaidBonus).HasPrecision(18, 2);
         builder.Property(x => x.DebtAmount).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
+        builder.HasIndex(x => x.ReceiptToken).IsUnique();
         builder.HasIndex(x => x.BranchId);
 
         builder.HasOne<Branch>()

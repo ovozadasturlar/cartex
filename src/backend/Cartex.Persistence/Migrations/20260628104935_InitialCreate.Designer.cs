@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260628091624_InitialCreate")]
+    [Migration("20260628104935_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -562,6 +562,58 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("loyalty_programs", (string)null);
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationOutbox", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("event_type");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_outbox");
+
+                    b.HasIndex("Status", "OccurredAt")
+                        .HasDatabaseName("ix_notification_outbox_status_occurred_at");
+
+                    b.ToTable("notification_outbox", (string)null);
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>
                 {
                     b.Property<long>("Id")
@@ -942,6 +994,12 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("paid_cash");
 
+                    b.Property<string>("ReceiptToken")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("receipt_token");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -977,6 +1035,10 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("CustomerId")
                         .HasDatabaseName("ix_sales_customer_id");
+
+                    b.HasIndex("ReceiptToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_receipt_token");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_sales_user_id");

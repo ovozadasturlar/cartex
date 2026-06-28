@@ -57,3 +57,10 @@ public enum MeasureMode
     Weighed,
     Length
 }
+
+public enum OutboxStatus
+{
+    Pending,
+    Processed,
+    Failed
+}

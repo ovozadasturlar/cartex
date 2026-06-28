@@ -6,6 +6,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Common;
 using Cartex.Auth;
 using Cartex.Auth.Services;
+using Cartex.Infrastructure;
 using Cartex.Infrastructure.Web;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
@@ -27,6 +28,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

@@ -5,6 +5,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Domain.Events;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
@@ -69,7 +70,8 @@ public sealed class CreateSaleCommandHandler(
             PaidCard = request.PaidCard,
             PaidBonus = request.PaidBonus,
             DebtAmount = debtAmount,
-            Status = SaleStatus.Completed
+            Status = SaleStatus.Completed,
+            ReceiptToken = Guid.NewGuid().ToString("N")
         };
 
         var cashbackLines = new List<CashbackLine>();
@@ -99,6 +101,8 @@ public sealed class CreateSaleCommandHandler(
         db.Sales.Add(sale);
 
         await PostLedgerAsync(request, sale, warehouse.BranchId, debtAmount, cashbackLines, userId, cancellationToken);
+
+        sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.BranchId, sale.CustomerId, sale.TotalAmount));
 
         await db.SaveChangesAsync(cancellationToken);
 

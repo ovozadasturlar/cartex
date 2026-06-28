@@ -589,7 +589,11 @@ public static class DatabaseSeeder
 
         var allSales = new[] { sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10,
             sale11, sale12, sale13, sale14, sale15, sale16, sale17, sale18, sale19, sale20 };
-        foreach (var s in allSales) s.BranchId = branch1.Id;
+        foreach (var s in allSales)
+        {
+            s.BranchId = branch1.Id;
+            s.ReceiptToken = Guid.NewGuid().ToString("N");
+        }
         await context.Sales.AddRangeAsync(allSales);
 
         var saleB2 = new Sale
@@ -600,6 +604,7 @@ public static class DatabaseSeeder
             TotalAmount = 14000,
             PaidCash = 14000,
             Status = SaleStatus.Completed,
+            ReceiptToken = Guid.NewGuid().ToString("N"),
             CreatedAt = now.AddDays(-1)
         };
         await context.Sales.AddAsync(saleB2);
