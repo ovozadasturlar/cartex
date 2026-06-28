@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -7,6 +8,7 @@ using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
 using Cartex.UI.Services;
+using Refit;
 
 namespace Cartex.UI.ViewModels;
 
@@ -14,16 +16,14 @@ public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, dec
 
 public partial class CategoryItem : ObservableObject
 {
-    [ObservableProperty] private string _name = string.Empty;
+    public string Name { get; init; } = string.Empty;
     [ObservableProperty] private bool _isSelected;
 }
 
-public enum PosLayout { Default, ThreeColumn, Stacked }
-
 public partial class CartItem : ObservableObject
 {
-    [ObservableProperty] private string _productName = string.Empty;
-    [ObservableProperty] private long _productId;
+    public long ProductId { get; init; }
+    public string ProductName { get; init; } = string.Empty;
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity = 1;
 
@@ -33,62 +33,65 @@ public partial class CartItem : ObservableObject
     partial void OnUnitPriceChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
 }
 
-public partial class SalesViewModel : ViewModelBase
+public partial class SalesViewModel : ViewModelBase, ILoadable
 {
     private readonly ISalesApi _salesApi;
     private readonly IStocksApi _stocksApi;
     private readonly ICustomersApi _customersApi;
+    private readonly IProductsApi _productsApi;
+    private readonly IToastService _toast;
+    private readonly IBusyService _busy;
 
-    [ObservableProperty] private string _barcodeInput = string.Empty;
+    public BranchContextService Branch { get; }
+
+    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private string _customerSearch = string.Empty;
+    [ObservableProperty] private CustomerDto? _selectedCustomer;
     [ObservableProperty] private decimal _paidCash;
     [ObservableProperty] private decimal _paidCard;
     [ObservableProperty] private decimal _paidBonus;
-    [ObservableProperty] private CustomerDto? _selectedCustomer;
-    [ObservableProperty] private bool _isLoading;
-    [ObservableProperty] private string? _statusMessage;
-    [ObservableProperty] private long _selectedWarehouseId = 1;
-    [ObservableProperty] private bool _isTouchMode;
-    [ObservableProperty] private string _numpadDisplay = "0";
-    [ObservableProperty] private string _numpadTarget = "cash";
-    [ObservableProperty] private string _searchQuery = string.Empty;
-    [ObservableProperty] private CartItem? _selectedCartItem;
     [ObservableProperty] private decimal _discountAmount;
-    [ObservableProperty] private bool _isHeldSalesDesktopVisible;
-    [ObservableProperty] private bool _isHeldSalesTouchVisible;
-    [ObservableProperty] private string? _selectedCategory;
-    [ObservableProperty] private bool _isNumpadVisible = true;
-    [ObservableProperty] private PosLayout _currentLayout = PosLayout.Default;
-    [ObservableProperty] private bool _isLayoutSwapped;
-    [ObservableProperty] private bool _isCartPaymentSwapped;
+    [ObservableProperty] private bool _isCustomerPanelOpen;
+    [ObservableProperty] private bool _isHeldPanelOpen;
+    [ObservableProperty] private string? _lastReceiptToken;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
-    public ObservableCollection<StockOnHandDto> AvailableStocks { get; } = [];
-    public ObservableCollection<StockOnHandDto> FilteredStocks { get; } = [];
-    public ObservableCollection<CustomerDto> Customers { get; } = [];
+    public ObservableCollection<StockOnHandDto> Products { get; } = [];
+    public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
     public ObservableCollection<HeldSale> HeldSales { get; } = [];
     public ObservableCollection<CategoryItem> Categories { get; } = [];
+
+    private readonly List<StockOnHandDto> _allProducts = [];
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
     public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount);
     public decimal TotalPaid => PaidCash + PaidCard + PaidBonus;
     public decimal ChangeAmount => TotalPaid > TotalAmount ? TotalPaid - TotalAmount : 0;
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
+    public bool IsCartEmpty => CartItems.Count == 0;
+    public bool HasLastReceipt => !string.IsNullOrEmpty(LastReceiptToken);
 
-    public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi)
+    public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi,
+        IProductsApi productsApi, BranchContextService branch, IToastService toast, IBusyService busy)
     {
         _salesApi = salesApi;
         _stocksApi = stocksApi;
         _customersApi = customersApi;
+        _productsApi = productsApi;
+        Branch = branch;
+        _toast = toast;
+        _busy = busy;
 
         CartItems.CollectionChanged += (_, _) => NotifyTotals();
-        IsTouchMode = ModeManager.Instance.IsTouchMode;
-        ModeManager.Instance.PropertyChanged += OnTouchModeChanged;
+        Branch.PropertyChanged += OnBranchChanged;
     }
 
-    private void OnTouchModeChanged(object? sender, PropertyChangedEventArgs e)
+    public Task LoadAsync() => LoadProductsAsync();
+
+    private void OnBranchChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ModeManager.IsTouchMode))
-            IsTouchMode = ModeManager.Instance.IsTouchMode;
+        if (e.PropertyName == nameof(BranchContextService.SelectedWarehouse))
+            _ = LoadProductsAsync();
     }
 
     private void NotifyTotals()
@@ -98,225 +101,178 @@ public partial class SalesViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalPaid));
         OnPropertyChanged(nameof(ChangeAmount));
         OnPropertyChanged(nameof(DebtAmount));
+        OnPropertyChanged(nameof(IsCartEmpty));
     }
 
     partial void OnPaidCashChanged(decimal value) => NotifyTotals();
     partial void OnPaidCardChanged(decimal value) => NotifyTotals();
     partial void OnPaidBonusChanged(decimal value) => NotifyTotals();
     partial void OnDiscountAmountChanged(decimal value) => NotifyTotals();
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnLastReceiptTokenChanged(string? value) => OnPropertyChanged(nameof(HasLastReceipt));
 
-    partial void OnSearchQueryChanged(string value) => ApplyFilter();
-    partial void OnSelectedCategoryChanged(string? value) => ApplyFilter();
+    private async Task LoadProductsAsync()
+    {
+        var warehouseId = Branch.CurrentWarehouseId;
+        if (warehouseId is null) return;
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                var stocks = await _stocksApi.GetOnHandAsync(warehouseId.Value);
+                _allProducts.Clear();
+                _allProducts.AddRange(stocks);
+
+                Categories.Clear();
+                Categories.Add(new CategoryItem { Name = L["all"], IsSelected = true });
+                foreach (var c in stocks.Where(s => !string.IsNullOrEmpty(s.CategoryName))
+                             .Select(s => s.CategoryName!).Distinct().OrderBy(c => c))
+                    Categories.Add(new CategoryItem { Name = c });
+
+                ApplyFilter();
+            }
+        }
+        catch
+        {
+            _toast.Error(L["error"]);
+        }
+    }
 
     private void ApplyFilter()
     {
-        FilteredStocks.Clear();
-        var query = SearchQuery?.Trim() ?? "";
-        IEnumerable<StockOnHandDto> source = AvailableStocks;
+        var query = SearchText.Trim();
+        var category = Categories.FirstOrDefault(c => c.IsSelected)?.Name;
+        IEnumerable<StockOnHandDto> source = _allProducts;
 
-        if (!string.IsNullOrEmpty(SelectedCategory))
-            source = source.Where(s => string.Equals(s.CategoryName, SelectedCategory, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(category) && category != L["all"])
+            source = source.Where(s => string.Equals(s.CategoryName, category, StringComparison.OrdinalIgnoreCase));
 
         if (!string.IsNullOrEmpty(query))
             source = source.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase));
 
+        Products.Clear();
         foreach (var s in source)
-            FilteredStocks.Add(s);
+            Products.Add(s);
     }
 
     [RelayCommand]
-    private async Task LoadStocksAsync()
+    private void SelectCategory(CategoryItem category)
     {
-        try
-        {
-            var stocks = await _stocksApi.GetOnHandAsync(SelectedWarehouseId);
-            AvailableStocks.Clear();
-            FilteredStocks.Clear();
-            Categories.Clear();
-            var cats = new HashSet<string>();
-            foreach (var s in stocks)
-            {
-                AvailableStocks.Add(s);
-                FilteredStocks.Add(s);
-                if (!string.IsNullOrEmpty(s.CategoryName))
-                    cats.Add(s.CategoryName);
-            }
-            foreach (var c in cats.OrderBy(c => c))
-                Categories.Add(new CategoryItem { Name = c });
-            SelectedCategory = null;
-        }
-        catch { }
+        foreach (var c in Categories)
+            c.IsSelected = c == category;
+        ApplyFilter();
     }
 
     [RelayCommand]
-    private async Task LoadCustomersAsync()
+    private async Task ScanAsync()
     {
-        try
+        var code = SearchText.Trim();
+        if (string.IsNullOrEmpty(code)) return;
+
+        var warehouseId = Branch.CurrentWarehouseId;
+        if (warehouseId is null)
         {
-            var customers = await _customersApi.GetAllAsync();
-            Customers.Clear();
-            foreach (var c in customers)
-                Customers.Add(c);
-        }
-        catch { }
-    }
-
-    [RelayCommand]
-    private void AddByBarcode()
-    {
-        if (string.IsNullOrWhiteSpace(SearchQuery)) return;
-
-        var stock = AvailableStocks.FirstOrDefault(s =>
-            s.ProductName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
-
-        if (stock is null)
-        {
-            StatusMessage = $"Product not found: {SearchQuery}";
-            SearchQuery = string.Empty;
+            _toast.Warning(L["select_warehouse"]);
             return;
         }
 
-        AddStockToCart(stock);
-        SearchQuery = string.Empty;
+        try
+        {
+            var product = await _productsApi.GetByBarcodeAsync(code, warehouseId.Value);
+            AddToCart(product.ProductId, product.ProductName, product.SellingPrice);
+            SearchText = string.Empty;
+            return;
+        }
+        catch (ApiException)
+        {
+        }
+
+        if (Products.Count > 0)
+        {
+            var first = Products[0];
+            AddToCart(first.ProductId, first.ProductName, first.SellingPrice);
+            SearchText = string.Empty;
+        }
+        else
+        {
+            _toast.Warning($"{L["error"]}: {code}");
+        }
     }
 
     [RelayCommand]
-    private void AddStockToCart(StockOnHandDto stock)
+    private void AddStockToCart(StockOnHandDto stock) =>
+        AddToCart(stock.ProductId, stock.ProductName, stock.SellingPrice);
+
+    private void AddToCart(long productId, string name, decimal price)
     {
-        var existing = CartItems.FirstOrDefault(c => c.ProductId == stock.ProductId);
+        var existing = CartItems.FirstOrDefault(c => c.ProductId == productId);
         if (existing is not null)
             existing.Quantity += 1;
         else
-            CartItems.Add(new CartItem
-            {
-                ProductName = stock.ProductName,
-                ProductId = stock.ProductId,
-                UnitPrice = stock.SellingPrice,
-                Quantity = 1
-            });
+            CartItems.Add(new CartItem { ProductId = productId, ProductName = name, UnitPrice = price });
         NotifyTotals();
     }
 
     [RelayCommand]
-    private void RemoveCartItem(CartItem item)
+    private void Increment(CartItem item) { item.Quantity += 1; NotifyTotals(); }
+
+    [RelayCommand]
+    private void Decrement(CartItem item)
     {
-        CartItems.Remove(item);
+        if (item.Quantity <= 1) CartItems.Remove(item);
+        else item.Quantity -= 1;
         NotifyTotals();
     }
 
     [RelayCommand]
-    private void IncrementCartItem(CartItem item)
-    {
-        item.Quantity += 1;
-        NotifyTotals();
-    }
+    private void RemoveItem(CartItem item) { CartItems.Remove(item); NotifyTotals(); }
 
     [RelayCommand]
-    private void DecrementCartItem(CartItem item)
-    {
-        if (item.Quantity <= 1)
-            CartItems.Remove(item);
-        else
-            item.Quantity -= 1;
-        NotifyTotals();
-    }
-
-    [RelayCommand]
-    private void NumpadPress(string key)
-    {
-        switch (key)
-        {
-            case "C":
-                NumpadDisplay = "0";
-                break;
-            case "⌫":
-                NumpadDisplay = NumpadDisplay.Length > 1 ? NumpadDisplay[..^1] : "0";
-                break;
-            case ".":
-                if (!NumpadDisplay.Contains('.'))
-                    NumpadDisplay += ".";
-                break;
-            default:
-                NumpadDisplay = NumpadDisplay == "0" ? key : NumpadDisplay + key;
-                break;
-        }
-    }
-
-    [RelayCommand]
-    private void NumpadApply()
-    {
-        if (!decimal.TryParse(NumpadDisplay, out var value)) return;
-
-        switch (NumpadTarget)
-        {
-            case "cash": PaidCash = value; break;
-            case "card": PaidCard = value; break;
-            case "bonus": PaidBonus = value; break;
-            case "qty" when SelectedCartItem is not null:
-                SelectedCartItem.Quantity = value;
-                NotifyTotals();
-                break;
-        }
-        NumpadDisplay = "0";
-    }
-
-    [RelayCommand]
-    private void SetNumpadTarget(string target)
-    {
-        if (decimal.TryParse(NumpadDisplay, out var value) && value > 0)
-        {
-            switch (target)
-            {
-                case "cash": PaidCash = value; break;
-                case "card": PaidCard = value; break;
-                case "bonus": PaidBonus = value; break;
-            }
-        }
-        NumpadTarget = target;
-        NumpadDisplay = "0";
-    }
-
-    [RelayCommand]
-    private void ToggleNumpad() => IsNumpadVisible = !IsNumpadVisible;
-
-    [RelayCommand]
-    private void SelectCategory(string? category)
-    {
-        SelectedCategory = SelectedCategory == category ? null : category;
-        foreach (var c in Categories)
-            c.IsSelected = c.Name == SelectedCategory;
-    }
-
-    [RelayCommand]
-    private void SwapLayout() => IsLayoutSwapped = !IsLayoutSwapped;
-
-    [RelayCommand]
-    private void SwapPanels(string? param)
-    {
-        if (param is "columns") IsLayoutSwapped = !IsLayoutSwapped;
-        else if (param is "rows") IsCartPaymentSwapped = !IsCartPaymentSwapped;
-    }
-
-    [RelayCommand]
-    private void PayExact()
-    {
-        PaidCash = TotalAmount;
-        PaidCard = 0;
-        PaidBonus = 0;
-    }
+    private void PayExact() { PaidCash = TotalAmount; PaidCard = 0; PaidBonus = 0; }
 
     [RelayCommand]
     private void ClearCart()
     {
         CartItems.Clear();
-        PaidCash = 0;
-        PaidCard = 0;
-        PaidBonus = 0;
-        DiscountAmount = 0;
+        PaidCash = PaidCard = PaidBonus = DiscountAmount = 0;
         SelectedCustomer = null;
-        StatusMessage = null;
-        NumpadDisplay = "0";
         NotifyTotals();
+    }
+
+    [RelayCommand]
+    private async Task SearchCustomerAsync()
+    {
+        var query = CustomerSearch.Trim();
+        try
+        {
+            var customers = await _customersApi.GetAllAsync(string.IsNullOrEmpty(query) ? null : query);
+            CustomerResults.Clear();
+            foreach (var c in customers.Take(30))
+                CustomerResults.Add(c);
+        }
+        catch
+        {
+            _toast.Error(L["error"]);
+        }
+    }
+
+    [RelayCommand]
+    private void SelectCustomer(CustomerDto customer)
+    {
+        SelectedCustomer = customer;
+        IsCustomerPanelOpen = false;
+    }
+
+    [RelayCommand]
+    private void ClearCustomer() => SelectedCustomer = null;
+
+    [RelayCommand]
+    private void ToggleCustomerPanel()
+    {
+        IsCustomerPanelOpen = !IsCustomerPanelOpen;
+        if (IsCustomerPanelOpen && CustomerResults.Count == 0)
+            _ = SearchCustomerAsync();
     }
 
     [RelayCommand]
@@ -324,18 +280,11 @@ public partial class SalesViewModel : ViewModelBase
     {
         if (CartItems.Count == 0) return;
 
-        var label = $"#{HeldSales.Count + 1} - {TotalAmount:N0}";
-        var items = CartItems.Select(c => new CartItem
-        {
-            ProductName = c.ProductName,
-            ProductId = c.ProductId,
-            UnitPrice = c.UnitPrice,
-            Quantity = c.Quantity
-        }).ToList();
-
+        var label = $"#{HeldSales.Count + 1} · {TotalAmount:N0}";
+        var items = CartItems.Select(c => new CartItem { ProductId = c.ProductId, ProductName = c.ProductName, UnitPrice = c.UnitPrice, Quantity = c.Quantity }).ToList();
         HeldSales.Add(new HeldSale(label, items, PaidCash, PaidCard, PaidBonus, SelectedCustomer, DateTime.Now));
         ClearCart();
-        StatusMessage = L["sale_held"];
+        _toast.Info(L["sale_held"]);
     }
 
     [RelayCommand]
@@ -349,29 +298,27 @@ public partial class SalesViewModel : ViewModelBase
         PaidBonus = held.PaidBonus;
         SelectedCustomer = held.Customer;
         HeldSales.Remove(held);
+        IsHeldPanelOpen = false;
         NotifyTotals();
-        IsHeldSalesDesktopVisible = false;
-        IsHeldSalesTouchVisible = false;
     }
 
     [RelayCommand]
-    private void DiscardHeldSale(HeldSale held)
-    {
-        HeldSales.Remove(held);
-    }
+    private void DiscardHeld(HeldSale held) => HeldSales.Remove(held);
 
     [RelayCommand]
-    private void ToggleHeldSales()
+    private void ToggleHeldPanel() => IsHeldPanelOpen = !IsHeldPanelOpen;
+
+    [RelayCommand]
+    private void OpenReceipt()
     {
-        if (IsTouchMode)
+        if (string.IsNullOrEmpty(LastReceiptToken)) return;
+        var url = $"{SettingsService.Instance.ApiBaseUrl}/r/{LastReceiptToken}";
+        try
         {
-            IsHeldSalesTouchVisible = !IsHeldSalesTouchVisible;
-            IsHeldSalesDesktopVisible = false;
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
-        else
+        catch
         {
-            IsHeldSalesDesktopVisible = !IsHeldSalesDesktopVisible;
-            IsHeldSalesTouchVisible = false;
         }
     }
 
@@ -380,30 +327,44 @@ public partial class SalesViewModel : ViewModelBase
     {
         if (CartItems.Count == 0) return;
 
-        IsLoading = true;
-        StatusMessage = null;
+        var warehouseId = Branch.CurrentWarehouseId;
+        if (warehouseId is null) { _toast.Warning(L["select_warehouse"]); return; }
+        if (PaidBonus > 0 && SelectedCustomer is null) { _toast.Warning(L["customer"]); return; }
+        if (PaidBonus > (SelectedCustomer?.CashbackBalance ?? 0)) { _toast.Warning(L["cashback_balance"]); return; }
+        if (DebtAmount > 0 && SelectedCustomer is null) { _toast.Warning(L["customer"]); return; }
 
         try
         {
-            var items = CartItems.Select(c => new CreateSaleItemRequest(c.ProductId, c.Quantity)).ToList();
+            long saleId;
+            using (_busy.Begin(L["loading"]))
+            {
+                var items = CartItems.Select(c => new CreateSaleItemRequest(c.ProductId, c.Quantity)).ToList();
+                var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items);
+                saleId = await _salesApi.CreateAsync(request);
+            }
 
-            var request = new CreateSaleRequest(
-                SelectedWarehouseId,
-                SelectedCustomer?.Id,
-                PaidCash, PaidCard, PaidBonus,
-                items);
-
-            await _salesApi.CreateAsync(request);
+            var change = ChangeAmount;
+            await ResolveReceiptAsync(saleId, warehouseId.Value);
             ClearCart();
-            StatusMessage = L["success"];
+            _toast.Success(change > 0 ? $"{L["complete_sale"]} · {L["change"]}: {change:N0}" : L["complete_sale"]);
+            await LoadProductsAsync();
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            _toast.Error(ex is ApiException ? L["error"] : ex.Message);
         }
-        finally
+    }
+
+    private async Task ResolveReceiptAsync(long saleId, long warehouseId)
+    {
+        try
         {
-            IsLoading = false;
+            var sales = await _salesApi.GetAllAsync(warehouseId, DateTime.Today, DateTime.Today.AddDays(1));
+            LastReceiptToken = sales.FirstOrDefault(s => s.Id == saleId)?.ReceiptToken;
+        }
+        catch
+        {
+            LastReceiptToken = null;
         }
     }
 }
