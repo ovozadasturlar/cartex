@@ -1,77 +1,95 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
-using Cartex.Shared.Models.Warehouses;
 using Cartex.Shared.Models.Stocks;
+using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class WarehouseViewModel : ViewModelBase
+public partial class WarehouseViewModel : ViewModelBase, ILoadable
 {
-    private readonly IWarehousesApi _warehousesApi;
     private readonly IStocksApi _stocksApi;
+    private readonly IToastService _toast;
+    private readonly IBusyService _busy;
 
-    [ObservableProperty]
-    private WarehouseDto? _selectedWarehouse;
+    public BranchContextService Branch { get; }
 
-    [ObservableProperty]
-    private bool _isLoading;
+    private readonly List<StockOnHandDto> _allOnHand = [];
 
-    [ObservableProperty]
-    private string _searchText = string.Empty;
+    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private bool _showExpiring;
 
-    public ObservableCollection<WarehouseDto> Warehouses { get; } = [];
-    public ObservableCollection<StockDto> Stocks { get; } = [];
+    public ObservableCollection<StockOnHandDto> OnHand { get; } = [];
+    public ObservableCollection<ExpiringStockDto> Expiring { get; } = [];
 
-    public WarehouseViewModel(IWarehousesApi warehousesApi, IStocksApi stocksApi)
+    public bool IsOnHandEmpty => OnHand.Count == 0;
+    public bool IsExpiringEmpty => Expiring.Count == 0;
+
+    public WarehouseViewModel(IStocksApi stocksApi, BranchContextService branch, IToastService toast, IBusyService busy)
     {
-        _warehousesApi = warehousesApi;
         _stocksApi = stocksApi;
+        Branch = branch;
+        _toast = toast;
+        _busy = busy;
+        Branch.PropertyChanged += OnBranchChanged;
     }
 
-    [RelayCommand]
-    private async Task LoadWarehousesAsync()
+    public async Task LoadAsync()
     {
         try
         {
-            var warehouses = await _warehousesApi.GetAllAsync();
-            Warehouses.Clear();
-            foreach (var w in warehouses)
-                Warehouses.Add(w);
+            using (_busy.Begin(L["loading"]))
+            {
+                await LoadOnHandAsync();
 
-            if (Warehouses.Count > 0 && SelectedWarehouse is null)
-                SelectedWarehouse = Warehouses[0];
+                var expiring = await _stocksApi.GetExpiringAsync(30);
+                Expiring.Clear();
+                foreach (var e in expiring)
+                    Expiring.Add(e);
+                OnPropertyChanged(nameof(IsExpiringEmpty));
+            }
         }
-        catch { }
+        catch
+        {
+            _toast.Error(L["error"]);
+        }
     }
 
-    partial void OnSelectedWarehouseChanged(WarehouseDto? value)
+    private async Task LoadOnHandAsync()
     {
-        if (value is not null)
-            _ = LoadStocksAsync();
+        var warehouseId = Branch.CurrentWarehouseId;
+        _allOnHand.Clear();
+        if (warehouseId is not null)
+            _allOnHand.AddRange(await _stocksApi.GetOnHandAsync(warehouseId.Value));
+        ApplyFilter();
+    }
+
+    private void OnBranchChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(BranchContextService.SelectedWarehouse))
+            _ = LoadOnHandAsync();
+    }
+
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        var query = SearchText.Trim();
+        IEnumerable<StockOnHandDto> source = _allOnHand;
+        if (!string.IsNullOrEmpty(query))
+            source = source.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        OnHand.Clear();
+        foreach (var s in source)
+            OnHand.Add(s);
+        OnPropertyChanged(nameof(IsOnHandEmpty));
     }
 
     [RelayCommand]
-    private async Task LoadStocksAsync()
-    {
-        if (SelectedWarehouse is null) return;
+    private void ShowOnHandTab() => ShowExpiring = false;
 
-        IsLoading = true;
-        try
-        {
-            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText;
-            var stocks = await _stocksApi.GetAllAsync(SelectedWarehouse.Id, search);
-            Stocks.Clear();
-            foreach (var s in stocks)
-                Stocks.Add(s);
-        }
-        catch { }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    partial void OnSearchTextChanged(string value) => _ = LoadStocksAsync();
+    [RelayCommand]
+    private void ShowExpiringTab() => ShowExpiring = true;
 }

@@ -1,50 +1,105 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.WarehouseView"
              x:CompileBindings="False">
 
-    <Grid RowDefinitions="Auto,*" Margin="24">
+    <UserControl.Styles>
+        <Style Selector="Button.tab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.tab.active">
+            <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </UserControl.Styles>
 
-        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,16">
-            <ComboBox ItemsSource="{Binding Warehouses}"
-                      SelectedItem="{Binding SelectedWarehouse, Mode=TwoWay}"
-                      MinWidth="200" MinHeight="36"
-                      PlaceholderText="{Binding L[select_warehouse]}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+    <DockPanel Margin="24">
 
-            <TextBox Grid.Column="1" Watermark="{Binding L[search]}"
-                     Text="{Binding SearchText, Mode=TwoWay}"
-                     Classes="search" Margin="12,0" />
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[inventory]}" Margin="0,0,0,16">
+            <Border Background="{DynamicResource AppBg}" CornerRadius="9" Padding="3"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="tab" Classes.active="{Binding !ShowExpiring}"
+                            Command="{Binding ShowOnHandTabCommand}" Content="{Binding L[on_hand]}" />
+                    <Button Classes="tab" Classes.active="{Binding ShowExpiring}"
+                            Command="{Binding ShowExpiringTabCommand}" Content="{Binding L[expiring]}" />
+                </StackPanel>
+            </Border>
+        </c:PageHeader>
 
-            <Button Grid.Column="2" Content="{Binding L[refresh]}" Classes="outline"
-                    Command="{Binding LoadStocksCommand}" />
-        </Grid>
+        <c:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText, Mode=TwoWay}"
+                     Watermark="{Binding L[search]}" Margin="0,0,0,14"
+                     IsVisible="{Binding !ShowExpiring}" />
 
-        <DataGrid Grid.Row="1"
-                  x:Name="StocksGrid" ItemsSource="{Binding Stocks}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  GridLinesVisibility="Horizontal"
-                  BorderThickness="1"
-                  BorderBrush="{DynamicResource BorderBrush}"
-                  CornerRadius="6">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
-                <DataGridTextColumn Header="Name" Binding="{Binding ProductName, Mode=OneWay}" Width="*" />
-                <DataGridTextColumn Header="Unit" Binding="{Binding UnitName, Mode=OneWay}" Width="80" />
-                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity, Mode=OneWay}" Width="100" />
-                <DataGridTextColumn Header="Purchase Price" Binding="{Binding PurchasePrice, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
-                <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
-                <DataGridTextColumn Header="Expired At" Binding="{Binding ExpiredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}'}" Width="120" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <Panel>
+            <Panel IsVisible="{Binding !ShowExpiring}">
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding OnHand}" AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Width="2*" Binding="{Binding ProductName}"
+                                                Header="{Binding [product_name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
+                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding UnitName}"
+                                                Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding SellingPrice, StringFormat='{}{0:N0}'}"
+                                                Header="{Binding [selling_price], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [expired_at], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding NearestExpiry, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                                   VerticalAlignment="Center" Margin="12,0"
+                                                   Foreground="{Binding NearestExpiry, Converter={x:Static conv:ExpiryBrushConverter.Instance}}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <c:EmptyState Icon="Warehouse" Title="{Binding L[no_data]}" IsVisible="{Binding IsOnHandEmpty}" />
+            </Panel>
 
-        <ProgressBar Grid.Row="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
-                     VerticalAlignment="Top" Height="4" />
-    </Grid>
+            <Panel IsVisible="{Binding ShowExpiring}">
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding Expiring}" AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Width="2*" Binding="{Binding ProductName}"
+                                                Header="{Binding [product_name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="*" Binding="{Binding WarehouseName}"
+                                                Header="{Binding [warehouse], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [expired_at], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ExpiredAt, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                                   VerticalAlignment="Center" Margin="12,0" FontWeight="SemiBold"
+                                                   Foreground="{Binding ExpiredAt, Converter={x:Static conv:ExpiryBrushConverter.Instance}}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <c:EmptyState Icon="ClockCheckOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsExpiringEmpty}" />
+            </Panel>
+        </Panel>
+    </DockPanel>
 </UserControl>
