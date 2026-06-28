@@ -15,6 +15,12 @@ public static class DependencyInjection
         services.AddSingleton<NavigationService>();
         services.AddSingleton(LocalizationManager.Instance);
 
+        services.AddSingleton<ToastService>();
+        services.AddSingleton<IToastService>(sp => sp.GetRequiredService<ToastService>());
+        services.AddSingleton<IDialogService, DialogService>();
+        services.AddSingleton<BusyService>();
+        services.AddSingleton<IBusyService>(sp => sp.GetRequiredService<BusyService>());
+
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
         services.AddTransient<DashboardViewModel>();
