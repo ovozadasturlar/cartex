@@ -8,7 +8,7 @@ namespace Cartex.Application.Accounts.Queries;
 
 public record GetAccountsQuery : FilteringRequest, IRequest<IReadOnlyCollection<AccountDto>>;
 
-public record AccountDto(long Id, string OwnerType, long OwnerId, string Name, string Type, decimal Balance);
+public record AccountDto(long Id, string Name, string Type, decimal Balance, string? OwnerName);
 
 public sealed class GetAccountsQueryHandler(
     IApplicationDbContext db,
@@ -20,11 +20,13 @@ public sealed class GetAccountsQueryHandler(
             .ToPagedListAsync(request,
                 a => new AccountDto(
                     a.Id,
-                    a.OwnerType.ToString(),
-                    a.OwnerId,
                     a.Name,
                     a.Type.ToString(),
-                    a.Balance),
+                    a.Balance,
+                    a.Customer != null ? a.Customer.FullName
+                        : a.Branch != null ? a.Branch.Name
+                        : a.Supplier != null ? a.Supplier.Name
+                        : null),
                 writer, cancellationToken);
     }
 }

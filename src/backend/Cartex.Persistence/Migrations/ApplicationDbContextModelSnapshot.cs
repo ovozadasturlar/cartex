@@ -36,6 +36,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("balance");
 
+                    b.Property<long?>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -62,16 +66,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(60)")
                         .HasColumnName("name");
 
-                    b.Property<long>("OwnerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("owner_id");
-
-                    b.Property<string>("OwnerType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("owner_type");
-
                     b.Property<long?>("SupplierId")
                         .HasColumnType("bigint")
                         .HasColumnName("supplier_id");
@@ -93,11 +87,18 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_accounts");
 
-                    b.HasIndex("CustomerId")
-                        .HasDatabaseName("ix_accounts_customer_id");
-
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_accounts_supplier_id");
+
+                    b.HasIndex("BranchId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("ix_accounts_branch_id_type")
+                        .HasFilter("\"branch_id\" IS NOT NULL");
+
+                    b.HasIndex("CustomerId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("ix_accounts_customer_id_type")
+                        .HasFilter("\"customer_id\" IS NOT NULL");
 
                     b.ToTable("accounts", (string)null);
                 });
@@ -389,11 +390,6 @@ namespace Cartex.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
                         .HasColumnName("card_barcode");
-
-                    b.Property<decimal>("CashbackBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("cashback_balance");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1396,15 +1392,29 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Account", b =>
                 {
-                    b.HasOne("Cartex.Domain.Entities.Customer", null)
+                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_accounts_branches_branch_id");
+
+                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
                         .WithMany("Accounts")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_accounts_customers_customer_id");
 
-                    b.HasOne("Cartex.Domain.Entities.Supplier", null)
+                    b.HasOne("Cartex.Domain.Entities.Supplier", "Supplier")
                         .WithMany("Accounts")
                         .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_accounts_suppliers_supplier_id");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.AuditLog", b =>

@@ -67,7 +67,6 @@ namespace Cartex.Persistence.Migrations
                     phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     card_barcode = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: true),
                     discount_pct = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
-                    cashback_balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_by = table.Column<long>(type: "bigint", nullable: true),
@@ -215,41 +214,6 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "accounts",
-                columns: table => new
-                {
-                    id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    owner_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    owner_id = table.Column<long>(type: "bigint", nullable: false),
-                    name = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: false),
-                    type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    customer_id = table.Column<long>(type: "bigint", nullable: true),
-                    supplier_id = table.Column<long>(type: "bigint", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_by = table.Column<long>(type: "bigint", nullable: true),
-                    updated_by = table.Column<long>(type: "bigint", nullable: true),
-                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_accounts", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_accounts_customers_customer_id",
-                        column: x => x.customer_id,
-                        principalTable: "customers",
-                        principalColumn: "id");
-                    table.ForeignKey(
-                        name: "fk_accounts_suppliers_supplier_id",
-                        column: x => x.supplier_id,
-                        principalTable: "suppliers",
-                        principalColumn: "id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "products",
                 columns: table => new
                 {
@@ -279,6 +243,48 @@ namespace Cartex.Persistence.Migrations
                         name: "fk_products_units_unit_id",
                         column: x => x.unit_id,
                         principalTable: "units",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "accounts",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    branch_id = table.Column<long>(type: "bigint", nullable: true),
+                    customer_id = table.Column<long>(type: "bigint", nullable: true),
+                    supplier_id = table.Column<long>(type: "bigint", nullable: true),
+                    name = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: false),
+                    type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_accounts", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_accounts_branches_branch_id",
+                        column: x => x.branch_id,
+                        principalTable: "branches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_accounts_customers_customer_id",
+                        column: x => x.customer_id,
+                        principalTable: "customers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_accounts_suppliers_supplier_id",
+                        column: x => x.supplier_id,
+                        principalTable: "suppliers",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -734,9 +740,18 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_accounts_customer_id",
+                name: "ix_accounts_branch_id_type",
                 table: "accounts",
-                column: "customer_id");
+                columns: new[] { "branch_id", "type" },
+                unique: true,
+                filter: "\"branch_id\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_accounts_customer_id_type",
+                table: "accounts",
+                columns: new[] { "customer_id", "type" },
+                unique: true,
+                filter: "\"customer_id\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_accounts_supplier_id",

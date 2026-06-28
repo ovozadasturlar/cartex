@@ -1,12 +1,5 @@
 namespace Cartex.Domain.Enums;
 
-public enum AccountOwnerType
-{
-    Branch,
-    Customer,
-    Supplier
-}
-
 public enum AccountType
 {
     Cash,
@@ -18,8 +11,10 @@ public enum AccountType
 public enum OperationType
 {
     Sale,
-    Bonus,
+    DebtCharge,
     DebtPay,
+    Cashback,
+    BonusSpend,
     SupplyPay
 }
 

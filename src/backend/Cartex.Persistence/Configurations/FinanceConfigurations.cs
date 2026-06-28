@@ -9,10 +9,32 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
     public void Configure(EntityTypeBuilder<Account> builder)
     {
         builder.ToTable("accounts");
-        builder.Property(x => x.OwnerType).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Name).HasMaxLength(60);
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Balance).HasPrecision(18, 2);
+
+        builder.HasOne(x => x.Branch)
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Customer)
+            .WithMany(c => c.Accounts)
+            .HasForeignKey(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Supplier)
+            .WithMany(s => s.Accounts)
+            .HasForeignKey(x => x.SupplierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => new { x.CustomerId, x.Type })
+            .IsUnique()
+            .HasFilter("\"customer_id\" IS NOT NULL");
+
+        builder.HasIndex(x => new { x.BranchId, x.Type })
+            .IsUnique()
+            .HasFilter("\"branch_id\" IS NOT NULL");
     }
 }
 

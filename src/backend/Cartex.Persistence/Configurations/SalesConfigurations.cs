@@ -15,7 +15,6 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.CardBarcode).HasMaxLength(60);
         builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL");
         builder.Property(x => x.DiscountPct).HasPrecision(5, 2);
-        builder.Property(x => x.CashbackBalance).HasPrecision(18, 2);
     }
 }
 

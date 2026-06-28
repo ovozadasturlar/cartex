@@ -114,23 +114,10 @@ public static class DatabaseSeeder
             new UserBranch { UserId = admin.Id, BranchId = branch2.Id },
             new UserBranch { UserId = cashier.Id, BranchId = branch1.Id });
 
-        var shopCashAccount = new Account
-        {
-            OwnerType = AccountOwnerType.Branch,
-            OwnerId = branch1.Id,
-            Name = "Naqd Kassa",
-            Type = AccountType.Cash,
-            Balance = 0
-        };
-        var shopCardAccount = new Account
-        {
-            OwnerType = AccountOwnerType.Branch,
-            OwnerId = branch1.Id,
-            Name = "Bank Karta",
-            Type = AccountType.Card,
-            Balance = 0
-        };
-        await context.Accounts.AddRangeAsync(shopCashAccount, shopCardAccount);
+        var shopCashAccount = new Account { BranchId = branch1.Id, Name = "Naqd kassa", Type = AccountType.Cash, Balance = 0 };
+        var shopCardAccount = new Account { BranchId = branch1.Id, Name = "Bank karta", Type = AccountType.Card, Balance = 0 };
+        var branch2CashAccount = new Account { BranchId = branch2.Id, Name = "Naqd kassa", Type = AccountType.Cash, Balance = 0 };
+        await context.Accounts.AddRangeAsync(shopCashAccount, shopCardAccount, branch2CashAccount);
 
         var defaultUnits = new List<Unit>
         {
@@ -287,11 +274,16 @@ public static class DatabaseSeeder
         };
         await context.Stocks.AddRangeAsync(branch2Stocks);
 
-        var customer1 = new Customer { FullName = "Alisher Karimov", Phone = "+998901234567", CardBarcode = "CB001", DiscountPct = 5, CashbackBalance = 15000 };
-        var customer2 = new Customer { FullName = "Dilnoza Rahimova", Phone = "+998935557788", CardBarcode = "CB002", DiscountPct = 3, CashbackBalance = 8000 };
-        var customer3 = new Customer { FullName = "Jasur Toshmatov", Phone = "+998977778899", CardBarcode = "CB003", DiscountPct = 0, CashbackBalance = 0 };
+        var customer1 = new Customer { FullName = "Alisher Karimov", Phone = "+998901234567", CardBarcode = "CB001", DiscountPct = 5 };
+        var customer2 = new Customer { FullName = "Dilnoza Rahimova", Phone = "+998935557788", CardBarcode = "CB002", DiscountPct = 3 };
+        var customer3 = new Customer { FullName = "Jasur Toshmatov", Phone = "+998977778899", CardBarcode = "CB003" };
 
         await context.Customers.AddRangeAsync(customer1, customer2, customer3);
+        await context.SaveChangesAsync();
+
+        var customer1Bonus = new Account { CustomerId = customer1.Id, Name = "Bonus", Type = AccountType.Bonus, Balance = 15000 };
+        var customer2Bonus = new Account { CustomerId = customer2.Id, Name = "Bonus", Type = AccountType.Bonus, Balance = 8000 };
+        await context.Accounts.AddRangeAsync(customer1Bonus, customer2Bonus);
         await context.SaveChangesAsync();
 
         var now = DateTime.UtcNow;
@@ -696,6 +688,7 @@ public static class DatabaseSeeder
 
         shopCashAccount.Balance = 748500;
         shopCardAccount.Balance = 530500;
+        branch2CashAccount.Balance = 14000;
 
         var transactions = new List<Transaction>
         {
@@ -724,6 +717,9 @@ public static class DatabaseSeeder
             new() { ToAccountId = shopCashAccount.Id, Amount = 68000, OperationType = OperationType.Sale, SaleId = sale19.Id, UserId = admin.Id, CreatedAt = sale19.CreatedAt },
             new() { ToAccountId = shopCashAccount.Id, Amount = 50000, OperationType = OperationType.Sale, SaleId = sale20.Id, UserId = admin.Id, CreatedAt = sale20.CreatedAt },
             new() { ToAccountId = shopCardAccount.Id, Amount = 44000, OperationType = OperationType.Sale, SaleId = sale20.Id, UserId = admin.Id, CreatedAt = sale20.CreatedAt },
+            new() { ToAccountId = branch2CashAccount.Id, Amount = 14000, OperationType = OperationType.Sale, SaleId = saleB2.Id, UserId = admin.Id, CreatedAt = saleB2.CreatedAt },
+            new() { ToAccountId = customer1Bonus.Id, Amount = 15000, OperationType = OperationType.Cashback, UserId = admin.Id, CreatedAt = now.AddDays(-14) },
+            new() { ToAccountId = customer2Bonus.Id, Amount = 8000, OperationType = OperationType.Cashback, UserId = admin.Id, CreatedAt = now.AddDays(-14) },
         };
 
         await context.Transactions.AddRangeAsync(transactions);

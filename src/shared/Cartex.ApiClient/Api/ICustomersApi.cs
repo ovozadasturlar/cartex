@@ -10,4 +10,10 @@ public interface ICustomersApi
 
     [Post("/api/customers")]
     Task<long> CreateAsync([Body] CreateCustomerRequest request);
+
+    [Get("/api/customers/{id}/ledger")]
+    Task<List<CustomerLedgerEntryDto>> GetLedgerAsync(long id);
+
+    [Post("/api/customers/{id}/repay-debt")]
+    Task RepayDebtAsync(long id, [Body] RepayDebtRequest request);
 }
