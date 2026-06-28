@@ -480,6 +480,39 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "product_prices",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    warehouse_id = table.Column<long>(type: "bigint", nullable: true),
+                    selling_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_product_prices", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_product_prices_products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_product_prices_warehouses_warehouse_id",
+                        column: x => x.warehouse_id,
+                        principalTable: "warehouses",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "sales",
                 columns: table => new
                 {
@@ -587,49 +620,6 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "stocks",
-                columns: table => new
-                {
-                    id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    branch_id = table.Column<long>(type: "bigint", nullable: false),
-                    product_id = table.Column<long>(type: "bigint", nullable: false),
-                    warehouse_id = table.Column<long>(type: "bigint", nullable: false),
-                    quantity = table.Column<decimal>(type: "numeric(12,3)", precision: 12, scale: 3, nullable: false),
-                    purchase_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
-                    selling_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
-                    expired_at = table.Column<DateOnly>(type: "date", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_by = table.Column<long>(type: "bigint", nullable: true),
-                    updated_by = table.Column<long>(type: "bigint", nullable: true),
-                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_stocks", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_stocks_branches_branch_id",
-                        column: x => x.branch_id,
-                        principalTable: "branches",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_stocks_products_product_id",
-                        column: x => x.product_id,
-                        principalTable: "products",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_stocks_warehouses_warehouse_id",
-                        column: x => x.warehouse_id,
-                        principalTable: "warehouses",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "supplies",
                 columns: table => new
                 {
@@ -678,39 +668,52 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "sale_items",
+                name: "stocks",
                 columns: table => new
                 {
                     id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    sale_id = table.Column<long>(type: "bigint", nullable: false),
+                    branch_id = table.Column<long>(type: "bigint", nullable: false),
                     product_id = table.Column<long>(type: "bigint", nullable: false),
-                    stock_id = table.Column<long>(type: "bigint", nullable: false),
+                    warehouse_id = table.Column<long>(type: "bigint", nullable: false),
+                    supply_id = table.Column<long>(type: "bigint", nullable: true),
                     quantity = table.Column<decimal>(type: "numeric(12,3)", precision: 12, scale: 3, nullable: false),
-                    unit_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
-                    purchase_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false)
+                    purchase_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
+                    expired_at = table.Column<DateOnly>(type: "date", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_sale_items", x => x.id);
+                    table.PrimaryKey("pk_stocks", x => x.id);
                     table.ForeignKey(
-                        name: "fk_sale_items_products_product_id",
+                        name: "fk_stocks_branches_branch_id",
+                        column: x => x.branch_id,
+                        principalTable: "branches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_stocks_products_product_id",
                         column: x => x.product_id,
                         principalTable: "products",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "fk_sale_items_sales_sale_id",
-                        column: x => x.sale_id,
-                        principalTable: "sales",
+                        name: "fk_stocks_supplies_supply_id",
+                        column: x => x.supply_id,
+                        principalTable: "supplies",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "fk_sale_items_stocks_stock_id",
-                        column: x => x.stock_id,
-                        principalTable: "stocks",
+                        name: "fk_stocks_warehouses_warehouse_id",
+                        column: x => x.warehouse_id,
+                        principalTable: "warehouses",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -792,6 +795,42 @@ namespace Cartex.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "sale_items",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    sale_id = table.Column<long>(type: "bigint", nullable: false),
+                    product_id = table.Column<long>(type: "bigint", nullable: false),
+                    stock_id = table.Column<long>(type: "bigint", nullable: false),
+                    quantity = table.Column<decimal>(type: "numeric(12,3)", precision: 12, scale: 3, nullable: false),
+                    unit_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
+                    purchase_price = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_sale_items", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_sale_items_products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_sale_items_sales_sale_id",
+                        column: x => x.sale_id,
+                        principalTable: "sales",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_sale_items_stocks_stock_id",
+                        column: x => x.stock_id,
+                        principalTable: "stocks",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_accounts_branch_id_type",
                 table: "accounts",
@@ -868,6 +907,25 @@ namespace Cartex.Persistence.Migrations
                 table: "permissions",
                 column: "name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_product_prices_product_id",
+                table: "product_prices",
+                column: "product_id",
+                unique: true,
+                filter: "\"warehouse_id\" IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_product_prices_product_id_warehouse_id",
+                table: "product_prices",
+                columns: new[] { "product_id", "warehouse_id" },
+                unique: true,
+                filter: "\"warehouse_id\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_product_prices_warehouse_id",
+                table: "product_prices",
+                column: "warehouse_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_products_category_id",
@@ -961,9 +1019,14 @@ namespace Cartex.Persistence.Migrations
                 column: "product_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_stocks_warehouse_id",
+                name: "ix_stocks_supply_id",
                 table: "stocks",
-                column: "warehouse_id");
+                column: "supply_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_stocks_warehouse_id_product_id",
+                table: "stocks",
+                columns: new[] { "warehouse_id", "product_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_supplies_branch_id",
@@ -1060,6 +1123,9 @@ namespace Cartex.Persistence.Migrations
                 name: "cashback_rules");
 
             migrationBuilder.DropTable(
+                name: "product_prices");
+
+            migrationBuilder.DropTable(
                 name: "role_permissions");
 
             migrationBuilder.DropTable(
@@ -1093,13 +1159,19 @@ namespace Cartex.Persistence.Migrations
                 name: "sales");
 
             migrationBuilder.DropTable(
-                name: "supplies");
-
-            migrationBuilder.DropTable(
                 name: "products");
 
             migrationBuilder.DropTable(
+                name: "supplies");
+
+            migrationBuilder.DropTable(
                 name: "customers");
+
+            migrationBuilder.DropTable(
+                name: "categories");
+
+            migrationBuilder.DropTable(
+                name: "units");
 
             migrationBuilder.DropTable(
                 name: "suppliers");
@@ -1109,12 +1181,6 @@ namespace Cartex.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "warehouses");
-
-            migrationBuilder.DropTable(
-                name: "categories");
-
-            migrationBuilder.DropTable(
-                name: "units");
 
             migrationBuilder.DropTable(
                 name: "roles");

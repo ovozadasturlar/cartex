@@ -43,7 +43,8 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
                 .FirstOrDefaultAsync(s =>
                     s.WarehouseId == transfer.ToWarehouseId &&
                     s.ProductId == transfer.ProductId &&
-                    s.PurchasePrice == stock.PurchasePrice, cancellationToken);
+                    s.PurchasePrice == stock.PurchasePrice &&
+                    s.ExpiredAt == stock.ExpiredAt, cancellationToken);
 
             if (targetStock is not null)
             {
@@ -58,7 +59,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
                     WarehouseId = transfer.ToWarehouseId,
                     Quantity = deduct,
                     PurchasePrice = stock.PurchasePrice,
-                    SellingPrice = stock.SellingPrice
+                    ExpiredAt = stock.ExpiredAt
                 });
             }
         }

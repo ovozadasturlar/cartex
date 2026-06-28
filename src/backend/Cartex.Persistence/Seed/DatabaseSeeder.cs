@@ -191,6 +191,16 @@ public static class DatabaseSeeder
         await context.Products.AddRangeAsync(products);
         await context.SaveChangesAsync();
 
+        var sellingPrices = new[]
+        {
+            10000m, 7500m, 5000m, 4000m, 4500m, 5000m, 10000m, 7500m, 9000m, 15000m, 12000m, 17000m,
+            22000m, 6500m, 19000m, 18000m, 8000m, 5000m, 6000m, 7000m, 10000m, 20000m, 9000m, 12000m,
+            5500m, 6000m, 4000m, 7000m, 5500m, 7500m, 12000m, 9000m, 25000m
+        };
+        for (var i = 0; i < products.Count; i++)
+            await context.ProductPrices.AddAsync(new ProductPrice { ProductId = products[i].Id, SellingPrice = sellingPrices[i] });
+        await context.SaveChangesAsync();
+
         var barcodes = new List<Barcode>
         {
             new() { ProductId = products[0].Id, Code = "5449000214911" },
@@ -232,39 +242,39 @@ public static class DatabaseSeeder
 
         var stocks = new List<Stock>
         {
-            new() { ProductId = products[0].Id, WarehouseId = warehouse.Id, Quantity = 120, PurchasePrice = 8000, SellingPrice = 10000 },
-            new() { ProductId = products[1].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 6000, SellingPrice = 7500 },
-            new() { ProductId = products[2].Id, WarehouseId = warehouse.Id, Quantity = 150, PurchasePrice = 4000, SellingPrice = 5000 },
-            new() { ProductId = products[3].Id, WarehouseId = warehouse.Id, Quantity = 80, PurchasePrice = 3000, SellingPrice = 4000 },
-            new() { ProductId = products[4].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 3500, SellingPrice = 4500 },
-            new() { ProductId = products[5].Id, WarehouseId = warehouse.Id, Quantity = 50, PurchasePrice = 4000, SellingPrice = 5000 },
-            new() { ProductId = products[6].Id, WarehouseId = warehouse.Id, Quantity = 90, PurchasePrice = 8000, SellingPrice = 10000 },
-            new() { ProductId = products[7].Id, WarehouseId = warehouse.Id, Quantity = 70, PurchasePrice = 6000, SellingPrice = 7500 },
-            new() { ProductId = products[8].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 7000, SellingPrice = 9000 },
-            new() { ProductId = products[9].Id, WarehouseId = warehouse.Id, Quantity = 200, PurchasePrice = 12000, SellingPrice = 15000 },
-            new() { ProductId = products[10].Id, WarehouseId = warehouse.Id, Quantity = 180, PurchasePrice = 10000, SellingPrice = 12000 },
-            new() { ProductId = products[11].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 14000, SellingPrice = 17000 },
-            new() { ProductId = products[12].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 18000, SellingPrice = 22000 },
-            new() { ProductId = products[13].Id, WarehouseId = warehouse.Id, Quantity = 45, PurchasePrice = 5000, SellingPrice = 6500 },
-            new() { ProductId = products[14].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 15000, SellingPrice = 19000 },
-            new() { ProductId = products[15].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 15000, SellingPrice = 18000 },
-            new() { ProductId = products[16].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 6000, SellingPrice = 8000 },
-            new() { ProductId = products[17].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 3500, SellingPrice = 5000 },
-            new() { ProductId = products[18].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 4500, SellingPrice = 6000 },
-            new() { ProductId = products[19].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 5500, SellingPrice = 7000 },
-            new() { ProductId = products[20].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 8000, SellingPrice = 10000 },
-            new() { ProductId = products[21].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 16000, SellingPrice = 20000 },
-            new() { ProductId = products[22].Id, WarehouseId = warehouse.Id, Quantity = 2, PurchasePrice = 7000, SellingPrice = 9000 },
-            new() { ProductId = products[23].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 9000, SellingPrice = 12000 },
-            new() { ProductId = products[24].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000, SellingPrice = 5500 },
-            new() { ProductId = products[25].Id, WarehouseId = warehouse.Id, Quantity = 55, PurchasePrice = 4500, SellingPrice = 6000 },
-            new() { ProductId = products[26].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 3000, SellingPrice = 4000 },
-            new() { ProductId = products[27].Id, WarehouseId = warehouse.Id, Quantity = 1, PurchasePrice = 5000, SellingPrice = 7000 },
-            new() { ProductId = products[28].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000, SellingPrice = 5500 },
-            new() { ProductId = products[29].Id, WarehouseId = warehouse.Id, Quantity = 65, PurchasePrice = 5500, SellingPrice = 7500 },
-            new() { ProductId = products[30].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 9000, SellingPrice = 12000 },
-            new() { ProductId = products[31].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 7000, SellingPrice = 9000 },
-            new() { ProductId = products[32].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 20000, SellingPrice = 25000 },
+            new() { ProductId = products[0].Id, WarehouseId = warehouse.Id, Quantity = 120, PurchasePrice = 8000 },
+            new() { ProductId = products[1].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 6000 },
+            new() { ProductId = products[2].Id, WarehouseId = warehouse.Id, Quantity = 150, PurchasePrice = 4000 },
+            new() { ProductId = products[3].Id, WarehouseId = warehouse.Id, Quantity = 80, PurchasePrice = 3000 },
+            new() { ProductId = products[4].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 3500 },
+            new() { ProductId = products[5].Id, WarehouseId = warehouse.Id, Quantity = 50, PurchasePrice = 4000 },
+            new() { ProductId = products[6].Id, WarehouseId = warehouse.Id, Quantity = 90, PurchasePrice = 8000 },
+            new() { ProductId = products[7].Id, WarehouseId = warehouse.Id, Quantity = 70, PurchasePrice = 6000 },
+            new() { ProductId = products[8].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 7000 },
+            new() { ProductId = products[9].Id, WarehouseId = warehouse.Id, Quantity = 200, PurchasePrice = 12000 },
+            new() { ProductId = products[10].Id, WarehouseId = warehouse.Id, Quantity = 180, PurchasePrice = 10000 },
+            new() { ProductId = products[11].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 14000 },
+            new() { ProductId = products[12].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 18000 },
+            new() { ProductId = products[13].Id, WarehouseId = warehouse.Id, Quantity = 45, PurchasePrice = 5000 },
+            new() { ProductId = products[14].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 15000 },
+            new() { ProductId = products[15].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 15000 },
+            new() { ProductId = products[16].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 6000 },
+            new() { ProductId = products[17].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 3500 },
+            new() { ProductId = products[18].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 4500 },
+            new() { ProductId = products[19].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 5500 },
+            new() { ProductId = products[20].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 8000 },
+            new() { ProductId = products[21].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 16000 },
+            new() { ProductId = products[22].Id, WarehouseId = warehouse.Id, Quantity = 2, PurchasePrice = 7000 },
+            new() { ProductId = products[23].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 9000 },
+            new() { ProductId = products[24].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000 },
+            new() { ProductId = products[25].Id, WarehouseId = warehouse.Id, Quantity = 55, PurchasePrice = 4500 },
+            new() { ProductId = products[26].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 3000 },
+            new() { ProductId = products[27].Id, WarehouseId = warehouse.Id, Quantity = 1, PurchasePrice = 5000 },
+            new() { ProductId = products[28].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000 },
+            new() { ProductId = products[29].Id, WarehouseId = warehouse.Id, Quantity = 65, PurchasePrice = 5500 },
+            new() { ProductId = products[30].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 9000 },
+            new() { ProductId = products[31].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 7000 },
+            new() { ProductId = products[32].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 20000 },
         };
 
         foreach (var s in stocks) s.BranchId = branch1.Id;
@@ -272,9 +282,9 @@ public static class DatabaseSeeder
 
         var branch2Stocks = new List<Stock>
         {
-            new() { BranchId = branch2.Id, ProductId = products[0].Id, WarehouseId = warehouse2.Id, Quantity = 50, PurchasePrice = 8000, SellingPrice = 10000 },
-            new() { BranchId = branch2.Id, ProductId = products[3].Id, WarehouseId = warehouse2.Id, Quantity = 40, PurchasePrice = 3000, SellingPrice = 4000 },
-            new() { BranchId = branch2.Id, ProductId = products[9].Id, WarehouseId = warehouse2.Id, Quantity = 30, PurchasePrice = 12000, SellingPrice = 15000 },
+            new() { BranchId = branch2.Id, ProductId = products[0].Id, WarehouseId = warehouse2.Id, Quantity = 50, PurchasePrice = 8000 },
+            new() { BranchId = branch2.Id, ProductId = products[3].Id, WarehouseId = warehouse2.Id, Quantity = 40, PurchasePrice = 3000 },
+            new() { BranchId = branch2.Id, ProductId = products[9].Id, WarehouseId = warehouse2.Id, Quantity = 30, PurchasePrice = 12000 },
         };
         await context.Stocks.AddRangeAsync(branch2Stocks);
 

@@ -18,6 +18,7 @@ public interface IApplicationDbContext
     DbSet<Barcode> Barcodes { get; }
     DbSet<Warehouse> Warehouses { get; }
     DbSet<Stock> Stocks { get; }
+    DbSet<ProductPrice> ProductPrices { get; }
     DbSet<StockTransfer> StockTransfers { get; }
     DbSet<Customer> Customers { get; }
     DbSet<Supplier> Suppliers { get; }

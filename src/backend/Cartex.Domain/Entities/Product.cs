@@ -15,4 +15,5 @@ public class Product : SoftDeleteEntity
 
     public ICollection<Barcode> Barcodes { get; set; } = [];
     public ICollection<Stock> Stocks { get; set; } = [];
+    public ICollection<ProductPrice> Prices { get; set; } = [];
 }

@@ -18,4 +18,20 @@ public class StocksController(ISender sender) : ControllerBase
         var result = await sender.Send(query);
         return Ok(result);
     }
+
+    [HttpGet("on-hand")]
+    [HasPermission("stocks.view")]
+    public async Task<IActionResult> GetOnHand([FromQuery] long warehouseId)
+    {
+        var result = await sender.Send(new GetStockOnHandQuery(warehouseId));
+        return Ok(result);
+    }
+
+    [HttpGet("expiring")]
+    [HasPermission("stocks.view")]
+    public async Task<IActionResult> GetExpiring([FromQuery] int withinDays = 30)
+    {
+        var result = await sender.Send(new GetExpiringStocksQuery(withinDays));
+        return Ok(result);
+    }
 }

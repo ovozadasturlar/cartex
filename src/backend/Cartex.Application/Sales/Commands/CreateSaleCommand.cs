@@ -6,11 +6,12 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
 
 namespace Cartex.Application.Sales.Commands;
 
-public record CreateSaleItemDto(long ProductId, long StockId, decimal Quantity, decimal UnitPrice);
+public record CreateSaleItemDto(long ProductId, decimal Quantity);
 
 public record CreateSaleCommand(
     long WarehouseId,
@@ -24,6 +25,7 @@ public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     ILedgerService ledger,
+    IStockAllocator stockAllocator,
     ICashbackCalculator cashbackCalculator) : IRequestHandler<CreateSaleCommand, long>
 {
     public async Task<long> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
@@ -33,7 +35,17 @@ public sealed class CreateSaleCommandHandler(
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
-        var totalAmount = request.Items.Sum(i => i.Quantity * i.UnitPrice);
+        var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
+        var prices = await db.ProductPrices
+            .Where(p => productIds.Contains(p.ProductId) && (p.WarehouseId == warehouse.Id || p.WarehouseId == null))
+            .ToListAsync(cancellationToken);
+
+        decimal PriceOf(long productId) =>
+            (prices.FirstOrDefault(p => p.ProductId == productId && p.WarehouseId == warehouse.Id)
+             ?? prices.FirstOrDefault(p => p.ProductId == productId && p.WarehouseId == null))?.SellingPrice
+            ?? throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (ProductId={productId}).");
+
+        var totalAmount = request.Items.Sum(i => PriceOf(i.ProductId) * i.Quantity);
         var debtAmount = Math.Max(0, totalAmount - request.PaidCash - request.PaidCard - request.PaidBonus);
 
         if ((request.PaidBonus > 0 || debtAmount > 0) && request.CustomerId is null)
@@ -60,33 +72,40 @@ public sealed class CreateSaleCommandHandler(
             Status = SaleStatus.Completed
         };
 
+        var cashbackLines = new List<CashbackLine>();
+
         foreach (var item in request.Items)
         {
-            var stock = await db.Stocks.FirstOrDefaultAsync(s => s.Id == item.StockId, cancellationToken)
-                ?? throw new NotFoundException($"Stock {item.StockId} not found.");
+            var unitPrice = PriceOf(item.ProductId);
+            var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, item.ProductId, item.Quantity, cancellationToken);
 
-            sale.Items.Add(new SaleItem
+            foreach (var allocation in allocations)
             {
-                ProductId = item.ProductId,
-                StockId = item.StockId,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                PurchasePrice = stock.PurchasePrice
-            });
+                sale.Items.Add(new SaleItem
+                {
+                    ProductId = item.ProductId,
+                    StockId = allocation.Batch.Id,
+                    Quantity = allocation.Quantity,
+                    UnitPrice = unitPrice,
+                    PurchasePrice = allocation.Batch.PurchasePrice
+                });
 
-            stock.Quantity -= item.Quantity;
+                allocation.Batch.Quantity -= allocation.Quantity;
+            }
+
+            cashbackLines.Add(new CashbackLine(item.ProductId, item.Quantity, unitPrice * item.Quantity));
         }
 
         db.Sales.Add(sale);
 
-        await PostLedgerAsync(request, sale, warehouse.BranchId, debtAmount, userId, cancellationToken);
+        await PostLedgerAsync(request, sale, warehouse.BranchId, debtAmount, cashbackLines, userId, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
         return sale.Id;
     }
 
-    private async Task PostLedgerAsync(CreateSaleCommand request, Sale sale, long branchId, decimal debtAmount, long userId, CancellationToken cancellationToken)
+    private async Task PostLedgerAsync(CreateSaleCommand request, Sale sale, long branchId, decimal debtAmount, List<CashbackLine> cashbackLines, long userId, CancellationToken cancellationToken)
     {
         if (request.PaidCash > 0)
         {
@@ -117,8 +136,7 @@ public sealed class CreateSaleCommandHandler(
             ledger.Post(OperationType.DebtCharge, debtAmount, null, debt, userId).Sale = sale;
         }
 
-        var lines = request.Items.Select(i => new CashbackLine(i.ProductId, i.Quantity, i.Quantity * i.UnitPrice)).ToList();
-        var cashback = await cashbackCalculator.CalculateAsync(branchId, lines, cancellationToken);
+        var cashback = await cashbackCalculator.CalculateAsync(branchId, cashbackLines, cancellationToken);
         if (cashback > 0)
         {
             var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
@@ -132,6 +150,7 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
     public CreateSaleCommandValidator()
     {
         RuleFor(x => x.Items).NotEmpty();
+        RuleForEach(x => x.Items).Must(i => i.Quantity > 0).WithMessage("Miqdor 0 dan katta bo'lishi kerak.");
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);

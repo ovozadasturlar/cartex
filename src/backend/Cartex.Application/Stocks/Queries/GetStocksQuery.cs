@@ -9,7 +9,7 @@ namespace Cartex.Application.Stocks.Queries;
 
 public record GetStocksQuery : FilteringRequest, IRequest<IReadOnlyCollection<StockDto>>;
 
-public record StockDto(long Id, string ProductName, string? CategoryName, string UnitName, decimal Quantity, decimal PurchasePrice, decimal SellingPrice, DateOnly? ExpiredAt);
+public record StockDto(long Id, long ProductId, string ProductName, string? CategoryName, string UnitName, decimal Quantity, decimal PurchasePrice, decimal SellingPrice, DateOnly? ExpiredAt);
 
 public sealed class GetStocksQueryHandler(
     IApplicationDbContext db,
@@ -25,12 +25,14 @@ public sealed class GetStocksQueryHandler(
             .ToPagedListAsync(request,
                 s => new StockDto(
                     s.Id,
+                    s.ProductId,
                     s.Product.Name,
                     s.Product.Category != null ? s.Product.Category.Name : null,
                     s.Product.Unit.Name,
                     s.Quantity,
                     s.PurchasePrice,
-                    s.SellingPrice,
+                    (s.Product.Prices.Where(pp => pp.WarehouseId == s.WarehouseId).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()
+                        ?? s.Product.Prices.Where(pp => pp.WarehouseId == null).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()) ?? 0,
                     s.ExpiredAt),
                 writer, cancellationToken);
     }

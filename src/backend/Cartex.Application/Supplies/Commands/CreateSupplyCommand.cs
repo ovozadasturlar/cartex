@@ -6,7 +6,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Supplies.Commands;
 
-public record CreateSupplyItemDto(long ProductId, decimal Quantity, decimal PurchasePrice);
+public record CreateSupplyItemDto(long ProductId, decimal Quantity, decimal PurchasePrice, DateOnly? ExpiredAt);
 
 public record CreateSupplyCommand(
     long SupplierId,
@@ -47,9 +47,10 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 BranchId = warehouse.BranchId,
                 ProductId = item.ProductId,
                 WarehouseId = request.WarehouseId,
+                Supply = supply,
                 Quantity = item.Quantity,
                 PurchasePrice = item.PurchasePrice,
-                SellingPrice = 0
+                ExpiredAt = item.ExpiredAt
             });
         }
 

@@ -1,0 +1,23 @@
+using Cartex.Persistence;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cartex.Application.Stocks.Queries;
+
+public record GetExpiringStocksQuery(int WithinDays = 30) : IRequest<IReadOnlyCollection<ExpiringStockDto>>;
+
+public record ExpiringStockDto(long Id, string ProductName, string WarehouseName, decimal Quantity, DateOnly ExpiredAt);
+
+public sealed class GetExpiringStocksQueryHandler(IApplicationDbContext db) : IRequestHandler<GetExpiringStocksQuery, IReadOnlyCollection<ExpiringStockDto>>
+{
+    public async Task<IReadOnlyCollection<ExpiringStockDto>> Handle(GetExpiringStocksQuery request, CancellationToken cancellationToken)
+    {
+        var threshold = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(request.WithinDays);
+
+        return await db.Stocks
+            .Where(s => s.Quantity > 0 && s.ExpiredAt != null && s.ExpiredAt <= threshold)
+            .OrderBy(s => s.ExpiredAt)
+            .Select(s => new ExpiringStockDto(s.Id, s.Product.Name, s.Warehouse.Name, s.Quantity, s.ExpiredAt!.Value))
+            .ToListAsync(cancellationToken);
+    }
+}

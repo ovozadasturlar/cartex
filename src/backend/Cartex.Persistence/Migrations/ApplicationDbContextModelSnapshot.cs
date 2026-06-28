@@ -679,6 +679,71 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductPrice", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("SellingPrice")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("selling_price");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long?>("WarehouseId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_prices");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_prices_product_id")
+                        .HasFilter("\"warehouse_id\" IS NULL");
+
+                    b.HasIndex("WarehouseId")
+                        .HasDatabaseName("ix_product_prices_warehouse_id");
+
+                    b.HasIndex("ProductId", "WarehouseId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_prices_product_id_warehouse_id")
+                        .HasFilter("\"warehouse_id\" IS NOT NULL");
+
+                    b.ToTable("product_prices", (string)null);
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.Role", b =>
                 {
                     b.Property<long>("Id")
@@ -947,10 +1012,9 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(12,3)")
                         .HasColumnName("quantity");
 
-                    b.Property<decimal>("SellingPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("selling_price");
+                    b.Property<long?>("SupplyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("supply_id");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -973,8 +1037,11 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_stocks_product_id");
 
-                    b.HasIndex("WarehouseId")
-                        .HasDatabaseName("ix_stocks_warehouse_id");
+                    b.HasIndex("SupplyId")
+                        .HasDatabaseName("ix_stocks_supply_id");
+
+                    b.HasIndex("WarehouseId", "ProductId")
+                        .HasDatabaseName("ix_stocks_warehouse_id_product_id");
 
                     b.ToTable("stocks", (string)null);
                 });
@@ -1618,6 +1685,26 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Unit");
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductPrice", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Product", "Product")
+                        .WithMany("Prices")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_prices_products_product_id");
+
+                    b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_product_prices_warehouses_warehouse_id");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Warehouse");
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.RolePermission", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Permission", "Permission")
@@ -1721,6 +1808,12 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_stocks_products_product_id");
 
+                    b.HasOne("Cartex.Domain.Entities.Supply", "Supply")
+                        .WithMany()
+                        .HasForeignKey("SupplyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stocks_supplies_supply_id");
+
                     b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
                         .WithMany("Stocks")
                         .HasForeignKey("WarehouseId")
@@ -1729,6 +1822,8 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_stocks_warehouses_warehouse_id");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Supply");
 
                     b.Navigation("Warehouse");
                 });
@@ -1971,6 +2066,8 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.Product", b =>
                 {
                     b.Navigation("Barcodes");
+
+                    b.Navigation("Prices");
 
                     b.Navigation("Stocks");
                 });

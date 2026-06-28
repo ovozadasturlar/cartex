@@ -24,7 +24,6 @@ public partial class CartItem : ObservableObject
 {
     [ObservableProperty] private string _productName = string.Empty;
     [ObservableProperty] private long _productId;
-    [ObservableProperty] private long _stockId;
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity = 1;
 
@@ -39,7 +38,6 @@ public partial class SalesViewModel : ViewModelBase
     private readonly ISalesApi _salesApi;
     private readonly IStocksApi _stocksApi;
     private readonly ICustomersApi _customersApi;
-    private readonly AuthService _authService;
 
     [ObservableProperty] private string _barcodeInput = string.Empty;
     [ObservableProperty] private decimal _paidCash;
@@ -64,8 +62,8 @@ public partial class SalesViewModel : ViewModelBase
     [ObservableProperty] private bool _isCartPaymentSwapped;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
-    public ObservableCollection<StockDto> AvailableStocks { get; } = [];
-    public ObservableCollection<StockDto> FilteredStocks { get; } = [];
+    public ObservableCollection<StockOnHandDto> AvailableStocks { get; } = [];
+    public ObservableCollection<StockOnHandDto> FilteredStocks { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
     public ObservableCollection<HeldSale> HeldSales { get; } = [];
     public ObservableCollection<CategoryItem> Categories { get; } = [];
@@ -76,12 +74,11 @@ public partial class SalesViewModel : ViewModelBase
     public decimal ChangeAmount => TotalPaid > TotalAmount ? TotalPaid - TotalAmount : 0;
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
 
-    public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi, AuthService authService)
+    public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi)
     {
         _salesApi = salesApi;
         _stocksApi = stocksApi;
         _customersApi = customersApi;
-        _authService = authService;
 
         CartItems.CollectionChanged += (_, _) => NotifyTotals();
         IsTouchMode = ModeManager.Instance.IsTouchMode;
@@ -115,7 +112,7 @@ public partial class SalesViewModel : ViewModelBase
     {
         FilteredStocks.Clear();
         var query = SearchQuery?.Trim() ?? "";
-        IEnumerable<StockDto> source = AvailableStocks;
+        IEnumerable<StockOnHandDto> source = AvailableStocks;
 
         if (!string.IsNullOrEmpty(SelectedCategory))
             source = source.Where(s => string.Equals(s.CategoryName, SelectedCategory, StringComparison.OrdinalIgnoreCase));
@@ -132,7 +129,7 @@ public partial class SalesViewModel : ViewModelBase
     {
         try
         {
-            var stocks = await _stocksApi.GetAllAsync(SelectedWarehouseId);
+            var stocks = await _stocksApi.GetOnHandAsync(SelectedWarehouseId);
             AvailableStocks.Clear();
             FilteredStocks.Clear();
             Categories.Clear();
@@ -184,17 +181,16 @@ public partial class SalesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AddStockToCart(StockDto stock)
+    private void AddStockToCart(StockOnHandDto stock)
     {
-        var existing = CartItems.FirstOrDefault(c => c.StockId == stock.Id);
+        var existing = CartItems.FirstOrDefault(c => c.ProductId == stock.ProductId);
         if (existing is not null)
             existing.Quantity += 1;
         else
             CartItems.Add(new CartItem
             {
                 ProductName = stock.ProductName,
-                ProductId = stock.Id,
-                StockId = stock.Id,
+                ProductId = stock.ProductId,
                 UnitPrice = stock.SellingPrice,
                 Quantity = 1
             });
@@ -333,7 +329,6 @@ public partial class SalesViewModel : ViewModelBase
         {
             ProductName = c.ProductName,
             ProductId = c.ProductId,
-            StockId = c.StockId,
             UnitPrice = c.UnitPrice,
             Quantity = c.Quantity
         }).ToList();
@@ -390,12 +385,10 @@ public partial class SalesViewModel : ViewModelBase
 
         try
         {
-            var items = CartItems.Select(c => new CreateSaleItemRequest(
-                c.ProductId, c.StockId, c.Quantity, c.UnitPrice)).ToList();
+            var items = CartItems.Select(c => new CreateSaleItemRequest(c.ProductId, c.Quantity)).ToList();
 
             var request = new CreateSaleRequest(
                 SelectedWarehouseId,
-                _authService.UserInfo?.UserId ?? 0,
                 SelectedCustomer?.Id,
                 PaidCash, PaidCard, PaidBonus,
                 items);

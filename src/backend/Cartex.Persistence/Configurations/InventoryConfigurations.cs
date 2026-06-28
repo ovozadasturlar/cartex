@@ -26,8 +26,8 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.ToTable("stocks");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
-        builder.Property(x => x.SellingPrice).HasPrecision(14, 2);
         builder.HasIndex(x => x.BranchId);
+        builder.HasIndex(x => new { x.WarehouseId, x.ProductId });
 
         builder.HasOne<Branch>()
             .WithMany()
@@ -43,6 +43,38 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
             .WithMany(w => w.Stocks)
             .HasForeignKey(x => x.WarehouseId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Supply)
+            .WithMany()
+            .HasForeignKey(x => x.SupplyId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
+{
+    public void Configure(EntityTypeBuilder<ProductPrice> builder)
+    {
+        builder.ToTable("product_prices");
+        builder.Property(x => x.SellingPrice).HasPrecision(14, 2);
+
+        builder.HasOne(x => x.Product)
+            .WithMany(p => p.Prices)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Warehouse)
+            .WithMany()
+            .HasForeignKey(x => x.WarehouseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(x => x.ProductId)
+            .IsUnique()
+            .HasFilter("\"warehouse_id\" IS NULL");
+
+        builder.HasIndex(x => new { x.ProductId, x.WarehouseId })
+            .IsUnique()
+            .HasFilter("\"warehouse_id\" IS NOT NULL");
     }
 }
 
