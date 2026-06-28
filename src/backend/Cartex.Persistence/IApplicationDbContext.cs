@@ -33,6 +33,8 @@ public interface IApplicationDbContext
     DbSet<SupplyItem> SupplyItems { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<NotificationOutbox> NotificationOutbox { get; }
+    DbSet<Cart> Carts { get; }
+    DbSet<CartItem> CartItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cartex.Api;
 using Cartex.Api.Middleware;
 using Cartex.Api.Services;
 using Cartex.Application;
@@ -29,6 +30,8 @@ builder.Services.AddPersistence(connectionString);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+
+builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

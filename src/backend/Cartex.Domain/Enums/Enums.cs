@@ -64,3 +64,10 @@ public enum OutboxStatus
     Processed,
     Failed
 }
+
+public enum CartStatus
+{
+    Open,
+    CheckedOut,
+    Cancelled
+}
