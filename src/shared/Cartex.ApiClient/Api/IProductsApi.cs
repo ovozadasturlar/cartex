@@ -8,6 +8,9 @@ public interface IProductsApi
     [Get("/api/products")]
     Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null);
 
+    [Get("/api/products/by-barcode")]
+    Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId);
+
     [Post("/api/products")]
     Task<long> CreateAsync([Body] CreateProductRequest request);
 

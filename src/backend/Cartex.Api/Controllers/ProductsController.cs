@@ -20,6 +20,14 @@ public class ProductsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("by-barcode")]
+    [HasPermission("sales.create")]
+    public async Task<IActionResult> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)
+    {
+        var result = await sender.Send(new GetProductByBarcodeQuery(code, warehouseId));
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     [HasPermission("products.manage")]
     public async Task<IActionResult> CreateProduct(CreateProductCommand command)
