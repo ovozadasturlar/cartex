@@ -55,11 +55,13 @@ public partial class SalesViewModel : ViewModelBase
     [ObservableProperty] private string _searchQuery = string.Empty;
     [ObservableProperty] private CartItem? _selectedCartItem;
     [ObservableProperty] private decimal _discountAmount;
-    [ObservableProperty] private bool _isHeldSalesVisible;
+    [ObservableProperty] private bool _isHeldSalesDesktopVisible;
+    [ObservableProperty] private bool _isHeldSalesTouchVisible;
     [ObservableProperty] private string? _selectedCategory;
     [ObservableProperty] private bool _isNumpadVisible = true;
     [ObservableProperty] private PosLayout _currentLayout = PosLayout.Default;
     [ObservableProperty] private bool _isLayoutSwapped;
+    [ObservableProperty] private bool _isCartPaymentSwapped;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockDto> AvailableStocks { get; } = [];
@@ -165,20 +167,20 @@ public partial class SalesViewModel : ViewModelBase
     [RelayCommand]
     private void AddByBarcode()
     {
-        if (string.IsNullOrWhiteSpace(BarcodeInput)) return;
+        if (string.IsNullOrWhiteSpace(SearchQuery)) return;
 
         var stock = AvailableStocks.FirstOrDefault(s =>
-            s.ProductName.Contains(BarcodeInput, StringComparison.OrdinalIgnoreCase));
+            s.ProductName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
 
         if (stock is null)
         {
-            StatusMessage = $"Product not found: {BarcodeInput}";
-            BarcodeInput = string.Empty;
+            StatusMessage = $"Product not found: {SearchQuery}";
+            SearchQuery = string.Empty;
             return;
         }
 
         AddStockToCart(stock);
-        BarcodeInput = string.Empty;
+        SearchQuery = string.Empty;
     }
 
     [RelayCommand]
@@ -293,6 +295,13 @@ public partial class SalesViewModel : ViewModelBase
     private void SwapLayout() => IsLayoutSwapped = !IsLayoutSwapped;
 
     [RelayCommand]
+    private void SwapPanels(string? param)
+    {
+        if (param is "columns") IsLayoutSwapped = !IsLayoutSwapped;
+        else if (param is "rows") IsCartPaymentSwapped = !IsCartPaymentSwapped;
+    }
+
+    [RelayCommand]
     private void PayExact()
     {
         PaidCash = TotalAmount;
@@ -346,7 +355,8 @@ public partial class SalesViewModel : ViewModelBase
         SelectedCustomer = held.Customer;
         HeldSales.Remove(held);
         NotifyTotals();
-        IsHeldSalesVisible = false;
+        IsHeldSalesDesktopVisible = false;
+        IsHeldSalesTouchVisible = false;
     }
 
     [RelayCommand]
@@ -356,7 +366,19 @@ public partial class SalesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleHeldSales() => IsHeldSalesVisible = !IsHeldSalesVisible;
+    private void ToggleHeldSales()
+    {
+        if (IsTouchMode)
+        {
+            IsHeldSalesTouchVisible = !IsHeldSalesTouchVisible;
+            IsHeldSalesDesktopVisible = false;
+        }
+        else
+        {
+            IsHeldSalesDesktopVisible = !IsHeldSalesDesktopVisible;
+            IsHeldSalesTouchVisible = false;
+        }
+    }
 
     [RelayCommand]
     private async Task CompleteSaleAsync()

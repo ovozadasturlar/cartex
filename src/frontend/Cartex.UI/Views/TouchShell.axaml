@@ -47,12 +47,20 @@
                 Background="{DynamicResource HeaderBg}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                 Padding="12,6">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
 
+                <!-- Layout cycle button (visible on Sales page only) -->
+                <Button Grid.Column="1" Background="Transparent" BorderThickness="0"
+                        Padding="10,8" MinHeight="48" Cursor="Hand"
+                        IsVisible="{Binding IsSalesPageActive}"
+                        Command="{Binding CycleLayoutCommand}">
+                    <mi:MaterialIcon Kind="{Binding LayoutIconKind}" Width="18" Height="18" />
+                </Button>
+
                 <!-- Theme popup -->
-                <Panel Grid.Column="1" Margin="0,0,4,0">
+                <Panel Grid.Column="2" Margin="0,0,4,0">
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleThemePopupCommand}">
@@ -86,7 +94,7 @@
                 </Panel>
 
                 <!-- Mode popup -->
-                <Panel Grid.Column="2" Margin="0,0,4,0">
+                <Panel Grid.Column="3" Margin="0,0,4,0">
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleModePopupCommand}">
@@ -120,7 +128,7 @@
                 </Panel>
 
                 <!-- Language popup -->
-                <Panel Grid.Column="3" Margin="0,0,4,0">
+                <Panel Grid.Column="4" Margin="0,0,4,0">
                     <Button Background="Transparent" BorderThickness="0"
                             Padding="10,8" MinHeight="48" Cursor="Hand"
                             Command="{Binding ToggleLanguagePopupCommand}">
@@ -160,7 +168,7 @@
                 </Panel>
 
                 <!-- Logout -->
-                <Button Grid.Column="4" Background="Transparent" BorderThickness="0"
+                <Button Grid.Column="5" Background="Transparent" BorderThickness="0"
                         Command="{Binding LogoutCommand}"
                         Padding="10,8" MinHeight="48">
                     <mi:MaterialIcon Kind="Logout" Width="18" Height="18"

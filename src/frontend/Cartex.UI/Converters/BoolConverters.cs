@@ -77,6 +77,8 @@ public sealed class BoolToColumnConverter : IValueConverter
 {
     public static readonly BoolToColumnConverter Col0Or2 = new(0, 2);
     public static readonly BoolToColumnConverter Col2Or0 = new(2, 0);
+    public static readonly BoolToColumnConverter Row0Or2 = new(0, 2);
+    public static readonly BoolToColumnConverter Row2Or0 = new(2, 0);
 
     private readonly int _falseVal;
     private readonly int _trueVal;

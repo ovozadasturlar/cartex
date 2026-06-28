@@ -241,10 +241,16 @@
                     Background="{DynamicResource HeaderBg}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                     Padding="24,14">
-                <Grid ColumnDefinitions="*,Auto">
+                <Grid ColumnDefinitions="*,Auto,Auto">
                     <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" FontSize="14"
+                    <Button Grid.Column="1" Classes="outline" MinHeight="30" MinWidth="30" Padding="5"
+                            ToolTip.Tip="Change layout mode" Margin="0,0,12,0"
+                            Command="{Binding CycleLayoutCommand}"
+                            IsVisible="{Binding IsSalesPageActive}">
+                        <mi:MaterialIcon Kind="{Binding LayoutIconKind}" Width="15" Height="15" />
+                    </Button>
+                    <TextBlock Grid.Column="2" FontSize="14"
                                Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
                                Text="{Binding Source={x:Static sys:DateTime.Now}, StringFormat='{}{0:dddd, dd MMMM yyyy}'}" />
                 </Grid>

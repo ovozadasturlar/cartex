@@ -68,6 +68,7 @@ public partial class MainViewModel : ViewModelBase
         ModeManager.Instance.ModeChanged += OnModeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
         LocalizationManager.Instance.LanguageChanged += _langChangedHandler;
+        LayoutCycleEvent.IconChanged += kind => LayoutIconKind = kind;
     }
 
     public void Initialize()
@@ -112,6 +113,15 @@ public partial class MainViewModel : ViewModelBase
         var item = MenuItems.FirstOrDefault(m => m.Key == menuKey);
         if (item is not null)
             SelectedMenuItem = item;
+    }
+
+    [ObservableProperty] private MaterialIconKind _layoutIconKind = MaterialIconKind.ViewColumn;
+
+    public bool IsSalesPageActive => CurrentPage is SalesViewModel;
+
+    partial void OnCurrentPageChanged(ViewModelBase? value)
+    {
+        OnPropertyChanged(nameof(IsSalesPageActive));
     }
 
     partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)
@@ -248,6 +258,9 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarCollapsed = !IsSidebarCollapsed;
+
+    [RelayCommand]
+    private void CycleLayout() => Services.LayoutCycleEvent.Raise();
 
     [RelayCommand]
     private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;
