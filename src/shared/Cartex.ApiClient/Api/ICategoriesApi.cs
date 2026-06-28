@@ -10,4 +10,7 @@ public interface ICategoriesApi
 
     [Post("/api/categories")]
     Task<long> CreateAsync([Body] CreateCategoryRequest request);
+
+    [Put("/api/categories/{id}")]
+    Task UpdateAsync(long id, [Body] UpdateCategoryRequest request);
 }

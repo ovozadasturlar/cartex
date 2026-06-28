@@ -10,4 +10,7 @@ public interface IUnitsApi
 
     [Post("/api/units")]
     Task<long> CreateAsync([Body] CreateUnitRequest request);
+
+    [Put("/api/units/{id}")]
+    Task UpdateAsync(long id, [Body] UpdateUnitRequest request);
 }

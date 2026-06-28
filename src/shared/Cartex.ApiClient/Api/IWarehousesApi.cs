@@ -10,4 +10,7 @@ public interface IWarehousesApi
 
     [Post("/api/warehouses")]
     Task<long> CreateAsync([Body] CreateWarehouseRequest request);
+
+    [Put("/api/warehouses/{id}")]
+    Task UpdateAsync(long id, [Body] UpdateWarehouseRequest request);
 }

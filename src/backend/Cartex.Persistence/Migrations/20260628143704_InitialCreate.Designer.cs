@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260628111438_InitialCreate")]
+    [Migration("20260628143704_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1014,6 +1014,15 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("StartPage")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("start_page");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1711,9 +1720,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("password_hash");
 
-                    b.Property<long>("RoleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("role_id");
+                    b.Property<string>("StartPage")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("start_page");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1734,9 +1744,6 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("DefaultBranchId")
                         .HasDatabaseName("ix_users_default_branch_id");
-
-                    b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_users_role_id");
 
                     b.HasIndex("Username")
                         .IsUnique()
@@ -1762,6 +1769,25 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_user_branches_branch_id");
 
                     b.ToTable("user_branches", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.UserRole", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("role_id");
+
+                    b.HasKey("UserId", "RoleId")
+                        .HasName("pk_user_roles");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("ix_user_roles_role_id");
+
+                    b.ToTable("user_roles", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>
@@ -2283,16 +2309,7 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_users_branches_default_branch_id");
 
-                    b.HasOne("Cartex.Domain.Entities.Role", "Role")
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_users_roles_role_id");
-
                     b.Navigation("DefaultBranch");
-
-                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.UserBranch", b =>
@@ -2312,6 +2329,27 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_user_branches_users_user_id");
 
                     b.Navigation("Branch");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.UserRole", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Role", "Role")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_roles_roles_role_id");
+
+                    b.HasOne("Cartex.Domain.Entities.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_roles_users_user_id");
+
+                    b.Navigation("Role");
 
                     b.Navigation("User");
                 });
@@ -2387,7 +2425,7 @@ namespace Cartex.Persistence.Migrations
                 {
                     b.Navigation("RolePermissions");
 
-                    b.Navigation("Users");
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Sale", b =>
@@ -2415,6 +2453,8 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.User", b =>
                 {
                     b.Navigation("UserBranches");
+
+                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>

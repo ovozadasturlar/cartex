@@ -11,6 +11,9 @@ public interface IRolesApi
     [Post("/api/roles")]
     Task<long> CreateAsync([Body] CreateRoleRequest request);
 
+    [Put("/api/roles/{id}")]
+    Task UpdateAsync(long id, [Body] UpdateRoleRequest request);
+
     [Put("/api/roles/{id}/permissions")]
     Task AssignPermissionsAsync(long id, [Body] AssignPermissionsRequest request);
 }

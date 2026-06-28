@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Cartex.UI.Views;
 
-public partial class UsersView : UserControl
+public partial class LoyaltyView : UserControl
 {
-    public UsersView()
+    public LoyaltyView()
     {
         InitializeComponent();
     }

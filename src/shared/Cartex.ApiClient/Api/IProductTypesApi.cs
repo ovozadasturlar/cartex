@@ -10,4 +10,7 @@ public interface IProductTypesApi
 
     [Post("/api/product-types")]
     Task<long> CreateAsync([Body] CreateProductTypeRequest request);
+
+    [Put("/api/product-types/{id}")]
+    Task UpdateAsync(long id, [Body] UpdateProductTypeRequest request);
 }

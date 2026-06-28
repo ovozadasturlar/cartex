@@ -1,3 +1,3 @@
 namespace Cartex.Shared.Models.Auth;
 
-public record UserInfo(long UserId, string Username, string FullName, string Role, List<string> Permissions);
+public record UserInfo(long UserId, string Username, string FullName, List<string> Roles, string? StartPage, List<string> Permissions);

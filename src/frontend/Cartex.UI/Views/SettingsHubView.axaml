@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Cartex.UI.Views.SettingsHubView"
+             x:CompileBindings="False">
+
+    <UserControl.Styles>
+        <Style Selector="Button.sub-nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Margin" Value="8,1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.sub-nav:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.sub-nav.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="248,*">
+
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBg}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="20,20,16,12">
+                    <mi:MaterialIcon Kind="Cog" Width="22" Height="22" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                    <TextBlock Text="{Binding L[settings]}" FontSize="17" FontWeight="Bold"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                </StackPanel>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,4">
+                    <ItemsControl ItemsSource="{Binding Sections}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,2,0,8">
+                                    <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextMuted}" Margin="20,6,0,4" />
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Classes="sub-nav" Classes.active="{Binding IsActive}"
+                                                        Command="{Binding $parent[UserControl].DataContext.SelectSectionCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                        <mi:MaterialIcon Kind="{Binding Icon}" Width="19" Height="19"
+                                                                         Foreground="{DynamicResource TextSecondary}" />
+                                                        <TextBlock Text="{Binding Title}" FontSize="13.5" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource TextPrimary}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <ContentControl Grid.Column="1" Content="{Binding CurrentSection}" />
+
+    </Grid>
+</UserControl>
