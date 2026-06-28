@@ -2,6 +2,13 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="SemiColorPrimary" Color="#15803D" />
+            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#16A34A" />
+            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#166534" />
+            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#14532D" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#2022C55E" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#3022C55E" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#4022C55E" />
             <SolidColorBrush x:Key="AppBg" Color="#111318" />
             <SolidColorBrush x:Key="SidebarBg" Color="#1A1D24" />
             <SolidColorBrush x:Key="CardBg" Color="#1A1D24" />
@@ -20,6 +27,13 @@
             <SolidColorBrush x:Key="InfoBg" Color="#200EA5E9" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="SemiColorPrimary" Color="#166534" />
+            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#15803D" />
+            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#14532D" />
+            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#BBF7D0" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#F0FDF4" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#DCFCE7" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#BBF7D0" />
             <SolidColorBrush x:Key="AppBg" Color="#F5F5F0" />
             <SolidColorBrush x:Key="SidebarBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="CardBg" Color="#FFFFFF" />
