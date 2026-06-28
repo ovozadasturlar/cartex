@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260628083616_InitialCreate")]
+    [Migration("20260628084759_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -291,11 +291,6 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<decimal>("CashbackRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)")
-                        .HasColumnName("cashback_rate");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -327,6 +322,69 @@ namespace Cartex.Persistence.Migrations
                         .HasName("pk_businesses");
 
                     b.ToTable("businesses", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.CashbackRule", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<long>("LoyaltyProgramId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("loyalty_program_id");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("method");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("target_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cashback_rules");
+
+                    b.HasIndex("LoyaltyProgramId", "Scope", "TargetId")
+                        .HasDatabaseName("ix_cashback_rules_loyalty_program_id_scope_target_id");
+
+                    b.ToTable("cashback_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
@@ -447,6 +505,61 @@ namespace Cartex.Persistence.Migrations
                         .HasFilter("\"phone\" IS NOT NULL");
 
                     b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.LoyaltyProgram", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Base")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("base");
+
+                    b.Property<long?>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<decimal>("TotalPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("total_percent");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_programs");
+
+                    b.HasIndex("BranchId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_loyalty_programs_branch_id")
+                        .HasFilter("\"branch_id\" IS NOT NULL");
+
+                    b.ToTable("loyalty_programs", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>
@@ -1454,6 +1567,18 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Business");
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.CashbackRule", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.LoyaltyProgram", "LoyaltyProgram")
+                        .WithMany("Rules")
+                        .HasForeignKey("LoyaltyProgramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashback_rules_loyalty_programs_loyalty_program_id");
+
+                    b.Navigation("LoyaltyProgram");
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Category", "Parent")
@@ -1463,6 +1588,17 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_categories_categories_parent_id");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.LoyaltyProgram", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_loyalty_programs_branches_branch_id");
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Product", b =>
@@ -1823,6 +1959,11 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Accounts");
 
                     b.Navigation("Sales");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.LoyaltyProgram", b =>
+                {
+                    b.Navigation("Rules");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>

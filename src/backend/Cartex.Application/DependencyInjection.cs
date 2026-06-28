@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Cartex.Application.Common.Behaviors;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Loyalty;
 
 namespace Cartex.Application;
 
@@ -18,6 +19,10 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
 
         services.AddScoped<ILedgerService, LedgerService>();
+
+        services.AddScoped<ICashbackCalculator, CashbackCalculator>();
+        services.AddScoped<ICashbackStrategy, PercentCashbackStrategy>();
+        services.AddScoped<ICashbackStrategy, FixedPerUnitCashbackStrategy>();
 
         return services;
     }

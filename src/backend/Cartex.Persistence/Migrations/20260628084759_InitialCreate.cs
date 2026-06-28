@@ -20,7 +20,6 @@ namespace Cartex.Persistence.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     legal_name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
-                    cashback_rate = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_by = table.Column<long>(type: "bigint", nullable: true),
@@ -290,6 +289,32 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "loyalty_programs",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    branch_id = table.Column<long>(type: "bigint", nullable: true),
+                    is_enabled = table.Column<bool>(type: "boolean", nullable: false),
+                    @base = table.Column<string>(name: "base", type: "character varying(20)", maxLength: 20, nullable: false),
+                    total_percent = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_loyalty_programs", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_loyalty_programs_branches_branch_id",
+                        column: x => x.branch_id,
+                        principalTable: "branches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
@@ -374,6 +399,34 @@ namespace Cartex.Persistence.Migrations
                         name: "fk_barcodes_products_product_id",
                         column: x => x.product_id,
                         principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "cashback_rules",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    loyalty_program_id = table.Column<long>(type: "bigint", nullable: false),
+                    scope = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    target_id = table.Column<long>(type: "bigint", nullable: false),
+                    method = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    value = table.Column<decimal>(type: "numeric(14,2)", precision: 14, scale: 2, nullable: false),
+                    priority = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_cashback_rules", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_cashback_rules_loyalty_programs_loyalty_program_id",
+                        column: x => x.loyalty_program_id,
+                        principalTable: "loyalty_programs",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -780,6 +833,11 @@ namespace Cartex.Persistence.Migrations
                 column: "business_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_cashback_rules_loyalty_program_id_scope_target_id",
+                table: "cashback_rules",
+                columns: new[] { "loyalty_program_id", "scope", "target_id" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_categories_parent_id",
                 table: "categories",
                 column: "parent_id");
@@ -797,6 +855,13 @@ namespace Cartex.Persistence.Migrations
                 column: "phone",
                 unique: true,
                 filter: "\"phone\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_loyalty_programs_branch_id",
+                table: "loyalty_programs",
+                column: "branch_id",
+                unique: true,
+                filter: "\"branch_id\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "ix_permissions_name",
@@ -992,6 +1057,9 @@ namespace Cartex.Persistence.Migrations
                 name: "barcodes");
 
             migrationBuilder.DropTable(
+                name: "cashback_rules");
+
+            migrationBuilder.DropTable(
                 name: "role_permissions");
 
             migrationBuilder.DropTable(
@@ -1008,6 +1076,9 @@ namespace Cartex.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "user_branches");
+
+            migrationBuilder.DropTable(
+                name: "loyalty_programs");
 
             migrationBuilder.DropTable(
                 name: "permissions");

@@ -41,6 +41,7 @@ public static class DependencyInjection
         RegisterAuthorized<ISuppliersApi>(services, settings, baseUrl);
         RegisterAuthorized<IAccountsApi>(services, settings, baseUrl);
         RegisterAuthorized<ITransactionsApi>(services, settings, baseUrl);
+        RegisterAuthorized<ILoyaltyApi>(services, settings, baseUrl);
         RegisterAuthorized<IAuditLogsApi>(services, settings, baseUrl);
 
         return services;

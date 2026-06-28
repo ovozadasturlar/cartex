@@ -31,3 +31,22 @@ public enum SaleStatus
     Returned,
     PartialReturn
 }
+
+public enum CashbackBase
+{
+    None,
+    PercentOfTotal,
+    PerLineRules
+}
+
+public enum CashbackScope
+{
+    Product,
+    Category
+}
+
+public enum CashbackMethod
+{
+    Percent,
+    FixedPerUnit
+}

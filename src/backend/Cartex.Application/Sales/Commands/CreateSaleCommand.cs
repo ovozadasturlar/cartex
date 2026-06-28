@@ -6,6 +6,7 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Loyalty;
 
 namespace Cartex.Application.Sales.Commands;
 
@@ -22,7 +23,8 @@ public record CreateSaleCommand(
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
-    ILedgerService ledger) : IRequestHandler<CreateSaleCommand, long>
+    ILedgerService ledger,
+    ICashbackCalculator cashbackCalculator) : IRequestHandler<CreateSaleCommand, long>
 {
     public async Task<long> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
@@ -77,14 +79,14 @@ public sealed class CreateSaleCommandHandler(
 
         db.Sales.Add(sale);
 
-        await PostLedgerAsync(request, sale, warehouse.BranchId, totalAmount, debtAmount, userId, cancellationToken);
+        await PostLedgerAsync(request, sale, warehouse.BranchId, debtAmount, userId, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 
         return sale.Id;
     }
 
-    private async Task PostLedgerAsync(CreateSaleCommand request, Sale sale, long branchId, decimal totalAmount, decimal debtAmount, long userId, CancellationToken cancellationToken)
+    private async Task PostLedgerAsync(CreateSaleCommand request, Sale sale, long branchId, decimal debtAmount, long userId, CancellationToken cancellationToken)
     {
         if (request.PaidCash > 0)
         {
@@ -115,8 +117,8 @@ public sealed class CreateSaleCommandHandler(
             ledger.Post(OperationType.DebtCharge, debtAmount, null, debt, userId).Sale = sale;
         }
 
-        var rate = await db.Businesses.Select(b => b.CashbackRate).FirstOrDefaultAsync(cancellationToken);
-        var cashback = rate > 0 ? totalAmount * rate / 100 : 0;
+        var lines = request.Items.Select(i => new CashbackLine(i.ProductId, i.Quantity, i.Quantity * i.UnitPrice)).ToList();
+        var cashback = await cashbackCalculator.CalculateAsync(branchId, lines, cancellationToken);
         if (cashback > 0)
         {
             var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);

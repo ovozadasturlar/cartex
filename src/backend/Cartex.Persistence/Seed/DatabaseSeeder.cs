@@ -42,6 +42,8 @@ public static class DatabaseSeeder
             new() { Name = "accounts.view", Description = "View accounts" },
             new() { Name = "accounts.manage", Description = "Manage accounts" },
             new() { Name = "transactions.view", Description = "View transactions" },
+            new() { Name = "loyalty.view", Description = "View loyalty/cashback settings" },
+            new() { Name = "loyalty.manage", Description = "Manage loyalty/cashback settings" },
             new() { Name = "reports.view", Description = "View reports" },
             new() { Name = "audit.view", Description = "View audit logs" },
         };
@@ -75,9 +77,11 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        var business = new Business { Name = "Cartex Biznes", CashbackRate = 1 };
+        var business = new Business { Name = "Cartex Biznes" };
         await context.Businesses.AddAsync(business);
         await context.SaveChangesAsync();
+
+        await context.LoyaltyPrograms.AddAsync(new LoyaltyProgram { IsEnabled = true, Base = CashbackBase.PercentOfTotal, TotalPercent = 1 });
 
         var branch1 = new Branch { BusinessId = business.Id, Name = "Filial 1", Address = "Tashkent" };
         var branch2 = new Branch { BusinessId = business.Id, Name = "Filial 2", Address = "Samarqand" };
