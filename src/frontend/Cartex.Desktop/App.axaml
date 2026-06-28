@@ -16,6 +16,7 @@
                 <ResourceInclude Source="avares://Cartex.UI/Themes/Colors.axaml" />
                 <ResourceInclude Source="avares://Cartex.UI/Themes/Brushes.axaml" />
                 <ResourceInclude Source="avares://Cartex.UI/Themes/ThemeBrushes.axaml" />
+                <ResourceInclude Source="avares://Cartex.UI/Themes/Controls.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
