@@ -29,6 +29,7 @@ public static class DependencyInjection
         RegisterAuthorized<IRolesApi>(services, settings, baseUrl);
         RegisterAuthorized<IPermissionsApi>(services, settings, baseUrl);
         RegisterAuthorized<IProductsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IProductTypesApi>(services, settings, baseUrl);
         RegisterAuthorized<ICategoriesApi>(services, settings, baseUrl);
         RegisterAuthorized<IUnitsApi>(services, settings, baseUrl);
         RegisterAuthorized<IBarcodesApi>(services, settings, baseUrl);

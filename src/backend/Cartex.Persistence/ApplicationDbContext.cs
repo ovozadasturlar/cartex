@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<UserBranch> UserBranches => Set<UserBranch>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Unit> Units => Set<Unit>();
+    public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();

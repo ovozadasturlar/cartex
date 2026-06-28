@@ -149,6 +149,11 @@ public static class DatabaseSeeder
         var catSnacks = new Category { Name = "Konditeriya" };
 
         await context.Categories.AddRangeAsync(catFood, catBeverages, catDairy, catBakery, catHousehold, catPersonalCare, catSnacks);
+
+        var typeFood = new ProductType { Name = "Oziq-ovqat", TracksExpiry = true, MeasureMode = MeasureMode.Counted };
+        var typeWeighed = new ProductType { Name = "Tarozili mahsulot", TracksExpiry = true, MeasureMode = MeasureMode.Weighed };
+        var typeNonFood = new ProductType { Name = "Nooziq-ovqat", TracksExpiry = false, MeasureMode = MeasureMode.Counted };
+        await context.ProductTypes.AddRangeAsync(typeFood, typeWeighed, typeNonFood);
         await context.SaveChangesAsync();
 
         var products = new List<Product>
@@ -187,6 +192,14 @@ public static class DatabaseSeeder
             new() { Name = "Kofe Nescafe 3v1", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
             new() { Name = "Tovuq go'shti 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 5 },
         };
+
+        var weighedIdx = new[] { 9, 10, 11, 21, 26, 32 };
+        var nonFoodIdx = new[] { 13, 14, 23, 24 };
+        for (var i = 0; i < products.Count; i++)
+            products[i].ProductTypeId = weighedIdx.Contains(i) ? typeWeighed.Id
+                : nonFoodIdx.Contains(i) ? typeNonFood.Id
+                : typeFood.Id;
+        products[0].Attributes = """{"hajm":"1.5L","brend":"Coca-Cola"}""";
 
         await context.Products.AddRangeAsync(products);
         await context.SaveChangesAsync();

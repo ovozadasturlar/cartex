@@ -14,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<UserBranch> UserBranches { get; }
     DbSet<Category> Categories { get; }
     DbSet<Unit> Units { get; }
+    DbSet<ProductType> ProductTypes { get; }
     DbSet<Product> Products { get; }
     DbSet<Barcode> Barcodes { get; }
     DbSet<Warehouse> Warehouses { get; }

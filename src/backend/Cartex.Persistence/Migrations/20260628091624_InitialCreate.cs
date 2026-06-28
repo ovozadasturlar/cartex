@@ -100,6 +100,27 @@ namespace Cartex.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "product_types",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    tracks_expiry = table.Column<bool>(type: "boolean", nullable: false),
+                    measure_mode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<long>(type: "bigint", nullable: true),
+                    updated_by = table.Column<long>(type: "bigint", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_product_types", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "roles",
                 columns: table => new
                 {
@@ -220,8 +241,11 @@ namespace Cartex.Persistence.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     category_id = table.Column<long>(type: "bigint", nullable: true),
                     unit_id = table.Column<long>(type: "bigint", nullable: false),
+                    product_type_id = table.Column<long>(type: "bigint", nullable: true),
                     name = table.Column<string>(type: "text", nullable: false),
                     min_stock = table.Column<decimal>(type: "numeric(12,3)", precision: 12, scale: 3, nullable: false),
+                    tracks_expiry_override = table.Column<bool>(type: "boolean", nullable: true),
+                    attributes = table.Column<string>(type: "jsonb", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_by = table.Column<long>(type: "bigint", nullable: true),
@@ -236,6 +260,12 @@ namespace Cartex.Persistence.Migrations
                         name: "fk_products_categories_category_id",
                         column: x => x.category_id,
                         principalTable: "categories",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_products_product_types_product_type_id",
+                        column: x => x.product_type_id,
+                        principalTable: "product_types",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
@@ -933,6 +963,11 @@ namespace Cartex.Persistence.Migrations
                 column: "category_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_products_product_type_id",
+                table: "products",
+                column: "product_type_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_products_unit_id",
                 table: "products",
                 column: "unit_id");
@@ -1169,6 +1204,9 @@ namespace Cartex.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "categories");
+
+            migrationBuilder.DropTable(
+                name: "product_types");
 
             migrationBuilder.DropTable(
                 name: "units");

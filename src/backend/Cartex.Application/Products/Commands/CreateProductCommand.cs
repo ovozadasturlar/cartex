@@ -5,7 +5,15 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Products.Commands;
 
-public record CreateProductCommand(string Name, long? CategoryId, long UnitId, decimal MinStock, List<string>? Barcodes) : ICommand<long>;
+public record CreateProductCommand(
+    string Name,
+    long? CategoryId,
+    long UnitId,
+    decimal MinStock,
+    List<string>? Barcodes,
+    long? ProductTypeId = null,
+    bool? TracksExpiryOverride = null,
+    string? Attributes = null) : ICommand<long>;
 
 public sealed class CreateProductCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateProductCommand, long>
 {
@@ -16,7 +24,10 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db) : IReq
             Name = request.Name,
             CategoryId = request.CategoryId,
             UnitId = request.UnitId,
-            MinStock = request.MinStock
+            MinStock = request.MinStock,
+            ProductTypeId = request.ProductTypeId,
+            TracksExpiryOverride = request.TracksExpiryOverride,
+            Attributes = request.Attributes
         };
 
         db.Products.Add(product);

@@ -50,3 +50,10 @@ public enum CashbackMethod
     Percent,
     FixedPerUnit
 }
+
+public enum MeasureMode
+{
+    Counted,
+    Weighed,
+    Length
+}

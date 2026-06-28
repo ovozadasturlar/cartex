@@ -28,6 +28,16 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
     }
 }
 
+public class ProductTypeConfiguration : IEntityTypeConfiguration<ProductType>
+{
+    public void Configure(EntityTypeBuilder<ProductType> builder)
+    {
+        builder.ToTable("product_types");
+        builder.Property(x => x.Name).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.MeasureMode).HasConversion<string>().HasMaxLength(20);
+    }
+}
+
 public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
@@ -35,6 +45,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.ToTable("products");
         builder.Property(x => x.Name).IsRequired();
         builder.Property(x => x.MinStock).HasPrecision(12, 3);
+        builder.Property(x => x.Attributes).HasColumnType("jsonb");
 
         builder.HasOne(x => x.Category)
             .WithMany(c => c.Products)
@@ -45,6 +56,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithMany(u => u.Products)
             .HasForeignKey(x => x.UnitId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.ProductType)
+            .WithMany(t => t.Products)
+            .HasForeignKey(x => x.ProductTypeId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

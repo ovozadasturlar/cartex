@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260628090530_InitialCreate")]
+    [Migration("20260628091624_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -628,6 +628,10 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Attributes")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attributes");
+
                     b.Property<long?>("CategoryId")
                         .HasColumnType("bigint")
                         .HasColumnName("category_id");
@@ -658,6 +662,14 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<long?>("ProductTypeId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("product_type_id");
+
+                    b.Property<bool?>("TracksExpiryOverride")
+                        .HasColumnType("boolean")
+                        .HasColumnName("tracks_expiry_override");
+
                     b.Property<long>("UnitId")
                         .HasColumnType("bigint")
                         .HasColumnName("unit_id");
@@ -675,6 +687,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("CategoryId")
                         .HasDatabaseName("ix_products_category_id");
+
+                    b.HasIndex("ProductTypeId")
+                        .HasDatabaseName("ix_products_product_type_id");
 
                     b.HasIndex("UnitId")
                         .HasDatabaseName("ix_products_unit_id");
@@ -745,6 +760,61 @@ namespace Cartex.Persistence.Migrations
                         .HasFilter("\"warehouse_id\" IS NOT NULL");
 
                     b.ToTable("product_prices", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("MeasureMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("measure_mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("TracksExpiry")
+                        .HasColumnType("boolean")
+                        .HasColumnName("tracks_expiry");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_types");
+
+                    b.ToTable("product_types", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Role", b =>
@@ -1676,6 +1746,12 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_products_categories_category_id");
 
+                    b.HasOne("Cartex.Domain.Entities.ProductType", "ProductType")
+                        .WithMany("Products")
+                        .HasForeignKey("ProductTypeId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_products_product_types_product_type_id");
+
                     b.HasOne("Cartex.Domain.Entities.Unit", "Unit")
                         .WithMany("Products")
                         .HasForeignKey("UnitId")
@@ -1684,6 +1760,8 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_products_units_unit_id");
 
                     b.Navigation("Category");
+
+                    b.Navigation("ProductType");
 
                     b.Navigation("Unit");
                 });
@@ -2073,6 +2151,11 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Prices");
 
                     b.Navigation("Stocks");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductType", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Role", b =>
