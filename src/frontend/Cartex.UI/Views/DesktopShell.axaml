@@ -1,11 +1,67 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:conv="using:Cartex.UI.Converters"
-             xmlns:vm="using:Cartex.UI.ViewModels"
-             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:u="https://irihi.tech/ursa"
              x:Class="Cartex.UI.Views.DesktopShell"
              x:CompileBindings="False">
+
+    <UserControl.Styles>
+        <Style Selector="Button.icon">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.icon:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+
+        <Style Selector="Button.nav-item">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.nav-item:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.nav-item.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+        </Style>
+
+        <Style Selector="Button.menu-item">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.menu-item:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+
+        <Style Selector="Border.popup">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="MinWidth" Value="180" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="BoxShadow" Value="0 8 24 0 #22000000" />
+        </Style>
+    </UserControl.Styles>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -13,105 +69,133 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border x:Name="SidebarBorder"
-                Grid.Column="0"
-                Width="240"
+        <Border Grid.Column="0"
                 Background="{DynamicResource SidebarBg}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
+                Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.Instance}}"
                 ClipToBounds="True">
-            <DockPanel>
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.18" />
+                </Transitions>
+            </Border.Transitions>
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="12,12,8,10">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="16,18,12,14">
                     <Image Source="avares://Cartex.UI/Assets/logo.png"
                            Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            Height="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="CARTEX" FontSize="20" FontWeight="Bold"
-                               VerticalAlignment="Center" Margin="10,0,0,0"
+                    <TextBlock Grid.Column="1" Text="CARTEX" FontSize="19" FontWeight="Bold"
+                               Margin="10,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource BrandPrimaryBrush}"
                                IsVisible="{Binding !IsSidebarCollapsed}" />
-                    <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
-                            Padding="6" Cursor="Hand" VerticalAlignment="Center"
-                            Command="{Binding ToggleSidebarCommand}"
-                            IsVisible="{Binding !IsSidebarCollapsed}">
+                </Grid>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,6">
+                    <ItemsControl ItemsSource="{Binding MenuSections}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel IsVisible="{Binding IsVisible}" Margin="0,2,0,8">
+                                    <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextMuted}" Margin="22,6,0,4"
+                                               IsVisible="{Binding !$parent[UserControl].DataContext.IsSidebarCollapsed}" />
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Panel Margin="10,1" IsVisible="{Binding IsVisible}">
+                                                    <Button Classes="nav-item" Classes.active="{Binding IsActive}"
+                                                            Command="{Binding $parent[UserControl].DataContext.SelectMenuItemCommand}"
+                                                            CommandParameter="{Binding}" ToolTip.Tip="{Binding Title}">
+                                                        <Grid ColumnDefinitions="24,*">
+                                                            <mi:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
+                                                                             Classes.nav-active="{Binding IsActive}"
+                                                                             Foreground="{DynamicResource TextSecondary}" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13.5"
+                                                                       VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                       Foreground="{DynamicResource TextPrimary}"
+                                                                       IsVisible="{Binding !$parent[UserControl].DataContext.IsSidebarCollapsed}" />
+                                                        </Grid>
+                                                    </Button>
+                                                    <Border Width="3" CornerRadius="0,2,2,0"
+                                                            Background="{DynamicResource BrandPrimaryBrush}"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                                                            Margin="-10,6" IsVisible="{Binding IsActive}" />
+                                                </Panel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <DockPanel Grid.Column="1" Background="{DynamicResource AppBg}">
+
+            <Border DockPanel.Dock="Top"
+                    Background="{DynamicResource HeaderBg}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                    Padding="14,10">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" VerticalAlignment="Center">
+
+                    <Button Grid.Column="0" Classes="icon" Command="{Binding ToggleSidebarCommand}">
                         <mi:MaterialIcon Kind="Menu" Width="20" Height="20"
                                          Foreground="{DynamicResource TextSecondary}" />
                     </Button>
-                </Grid>
 
-                <Button DockPanel.Dock="Top" Background="Transparent" BorderThickness="0"
-                        Padding="0,6" Cursor="Hand" HorizontalAlignment="Center"
-                        Command="{Binding ToggleSidebarCommand}"
-                        IsVisible="{Binding IsSidebarCollapsed}"
-                        ToolTip.Tip="Expand sidebar">
-                    <mi:MaterialIcon Kind="Menu" Width="20" Height="20"
-                                     Foreground="{DynamicResource TextSecondary}" />
-                </Button>
+                    <TextBox Grid.Column="1" x:Name="SearchBox" Width="300" Margin="10,0,0,0" MinHeight="36"
+                             Watermark="{Binding L[search]}" Text="{Binding NavFilter, Mode=TwoWay}">
+                        <TextBox.InnerLeftContent>
+                            <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
+                                             Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
 
-                <Separator DockPanel.Dock="Top" Background="{DynamicResource BorderBrush}" Height="1" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
 
-                <Border DockPanel.Dock="Bottom" Padding="8,8">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Border Width="34" Height="34" CornerRadius="17"
-                                Background="{DynamicResource BrandPrimaryBrush}"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="{Binding UserInitial}" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="White" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" />
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"
-                                    IsVisible="{Binding !IsSidebarCollapsed}">
-                            <TextBlock Text="{Binding UserDisplayName}" FontSize="13" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimary}"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="120" />
-                            <TextBlock Text="{Binding UserRole}" FontSize="11"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="120" />
-                        </StackPanel>
-                        <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
-                                Padding="6" Cursor="Hand" VerticalAlignment="Center"
-                                Command="{Binding LogoutCommand}"
-                                IsVisible="{Binding !IsSidebarCollapsed}"
-                                ToolTip.Tip="{Binding L[logout]}">
-                            <mi:MaterialIcon Kind="Logout" Width="18" Height="18"
-                                             Foreground="{DynamicResource TextSecondary}" />
-                        </Button>
-                    </Grid>
-                </Border>
+                        <ComboBox ItemsSource="{Binding Branch.Branches}" SelectedItem="{Binding Branch.SelectedBranch}"
+                                  MinWidth="130" VerticalAlignment="Center"
+                                  IsVisible="{Binding Branch.HasMultipleBranches}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
-                <StackPanel DockPanel.Dock="Bottom" Margin="4,4" Spacing="2">
-                    <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="0,0,0,2" />
-                    <StackPanel Orientation="{Binding IsSidebarCollapsed, Converter={x:Static conv:BoolToOrientationConverter.Instance}}"
-                                HorizontalAlignment="Center" Spacing="4">
+                        <ComboBox ItemsSource="{Binding Branch.Warehouses}" SelectedItem="{Binding Branch.SelectedWarehouse}"
+                                  MinWidth="150" VerticalAlignment="Center"
+                                  PlaceholderText="{Binding L[warehouse]}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
                         <Panel>
-                            <Button Background="Transparent" BorderThickness="0"
-                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
-                                    Command="{Binding ToggleThemePopupCommand}"
-                                    ToolTip.Tip="Theme">
-                                <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18" />
+                            <Button Classes="icon" Command="{Binding ToggleThemePopupCommand}"
+                                    ToolTip.Tip="{Binding L[theme]}">
+                                <mi:MaterialIcon Kind="{Binding ThemeIcon}" Width="18" Height="18"
+                                                 Foreground="{DynamicResource TextSecondary}" />
                             </Button>
                             <Popup IsOpen="{Binding IsThemePopupOpen, Mode=TwoWay}"
-                                   Placement="Top" IsLightDismissEnabled="True">
-                                <Border Background="{DynamicResource CardBg}" CornerRadius="8"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                        Padding="4" MinWidth="160">
+                                   Placement="BottomEdgeAlignedRight" IsLightDismissEnabled="True">
+                                <Border Classes="popup">
                                     <StackPanel Spacing="2">
-                                        <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left" Padding="12,8"
-                                                Command="{Binding SelectThemeCommand}"
-                                                CommandParameter="Light">
+                                        <Button Classes="menu-item" Command="{Binding SelectThemeCommand}" CommandParameter="Light">
                                             <StackPanel Orientation="Horizontal" Spacing="10">
                                                 <mi:MaterialIcon Kind="WeatherSunny" Width="18" Height="18" />
-                                                <TextBlock Text="Light" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding L[light]}" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left" Padding="12,8"
-                                                Command="{Binding SelectThemeCommand}"
-                                                CommandParameter="Dark">
+                                        <Button Classes="menu-item" Command="{Binding SelectThemeCommand}" CommandParameter="Dark">
                                             <StackPanel Orientation="Horizontal" Spacing="10">
                                                 <mi:MaterialIcon Kind="WeatherNight" Width="18" Height="18" />
-                                                <TextBlock Text="Dark" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding L[dark]}" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -120,68 +204,26 @@
                         </Panel>
 
                         <Panel>
-                            <Button Background="Transparent" BorderThickness="0"
-                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
-                                    Command="{Binding ToggleModePopupCommand}"
-                                    ToolTip.Tip="Mode">
-                                <mi:MaterialIcon Kind="{Binding ModeIcon}" Width="18" Height="18" />
-                            </Button>
-                            <Popup IsOpen="{Binding IsModePopupOpen, Mode=TwoWay}"
-                                   Placement="Top" IsLightDismissEnabled="True">
-                                <Border Background="{DynamicResource CardBg}" CornerRadius="8"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                        Padding="4" MinWidth="160">
-                                    <StackPanel Spacing="2">
-                                        <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left" Padding="12,8"
-                                                Command="{Binding SelectModeCommand}"
-                                                CommandParameter="Desktop">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <mi:MaterialIcon Kind="Monitor" Width="18" Height="18" />
-                                                <TextBlock Text="Desktop" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left" Padding="12,8"
-                                                Command="{Binding SelectModeCommand}"
-                                                CommandParameter="Touch">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <mi:MaterialIcon Kind="GestureTap" Width="18" Height="18" />
-                                                <TextBlock Text="Touch" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Border>
-                            </Popup>
-                        </Panel>
-
-                        <Panel>
-                            <Button Background="Transparent" BorderThickness="0"
-                                    Padding="10,6" Cursor="Hand" HorizontalAlignment="Center"
-                                    Command="{Binding ToggleLanguagePopupCommand}"
-                                    ToolTip.Tip="Language">
-                                <Border Background="{DynamicResource BorderBrush}" CornerRadius="3" Padding="5,2">
-                                    <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="10" FontWeight="Bold"
-                                               Foreground="{DynamicResource TextPrimary}"
-                                               VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <Button Classes="icon" Command="{Binding ToggleLanguagePopupCommand}"
+                                    ToolTip.Tip="{Binding L[language]}">
+                                <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="4" Padding="6,3">
+                                    <TextBlock Text="{Binding CurrentLanguageFlag}" FontSize="11" FontWeight="Bold"
+                                               Foreground="{DynamicResource TextPrimary}" />
                                 </Border>
                             </Button>
                             <Popup IsOpen="{Binding IsLanguagePopupOpen, Mode=TwoWay}"
-                                   Placement="Top" IsLightDismissEnabled="True">
-                                <Border Background="{DynamicResource CardBg}" CornerRadius="8"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                        Padding="4" MinWidth="200">
+                                   Placement="BottomEdgeAlignedRight" IsLightDismissEnabled="True">
+                                <Border Classes="popup" MinWidth="200">
                                     <ItemsControl ItemsSource="{Binding AvailableLanguages}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Button Background="Transparent" HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Left" Padding="12,8"
+                                                <Button Classes="menu-item"
                                                         Command="{Binding $parent[UserControl].DataContext.SelectLanguageCommand}"
                                                         CommandParameter="{Binding}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Border Background="{DynamicResource BorderBrush}" CornerRadius="3" Padding="5,2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="4" Padding="6,3">
                                                             <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageFlagConverter.Instance}}"
-                                                                       FontSize="10" FontWeight="Bold"
+                                                                       FontSize="11" FontWeight="Bold"
                                                                        Foreground="{DynamicResource TextPrimary}" />
                                                         </Border>
                                                         <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}"
@@ -194,71 +236,73 @@
                                 </Border>
                             </Popup>
                         </Panel>
-                    </StackPanel>
-                </StackPanel>
 
-                <Separator DockPanel.Dock="Bottom" Background="{DynamicResource BorderBrush}" Height="1" />
-
-                <ScrollViewer Margin="0,4">
-                    <ItemsControl ItemsSource="{Binding MenuItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Panel Margin="0,1,8,1">
-                                    <Border CornerRadius="0,8,8,0" Background="Transparent"
-                                            Classes.nav-active="{Binding IsActive}">
-                                        <Button Background="Transparent" BorderThickness="0"
-                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                                Command="{Binding $parent[UserControl].DataContext.SelectMenuItemCommand}"
-                                                CommandParameter="{Binding}" Padding="16,10"
-                                                ToolTip.Tip="{Binding Title}">
-                                            <Grid ColumnDefinitions="22,*">
-                                                <mi:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
-                                                    Classes.nav-active="{Binding IsActive}"
-                                                    Foreground="{DynamicResource TextSecondary}" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14"
-                                                    VerticalAlignment="Center" Margin="14,0,0,0"
-                                                    Foreground="{DynamicResource TextPrimary}"
-                                                    IsVisible="{Binding !$parent[UserControl].DataContext.IsSidebarCollapsed}" />
-                                            </Grid>
-                                        </Button>
+                        <Panel>
+                            <Button Background="Transparent" BorderThickness="0" Padding="6,4" Cursor="Hand"
+                                    CornerRadius="8" Command="{Binding ToggleUserMenuCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="15"
+                                            Background="{DynamicResource BrandPrimaryBrush}">
+                                        <TextBlock Text="{Binding UserInitial}" Foreground="White" FontWeight="SemiBold"
+                                                   FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <Border Width="3" CornerRadius="0,1.5,1.5,0"
-                                            Background="{DynamicResource BrandPrimaryBrush}"
-                                            HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                                            Margin="0,4" IsVisible="{Binding IsActive}" />
-                                </Panel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                                    <TextBlock Text="{Binding UserDisplayName}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextPrimary}" FontSize="13"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                                    <mi:MaterialIcon Kind="ChevronDown" Width="16" Height="16"
+                                                     Foreground="{DynamicResource TextSecondary}" />
+                                </StackPanel>
+                            </Button>
+                            <Popup IsOpen="{Binding IsUserMenuOpen, Mode=TwoWay}"
+                                   Placement="BottomEdgeAlignedRight" IsLightDismissEnabled="True">
+                                <Border Classes="popup" MinWidth="220">
+                                    <StackPanel Spacing="2">
+                                        <StackPanel Margin="12,8,12,8">
+                                            <TextBlock Text="{Binding UserDisplayName}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Text="{Binding UserRole}" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}" />
+                                        </StackPanel>
+                                        <Separator Background="{DynamicResource BorderBrush}" Height="1" Margin="4,2" />
+                                        <Button Classes="menu-item" Command="{Binding LogoutCommand}">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <mi:MaterialIcon Kind="Logout" Width="18" Height="18"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                                <TextBlock Text="{Binding L[logout]}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Panel>
 
-            </DockPanel>
-        </Border>
-
-        <DockPanel Grid.Column="1" Background="{DynamicResource AppBg}">
-
-            <Border DockPanel.Dock="Top"
-                    Background="{DynamicResource HeaderBg}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-                    Padding="24,14">
-                <Grid ColumnDefinitions="*,Auto,Auto">
-                    <TextBlock Text="{Binding CurrentPageTitle}" FontSize="20" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="outline" MinHeight="30" MinWidth="30" Padding="5"
-                            ToolTip.Tip="Change layout mode" Margin="0,0,12,0"
-                            Command="{Binding CycleLayoutCommand}"
-                            IsVisible="{Binding IsSalesPageActive}">
-                        <mi:MaterialIcon Kind="{Binding LayoutIconKind}" Width="15" Height="15" />
-                    </Button>
-                    <TextBlock Grid.Column="2" FontSize="14"
-                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
-                               Text="{Binding Source={x:Static sys:DateTime.Now}, StringFormat='{}{0:dddd, dd MMMM yyyy}'}" />
+                    </StackPanel>
                 </Grid>
             </Border>
 
-            <ContentControl Content="{Binding CurrentPage}" />
+            <Panel>
+                <TransitioningContentControl Content="{Binding CurrentPage}">
+                    <TransitioningContentControl.PageTransition>
+                        <CrossFade Duration="0:0:0.18" />
+                    </TransitioningContentControl.PageTransition>
+                </TransitioningContentControl>
+
+                <Border IsVisible="{Binding Busy.IsBusy}" Background="#33000000">
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14" HorizontalAlignment="Center">
+                            <ProgressBar IsIndeterminate="True" Width="190" />
+                            <TextBlock Text="{Binding Busy.Message}" Foreground="{DynamicResource TextSecondary}"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Border>
+            </Panel>
 
         </DockPanel>
+
+        <u:OverlayDialogHost Grid.Column="0" Grid.ColumnSpan="2" />
 
     </Grid>
 </UserControl>

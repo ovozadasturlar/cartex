@@ -13,62 +13,70 @@ public partial class MainViewModel : ViewModelBase
     private readonly NavigationService _navigationService;
     private readonly Action _langChangedHandler;
 
+    public BranchContextService Branch { get; }
+    public IBusyService Busy { get; }
+
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private MenuItem? _selectedMenuItem;
-    [ObservableProperty] private AppMode _currentMode;
     [ObservableProperty] private AppTheme _currentTheme;
     [ObservableProperty] private AppLanguage _currentLanguage;
     [ObservableProperty] private string _userDisplayName = "";
     [ObservableProperty] private string _userRole = "";
     [ObservableProperty] private string _currentPageTitle = "";
+    [ObservableProperty] private string _navFilter = "";
 
     [ObservableProperty] private bool _isThemePopupOpen;
-    [ObservableProperty] private bool _isModePopupOpen;
     [ObservableProperty] private bool _isLanguagePopupOpen;
+    [ObservableProperty] private bool _isUserMenuOpen;
     [ObservableProperty] private bool _isSidebarCollapsed;
 
     public string UserInitial => string.IsNullOrEmpty(UserDisplayName) ? "?" : UserDisplayName[..1].ToUpper();
-
-    public bool IsTouchMode
-    {
-        get => CurrentMode == AppMode.Touch;
-        set => CurrentMode = value ? AppMode.Touch : AppMode.Desktop;
-    }
-
-    public bool IsDarkTheme
-    {
-        get => CurrentTheme == AppTheme.Dark;
-        set => CurrentTheme = value ? AppTheme.Dark : AppTheme.Light;
-    }
-
+    public bool IsDarkTheme { get => CurrentTheme == AppTheme.Dark; set => CurrentTheme = value ? AppTheme.Dark : AppTheme.Light; }
     public string CurrentLanguageFlag => LocalizationManager.GetLanguageShortCode(CurrentLanguage);
+    public MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark ? MaterialIconKind.WeatherNight : MaterialIconKind.WeatherSunny;
 
-    public MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark
-        ? MaterialIconKind.WeatherNight
-        : MaterialIconKind.WeatherSunny;
-
-    public MaterialIconKind ModeIcon => CurrentMode == AppMode.Touch
-        ? MaterialIconKind.GestureTap
-        : MaterialIconKind.Monitor;
-
-    public ObservableCollection<MenuItem> MenuItems { get; } = [];
+    public ObservableCollection<MenuSection> MenuSections { get; } = [];
     public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
-    public MainViewModel(AuthService authService, NavigationService navigationService)
+    private record MenuDef(string SectionKey, string Key, MaterialIconKind Icon, Type VmType, string? Permission);
+
+    private static readonly (string Key, string TitleKey)[] SectionDefs =
+    [
+        ("main", "section_main"),
+        ("catalog", "section_catalog"),
+        ("inventory", "section_inventory"),
+        ("people", "section_people"),
+        ("analytics", "section_analytics"),
+        ("admin", "section_admin"),
+    ];
+
+    private static readonly MenuDef[] Defs =
+    [
+        new("main", "dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), null),
+        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create"),
+        new("catalog", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
+        new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),
+        new("people", "customers", MaterialIconKind.AccountGroup, typeof(CustomersViewModel), "customers.view"),
+        new("analytics", "sale_history", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view"),
+        new("analytics", "reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view"),
+        new("admin", "users", MaterialIconKind.AccountCog, typeof(UsersViewModel), "users.view"),
+        new("admin", "roles", MaterialIconKind.ShieldAccount, typeof(RolesViewModel), "roles.view"),
+        new("admin", "settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null),
+    ];
+
+    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy)
     {
         _authService = authService;
         _navigationService = navigationService;
-        _currentMode = SettingsService.Instance.Mode;
+        Branch = branch;
+        Busy = busy;
         _currentTheme = SettingsService.Instance.Theme;
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
-
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
-        ModeManager.Instance.ModeChanged += OnModeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
         LocalizationManager.Instance.LanguageChanged += _langChangedHandler;
-        LayoutCycleEvent.IconChanged += kind => LayoutIconKind = kind;
     }
 
     public void Initialize()
@@ -77,85 +85,70 @@ public partial class MainViewModel : ViewModelBase
         UserRole = _authService.UserInfo?.Role ?? "";
         OnPropertyChanged(nameof(UserInitial));
 
-        ModeManager.Instance.Mode = CurrentMode;
+        BuildMenu();
+        _ = Branch.LoadAsync();
 
-        MenuItems.Clear();
-        AddMenuItem("dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), null);
-        AddMenuItem("pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create");
-        AddMenuItem("products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view");
-        AddMenuItem("inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view");
-        AddMenuItem("sales", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view");
-        AddMenuItem("reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view");
-        AddMenuItem("settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null);
-
-        UpdateMenuTitles();
-
-        if (MenuItems.Count > 0)
-            SelectedMenuItem = MenuItems[0];
+        SelectedMenuItem = MenuSections.SelectMany(s => s.Items).FirstOrDefault();
     }
 
-    private void AddMenuItem(string key, MaterialIconKind icon, Type vmType, string? permission)
+    private void BuildMenu()
     {
-        if (permission is not null && !_authService.HasPermission(permission) && _authService.UserInfo?.Role != "Admin")
-            return;
+        MenuSections.Clear();
+        var isAdmin = _authService.UserInfo?.Role == "Admin";
 
-        MenuItems.Add(new MenuItem { Key = key, Icon = icon, ViewModelType = vmType, Permission = permission });
+        foreach (var (key, titleKey) in SectionDefs)
+        {
+            var section = new MenuSection { Key = key, Title = L[titleKey] };
+            foreach (var def in Defs.Where(d => d.SectionKey == key))
+            {
+                if (def.Permission is not null && !_authService.HasPermission(def.Permission) && !isAdmin)
+                    continue;
+                section.Items.Add(new MenuItem
+                {
+                    Key = def.Key,
+                    Icon = def.Icon,
+                    ViewModelType = def.VmType,
+                    Permission = def.Permission,
+                    Title = L[def.Key]
+                });
+            }
+            if (section.Items.Count > 0)
+                MenuSections.Add(section);
+        }
     }
 
-    private void UpdateMenuTitles()
+    partial void OnNavFilterChanged(string value)
     {
-        foreach (var item in MenuItems)
-            item.Title = L[item.Key];
+        var filter = value.Trim();
+        foreach (var section in MenuSections)
+        {
+            var visible = 0;
+            foreach (var item in section.Items)
+            {
+                item.IsVisible = filter.Length == 0 || item.Title.Contains(filter, StringComparison.OrdinalIgnoreCase);
+                if (item.IsVisible) visible++;
+            }
+            section.IsVisible = visible > 0;
+        }
     }
 
     private void OnMenuNavigationRequested(string menuKey)
     {
-        var item = MenuItems.FirstOrDefault(m => m.Key == menuKey);
+        var item = MenuSections.SelectMany(s => s.Items).FirstOrDefault(m => m.Key == menuKey);
         if (item is not null)
             SelectedMenuItem = item;
-    }
-
-    [ObservableProperty] private MaterialIconKind _layoutIconKind = MaterialIconKind.ViewColumn;
-
-    public bool IsSalesPageActive => CurrentPage is SalesViewModel;
-
-    partial void OnCurrentPageChanged(ViewModelBase? value)
-    {
-        OnPropertyChanged(nameof(IsSalesPageActive));
     }
 
     partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)
     {
         if (oldValue is not null) oldValue.IsActive = false;
-        if (newValue is not null)
-        {
-            newValue.IsActive = true;
-            CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
-            CurrentPageTitle = newValue.Title;
+        if (newValue is null) return;
 
-            _ = CurrentPage switch
-            {
-                DashboardViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                ProductsViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                SalesViewModel vm => vm.LoadStocksCommand.ExecuteAsync(null),
-                SalesHistoryViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                ReportsViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                CustomersViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                UsersViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                RolesViewModel vm => vm.LoadCommand.ExecuteAsync(null),
-                WarehouseViewModel vm => vm.LoadWarehousesCommand.ExecuteAsync(null),
-                _ => Task.CompletedTask
-            };
-        }
-    }
-
-    partial void OnCurrentModeChanged(AppMode value)
-    {
-        SettingsService.Instance.Mode = value;
-        if (ModeManager.Instance.Mode != value)
-            ModeManager.Instance.Mode = value;
-        OnPropertyChanged(nameof(IsTouchMode));
-        OnPropertyChanged(nameof(ModeIcon));
+        newValue.IsActive = true;
+        CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
+        CurrentPageTitle = newValue.Title;
+        if (CurrentPage is ILoadable loadable)
+            _ = loadable.LoadAsync();
     }
 
     partial void OnCurrentThemeChanged(AppTheme value)
@@ -173,94 +166,51 @@ public partial class MainViewModel : ViewModelBase
         if (LocalizationManager.Instance.CurrentLanguage != value)
             LocalizationManager.Instance.CurrentLanguage = value;
         OnPropertyChanged(nameof(CurrentLanguageFlag));
-        UpdateMenuTitles();
-        if (SelectedMenuItem is not null)
-            CurrentPageTitle = SelectedMenuItem.Title;
+        RefreshTitles();
     }
 
     private void OnThemeManagedChanged(AppTheme theme)
     {
-        if (_currentTheme == theme) return;
-        _currentTheme = theme;
-        SettingsService.Instance.Theme = theme;
-        OnPropertyChanged(nameof(CurrentTheme));
-        OnPropertyChanged(nameof(IsDarkTheme));
-        OnPropertyChanged(nameof(ThemeIcon));
-    }
-
-    private void OnModeManagedChanged(AppMode mode)
-    {
-        if (_currentMode == mode) return;
-        _currentMode = mode;
-        SettingsService.Instance.Mode = mode;
-        OnPropertyChanged(nameof(CurrentMode));
-        OnPropertyChanged(nameof(IsTouchMode));
-        OnPropertyChanged(nameof(ModeIcon));
+        if (CurrentTheme != theme)
+            CurrentTheme = theme;
     }
 
     private void OnLanguageManagedChanged()
     {
         var lang = LocalizationManager.Instance.CurrentLanguage;
-        if (_currentLanguage == lang) return;
-        _currentLanguage = lang;
-        SettingsService.Instance.Language = lang;
-        OnPropertyChanged(nameof(CurrentLanguage));
-        OnPropertyChanged(nameof(CurrentLanguageFlag));
-        UpdateMenuTitles();
+        if (CurrentLanguage != lang)
+            CurrentLanguage = lang;
+    }
+
+    private void RefreshTitles()
+    {
+        foreach (var section in MenuSections)
+        {
+            section.Title = L[SectionDefs.First(s => s.Key == section.Key).TitleKey];
+            foreach (var item in section.Items)
+                item.Title = L[item.Key];
+        }
         if (SelectedMenuItem is not null)
             CurrentPageTitle = SelectedMenuItem.Title;
     }
 
     [RelayCommand]
-    private void ToggleThemePopup()
-    {
-        IsThemePopupOpen = !IsThemePopupOpen;
-        IsModePopupOpen = false;
-        IsLanguagePopupOpen = false;
-    }
+    private void ToggleThemePopup() { IsThemePopupOpen = !IsThemePopupOpen; IsLanguagePopupOpen = false; IsUserMenuOpen = false; }
 
     [RelayCommand]
-    private void ToggleModePopup()
-    {
-        IsModePopupOpen = !IsModePopupOpen;
-        IsThemePopupOpen = false;
-        IsLanguagePopupOpen = false;
-    }
+    private void ToggleLanguagePopup() { IsLanguagePopupOpen = !IsLanguagePopupOpen; IsThemePopupOpen = false; IsUserMenuOpen = false; }
 
     [RelayCommand]
-    private void ToggleLanguagePopup()
-    {
-        IsLanguagePopupOpen = !IsLanguagePopupOpen;
-        IsThemePopupOpen = false;
-        IsModePopupOpen = false;
-    }
+    private void ToggleUserMenu() { IsUserMenuOpen = !IsUserMenuOpen; IsThemePopupOpen = false; IsLanguagePopupOpen = false; }
 
     [RelayCommand]
-    private void SelectTheme(string theme)
-    {
-        CurrentTheme = Enum.Parse<AppTheme>(theme);
-        IsThemePopupOpen = false;
-    }
+    private void SelectTheme(string theme) { CurrentTheme = Enum.Parse<AppTheme>(theme); IsThemePopupOpen = false; }
 
     [RelayCommand]
-    private void SelectMode(string mode)
-    {
-        CurrentMode = Enum.Parse<AppMode>(mode);
-        IsModePopupOpen = false;
-    }
-
-    [RelayCommand]
-    private void SelectLanguage(AppLanguage lang)
-    {
-        CurrentLanguage = lang;
-        IsLanguagePopupOpen = false;
-    }
+    private void SelectLanguage(AppLanguage lang) { CurrentLanguage = lang; IsLanguagePopupOpen = false; }
 
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarCollapsed = !IsSidebarCollapsed;
-
-    [RelayCommand]
-    private void CycleLayout() => Services.LayoutCycleEvent.Raise();
 
     [RelayCommand]
     private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;
@@ -268,6 +218,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Logout()
     {
+        IsUserMenuOpen = false;
         _authService.Logout();
         _navigationService.NavigateTo(ServiceLocator.Resolve<LoginViewModel>());
     }

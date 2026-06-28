@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddApiClients(settings.ApiBaseUrl, () => ServiceLocator.Resolve<AuthService>().Token);
 
         services.AddSingleton<NavigationService>();
+        services.AddSingleton<BranchContextService>();
         services.AddSingleton(LocalizationManager.Instance);
 
         services.AddSingleton<ToastService>();

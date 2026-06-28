@@ -12,4 +12,5 @@ public partial class MenuItem : ObservableObject
 
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private bool _isActive;
+    [ObservableProperty] private bool _isVisible = true;
 }
