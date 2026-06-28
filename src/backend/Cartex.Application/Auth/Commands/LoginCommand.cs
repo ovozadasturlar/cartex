@@ -21,6 +21,7 @@ public sealed class LoginCommandHandler(
             .Include(u => u.Role)
                 .ThenInclude(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
+            .Include(u => u.UserBranches)
             .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken)
             ?? throw new UnauthorizedAccessException("Invalid username or password.");
 
@@ -35,7 +36,12 @@ public sealed class LoginCommandHandler(
             .Select(rp => rp.Permission.Name)
             .ToList();
 
-        var token = jwtTokenGenerator.GenerateToken(user.Id, user.Username, user.Role.Name, permissions);
+        var businessId = await db.Businesses.Select(b => b.Id).FirstAsync(cancellationToken);
+        var branchIds = user.UserBranches.Select(ub => ub.BranchId).ToList();
+
+        var token = jwtTokenGenerator.GenerateToken(
+            user.Id, user.Username, user.Role.Name, permissions,
+            businessId, branchIds, user.DefaultBranchId);
 
         return new LoginResponse(token, user.FullName, user.Role.Name);
     }

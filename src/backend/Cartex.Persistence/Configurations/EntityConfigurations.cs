@@ -4,14 +4,29 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Cartex.Persistence.Configurations;
 
-public class ShopConfiguration : IEntityTypeConfiguration<Shop>
+public class BusinessConfiguration : IEntityTypeConfiguration<Business>
 {
-    public void Configure(EntityTypeBuilder<Shop> builder)
+    public void Configure(EntityTypeBuilder<Business> builder)
     {
-        builder.ToTable("shops");
+        builder.ToTable("businesses");
+        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.LegalName).HasMaxLength(150);
+        builder.Property(x => x.CashbackRate).HasPrecision(5, 2);
+    }
+}
+
+public class BranchConfiguration : IEntityTypeConfiguration<Branch>
+{
+    public void Configure(EntityTypeBuilder<Branch> builder)
+    {
+        builder.ToTable("branches");
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Phone).HasMaxLength(20);
-        builder.Property(x => x.CashbackRate).HasPrecision(5, 2);
+
+        builder.HasOne(x => x.Business)
+            .WithMany(b => b.Branches)
+            .HasForeignKey(x => x.BusinessId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -63,15 +78,34 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Username).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Username).IsUnique();
 
-        builder.HasOne(x => x.Shop)
-            .WithMany(s => s.Users)
-            .HasForeignKey(x => x.ShopId)
+        builder.HasOne(x => x.DefaultBranch)
+            .WithMany()
+            .HasForeignKey(x => x.DefaultBranchId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Role)
             .WithMany(r => r.Users)
             .HasForeignKey(x => x.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class UserBranchConfiguration : IEntityTypeConfiguration<UserBranch>
+{
+    public void Configure(EntityTypeBuilder<UserBranch> builder)
+    {
+        builder.ToTable("user_branches");
+        builder.HasKey(x => new { x.UserId, x.BranchId });
+
+        builder.HasOne(x => x.User)
+            .WithMany(u => u.UserBranches)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Branch)
+            .WithMany(b => b.UserBranches)
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -141,10 +175,11 @@ public class WarehouseConfiguration : IEntityTypeConfiguration<Warehouse>
     {
         builder.ToTable("warehouses");
         builder.Property(x => x.Name).IsRequired();
+        builder.HasIndex(x => x.BranchId);
 
-        builder.HasOne(x => x.Shop)
+        builder.HasOne(x => x.Branch)
             .WithMany(s => s.Warehouses)
-            .HasForeignKey(x => x.ShopId)
+            .HasForeignKey(x => x.BranchId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -157,6 +192,12 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
         builder.Property(x => x.SellingPrice).HasPrecision(14, 2);
+        builder.HasIndex(x => x.BranchId);
+
+        builder.HasOne<Branch>()
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Product)
             .WithMany(p => p.Stocks)
@@ -177,6 +218,12 @@ public class StockTransferConfiguration : IEntityTypeConfiguration<StockTransfer
         builder.ToTable("stock_transfers");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.HasIndex(x => x.BranchId);
+
+        builder.HasOne<Branch>()
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.FromWarehouse)
             .WithMany()
@@ -258,6 +305,12 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.PaidBonus).HasPrecision(18, 2);
         builder.Property(x => x.DebtAmount).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.HasIndex(x => x.BranchId);
+
+        builder.HasOne<Branch>()
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Warehouse)
             .WithMany()
@@ -293,6 +346,12 @@ public class SupplyConfiguration : IEntityTypeConfiguration<Supply>
     {
         builder.ToTable("supplies");
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
+        builder.HasIndex(x => x.BranchId);
+
+        builder.HasOne<Branch>()
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Supplier)
             .WithMany(s => s.Supplies)

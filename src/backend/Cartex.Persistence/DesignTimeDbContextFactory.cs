@@ -1,3 +1,4 @@
+using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -15,6 +16,6 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new ApplicationDbContext(options);
+        return new ApplicationDbContext(options, new NullCurrentUser());
     }
 }

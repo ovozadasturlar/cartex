@@ -3,8 +3,10 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
 
-public class StockTransfer : SoftDeleteEntity
+public class StockTransfer : SoftDeleteEntity, IBranchScoped
 {
+    public long BranchId { get; set; }
+
     public long FromWarehouseId { get; set; }
     public Warehouse FromWarehouse { get; set; } = null!;
 

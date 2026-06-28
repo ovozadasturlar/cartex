@@ -2,6 +2,7 @@ using MediatR;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 
@@ -11,24 +12,29 @@ public record CreateSaleItemDto(long ProductId, long StockId, decimal Quantity, 
 
 public record CreateSaleCommand(
     long WarehouseId,
-    long UserId,
     long? CustomerId,
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
     List<CreateSaleItemDto> Items) : IRequest<long>;
 
-public sealed class CreateSaleCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateSaleCommand, long>
+public sealed class CreateSaleCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateSaleCommand, long>
 {
     public async Task<long> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
+        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+
+        var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
+            ?? throw new NotFoundException("Warehouse not found.");
+
         var totalAmount = request.Items.Sum(i => i.Quantity * i.UnitPrice);
         var debtAmount = totalAmount - request.PaidCash - request.PaidCard - request.PaidBonus;
 
         var sale = new Sale
         {
+            BranchId = warehouse.BranchId,
             WarehouseId = request.WarehouseId,
-            UserId = request.UserId,
+            UserId = userId,
             CustomerId = request.CustomerId,
             TotalAmount = totalAmount,
             PaidCash = request.PaidCash,
@@ -61,17 +67,15 @@ public sealed class CreateSaleCommandHandler(IApplicationDbContext db) : IReques
 
         if (request.CustomerId is not null)
         {
-            var warehouse = await db.Warehouses
-                .Include(w => w.Shop)
-                .FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken);
+            var cashbackRate = await db.Businesses.Select(b => b.CashbackRate).FirstOrDefaultAsync(cancellationToken);
 
-            if (warehouse is not null && warehouse.Shop.CashbackRate > 0)
+            if (cashbackRate > 0)
             {
                 var customer = await db.Customers
                     .FirstOrDefaultAsync(c => c.Id == request.CustomerId, cancellationToken);
 
                 if (customer is not null)
-                    customer.CashbackBalance += totalAmount * warehouse.Shop.CashbackRate / 100;
+                    customer.CashbackBalance += totalAmount * cashbackRate / 100;
             }
         }
 

@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using Cartex.Api.Middleware;
+using Cartex.Api.Services;
 using Cartex.Application;
 using Cartex.Application.Common.Interfaces;
+using Cartex.Domain.Common;
 using Cartex.Auth;
 using Cartex.Auth.Services;
 using Cartex.Infrastructure.Web;
@@ -27,6 +29,7 @@ builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 
 builder.Services.AddControllers()

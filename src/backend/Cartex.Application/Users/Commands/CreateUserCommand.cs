@@ -6,7 +6,9 @@ using Cartex.Auth.Services;
 
 namespace Cartex.Application.Users.Commands;
 
-public record CreateUserCommand(long ShopId, string FullName, string Username, string Password, long RoleId) : IRequest<long>;
+public record CreateUserCommand(
+    string FullName, string Username, string Password, long RoleId,
+    long? DefaultBranchId, List<long> BranchIds) : IRequest<long>;
 
 public sealed class CreateUserCommandHandler(
     IApplicationDbContext db,
@@ -16,11 +18,12 @@ public sealed class CreateUserCommandHandler(
     {
         var user = new User
         {
-            ShopId = request.ShopId,
             FullName = request.FullName,
             Username = request.Username,
             PasswordHash = passwordHasher.Hash(request.Password),
-            RoleId = request.RoleId
+            RoleId = request.RoleId,
+            DefaultBranchId = request.DefaultBranchId,
+            UserBranches = [.. request.BranchIds.Distinct().Select(id => new UserBranch { BranchId = id })]
         };
 
         db.Users.Add(user);

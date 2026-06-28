@@ -213,6 +213,118 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("barcodes", (string)null);
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.Branch", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<long>("BusinessId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("business_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_branches");
+
+                    b.HasIndex("BusinessId")
+                        .HasDatabaseName("ix_branches_business_id");
+
+                    b.ToTable("branches", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Business", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("CashbackRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("cashback_rate");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("LegalName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("legal_name");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_businesses");
+
+                    b.ToTable("businesses", (string)null);
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
                 {
                     b.Property<long>("Id")
@@ -539,6 +651,10 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -609,6 +725,9 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_sales");
 
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_sales_branch_id");
+
                     b.HasIndex("CustomerId")
                         .HasDatabaseName("ix_sales_customer_id");
 
@@ -672,69 +791,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("sale_items", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.Shop", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("text")
-                        .HasColumnName("address");
-
-                    b.Property<decimal>("CashbackRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)")
-                        .HasColumnName("cashback_rate");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("phone");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_shops");
-
-                    b.ToTable("shops", (string)null);
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.Stock", b =>
                 {
                     b.Property<long>("Id")
@@ -743,6 +799,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -798,6 +858,9 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_stocks");
 
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_stocks_branch_id");
+
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_stocks_product_id");
 
@@ -815,6 +878,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -869,6 +936,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_stock_transfers");
+
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_stock_transfers_branch_id");
 
                     b.HasIndex("FromWarehouseId")
                         .HasDatabaseName("ix_stock_transfers_from_warehouse_id");
@@ -943,6 +1013,10 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -990,6 +1064,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_supplies");
+
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_supplies_branch_id");
 
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_supplies_supplier_id");
@@ -1187,6 +1264,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
 
+                    b.Property<long?>("DefaultBranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("default_branch_id");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -1213,10 +1294,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("role_id");
 
-                    b.Property<long>("ShopId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("shop_id");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1234,17 +1311,36 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_users");
 
+                    b.HasIndex("DefaultBranchId")
+                        .HasDatabaseName("ix_users_default_branch_id");
+
                     b.HasIndex("RoleId")
                         .HasDatabaseName("ix_users_role_id");
-
-                    b.HasIndex("ShopId")
-                        .HasDatabaseName("ix_users_shop_id");
 
                     b.HasIndex("Username")
                         .IsUnique()
                         .HasDatabaseName("ix_users_username");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.UserBranch", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.HasKey("UserId", "BranchId")
+                        .HasName("pk_user_branches");
+
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_user_branches_branch_id");
+
+                    b.ToTable("user_branches", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>
@@ -1255,6 +1351,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1277,10 +1377,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
-                    b.Property<long>("ShopId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("shop_id");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1292,8 +1388,8 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_warehouses");
 
-                    b.HasIndex("ShopId")
-                        .HasDatabaseName("ix_warehouses_shop_id");
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("ix_warehouses_branch_id");
 
                     b.ToTable("warehouses", (string)null);
                 });
@@ -1331,6 +1427,18 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_barcodes_products_product_id");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Branch", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
+                        .WithMany("Branches")
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_branches_businesses_business_id");
+
+                    b.Navigation("Business");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
@@ -1387,6 +1495,13 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Sale", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_branches_branch_id");
+
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
                         .WithMany("Sales")
                         .HasForeignKey("CustomerId")
@@ -1446,6 +1561,13 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Stock", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stocks_branches_branch_id");
+
                     b.HasOne("Cartex.Domain.Entities.Product", "Product")
                         .WithMany("Stocks")
                         .HasForeignKey("ProductId")
@@ -1467,6 +1589,13 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.StockTransfer", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stock_transfers_branches_branch_id");
+
                     b.HasOne("Cartex.Domain.Entities.Warehouse", "FromWarehouse")
                         .WithMany()
                         .HasForeignKey("FromWarehouseId")
@@ -1506,6 +1635,13 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Supply", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_supplies_branches_branch_id");
+
                     b.HasOne("Cartex.Domain.Entities.Supplier", "Supplier")
                         .WithMany("Supplies")
                         .HasForeignKey("SupplierId")
@@ -1599,6 +1735,12 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.User", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.Branch", "DefaultBranch")
+                        .WithMany()
+                        .HasForeignKey("DefaultBranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_users_branches_default_branch_id");
+
                     b.HasOne("Cartex.Domain.Entities.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
@@ -1606,28 +1748,54 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_users_roles_role_id");
 
-                    b.HasOne("Cartex.Domain.Entities.Shop", "Shop")
-                        .WithMany("Users")
-                        .HasForeignKey("ShopId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_users_shops_shop_id");
+                    b.Navigation("DefaultBranch");
 
                     b.Navigation("Role");
+                });
 
-                    b.Navigation("Shop");
+            modelBuilder.Entity("Cartex.Domain.Entities.UserBranch", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
+                        .WithMany("UserBranches")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_branches_branches_branch_id");
+
+                    b.HasOne("Cartex.Domain.Entities.User", "User")
+                        .WithMany("UserBranches")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_branches_users_user_id");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>
                 {
-                    b.HasOne("Cartex.Domain.Entities.Shop", "Shop")
+                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
                         .WithMany("Warehouses")
-                        .HasForeignKey("ShopId")
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_warehouses_shops_shop_id");
+                        .HasConstraintName("fk_warehouses_branches_branch_id");
 
-                    b.Navigation("Shop");
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Branch", b =>
+                {
+                    b.Navigation("UserBranches");
+
+                    b.Navigation("Warehouses");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Business", b =>
+                {
+                    b.Navigation("Branches");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
@@ -1668,13 +1836,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.Shop", b =>
-                {
-                    b.Navigation("Users");
-
-                    b.Navigation("Warehouses");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.Supplier", b =>
                 {
                     b.Navigation("Accounts");
@@ -1690,6 +1851,11 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.Unit", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.User", b =>
+                {
+                    b.Navigation("UserBranches");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>

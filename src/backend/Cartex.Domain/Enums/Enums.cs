@@ -2,7 +2,7 @@ namespace Cartex.Domain.Enums;
 
 public enum AccountOwnerType
 {
-    Shop,
+    Branch,
     Customer,
     Supplier
 }

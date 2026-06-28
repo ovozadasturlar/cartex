@@ -2,10 +2,10 @@ using Cartex.Domain.Common;
 
 namespace Cartex.Domain.Entities;
 
-public class Warehouse : SoftDeleteEntity
+public class Warehouse : SoftDeleteEntity, IBranchScoped
 {
-    public long ShopId { get; set; }
-    public Shop Shop { get; set; } = null!;
+    public long BranchId { get; set; }
+    public Branch Branch { get; set; } = null!;
 
     public string Name { get; set; } = null!;
 

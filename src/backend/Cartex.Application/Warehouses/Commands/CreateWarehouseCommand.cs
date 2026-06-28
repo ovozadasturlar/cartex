@@ -5,7 +5,7 @@ using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Warehouses.Commands;
 
-public record CreateWarehouseCommand(long ShopId, string Name) : IRequest<long>;
+public record CreateWarehouseCommand(long BranchId, string Name) : IRequest<long>;
 
 public sealed class CreateWarehouseCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateWarehouseCommand, long>
 {
@@ -13,7 +13,7 @@ public sealed class CreateWarehouseCommandHandler(IApplicationDbContext db) : IR
     {
         var warehouse = new Warehouse
         {
-            ShopId = request.ShopId,
+            BranchId = request.BranchId,
             Name = request.Name
         };
 

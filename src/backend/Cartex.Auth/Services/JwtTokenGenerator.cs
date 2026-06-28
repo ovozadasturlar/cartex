@@ -8,12 +8,14 @@ namespace Cartex.Auth.Services;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateToken(long userId, string username, string role, IEnumerable<string> permissions);
+    string GenerateToken(long userId, string username, string role, IEnumerable<string> permissions,
+        long businessId, IEnumerable<long> branchIds, long? defaultBranchId);
 }
 
 public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
 {
-    public string GenerateToken(long userId, string username, string role, IEnumerable<string> permissions)
+    public string GenerateToken(long userId, string username, string role, IEnumerable<string> permissions,
+        long businessId, IEnumerable<long> branchIds, long? defaultBranchId)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -23,8 +25,13 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
             new("userId", userId.ToString()),
             new("username", username),
             new(ClaimTypes.Role, role),
+            new("businessId", businessId.ToString()),
         };
 
+        if (defaultBranchId is not null)
+            claims.Add(new Claim("defaultBranchId", defaultBranchId.Value.ToString()));
+
+        claims.AddRange(branchIds.Select(b => new Claim("branchId", b.ToString())));
         claims.AddRange(permissions.Select(p => new Claim("permission", p)));
 
         var token = new JwtSecurityToken(

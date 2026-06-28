@@ -1,5 +1,5 @@
-using Cartex.Application.Shops.Commands;
-using Cartex.Application.Shops.Queries;
+using Cartex.Application.Branches.Commands;
+using Cartex.Application.Branches.Queries;
 using Cartex.Auth.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -10,27 +10,27 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class ShopsController(ISender sender) : ControllerBase
+public class BranchesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("shops.view")]
-    public async Task<IActionResult> GetShops([FromQuery] GetShopsQuery query)
+    [HasPermission("branches.view")]
+    public async Task<IActionResult> GetBranches([FromQuery] GetBranchesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
     }
 
     [HttpPost]
-    [HasPermission("shops.manage")]
-    public async Task<IActionResult> CreateShop(CreateShopCommand command)
+    [HasPermission("branches.manage")]
+    public async Task<IActionResult> CreateBranch(CreateBranchCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission("shops.manage")]
-    public async Task<IActionResult> UpdateShop(long id, UpdateShopCommand command)
+    [HasPermission("branches.manage")]
+    public async Task<IActionResult> UpdateBranch(long id, UpdateBranchCommand command)
     {
         if (id != command.Id) return BadRequest();
         await sender.Send(command);

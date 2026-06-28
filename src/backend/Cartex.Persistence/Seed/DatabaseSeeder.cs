@@ -13,8 +13,9 @@ public static class DatabaseSeeder
 
         var permissions = new List<Permission>
         {
-            new() { Name = "shops.view", Description = "View shops" },
-            new() { Name = "shops.manage", Description = "Create/edit shops" },
+            new() { Name = "branches.view", Description = "View branches" },
+            new() { Name = "branches.manage", Description = "Create/edit branches" },
+            new() { Name = "branch.viewAll", Description = "Access data of all branches" },
             new() { Name = "users.view", Description = "View users" },
             new() { Name = "users.manage", Description = "Create/edit users" },
             new() { Name = "roles.view", Description = "View roles" },
@@ -66,7 +67,7 @@ public static class DatabaseSeeder
             context.RolePermissions.Add(new RolePermission { RoleId = cashierRole.Id, PermissionId = perm.Id });
         }
 
-        var managerPermissions = permissions.Where(p => !p.Name.Contains("roles.manage") && !p.Name.Contains("shops.manage")).ToList();
+        var managerPermissions = permissions.Where(p => !p.Name.Contains("roles.manage") && !p.Name.Contains("branches.manage")).ToList();
         foreach (var perm in managerPermissions)
         {
             context.RolePermissions.Add(new RolePermission { RoleId = managerRole.Id, PermissionId = perm.Id });
@@ -74,36 +75,57 @@ public static class DatabaseSeeder
 
         await context.SaveChangesAsync();
 
-        var shop = new Shop { Name = "Main Shop", Address = "Tashkent", CashbackRate = 1 };
-        await context.Shops.AddAsync(shop);
+        var business = new Business { Name = "Cartex Biznes", CashbackRate = 1 };
+        await context.Businesses.AddAsync(business);
         await context.SaveChangesAsync();
 
-        var warehouse = new Warehouse { ShopId = shop.Id, Name = "Main Warehouse" };
-        await context.Warehouses.AddAsync(warehouse);
+        var branch1 = new Branch { BusinessId = business.Id, Name = "Filial 1", Address = "Tashkent" };
+        var branch2 = new Branch { BusinessId = business.Id, Name = "Filial 2", Address = "Samarqand" };
+        await context.Branches.AddRangeAsync(branch1, branch2);
+        await context.SaveChangesAsync();
+
+        var warehouse = new Warehouse { BranchId = branch1.Id, Name = "Filial 1 ombori" };
+        var warehouse2 = new Warehouse { BranchId = branch2.Id, Name = "Filial 2 ombori" };
 
         var admin = new User
         {
-            ShopId = shop.Id,
             FullName = "Administrator",
             Username = "admin",
             PasswordHash = hashPassword("admin123"),
             RoleId = adminRole.Id,
+            DefaultBranchId = branch1.Id,
             IsActive = true
         };
-        await context.Users.AddAsync(admin);
+        var cashier = new User
+        {
+            FullName = "Kassir (Filial 1)",
+            Username = "cashier",
+            PasswordHash = hashPassword("cashier123"),
+            RoleId = cashierRole.Id,
+            DefaultBranchId = branch1.Id,
+            IsActive = true
+        };
+        await context.Warehouses.AddRangeAsync(warehouse, warehouse2);
+        await context.Users.AddRangeAsync(admin, cashier);
+        await context.SaveChangesAsync();
+
+        await context.UserBranches.AddRangeAsync(
+            new UserBranch { UserId = admin.Id, BranchId = branch1.Id },
+            new UserBranch { UserId = admin.Id, BranchId = branch2.Id },
+            new UserBranch { UserId = cashier.Id, BranchId = branch1.Id });
 
         var shopCashAccount = new Account
         {
-            OwnerType = AccountOwnerType.Shop,
-            OwnerId = shop.Id,
+            OwnerType = AccountOwnerType.Branch,
+            OwnerId = branch1.Id,
             Name = "Naqd Kassa",
             Type = AccountType.Cash,
             Balance = 0
         };
         var shopCardAccount = new Account
         {
-            OwnerType = AccountOwnerType.Shop,
-            OwnerId = shop.Id,
+            OwnerType = AccountOwnerType.Branch,
+            OwnerId = branch1.Id,
             Name = "Bank Karta",
             Type = AccountType.Card,
             Balance = 0
@@ -254,7 +276,16 @@ public static class DatabaseSeeder
             new() { ProductId = products[32].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 20000, SellingPrice = 25000 },
         };
 
+        foreach (var s in stocks) s.BranchId = branch1.Id;
         await context.Stocks.AddRangeAsync(stocks);
+
+        var branch2Stocks = new List<Stock>
+        {
+            new() { BranchId = branch2.Id, ProductId = products[0].Id, WarehouseId = warehouse2.Id, Quantity = 50, PurchasePrice = 8000, SellingPrice = 10000 },
+            new() { BranchId = branch2.Id, ProductId = products[3].Id, WarehouseId = warehouse2.Id, Quantity = 40, PurchasePrice = 3000, SellingPrice = 4000 },
+            new() { BranchId = branch2.Id, ProductId = products[9].Id, WarehouseId = warehouse2.Id, Quantity = 30, PurchasePrice = 12000, SellingPrice = 15000 },
+        };
+        await context.Stocks.AddRangeAsync(branch2Stocks);
 
         var customer1 = new Customer { FullName = "Alisher Karimov", Phone = "+998901234567", CardBarcode = "CB001", DiscountPct = 5, CashbackBalance = 15000 };
         var customer2 = new Customer { FullName = "Dilnoza Rahimova", Phone = "+998935557788", CardBarcode = "CB002", DiscountPct = 3, CashbackBalance = 8000 };
@@ -537,8 +568,22 @@ public static class DatabaseSeeder
             CreatedAt = now.AddDays(-1)
         };
 
-        await context.Sales.AddRangeAsync(sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10,
-            sale11, sale12, sale13, sale14, sale15, sale16, sale17, sale18, sale19, sale20);
+        var allSales = new[] { sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10,
+            sale11, sale12, sale13, sale14, sale15, sale16, sale17, sale18, sale19, sale20 };
+        foreach (var s in allSales) s.BranchId = branch1.Id;
+        await context.Sales.AddRangeAsync(allSales);
+
+        var saleB2 = new Sale
+        {
+            BranchId = branch2.Id,
+            WarehouseId = warehouse2.Id,
+            UserId = admin.Id,
+            TotalAmount = 14000,
+            PaidCash = 14000,
+            Status = SaleStatus.Completed,
+            CreatedAt = now.AddDays(-1)
+        };
+        await context.Sales.AddAsync(saleB2);
         await context.SaveChangesAsync();
 
         var saleItems = new List<SaleItem>

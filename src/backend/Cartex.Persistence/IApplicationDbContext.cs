@@ -5,11 +5,13 @@ namespace Cartex.Persistence;
 
 public interface IApplicationDbContext
 {
-    DbSet<Shop> Shops { get; }
+    DbSet<Business> Businesses { get; }
+    DbSet<Branch> Branches { get; }
     DbSet<Role> Roles { get; }
     DbSet<Permission> Permissions { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<User> Users { get; }
+    DbSet<UserBranch> UserBranches { get; }
     DbSet<Category> Categories { get; }
     DbSet<Unit> Units { get; }
     DbSet<Product> Products { get; }

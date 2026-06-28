@@ -25,7 +25,7 @@
                 <DataGridTextColumn Header="Name" Binding="{Binding FullName, Mode=OneWay}" Width="*" />
                 <DataGridTextColumn Header="Username" Binding="{Binding Username, Mode=OneWay}" Width="150" />
                 <DataGridTextColumn Header="Role" Binding="{Binding RoleName, Mode=OneWay}" Width="120" />
-                <DataGridTextColumn Header="Shop" Binding="{Binding ShopName, Mode=OneWay}" Width="150" />
+                <DataGridTextColumn Header="Filial" Binding="{Binding DefaultBranchName, Mode=OneWay}" Width="150" />
                 <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive, Mode=OneWay}" Width="80" />
             </DataGrid.Columns>
         </DataGrid>

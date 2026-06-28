@@ -1,10 +1,11 @@
 using Cartex.Domain.Common;
+using Cartex.Domain.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cartex.Persistence.Interceptors;
 
-public sealed class AuditableEntityInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
+public sealed class BranchStampingInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
 {
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -23,21 +24,20 @@ public sealed class AuditableEntityInterceptor(ICurrentUser currentUser) : SaveC
     {
         if (context is null) return;
 
-        var now = DateTime.UtcNow;
-        var userId = currentUser.UserId;
+        var scopedToBranches = currentUser.IsAuthenticated && !currentUser.CanAccessAllBranches;
 
-        foreach (var entry in context.ChangeTracker.Entries<AuditableEntity>())
+        foreach (var entry in context.ChangeTracker.Entries<IBranchScoped>())
         {
-            if (entry.State == EntityState.Added)
-            {
-                entry.Entity.CreatedAt = now;
-                entry.Entity.CreatedBy = userId;
-            }
-            else if (entry.State == EntityState.Modified)
-            {
-                entry.Entity.UpdatedAt = now;
-                entry.Entity.UpdatedBy = userId;
-            }
+            if (entry.State != EntityState.Added) continue;
+
+            var entity = entry.Entity;
+
+            if (entity.BranchId == 0)
+                entity.BranchId = currentUser.DefaultBranchId
+                    ?? (currentUser.BranchIds.Count == 1 ? currentUser.BranchIds.First() : 0);
+
+            if (scopedToBranches && !currentUser.BranchIds.Contains(entity.BranchId))
+                throw new ForbiddenException("Cannot write data outside your branch.");
         }
     }
 }

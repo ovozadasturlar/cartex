@@ -19,6 +19,9 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
         if (transfer.Status != TransferStatus.Sent)
             throw new BusinessRuleException("Transfer is not in Sent status.");
 
+        var toWarehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == transfer.ToWarehouseId, cancellationToken)
+            ?? throw new NotFoundException("Target warehouse not found.");
+
         transfer.Status = TransferStatus.Received;
 
         var sourceStocks = await db.Stocks
@@ -50,6 +53,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
             {
                 db.Stocks.Add(new Stock
                 {
+                    BranchId = toWarehouse.BranchId,
                     ProductId = transfer.ProductId,
                     WarehouseId = transfer.ToWarehouseId,
                     Quantity = deduct,

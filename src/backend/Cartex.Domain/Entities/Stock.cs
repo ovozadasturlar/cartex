@@ -2,8 +2,10 @@ using Cartex.Domain.Common;
 
 namespace Cartex.Domain.Entities;
 
-public class Stock : SoftDeleteEntity
+public class Stock : SoftDeleteEntity, IBranchScoped
 {
+    public long BranchId { get; set; }
+
     public long ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
