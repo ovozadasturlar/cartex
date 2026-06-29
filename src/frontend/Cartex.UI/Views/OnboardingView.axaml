@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Cartex.UI.Views.OnboardingView"
+             x:CompileBindings="False">
+
+    <Border Background="{DynamicResource CardBg}" CornerRadius="16"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            BoxShadow="0 18 50 0 #33000000"
+            VerticalAlignment="Center" HorizontalAlignment="Center"
+            Width="480" Padding="36,32">
+        <StackPanel Spacing="20">
+
+            <StackPanel Spacing="6">
+                <mi:MaterialIcon Kind="RocketLaunchOutline" Width="40" Height="40"
+                                 HorizontalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                <TextBlock Text="{Binding L[onboarding_title]}" Classes="h1" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding L[onboarding_subtitle]}" Classes="caption"
+                           HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding IsStep1}" Spacing="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[business_name]}" Classes="caption" />
+                    <TextBox Text="{Binding BusinessName, Mode=TwoWay}" MinHeight="44" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[currency]}" Classes="caption" />
+                    <ComboBox ItemsSource="{Binding Currencies}" SelectedItem="{Binding Currency, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch" MinHeight="44" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding IsStep2}" Spacing="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[branch]}" Classes="caption" />
+                    <TextBox Text="{Binding BranchName, Mode=TwoWay}" MinHeight="44" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[address]}" Classes="caption" />
+                    <TextBox Text="{Binding BranchAddress, Mode=TwoWay}" MinHeight="44" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding IsStep3}" Spacing="10">
+                <mi:MaterialIcon Kind="CheckCircleOutline" Width="48" Height="48"
+                                 HorizontalAlignment="Center" Foreground="{DynamicResource SuccessBrush}" />
+                <TextBlock Text="{Binding L[onboarding_done]}" HorizontalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,0">
+                <Button Grid.Column="0" Content="{Binding L[back]}" Command="{Binding BackCommand}"
+                        IsVisible="{Binding CanBack}" MinHeight="44" Padding="20,0" />
+                <Button Grid.Column="2" Classes="brand" Content="{Binding L[next]}" Command="{Binding NextCommand}"
+                        IsVisible="{Binding !IsLast}" MinHeight="44" Padding="24,0" />
+                <Button Grid.Column="2" Classes="brand" Content="{Binding L[finish]}" Command="{Binding FinishCommand}"
+                        IsVisible="{Binding IsLast}" MinHeight="44" Padding="24,0" />
+            </Grid>
+
+        </StackPanel>
+    </Border>
+</UserControl>

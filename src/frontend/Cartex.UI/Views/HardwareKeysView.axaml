@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.HardwareKeysView"
+             x:CompileBindings="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="16" MaxWidth="560" HorizontalAlignment="Left">
+
+            <c:PageHeader Title="{Binding L[hardware_keys]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="14">
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[user]}" Classes="caption" />
+                        <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"
+                                  HorizontalAlignment="Stretch" MinHeight="42">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding FullName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[usb_drive]}" Classes="caption" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Command="{Binding DetectDriveCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <mi:MaterialIcon Kind="Usb" Width="18" Height="18" />
+                                    <TextBlock Text="{Binding L[detect_drive]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding DriveInfo}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Classes="brand" Command="{Binding IssueKeyCommand}"
+                            Content="{Binding L[issue_key]}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

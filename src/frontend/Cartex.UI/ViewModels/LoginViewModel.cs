@@ -20,6 +20,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty] private bool _isThemePopupOpen;
     [ObservableProperty] private bool _isLanguagePopupOpen;
 
+    [ObservableProperty] private bool _keyDetected;
+    private DetectedDrive? _detectedDrive;
+
     public AppTheme CurrentTheme
     {
         get => SettingsService.Instance.Theme;
@@ -56,6 +59,39 @@ public partial class LoginViewModel : ViewModelBase
         _authService = authService;
         _navigationService = navigationService;
         _rememberMe = SettingsService.Instance.RememberMe;
+        DetectKey();
+    }
+
+    [RelayCommand]
+    private void DetectKey()
+    {
+        _detectedDrive = HardwareKeyReader.ScanForKey();
+        KeyDetected = _detectedDrive is not null;
+    }
+
+    [RelayCommand]
+    private async Task LoginWithKeyAsync()
+    {
+        if (_detectedDrive?.KeyContent is null) return;
+        ErrorMessage = null;
+        IsLoading = true;
+        try
+        {
+            await _authService.LoginWithKeyAsync(_detectedDrive.KeyContent, _detectedDrive.Serial);
+            var mainVm = ServiceLocator.Resolve<MainViewModel>();
+            mainVm.Initialize();
+            _navigationService.NavigateTo(mainVm);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
+                ? L["login_error"]
+                : ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]

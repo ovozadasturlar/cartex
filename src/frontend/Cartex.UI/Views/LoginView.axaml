@@ -67,6 +67,16 @@
                         IsDefault="True"
                         IsEnabled="{Binding !IsLoading}" />
 
+                <Button Command="{Binding LoginWithKeyCommand}"
+                        IsVisible="{Binding KeyDetected}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        MinHeight="44" IsEnabled="{Binding !IsLoading}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="Usb" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[login_with_key]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
                 <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
 
             </StackPanel>
