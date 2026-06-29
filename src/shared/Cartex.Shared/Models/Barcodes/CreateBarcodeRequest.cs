@@ -1,3 +1,3 @@
 namespace Cartex.Shared.Models.Barcodes;
 
-public record CreateBarcodeRequest(long ProductId, string Code, decimal PackQty);
+public record CreateBarcodeRequest(long VariantId, string Code, decimal PackQty);

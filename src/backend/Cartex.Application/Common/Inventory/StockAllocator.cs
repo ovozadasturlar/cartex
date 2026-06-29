@@ -8,15 +8,15 @@ public record StockAllocation(Stock Batch, decimal Quantity);
 
 public interface IStockAllocator
 {
-    Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long productId, decimal quantity, CancellationToken cancellationToken);
+    Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, CancellationToken cancellationToken);
 }
 
 public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
 {
-    public async Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long productId, decimal quantity, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, CancellationToken cancellationToken)
     {
         var batches = await db.Stocks
-            .Where(s => s.WarehouseId == warehouseId && s.ProductId == productId && s.Quantity > 0)
+            .Where(s => s.WarehouseId == warehouseId && s.VariantId == variantId && s.Quantity > 0)
             .OrderBy(s => s.ExpiredAt == null)
             .ThenBy(s => s.ExpiredAt)
             .ThenBy(s => s.CreatedAt)

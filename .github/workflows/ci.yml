@@ -21,5 +21,11 @@ jobs:
       - name: Architecture tests
         run: dotnet test tests/Cartex.ArchitectureTests/Cartex.ArchitectureTests.csproj -c Release
 
+      - name: Unit tests
+        run: dotnet test tests/Cartex.UnitTests/Cartex.UnitTests.csproj -c Release
+
       - name: Application integration tests
         run: dotnet test tests/Cartex.Application.Tests/Cartex.Application.Tests.csproj -c Release
+
+      - name: API integration tests
+        run: dotnet test tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj -c Release

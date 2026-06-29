@@ -6,8 +6,8 @@ public class Stock : SoftDeleteEntity, IBranchScoped
 {
     public long BranchId { get; set; }
 
-    public long ProductId { get; set; }
-    public Product Product { get; set; } = null!;
+    public long VariantId { get; set; }
+    public ProductVariant Variant { get; set; } = null!;
 
     public long WarehouseId { get; set; }
     public Warehouse Warehouse { get; set; } = null!;

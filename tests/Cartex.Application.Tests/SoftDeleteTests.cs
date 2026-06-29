@@ -8,12 +8,11 @@ using Xunit;
 namespace Cartex.Application.Tests;
 
 [Collection("database")]
-public class SoftDeleteTests(DatabaseFixture fixture)
+public class SoftDeleteTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     [Fact]
     public async Task Removed_entity_is_filtered_out_and_can_be_restored()
     {
-        fixture.CurrentUser.Reset();
         long categoryId;
 
         using (var scope = fixture.CreateScope())

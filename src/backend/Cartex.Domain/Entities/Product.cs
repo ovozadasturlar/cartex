@@ -17,8 +17,9 @@ public class Product : SoftDeleteEntity
     public decimal MinStock { get; set; }
     public bool? TracksExpiryOverride { get; set; }
     public string? Attributes { get; set; }
+    public string? IkpuCode { get; set; }
+    public decimal? VatRate { get; set; }
+    public string? ImageKey { get; set; }
 
-    public ICollection<Barcode> Barcodes { get; set; } = [];
-    public ICollection<Stock> Stocks { get; set; } = [];
-    public ICollection<ProductPrice> Prices { get; set; } = [];
+    public ICollection<ProductVariant> Variants { get; set; } = [];
 }

@@ -11,6 +11,11 @@ public class PermissionPolicyProvider(IOptions<AuthorizationOptions> options) : 
         if (policy is not null)
             return policy;
 
+        if (policyName.StartsWith("feature:", StringComparison.Ordinal))
+            return new AuthorizationPolicyBuilder()
+                .AddRequirements(new FeatureRequirement(policyName["feature:".Length..]))
+                .Build();
+
         return new AuthorizationPolicyBuilder()
             .AddRequirements(new PermissionRequirement(policyName))
             .Build();
