@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Cartex.Shared.Models.Stocks;
 using Cartex.UI.ViewModels;
 
 namespace Cartex.UI.Views;
@@ -10,6 +11,15 @@ public partial class SalesView : UserControl
     public SalesView()
     {
         InitializeComponent();
+    }
+
+    private void OnTileHolding(object? sender, HoldingRoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: StockOnHandDto product } && DataContext is SalesViewModel vm)
+        {
+            vm.ShowProductDetail(product);
+            e.Handled = true;
+        }
     }
 
     protected override void OnLoaded(RoutedEventArgs e)

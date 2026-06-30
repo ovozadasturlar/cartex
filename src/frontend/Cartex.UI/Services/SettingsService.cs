@@ -62,6 +62,12 @@ public sealed class SettingsService
         set { _data.RememberMe = value; Save(); }
     }
 
+    public double PosCartWidth
+    {
+        get => _data.PosCartWidth;
+        set { _data.PosCartWidth = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -95,5 +101,6 @@ public sealed class SettingsService
         public AppMode Mode { get; set; }
         public string ApiBaseUrl { get; set; } = "http://localhost:5015";
         public bool RememberMe { get; set; }
+        public double PosCartWidth { get; set; } = 430;
     }
 }
