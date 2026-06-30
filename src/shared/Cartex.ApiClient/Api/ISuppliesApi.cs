@@ -6,7 +6,15 @@ namespace Cartex.ApiClient.Api;
 public interface ISuppliesApi
 {
     [Get("/api/supplies")]
-    Task<List<SupplyDto>> GetAllAsync([Query] long? warehouseId = null);
+    Task<List<SupplyDto>> GetAllAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
+
+    [Get("/api/supplies")]
+    Task<IApiResponse<List<SupplyDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
+        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null,
+        [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
+
+    [Get("/api/supplies/totals")]
+    Task<SuppliesTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
 
     [Post("/api/supplies")]
     Task<long> CreateAsync([Body] CreateSupplyRequest request);

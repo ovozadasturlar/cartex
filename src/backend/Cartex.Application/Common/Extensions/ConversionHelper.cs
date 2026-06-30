@@ -16,17 +16,19 @@ public static class ConversionHelper
         "d.M.yyyy",
     ];
 
-    public static DateTimeOffset ParseFlexibleDateTimeOffset(string input)
+    public static bool TryParseFlexibleDateTimeOffset(string input, out DateTimeOffset result)
     {
         foreach (var format in DateFormats)
-            if (DateTimeOffset.TryParseExact(input, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-                return parsed;
+            if (DateTimeOffset.TryParseExact(input, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+                return true;
 
-        if (DateTimeOffset.TryParse(input, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fallback))
-            return fallback;
-
-        throw new InvalidOperationException($"Cannot parse date: '{input}'");
+        return DateTimeOffset.TryParse(input, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
     }
+
+    public static DateTimeOffset ParseFlexibleDateTimeOffset(string input) =>
+        TryParseFlexibleDateTimeOffset(input, out var parsed)
+            ? parsed
+            : throw new InvalidOperationException($"Cannot parse date: '{input}'");
 
     public static object? TryConvert(object value, Type targetType)
     {
@@ -45,12 +47,18 @@ public static class ConversionHelper
         var str = value?.ToString();
         if (string.IsNullOrWhiteSpace(str)) return null;
 
-        if (targetType == typeof(Guid)) return Guid.Parse(str);
-        if (targetType == typeof(DateTime)) return ParseFlexibleDateTimeOffset(str).DateTime;
-        if (targetType == typeof(DateTimeOffset)) return ParseFlexibleDateTimeOffset(str);
-        if (targetType.IsEnum) return Enum.Parse(targetType, str, ignoreCase: true);
-        if (value is IConvertible) return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
+        if (targetType == typeof(Guid)) return Guid.TryParse(str, out var guid) ? guid : null;
+        if (targetType == typeof(DateTime)) return TryParseFlexibleDateTimeOffset(str, out var dt) ? dt.DateTime : null;
+        if (targetType == typeof(DateTimeOffset)) return TryParseFlexibleDateTimeOffset(str, out var dto) ? dto : null;
+        if (targetType.IsEnum) return Enum.TryParse(targetType, str, ignoreCase: true, out var en) ? en : null;
 
-        throw new InvalidOperationException($"Cannot convert '{value}' to {targetType.Name}");
+        try
+        {
+            return value is IConvertible ? Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

@@ -1,3 +1,4 @@
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 
 namespace Cartex.Api.Services;
@@ -16,7 +17,10 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
         User?.FindAll("branchId").Select(c => long.Parse(c.Value)).ToArray() ?? [];
 
     public bool CanAccessAllBranches =>
-        User?.FindAll("permission").Any(c => c.Value == "branch.viewAll") ?? false;
+        User?.FindAll("permission").Any(c => c.Value == AppPermissions.Branches.ViewAll || c.Value == AppPermissions.Wildcard) ?? false;
+
+    public bool HasPermission(string permission) =>
+        User?.FindAll("permission").Any(c => c.Value == permission || c.Value == AppPermissions.Wildcard) ?? false;
 
     private long? GetLong(string claimType)
     {

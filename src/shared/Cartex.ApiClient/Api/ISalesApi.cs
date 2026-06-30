@@ -8,6 +8,17 @@ public interface ISalesApi
     [Get("/api/sales")]
     Task<List<SaleDto>> GetAllAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null);
 
+    [Get("/api/sales")]
+    Task<IApiResponse<List<SaleDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
+        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null,
+        [Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null);
+
+    [Get("/api/sales/totals")]
+    Task<SalesTotalsDto> GetTotalsAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] string? search = null);
+
     [Post("/api/sales")]
-    Task<long> CreateAsync([Body] CreateSaleRequest request);
+    Task<CreateSaleResult> CreateAsync([Body] CreateSaleRequest request);
+
+    [Post("/api/sales/{id}/return")]
+    Task ReturnAsync(long id, [Body] ReturnSaleRequest request);
 }

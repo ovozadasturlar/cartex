@@ -9,7 +9,6 @@ public class LoyaltyProgramConfiguration : IEntityTypeConfiguration<LoyaltyProgr
     public void Configure(EntityTypeBuilder<LoyaltyProgram> builder)
     {
         builder.ToTable("loyalty_programs");
-        builder.Property(x => x.Base).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.TotalPercent).HasPrecision(5, 2);
 
         builder.HasOne(x => x.Branch)

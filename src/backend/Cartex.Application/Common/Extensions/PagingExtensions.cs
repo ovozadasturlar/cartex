@@ -20,14 +20,17 @@ public static class PagingExtensions
         if (request.Page <= 0 || request.PageSize <= 0)
             return await filtered.Select(selector).ToListAsync(cancellationToken);
 
+        var page = request.Page;
+        var pageSize = Math.Min(request.PageSize, PagingRequest.MaxPageSize);
+
         var items = await filtered
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(selector)
             .ToListAsync(cancellationToken);
 
-        writer?.Write(new PagedListMetadata(total, request.Page, request.PageSize,
-            (int)Math.Ceiling((double)total / request.PageSize)));
+        writer?.Write(new PagedListMetadata(total, page, pageSize,
+            (int)Math.Ceiling((double)total / pageSize)));
 
         return items;
     }

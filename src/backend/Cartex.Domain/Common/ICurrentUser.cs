@@ -8,6 +8,7 @@ public interface ICurrentUser
     IReadOnlyCollection<long> BranchIds { get; }
     bool CanAccessAllBranches { get; }
     bool IsAuthenticated { get; }
+    bool HasPermission(string permission);
 }
 
 public sealed class NullCurrentUser : ICurrentUser
@@ -18,4 +19,5 @@ public sealed class NullCurrentUser : ICurrentUser
     public IReadOnlyCollection<long> BranchIds => [];
     public bool CanAccessAllBranches => false;
     public bool IsAuthenticated => false;
+    public bool HasPermission(string permission) => false;
 }

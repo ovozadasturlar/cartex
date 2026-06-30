@@ -30,8 +30,9 @@ public sealed class AuditableEntityInterceptor(ICurrentUser currentUser) : SaveC
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.CreatedAt = now;
-                entry.Entity.CreatedBy = userId;
+                if (entry.Entity.CreatedAt == default)
+                    entry.Entity.CreatedAt = now;
+                entry.Entity.CreatedBy ??= userId;
             }
             else if (entry.State == EntityState.Modified)
             {

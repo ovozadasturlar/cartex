@@ -45,16 +45,6 @@ public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICa
         if (program is null)
             return 0;
 
-        return program.Base switch
-        {
-            CashbackBase.PercentOfTotal => lines.Sum(l => l.LineTotal) * program.TotalPercent / 100,
-            CashbackBase.PerLineRules => await CalculatePerLineAsync(program, lines, cancellationToken),
-            _ => 0
-        };
-    }
-
-    private async Task<decimal> CalculatePerLineAsync(LoyaltyProgram program, IReadOnlyCollection<CashbackLine> lines, CancellationToken cancellationToken)
-    {
         var productIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var categoryByProduct = await db.Products
             .Where(p => productIds.Contains(p.Id))
@@ -62,14 +52,24 @@ public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICa
             .ToDictionaryAsync(p => p.Id, p => p.CategoryId, cancellationToken);
 
         decimal total = 0;
+        decimal percentBase = 0;
         foreach (var line in lines)
         {
             var rule = ResolveRule(program, line.ProductId, categoryByProduct.GetValueOrDefault(line.ProductId));
             var strategy = rule is null ? null : strategies.FirstOrDefault(s => s.Method == rule.Method);
             if (rule is not null && strategy is not null)
+            {
                 total += strategy.Calculate(line, rule.Value);
+                if (!rule.ExcludeFromTotalPercent)
+                    percentBase += line.LineTotal;
+            }
+            else
+            {
+                percentBase += line.LineTotal;
+            }
         }
-        return total;
+
+        return total + percentBase * program.TotalPercent / 100;
     }
 
     private static CashbackRule? ResolveRule(LoyaltyProgram program, long productId, long? categoryId)

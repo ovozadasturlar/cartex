@@ -1,3 +1,3 @@
 namespace Cartex.Shared.Models.Categories;
 
-public record CategoryDto(long Id, string Name, long? ParentId, string? ParentName);
+public record CategoryDto(long Id, string Name, string? Description, long? ParentId, string? ParentName);

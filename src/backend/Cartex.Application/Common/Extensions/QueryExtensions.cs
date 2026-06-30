@@ -1,26 +1,37 @@
 namespace Cartex.Application.Common.Extensions;
 
 using Cartex.Application.Common.Models;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Domain.Common.Exceptions;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection;
 
 public static class QueryExtensions
 {
+    private static readonly HashSet<string> SensitiveProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "passwordhash", "password", "refreshtoken", "securitystamp",
+        "receipttoken", "cardbarcode", "telegramchatid"
+    };
+
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertyCache = new();
+
+    internal static bool IsSensitive(string name) => SensitiveProperties.Contains(name);
+
+    internal static PropertyInfo[] GetCachedProperties(Type type) =>
+        PropertyCache.GetOrAdd(type, t => t.GetProperties());
+
     public static IQueryable<T> AsFilterable<T>(this IQueryable<T> query, FilteringRequest request)
         where T : class
     {
-        query = ApplyIncludes(query, request);
         var param = Expression.Parameter(typeof(T), "x");
-        var props = typeof(T).GetProperties();
+        var props = GetCachedProperties(typeof(T));
 
         foreach (var entry in request.Filters ?? [])
         {
-            if (entry.Value.All(v => v.StartsWith("include", StringComparison.OrdinalIgnoreCase)))
-                continue;
-
             var prop = props.FirstOrDefault(p => string.Equals(p.Name, entry.Key, StringComparison.OrdinalIgnoreCase));
-            if (prop is null) continue;
+            if (prop is null || IsSensitive(prop.Name)) continue;
 
             var member = Expression.Property(param, prop.Name);
             var filterExpr = BuildCombinedCondition(member, entry.Value, prop.PropertyType, request.TimeZone);
@@ -68,7 +79,7 @@ public static class QueryExtensions
         else if (raw.StartsWith("contains:", StringComparison.OrdinalIgnoreCase)) { op = "contains"; value = raw[9..]; }
         else if (raw.StartsWith("starts:", StringComparison.OrdinalIgnoreCase)) { op = "starts"; value = raw[7..]; }
         else if (raw.StartsWith("ends:", StringComparison.OrdinalIgnoreCase)) { op = "ends"; value = raw[5..]; }
-        else if (raw.StartsWith("equals:", StringComparison.OrdinalIgnoreCase)) { op = "equals"; value = raw[7..]; }
+        else if (raw.StartsWith("equals:", StringComparison.OrdinalIgnoreCase)) { op = "="; value = raw[7..]; }
 
         if (op == "not")
         {
@@ -80,7 +91,7 @@ public static class QueryExtensions
         {
             var listValues = value.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(v => v.Trim())
-                .Select(v => ConversionHelper.TryConvert(v, targetType))
+                .Select(v => ConversionHelper.TryConvert(v, targetType) ?? throw new BusinessRuleException($"Invalid filter value: '{v}'."))
                 .ToList();
 
             var typedArray = Array.CreateInstance(targetType, listValues.Count);
@@ -97,9 +108,8 @@ public static class QueryExtensions
         if (targetType == typeof(DateTime) || targetType == typeof(DateTimeOffset))
             return BuildDateTimeCondition(member, value, op, targetType, timezone);
 
-        object? converted;
-        try { converted = ConversionHelper.TryConvert(value, targetType); }
-        catch { return null; }
+        var converted = ConversionHelper.TryConvert(value, targetType);
+        if (converted is null) return null;
 
         var constant = Expression.Constant(converted, targetType);
 
@@ -133,6 +143,7 @@ public static class QueryExtensions
         var offset = timezoneOffset.HasValue ? TimeSpan.FromHours(timezoneOffset.Value) : TimeSpan.Zero;
         string[] dayFormats = ["yyyy-MM-dd", "dd.MM.yyyy", "yyyy/MM/dd"];
         string[] monthFormats = ["yyyy-MM", "MM.yyyy", "yyyy/MM"];
+        string[] yearFormats = ["yyyy"];
 
         DateTimeOffset parsedStart, parsedEnd;
 
@@ -146,12 +157,21 @@ public static class QueryExtensions
             parsedStart = new DateTimeOffset(dtMonth.Year, dtMonth.Month, 1, 0, 0, 0, offset);
             parsedEnd = parsedStart.AddMonths(1);
         }
+        else if (DateTimeOffset.TryParseExact(value, yearFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtYear))
+        {
+            parsedStart = new DateTimeOffset(dtYear.Year, 1, 1, 0, 0, 0, offset);
+            parsedEnd = parsedStart.AddYears(1);
+        }
+        else if (ConversionHelper.TryParseFlexibleDateTimeOffset(value, out var flexible))
+        {
+            parsedStart = flexible.Offset == TimeSpan.Zero && !value.EndsWith('Z')
+                ? new DateTimeOffset(flexible.DateTime, offset)
+                : flexible;
+            parsedEnd = parsedStart.AddSeconds(1);
+        }
         else
         {
-            parsedStart = ConversionHelper.ParseFlexibleDateTimeOffset(value);
-            if (parsedStart.Offset == TimeSpan.Zero && !value.EndsWith('Z'))
-                parsedStart = new DateTimeOffset(parsedStart.DateTime, offset);
-            parsedEnd = parsedStart.AddSeconds(1);
+            throw new BusinessRuleException($"Invalid date filter value: '{value}'.");
         }
 
         var utcStart = parsedStart.ToUniversalTime();
@@ -179,7 +199,9 @@ public static class QueryExtensions
     private static ExpressionType DetectLogicalOperator(List<string> values)
     {
         var tokens = values.Select(v => v.Trim().ToLower()).ToList();
-        return tokens.Contains("or") || tokens.Contains("||") ? ExpressionType.OrElse : ExpressionType.AndAlso;
+        return tokens.Contains("or") || tokens.Contains("||") || tokens.Contains("|")
+            ? ExpressionType.OrElse
+            : ExpressionType.AndAlso;
     }
 
     private static bool IsLogicalToken(string token) =>
@@ -189,7 +211,8 @@ public static class QueryExtensions
     {
         if (string.IsNullOrWhiteSpace(search)) return null;
 
-        var stringProps = typeof(T).GetProperties().Where(p => p.PropertyType == typeof(string));
+        var stringProps = GetCachedProperties(typeof(T))
+            .Where(p => p.PropertyType == typeof(string) && !IsSensitive(p.Name));
         Expression? expr = null;
         var lowered = search.ToLower();
 
@@ -204,28 +227,5 @@ public static class QueryExtensions
         }
 
         return expr;
-    }
-
-    private static IQueryable<T> ApplyIncludes<T>(IQueryable<T> query, FilteringRequest request) where T : class
-    {
-        var props = typeof(T).GetProperties();
-        foreach (var entry in request.Filters ?? [])
-        {
-            var prop = props.FirstOrDefault(p => string.Equals(p.Name, entry.Key, StringComparison.OrdinalIgnoreCase));
-            if (prop is null) continue;
-
-            foreach (var val in entry.Value)
-            {
-                if (val.Equals("include", StringComparison.OrdinalIgnoreCase))
-                    query = query.Include(prop.Name);
-                else if (val.StartsWith("include:", StringComparison.OrdinalIgnoreCase))
-                {
-                    var segments = val["include:".Length..].Split('.')
-                        .Select(s => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..]);
-                    query = query.Include($"{prop.Name}.{string.Join('.', segments)}");
-                }
-            }
-        }
-        return query;
     }
 }

@@ -10,6 +10,9 @@ public sealed class TestCurrentUser : ICurrentUser
     public long? DefaultBranchId { get; private set; }
     public IReadOnlyCollection<long> BranchIds { get; private set; } = [];
     public bool CanAccessAllBranches { get; private set; }
+    public HashSet<string> Granted { get; } = [];
+
+    public bool HasPermission(string permission) => CanAccessAllBranches || Granted.Contains(permission);
 
     public void Reset()
     {
@@ -19,6 +22,7 @@ public sealed class TestCurrentUser : ICurrentUser
         DefaultBranchId = null;
         BranchIds = [];
         CanAccessAllBranches = false;
+        Granted.Clear();
     }
 
     public void AsAdmin(long userId, long businessId, params long[] branches)

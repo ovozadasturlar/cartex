@@ -13,4 +13,5 @@ public class CashbackRule : AuditableEntity
     public CashbackMethod Method { get; set; }
     public decimal Value { get; set; }
     public int Priority { get; set; }
+    public bool ExcludeFromTotalPercent { get; set; }
 }

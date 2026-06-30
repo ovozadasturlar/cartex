@@ -9,7 +9,6 @@ public class LoyaltyProgram : AuditableEntity
     public Branch? Branch { get; set; }
 
     public bool IsEnabled { get; set; }
-    public CashbackBase Base { get; set; }
     public decimal TotalPercent { get; set; }
 
     public ICollection<CashbackRule> Rules { get; set; } = [];

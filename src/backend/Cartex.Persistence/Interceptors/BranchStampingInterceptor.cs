@@ -36,6 +36,9 @@ public sealed class BranchStampingInterceptor(ICurrentUser currentUser) : SaveCh
                 entity.BranchId = currentUser.DefaultBranchId
                     ?? (currentUser.BranchIds.Count == 1 ? currentUser.BranchIds.First() : 0);
 
+            if (entity.BranchId == 0)
+                throw new InvalidOperationException("Branch aniqlanmadi");
+
             if (scopedToBranches && !currentUser.BranchIds.Contains(entity.BranchId))
                 throw new ForbiddenException("Cannot write data outside your branch.");
         }

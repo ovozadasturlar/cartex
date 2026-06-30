@@ -25,6 +25,8 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
         builder.ToTable("units");
         builder.Property(x => x.Name).HasMaxLength(20).IsRequired();
         builder.Property(x => x.ShortName).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.Dimension).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Factor).HasPrecision(18, 6);
     }
 }
 
@@ -35,6 +37,7 @@ public class ProductTypeConfiguration : IEntityTypeConfiguration<ProductType>
         builder.ToTable("product_types");
         builder.Property(x => x.Name).HasMaxLength(50).IsRequired();
         builder.Property(x => x.MeasureMode).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.AttributeSchema).HasColumnType("jsonb");
     }
 }
 
@@ -46,6 +49,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.Name).IsRequired();
         builder.Property(x => x.MinStock).HasPrecision(12, 3);
         builder.Property(x => x.Attributes).HasColumnType("jsonb");
+        builder.Property(x => x.IkpuCode).HasMaxLength(30);
+        builder.Property(x => x.VatRate).HasPrecision(5, 2);
+        builder.Property(x => x.ImageKey).HasMaxLength(200);
 
         builder.HasOne(x => x.Category)
             .WithMany(c => c.Products)
@@ -64,18 +70,39 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
     }
 }
 
+public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVariant>
+{
+    public void Configure(EntityTypeBuilder<ProductVariant> builder)
+    {
+        builder.ToTable("product_variants");
+        builder.Property(x => x.Name).HasMaxLength(100);
+        builder.Property(x => x.Code).HasMaxLength(60);
+        builder.Property(x => x.Attributes).HasColumnType("jsonb");
+        builder.Property(x => x.ImageKey).HasMaxLength(200);
+        builder.HasIndex(x => x.ProductId);
+        builder.HasIndex(x => x.Code)
+            .IsUnique()
+            .HasFilter("\"code\" IS NOT NULL AND \"is_deleted\" = false");
+
+        builder.HasOne(x => x.Product)
+            .WithMany(p => p.Variants)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class BarcodeConfiguration : IEntityTypeConfiguration<Barcode>
 {
     public void Configure(EntityTypeBuilder<Barcode> builder)
     {
         builder.ToTable("barcodes");
         builder.Property(x => x.Code).HasMaxLength(60).IsRequired();
-        builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasIndex(x => x.Code).IsUnique().HasFilter("\"is_deleted\" = false");
         builder.Property(x => x.PackQty).HasPrecision(12, 3);
 
-        builder.HasOne(x => x.Product)
-            .WithMany(p => p.Barcodes)
-            .HasForeignKey(x => x.ProductId)
+        builder.HasOne(x => x.Variant)
+            .WithMany(v => v.Barcodes)
+            .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

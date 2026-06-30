@@ -1,5 +1,12 @@
 namespace Cartex.Shared.Models.Sales;
 
+public record SaleLineDto(
+    long SaleItemId,
+    string ProductName,
+    decimal Quantity,
+    decimal ReturnedQuantity,
+    decimal UnitPrice);
+
 public record SaleDto(
     long Id,
     DateTime SaleDate,
@@ -11,4 +18,5 @@ public record SaleDto(
     string Status,
     string ReceiptToken,
     string? CustomerName,
-    string UserName);
+    string UserName,
+    List<SaleLineDto> Items);
