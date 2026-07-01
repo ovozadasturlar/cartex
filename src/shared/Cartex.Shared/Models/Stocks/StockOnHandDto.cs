@@ -1,3 +1,3 @@
 namespace Cartex.Shared.Models.Stocks;
 
-public record StockOnHandDto(long ProductId, string ProductName, string? CategoryName, string UnitName, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry);
+public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null);

@@ -29,12 +29,62 @@ public sealed class BoolToOpacityConverter : IValueConverter
         value is 1.0;
 }
 
+public sealed class IntPositiveConverter : IValueConverter
+{
+    public static readonly IntPositiveConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is int i && i > 0;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class DecimalPositiveConverter : IValueConverter
+{
+    public static readonly DecimalPositiveConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var positive = value is decimal d && d > 0;
+        return parameter is "inverse" ? !positive : positive;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class PackQtyConverter : IValueConverter
+{
+    public static readonly PackQtyConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is decimal d && d > 1 ? $"× {d:0.###}" : string.Empty;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class StringNotEmptyConverter : IValueConverter
 {
     public static readonly StringNotEmptyConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         !string.IsNullOrWhiteSpace(value as string);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class StringEqualsConverter : IValueConverter
+{
+    public static readonly StringEqualsConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var current = value?.ToString();
+        return parameter?.ToString()?.Split(',').Any(p => string.Equals(current, p, StringComparison.Ordinal)) ?? current is null;
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

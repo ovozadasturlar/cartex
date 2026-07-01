@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.TariffFeaturesView"
+             x:CompileBindings="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+
+            <c:PageHeader Title="{Binding L[tariff_features]}" Subtitle="{Binding L[tariff_features_hint]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="16">
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{Binding L[status]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding IsActive}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                        <StackPanel Grid.Column="0" Spacing="5">
+                            <TextBlock Text="{Binding L[tariff]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <ComboBox ItemsSource="{Binding Tariffs}" SelectedItem="{Binding Tariff}" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="5">
+                            <TextBlock Text="{Binding L[expires_at]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <DatePicker SelectedDate="{Binding ExpiresAt}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[features]}" FontWeight="SemiBold" FontSize="14"
+                               Foreground="{DynamicResource TextPrimary}" />
+
+                    <ItemsControl ItemsSource="{Binding Features}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,12">
+                                    <ToggleSwitch Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Top" />
+                                    <StackPanel Grid.Column="1" Spacing="2" Margin="6,2,0,0">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="{Binding Impact}" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}"
+                            HorizontalAlignment="Left" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
