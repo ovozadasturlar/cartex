@@ -11,11 +11,13 @@ public interface IApplicationDbContext
     DbSet<Permission> Permissions { get; }
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<User> Users { get; }
+    DbSet<UserRole> UserRoles { get; }
     DbSet<UserBranch> UserBranches { get; }
     DbSet<Category> Categories { get; }
     DbSet<Unit> Units { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<Product> Products { get; }
+    DbSet<ProductVariant> ProductVariants { get; }
     DbSet<Barcode> Barcodes { get; }
     DbSet<Warehouse> Warehouses { get; }
     DbSet<Stock> Stocks { get; }
@@ -35,6 +37,16 @@ public interface IApplicationDbContext
     DbSet<NotificationOutbox> NotificationOutbox { get; }
     DbSet<Cart> Carts { get; }
     DbSet<CartItem> CartItems { get; }
+    DbSet<Feature> Features { get; }
+    DbSet<LicenseState> LicenseStates { get; }
+    DbSet<BusinessSetting> BusinessSettings { get; }
+    DbSet<Shift> Shifts { get; }
+    DbSet<StockAdjustment> StockAdjustments { get; }
+    DbSet<ExpenseCategory> ExpenseCategories { get; }
+    DbSet<ExchangeRate> ExchangeRates { get; }
+    DbSet<SalePayment> SalePayments { get; }
+    DbSet<ShiftCash> ShiftCashes { get; }
+    DbSet<DebtReminderLog> DebtReminderLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

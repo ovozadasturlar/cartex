@@ -24,11 +24,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<UserBranch> UserBranches => Set<UserBranch>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Stock> Stocks => Set<Stock>();
@@ -48,6 +50,16 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<Feature> Features => Set<Feature>();
+    public DbSet<LicenseState> LicenseStates => Set<LicenseState>();
+    public DbSet<BusinessSetting> BusinessSettings => Set<BusinessSetting>();
+    public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+    public DbSet<ExchangeRate> ExchangeRates => Set<ExchangeRate>();
+    public DbSet<SalePayment> SalePayments => Set<SalePayment>();
+    public DbSet<ShiftCash> ShiftCashes => Set<ShiftCash>();
+    public DbSet<DebtReminderLog> DebtReminderLogs => Set<DebtReminderLog>();
 
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {

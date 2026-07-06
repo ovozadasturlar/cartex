@@ -19,6 +19,8 @@ public class SupplyConfiguration : IEntityTypeConfiguration<Supply>
     public void Configure(EntityTypeBuilder<Supply> builder)
     {
         builder.ToTable("supplies");
+        builder.Property(x => x.Currency).HasMaxLength(3);
+        builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.HasIndex(x => x.BranchId);
 
@@ -51,5 +53,10 @@ public class SupplyItemConfiguration : IEntityTypeConfiguration<SupplyItem>
             .WithMany(s => s.Items)
             .HasForeignKey(x => x.SupplyId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Variant)
+            .WithMany()
+            .HasForeignKey(x => x.VariantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

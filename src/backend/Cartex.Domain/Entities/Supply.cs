@@ -16,6 +16,8 @@ public class Supply : SoftDeleteEntity, IBranchScoped
     public User User { get; set; } = null!;
 
     public decimal TotalAmount { get; set; }
+    public string Currency { get; set; } = "UZS";
+    public decimal Rate { get; set; } = 1m;
     public DateOnly SupplyDate { get; set; }
 
     public ICollection<SupplyItem> Items { get; set; } = [];

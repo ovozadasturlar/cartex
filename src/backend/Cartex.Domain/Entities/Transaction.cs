@@ -12,13 +12,24 @@ public class Transaction : AuditableEntity
     public Account? ToAccount { get; set; }
 
     public decimal Amount { get; set; }
+    public string Currency { get; set; } = "UZS";
+    public decimal Rate { get; set; } = 1m;
     public OperationType OperationType { get; set; }
+    public string? Description { get; set; }
+
+    public long? ExpenseCategoryId { get; set; }
+    public ExpenseCategory? ExpenseCategory { get; set; }
 
     public long? SaleId { get; set; }
     public Sale? Sale { get; set; }
 
     public long? SupplyId { get; set; }
     public Supply? Supply { get; set; }
+
+    public long? ShiftId { get; set; }
+    public Shift? Shift { get; set; }
+
+    public long? BranchId { get; set; }
 
     public long UserId { get; set; }
     public User User { get; set; } = null!;

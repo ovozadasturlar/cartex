@@ -16,5 +16,6 @@ public class Account : SoftDeleteEntity
 
     public string Name { get; set; } = null!;
     public AccountType Type { get; set; }
+    public string Currency { get; set; } = "UZS";
     public decimal Balance { get; set; }
 }

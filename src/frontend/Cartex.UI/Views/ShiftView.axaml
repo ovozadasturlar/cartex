@@ -1,0 +1,260 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
+             x:Class="Cartex.UI.Views.ShiftView"
+             x:CompileBindings="False">
+
+    <Panel>
+    <ScrollViewer>
+        <StackPanel Margin="24" MaxWidth="720" HorizontalAlignment="Left" Spacing="16">
+            <c:PageHeader Title="{Binding L[shift]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding NoShift}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[no_open_shift]}" Foreground="{DynamicResource TextSecondary}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[opening_float]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding OpeningFloat}" Minimum="0" FormatString="N0"
+                                       ShowButtonSpinner="False" MinHeight="40" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding CurrencyRows}" IsVisible="{Binding IsMulticurrency}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="60,8,*" Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding Currency}" VerticalAlignment="Center" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding Opening}" Minimum="0" FormatString="N2"
+                                                   ShowButtonSpinner="False" MinHeight="36" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="brand" HorizontalAlignment="Left" MinWidth="160"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding OpenShiftCommand}" Content="{Binding L[open_shift]}" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding HasShift}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding L[shift]}" FontWeight="SemiBold" FontSize="16"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Current.OpenedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                   Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <TextBlock Text="{Binding L[opening_float]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.OpeningFloat, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="1">
+                            <TextBlock Text="{Binding L[cash_sales]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.CashSales, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="2">
+                            <TextBlock Text="{Binding L[pay_in]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.PayIn, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="0">
+                            <TextBlock Text="{Binding L[pay_out]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.PayOut, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="1">
+                            <TextBlock Text="{Binding L[debt_pay_in]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.DebtPayIn, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="2">
+                            <TextBlock Text="{Binding L[supply_pay_out]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.SupplyPayOut, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="0">
+                            <TextBlock Text="{Binding L[expected_cash]}" Classes="caption" />
+                            <TextBlock Text="{Binding Current.ExpectedCash, StringFormat='{}{0:N0}'}" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding L[cash_movement]}" Classes="caption" />
+                            <TextBox Text="{Binding MovementReason}" PlaceholderText="{Binding L[movement_reason]}" MinHeight="40" />
+                            <ComboBox ItemsSource="{Binding ExpenseCategories}" SelectedItem="{Binding SelectedExpenseCategory}"
+                                      PlaceholderText="{Binding L[expense_category]}" HorizontalAlignment="Stretch" MinHeight="40">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                                <NumericUpDown Grid.Column="0" Value="{Binding MovementAmount}" Minimum="0" FormatString="N0"
+                                               ShowButtonSpinner="False" MinHeight="40" />
+                                <Button Grid.Column="2" Classes="outline" Command="{Binding PayInCommand}" Content="{Binding L[pay_in]}" />
+                                <Button Grid.Column="4" Classes="outline" Command="{Binding PayOutCommand}" Content="{Binding L[pay_out]}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                        <StackPanel Spacing="8">
+                            <ItemsControl ItemsSource="{Binding Current.Currencies}" IsVisible="{Binding IsMulticurrency}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="60,*,Auto" Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding Currency}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondary}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding ExpectedCash, StringFormat='{}{0:N2}'}"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding L[counted_cash]}" Classes="caption" />
+                            <Grid ColumnDefinitions="*,8,Auto">
+                                <NumericUpDown Grid.Column="0" Value="{Binding CountedCash}" Minimum="0" FormatString="N0"
+                                               ShowButtonSpinner="False" MinHeight="40" />
+                                <Button Grid.Column="2" Classes="brand" MinWidth="140" HorizontalContentAlignment="Center"
+                                        Command="{Binding CloseShiftCommand}" Content="{Binding L[close_shift]}" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding CurrencyRows}" IsVisible="{Binding IsMulticurrency}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="60,8,*" Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding Currency}" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextSecondary}" />
+                                            <NumericUpDown Grid.Column="2" Value="{Binding Counted}" Minimum="0" FormatString="N2"
+                                                           ShowButtonSpinner="False" MinHeight="36" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding CanViewHistory}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding L[shift_history]}" FontWeight="SemiBold" FontSize="16"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <Border Background="{DynamicResource AppBg}" CornerRadius="10" ClipToBounds="True"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="320"
+                                  c:GridDoubleClick.Command="{Binding ShowReportCommand}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="*" Binding="{Binding UserName}"
+                                                    Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding OpenedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                    Header="{Binding [opened_at], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding ClosedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                    Header="{Binding [closed_at], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding CountedCash, StringFormat='{}{0:N0}'}"
+                                                    Header="{Binding [counted_cash], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding Status, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=shift}"
+                                                    Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Classes="icon" Margin="6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.ShowReportCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[z_report]}">
+                                                <mi:MaterialIcon Kind="FileChartOutline" Width="15" Height="15"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                    <c:Pager State="{Binding HistoryPaging}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+
+    <Border Background="#80000000" IsVisible="{Binding IsReportOpen}">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="360"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{Binding L[z_report]}" FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimary}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[opening_float]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.OpeningFloat, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[cash_sales]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.CashSales, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[pay_in]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.PayIn, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[pay_out]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.PayOut, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[debt_pay_in]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.DebtPayIn, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[supply_pay_out]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.SupplyPayOut, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[expected_cash]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.ExpectedCash, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[counted_cash]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.CountedCash, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding L[difference]}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding LastReport.Difference, StringFormat='{}{0:N0}'}" FontWeight="Bold"
+                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding LastReport.Currencies}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,4,0,0">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Currency}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [expected_cash], Source={x:Static svc:LocalizationManager.Instance}}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ExpectedCash, StringFormat='{}{0:N2}'}" Foreground="{DynamicResource TextPrimary}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [counted_cash], Source={x:Static svc:LocalizationManager.Instance}}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CountedCash, StringFormat='{}{0:N2}'}" Foreground="{DynamicResource TextPrimary}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [difference], Source={x:Static svc:LocalizationManager.Instance}}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Difference, StringFormat='{}{0:N2}'}" FontWeight="SemiBold" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Classes="brand" HorizontalAlignment="Right" Margin="0,6,0,0"
+                        Command="{Binding CloseReportCommand}" Content="{Binding L[close]}" />
+            </StackPanel>
+        </Border>
+    </Border>
+    </Panel>
+</UserControl>

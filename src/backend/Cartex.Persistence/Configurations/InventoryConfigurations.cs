@@ -27,16 +27,16 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
         builder.HasIndex(x => x.BranchId);
-        builder.HasIndex(x => new { x.WarehouseId, x.ProductId });
+        builder.HasIndex(x => new { x.WarehouseId, x.VariantId });
 
         builder.HasOne<Branch>()
             .WithMany()
             .HasForeignKey(x => x.BranchId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(x => x.Product)
-            .WithMany(p => p.Stocks)
-            .HasForeignKey(x => x.ProductId)
+        builder.HasOne(x => x.Variant)
+            .WithMany(v => v.Stocks)
+            .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Warehouse)
@@ -51,16 +51,45 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
     }
 }
 
+public class StockAdjustmentConfiguration : IEntityTypeConfiguration<StockAdjustment>
+{
+    public void Configure(EntityTypeBuilder<StockAdjustment> builder)
+    {
+        builder.ToTable("stock_adjustments");
+        builder.Property(x => x.SystemQuantity).HasPrecision(12, 3);
+        builder.Property(x => x.CountedQuantity).HasPrecision(12, 3);
+        builder.Property(x => x.Difference).HasPrecision(12, 3);
+        builder.Property(x => x.Reason).HasMaxLength(250);
+        builder.HasIndex(x => x.BranchId);
+
+        builder.HasOne<Branch>()
+            .WithMany()
+            .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Warehouse>()
+            .WithMany()
+            .HasForeignKey(x => x.WarehouseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ProductVariant>()
+            .WithMany()
+            .HasForeignKey(x => x.VariantId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
 {
     public void Configure(EntityTypeBuilder<ProductPrice> builder)
     {
         builder.ToTable("product_prices");
+        builder.Property(x => x.Currency).HasMaxLength(3);
         builder.Property(x => x.SellingPrice).HasPrecision(14, 2);
 
-        builder.HasOne(x => x.Product)
-            .WithMany(p => p.Prices)
-            .HasForeignKey(x => x.ProductId)
+        builder.HasOne(x => x.Variant)
+            .WithMany(v => v.Prices)
+            .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(x => x.Warehouse)
@@ -68,11 +97,11 @@ public class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
             .HasForeignKey(x => x.WarehouseId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(x => x.ProductId)
+        builder.HasIndex(x => x.VariantId)
             .IsUnique()
             .HasFilter("\"warehouse_id\" IS NULL");
 
-        builder.HasIndex(x => new { x.ProductId, x.WarehouseId })
+        builder.HasIndex(x => new { x.VariantId, x.WarehouseId })
             .IsUnique()
             .HasFilter("\"warehouse_id\" IS NOT NULL");
     }
@@ -100,6 +129,11 @@ public class StockTransferConfiguration : IEntityTypeConfiguration<StockTransfer
         builder.HasOne(x => x.ToWarehouse)
             .WithMany()
             .HasForeignKey(x => x.ToWarehouseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Variant)
+            .WithMany()
+            .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
