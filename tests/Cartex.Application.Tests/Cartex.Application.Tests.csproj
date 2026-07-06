@@ -6,19 +6,22 @@
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <NoWarn>xUnit1051</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.6.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.13.0" />
+    <PackageReference Include="Respawn" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\backend\Cartex.Domain\Cartex.Domain.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Persistence\Cartex.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\backend\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

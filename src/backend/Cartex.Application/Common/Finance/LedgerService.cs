@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
@@ -8,28 +9,56 @@ namespace Cartex.Application.Common.Finance;
 
 public interface ILedgerService
 {
-    Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken);
-    Task<Account> CustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken);
-    Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken);
-    Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId);
+    Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Task<Account> CustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Task<Account> SupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Task<Account?> FindSupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId, long? shiftId = null, decimal rate = 1m);
 }
 
-public sealed class LedgerService(IApplicationDbContext db) : ILedgerService
+public sealed class LedgerService(IApplicationDbContext db, ICurrencyService currency) : ILedgerService
 {
-    public Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken) =>
-        GetOrCreateAsync(a => a.BranchId == branchId && a.Type == type,
-            () => new Account { BranchId = branchId, Type = type, Name = DefaultName(type) }, cancellationToken);
-
-    public Task<Account> CustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken) =>
-        GetOrCreateAsync(a => a.CustomerId == customerId && a.Type == type,
-            () => new Account { CustomerId = customerId, Type = type, Name = DefaultName(type) }, cancellationToken);
-
-    public async Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken) =>
-        db.Accounts.Local.FirstOrDefault(a => a.CustomerId == customerId && a.Type == type)
-        ?? await db.Accounts.FirstOrDefaultAsync(a => a.CustomerId == customerId && a.Type == type, cancellationToken);
-
-    public Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId)
+    public async Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
     {
+        var (code, isBase) = await ResolveAsync(currencyCode, cancellationToken);
+        return await GetOrCreateAsync(a => a.BranchId == branchId && a.Type == type && a.Currency == code,
+            () => new Account { BranchId = branchId, Type = type, Currency = code, Name = DefaultName(type, code, isBase) }, cancellationToken);
+    }
+
+    public async Task<Account> CustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
+    {
+        var (code, isBase) = await ResolveAsync(currencyCode, cancellationToken);
+        return await GetOrCreateAsync(a => a.CustomerId == customerId && a.Type == type && a.Currency == code,
+            () => new Account { CustomerId = customerId, Type = type, Currency = code, Name = DefaultName(type, code, isBase) }, cancellationToken);
+    }
+
+    public async Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
+    {
+        var (code, _) = await ResolveAsync(currencyCode, cancellationToken);
+        return db.Accounts.Local.FirstOrDefault(a => a.CustomerId == customerId && a.Type == type && a.Currency == code)
+            ?? await db.Accounts.FirstOrDefaultAsync(a => a.CustomerId == customerId && a.Type == type && a.Currency == code, cancellationToken);
+    }
+
+    public async Task<Account> SupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
+    {
+        var (code, isBase) = await ResolveAsync(currencyCode, cancellationToken);
+        return await GetOrCreateAsync(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code,
+            () => new Account { SupplierId = supplierId, Type = type, Currency = code, Name = DefaultName(type, code, isBase) }, cancellationToken);
+    }
+
+    public async Task<Account?> FindSupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
+    {
+        var (code, _) = await ResolveAsync(currencyCode, cancellationToken);
+        return db.Accounts.Local.FirstOrDefault(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code)
+            ?? await db.Accounts.FirstOrDefaultAsync(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code, cancellationToken);
+    }
+
+    public Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId, long? shiftId = null, decimal rate = 1m)
+    {
+        if (from is not null && to is not null && from.Currency != to.Currency)
+            throw new BusinessRuleException("Tranzaksiya hisoblari valyutasi mos emas.");
+
         if (from is not null) from.Balance -= amount;
         if (to is not null) to.Balance += amount;
 
@@ -38,11 +67,21 @@ public sealed class LedgerService(IApplicationDbContext db) : ILedgerService
             FromAccount = from,
             ToAccount = to,
             Amount = amount,
+            Currency = (from ?? to)?.Currency ?? "UZS",
+            Rate = rate,
             OperationType = type,
-            UserId = userId
+            BranchId = from?.BranchId ?? to?.BranchId,
+            UserId = userId,
+            ShiftId = shiftId
         };
         db.Transactions.Add(transaction);
         return transaction;
+    }
+
+    private async Task<(string Code, bool IsBase)> ResolveAsync(string? code, CancellationToken cancellationToken)
+    {
+        var baseCode = await currency.BaseAsync(cancellationToken);
+        return (code ?? baseCode, code is null || code == baseCode);
     }
 
     private async Task<Account> GetOrCreateAsync(Expression<Func<Account, bool>> predicate, Func<Account> factory, CancellationToken cancellationToken)
@@ -58,12 +97,16 @@ public sealed class LedgerService(IApplicationDbContext db) : ILedgerService
         return account;
     }
 
-    private static string DefaultName(AccountType type) => type switch
+    private static string DefaultName(AccountType type, string currency, bool isBase)
     {
-        AccountType.Cash => "Naqd kassa",
-        AccountType.Card => "Bank karta",
-        AccountType.Bonus => "Bonus",
-        AccountType.Debt => "Qarz",
-        _ => type.ToString()
-    };
+        var name = type switch
+        {
+            AccountType.Cash => "Naqd kassa",
+            AccountType.Card => "Bank karta",
+            AccountType.Bonus => "Bonus",
+            AccountType.Debt => "Qarz",
+            _ => type.ToString()
+        };
+        return isBase ? name : $"{name} {currency}";
+    }
 }

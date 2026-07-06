@@ -11,7 +11,7 @@ using Xunit;
 namespace Cartex.Application.Tests;
 
 [Collection("database")]
-public class CreateSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
+public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private async Task<(long branch1, long warehouse1, long businessId, long adminId, long variantId)> SetupAsync()
     {
@@ -27,23 +27,31 @@ public class CreateSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     }
 
     [Fact]
-    public async Task Sale_decrements_stock_posts_ledger_and_writes_outbox()
+    public async Task Return_restores_stock_reverses_cash_and_marks_returned()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-
-        decimal stockBefore, cashBefore;
-        int outboxBefore;
         fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(fixture);
+
+        decimal stockBefore, cashBefore;
+        long saleId;
         using (var scope = fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             stockBefore = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
             cashBefore = (await db.Accounts.FirstAsync(a => a.BranchId == branch1 && a.Type == AccountType.Cash)).Balance;
-            outboxBefore = await db.NotificationOutbox.CountAsync();
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new CreateSaleCommand(warehouse1, null, 20000, 0, 0, [new CreateSaleItemDto(variantId, 2)]));
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 20000, 0, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
+        }
+
+        using (var scope = fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var lines = await db.SaleItems.Where(i => i.SaleId == saleId)
+                .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new ReturnSaleCommand(saleId, lines));
         }
 
         using (var scope = fixture.CreateScope())
@@ -51,37 +59,37 @@ public class CreateSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var stockAfter = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
             var cashAfter = (await db.Accounts.FirstAsync(a => a.BranchId == branch1 && a.Type == AccountType.Cash)).Balance;
-            var outboxAfter = await db.NotificationOutbox.CountAsync();
+            var status = (await db.Sales.FirstAsync(s => s.Id == saleId)).Status;
 
-            Assert.Equal(stockBefore - 2, stockAfter);
-            Assert.Equal(cashBefore + 20000, cashAfter);
-            Assert.True(outboxAfter > outboxBefore);
+            Assert.Equal(stockBefore, stockAfter);
+            Assert.Equal(cashBefore, cashAfter);
+            Assert.Equal(SaleStatus.Returned, status);
         }
     }
 
     [Fact]
-    public async Task Sale_with_insufficient_stock_throws_and_keeps_stock()
+    public async Task Return_twice_throws()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-
         fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(fixture);
-        decimal before;
+
+        long saleId;
+        List<ReturnLineDto> lines;
         using (var scope = fixture.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            before = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
-
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await Assert.ThrowsAsync<BusinessRuleException>(() =>
-                sender.Send(new CreateSaleCommand(warehouse1, null, 1_000_000_000m, 0, 0, [new CreateSaleItemDto(variantId, before + 1000)])));
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 10000, 0, 0, [new CreateSaleItemDto(variantId, 1)]))).SaleId;
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            lines = await db.SaleItems.Where(i => i.SaleId == saleId)
+                .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();
+            await sender.Send(new ReturnSaleCommand(saleId, lines));
         }
 
         using (var scope = fixture.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var after = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
-            Assert.Equal(before, after);
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new ReturnSaleCommand(saleId, lines)));
         }
     }
 }

@@ -15,7 +15,23 @@ public enum OperationType
     DebtPay,
     Cashback,
     BonusSpend,
-    SupplyPay
+    SupplyPay,
+    CashIn,
+    CashOut,
+    Change
+}
+
+public enum PaymentMethod
+{
+    Cash,
+    Card,
+    Bonus
+}
+
+public enum ShiftStatus
+{
+    Open,
+    Closed
 }
 
 public enum TransferStatus
@@ -30,13 +46,6 @@ public enum SaleStatus
     Completed,
     Returned,
     PartialReturn
-}
-
-public enum CashbackBase
-{
-    None,
-    PercentOfTotal,
-    PerLineRules
 }
 
 public enum CashbackScope
@@ -58,6 +67,14 @@ public enum MeasureMode
     Length
 }
 
+public enum UnitDimension
+{
+    Count,
+    Weight,
+    Volume,
+    Length
+}
+
 public enum OutboxStatus
 {
     Pending,
@@ -68,6 +85,8 @@ public enum OutboxStatus
 public enum CartStatus
 {
     Open,
+    Confirmed,
+    Ready,
     CheckedOut,
     Cancelled
 }

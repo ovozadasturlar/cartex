@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             x:Class="Cartex.UI.Views.SuppliersView"
+             x:CompileBindings="False">
+
+    <Panel>
+        <DockPanel Margin="24">
+            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[suppliers]}" Margin="0,0,0,16">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </c:PageHeader>
+
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,14" ColumnDefinitions="*,Auto,Auto">
+                <TextBox Classes="search" PlaceholderText="{Binding L[search]}" Text="{Binding SearchText, Mode=TwoWay}" />
+                <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="130" VerticalAlignment="Stretch"
+                          ItemsSource="{Binding Paging.SortOptions}" SelectedItem="{Binding Paging.SelectedSort}" />
+                <Button Grid.Column="2" Classes="icon" Margin="6,0,0,0" Command="{Binding Paging.ToggleDirectionCommand}"
+                        ToolTip.Tip="{Binding L[sort]}">
+                    <Panel>
+                        <mi:MaterialIcon Kind="SortAscending" Width="18" Height="18" IsVisible="{Binding !Paging.Descending}" />
+                        <mi:MaterialIcon Kind="SortDescending" Width="18" Height="18" IsVisible="{Binding Paging.Descending}" />
+                    </Panel>
+                </Button>
+            </Grid>
+
+            <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}" />
+
+            <Panel>
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding Suppliers}" AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              c:GridDoubleClick.Command="{Binding OpenEditCommand}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
+                                                Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="*" Binding="{Binding Phone}"
+                                                Header="{Binding [phone], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding Payable, StringFormat='{}{0:N0}'}"
+                                                Header="{Binding [supplier_payable], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Classes="icon" Margin="6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenRepayCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[repay_debt]}">
+                                                <mi:MaterialIcon Kind="CashCheck" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <c:EmptyState Icon="TruckOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+            </Panel>
+        </DockPanel>
+
+        <Border IsVisible="{Binding IsEditOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[suppliers]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <c:FieldLabel Text="{Binding L[name]}" Required="True" />
+                        <TextBox Text="{Binding EditName}" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[phone]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding EditPhone}" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Border IsVisible="{Binding IsRepayOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[repay_debt]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding RepaySupplier.Name}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding RepaySupplier.Payable, StringFormat='{}{0:N0}'}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <NumericUpDown Value="{Binding RepayAmount}" Minimum="0" Increment="1000" FormatString="N0"
+                                       ShowButtonSpinner="False" MinHeight="38" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding L[via_card]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding RepayViaCard}" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelRepayCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding RepayCommand}" Content="{Binding L[confirm]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Panel>
+</UserControl>
