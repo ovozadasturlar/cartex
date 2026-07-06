@@ -1,11 +1,11 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Warehouses.Commands;
 
-public record CreateWarehouseCommand(long BranchId, string Name) : ICommand<long>;
+public record CreateWarehouseCommand(long BranchId, string Name, bool IsOnline = false) : ICommand<long>;
 
 public sealed class CreateWarehouseCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateWarehouseCommand, long>
 {
@@ -14,7 +14,8 @@ public sealed class CreateWarehouseCommandHandler(IApplicationDbContext db) : IR
         var warehouse = new Warehouse
         {
             BranchId = request.BranchId,
-            Name = request.Name
+            Name = request.Name,
+            IsOnline = request.IsOnline
         };
 
         db.Warehouses.Add(warehouse);

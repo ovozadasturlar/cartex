@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using Cartex.Api;
 using Cartex.Api.Middleware;
 using Cartex.Api.Services;
 using Cartex.Application;
@@ -29,13 +28,15 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.Configure<FeatureOptions>(builder.Configuration.GetSection("Features"));
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, Cartex.Api.Authorization.FeatureAwareAuthorizationResultHandler>();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
+builder.Services.AddHostedService<TelegramUpdatePoller>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -56,9 +57,14 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddOpenApi();
 
-builder.WebHost.UseUrls("http://localhost:5015");
+builder.Host.UseWindowsService();
+builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5015");
 
 var app = builder.Build();
+
+var developerPassword = builder.Configuration["Seed:DeveloperPassword"];
+if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(developerPassword))
+    throw new InvalidOperationException("Seed:DeveloperPassword production muhitida majburiy.");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -66,7 +72,14 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DatabaseSeeder.SeedAsync(db, hasher.Hash);
+    await DatabaseSeeder.SeedAsync(db, hasher.Hash, developerPassword);
+    await DatabaseSeeder.SyncPermissionsAsync(db);
+    await DatabaseSeeder.SyncUnitsAsync(db);
+    await DatabaseSeeder.SyncFeaturesAsync(db);
+    await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
+
+    if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Demo"))
+        await DemoDataSeeder.SeedAsync(db);
 }
 
 app.UseSerilogRequestLogging();
@@ -91,4 +104,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
+app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+
 app.Run();
+
+public partial class Program;

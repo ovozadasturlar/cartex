@@ -1,9 +1,10 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
-using Material.Icons;
 
 namespace Cartex.UI.ViewModels;
 
@@ -11,10 +12,12 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly AuthService _authService;
     private readonly NavigationService _navigationService;
+    private readonly Cartex.ApiClient.Api.IBusinessApi _businessApi;
     private readonly Action _langChangedHandler;
 
     public BranchContextService Branch { get; }
     public IBusyService Busy { get; }
+    public ConnectivityService Connectivity { get; }
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private MenuItem? _selectedMenuItem;
@@ -29,47 +32,36 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isLanguagePopupOpen;
     [ObservableProperty] private bool _isUserMenuOpen;
     [ObservableProperty] private bool _isSidebarCollapsed;
+    [ObservableProperty] private bool _isSettingsActive;
+
+    public bool CanOpenSettings { get; private set; }
 
     public string UserInitial => string.IsNullOrEmpty(UserDisplayName) ? "?" : UserDisplayName[..1].ToUpper();
     public bool IsDarkTheme { get => CurrentTheme == AppTheme.Dark; set => CurrentTheme = value ? AppTheme.Dark : AppTheme.Light; }
     public string CurrentLanguageFlag => LocalizationManager.GetLanguageShortCode(CurrentLanguage);
-    public MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark ? MaterialIconKind.WeatherNight : MaterialIconKind.WeatherSunny;
+    public Material.Icons.MaterialIconKind ThemeIcon => CurrentTheme == AppTheme.Dark ? Material.Icons.MaterialIconKind.WeatherNight : Material.Icons.MaterialIconKind.WeatherSunny;
 
     public ObservableCollection<MenuSection> MenuSections { get; } = [];
     public AppLanguage[] AvailableLanguages => LocalizationManager.AvailableLanguages;
 
-    private record MenuDef(string SectionKey, string Key, MaterialIconKind Icon, Type VmType, string? Permission);
+    [ObservableProperty] private bool _isOnboardingOpen;
+    [ObservableProperty] private OnboardingViewModel? _onboarding;
 
-    private static readonly (string Key, string TitleKey)[] SectionDefs =
-    [
-        ("main", "section_main"),
-        ("catalog", "section_catalog"),
-        ("inventory", "section_inventory"),
-        ("people", "section_people"),
-        ("analytics", "section_analytics"),
-        ("admin", "section_admin"),
-    ];
+    private readonly List<PaletteItem> _allPaletteItems = [];
+    public ObservableCollection<PaletteItem> PaletteResults { get; } = [];
+    [ObservableProperty] private bool _isPaletteOpen;
+    [ObservableProperty] private string _paletteQuery = "";
+    [ObservableProperty] private PaletteItem? _selectedPaletteItem;
 
-    private static readonly MenuDef[] Defs =
-    [
-        new("main", "dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), null),
-        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create"),
-        new("catalog", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
-        new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),
-        new("people", "customers", MaterialIconKind.AccountGroup, typeof(CustomersViewModel), "customers.view"),
-        new("analytics", "sale_history", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view"),
-        new("analytics", "reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view"),
-        new("admin", "users", MaterialIconKind.AccountCog, typeof(UsersViewModel), "users.view"),
-        new("admin", "roles", MaterialIconKind.ShieldAccount, typeof(RolesViewModel), "roles.view"),
-        new("admin", "settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null),
-    ];
-
-    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy)
+    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _businessApi = businessApi;
+        _featuresApi = featuresApi;
         Branch = branch;
         Busy = busy;
+        Connectivity = connectivity;
         _currentTheme = SettingsService.Instance.Theme;
         _currentLanguage = SettingsService.Instance.Language;
 
@@ -82,26 +74,102 @@ public partial class MainViewModel : ViewModelBase
     public void Initialize()
     {
         UserDisplayName = _authService.UserInfo?.FullName ?? _authService.UserInfo?.Username ?? "";
-        UserRole = _authService.UserInfo?.Role ?? "";
+        UserRole = string.Join(", ", _authService.Roles);
         OnPropertyChanged(nameof(UserInitial));
 
         BuildMenu();
+        CanOpenSettings = NavRegistry.SettingsPages.Any(p => p.Permission is not null && _authService.HasPermission(p.Permission));
+        OnPropertyChanged(nameof(CanOpenSettings));
+        BuildPalette();
+        _ = LoadFeaturesAsync();
+        Connectivity.Start();
         _ = Branch.LoadAsync();
+        _ = CheckOnboardingAsync();
 
-        SelectedMenuItem = MenuSections.SelectMany(s => s.Items).FirstOrDefault();
+        SelectLanding();
+    }
+
+    private async Task CheckOnboardingAsync()
+    {
+        if (!_authService.HasPermission("business.manage")) return;
+        try
+        {
+            var business = await _businessApi.GetAsync();
+            if (business.IsOnboarded) return;
+            var vm = ServiceLocator.Resolve<OnboardingViewModel>();
+            await vm.LoadAsync();
+            vm.Completed = () => IsOnboardingOpen = false;
+            Onboarding = vm;
+            IsOnboardingOpen = true;
+        }
+        catch { }
+    }
+
+    private void BuildPalette()
+    {
+        _allPaletteItems.Clear();
+        foreach (var item in MenuSections.SelectMany(s => s.Items))
+        {
+            var captured = item;
+            _allPaletteItems.Add(new PaletteItem(item.Title, item.Icon, () => SelectedMenuItem = captured));
+        }
+        foreach (var def in NavRegistry.SettingsPages)
+        {
+            if (def.Permission is not null && !_authService.HasPermission(def.Permission)) continue;
+            var key = def.Key;
+            _allPaletteItems.Add(new PaletteItem(L[key], def.Icon, () => OpenSettingsPage(key)));
+        }
+    }
+
+    private void OpenSettingsPage(string key)
+    {
+        OpenSettings();
+        ServiceLocator.Resolve<SettingsHubViewModel>().SelectByKey(key);
+    }
+
+    private void FilterPalette()
+    {
+        var q = PaletteQuery.Trim();
+        PaletteResults.Clear();
+        foreach (var item in _allPaletteItems)
+            if (q.Length == 0 || item.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
+                PaletteResults.Add(item);
+        SelectedPaletteItem = PaletteResults.FirstOrDefault();
+    }
+
+    partial void OnPaletteQueryChanged(string value) => FilterPalette();
+
+    [RelayCommand]
+    private void OpenPalette()
+    {
+        PaletteQuery = "";
+        FilterPalette();
+        IsPaletteOpen = true;
+    }
+
+    [RelayCommand]
+    private void ClosePalette() => IsPaletteOpen = false;
+
+    [RelayCommand]
+    private void ExecutePalette(PaletteItem? item)
+    {
+        item ??= SelectedPaletteItem;
+        if (item is null) return;
+        IsPaletteOpen = false;
+        item.Invoke();
     }
 
     private void BuildMenu()
     {
         MenuSections.Clear();
-        var isAdmin = _authService.UserInfo?.Role == "Admin";
-
-        foreach (var (key, titleKey) in SectionDefs)
+        foreach (var (key, titleKey) in NavRegistry.SidebarSections)
         {
             var section = new MenuSection { Key = key, Title = L[titleKey] };
-            foreach (var def in Defs.Where(d => d.SectionKey == key))
+            foreach (var def in NavRegistry.SidebarPages.Where(d => d.SectionKey == key))
             {
-                if (def.Permission is not null && !_authService.HasPermission(def.Permission) && !isAdmin)
+                if (def.Permission is not null && !_authService.HasPermission(def.Permission))
+                    continue;
+                if (def.Feature is not null && !_enabledFeatures.Contains(def.Feature))
                     continue;
                 section.Items.Add(new MenuItem
                 {
@@ -115,6 +183,36 @@ public partial class MainViewModel : ViewModelBase
             if (section.Items.Count > 0)
                 MenuSections.Add(section);
         }
+    }
+
+    private readonly HashSet<string> _enabledFeatures = [];
+    private Cartex.ApiClient.Api.IFeaturesApi _featuresApi = null!;
+
+    private async Task LoadFeaturesAsync()
+    {
+        try
+        {
+            var enabled = await _featuresApi.GetEnabledAsync();
+            _enabledFeatures.Clear();
+            foreach (var code in enabled) _enabledFeatures.Add(code);
+            if (NavRegistry.SidebarPages.Any(p => p.Feature is not null && _enabledFeatures.Contains(p.Feature)))
+            {
+                BuildMenu();
+                BuildPalette();
+            }
+        }
+        catch { }
+    }
+
+    private void SelectLanding()
+    {
+        var all = MenuSections.SelectMany(s => s.Items).ToList();
+        var startKey = _authService.UserInfo?.StartPage;
+        var landing = (startKey is not null ? all.FirstOrDefault(m => m.Key == startKey) : null) ?? all.FirstOrDefault();
+        if (landing is not null)
+            SelectedMenuItem = landing;
+        else if (CanOpenSettings)
+            OpenSettings();
     }
 
     partial void OnNavFilterChanged(string value)
@@ -144,9 +242,22 @@ public partial class MainViewModel : ViewModelBase
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is null) return;
 
+        IsSettingsActive = false;
         newValue.IsActive = true;
         CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
         CurrentPageTitle = newValue.Title;
+        if (CurrentPage is ILoadable loadable)
+            _ = loadable.LoadAsync();
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        if (!CanOpenSettings) return;
+        SelectedMenuItem = null;
+        IsSettingsActive = true;
+        CurrentPage = ServiceLocator.Resolve<SettingsHubViewModel>();
+        CurrentPageTitle = L["settings"];
         if (CurrentPage is ILoadable loadable)
             _ = loadable.LoadAsync();
     }
@@ -186,11 +297,13 @@ public partial class MainViewModel : ViewModelBase
     {
         foreach (var section in MenuSections)
         {
-            section.Title = L[SectionDefs.First(s => s.Key == section.Key).TitleKey];
+            section.Title = L[NavRegistry.SidebarSections.First(s => s.Key == section.Key).TitleKey];
             foreach (var item in section.Items)
                 item.Title = L[item.Key];
         }
-        if (SelectedMenuItem is not null)
+        if (IsSettingsActive)
+            CurrentPageTitle = L["settings"];
+        else if (SelectedMenuItem is not null)
             CurrentPageTitle = SelectedMenuItem.Title;
     }
 

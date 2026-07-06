@@ -8,7 +8,7 @@ namespace Cartex.ApiClient;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApiClients(this IServiceCollection services, string baseUrl, Func<string?> tokenProvider)
+    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Action? onUnauthorized = null)
     {
         var settings = new RefitSettings
         {
@@ -19,13 +19,21 @@ public static class DependencyInjection
             })
         };
 
-        services.AddTransient(_ => new AuthTokenHandler(tokenProvider));
+        services.AddTransient(_ => new AuthTokenHandler(tokenProvider, onUnauthorized));
+        services.AddTransient<NoContentHandler>();
+        services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
+
+        var baseUrl = baseUrlProvider();
 
         services.AddRefitClient<IAuthApi>(settings)
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<NoContentHandler>();
 
         services.AddRefitClient<IReceiptApi>(settings)
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl));
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<NoContentHandler>();
 
         RegisterAuthorized<IBranchesApi>(services, settings, baseUrl);
         RegisterAuthorized<IUsersApi>(services, settings, baseUrl);
@@ -47,7 +55,17 @@ public static class DependencyInjection
         RegisterAuthorized<ITransactionsApi>(services, settings, baseUrl);
         RegisterAuthorized<ILoyaltyApi>(services, settings, baseUrl);
         RegisterAuthorized<IAuditLogsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IReportsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IExpenseCategoriesApi>(services, settings, baseUrl);
         RegisterAuthorized<IOrderingApi>(services, settings, baseUrl);
+        RegisterAuthorized<IFeaturesApi>(services, settings, baseUrl);
+        RegisterAuthorized<ILicenseApi>(services, settings, baseUrl);
+        RegisterAuthorized<ISettingsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IStorageApi>(services, settings, baseUrl);
+        RegisterAuthorized<IShiftsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IHardwareKeysApi>(services, settings, baseUrl);
+        RegisterAuthorized<IBusinessApi>(services, settings, baseUrl);
+        RegisterAuthorized<IRatesApi>(services, settings, baseUrl);
 
         return services;
     }
@@ -55,5 +73,7 @@ public static class DependencyInjection
     private static void RegisterAuthorized<T>(IServiceCollection services, RefitSettings settings, string baseUrl) where T : class =>
         services.AddRefitClient<T>(settings)
             .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
-            .AddHttpMessageHandler<AuthTokenHandler>();
+            .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<AuthTokenHandler>()
+            .AddHttpMessageHandler<NoContentHandler>();
 }

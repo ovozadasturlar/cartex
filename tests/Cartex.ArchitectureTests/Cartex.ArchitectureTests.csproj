@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\backend\Cartex.Persistence\Cartex.Persistence.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Auth\Cartex.Auth.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\backend\Cartex.Api\Cartex.Api.csproj" />
   </ItemGroup>
 
 </Project>

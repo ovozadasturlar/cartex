@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             x:Class="Cartex.UI.Views.WarehousesView"
+             x:CompileBindings="False">
+
+    <Panel>
+        <DockPanel Margin="24">
+            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[warehouse]}" Margin="0,0,0,16">
+                <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </c:PageHeader>
+
+            <Panel>
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding Warehouses}" AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              c:GridDoubleClick.Command="{Binding OpenEditCommand}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
+                                                Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="*" Binding="{Binding BranchName}"
+                                                Header="{Binding [branch], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="icon" Margin="6,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                             Foreground="{DynamicResource TextSecondary}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <c:EmptyState Icon="Warehouse" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+            </Panel>
+        </DockPanel>
+
+        <Border IsVisible="{Binding IsEditOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[warehouse]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[branch]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding BranchOptions}" SelectedItem="{Binding SelectedBranch}" HorizontalAlignment="Stretch" IsEnabled="{Binding IsNew}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding EditName}" MinHeight="38" />
+                        <CheckBox IsChecked="{Binding EditIsOnline}" Content="{Binding L[online_warehouse]}" Margin="0,8,0,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Panel>
+</UserControl>

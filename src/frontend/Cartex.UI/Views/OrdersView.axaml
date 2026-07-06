@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             x:Class="Cartex.UI.Views.OrdersView"
+             x:CompileBindings="False">
+
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[orders]}" Margin="0,0,0,16">
+            <ComboBox MinWidth="150" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}" />
+        </c:PageHeader>
+
+        <Panel>
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <DataGrid ItemsSource="{Binding Carts}" AutoGenerateColumns="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                            Header="{Binding [date], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding CustomerName}"
+                                            Header="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding WarehouseName}"
+                                            Header="{Binding [warehouse], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding ItemCount}"
+                                            Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Status}"
+                                            Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTemplateColumn Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Classes="icon" Margin="4,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.ConfirmCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[confirm]}">
+                                            <mi:MaterialIcon Kind="CheckCircleOutline" Width="16" Height="16"
+                                                             Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        </Button>
+                                        <Button Classes="icon" Margin="4,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.MarkReadyCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[order_ready]}">
+                                            <mi:MaterialIcon Kind="PackageVariantClosedCheck" Width="16" Height="16"
+                                                             Foreground="{DynamicResource InfoBrush}" />
+                                        </Button>
+                                        <Button Classes="icon" Margin="4,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.TakeToPosCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[take_to_pos]}">
+                                            <mi:MaterialIcon Kind="CashRegister" Width="16" Height="16"
+                                                             Foreground="{DynamicResource TextPrimary}" />
+                                        </Button>
+                                        <Button Classes="icon" Margin="4,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.CancelCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[cancel]}">
+                                            <mi:MaterialIcon Kind="CloseCircleOutline" Width="16" Height="16"
+                                                             Foreground="{DynamicResource DangerBrush}" />
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <c:EmptyState Icon="ClipboardTextClockOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+        </Panel>
+    </DockPanel>
+</UserControl>

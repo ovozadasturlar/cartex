@@ -1,10 +1,12 @@
 using FluentValidation;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Cartex.Application.Common.Behaviors;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
+using Cartex.Application.Common.Security;
+using Cartex.Application.Auth;
 
 namespace Cartex.Application;
 
@@ -14,12 +16,16 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+        services.AddMediator(assembly);
         services.AddValidatorsFromAssembly(assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
 
+        services.AddScoped<IAccessControlService, AccessControlService>();
+        services.AddScoped<AuthTokenBuilder>();
+
         services.AddScoped<ILedgerService, LedgerService>();
+        services.AddScoped<ICurrencyService, CurrencyService>();
 
         services.AddScoped<ICashbackCalculator, CashbackCalculator>();
         services.AddScoped<ICashbackStrategy, PercentCashbackStrategy>();
