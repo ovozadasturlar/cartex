@@ -1,0 +1,63 @@
+using Cartex.Domain.Enums;
+using Cartex.Persistence;
+using Cartex.Application.Common.Messaging;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cartex.Application.Reports.Queries;
+
+public record GetSalesBreakdownReportQuery(DateTime From, DateTime To, long? WarehouseId) : IRequest<SalesBreakdownReportDto>;
+
+public record CashierSalesDto(long UserId, string UserName, decimal Revenue, int Count);
+
+public record CategorySalesDto(string? CategoryName, decimal Quantity, decimal Revenue);
+
+public record SalesBreakdownReportDto(
+    decimal Cash,
+    decimal Card,
+    decimal Bonus,
+    decimal Debt,
+    List<CashierSalesDto> ByCashier,
+    List<CategorySalesDto> ByCategory);
+
+public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSalesBreakdownReportQuery, SalesBreakdownReportDto>
+{
+    public async Task<SalesBreakdownReportDto> Handle(GetSalesBreakdownReportQuery request, CancellationToken cancellationToken)
+    {
+        var from = DateTime.SpecifyKind(request.From, DateTimeKind.Utc);
+        var to = DateTime.SpecifyKind(request.To, DateTimeKind.Utc);
+
+        var salesQuery = db.Sales.Where(s => s.Status == SaleStatus.Completed && s.CreatedAt >= from && s.CreatedAt < to);
+        if (request.WarehouseId is { } warehouseId)
+            salesQuery = salesQuery.Where(s => s.WarehouseId == warehouseId);
+
+        var sales = await salesQuery
+            .Select(s => new { s.Id, s.UserId, UserName = s.User.FullName, s.TotalAmount, s.PaidCash, s.PaidCard, s.PaidBonus, s.DebtAmount })
+            .ToListAsync(cancellationToken);
+
+        var byCashier = sales
+            .GroupBy(s => new { s.UserId, s.UserName })
+            .Select(g => new CashierSalesDto(g.Key.UserId, g.Key.UserName, g.Sum(x => x.TotalAmount), g.Count()))
+            .OrderByDescending(c => c.Revenue)
+            .ToList();
+
+        var saleIds = sales.Select(s => s.Id).ToList();
+        var items = await db.SaleItems
+            .Where(i => saleIds.Contains(i.SaleId))
+            .Select(i => new { CategoryName = i.Variant.Product.Category != null ? i.Variant.Product.Category.Name : null, i.Quantity, i.UnitPrice })
+            .ToListAsync(cancellationToken);
+
+        var byCategory = items
+            .GroupBy(i => i.CategoryName)
+            .Select(g => new CategorySalesDto(g.Key, g.Sum(x => x.Quantity), g.Sum(x => x.UnitPrice * x.Quantity)))
+            .OrderByDescending(c => c.Revenue)
+            .ToList();
+
+        return new SalesBreakdownReportDto(
+            sales.Sum(s => s.PaidCash),
+            sales.Sum(s => s.PaidCard),
+            sales.Sum(s => s.PaidBonus),
+            sales.Sum(s => s.DebtAmount),
+            byCashier,
+            byCategory);
+    }
+}

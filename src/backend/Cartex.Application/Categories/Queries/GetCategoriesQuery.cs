@@ -2,14 +2,14 @@ using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Categories.Queries;
 
 public record GetCategoriesQuery : FilteringRequest, IRequest<IReadOnlyCollection<CategoryDto>>;
 
-public record CategoryDto(long Id, string Name, long? ParentId, string? ParentName);
+public record CategoryDto(long Id, string Name, string? Description, long? ParentId, string? ParentName);
 
 public sealed class GetCategoriesQueryHandler(
     IApplicationDbContext db,
@@ -23,6 +23,7 @@ public sealed class GetCategoriesQueryHandler(
                 c => new CategoryDto(
                     c.Id,
                     c.Name,
+                    c.Description,
                     c.ParentId,
                     c.Parent != null ? c.Parent.Name : null),
                 writer, cancellationToken);

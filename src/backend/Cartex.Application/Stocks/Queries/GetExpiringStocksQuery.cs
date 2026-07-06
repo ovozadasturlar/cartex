@@ -1,5 +1,5 @@
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Stocks.Queries;
@@ -17,7 +17,7 @@ public sealed class GetExpiringStocksQueryHandler(IApplicationDbContext db) : IR
         return await db.Stocks
             .Where(s => s.Quantity > 0 && s.ExpiredAt != null && s.ExpiredAt <= threshold)
             .OrderBy(s => s.ExpiredAt)
-            .Select(s => new ExpiringStockDto(s.Id, s.Product.Name, s.Warehouse.Name, s.Quantity, s.ExpiredAt!.Value))
+            .Select(s => new ExpiringStockDto(s.Id, s.Variant.Product.Name, s.Warehouse.Name, s.Quantity, s.ExpiredAt!.Value))
             .ToListAsync(cancellationToken);
     }
 }

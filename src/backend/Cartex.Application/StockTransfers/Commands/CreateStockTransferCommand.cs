@@ -1,4 +1,4 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -8,7 +8,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Application.StockTransfers.Commands;
 
-public record CreateStockTransferCommand(long FromWarehouseId, long ToWarehouseId, long ProductId, decimal Quantity) : ICommand<long>;
+public record CreateStockTransferCommand(long FromWarehouseId, long ToWarehouseId, long VariantId, decimal Quantity) : ICommand<long>;
 
 public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateStockTransferCommand, long>
 {
@@ -24,7 +24,7 @@ public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, 
             BranchId = fromWarehouse.BranchId,
             FromWarehouseId = request.FromWarehouseId,
             ToWarehouseId = request.ToWarehouseId,
-            ProductId = request.ProductId,
+            VariantId = request.VariantId,
             Quantity = request.Quantity,
             UserId = userId,
             Status = TransferStatus.Sent

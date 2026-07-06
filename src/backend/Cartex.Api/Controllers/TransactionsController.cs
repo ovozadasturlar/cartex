@@ -1,6 +1,7 @@
 using Cartex.Application.Transactions.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,11 +10,20 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequiresFeature(FeatureCatalog.Accounts)]
 public class TransactionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("transactions.view")]
+    [HasPermission(AppPermissions.Transactions.View)]
     public async Task<IActionResult> GetTransactions([FromQuery] GetTransactionsQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
+    [HttpGet("totals")]
+    [HasPermission(AppPermissions.Transactions.View)]
+    public async Task<IActionResult> GetTotals([FromQuery] GetTransactionsTotalsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);

@@ -2,12 +2,17 @@ using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.StockTransfers.Queries;
 
-public record GetStockTransfersQuery : FilteringRequest, IRequest<IReadOnlyCollection<StockTransferDto>>;
+public record GetStockTransfersQuery : FilteringRequest, IRequest<IReadOnlyCollection<StockTransferDto>>
+{
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public long? WarehouseId { get; set; }
+}
 
 public record StockTransferDto(
     long Id,
@@ -25,15 +30,25 @@ public sealed class GetStockTransfersQueryHandler(
 {
     public async Task<IReadOnlyCollection<StockTransferDto>> Handle(GetStockTransfersQuery request, CancellationToken cancellationToken)
     {
-        return await db.StockTransfers
-            .Include(t => t.Product)
+        var query = db.StockTransfers
+            .Include(t => t.Variant).ThenInclude(v => v.Product)
             .Include(t => t.FromWarehouse)
             .Include(t => t.ToWarehouse)
             .Include(t => t.User)
+            .AsQueryable();
+
+        if (request.FromDate is { } fromDate)
+            query = query.Where(t => t.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));
+        if (request.ToDate is { } toDate)
+            query = query.Where(t => t.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
+        if (request.WarehouseId is { } warehouseId)
+            query = query.Where(t => t.FromWarehouseId == warehouseId);
+
+        return await query
             .ToPagedListAsync(request,
                 t => new StockTransferDto(
                     t.Id,
-                    t.Product.Name,
+                    t.Variant.Product.Name,
                     t.Quantity,
                     t.FromWarehouse.Name,
                     t.ToWarehouse.Name,

@@ -1,7 +1,9 @@
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Sales.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Shared.Models.Sales;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,18 +15,35 @@ namespace Cartex.Api.Controllers;
 public class SalesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("sales.view")]
+    [HasPermission(AppPermissions.Sales.View)]
     public async Task<IActionResult> GetSales([FromQuery] GetSalesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
     }
 
+    [HttpGet("totals")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<IActionResult> GetTotals([FromQuery] GetSalesTotalsQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
     [HttpPost]
-    [HasPermission("sales.create")]
+    [HasPermission(AppPermissions.Sales.Create)]
     public async Task<IActionResult> CreateSale(CreateSaleCommand command)
     {
-        var id = await sender.Send(command);
-        return Ok(id);
+        var result = await sender.Send(command);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:long}/return")]
+    [HasPermission(AppPermissions.Sales.Return)]
+    public async Task<IActionResult> ReturnSale(long id, [FromBody] ReturnSaleRequest request)
+    {
+        var lines = request.Lines.Select(l => new ReturnLineDto(l.SaleItemId, l.Quantity, l.Restock, l.Reason)).ToList();
+        await sender.Send(new ReturnSaleCommand(id, lines));
+        return NoContent();
     }
 }

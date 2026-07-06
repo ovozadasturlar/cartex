@@ -1,57 +1,59 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.SettingsView"
              x:CompileBindings="False">
 
-    <TabControl Margin="16">
-        <TabItem Header="{Binding L[users]}">
-            <ContentControl Content="{Binding UsersVm}" Margin="0,8,0,0" />
-        </TabItem>
-        <TabItem Header="{Binding L[customers]}">
-            <ContentControl Content="{Binding CustomersVm}" Margin="0,8,0,0" />
-        </TabItem>
-        <TabItem Header="{Binding L[roles]}">
-            <ContentControl Content="{Binding RolesVm}" Margin="0,8,0,0" />
-        </TabItem>
-        <TabItem Header="{Binding L[general]}">
-            <ScrollViewer Padding="24">
-                <StackPanel Spacing="16" MaxWidth="600">
-                    <Border Classes="card">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="{Binding L[api_url]}" Classes="subtitle" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Text="{Binding ApiUrl, Mode=TwoWay}" Classes="search" />
-                                <Button Grid.Column="1" Content="{Binding L[save]}"
-                                        Classes="brand" Margin="8,0,0,0"
-                                        Command="{Binding SaveApiUrlCommand}" />
-                            </Grid>
+    <ScrollViewer>
+        <StackPanel Margin="24" Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+
+            <c:PageHeader Title="{Binding L[app_settings]}" Subtitle="{Binding L[appearance]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="{Binding L[appearance]}" FontWeight="SemiBold" FontSize="15"
+                               Foreground="{DynamicResource TextPrimary}" />
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                            <TextBlock Text="{Binding L[dark_theme]}" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[theme]}" FontSize="12" Foreground="{DynamicResource TextMuted}" />
                         </StackPanel>
-                    </Border>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsDarkTheme}" VerticalAlignment="Center" />
+                    </Grid>
 
-                    <Border Classes="card">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="{Binding L[appearance]}" Classes="subtitle" />
-                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
-                                <TextBlock Text="{Binding L[theme]}" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextSecondary}" />
-                                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableThemes}"
-                                          SelectedItem="{Binding SelectedTheme}" MinWidth="200" />
-
-                                <TextBlock Grid.Row="1" Text="{Binding L[mode]}" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" />
-                                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AvailableModes}"
-                                          SelectedItem="{Binding SelectedMode}" MinWidth="200" Margin="0,8,0,0" />
-
-                                <TextBlock Grid.Row="2" Text="{Binding L[language]}" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0" />
-                                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding AvailableLanguages}"
-                                          SelectedItem="{Binding SelectedLanguage}" MinWidth="200" Margin="0,8,0,0" />
-                            </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding L[language]}" Foreground="{DynamicResource TextPrimary}" />
                         </StackPanel>
-                    </Border>
+                        <ComboBox Grid.Column="1" MinWidth="200" SelectedItem="{Binding SelectedLanguage}"
+                                  ItemsSource="{Binding AvailableLanguages}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding ., Converter={x:Static conv:LanguageDisplayConverter.Instance}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
                 </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-    </TabControl>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[api_url]}" FontWeight="SemiBold" FontSize="15"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBox Text="{Binding ApiUrl}" Width="380" MinHeight="38"
+                                 PlaceholderText="{Binding L[api_url]}" />
+                        <Button Classes="brand" Command="{Binding SaveApiUrlCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

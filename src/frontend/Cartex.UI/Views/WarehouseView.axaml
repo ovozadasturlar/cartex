@@ -25,23 +25,50 @@
     <DockPanel Margin="24">
 
         <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[inventory]}" Margin="0,0,0,16">
-            <Border Background="{DynamicResource AppBg}" CornerRadius="9" Padding="3"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <StackPanel Orientation="Horizontal" Spacing="2">
-                    <Button Classes="tab" Classes.active="{Binding !ShowExpiring}"
-                            Command="{Binding ShowOnHandTabCommand}" Content="{Binding L[on_hand]}" />
-                    <Button Classes="tab" Classes.active="{Binding ShowExpiring}"
-                            Command="{Binding ShowExpiringTabCommand}" Content="{Binding L[expiring]}" />
-                </StackPanel>
-            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Background="{DynamicResource AppBg}" CornerRadius="9" Padding="3"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="tab" Classes.active="{Binding IsOnHand}"
+                                Command="{Binding ShowOnHandTabCommand}" Content="{Binding L[on_hand]}" />
+                        <Button Classes="tab" Classes.active="{Binding IsLowStock}"
+                                Command="{Binding ShowLowStockTabCommand}" Content="{Binding L[low_stock]}" />
+                        <Button Classes="tab" Classes.active="{Binding IsExpiring}"
+                                Command="{Binding ShowExpiringTabCommand}" Content="{Binding L[expiring]}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </c:PageHeader>
 
         <c:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText, Mode=TwoWay}"
                      Watermark="{Binding L[search]}" Margin="0,0,0,14"
-                     IsVisible="{Binding !ShowExpiring}" />
+                     IsVisible="{Binding IsOnHand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <ComboBox MinWidth="180" VerticalAlignment="Center"
+                          ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+            </StackPanel>
+        </c:FilterBar>
 
         <Panel>
-            <Panel IsVisible="{Binding !ShowExpiring}">
+            <DockPanel IsVisible="{Binding IsOnHand}">
+                <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}">
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <mi:MaterialIcon Kind="Counter" Width="16" Height="16" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding L[total_quantity]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TotalQuantity, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <mi:MaterialIcon Kind="CashMultiple" Width="16" Height="16" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding L[total_value]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TotalValue, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </c:Pager>
+                <Panel>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                     <DataGrid ItemsSource="{Binding OnHand}" AutoGenerateColumns="False" IsReadOnly="True"
@@ -67,13 +94,53 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="icon" Margin="12,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.AdjustCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[stock_count]}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanAdjust}">
+                                            <mi:MaterialIcon Kind="ClipboardListOutline" Width="17" Height="17"
+                                                             Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
                 <c:EmptyState Icon="Warehouse" Title="{Binding L[no_data]}" IsVisible="{Binding IsOnHandEmpty}" />
-            </Panel>
+                </Panel>
+            </DockPanel>
 
-            <Panel IsVisible="{Binding ShowExpiring}">
+            <DockPanel IsVisible="{Binding IsLowStock}">
+                <c:ExportButton DockPanel.Dock="Top" HorizontalAlignment="Right" Margin="0,0,0,14"
+                                Command="{Binding ExportLowStockCommand}" Text="{Binding L[export]}"
+                                IsVisible="{Binding CanExport}" />
+                <Panel>
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                        <DataGrid ItemsSource="{Binding LowStock}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="2*" Binding="{Binding ProductName}"
+                                                    Header="{Binding [product_name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding UnitName}"
+                                                    Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding OnHand, StringFormat='{}{0:N0}'}"
+                                                    Header="{Binding [on_hand], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding MinStock, StringFormat='{}{0:N0}'}"
+                                                    Header="{Binding [min_stock], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                    <c:EmptyState Icon="AlertOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsLowStockEmpty}" />
+                </Panel>
+            </DockPanel>
+
+            <Panel IsVisible="{Binding IsExpiring}">
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                     <DataGrid ItemsSource="{Binding Expiring}" AutoGenerateColumns="False" IsReadOnly="True"

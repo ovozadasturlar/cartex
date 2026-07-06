@@ -1,11 +1,11 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Categories.Commands;
 
-public record CreateCategoryCommand(string Name, long? ParentId) : ICommand<long>;
+public record CreateCategoryCommand(string Name, long? ParentId, string? Description = null) : ICommand<long>;
 
 public sealed class CreateCategoryCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateCategoryCommand, long>
 {
@@ -14,7 +14,8 @@ public sealed class CreateCategoryCommandHandler(IApplicationDbContext db) : IRe
         var category = new Category
         {
             Name = request.Name,
-            ParentId = request.ParentId
+            ParentId = request.ParentId,
+            Description = request.Description
         };
 
         db.Categories.Add(category);

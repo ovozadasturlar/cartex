@@ -1,0 +1,35 @@
+using Cartex.Application.Business.Commands;
+using Cartex.Application.Business.Queries;
+using Cartex.Auth.Authorization;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Cartex.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class BusinessController(ISender sender) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get() =>
+        Ok(await sender.Send(new GetBusinessQuery()));
+
+    [HttpPut]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<IActionResult> Update(UpdateBusinessCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpPost("complete-onboarding")]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<IActionResult> CompleteOnboarding()
+    {
+        await sender.Send(new CompleteOnboardingCommand());
+        return NoContent();
+    }
+}

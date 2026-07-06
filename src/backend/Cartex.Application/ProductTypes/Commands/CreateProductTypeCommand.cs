@@ -1,4 +1,4 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
@@ -6,7 +6,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.ProductTypes.Commands;
 
-public record CreateProductTypeCommand(string Name, bool TracksExpiry, MeasureMode MeasureMode) : ICommand<long>;
+public record CreateProductTypeCommand(string Name, bool TracksExpiry, MeasureMode MeasureMode, string? AttributeSchema = null) : ICommand<long>;
 
 public sealed class CreateProductTypeCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateProductTypeCommand, long>
 {
@@ -16,7 +16,8 @@ public sealed class CreateProductTypeCommandHandler(IApplicationDbContext db) : 
         {
             Name = request.Name,
             TracksExpiry = request.TracksExpiry,
-            MeasureMode = request.MeasureMode
+            MeasureMode = request.MeasureMode,
+            AttributeSchema = request.AttributeSchema
         };
 
         db.ProductTypes.Add(type);

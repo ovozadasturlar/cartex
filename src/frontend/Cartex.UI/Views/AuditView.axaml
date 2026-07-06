@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Cartex.UI.Views.AuditView"
+             x:CompileBindings="False">
+
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[audit]}" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox MinWidth="130" VerticalAlignment="Center"
+                          ItemsSource="{Binding Paging.SortOptions}" SelectedItem="{Binding Paging.SelectedSort}" />
+                <Button Classes="icon" Command="{Binding Paging.ToggleDirectionCommand}" ToolTip.Tip="{Binding L[sort]}">
+                    <Panel>
+                        <mi:MaterialIcon Kind="SortAscending" Width="18" Height="18" IsVisible="{Binding !Paging.Descending}" />
+                        <mi:MaterialIcon Kind="SortDescending" Width="18" Height="18" IsVisible="{Binding Paging.Descending}" />
+                    </Panel>
+                </Button>
+                <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+            </StackPanel>
+        </c:PageHeader>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16" VerticalAlignment="Center">
+            <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+            <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}" MinWidth="140" MinHeight="36" />
+            <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="8,0,0,0" />
+            <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}" MinWidth="140" MinHeight="36" />
+            <TextBox Text="{Binding SearchUser}" PlaceholderText="{Binding L[user]}" MinWidth="150" MinHeight="36" VerticalContentAlignment="Center" />
+            <TextBox Text="{Binding SearchTable}" PlaceholderText="{Binding L[table_name]}" MinWidth="140" MinHeight="36" VerticalContentAlignment="Center" />
+            <TextBox Text="{Binding SearchAction}" PlaceholderText="{Binding L[action]}" MinWidth="140" MinHeight="36" VerticalContentAlignment="Center" />
+            <Button Classes="brand" Command="{Binding RefreshCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <mi:MaterialIcon Kind="Magnify" Width="17" Height="17" />
+                    <TextBlock Text="{Binding L[refresh]}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+        <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}" />
+        <Panel>
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <DataGrid ItemsSource="{Binding Logs}" AutoGenerateColumns="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                            Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding UserName}"
+                                            Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Action}"
+                                            Header="{Binding [action], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding TableName}"
+                                            Header="{Binding [table_name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding RecordId}"
+                                            Header="{Binding [record_id], Source={x:Static svc:LocalizationManager.Instance}}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <c:EmptyState Icon="History" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+        </Panel>
+    </DockPanel>
+</UserControl>

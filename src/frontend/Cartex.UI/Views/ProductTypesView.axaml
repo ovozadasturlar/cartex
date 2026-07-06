@@ -1,0 +1,146 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
+             x:Class="Cartex.UI.Views.ProductTypesView"
+             x:CompileBindings="False">
+
+    <Panel>
+        <DockPanel Margin="24">
+            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[product_types]}" Margin="0,0,0,16">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </c:PageHeader>
+
+            <TextBox DockPanel.Dock="Top" Classes="search" Margin="0,0,0,14"
+                     PlaceholderText="{Binding L[search]}" Text="{Binding SearchText, Mode=TwoWay}" />
+
+            <Panel>
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <DataGrid ItemsSource="{Binding ProductTypes}" AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              c:GridDoubleClick.Command="{Binding OpenEditCommand}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
+                                                Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding MeasureMode}"
+                                                Header="{Binding [measure_mode], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [tracks_expiry], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding TracksExpiry}" IsEnabled="False" IsHitTestVisible="False"
+                                                  HorizontalAlignment="Center" Margin="12,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="icon" Margin="6,0"
+                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                             Foreground="{DynamicResource TextSecondary}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <c:EmptyState Icon="ShapeOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+            </Panel>
+        </DockPanel>
+
+        <Border IsVisible="{Binding IsEditOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="680"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[product_types]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding EditName}" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[measure_mode]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding MeasureModes}" SelectedItem="{Binding SelectedMeasureMode}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <ToggleSwitch IsChecked="{Binding EditTracksExpiry}" />
+                        <TextBlock Text="{Binding L[tracks_expiry]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                    </StackPanel>
+
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,2,0,0" Padding="0,12,0,0">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[attributes]}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="outline" Command="{Binding AddFieldCommand}"
+                                        Content="{Binding L[add_field]}" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SchemaFields}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="8"
+                                                Padding="10" Margin="0,0,0,8">
+                                            <StackPanel Spacing="8">
+                                                <Grid ColumnDefinitions="*,8,*,8,120,8,Auto">
+                                                    <TextBox Grid.Column="0" Text="{Binding Key}" PlaceholderText="{Binding $parent[ItemsControl].DataContext.L[field_key]}" />
+                                                    <TextBox Grid.Column="2" Text="{Binding Label}" PlaceholderText="{Binding $parent[ItemsControl].DataContext.L[field_label]}" />
+                                                    <ComboBox Grid.Column="4" ItemsSource="{Binding $parent[ItemsControl].DataContext.FieldTypes}"
+                                                              SelectedItem="{Binding Type}" HorizontalAlignment="Stretch" />
+                                                    <Button Grid.Column="6" Classes="icon"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveFieldCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
+                                                                         Foreground="{DynamicResource DangerBrush}" />
+                                                    </Button>
+                                                </Grid>
+                                                <Grid ColumnDefinitions="*,8,140">
+                                                    <TextBox Grid.Column="0" Text="{Binding Options}"
+                                                             IsVisible="{Binding Type, Converter={x:Static conv:StringEqualsConverter.Instance}, ConverterParameter=select}"
+                                                             PlaceholderText="{Binding $parent[ItemsControl].DataContext.L[options]}" />
+                                                    <TextBox Grid.Column="2" Text="{Binding Suffix}"
+                                                             PlaceholderText="{Binding $parent[ItemsControl].DataContext.L[suffix]}" />
+                                                </Grid>
+                                                <StackPanel Orientation="Horizontal" Spacing="18">
+                                                    <CheckBox IsChecked="{Binding Required}" Content="{Binding $parent[ItemsControl].DataContext.L[required]}" />
+                                                    <CheckBox IsChecked="{Binding VariantDefining}" Content="{Binding $parent[ItemsControl].DataContext.L[variant_defining]}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Border>
+    </Panel>
+</UserControl>

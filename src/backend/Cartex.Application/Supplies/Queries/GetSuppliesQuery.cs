@@ -2,12 +2,17 @@ using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Supplies.Queries;
 
-public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplyDto>>;
+public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplyDto>>
+{
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public long? SupplierId { get; set; }
+}
 
 public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string SupplierName, string WarehouseName, string UserName);
 
@@ -17,10 +22,20 @@ public sealed class GetSuppliesQueryHandler(
 {
     public async Task<IReadOnlyCollection<SupplyDto>> Handle(GetSuppliesQuery request, CancellationToken cancellationToken)
     {
-        return await db.Supplies
+        var query = db.Supplies
             .Include(s => s.Supplier)
             .Include(s => s.Warehouse)
             .Include(s => s.User)
+            .AsQueryable();
+
+        if (request.FromDate is { } fromDate)
+            query = query.Where(s => s.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));
+        if (request.ToDate is { } toDate)
+            query = query.Where(s => s.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
+        if (request.SupplierId is { } supplierId)
+            query = query.Where(s => s.SupplierId == supplierId);
+
+        return await query
             .ToPagedListAsync(request,
                 s => new SupplyDto(
                     s.Id,

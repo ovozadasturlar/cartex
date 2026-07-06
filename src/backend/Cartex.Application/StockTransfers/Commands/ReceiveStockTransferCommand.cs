@@ -1,16 +1,18 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 
+using Unit = Cartex.Application.Common.Messaging.Unit;
+
 namespace Cartex.Application.StockTransfers.Commands;
 
-public record ReceiveStockTransferCommand(long Id) : ICommand<MediatR.Unit>;
+public record ReceiveStockTransferCommand(long Id) : ICommand<Unit>;
 
-public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db) : IRequestHandler<ReceiveStockTransferCommand, MediatR.Unit>
+public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db) : IRequestHandler<ReceiveStockTransferCommand, Unit>
 {
-    public async Task<MediatR.Unit> Handle(ReceiveStockTransferCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(ReceiveStockTransferCommand request, CancellationToken cancellationToken)
     {
         var transfer = await db.StockTransfers
             .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
@@ -25,7 +27,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
         transfer.Status = TransferStatus.Received;
 
         var sourceStocks = await db.Stocks
-            .Where(s => s.WarehouseId == transfer.FromWarehouseId && s.ProductId == transfer.ProductId && s.Quantity > 0)
+            .Where(s => s.WarehouseId == transfer.FromWarehouseId && s.VariantId == transfer.VariantId && s.Quantity > 0)
             .OrderBy(s => s.Id)
             .ToListAsync(cancellationToken);
 
@@ -42,7 +44,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
             var targetStock = await db.Stocks
                 .FirstOrDefaultAsync(s =>
                     s.WarehouseId == transfer.ToWarehouseId &&
-                    s.ProductId == transfer.ProductId &&
+                    s.VariantId == transfer.VariantId &&
                     s.PurchasePrice == stock.PurchasePrice &&
                     s.ExpiredAt == stock.ExpiredAt, cancellationToken);
 
@@ -55,7 +57,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
                 db.Stocks.Add(new Stock
                 {
                     BranchId = toWarehouse.BranchId,
-                    ProductId = transfer.ProductId,
+                    VariantId = transfer.VariantId,
                     WarehouseId = transfer.ToWarehouseId,
                     Quantity = deduct,
                     PurchasePrice = stock.PurchasePrice,
@@ -66,6 +68,6 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return MediatR.Unit.Value;
+        return Unit.Value;
     }
 }

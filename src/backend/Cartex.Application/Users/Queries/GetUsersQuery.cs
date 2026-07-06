@@ -1,27 +1,49 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Security;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Users.Queries;
 
 public record GetUsersQuery : FilteringRequest, IRequest<IReadOnlyCollection<UserDto>>;
 
-public record UserDto(long Id, string FullName, string Username, string RoleName, string? DefaultBranchName, bool IsActive);
+public record UserDto(
+    long Id, string FullName, string Username,
+    List<long> RoleIds, List<string> RoleNames,
+    long? DefaultBranchId, string? DefaultBranchName,
+    List<long> BranchIds, string? StartPage, bool IsActive);
 
 public sealed class GetUsersQueryHandler(
     IApplicationDbContext db,
+    IAccessControlService accessControl,
     IPagingMetadataWriter writer) : IRequestHandler<GetUsersQuery, IReadOnlyCollection<UserDto>>
 {
     public async Task<IReadOnlyCollection<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        return await db.Users
-            .Include(u => u.Role)
+        var ctx = await accessControl.GetContextAsync(cancellationToken);
+
+        var query = db.Users
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.UserBranches)
             .Include(u => u.DefaultBranch)
+            .AsQueryable();
+
+        if (!ctx.AccessAll)
+            query = query.Where(u => !u.UserRoles.Any(ur => ur.Role.AccessAll || ur.Role.Level > ctx.Level));
+
+        return await query
             .ToPagedListAsync(request,
-                u => new UserDto(u.Id, u.FullName, u.Username, u.Role.Name, u.DefaultBranch != null ? u.DefaultBranch.Name : null, u.IsActive),
+                u => new UserDto(
+                    u.Id, u.FullName, u.Username,
+                    u.UserRoles.Select(ur => ur.RoleId).ToList(),
+                    u.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                    u.DefaultBranchId,
+                    u.DefaultBranch != null ? u.DefaultBranch.Name : null,
+                    u.UserBranches.Select(ub => ub.BranchId).ToList(),
+                    u.StartPage, u.IsActive),
                 writer, cancellationToken);
     }
 }

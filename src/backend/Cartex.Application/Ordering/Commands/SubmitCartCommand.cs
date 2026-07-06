@@ -2,12 +2,12 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using FluentValidation;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public record SubmitCartItemDto(long ProductId, decimal Quantity);
+public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
 public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items) : ICommand<string>;
 
@@ -27,7 +27,7 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IReques
         };
 
         foreach (var item in request.Items)
-            cart.Items.Add(new CartItem { ProductId = item.ProductId, Quantity = item.Quantity });
+            cart.Items.Add(new CartItem { VariantId = item.VariantId, Quantity = item.Quantity });
 
         db.Carts.Add(cart);
         await db.SaveChangesAsync(cancellationToken);

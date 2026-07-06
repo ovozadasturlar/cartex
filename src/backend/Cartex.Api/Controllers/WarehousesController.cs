@@ -1,7 +1,8 @@
 using Cartex.Application.Warehouses.Commands;
 using Cartex.Application.Warehouses.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class WarehousesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("warehouses.view")]
+    [HasPermission(AppPermissions.Warehouses.View)]
     public async Task<IActionResult> GetWarehouses([FromQuery] GetWarehousesQuery query)
     {
         var result = await sender.Send(query);
@@ -21,10 +22,18 @@ public class WarehousesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission("warehouses.manage")]
+    [HasPermission(AppPermissions.Warehouses.Manage)]
     public async Task<IActionResult> CreateWarehouse(CreateWarehouseCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
+    }
+
+    [HttpPut("{id:long}")]
+    [HasPermission(AppPermissions.Warehouses.Manage)]
+    public async Task<IActionResult> UpdateWarehouse(long id, UpdateWarehouseCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
     }
 }

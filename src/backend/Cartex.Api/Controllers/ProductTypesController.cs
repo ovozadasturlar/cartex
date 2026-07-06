@@ -1,7 +1,8 @@
 using Cartex.Application.ProductTypes.Commands;
 using Cartex.Application.ProductTypes.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class ProductTypesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("products.view")]
+    [HasPermission(AppPermissions.Products.View)]
     public async Task<IActionResult> GetProductTypes()
     {
         var result = await sender.Send(new GetProductTypesQuery());
@@ -21,10 +22,18 @@ public class ProductTypesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission("products.manage")]
+    [HasPermission(AppPermissions.Products.Manage)]
     public async Task<IActionResult> CreateProductType(CreateProductTypeCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
+    }
+
+    [HttpPut("{id:long}")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> UpdateProductType(long id, UpdateProductTypeCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
     }
 }

@@ -1,7 +1,8 @@
 using Cartex.Application.StockTransfers.Commands;
 using Cartex.Application.StockTransfers.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,18 +11,27 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/stock-transfers")]
 [Authorize]
+[RequiresFeature(FeatureCatalog.StockTransfers)]
 public class StockTransfersController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("stock_transfers.view")]
+    [HasPermission(AppPermissions.StockTransfers.View)]
     public async Task<IActionResult> GetStockTransfers([FromQuery] GetStockTransfersQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
     }
 
+    [HttpGet("totals")]
+    [HasPermission(AppPermissions.StockTransfers.View)]
+    public async Task<IActionResult> GetTotals([FromQuery] GetStockTransfersTotalsQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
     [HttpPost]
-    [HasPermission("stock_transfers.manage")]
+    [HasPermission(AppPermissions.StockTransfers.Manage)]
     public async Task<IActionResult> CreateStockTransfer(CreateStockTransferCommand command)
     {
         var id = await sender.Send(command);
@@ -29,7 +39,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/receive")]
-    [HasPermission("stock_transfers.manage")]
+    [HasPermission(AppPermissions.StockTransfers.Manage)]
     public async Task<IActionResult> ReceiveStockTransfer(long id)
     {
         await sender.Send(new ReceiveStockTransferCommand(id));

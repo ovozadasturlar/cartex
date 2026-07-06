@@ -1,14 +1,18 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Domain.Authorization;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Permissions.Queries;
 
 public record GetPermissionsQuery : FilteringRequest, IRequest<IReadOnlyCollection<PermissionDto>>;
 
-public record PermissionDto(long Id, string Name, string? Description, bool IsEnabled);
+public record PermissionDto(long Id, string Name, string? Description, bool IsEnabled)
+{
+    public IReadOnlyList<string> DependsOn { get; init; } = [];
+}
 
 public sealed class GetPermissionsQueryHandler(
     IApplicationDbContext db,
@@ -16,9 +20,11 @@ public sealed class GetPermissionsQueryHandler(
 {
     public async Task<IReadOnlyCollection<PermissionDto>> Handle(GetPermissionsQuery request, CancellationToken cancellationToken)
     {
-        return await db.Permissions
+        var permissions = await db.Permissions
             .ToPagedListAsync(request,
                 p => new PermissionDto(p.Id, p.Name, p.Description, p.IsEnabled),
                 writer, cancellationToken);
+
+        return permissions.Select(p => p with { DependsOn = PermissionDependencies.DependsOn(p.Name) }).ToList();
     }
 }

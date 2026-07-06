@@ -1,14 +1,13 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Domain.Entities;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Unit = MediatR.Unit;
+using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Loyalty.Commands;
 
-public record UpdateLoyaltyProgramCommand(bool IsEnabled, CashbackBase Base, decimal TotalPercent) : ICommand<Unit>;
+public record UpdateLoyaltyProgramCommand(bool IsEnabled, decimal TotalPercent) : ICommand<Unit>;
 
 public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateLoyaltyProgramCommand, Unit>
 {
@@ -23,7 +22,6 @@ public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db)
         }
 
         program.IsEnabled = request.IsEnabled;
-        program.Base = request.Base;
         program.TotalPercent = request.TotalPercent;
 
         await db.SaveChangesAsync(cancellationToken);

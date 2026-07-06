@@ -1,4 +1,4 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 
@@ -14,16 +14,6 @@ public sealed class TogglePermissionCommandHandler(IApplicationDbContext db) : I
             ?? throw new NotFoundException("Permission not found.");
 
         permission.IsEnabled = request.IsEnabled;
-
-        if (!request.IsEnabled)
-        {
-            var rolePermissions = await db.RolePermissions
-                .Where(rp => rp.PermissionId == request.Id)
-                .ToListAsync(cancellationToken);
-
-            db.RolePermissions.RemoveRange(rolePermissions);
-        }
-
         await db.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

@@ -1,8 +1,7 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-using Cartex.Persistence;
 using Cartex.Auth.Services;
+using Cartex.Application.Common.Interfaces;
 
 namespace Cartex.Application.Auth.Commands;
 
@@ -11,18 +10,12 @@ public record LoginCommand(string Username, string Password) : IRequest<LoginRes
 public record LoginResponse(string Token, string FullName, string Role);
 
 public sealed class LoginCommandHandler(
-    IApplicationDbContext db,
-    IPasswordHasher passwordHasher,
-    IJwtTokenGenerator jwtTokenGenerator) : IRequestHandler<LoginCommand, LoginResponse>
+    AuthTokenBuilder tokenBuilder,
+    IPasswordHasher passwordHasher) : IRequestHandler<LoginCommand, LoginResponse>
 {
     public async Task<LoginResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var user = await db.Users
-            .Include(u => u.Role)
-                .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
-            .Include(u => u.UserBranches)
-            .FirstOrDefaultAsync(u => u.Username == request.Username, cancellationToken)
+        var user = await tokenBuilder.LoadUserAsync(request.Username, cancellationToken)
             ?? throw new UnauthorizedAccessException("Invalid username or password.");
 
         if (!user.IsActive)
@@ -31,19 +24,7 @@ public sealed class LoginCommandHandler(
         if (!passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid username or password.");
 
-        var permissions = user.Role.RolePermissions
-            .Where(rp => rp.Permission.IsEnabled)
-            .Select(rp => rp.Permission.Name)
-            .ToList();
-
-        var businessId = await db.Businesses.Select(b => b.Id).FirstAsync(cancellationToken);
-        var branchIds = user.UserBranches.Select(ub => ub.BranchId).ToList();
-
-        var token = jwtTokenGenerator.GenerateToken(
-            user.Id, user.Username, user.Role.Name, permissions,
-            businessId, branchIds, user.DefaultBranchId);
-
-        return new LoginResponse(token, user.FullName, user.Role.Name);
+        return await tokenBuilder.BuildAsync(user, cancellationToken);
     }
 }
 

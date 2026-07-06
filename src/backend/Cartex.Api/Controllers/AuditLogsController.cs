@@ -1,6 +1,7 @@
 using Cartex.Application.AuditLogs.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,10 +10,11 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/audit-logs")]
 [Authorize]
+[RequiresFeature(FeatureCatalog.Audit)]
 public class AuditLogsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("audit.view")]
+    [HasPermission(AppPermissions.Audit.View)]
     public async Task<IActionResult> GetAuditLogs([FromQuery] GetAuditLogsQuery query)
     {
         var result = await sender.Send(query);

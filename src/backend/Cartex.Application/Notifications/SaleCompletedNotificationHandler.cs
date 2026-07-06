@@ -1,37 +1,61 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Settings;
 using Cartex.Domain.Events;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Notifications;
 
-public sealed class SaleCompletedNotificationHandler(IApplicationDbContext db, INotificationService notifications)
+public sealed class SaleCompletedNotificationHandler(
+    IApplicationDbContext db,
+    ISettingsService settings,
+    INotificationService notifications)
     : INotificationHandler<DomainEventNotification<SaleCompletedEvent>>
 {
     public async Task Handle(DomainEventNotification<SaleCompletedEvent> notification, CancellationToken cancellationToken)
     {
         var sale = notification.DomainEvent;
-        if (sale.CustomerId is null)
+
+        var config = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken);
+        if (config is null || config.Channels.Count == 0)
             return;
 
-        var phone = await db.Customers
+        var customer = sale.CustomerId is null ? null : await db.Customers
             .Where(c => c.Id == sale.CustomerId)
-            .Select(c => c.Phone)
+            .Select(c => new { c.Phone, c.Email, c.TelegramChatId })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(phone))
-            return;
+        var payload = new Dictionary<string, string>
+        {
+            ["receiptToken"] = sale.ReceiptToken,
+            ["total"] = sale.TotalAmount.ToString("0.##")
+        };
 
-        await notifications.SendAsync(new NotificationMessage(
-            NotificationChannel.Telegram,
-            phone,
-            "sale_receipt",
-            new Dictionary<string, string>
+        async Task SendAsync(NotificationChannel channel, string? recipient)
+        {
+            if (string.IsNullOrWhiteSpace(recipient))
+                return;
+            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload), cancellationToken);
+        }
+
+        foreach (var channel in config.Channels.Distinct())
+        {
+            var recipient = channel switch
             {
-                ["receiptToken"] = sale.ReceiptToken,
-                ["total"] = sale.TotalAmount.ToString("0.##")
-            }), cancellationToken);
+                NotificationChannel.Telegram => customer?.TelegramChatId,
+                NotificationChannel.Email => customer?.Email,
+                NotificationChannel.Sms => customer?.Phone,
+                _ => null
+            };
+            await SendAsync(channel, recipient);
+        }
+
+        if (config.CopyToAdmin)
+        {
+            var telegram = await settings.GetAsync<TelegramSettings>(SettingKeys.Telegram, cancellationToken);
+            await SendAsync(NotificationChannel.Telegram, telegram?.ChatId);
+        }
     }
 }

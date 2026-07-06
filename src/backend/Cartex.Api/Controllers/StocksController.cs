@@ -1,6 +1,8 @@
+using Cartex.Application.Stocks.Commands;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class StocksController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("stocks.view")]
+    [HasPermission(AppPermissions.Stocks.View)]
     public async Task<IActionResult> GetStocks([FromQuery] GetStocksQuery query)
     {
         var result = await sender.Send(query);
@@ -20,18 +22,35 @@ public class StocksController(ISender sender) : ControllerBase
     }
 
     [HttpGet("on-hand")]
-    [HasPermission("stocks.view")]
-    public async Task<IActionResult> GetOnHand([FromQuery] long warehouseId)
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<IActionResult> GetOnHand([FromQuery] long warehouseId, [FromQuery] long? categoryId = null,
+        [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var result = await sender.Send(new GetStockOnHandQuery(warehouseId));
+        var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize));
         return Ok(result);
     }
 
     [HttpGet("expiring")]
-    [HasPermission("stocks.view")]
+    [HasPermission(AppPermissions.Stocks.View)]
     public async Task<IActionResult> GetExpiring([FromQuery] int withinDays = 30)
     {
         var result = await sender.Send(new GetExpiringStocksQuery(withinDays));
         return Ok(result);
+    }
+
+    [HttpGet("low-stock")]
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<IActionResult> GetLowStock([FromQuery] long warehouseId)
+    {
+        var result = await sender.Send(new GetLowStockQuery(warehouseId));
+        return Ok(result);
+    }
+
+    [HttpPost("adjust")]
+    [HasPermission(AppPermissions.Stocks.Manage)]
+    public async Task<IActionResult> Adjust(AdjustStockCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
     }
 }

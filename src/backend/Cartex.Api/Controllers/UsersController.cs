@@ -1,7 +1,8 @@
 using Cartex.Application.Users.Commands;
 using Cartex.Application.Users.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class UsersController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("users.view")]
+    [HasPermission(AppPermissions.Users.View)]
     public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
     {
         var result = await sender.Send(query);
@@ -21,7 +22,7 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission("users.manage")]
+    [HasPermission(AppPermissions.Users.Manage)]
     public async Task<IActionResult> CreateUser(CreateUserCommand command)
     {
         var id = await sender.Send(command);
@@ -29,11 +30,18 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission("users.manage")]
+    [HasPermission(AppPermissions.Users.Manage)]
     public async Task<IActionResult> UpdateUser(long id, UpdateUserCommand command)
     {
-        if (id != command.Id) return BadRequest();
-        await sender.Send(command);
+        await sender.Send(command with { Id = id });
+        return NoContent();
+    }
+
+    [HttpDelete("{id:long}")]
+    [HasPermission(AppPermissions.Users.Manage)]
+    public async Task<IActionResult> DeleteUser(long id)
+    {
+        await sender.Send(new DeleteUserCommand(id));
         return NoContent();
     }
 }

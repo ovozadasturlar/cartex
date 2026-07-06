@@ -1,7 +1,8 @@
 using Cartex.Application.Permissions.Commands;
 using Cartex.Application.Permissions.Queries;
 using Cartex.Auth.Authorization;
-using MediatR;
+using Cartex.Domain.Authorization;
+using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class PermissionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission("roles.view")]
+    [HasPermission(AppPermissions.Roles.View)]
     public async Task<IActionResult> GetPermissions([FromQuery] GetPermissionsQuery query)
     {
         var result = await sender.Send(query);
@@ -21,7 +22,7 @@ public class PermissionsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/toggle")]
-    [HasPermission("roles.manage")]
+    [HasPermission(AppPermissions.Permissions.Govern)]
     public async Task<IActionResult> TogglePermission(long id, [FromBody] TogglePermissionRequest request)
     {
         await sender.Send(new TogglePermissionCommand(id, request.IsEnabled));

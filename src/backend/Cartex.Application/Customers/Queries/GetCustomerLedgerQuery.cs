@@ -1,14 +1,18 @@
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Queries;
 
-public record GetCustomerLedgerQuery(long CustomerId) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
+public record GetCustomerLedgerQuery(long CustomerId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
 
 public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter);
 
-public sealed class GetCustomerLedgerQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCustomerLedgerQuery, IReadOnlyCollection<CustomerLedgerEntryDto>>
+public sealed class GetCustomerLedgerQueryHandler(
+    IApplicationDbContext db,
+    IPagingMetadataWriter writer) : IRequestHandler<GetCustomerLedgerQuery, IReadOnlyCollection<CustomerLedgerEntryDto>>
 {
     public async Task<IReadOnlyCollection<CustomerLedgerEntryDto>> Handle(GetCustomerLedgerQuery request, CancellationToken cancellationToken)
     {
@@ -50,6 +54,18 @@ public sealed class GetCustomerLedgerQueryHandler(IApplicationDbContext db) : IR
             }
         }
 
-        return entries;
+        entries.Reverse();
+
+        if (request.Page <= 0 || request.PageSize <= 0)
+            return entries;
+
+        var total = entries.Count;
+        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
+        writer.Write(new PagedListMetadata(total, request.Page, request.PageSize, totalPages));
+
+        return entries
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
     }
 }
