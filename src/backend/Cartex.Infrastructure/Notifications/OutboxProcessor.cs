@@ -4,7 +4,6 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

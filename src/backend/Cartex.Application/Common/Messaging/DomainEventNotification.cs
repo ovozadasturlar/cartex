@@ -1,5 +1,4 @@
 using Cartex.Domain.Common;
-using MediatR;
 
 namespace Cartex.Application.Common.Messaging;
 

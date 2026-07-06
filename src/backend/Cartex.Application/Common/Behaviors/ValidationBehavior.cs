@@ -1,5 +1,5 @@
 using FluentValidation;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Common.Behaviors;
 

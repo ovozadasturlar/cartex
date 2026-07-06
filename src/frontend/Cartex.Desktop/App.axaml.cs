@@ -34,6 +34,7 @@ public partial class App : Application
         RequestedThemeVariant = settings.Theme == AppTheme.Dark
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
+        ThemeManager.Instance.Theme = settings.Theme;
 
         LocalizationManager.Instance.LoadLanguage(settings.Language);
 
