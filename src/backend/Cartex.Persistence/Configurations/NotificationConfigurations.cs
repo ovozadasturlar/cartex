@@ -4,6 +4,16 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Cartex.Persistence.Configurations;
 
+public class DebtReminderLogConfiguration : IEntityTypeConfiguration<DebtReminderLog>
+{
+    public void Configure(EntityTypeBuilder<DebtReminderLog> builder)
+    {
+        builder.ToTable("debt_reminder_log");
+        builder.Property(x => x.Balance).HasPrecision(18, 2);
+        builder.HasIndex(x => new { x.CustomerId, x.SentAt });
+    }
+}
+
 public class NotificationOutboxConfiguration : IEntityTypeConfiguration<NotificationOutbox>
 {
     public void Configure(EntityTypeBuilder<NotificationOutbox> builder)

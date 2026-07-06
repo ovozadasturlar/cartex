@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.RemindersView"
+             x:CompileBindings="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="16">
+            <c:PageHeader Title="{Binding L[debt_reminders]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding L[reminder_enabled]}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,140">
+                        <TextBlock Text="{Binding L[reminder_min_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinDaysOverdue}" Minimum="0" Maximum="365" FormatString="0" MinHeight="36" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,140">
+                        <TextBlock Text="{Binding L[reminder_repeat_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding RepeatEveryDays}" Minimum="1" Maximum="365" FormatString="0" MinHeight="36" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,140">
+                        <TextBlock Text="{Binding L[reminder_min_balance]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinBalance}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,140">
+                        <TextBlock Text="{Binding L[reminder_send_hour]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding SendHourLocal}" Minimum="0" Maximum="23" FormatString="0" MinHeight="36" />
+                    </Grid>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding L[channels]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <StackPanel Orientation="Horizontal" Spacing="18">
+                            <CheckBox IsChecked="{Binding ChannelTelegram}" Content="Telegram" />
+                            <CheckBox IsChecked="{Binding ChannelSms}" Content="SMS" />
+                            <CheckBox IsChecked="{Binding ChannelEmail}" Content="Email" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Classes="brand" HorizontalAlignment="Left" MinWidth="140" HorizontalContentAlignment="Center"
+                            Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,25 +1,33 @@
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Sales.Queries;
 
 public record GetReceiptByTokenQuery(string Token) : IRequest<ReceiptDto?>;
 
-public record ReceiptItemDto(string ProductName, decimal Quantity, decimal UnitPrice, decimal LineTotal);
+public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal);
+
+public record ReceiptPaymentDto(string Method, string Currency, decimal Amount);
 
 public record ReceiptDto(
     string ReceiptToken,
     string BusinessName,
     string BranchName,
     string? BranchAddress,
+    string? BranchPhone,
     DateTime SaleDate,
     decimal TotalAmount,
+    decimal DiscountAmount,
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
     decimal DebtAmount,
-    List<ReceiptItemDto> Items);
+    decimal ChangeAmount,
+    decimal CashbackEarned,
+    string UserName,
+    List<ReceiptItemDto> Items,
+    List<ReceiptPaymentDto> Payments);
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
@@ -35,13 +43,19 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 business.Name,
                 branch.Name,
                 branch.Address,
+                branch.Phone,
                 sale.CreatedAt,
                 sale.TotalAmount,
-                sale.PaidCash,
+                sale.DiscountAmount,
+                sale.PaidCash + sale.ChangeAmount,
                 sale.PaidCard,
                 sale.PaidBonus,
                 sale.DebtAmount,
-                sale.Items.Select(i => new ReceiptItemDto(i.Product.Name, i.Quantity, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList()))
+                sale.ChangeAmount,
+                sale.CashbackEarned,
+                sale.User.FullName,
+                sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList(),
+                sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount)).ToList()))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

@@ -1,0 +1,210 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.IntegrationsView"
+             x:CompileBindings="False">
+
+    <UserControl.Styles>
+        <Style Selector="Button.subnav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.subnav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.subnav.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[integrations]}" Margin="0,0,0,16" />
+
+        <Grid ColumnDefinitions="220,*">
+
+            <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="8" Margin="0,0,16,0"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
+                <StackPanel Spacing="2">
+                    <Button Classes="subnav" Classes.active="{Binding IsTelegram}" Content="Telegram"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="telegram" />
+                    <Button Classes="subnav" Classes.active="{Binding IsEmail}" Content="Email (SMTP)"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="email" />
+                    <Button Classes="subnav" Classes.active="{Binding IsSms}" Content="SMS"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="sms" />
+                    <Button Classes="subnav" Classes.active="{Binding IsReceipt}" Content="{Binding L[receipt_delivery]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="receipt" />
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer Grid.Column="1">
+                <Panel MaxWidth="620" HorizontalAlignment="Left">
+
+                    <!-- Telegram -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsTelegram}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Telegram" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding TelegramEnabled}" />
+                                <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[bot_token]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <TextBox Grid.Column="0" Text="{Binding TelegramBotToken}" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                                    <Button Grid.Column="2" Classes="outline" Command="{Binding ConnectTelegramCommand}" Content="{Binding L[connect]}" />
+                                </Grid>
+                                <TextBlock Text="{Binding TelegramStatus}" Foreground="{DynamicResource BrandPrimaryBrush}" FontSize="12" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[admin_chat_id]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding TelegramChatId}" />
+                                <TextBlock Text="{Binding L[admin_chat_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="brand" Command="{Binding SaveTelegramCommand}" Content="{Binding L[save]}" />
+                                <Button Classes="outline" Command="{Binding TestTelegramMessageCommand}" Content="{Binding L[send_test]}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding L[test_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Email -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsEmail}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Email (SMTP)" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding EmailEnabled}" />
+                                <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[provider]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox ItemsSource="{Binding SmtpPresets}" SelectedItem="{Binding SelectedSmtpPreset}" MinWidth="240">
+                                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[smtp_host]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding EmailHost}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[port]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <NumericUpDown Value="{Binding EmailPort}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" MinWidth="120" />
+                                </StackPanel>
+                                <StackPanel Spacing="5" VerticalAlignment="Bottom">
+                                    <TextBlock Text="SSL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ToggleSwitch IsChecked="{Binding EmailUseSsl}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[username]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding EmailUsername}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[password]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding EmailPassword}" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[from_address]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding EmailFromAddress}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[from_name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding EmailFromName}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[test_recipient]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <TextBox Text="{Binding EmailTestRecipient}" PlaceholderText="pochta@example.com" />
+                                    <Button Grid.Column="2" Classes="outline" Command="{Binding TestEmailMessageCommand}" Content="{Binding L[send_test]}" />
+                                </Grid>
+                                <TextBlock Text="{Binding L[test_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Classes="brand" Command="{Binding SaveEmailCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- SMS -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsSms}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="SMS" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding SmsEnabled}" />
+                                <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[provider]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox ItemsSource="{Binding SmsProviders}" SelectedItem="{Binding SmsProvider}" MinWidth="200" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[username]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding SmsLogin}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[password]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding SmsPassword}" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[sender]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding SmsSender}" MinWidth="200" HorizontalAlignment="Left" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="Base URL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding SmsBaseUrl}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[test_recipient]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <TextBox Text="{Binding SmsTestRecipient}" PlaceholderText="+998901234567" />
+                                    <Button Grid.Column="2" Classes="outline" Command="{Binding TestSmsMessageCommand}" Content="{Binding L[send_test]}" />
+                                </Grid>
+                                <TextBlock Text="{Binding L[test_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Classes="brand" Command="{Binding SaveSmsCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Receipt delivery -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsReceipt}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="{Binding L[receipt_delivery]}" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[receipt_channels_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <CheckBox IsChecked="{Binding ChannelTelegram}" Content="Telegram" />
+                            <CheckBox IsChecked="{Binding ChannelSms}" Content="SMS" />
+                            <CheckBox IsChecked="{Binding ChannelEmail}" Content="Email" />
+                            <CheckBox IsChecked="{Binding CopyToAdmin}" Content="{Binding L[copy_to_admin]}" />
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[public_base_url]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding PublicBaseUrl}" PlaceholderText="https://shop.example.uz" />
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,8,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[telegram_receipt_format]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ComboBox ItemsSource="{Binding ReceiptFormats}" SelectedItem="{Binding TelegramFormat}" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Text="{Binding L[email_receipt_format]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ComboBox ItemsSource="{Binding ReceiptFormats}" SelectedItem="{Binding EmailFormat}" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding L[receipt_format_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <Button Classes="brand" Command="{Binding SaveNotificationCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                </Panel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</UserControl>
