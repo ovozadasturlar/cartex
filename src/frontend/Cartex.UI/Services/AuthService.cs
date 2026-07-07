@@ -44,6 +44,14 @@ public sealed class AuthService
         return response;
     }
 
+    public async Task<LoginResponse> LoginWithKeyAsync(string keyContent, string serial)
+    {
+        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial));
+        Token = response.Token;
+        _tokenStore.Clear();
+        return response;
+    }
+
     public bool TryRestore()
     {
         var stored = _tokenStore.Load();
@@ -57,10 +65,13 @@ public sealed class AuthService
         return UserInfo is not null;
     }
 
+    public event Action? LoggedOut;
+
     public void Logout()
     {
         Token = null;
         _tokenStore.Clear();
+        LoggedOut?.Invoke();
     }
 
     private static bool IsExpired(string token)
@@ -76,7 +87,11 @@ public sealed class AuthService
     }
 
     public bool HasPermission(string permission) =>
-        UserInfo?.Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase) == true;
+        UserInfo is not null &&
+        (UserInfo.Permissions.Contains("*") ||
+         UserInfo.Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase));
+
+    public IReadOnlyList<string> Roles => UserInfo?.Roles ?? [];
 
     private static UserInfo ParseToken(string token)
     {
@@ -85,17 +100,18 @@ public sealed class AuthService
             var handler = new JwtSecurityTokenHandler();
             var jwt = handler.ReadJwtToken(token);
 
-            var userId = long.TryParse(jwt.Claims.FirstOrDefault(c => c.Type == "nameid" || c.Type == ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
-            var username = jwt.Claims.FirstOrDefault(c => c.Type == "unique_name" || c.Type == ClaimTypes.Name)?.Value ?? "";
-            var fullName = jwt.Claims.FirstOrDefault(c => c.Type == "given_name" || c.Type == ClaimTypes.GivenName)?.Value ?? username;
-            var role = jwt.Claims.FirstOrDefault(c => c.Type == "role" || c.Type == ClaimTypes.Role)?.Value ?? "";
+            var userId = long.TryParse(jwt.Claims.FirstOrDefault(c => c.Type == "userId")?.Value, out var id) ? id : 0;
+            var username = jwt.Claims.FirstOrDefault(c => c.Type == "username")?.Value ?? "";
+            var fullName = jwt.Claims.FirstOrDefault(c => c.Type == "fullName")?.Value ?? username;
+            var roles = jwt.Claims.Where(c => c.Type == "role" || c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+            var startPage = jwt.Claims.FirstOrDefault(c => c.Type == "startPage")?.Value;
             var permissions = jwt.Claims.Where(c => c.Type == "permission").Select(c => c.Value).ToList();
 
-            return new UserInfo(userId, username, fullName, role, permissions);
+            return new UserInfo(userId, username, fullName, roles, startPage, permissions);
         }
         catch
         {
-            return new UserInfo(0, "", "", "", []);
+            return new UserInfo(0, "", "", [], null, []);
         }
     }
 }

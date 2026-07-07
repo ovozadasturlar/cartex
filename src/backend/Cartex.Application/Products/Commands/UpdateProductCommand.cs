@@ -1,6 +1,8 @@
-using MediatR;
+using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Application.Common.Catalog;
 
 namespace Cartex.Application.Products.Commands;
 
@@ -12,14 +14,26 @@ public record UpdateProductCommand(
     decimal MinStock,
     long? ProductTypeId = null,
     bool? TracksExpiryOverride = null,
-    string? Attributes = null) : ICommand<Unit>;
+    string? Attributes = null,
+    string? ImageKey = null,
+    string? Code = null,
+    string? IkpuCode = null,
+    decimal? VatRate = null,
+    decimal? SellingPrice = null,
+    string? PriceCurrency = null) : ICommand<Unit>;
 
-public sealed class UpdateProductCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateProductCommand, Unit>
+public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<UpdateProductCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
         var product = await db.Products.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Product not found.");
+
+        if (request.ProductTypeId is { } typeId)
+        {
+            var schema = await db.ProductTypes.Where(t => t.Id == typeId).Select(t => t.AttributeSchema).FirstOrDefaultAsync(cancellationToken);
+            AttributeSchema.Validate(schema, request.Attributes);
+        }
 
         product.Name = request.Name;
         product.CategoryId = request.CategoryId;
@@ -28,6 +42,20 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db) : IReq
         product.ProductTypeId = request.ProductTypeId;
         product.TracksExpiryOverride = request.TracksExpiryOverride;
         product.Attributes = request.Attributes;
+        product.ImageKey = request.ImageKey;
+        product.IkpuCode = request.IkpuCode;
+        product.VatRate = request.VatRate;
+
+        var defaultVariant = await db.ProductVariants.FirstOrDefaultAsync(v => v.ProductId == product.Id && v.IsDefault, cancellationToken);
+        if (defaultVariant is not null)
+        {
+            defaultVariant.Code = request.Code;
+            if (request.SellingPrice is { } sellingPrice)
+            {
+                await currency.EnsureAllowedAsync(request.PriceCurrency, cancellationToken);
+                await ProductPriceWriter.UpsertAsync(db, defaultVariant.Id, null, sellingPrice, cancellationToken, request.PriceCurrency);
+            }
+        }
 
         await db.SaveChangesAsync(cancellationToken);
 

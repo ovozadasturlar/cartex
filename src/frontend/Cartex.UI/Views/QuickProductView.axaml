@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.QuickProductView"
+             x:CompileBindings="False">
+
+    <Border Background="#66000000" IsVisible="{Binding IsOpen}">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                BoxShadow="0 18 50 0 #33000000" Padding="24">
+            <StackPanel Spacing="14">
+                <TextBlock Text="{Binding L[add_product]}" Classes="h2" />
+
+                <StackPanel Spacing="6">
+                    <c:FieldLabel Text="{Binding L[name]}" Required="True" />
+                    <TextBox Text="{Binding Name, Mode=TwoWay}" MinHeight="40" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="{Binding L[unit]}" Classes="caption" />
+                        <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="—">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="6">
+                        <TextBlock Text="{Binding L[category]}" Classes="caption" />
+                        <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="—">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                    <TextBox Text="{Binding Barcode, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="{Binding L[sku_code]}" Classes="caption" />
+                        <TextBox Text="{Binding Code, Mode=TwoWay}" MinHeight="40" PlaceholderText="P-001" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="6">
+                        <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding SellingPrice}" Minimum="0" Increment="1000" FormatString="N2"
+                                       ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,6,0,0">
+                    <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding CancelCommand}" Content="{Binding L[cancel]}" />
+                    <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                            Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

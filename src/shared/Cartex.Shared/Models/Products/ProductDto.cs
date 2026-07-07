@@ -2,6 +2,7 @@ namespace Cartex.Shared.Models.Products;
 
 public record ProductDto(
     long Id,
+    long DefaultVariantId,
     string Name,
     string? CategoryName,
     string UnitName,
@@ -11,4 +12,12 @@ public record ProductDto(
     string? ProductTypeName,
     bool TracksExpiry,
     string? MeasureMode,
-    string? Attributes);
+    string? Attributes,
+    string? ImageKey,
+    string? Code,
+    string? IkpuCode,
+    decimal? VatRate,
+    decimal? SellingPrice,
+    decimal OnHand = 0,
+    string? ImageUrl = null,
+    string? PriceCurrency = null);

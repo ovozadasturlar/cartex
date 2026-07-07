@@ -8,4 +8,10 @@ public record CreateProductRequest(
     List<string>? Barcodes,
     long? ProductTypeId = null,
     bool? TracksExpiryOverride = null,
-    string? Attributes = null);
+    string? Attributes = null,
+    string? ImageKey = null,
+    string? Code = null,
+    string? IkpuCode = null,
+    decimal? VatRate = null,
+    decimal? SellingPrice = null,
+    string? PriceCurrency = null);

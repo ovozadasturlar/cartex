@@ -3,6 +3,8 @@
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:il="using:AsyncImageLoader"
              x:Class="Cartex.UI.Views.ProductsView"
              x:CompileBindings="False">
 
@@ -23,39 +25,74 @@
         <DockPanel Margin="24">
 
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[products]}" Margin="0,0,0,16">
-                <Button Classes="brand" Command="{Binding OpenCreateCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
-                        <TextBlock Text="{Binding L[add_product]}" />
-                    </StackPanel>
-                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            <TextBlock Text="{Binding L[add_product]}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </c:PageHeader>
 
             <c:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText, Mode=TwoWay}"
                          Watermark="{Binding L[search]}" Margin="0,0,0,14">
-                <ComboBox ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}"
-                          MinWidth="180">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}"
+                              MinWidth="180">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ComboBox MinWidth="130" ItemsSource="{Binding Paging.SortOptions}" SelectedItem="{Binding Paging.SelectedSort}" />
+                    <Button Classes="icon" Command="{Binding Paging.ToggleDirectionCommand}" ToolTip.Tip="{Binding L[sort]}">
+                        <Panel>
+                            <mi:MaterialIcon Kind="SortAscending" Width="18" Height="18" IsVisible="{Binding !Paging.Descending}" />
+                            <mi:MaterialIcon Kind="SortDescending" Width="18" Height="18" IsVisible="{Binding Paging.Descending}" />
+                        </Panel>
+                    </Button>
+                </StackPanel>
             </c:FilterBar>
+
+            <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding L[total_quantity]}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding Totals.TotalOnHand, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
+                </StackPanel>
+            </c:Pager>
 
             <Panel>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                     <DataGrid ItemsSource="{Binding Products}" AutoGenerateColumns="False" IsReadOnly="True"
                               GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
-                              HeadersVisibility="Column">
+                              HeadersVisibility="Column" c:GridDoubleClick.Command="{Binding OpenEditCommand}">
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Width="34" Height="34" CornerRadius="7" Margin="8,4" ClipToBounds="True"
+                                                Background="{DynamicResource AppBg}" VerticalAlignment="Center">
+                                            <Panel>
+                                                <mi:MaterialIcon Kind="ImageOutline" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextMuted}" />
+                                                <Image il:ImageLoader.Source="{Binding ImageUrl}" Stretch="UniformToFill" />
+                                            </Panel>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="2*" Binding="{Binding Name}"
                                                 Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
                                                 Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" Binding="{Binding UnitName}"
                                                 Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTextColumn Width="Auto" Binding="{Binding OnHand, StringFormat='{}{0:N0}'}"
+                                                Header="{Binding [on_hand], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" Binding="{Binding MinStock, StringFormat='{}{0:N0}'}"
                                                 Header="{Binding [min_stock], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="*" Binding="{Binding ProductTypeName}"
@@ -63,12 +100,29 @@
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Classes="icon-sm" VerticalAlignment="Center" Margin="4,0"
-                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
-                                                CommandParameter="{Binding}">
-                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
-                                                             Foreground="{DynamicResource TextSecondary}" />
-                                        </Button>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Classes="icon-sm" VerticalAlignment="Center" Margin="4,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenPrintBarcodeCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanPrintBarcode}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[barcode_print]}">
+                                                <mi:MaterialIcon Kind="BarcodeScan" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Classes="icon-sm" VerticalAlignment="Center" Margin="4,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenVariantsCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[variants]}">
+                                                <mi:MaterialIcon Kind="FormatListBulletedType" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Classes="icon-sm" VerticalAlignment="Center" Margin="4,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -82,15 +136,16 @@
         </DockPanel>
 
         <Border Background="#55000000" IsVisible="{Binding IsEditOpen}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="660"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     BoxShadow="0 18 50 0 #33000000" Padding="24">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="14">
                     <TextBlock Text="{Binding EditTitle}" Classes="h2" />
 
                     <StackPanel Spacing="6">
-                        <TextBlock Text="{Binding L[name]}" Classes="caption" />
+                        <c:FieldLabel Text="{Binding L[name]}" Required="True" />
                         <TextBox Text="{Binding EditName, Mode=TwoWay}" MinHeight="40" />
                     </StackPanel>
 
@@ -121,7 +176,7 @@
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding L[unit]}" Classes="caption" />
+                            <c:FieldLabel Text="{Binding L[unit]}" Required="True" />
                             <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding EditUnit}"
                                       HorizontalAlignment="Stretch" PlaceholderText="—">
                                 <ComboBox.ItemTemplate>
@@ -138,9 +193,109 @@
                         </StackPanel>
                     </Grid>
 
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <NumericUpDown Value="{Binding EditSellingPrice}" Minimum="0" Increment="1000" FormatString="N2"
+                                           ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
+                            <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
+                                      MinHeight="40" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
+                        </Grid>
+                    </StackPanel>
+
                     <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
-                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" Watermark="4780000000001, ..." />
+                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, ..." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
+                        <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                        <ItemsControl ItemsSource="{Binding EditBarcodeList}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="7" Padding="10,5" Margin="0,0,0,5"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <TextBlock Text="{Binding Code}" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       Text="{Binding PackQty, Converter={x:Static conv:PackQtyConverter.Instance}}" />
+                                            <Button Grid.Column="2" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteEditBarcodeCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto">
+                            <TextBox Grid.Column="0" Text="{Binding EditBarcodeInput, Mode=TwoWay}" MinHeight="40"
+                                     PlaceholderText="4780000000001">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding AddEditBarcodeCommand}" />
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty}" Minimum="1" Increment="1"
+                                           FormatString="0.###" MinHeight="40" Width="120"
+                                           ToolTip.Tip="{Binding L[pack_size_hint]}" />
+                            <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding AddEditBarcodeCommand}">
+                                <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            </Button>
+                            <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding GenerateEditBarcodeCommand}" Content="{Binding L[generate_barcode]}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[sku_code]}" Classes="caption" />
+                        <TextBox Text="{Binding EditCode, Mode=TwoWay}" MinHeight="40" PlaceholderText="P-001" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="{Binding L[ikpu_code]}" Classes="caption" />
+                            <TextBox Text="{Binding EditIkpuCode, Mode=TwoWay}" MinHeight="40" PlaceholderText="00000000" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="6">
+                            <TextBlock Text="{Binding L[vat_rate]}" Classes="caption" />
+                            <NumericUpDown Value="{Binding EditVatRate}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding HasAttributes}">
+                        <TextBlock Text="{Binding L[attribute_values]}" Classes="caption" />
+                        <ItemsControl ItemsSource="{Binding EditAttributes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Spacing="4" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Display}" Classes="caption" />
+                                        <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
+                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
+                                                  HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
+                                        <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[image]}" Classes="caption" />
+                        <Grid ColumnDefinitions="Auto,12,*" VerticalAlignment="Center">
+                            <Border Grid.Column="0" Width="64" Height="64" CornerRadius="8" ClipToBounds="True"
+                                    Background="{DynamicResource SidebarItemHover}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <Image Source="{Binding EditImagePreview}" Stretch="UniformToFill" />
+                            </Border>
+                            <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Left"
+                                    Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
+                        </Grid>
                     </StackPanel>
 
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,6,0,0">
@@ -149,6 +304,166 @@
                                 Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
                         <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
                                 Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </Grid>
+                </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Border>
+        <Border Background="#55000000" IsVisible="{Binding IsVariantsOpen}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BoxShadow="0 18 50 0 #33000000" Padding="24">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="{Binding L[variants]}" Classes="h2" />
+                            <TextBlock Text="{Binding VariantProductName}" Classes="caption" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="brand" Command="{Binding OpenVariantCreateCommand}"
+                                Content="{Binding L[add_variant]}" VerticalAlignment="Center" />
+                    </Grid>
+                    <Button DockPanel.Dock="Bottom" Classes="outline" HorizontalAlignment="Right" Margin="0,14,0,0"
+                            Command="{Binding CloseVariantsCommand}" Content="{Binding L[close]}" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Variants}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <StackPanel Spacing="2">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimary}" />
+                                                    <Border Background="{DynamicResource BrandPrimaryBrush}" CornerRadius="4" Padding="6,1"
+                                                            IsVisible="{Binding IsDefault}" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding $parent[ItemsControl].DataContext.L[default]}"
+                                                                   FontSize="11" Foreground="White" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Code}" Classes="caption" />
+                                                <TextBlock Text="{Binding Barcodes, Converter={x:Static conv:StringJoinConverter.Instance}}"
+                                                           Classes="caption" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Classes="icon-sm" Margin="4,0"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.OpenVariantEditCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Grid.Column="2" Classes="icon-sm" Margin="4,0"
+                                                    IsVisible="{Binding !IsDefault}"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteVariantCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Border>
+
+        <Border Background="#66000000" IsVisible="{Binding IsVariantEditOpen}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BoxShadow="0 18 50 0 #33000000" Padding="24">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="{Binding L[add_variant]}" Classes="h2" />
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[variant_name]}" Classes="caption" />
+                            <TextBox Text="{Binding VName, Mode=TwoWay}" MinHeight="40" />
+                        </StackPanel>
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[sku_code]}" Classes="caption" />
+                            <TextBox Text="{Binding VCode, Mode=TwoWay}" MinHeight="40" />
+                        </StackPanel>
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                            <TextBox Text="{Binding VBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, ..." />
+                        </StackPanel>
+
+                        <StackPanel Spacing="8" IsVisible="{Binding VHasAttributes}">
+                            <TextBlock Text="{Binding L[attribute_values]}" Classes="caption" />
+                            <ItemsControl ItemsSource="{Binding VAttributes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="4" Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Display}" Classes="caption" />
+                                            <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
+                                            <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                            <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
+                                            <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[image]}" Classes="caption" />
+                            <Grid ColumnDefinitions="Auto,12,*" VerticalAlignment="Center">
+                                <Border Grid.Column="0" Width="64" Height="64" CornerRadius="8" ClipToBounds="True"
+                                        Background="{DynamicResource SidebarItemHover}"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <Image Source="{Binding VImagePreview}" Stretch="UniformToFill" />
+                                </Border>
+                                <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Left"
+                                        Command="{Binding PickVariantImageCommand}" Content="{Binding L[choose_image]}" />
+                            </Grid>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,6,0,0">
+                            <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                                    HorizontalContentAlignment="Center"
+                                    Command="{Binding CancelVariantEditCommand}" Content="{Binding L[cancel]}" />
+                            <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                                    Command="{Binding SaveVariantCommand}" Content="{Binding L[save]}" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Border>
+
+        <Border Background="#55000000" IsVisible="{Binding IsPrintOpen}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[barcode_print]}" Classes="h3" />
+                    <TextBlock Text="{Binding PrintProductName}" Foreground="{DynamicResource TextSecondary}" />
+                    <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14" MinHeight="110"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <Image Source="{Binding PrintPreview}" Height="84" Stretch="Uniform" />
+                    </Border>
+                    <Grid ColumnDefinitions="Auto,16,*" VerticalAlignment="Bottom">
+                        <StackPanel Grid.Column="0" Spacing="5">
+                            <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
+                            <NumericUpDown Value="{Binding PrintQuantity}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Text="{Binding L[printer_barcode]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding PrintPrinters}" SelectedItem="{Binding PrintSelectedPrinter}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
+                        <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"
+                                Command="{Binding CancelPrintCommand}" Content="{Binding L[cancel]}" />
+                        <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                                Command="{Binding DoPrintBarcodeCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="Printer" Width="18" Height="18" />
+                                <TextBlock Text="{Binding L[print]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </Grid>
                 </StackPanel>
             </Border>

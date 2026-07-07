@@ -1,6 +1,8 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:c="using:Cartex.UI.Controls"
+                    xmlns:conv="using:Cartex.UI.Converters"
+                    xmlns:vm="using:Cartex.UI.ViewModels.Common"
                     xmlns:mi="using:Material.Icons.Avalonia">
 
     <ControlTheme x:Key="{x:Type c:PageHeader}" TargetType="c:PageHeader">
@@ -22,12 +24,26 @@
         </Setter>
     </ControlTheme>
 
+    <ControlTheme x:Key="{x:Type c:FieldLabel}" TargetType="c:FieldLabel">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                    <TextBlock Text="{TemplateBinding Text}" FontSize="12.5"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="*" FontSize="12.5" FontWeight="Bold"
+                               Foreground="{DynamicResource DangerBrush}"
+                               IsVisible="{Binding Required, RelativeSource={RelativeSource TemplatedParent}}" />
+                </StackPanel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
     <ControlTheme x:Key="{x:Type c:FilterBar}" TargetType="c:FilterBar">
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBox Text="{Binding SearchText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                             Watermark="{TemplateBinding Watermark}" MaxWidth="380" MinHeight="38"
+                             PlaceholderText="{TemplateBinding Watermark}" MaxWidth="380" MinHeight="38"
                              HorizontalAlignment="Left">
                         <TextBox.InnerLeftContent>
                             <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
@@ -37,6 +53,70 @@
                     <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
                                       VerticalAlignment="Center" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:ExportButton}" TargetType="c:ExportButton">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Button Padding="12,8" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <mi:MaterialIcon Kind="DownloadOutline" Width="16" Height="16" />
+                        <TextBlock Text="{TemplateBinding Text}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Excel"
+                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
+                                      CommandParameter="Excel" />
+                            <MenuItem Header="PDF"
+                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
+                                      CommandParameter="Pdf" />
+                            <MenuItem Header="CSV"
+                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
+                                      CommandParameter="Csv" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:Pager}" TargetType="c:Pager">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid DataContext="{TemplateBinding State}" x:DataType="vm:PaginationState"
+                      ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,12,0,0"
+                      IsVisible="{Binding TotalCount, Converter={x:Static conv:IntPositiveConverter.Instance}}">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <mi:MaterialIcon Kind="FormatListNumbered" Width="15" Height="15"
+                                         Foreground="{DynamicResource TextMuted}" />
+                        <TextBlock Text="{Binding TotalCount}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                    </StackPanel>
+                    <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center"
+                                      Margin="20,0,0,0"
+                                      DataContext="{Binding $parent[c:Pager].DataContext}" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}"
+                                  MinWidth="76" VerticalAlignment="Center" />
+                        <Button Classes="icon" Command="{Binding FirstCommand}" IsEnabled="{Binding CanPrev}">
+                            <mi:MaterialIcon Kind="ChevronDoubleLeft" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding PrevCommand}" IsEnabled="{Binding CanPrev}">
+                            <mi:MaterialIcon Kind="ChevronLeft" Width="16" Height="16" />
+                        </Button>
+                        <TextBlock Text="{Binding PageInfo}" VerticalAlignment="Center" MinWidth="56"
+                                   TextAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                        <Button Classes="icon" Command="{Binding NextCommand}" IsEnabled="{Binding CanNext}">
+                            <mi:MaterialIcon Kind="ChevronRight" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="icon" Command="{Binding LastCommand}" IsEnabled="{Binding CanNext}">
+                            <mi:MaterialIcon Kind="ChevronDoubleRight" Width="16" Height="16" />
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </ControlTemplate>
         </Setter>
