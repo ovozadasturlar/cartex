@@ -1,34 +1,50 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Security;
 using Cartex.Persistence;
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Roles.Queries;
 
 public record GetRolesQuery : FilteringRequest, IRequest<IReadOnlyCollection<RoleDto>>;
 
-public record RoleDto(long Id, string Name, string? Description, List<string> Permissions);
+public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles);
 
 public sealed class GetRolesQueryHandler(
     IApplicationDbContext db,
+    IAccessControlService accessControl,
     IPagingMetadataWriter writer) : IRequestHandler<GetRolesQuery, IReadOnlyCollection<RoleDto>>
 {
     public async Task<IReadOnlyCollection<RoleDto>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
     {
-        return await db.Roles
+        var ctx = await accessControl.GetContextAsync(cancellationToken);
+
+        var query = db.Roles
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
+            .AsQueryable();
+
+        if (!ctx.AccessAll)
+            query = query.Where(r => !r.AccessAll && r.Level <= ctx.Level);
+
+        return await query
             .ToPagedListAsync(request,
                 r => new RoleDto(
                     r.Id,
                     r.Name,
                     r.Description,
+                    r.StartPage,
+                    r.Priority,
+                    r.IsSystem,
+                    r.AccessAll,
                     r.RolePermissions
                         .Where(rp => rp.Permission.IsEnabled)
                         .Select(rp => rp.Permission.Name)
-                        .ToList()),
+                        .ToList(),
+                    r.GrantablePermissions,
+                    r.AssignableRoles),
                 writer, cancellationToken);
     }
 }

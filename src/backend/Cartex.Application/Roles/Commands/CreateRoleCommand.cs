@@ -1,20 +1,31 @@
-using MediatR;
+using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
+using Cartex.Application.Common.Security;
 
 namespace Cartex.Application.Roles.Commands;
 
-public record CreateRoleCommand(string Name, string? Description) : ICommand<long>;
+public record CreateRoleCommand(string Name, string? Description, string? StartPage, int Priority, List<string>? GrantablePermissions = null, List<string>? AssignableRoles = null) : ICommand<long>;
 
-public sealed class CreateRoleCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateRoleCommand, long>
+public sealed class CreateRoleCommandHandler(IApplicationDbContext db, IAccessControlService accessControl) : IRequestHandler<CreateRoleCommand, long>
 {
     public async Task<long> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
     {
+        await accessControl.EnsureCanCreateRoleAsync(request.Priority, cancellationToken);
+
+        var grantable = request.GrantablePermissions ?? [];
+        await accessControl.EnsureCanDelegateAsync(grantable, cancellationToken);
+
         var role = new Role
         {
             Name = request.Name,
-            Description = request.Description
+            Description = request.Description,
+            StartPage = request.StartPage,
+            Priority = request.Priority,
+            Level = request.Priority,
+            GrantablePermissions = grantable,
+            AssignableRoles = request.AssignableRoles ?? []
         };
 
         db.Roles.Add(role);

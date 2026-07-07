@@ -2,7 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.DashboardView"
              x:CompileBindings="False">
 
@@ -85,24 +87,20 @@
             <Grid ColumnDefinitions="2.5*,12,*" Margin="0,8,0,0">
                 <Border Classes="card" Padding="16">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[revenue_trend]}" Classes="subtitle" Margin="0,0,0,12" />
-                        <lvc:CartesianChart Series="{Binding RevenueSeries}"
-                                            XAxes="{Binding RevenueXAxes}"
-                                            YAxes="{Binding RevenueYAxes}"
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[cash_flow]}" Classes="subtitle" Margin="0,0,0,12" />
+                        <lvc:CartesianChart Series="{Binding CashFlowSeries}"
+                                            XAxes="{Binding CashFlowXAxes}"
+                                            YAxes="{Binding CashFlowYAxes}"
                                             MinHeight="280"
-                                            TooltipTextSize="12"
-                                            LegendPosition="Hidden"
-                                            ZoomMode="X" />
+                                            LegendPosition="Top"
+                                            LegendTextSize="12"
+                                            TooltipTextSize="12" />
                     </DockPanel>
                 </Border>
                 <Border Grid.Column="2" Classes="card" Padding="16">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{Binding L[category_breakdown]}" Classes="subtitle" Margin="0,0,0,12" />
-                        <lvc:PieChart Series="{Binding CategorySeries}"
-                                      MinHeight="280"
-                                      LegendPosition="Bottom"
-                                      LegendTextSize="12"
-                                      TooltipTextSize="12" />
+                        <c:MiniBarChart Columns="{Binding CategoryBars}" />
                     </DockPanel>
                 </Border>
             </Grid>
@@ -123,7 +121,7 @@
                                                 BorderBrush="{DynamicResource BorderBrush}">
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding OperationType}"
+                                                    <TextBlock Text="{Binding OperationType, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=op}"
                                                                FontWeight="SemiBold"
                                                                Foreground="{DynamicResource TextPrimary}" />
                                                     <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:HH:mm}}"
@@ -162,7 +160,7 @@
                                                            VerticalAlignment="Center"
                                                            Foreground="{DynamicResource TextPrimary}" />
                                                 <TextBlock Grid.Column="1"
-                                                           Text="{Binding Quantity, StringFormat={}{0:N0}}"
+                                                           Text="{Binding OnHand, StringFormat={}{0:N0}}"
                                                            FontWeight="Bold" FontSize="16"
                                                            VerticalAlignment="Center"
                                                            Foreground="{DynamicResource WarningBrush}" />
@@ -175,6 +173,47 @@
                     </DockPanel>
                 </Border>
 
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+                <Border Classes="card" Grid.Column="0" Margin="0,0,8,0" Padding="16">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[top_customer_profit]}"
+                                   Classes="subtitle" Margin="0,0,0,12" />
+                        <ItemsControl ItemsSource="{Binding TopCustomers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding CustomerName}" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Profit, StringFormat={}{0:N0}}"
+                                                   FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SuccessBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+                <Border Classes="card" Grid.Column="1" Margin="8,0,0,0" Padding="16">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[top_product]}"
+                                   Classes="subtitle" Margin="0,0,0,12" />
+                        <ItemsControl ItemsSource="{Binding TopProducts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Profit, StringFormat={}{0:N0}}"
+                                                   FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource InfoBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
             </Grid>
 
         </StackPanel>

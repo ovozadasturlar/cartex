@@ -2,10 +2,14 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Reports;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Transactions;
+using Cartex.UI.Controls;
 using Cartex.UI.Services;
+using Avalonia.Media;
 using LiveChartsCore;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
@@ -14,11 +18,14 @@ namespace Cartex.UI.ViewModels;
 
 public partial class DashboardViewModel(
     NavigationService navigationService,
-    ISalesApi salesApi,
+    IReportsApi reportsApi,
     IProductsApi productsApi,
     IStocksApi stocksApi,
-    ITransactionsApi transactionsApi) : ViewModelBase
+    ITransactionsApi transactionsApi,
+    BranchContextService branch,
+    IToastService toast) : ViewModelBase, ILoadable
 {
+    private const double ChartHeight = 150;
     private static readonly string[] PieColors = ["#166534", "#059669", "#0EA5E9", "#F59E0B", "#DC2626", "#8B5CF6"];
 
     [ObservableProperty] private string _welcomeMessage = "";
@@ -29,33 +36,49 @@ public partial class DashboardViewModel(
     [ObservableProperty] private bool _isLoading;
 
     public ObservableCollection<TransactionDto> RecentTransactions { get; } = [];
-    public ObservableCollection<StockDto> LowStockItems { get; } = [];
+    public ObservableCollection<LowStockDto> LowStockItems { get; } = [];
+    public ObservableCollection<CustomerSalesDto> TopCustomers { get; } = [];
+    public ObservableCollection<TopProductReportDto> TopProducts { get; } = [];
 
-    public ObservableCollection<ISeries> RevenueSeries { get; } = [];
-    public ObservableCollection<ISeries> CategorySeries { get; } = [];
+    public ObservableCollection<ISeries> CashFlowSeries { get; } = [];
+    [ObservableProperty] private Axis[] _cashFlowXAxes = [new Axis()];
+    [ObservableProperty] private Axis[] _cashFlowYAxes = [new Axis { MinLimit = 0 }];
+    public ObservableCollection<ChartColumn> CategoryBars { get; } = [];
 
-    [ObservableProperty] private Axis[] _revenueXAxes = [new Axis()];
-    [ObservableProperty] private Axis[] _revenueYAxes = [new Axis()];
+    private static LineSeries<decimal> FogLine(decimal[] values, string name, string hex) =>
+        new()
+        {
+            Values = values,
+            Name = name,
+            Stroke = new SolidColorPaint(SKColor.Parse(hex), 2.5f),
+            Fill = new LinearGradientPaint(
+                [SKColor.Parse(hex).WithAlpha(70), SKColor.Parse(hex).WithAlpha(0)],
+                new SKPoint(0.5f, 0), new SKPoint(0.5f, 1)),
+            GeometrySize = 0,
+            GeometryStroke = null,
+            GeometryFill = null,
+            LineSmoothness = 0.35
+        };
 
     [RelayCommand]
-    private async Task LoadAsync()
+    public async Task LoadAsync()
     {
         IsLoading = true;
         WelcomeMessage = $"{L["welcome"]}, {ServiceLocator.Resolve<AuthService>().UserInfo?.FullName ?? ""}!";
 
         try
         {
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
-
-            var sales = await salesApi.GetAllAsync(fromDate: today, toDate: tomorrow);
-            TodaySales = sales.Sum(s => s.TotalAmount);
-            TodayProfit = TodaySales;
+            var todayStart = new DateTimeOffset(DateTime.Today).UtcDateTime;
+            var todayEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
+            var report = await reportsApi.GetSalesReportAsync(todayStart, todayEnd);
+            TodaySales = report.Revenue;
+            TodayProfit = report.Profit;
         }
-        catch
+        catch (Exception ex)
         {
             TodaySales = 0;
             TodayProfit = 0;
+            toast.Error(ApiErrors.Describe(ex));
         }
 
         try
@@ -70,38 +93,41 @@ public partial class DashboardViewModel(
                 .Take(PieColors.Length)
                 .ToList();
 
-            CategorySeries.Clear();
+            CategoryBars.Clear();
+            var maxCount = categoryGroups.Count > 0 ? categoryGroups.Max(g => g.Count) : 0;
             for (var i = 0; i < categoryGroups.Count; i++)
             {
-                var color = SKColor.Parse(PieColors[i % PieColors.Length]);
-                CategorySeries.Add(new PieSeries<int>
-                {
-                    Values = [categoryGroups[i].Count],
-                    Name = categoryGroups[i].Name,
-                    Fill = new SolidColorPaint(color),
-                    InnerRadius = 40
-                });
+                var brush = new SolidColorBrush(Color.Parse(PieColors[i % PieColors.Length]));
+                var height = maxCount > 0 ? categoryGroups[i].Count / (double)maxCount * ChartHeight : 0;
+                CategoryBars.Add(new ChartColumn(categoryGroups[i].Name, categoryGroups[i].Count.ToString(),
+                    [new ChartBar(height, brush)]));
             }
         }
         catch
         {
             TotalProducts = 0;
-            CategorySeries.Clear();
+            CategoryBars.Clear();
         }
 
         try
         {
-            var stocks = await stocksApi.GetAllAsync(warehouseId: 1);
-            var lowItems = stocks.Where(s => s.Quantity < 10).ToList();
-            LowStockCount = lowItems.Count;
+            var warehouseId = branch.CurrentWarehouseId;
             LowStockItems.Clear();
-            foreach (var item in lowItems)
-                LowStockItems.Add(item);
+            if (warehouseId is not null)
+            {
+                var lowItems = await stocksApi.GetLowStockAsync(warehouseId.Value);
+                LowStockCount = lowItems.Count;
+                foreach (var item in lowItems)
+                    LowStockItems.Add(item);
+            }
+            else
+                LowStockCount = 0;
         }
-        catch
+        catch (Exception ex)
         {
             LowStockCount = 0;
             LowStockItems.Clear();
+            toast.Error(ApiErrors.Describe(ex));
         }
 
         try
@@ -120,43 +146,43 @@ public partial class DashboardViewModel(
 
         try
         {
-            var weekAgo = DateTime.Today.AddDays(-6);
-            var weekSales = await salesApi.GetAllAsync(fromDate: weekAgo, toDate: DateTime.Today.AddDays(1));
-            var dailyTotals = Enumerable.Range(0, 7)
-                .Select(i => weekAgo.AddDays(i))
-                .Select(d => weekSales.Where(s => s.SaleDate.Date == d).Sum(s => s.TotalAmount))
-                .ToArray();
+            var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
+            var weekEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
+            var report = await reportsApi.GetSalesReportAsync(weekStart, weekEnd);
+            var flow = await reportsApi.GetCashFlowAsync(weekStart, weekEnd);
 
-            RevenueSeries.Clear();
-            RevenueSeries.Add(new LineSeries<decimal>
+            CashFlowSeries.Clear();
+            CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Sales)], L["sales"], "#2563EB"));
+            CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Income)], L["income"], "#166534"));
+            CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Expense)], L["expense"], "#DC2626"));
+            CashFlowXAxes = [new Axis
             {
-                Values = dailyTotals,
-                Fill = new SolidColorPaint(SKColor.Parse("#166534").WithAlpha(40)),
-                Stroke = new SolidColorPaint(SKColor.Parse("#166534"), 2),
-                GeometryFill = new SolidColorPaint(SKColor.Parse("#166534")),
-                GeometryStroke = new SolidColorPaint(SKColor.Parse("#FFFFFF"), 2),
-                GeometrySize = 8,
-                LineSmoothness = 0.3
-            });
-
-            RevenueXAxes = [new Axis
-            {
-                Labels = Enumerable.Range(0, 7).Select(i => weekAgo.AddDays(i).ToString("dd/MM")).ToArray(),
+                Labels = [.. flow.Select(f => f.Date.ToString("dd/MM"))],
                 LabelsPaint = new SolidColorPaint(SKColor.Parse("#94A3B8")),
                 TextSize = 12
             }];
+            CashFlowYAxes = [new Axis { MinLimit = 0, LabelsPaint = new SolidColorPaint(SKColor.Parse("#94A3B8")), TextSize = 12 }];
 
-            RevenueYAxes = [new Axis
-            {
-                LabelsPaint = new SolidColorPaint(SKColor.Parse("#94A3B8")),
-                TextSize = 12
-            }];
+            TopProducts.Clear();
+            foreach (var p in report.TopProducts.Take(2)) TopProducts.Add(p);
         }
         catch
         {
-            RevenueSeries.Clear();
-            RevenueXAxes = [new Axis()];
-            RevenueYAxes = [new Axis()];
+            CashFlowSeries.Clear();
+            TopProducts.Clear();
+        }
+
+        try
+        {
+            var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
+            var weekEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
+            var top = await reportsApi.GetTopCustomersAsync(weekStart, weekEnd);
+            TopCustomers.Clear();
+            foreach (var c in top.Take(2)) TopCustomers.Add(c);
+        }
+        catch
+        {
+            TopCustomers.Clear();
         }
 
         IsLoading = false;

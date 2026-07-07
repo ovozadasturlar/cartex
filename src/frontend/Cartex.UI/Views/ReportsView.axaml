@@ -1,118 +1,398 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              x:Class="Cartex.UI.Views.ReportsView"
              x:CompileBindings="False">
 
+    <Panel>
     <DockPanel Margin="24">
         <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,*" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextPrimary}" />
-                <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}"
-                            MinWidth="160" MinHeight="36" />
+                <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}" MinWidth="160" MinHeight="36" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0"
-                        VerticalAlignment="Center">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
                 <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextPrimary}" />
-                <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}"
-                            MinWidth="160" MinHeight="36" />
+                <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}" MinWidth="160" MinHeight="36" />
             </StackPanel>
             <Button Grid.Column="2" Content="{Binding L[load_report]}" Classes="brand"
-                    Margin="16,0,0,0" MinHeight="36"
-                    Command="{Binding LoadCommand}" />
+                    Margin="16,0,0,0" MinHeight="36" Command="{Binding LoadReportCommand}" />
         </Grid>
 
         <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
                      Height="4" Margin="0,0,0,8" />
 
-        <ScrollViewer>
-            <StackPanel Spacing="16">
-                <Grid ColumnDefinitions="*,*,*,*">
-                    <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                            <mi:MaterialIcon Kind="CashMultiple" Width="32" Height="32" HorizontalAlignment="Center"
-                                             Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            <TextBlock Text="{Binding L[total_sales]}" Classes="muted"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding TotalSales, StringFormat={}{0:N0}}"
-                                       FontSize="24" FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="1" Margin="8,0,8,0">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                            <mi:MaterialIcon Kind="ChartPie" Width="32" Height="32" HorizontalAlignment="Center"
-                                             Foreground="{DynamicResource InfoBrush}" />
-                            <TextBlock Text="{Binding L[total_transactions]}" Classes="muted"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding TotalTransactions}"
-                                       FontSize="24" FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource InfoBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="2" Margin="8,0,8,0">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                            <mi:MaterialIcon Kind="ChartLineVariant" Width="32" Height="32" HorizontalAlignment="Center"
-                                             Foreground="{DynamicResource WarningBrush}" />
-                            <TextBlock Text="{Binding L[average_sale]}" Classes="muted"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding AverageSale, StringFormat={}{0:N0}}"
-                                       FontSize="24" FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource WarningBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                            <mi:MaterialIcon Kind="TrophyOutline" Width="32" Height="32" HorizontalAlignment="Center"
-                                             Foreground="{DynamicResource DangerBrush}" />
-                            <TextBlock Text="{Binding L[max_sale]}" Classes="muted"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="{Binding MaxSale, StringFormat={}{0:N0}}"
-                                       FontSize="24" FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource DangerBrush}" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
+        <TabControl>
+            <TabItem Header="{Binding L[sales_report]}">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <mi:MaterialIcon Kind="CashMultiple" Width="32" Height="32" HorizontalAlignment="Center"
+                                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    <TextBlock Text="{Binding L[revenue]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding TotalSales, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="1" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <mi:MaterialIcon Kind="TrendingUp" Width="32" Height="32" HorizontalAlignment="Center"
+                                                     Foreground="{DynamicResource InfoBrush}" />
+                                    <TextBlock Text="{Binding L[profit]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding TotalProfit, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="2" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <mi:MaterialIcon Kind="ReceiptTextOutline" Width="32" Height="32" HorizontalAlignment="Center"
+                                                     Foreground="{DynamicResource WarningBrush}" />
+                                    <TextBlock Text="{Binding L[total_transactions]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding TotalTransactions}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource WarningBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <mi:MaterialIcon Kind="ChartLineVariant" Width="32" Height="32" HorizontalAlignment="Center"
+                                                     Foreground="{DynamicResource DangerBrush}" />
+                                    <TextBlock Text="{Binding L[average_sale]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding AverageSale, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
-                <Border Classes="card" Padding="16">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[sales_chart]}" Classes="subtitle" Margin="0,0,0,12" />
-                        <lvc:CartesianChart Series="{Binding SalesChartSeries}"
-                                            XAxes="{Binding SalesXAxes}"
-                                            YAxes="{Binding SalesYAxes}"
-                                            MinHeight="260" />
-                    </DockPanel>
-                </Border>
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding L[sales_chart]}" Classes="subtitle" Margin="0,0,0,12" />
+                                <lvc:CartesianChart Series="{Binding SalesChartSeries}"
+                                                    XAxes="{Binding SalesXAxes}"
+                                                    YAxes="{Binding SalesYAxes}"
+                                                    MinHeight="260"
+                                                    LegendPosition="Top"
+                                                    LegendTextSize="12"
+                                                    TooltipTextSize="12" />
+                            </DockPanel>
+                        </Border>
 
-                <DataGrid x:Name="SalesGrid"
-                          ItemsSource="{Binding Sales}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          CanUserResizeColumns="True"
-                          GridLinesVisibility="Horizontal"
-                          BorderThickness="1"
-                          BorderBrush="{DynamicResource BorderBrush}"
-                          CornerRadius="6">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id, Mode=OneWay}" Width="60" />
-                        <DataGridTextColumn Header="Date" Binding="{Binding SaleDate, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="160" />
-                        <DataGridTextColumn Header="Total" Binding="{Binding TotalAmount, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="120" />
-                        <DataGridTextColumn Header="Cash" Binding="{Binding PaidCash, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
-                        <DataGridTextColumn Header="Card" Binding="{Binding PaidCard, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
-                        <DataGridTextColumn Header="Debt" Binding="{Binding DebtAmount, Mode=OneWay, StringFormat='{}{0:N0}'}" Width="100" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" Width="100" />
-                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName, Mode=OneWay}" Width="150" />
-                        <DataGridTextColumn Header="Sold By" Binding="{Binding UserName, Mode=OneWay}" Width="*" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </StackPanel>
-        </ScrollViewer>
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding L[top_products]}" Classes="subtitle" VerticalAlignment="Center" />
+                                    <c:ExportButton Grid.Column="1" Command="{Binding ExportSalesCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                                </Grid>
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding TopProducts}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="360">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding ProductName}"
+                                                                Header="{Binding [product_name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [revenue], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Profit, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [profit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{Binding L[debt_aging]}">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[debt_total]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding DebtTotal, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="1" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[days_0_30]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding Debt0_30, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="2" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[days_31_60]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding Debt31_60, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource WarningBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[days_60_plus]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding Debt60Plus, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding L[debt_aging]}" Classes="subtitle" VerticalAlignment="Center" />
+                                    <c:ExportButton Grid.Column="1" Command="{Binding ExportDebtCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                                </Grid>
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding DebtRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="480">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding CustomerName}"
+                                                                Header="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Balance, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [balance], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding LastActivity, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                                                Header="{Binding [last_activity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding DaysOverdue}"
+                                                                Header="{Binding [days_overdue], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Bucket}"
+                                                                Header="{Binding [aging_bucket], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{Binding L[inventory_valuation]}">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,*">
+                            <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[total_cost]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding InventoryTotalCost, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="1" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[total_retail]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding InventoryTotalRetail, StringFormat={}{0:N0}}" FontSize="24" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding L[by_warehouse]}" Classes="subtitle" VerticalAlignment="Center" />
+                                    <c:ExportButton Grid.Column="1" Command="{Binding ExportInventoryCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                                </Grid>
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding InventoryByWarehouse}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
+                                                                Header="{Binding [warehouse], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Cost, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [cost], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Retail, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [retail], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding L[by_category]}" Classes="subtitle" Margin="0,0,0,12" />
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding InventoryByCategory}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
+                                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Cost, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [cost], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Retail, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [retail], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{Binding L[sales_breakdown]}">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[cash]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayCash, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="1" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[card]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayCard, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="2" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[bonus]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayBonus, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource WarningBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[debt]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayDebt, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding L[by_cashier]}" Classes="subtitle" VerticalAlignment="Center" />
+                                    <c:ExportButton Grid.Column="1" Command="{Binding ExportBreakdownCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                                </Grid>
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding SalesByCashier}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding UserName}"
+                                                                Header="{Binding [cashier], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Count}"
+                                                                Header="{Binding [count], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [revenue], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding L[by_category]}" Classes="subtitle" Margin="0,0,0,12" />
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding SalesByCategory}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
+                                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [revenue], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{Binding L[top_customers]}">
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+                        <Border Classes="card" Padding="16">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding L[top_customers]}" Classes="subtitle" VerticalAlignment="Center" />
+                                    <c:ExportButton Grid.Column="1" Command="{Binding ExportTopCustomersCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+                                </Grid>
+                                <Border Background="{DynamicResource CardBg}" CornerRadius="10" ClipToBounds="True"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <DataGrid ItemsSource="{Binding TopCustomers}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="480">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding CustomerName}"
+                                                                Header="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding SalesCount}"
+                                                                Header="{Binding [sales_count], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [revenue], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding Profit, StringFormat='{}{0:N0}'}"
+                                                                Header="{Binding [profit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTextColumn Width="Auto" Binding="{Binding LastPurchase, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                                                Header="{Binding [last_purchase], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTemplateColumn Width="Auto">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Classes="brand" Margin="6,2" Padding="10,4"
+                                                                Content="{Binding [give_bonus], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                                Command="{Binding DataContext.OpenBonusCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}"
+                                                                IsVisible="{Binding DataContext.CanGiveBonus, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
     </DockPanel>
+
+        <Border IsVisible="{Binding IsBonusOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[give_bonus]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding BonusCustomer.CustomerName}" Foreground="{DynamicResource TextSecondary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <NumericUpDown Value="{Binding BonusAmount}" Minimum="0" Increment="1000" FormatString="0.##" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[note]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding BonusNote}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelBonusCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding GiveBonusCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Panel>
 </UserControl>
