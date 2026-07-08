@@ -1,6 +1,9 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
+using Cartex.Domain.Events;
 using Cartex.Infrastructure.Catalog;
+using Cartex.Infrastructure.CloudBridge;
 using Cartex.Infrastructure.Features;
 using Cartex.Infrastructure.Licensing;
 using Cartex.Infrastructure.Notifications;
@@ -49,9 +52,14 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProductCatalogProvider, OpenFoodFactsProvider>();
         services.AddScoped<IObjectStorage, Storage.MinioObjectStorage>();
+        services.AddSingleton<IPushGateway, Push.NullPushGateway>();
         services.AddHostedService<OutboxProcessor>();
         services.AddHostedService<DebtReminderScheduler>();
+        services.AddHostedService<SmsStatusPoller>();
+        services.AddHostedService<Catalog.PrepackExpiryService>();
         services.AddScoped<IReceiptPdfRenderer, ReceiptPdfRenderer>();
+        services.AddScoped<CloudBridgeClient>();
+        services.AddTransient<INotificationHandler<DomainEventNotification<ReceiptMirrorEvent>>, ReceiptMirrorHandler>();
 
         return services;
     }

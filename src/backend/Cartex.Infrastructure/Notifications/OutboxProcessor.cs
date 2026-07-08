@@ -15,7 +15,8 @@ public sealed class OutboxProcessor(IServiceProvider services, ILogger<OutboxPro
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(10);
     private const int BatchSize = 20;
-    private const int MaxAttempts = 5;
+    private const int MaxAttempts = 12;
+    private DateTime _lastCleanup = DateTime.MinValue;
 
     private static readonly Assembly DomainAssembly = typeof(IDomainEvent).Assembly;
 
@@ -43,8 +44,18 @@ public sealed class OutboxProcessor(IServiceProvider services, ILogger<OutboxPro
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
 
+        if (DateTime.UtcNow - _lastCleanup > TimeSpan.FromHours(24))
+        {
+            _lastCleanup = DateTime.UtcNow;
+            var cutoff = DateTime.UtcNow.AddDays(-30);
+            await db.NotificationOutbox
+                .Where(m => m.Status == OutboxStatus.Processed && m.ProcessedAt < cutoff)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        var now = DateTime.UtcNow;
         var pending = await db.NotificationOutbox
-            .Where(m => m.Status == OutboxStatus.Pending)
+            .Where(m => m.Status == OutboxStatus.Pending && (m.NextAttemptAt == null || m.NextAttemptAt <= now))
             .OrderBy(m => m.OccurredAt)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
@@ -74,6 +85,8 @@ public sealed class OutboxProcessor(IServiceProvider services, ILogger<OutboxPro
                 message.Error = ex.Message;
                 if (message.Attempts >= MaxAttempts)
                     message.Status = OutboxStatus.Failed;
+                else
+                    message.NextAttemptAt = DateTime.UtcNow.AddMinutes(Math.Min(Math.Pow(2, message.Attempts), 60));
             }
         }
 
