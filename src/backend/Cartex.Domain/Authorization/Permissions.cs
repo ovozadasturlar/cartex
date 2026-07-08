@@ -71,7 +71,14 @@ public static class AppPermissions
         public const string Return = "sales.return";
         public const string Discount = "sales.discount";
         public const string PriceOverride = "sales.priceOverride";
+        public const string DiscountOverride = "sales.discountOverride";
         public const string CashOut = "sales.cashout";
+        public const string Prepack = "sales.prepack";
+    }
+
+    public static class Devices
+    {
+        public const string Manage = "devices.manage";
     }
 
     public static class Shifts
@@ -90,6 +97,7 @@ public static class AppPermissions
     {
         public const string View = "customers.view";
         public const string Manage = "customers.manage";
+        public const string Message = "customers.message";
     }
 
     public static class Suppliers
@@ -178,14 +186,18 @@ public static class AppPermissions
         [Sales.Create] = "Create sales (POS)",
         [Sales.Return] = "Return sales",
         [Sales.Discount] = "Apply discount on sale",
+        [Sales.DiscountOverride] = "Exceed the business discount limit",
         [Sales.PriceOverride] = "Override item price during sale",
         [Sales.CashOut] = "Cash withdrawal/expense from register",
+        [Sales.Prepack] = "Create/cancel prepack labels (weighed packs)",
+        [Devices.Manage] = "View and revoke connected devices",
         [Shifts.Manage] = "Open/close cash shift",
         [Shifts.View] = "View shift history",
         [Supplies.View] = "View supplies",
         [Supplies.Manage] = "Create/edit supplies",
         [Customers.View] = "View customers",
         [Customers.Manage] = "Create/edit customers",
+        [Customers.Message] = "Send messages to customers",
         [Suppliers.View] = "View suppliers",
         [Suppliers.Manage] = "Create/edit suppliers",
         [Accounts.View] = "View accounts",

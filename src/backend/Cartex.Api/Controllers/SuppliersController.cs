@@ -16,7 +16,7 @@ public class SuppliersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Suppliers.View)]
-    public async Task<IActionResult> GetSuppliers([FromQuery] GetSuppliersQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<SupplierDto>>> GetSuppliers([FromQuery] GetSuppliersQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -24,7 +24,7 @@ public class SuppliersController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Suppliers.Manage)]
-    public async Task<IActionResult> CreateSupplier(CreateSupplierCommand command)
+    public async Task<ActionResult<long>> CreateSupplier(CreateSupplierCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

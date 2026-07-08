@@ -14,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class BusinessController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get() =>
+    public async Task<ActionResult<BusinessDto>> Get() =>
         Ok(await sender.Send(new GetBusinessQuery()));
 
     [HttpPut]
@@ -27,9 +27,9 @@ public class BusinessController(ISender sender) : ControllerBase
 
     [HttpPost("complete-onboarding")]
     [HasPermission(AppPermissions.Business.Manage)]
-    public async Task<IActionResult> CompleteOnboarding()
+    public async Task<IActionResult> CompleteOnboarding(CompleteOnboardingCommand command)
     {
-        await sender.Send(new CompleteOnboardingCommand());
+        await sender.Send(command);
         return NoContent();
     }
 }

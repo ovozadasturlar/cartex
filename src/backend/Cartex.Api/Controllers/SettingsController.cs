@@ -7,6 +7,9 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using SmsMessageDto = Cartex.Application.Settings.Queries.SmsMessageDto;
+using SmsStatsDto = Cartex.Application.Settings.Queries.SmsStatsDto;
+
 namespace Cartex.Api.Controllers;
 
 [ApiController]
@@ -16,7 +19,7 @@ public class SettingsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Settings.Manage)]
-    public async Task<IActionResult> Get() =>
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.SettingsDto>> Get() =>
         Ok(await sender.Send(new GetSettingsQuery()));
 
     [HttpPut("telegram")]
@@ -29,7 +32,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpPost("telegram/test")]
     [HasPermission(AppPermissions.Settings.Manage)]
-    public async Task<IActionResult> TestTelegram(TelegramTestRequest request)
+    public async Task<ActionResult<TelegramTestResult>> TestTelegram(TelegramTestRequest request)
     {
         var info = await sender.Send(new TestTelegramQuery(request.BotToken));
         return Ok(new TelegramTestResult(info.Ok, info.Username));
@@ -59,6 +62,16 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("sms/journal")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<ActionResult<IReadOnlyCollection<SmsMessageDto>>> GetSmsJournal([FromQuery] GetSmsJournalQuery query) =>
+        Ok(await sender.Send(query));
+
+    [HttpGet("sms/stats")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<ActionResult<SmsStatsDto>> GetSmsStats([FromQuery] GetSmsStatsQuery query) =>
+        Ok(await sender.Send(query));
+
     [HttpPut("notification")]
     [HasPermission(AppPermissions.Settings.Manage)]
     public async Task<IActionResult> UpdateNotification(UpdateNotificationSettingsCommand command)
@@ -67,9 +80,71 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("receipt")]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReceiptSettingsDto>> GetReceipt()
+    {
+        var result = await sender.Send(new GetReceiptSettingsQuery());
+        return Ok(result);
+    }
+
+    [HttpPut("receipt")]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<IActionResult> UpdateReceipt(UpdateReceiptSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpGet("sales-policy")]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.SalesPolicyDto>> GetSalesPolicy()
+    {
+        var result = await sender.Send(new GetSalesPolicyQuery());
+        return Ok(result);
+    }
+
+    [HttpPut("sales-policy")]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<IActionResult> UpdateSalesPolicy(UpdateSalesPolicyCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpGet("storage")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.StorageSettingsDto>> GetStorage()
+    {
+        var result = await sender.Send(new GetStorageSettingsQuery());
+        return Ok(result);
+    }
+
+    [HttpPut("storage")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<IActionResult> UpdateStorage(UpdateStorageSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpGet("cloud-bridge")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.CloudBridgeSettingsDto>> GetCloudBridge()
+    {
+        var result = await sender.Send(new GetCloudBridgeSettingsQuery());
+        return Ok(result);
+    }
+
+    [HttpPut("cloud-bridge")]
+    [HasPermission(AppPermissions.Settings.Manage)]
+    public async Task<IActionResult> UpdateCloudBridge(UpdateCloudBridgeSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("reminder")]
     [HasPermission(AppPermissions.Notifications.Manage)]
-    public async Task<IActionResult> GetReminder()
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReminderSettingsDto>> GetReminder()
     {
         var result = await sender.Send(new GetReminderSettingsQuery());
         return Ok(result);

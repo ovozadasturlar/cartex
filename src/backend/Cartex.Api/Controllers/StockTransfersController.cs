@@ -16,7 +16,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.StockTransfers.View)]
-    public async Task<IActionResult> GetStockTransfers([FromQuery] GetStockTransfersQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<StockTransferDto>>> GetStockTransfers([FromQuery] GetStockTransfersQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -24,7 +24,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
 
     [HttpGet("totals")]
     [HasPermission(AppPermissions.StockTransfers.View)]
-    public async Task<IActionResult> GetTotals([FromQuery] GetStockTransfersTotalsQuery query)
+    public async Task<ActionResult<StockTransfersTotalsDto>> GetTotals([FromQuery] GetStockTransfersTotalsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -32,7 +32,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.StockTransfers.Manage)]
-    public async Task<IActionResult> CreateStockTransfer(CreateStockTransferCommand command)
+    public async Task<ActionResult<long>> CreateStockTransfer(CreateStockTransferCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

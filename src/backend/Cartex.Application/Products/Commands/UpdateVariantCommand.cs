@@ -8,7 +8,7 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Products.Commands;
 
-public record UpdateVariantCommand(long Id, string? Name, string? Code, string? Attributes, string? ImageKey, List<string>? Barcodes) : ICommand<Unit>;
+public record UpdateVariantCommand(long Id, string? Name, string? Code, string? Attributes, string? ImageKey, List<BarcodeInput>? Barcodes) : ICommand<Unit>;
 
 public sealed class UpdateVariantCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateVariantCommand, Unit>
 {
@@ -31,13 +31,29 @@ public sealed class UpdateVariantCommandHandler(IApplicationDbContext db) : IReq
         variant.Attributes = request.Attributes;
         variant.ImageKey = request.ImageKey;
 
-        var desired = request.Barcodes ?? [];
-        foreach (var existing in variant.Barcodes.Where(b => !desired.Contains(b.Code)).ToList())
+        var desired = (request.Barcodes ?? [])
+            .Where(b => !string.IsNullOrWhiteSpace(b.Code))
+            .Select(b => b with { Code = b.Code.Trim(), PackQty = b.PackQty > 0 ? b.PackQty : 1 })
+            .DistinctBy(b => b.Code)
+            .ToDictionary(b => b.Code);
+
+        foreach (var existing in variant.Barcodes.Where(b => !desired.ContainsKey(b.Code)).ToList())
             db.Barcodes.Remove(existing);
 
+        foreach (var existing in variant.Barcodes.Where(b => desired.ContainsKey(b.Code)))
+        {
+            var next = desired[existing.Code].PackQty;
+            if (next != existing.PackQty && Barcodes.GeneratedPackCodes.EmbeddedQty(existing.Code) is { } embedded && embedded != next)
+                throw new BusinessRuleException($"{existing.Code} kodida qadoq soni yozilgan — sonni o'zgartirish o'rniga yangi kod generatsiya qiling.");
+            existing.PackQty = next;
+        }
+
         var current = variant.Barcodes.Select(b => b.Code).ToHashSet();
-        foreach (var code in desired.Where(c => !current.Contains(c)))
-            db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = code, PackQty = 1 });
+        foreach (var input in desired.Values.Where(b => !current.Contains(b.Code)))
+        {
+            Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, input.PackQty);
+            db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = input.PackQty });
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

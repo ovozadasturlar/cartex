@@ -15,7 +15,7 @@ public class AccountsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Accounts.View)]
-    public async Task<IActionResult> GetAccounts([FromQuery] GetAccountsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<AccountDto>>> GetAccounts([FromQuery] GetAccountsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class AccountsController(ISender sender) : ControllerBase
 
     [HttpGet("totals")]
     [HasPermission(AppPermissions.Accounts.View)]
-    public async Task<IActionResult> GetTotals([FromQuery] GetAccountsTotalsQuery query)
+    public async Task<ActionResult<AccountsTotalsDto>> GetTotals([FromQuery] GetAccountsTotalsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);

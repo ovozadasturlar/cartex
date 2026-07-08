@@ -60,13 +60,6 @@ public enum CashbackMethod
     FixedPerUnit
 }
 
-public enum MeasureMode
-{
-    Counted,
-    Weighed,
-    Length
-}
-
 public enum UnitDimension
 {
     Count,
@@ -80,6 +73,21 @@ public enum OutboxStatus
     Pending,
     Processed,
     Failed
+}
+
+public enum PrepackStatus
+{
+    Active,
+    Sold,
+    Expired
+}
+
+public enum SmsStatus
+{
+    Sent,
+    Failed,
+    Delivered,
+    Undelivered
 }
 
 public enum CartStatus

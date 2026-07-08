@@ -3,15 +3,23 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Cartex.Infrastructure.Settings;
 
-public sealed class SettingsService(IApplicationDbContext db) : ISettingsService
+public sealed class SettingsService(IApplicationDbContext db, IMemoryCache cache) : ISettingsService
 {
+    private static string CacheKey(string key) => $"setting:{key}";
+
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var setting = await db.BusinessSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, cancellationToken);
-        return setting?.Value is null ? default : JsonSerializer.Deserialize<T>(setting.Value);
+        var json = await cache.GetOrCreateAsync(CacheKey(key), async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
+            var setting = await db.BusinessSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, cancellationToken);
+            return setting?.Value;
+        });
+        return json is null ? default : JsonSerializer.Deserialize<T>(json);
     }
 
     public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
@@ -23,6 +31,7 @@ public sealed class SettingsService(IApplicationDbContext db) : ISettingsService
         else
             setting.Value = json;
         await db.SaveChangesAsync(cancellationToken);
+        db.RunAfterCommit(() => cache.Remove(CacheKey(key)));
     }
 
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
@@ -31,5 +40,6 @@ public sealed class SettingsService(IApplicationDbContext db) : ISettingsService
         if (setting is null) return;
         db.BusinessSettings.Remove(setting);
         await db.SaveChangesAsync(cancellationToken);
+        db.RunAfterCommit(() => cache.Remove(CacheKey(key)));
     }
 }

@@ -11,7 +11,6 @@ public record ProductDto(
     long? ProductTypeId,
     string? ProductTypeName,
     bool TracksExpiry,
-    string? MeasureMode,
     string? Attributes,
     string? ImageKey,
     string? Code,
@@ -20,4 +19,5 @@ public record ProductDto(
     decimal? SellingPrice,
     decimal OnHand = 0,
     string? ImageUrl = null,
-    string? PriceCurrency = null);
+    string? PriceCurrency = null,
+    string? Dimension = null);

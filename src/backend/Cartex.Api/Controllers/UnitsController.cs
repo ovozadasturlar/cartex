@@ -15,7 +15,7 @@ public class UnitsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetUnits([FromQuery] GetUnitsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<UnitDto>>> GetUnits([FromQuery] GetUnitsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class UnitsController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CreateUnit(CreateUnitCommand command)
+    public async Task<ActionResult<long>> CreateUnit(CreateUnitCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
@@ -32,6 +32,14 @@ public class UnitsController(ISender sender) : ControllerBase
     [HttpPut("{id:long}")]
     [HasPermission(AppPermissions.Products.Manage)]
     public async Task<IActionResult> UpdateUnit(long id, UpdateUnitCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
+    }
+
+    [HttpPut("{id:long}/state")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> SetUnitState(long id, SetUnitStateCommand command)
     {
         await sender.Send(command with { Id = id });
         return NoContent();

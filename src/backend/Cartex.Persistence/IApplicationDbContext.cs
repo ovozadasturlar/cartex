@@ -47,8 +47,16 @@ public interface IApplicationDbContext
     DbSet<SalePayment> SalePayments { get; }
     DbSet<ShiftCash> ShiftCashes { get; }
     DbSet<DebtReminderLog> DebtReminderLogs { get; }
+    DbSet<RefreshSession> RefreshSessions { get; }
+    DbSet<OtpChallenge> OtpChallenges { get; }
+    DbSet<CustomerSession> CustomerSessions { get; }
+    DbSet<SmsMessage> SmsMessages { get; }
+    DbSet<Prepack> Prepacks { get; }
+    DbSet<HardwareKey> HardwareKeys { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
+
+    void RunAfterCommit(Action action);
 }

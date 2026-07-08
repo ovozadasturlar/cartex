@@ -7,7 +7,7 @@ using Cartex.Application.Common.Catalog;
 
 namespace Cartex.Application.Products.Commands;
 
-public record CreateVariantCommand(long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, List<string>? Barcodes) : ICommand<long>;
+public record CreateVariantCommand(long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, List<BarcodeInput>? Barcodes) : ICommand<long>;
 
 public sealed class CreateVariantCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateVariantCommand, long>
 {
@@ -38,15 +38,21 @@ public sealed class CreateVariantCommandHandler(IApplicationDbContext db) : IReq
         db.ProductVariants.Add(variant);
         await db.SaveChangesAsync(cancellationToken);
 
-        var codes = request.Barcodes?.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList() ?? [];
-        if (codes.Count > 0)
+        var inputs = request.Barcodes?.Where(b => !string.IsNullOrWhiteSpace(b.Code))
+            .Select(b => b with { Code = b.Code.Trim() }).DistinctBy(b => b.Code).ToList() ?? [];
+        if (inputs.Count > 0)
         {
+            var codes = inputs.Select(b => b.Code).ToList();
             var existing = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
                 throw new BusinessRuleException($"Bu barkod allaqachon mavjud: {existing}");
 
-            foreach (var code in codes)
-                db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = code, PackQty = 1 });
+            foreach (var input in inputs)
+            {
+                var packQty = input.PackQty > 0 ? input.PackQty : 1;
+                Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, packQty);
+                db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = packQty });
+            }
 
             await db.SaveChangesAsync(cancellationToken);
         }

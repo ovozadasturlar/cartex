@@ -34,6 +34,7 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public decimal RefundedCashback { get; set; }
     public SaleStatus Status { get; set; } = SaleStatus.Completed;
     public string ReceiptToken { get; set; } = null!;
+    public string? IdempotencyKey { get; set; }
 
     public ICollection<SaleItem> Items { get; set; } = [];
     public ICollection<SalePayment> Payments { get; set; } = [];

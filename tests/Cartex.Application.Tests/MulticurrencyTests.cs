@@ -147,7 +147,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            customerId = await sender.Send(new CreateCustomerCommand("USD Qarzdor", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, CreditLimit: 100_000_000m));
+            customerId = await sender.Send(new CreateCustomerCommand("USD Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: 100_000_000m));
             await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
                 DebtCurrency: "USD"));
         }

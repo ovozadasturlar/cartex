@@ -15,5 +15,5 @@ public interface IBarcodesApi
     Task DeleteAsync(long id);
 
     [Post("/api/barcodes/generate/{variantId}")]
-    Task<string> GenerateAsync(long variantId);
+    Task<string> GenerateAsync(long variantId, [Query] decimal packQty = 1);
 }

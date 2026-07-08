@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\Cartex.Domain\Cartex.Domain.csproj" />
     <ProjectReference Include="..\Cartex.Persistence\Cartex.Persistence.csproj" />
+    <ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
   </ItemGroup>
 
 </Project>

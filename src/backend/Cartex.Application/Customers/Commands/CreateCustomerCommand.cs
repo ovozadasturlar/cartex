@@ -1,3 +1,4 @@
+using Cartex.Application.Common;
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
@@ -8,7 +9,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null) : ICommand<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AgentId = null) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
@@ -23,12 +24,14 @@ public sealed class CreateCustomerCommandHandler(
             FullName = request.FullName,
             LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim(),
             Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
-            Phone = request.Phone,
+            Phone = Phones.Normalize(request.Phone),
             Email = request.Email,
             CardBarcode = request.CardBarcode,
             DiscountPct = request.DiscountPct,
             CreditLimit = request.CreditLimit,
-            NotificationsOptOut = request.NotificationsOptOut
+            NotificationsOptOut = request.NotificationsOptOut,
+            PreferredLanguage = request.PreferredLanguage ?? "uz-latn",
+            AgentId = request.AgentId
         };
 
         db.Customers.Add(customer);
@@ -60,7 +63,7 @@ public sealed class CreateCustomerCommandValidator : AbstractValidator<CreateCus
     public CreateCustomerCommandValidator()
     {
         RuleFor(x => x.FullName).NotEmpty();
-        RuleFor(x => x.Phone).NotEmpty();
+        RuleFor(x => x.Phone).NotEmpty().Must(p => Phones.IsValid(Phones.Normalize(p))).WithMessage("Telefon raqami noto'g'ri.");
         RuleFor(x => x.CreditLimit).GreaterThanOrEqualTo(0);
     }
 }

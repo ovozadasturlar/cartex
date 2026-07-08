@@ -39,7 +39,7 @@ public sealed class NotificationService(
             return;
         }
 
-        var text = BuildText(message);
+        var text = await BuildTextAsync(message, cancellationToken);
         await SendTextAsync(message.Channel, message.Recipient, text, Subject(message.Template), cancellationToken);
     }
 
@@ -51,19 +51,21 @@ public sealed class NotificationService(
         var cfg = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken) ?? new();
         var mode = ReceiptDeliveryPolicy.Resolve(message.Channel, cfg);
         var total = message.Data.TryGetValue("total", out var t) ? t : "";
+        var lang = message.Data.TryGetValue("lang", out var l) ? l : null;
+        string T(string key) => Cartex.Shared.Localization.ReceiptTexts.Get(key, lang);
 
         if (mode == "link")
         {
             var baseUrl = cfg.PublicBaseUrl!.TrimEnd('/');
-            var text = $"Xaridingiz uchun rahmat! Chek: {baseUrl}/r/{token}" + (string.IsNullOrEmpty(total) ? "" : $" ({total})");
-            await SendTextAsync(message.Channel, message.Recipient, text, "Chek", cancellationToken);
+            var text = $"{T("thanks")} {T("your_receipt")}: {baseUrl}/r/{token}" + (string.IsNullOrEmpty(total) ? "" : $" ({total})");
+            await SendTextAsync(message.Channel, message.Recipient, text, T("your_receipt"), cancellationToken);
             return;
         }
 
         if (mode == "text")
         {
-            var text = $"Xaridingiz: {total}. Rahmat!";
-            await SendTextAsync(message.Channel, message.Recipient, text, "Chek", cancellationToken);
+            var text = $"{T("your_purchase")}: {total}. {T("thanks")}";
+            await SendTextAsync(message.Channel, message.Recipient, text, T("your_receipt"), cancellationToken);
             return;
         }
 
@@ -71,9 +73,10 @@ public sealed class NotificationService(
         if (receipt is null)
             return;
 
-        var pdf = pdfRenderer.Render(receipt);
+        var receiptCfg = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
+        var pdf = pdfRenderer.Render(receipt, receiptCfg);
         var fileName = $"chek-{token[..8]}.pdf";
-        var caption = $"Xaridingiz uchun rahmat! ({total})";
+        var caption = $"{T("thanks")} ({total})";
 
         switch (message.Channel)
         {
@@ -81,7 +84,7 @@ public sealed class NotificationService(
                 await telegram.SendDocumentAsync(message.Recipient, pdf, fileName, caption, cancellationToken);
                 break;
             case NotificationChannel.Email:
-                await email.SendAsync(message.Recipient, "Chek", caption, cancellationToken, new EmailAttachment(pdf, fileName));
+                await email.SendAsync(message.Recipient, T("your_receipt"), caption, cancellationToken, new EmailAttachment(pdf, fileName));
                 break;
             default:
                 logger.LogInformation("PDF receipt not supported for {Channel}; skipped", message.Channel);
@@ -108,16 +111,31 @@ public sealed class NotificationService(
         }
     }
 
-    private static string BuildText(NotificationMessage message)
+    private async Task<string> BuildTextAsync(NotificationMessage message, CancellationToken cancellationToken)
     {
         var name = message.Data.GetValueOrDefault("name", "");
         var balance = message.Data.GetValueOrDefault("balance", "");
         var currency = message.Data.GetValueOrDefault("currency", "");
+        var days = message.Data.GetValueOrDefault("days", "");
+        var dueDate = message.Data.GetValueOrDefault("dueDate", "");
+
+        if (message.Template is "debt_reminder" or "debt_due_soon")
+        {
+            var reminder = await settings.GetAsync<ReminderSettings>(SettingKeys.Reminder, cancellationToken);
+            var template = message.Template == "debt_reminder" ? reminder?.OverdueTemplate : reminder?.DueSoonTemplate;
+            if (!string.IsNullOrWhiteSpace(template))
+                return template
+                    .Replace("{name}", name)
+                    .Replace("{balance}", balance)
+                    .Replace("{currency}", currency)
+                    .Replace("{days}", days)
+                    .Replace("{dueDate}", dueDate);
+        }
 
         return message.Template switch
         {
-            "debt_reminder" => $"Hurmatli {name}! Do'kondan qarzingiz: {balance} {currency} ({message.Data.GetValueOrDefault("days", "")} kundan beri). Iltimos, to'lovni amalga oshiring.",
-            "debt_due_soon" => $"Hurmatli {name}! Do'kondan qarzingiz {balance} {currency} bo'yicha to'lov muddati: {message.Data.GetValueOrDefault("dueDate", "")}. Iltimos, o'z vaqtida to'lang.",
+            "debt_reminder" => $"Hurmatli {name}! Do'kondan qarzingiz: {balance} {currency} ({days} kundan beri). Iltimos, to'lovni amalga oshiring.",
+            "debt_due_soon" => $"Hurmatli {name}! Do'kondan qarzingiz {balance} {currency} bo'yicha to'lov muddati: {dueDate}. Iltimos, o'z vaqtida to'lang.",
             _ => message.Template
         };
     }

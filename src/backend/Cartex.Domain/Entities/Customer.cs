@@ -11,6 +11,9 @@ public class Customer : SoftDeleteEntity
     public string? Email { get; set; }
     public string? CardBarcode { get; set; }
     public string? TelegramChatId { get; set; }
+    public string? PreferredLanguage { get; set; }
+    public long? AgentId { get; set; }
+    public User? Agent { get; set; }
     public decimal DiscountPct { get; set; }
     public decimal CreditLimit { get; set; }
     public bool NotificationsOptOut { get; set; }

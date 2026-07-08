@@ -16,6 +16,7 @@ public class Transaction : AuditableEntity
     public decimal Rate { get; set; } = 1m;
     public OperationType OperationType { get; set; }
     public string? Description { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     public long? ExpenseCategoryId { get; set; }
     public ExpenseCategory? ExpenseCategory { get; set; }

@@ -1,3 +1,4 @@
+using Cartex.Application.Shifts;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Shifts.Queries;
 using Cartex.Auth.Authorization;
@@ -15,7 +16,7 @@ public class ShiftsController(ISender sender) : ControllerBase
 {
     [HttpGet("current")]
     [HasPermission(AppPermissions.Shifts.Manage)]
-    public async Task<IActionResult> GetCurrent()
+    public async Task<ActionResult<CurrentShiftDto>> GetCurrent()
     {
         var result = await sender.Send(new GetCurrentShiftQuery());
         return result is null ? NoContent() : Ok(result);
@@ -23,7 +24,7 @@ public class ShiftsController(ISender sender) : ControllerBase
 
     [HttpGet]
     [HasPermission(AppPermissions.Shifts.View)]
-    public async Task<IActionResult> GetHistory([FromQuery] GetShiftsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<ShiftHistoryDto>>> GetHistory([FromQuery] GetShiftsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -31,7 +32,7 @@ public class ShiftsController(ISender sender) : ControllerBase
 
     [HttpGet("{id:long}/report")]
     [HasPermission(AppPermissions.Shifts.View)]
-    public async Task<IActionResult> GetReport(long id)
+    public async Task<ActionResult<ZReportDto>> GetReport(long id)
     {
         var result = await sender.Send(new GetShiftReportQuery(id));
         return Ok(result);
@@ -39,7 +40,7 @@ public class ShiftsController(ISender sender) : ControllerBase
 
     [HttpPost("open")]
     [HasPermission(AppPermissions.Shifts.Manage)]
-    public async Task<IActionResult> Open(OpenShiftCommand command)
+    public async Task<ActionResult<long>> Open(OpenShiftCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
@@ -47,7 +48,7 @@ public class ShiftsController(ISender sender) : ControllerBase
 
     [HttpPost("{id:long}/close")]
     [HasPermission(AppPermissions.Shifts.Manage)]
-    public async Task<IActionResult> Close(long id, CloseShiftCommand command)
+    public async Task<ActionResult<ZReportDto>> Close(long id, CloseShiftCommand command)
     {
         var report = await sender.Send(command with { ShiftId = id });
         return Ok(report);

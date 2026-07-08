@@ -15,7 +15,7 @@ public class AuditLogsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Audit.View)]
-    public async Task<IActionResult> GetAuditLogs([FromQuery] GetAuditLogsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<AuditLogDto>>> GetAuditLogs([FromQuery] GetAuditLogsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);

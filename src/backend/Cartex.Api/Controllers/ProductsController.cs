@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Products.Queries;
 using Cartex.Auth.Authorization;
@@ -15,7 +16,7 @@ public class ProductsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetProducts([FromQuery] GetProductsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<ProductDto>>> GetProducts([FromQuery] GetProductsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +24,7 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpGet("totals")]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetTotals([FromQuery] GetProductsTotalsQuery query)
+    public async Task<ActionResult<ProductsTotalsDto>> GetTotals([FromQuery] GetProductsTotalsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -31,7 +32,7 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpGet("by-barcode")]
     [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<IActionResult> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)
+    public async Task<ActionResult<ProductLookupDto>> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)
     {
         var result = await sender.Send(new GetProductByBarcodeQuery(code, warehouseId));
         return result is null ? NotFound() : Ok(result);
@@ -39,15 +40,23 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpGet("catalog-lookup")]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CatalogLookup([FromQuery] string barcode)
+    public async Task<ActionResult<ProductCatalogInfo>> CatalogLookup([FromQuery] string barcode)
     {
         var result = await sender.Send(new GetCatalogInfoByBarcodeQuery(barcode));
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpGet("variants/{id:long}/price-info")]
+    [HasPermission(AppPermissions.Supplies.Manage)]
+    public async Task<ActionResult<VariantPriceInfoDto>> GetVariantPriceInfo(long id, [FromQuery] long warehouseId)
+    {
+        var result = await sender.Send(new GetVariantPriceInfoQuery(id, warehouseId));
+        return Ok(result);
+    }
+
     [HttpPost]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CreateProduct(CreateProductCommand command)
+    public async Task<ActionResult<long>> CreateProduct(CreateProductCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
@@ -71,7 +80,7 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpGet("{productId:long}/variants")]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetVariants(long productId)
+    public async Task<ActionResult<IReadOnlyCollection<VariantDto>>> GetVariants(long productId)
     {
         var result = await sender.Send(new GetProductVariantsQuery(productId));
         return Ok(result);
@@ -79,7 +88,7 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpPost("{productId:long}/variants")]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CreateVariant(long productId, CreateVariantCommand command)
+    public async Task<ActionResult<long>> CreateVariant(long productId, CreateVariantCommand command)
     {
         var id = await sender.Send(command with { ProductId = productId });
         return Ok(id);

@@ -10,6 +10,8 @@ public class Unit : SoftDeleteEntity
     public UnitDimension Dimension { get; set; } = UnitDimension.Count;
     public decimal Factor { get; set; } = 1;
     public bool IsSystem { get; set; }
+    public bool IsEnabled { get; set; } = true;
+    public bool IsDefault { get; set; }
 
     public ICollection<Product> Products { get; set; } = [];
 }

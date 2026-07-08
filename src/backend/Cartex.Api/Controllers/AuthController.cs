@@ -1,26 +1,52 @@
 using Cartex.Application.Auth.Commands;
+using Cartex.Application.Auth.Queries;
 using Cartex.Application.Common.Messaging;
+using Cartex.Auth.Authorization;
+using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Cartex.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AllowAnonymous]
+[EnableRateLimiting("auth")]
 public class AuthController(ISender sender) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginCommand command)
+    public async Task<ActionResult<LoginResponse>> Login(LoginCommand command) =>
+        Ok(await sender.Send(command));
+
+    [AllowAnonymous]
+    [HttpPost("login-with-key")]
+    public async Task<ActionResult<LoginResponse>> LoginWithKey(LoginWithKeyCommand command) =>
+        Ok(await sender.Send(command));
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<ActionResult<LoginResponse>> Refresh(RefreshTokenCommand command) =>
+        Ok(await sender.Send(command));
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutCommand command)
     {
-        var result = await sender.Send(command);
-        return Ok(result);
+        await sender.Send(command);
+        return NoContent();
     }
 
-    [HttpPost("login-with-key")]
-    public async Task<IActionResult> LoginWithKey(LoginWithKeyCommand command)
+    [HttpGet("sessions")]
+    [HasPermission(AppPermissions.Devices.Manage)]
+    public async Task<ActionResult<IReadOnlyList<DeviceSessionDto>>> Sessions([FromQuery] bool all = false) =>
+        Ok(await sender.Send(new GetSessionsQuery(all)));
+
+    [HttpDelete("sessions/{id:long}")]
+    [HasPermission(AppPermissions.Devices.Manage)]
+    public async Task<IActionResult> RevokeSession(long id)
     {
-        var result = await sender.Send(command);
-        return Ok(result);
+        await sender.Send(new RevokeSessionCommand(id));
+        return NoContent();
     }
 }

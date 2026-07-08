@@ -15,7 +15,7 @@ public class ProductTypesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetProductTypes()
+    public async Task<ActionResult<IReadOnlyCollection<ProductTypeDto>>> GetProductTypes()
     {
         var result = await sender.Send(new GetProductTypesQuery());
         return Ok(result);
@@ -23,7 +23,7 @@ public class ProductTypesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CreateProductType(CreateProductTypeCommand command)
+    public async Task<ActionResult<long>> CreateProductType(CreateProductTypeCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

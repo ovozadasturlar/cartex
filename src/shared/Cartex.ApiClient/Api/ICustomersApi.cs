@@ -35,4 +35,7 @@ public interface ICustomersApi
 
     [Get("/api/customers/{id}")]
     Task<CustomerDto> GetByIdAsync(long id);
+
+    [Post("/api/customers/{id}/message")]
+    Task SendMessageAsync(long id, [Body] SendCustomerMessageRequest request);
 }

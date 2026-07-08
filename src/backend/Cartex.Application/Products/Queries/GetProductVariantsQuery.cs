@@ -6,7 +6,9 @@ namespace Cartex.Application.Products.Queries;
 
 public record GetProductVariantsQuery(long ProductId) : IRequest<IReadOnlyCollection<VariantDto>>;
 
-public record VariantDto(long Id, long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, bool IsDefault, List<string> Barcodes);
+public record VariantBarcodeDto(string Code, decimal PackQty);
+
+public record VariantDto(long Id, long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, bool IsDefault, List<VariantBarcodeDto> Barcodes);
 
 public sealed class GetProductVariantsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetProductVariantsQuery, IReadOnlyCollection<VariantDto>>
 {
@@ -18,7 +20,7 @@ public sealed class GetProductVariantsQueryHandler(IApplicationDbContext db) : I
             .ThenBy(v => v.Id)
             .Select(v => new VariantDto(
                 v.Id, v.ProductId, v.Name, v.Code, v.Attributes, v.ImageKey, v.IsDefault,
-                v.Barcodes.Select(b => b.Code).ToList()))
+                v.Barcodes.Select(b => new VariantBarcodeDto(b.Code, b.PackQty)).ToList()))
             .ToListAsync(cancellationToken);
     }
 }

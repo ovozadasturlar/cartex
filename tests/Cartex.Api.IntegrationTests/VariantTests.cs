@@ -8,7 +8,8 @@ namespace Cartex.Api.IntegrationTests;
 public class VariantTests(CartexApiFactory factory)
 {
     private sealed record UnitDto(long Id, string Name);
-    private sealed record VariantDto(long Id, long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, bool IsDefault, List<string> Barcodes);
+    private sealed record VariantBarcode(string Code, decimal PackQty);
+    private sealed record VariantDto(long Id, long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, bool IsDefault, List<VariantBarcode> Barcodes);
 
     [Fact]
     public async Task Variant_FullLifecycle_Works()
@@ -39,7 +40,7 @@ public class VariantTests(CartexApiFactory factory)
             code = "VT-L",
             attributes = (string?)null,
             imageKey = (string?)null,
-            barcodes = new[] { "7000000000001" }
+            barcodes = new[] { new { code = "7000000000001", packQty = 6m } }
         });
         addVariant.EnsureSuccessStatusCode();
         var variantId = await addVariant.Content.ReadFromJsonAsync<long>();
@@ -48,7 +49,7 @@ public class VariantTests(CartexApiFactory factory)
         Assert.Equal(2, afterAdd!.Count);
         var added = afterAdd.Single(v => v.Id == variantId);
         Assert.Equal("Large", added.Name);
-        Assert.Contains("7000000000001", added.Barcodes);
+        Assert.Contains(added.Barcodes, b => b.Code == "7000000000001" && b.PackQty == 6m);
 
         var update = await client.PutAsJsonAsync($"/api/products/variants/{variantId}", new
         {
@@ -56,15 +57,15 @@ public class VariantTests(CartexApiFactory factory)
             code = "VT-XL",
             attributes = (string?)null,
             imageKey = (string?)null,
-            barcodes = new[] { "7000000000002" }
+            barcodes = new[] { new { code = "7000000000002", packQty = 1m } }
         });
         Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
 
         var afterUpdate = await client.GetFromJsonAsync<List<VariantDto>>($"/api/products/{productId}/variants");
         var updated = afterUpdate!.Single(v => v.Id == variantId);
         Assert.Equal("Extra Large", updated.Name);
-        Assert.Contains("7000000000002", updated.Barcodes);
-        Assert.DoesNotContain("7000000000001", updated.Barcodes);
+        Assert.Contains(updated.Barcodes, b => b.Code == "7000000000002");
+        Assert.DoesNotContain(updated.Barcodes, b => b.Code == "7000000000001");
 
         var defaultId = afterUpdate.Single(v => v.IsDefault).Id;
         var deleteDefault = await client.DeleteAsync($"/api/products/variants/{defaultId}");

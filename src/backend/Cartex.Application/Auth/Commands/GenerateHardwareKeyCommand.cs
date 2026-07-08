@@ -29,6 +29,11 @@ public sealed class GenerateHardwareKeyCommandHandler(
 
         var content = await hardwareKeys.IssueAsync(user.Username, request.Serial, cancellationToken);
 
+        var existing = await db.HardwareKeys
+            .FirstOrDefaultAsync(k => k.UserId == user.Id && k.Serial == request.Serial && k.RevokedAt == null, cancellationToken);
+        if (existing is null)
+            db.HardwareKeys.Add(new Domain.Entities.HardwareKey { UserId = user.Id, Serial = request.Serial });
+
         audit.Add("hwkey", "users", user.Id, new { user.Username, request.Serial });
         await db.SaveChangesAsync(cancellationToken);
 

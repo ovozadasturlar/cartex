@@ -15,7 +15,7 @@ public class WarehousesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Warehouses.View)]
-    public async Task<IActionResult> GetWarehouses([FromQuery] GetWarehousesQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<WarehouseDto>>> GetWarehouses([FromQuery] GetWarehousesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class WarehousesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Warehouses.Manage)]
-    public async Task<IActionResult> CreateWarehouse(CreateWarehouseCommand command)
+    public async Task<ActionResult<long>> CreateWarehouse(CreateWarehouseCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

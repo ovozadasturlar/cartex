@@ -46,7 +46,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         using (var scope = fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            customerId = await sender.Send(new CreateCustomerCommand("Waterfall Mijoz", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, CreditLimit: 10_000_000m));
+            customerId = await sender.Send(new CreateCustomerCommand("Waterfall Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: 10_000_000m));
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 1000m, 2000m, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
         }
 
@@ -90,7 +90,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             cardBeforeSale = await db.Accounts.Where(a => a.BranchId == branch1 && a.Type == AccountType.Card).Select(a => a.Balance).FirstOrDefaultAsync();
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            customerId = await sender.Send(new CreateCustomerCommand("Waterfall Full", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, CreditLimit: 10_000_000m));
+            customerId = await sender.Send(new CreateCustomerCommand("Waterfall Full", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: 10_000_000m));
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 1000m, 2000m, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
         }
 
@@ -139,7 +139,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             await db.SaveChangesAsync();
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            customerId = await sender.Send(new CreateCustomerCommand("Cashback Cap", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m));
+            customerId = await sender.Send(new CreateCustomerCommand("Cashback Cap", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m));
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, price * 2, 0, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
         }
 

@@ -5,7 +5,7 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateReminderSettingsCommand(bool Enabled, int MinDaysOverdue, int RepeatEveryDays, decimal MinBalance, int SendHourLocal, List<string> Channels) : ICommand<Unit>;
+public record UpdateReminderSettingsCommand(bool Enabled, int MinDaysOverdue, int RepeatEveryDays, decimal MinBalance, int SendHourLocal, List<string> Channels, string? OverdueTemplate = null, string? DueSoonTemplate = null) : ICommand<Unit>;
 
 public sealed class UpdateReminderSettingsCommandHandler(ISettingsService settings)
     : IRequestHandler<UpdateReminderSettingsCommand, Unit>
@@ -19,6 +19,8 @@ public sealed class UpdateReminderSettingsCommandHandler(ISettingsService settin
             RepeatEveryDays = request.RepeatEveryDays,
             MinBalance = request.MinBalance,
             SendHourLocal = request.SendHourLocal,
+            OverdueTemplate = string.IsNullOrWhiteSpace(request.OverdueTemplate) ? null : request.OverdueTemplate.Trim(),
+            DueSoonTemplate = string.IsNullOrWhiteSpace(request.DueSoonTemplate) ? null : request.DueSoonTemplate.Trim(),
             Channels = request.Channels
                 .Select(c => Enum.TryParse<NotificationChannel>(c, true, out var parsed) ? parsed : (NotificationChannel?)null)
                 .Where(c => c is not null)
@@ -40,5 +42,7 @@ public sealed class UpdateReminderSettingsCommandValidator : AbstractValidator<U
         RuleFor(x => x.RepeatEveryDays).InclusiveBetween(1, 365);
         RuleFor(x => x.MinBalance).GreaterThanOrEqualTo(0);
         RuleFor(x => x.SendHourLocal).InclusiveBetween(0, 23);
+        RuleFor(x => x.OverdueTemplate).MaximumLength(500);
+        RuleFor(x => x.DueSoonTemplate).MaximumLength(500);
     }
 }

@@ -37,11 +37,14 @@ public sealed class UpdateUserCommandHandler(
         if (wasAdmin && !willBeAdmin)
             await accessControl.EnsureAdminRemainsAsync(user.Id, cancellationToken);
 
+        var wasActive = user.IsActive;
+
         user.FullName = request.FullName;
         user.IsActive = request.IsActive;
         user.DefaultBranchId = request.DefaultBranchId;
         user.StartPage = request.StartPage;
 
+        var revokeSessions = request.NewPassword is not null || (wasActive && !request.IsActive);
         if (request.NewPassword is not null)
             user.PasswordHash = passwordHasher.Hash(request.NewPassword);
 
@@ -56,6 +59,14 @@ public sealed class UpdateUserCommandHandler(
         audit.Add("user.update", "users", user.Id, new { user.Username, request.FullName, request.IsActive, request.RoleIds });
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (revokeSessions)
+        {
+            var now = DateTime.UtcNow;
+            await db.RefreshSessions
+                .Where(s => s.UserId == user.Id && s.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        }
 
         return Unit.Value;
     }

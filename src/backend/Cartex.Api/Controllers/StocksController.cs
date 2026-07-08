@@ -15,7 +15,7 @@ public class StocksController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Stocks.View)]
-    public async Task<IActionResult> GetStocks([FromQuery] GetStocksQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<StockDto>>> GetStocks([FromQuery] GetStocksQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class StocksController(ISender sender) : ControllerBase
 
     [HttpGet("on-hand")]
     [HasPermission(AppPermissions.Stocks.View)]
-    public async Task<IActionResult> GetOnHand([FromQuery] long warehouseId, [FromQuery] long? categoryId = null,
+    public async Task<ActionResult<StockOnHandPageDto>> GetOnHand([FromQuery] long warehouseId, [FromQuery] long? categoryId = null,
         [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize));
@@ -32,7 +32,7 @@ public class StocksController(ISender sender) : ControllerBase
 
     [HttpGet("expiring")]
     [HasPermission(AppPermissions.Stocks.View)]
-    public async Task<IActionResult> GetExpiring([FromQuery] int withinDays = 30)
+    public async Task<ActionResult<IReadOnlyCollection<ExpiringStockDto>>> GetExpiring([FromQuery] int withinDays = 30)
     {
         var result = await sender.Send(new GetExpiringStocksQuery(withinDays));
         return Ok(result);
@@ -40,7 +40,7 @@ public class StocksController(ISender sender) : ControllerBase
 
     [HttpGet("low-stock")]
     [HasPermission(AppPermissions.Stocks.View)]
-    public async Task<IActionResult> GetLowStock([FromQuery] long warehouseId)
+    public async Task<ActionResult<IReadOnlyCollection<LowStockDto>>> GetLowStock([FromQuery] long warehouseId)
     {
         var result = await sender.Send(new GetLowStockQuery(warehouseId));
         return Ok(result);

@@ -18,7 +18,11 @@ public static class PagingExtensions
         var total = await filtered.CountAsync(cancellationToken);
 
         if (request.Page <= 0 || request.PageSize <= 0)
+        {
+            if (total > PagingRequest.MaxUnboundedSize)
+                throw new BusinessRuleException($"Natija juda katta ({total}). Iltimos, filtr yoki sahifalashdan foydalaning.");
             return await filtered.Select(selector).ToListAsync(cancellationToken);
+        }
 
         var page = request.Page;
         var pageSize = Math.Min(request.PageSize, PagingRequest.MaxPageSize);

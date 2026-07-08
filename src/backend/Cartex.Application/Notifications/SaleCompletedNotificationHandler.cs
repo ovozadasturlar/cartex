@@ -3,7 +3,6 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Events;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Notifications;
@@ -24,14 +23,18 @@ public sealed class SaleCompletedNotificationHandler(
 
         var customer = sale.CustomerId is null ? null : await db.Customers
             .Where(c => c.Id == sale.CustomerId)
-            .Select(c => new { c.Phone, c.Email, c.TelegramChatId })
+            .Select(c => new { c.Phone, c.Email, c.TelegramChatId, c.NotificationsOptOut, c.PreferredLanguage })
             .FirstOrDefaultAsync(cancellationToken);
+        if (customer is { NotificationsOptOut: true })
+            customer = null;
 
         var payload = new Dictionary<string, string>
         {
             ["receiptToken"] = sale.ReceiptToken,
             ["total"] = sale.TotalAmount.ToString("0.##")
         };
+        if (customer?.PreferredLanguage is { } lang)
+            payload["lang"] = lang;
 
         async Task SendAsync(NotificationChannel channel, string? recipient)
         {

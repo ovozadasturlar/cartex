@@ -2,6 +2,7 @@ using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Respawn;
@@ -28,8 +29,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddScoped<IFeatureStateProvider, TestFeatureStates>();
+        services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();
         _services = services.BuildServiceProvider();

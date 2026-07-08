@@ -16,6 +16,35 @@ public class WarehouseConfiguration : IEntityTypeConfiguration<Warehouse>
             .WithMany(s => s.Warehouses)
             .HasForeignKey(x => x.BranchId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.AssignedUser)
+            .WithMany()
+            .HasForeignKey(x => x.AssignedUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class PrepackConfiguration : IEntityTypeConfiguration<Prepack>
+{
+    public void Configure(EntityTypeBuilder<Prepack> builder)
+    {
+        builder.ToTable("prepacks");
+        builder.Property(x => x.Quantity).HasPrecision(12, 3);
+        builder.Property(x => x.UnitPrice).HasPrecision(18, 6);
+        builder.Property(x => x.LabelCode).HasMaxLength(30).IsRequired();
+        builder.HasIndex(x => x.LabelCode).IsUnique();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.HasIndex(x => new { x.WarehouseId, x.Status });
+
+        builder.HasOne(x => x.Warehouse)
+            .WithMany()
+            .HasForeignKey(x => x.WarehouseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Variant)
+            .WithMany()
+            .HasForeignKey(x => x.VariantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

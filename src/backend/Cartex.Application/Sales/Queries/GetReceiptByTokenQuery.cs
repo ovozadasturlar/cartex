@@ -27,7 +27,10 @@ public record ReceiptDto(
     decimal CashbackEarned,
     string UserName,
     List<ReceiptItemDto> Items,
-    List<ReceiptPaymentDto> Payments);
+    List<ReceiptPaymentDto> Payments,
+    long SaleId = 0,
+    string? CustomerName = null,
+    string? Language = null);
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
@@ -55,7 +58,10 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.CashbackEarned,
                 sale.User.FullName,
                 sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList(),
-                sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount)).ToList()))
+                sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount)).ToList(),
+                sale.Id,
+                sale.Customer != null ? sale.Customer.FullName : null,
+                sale.Customer != null ? sale.Customer.PreferredLanguage : null))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

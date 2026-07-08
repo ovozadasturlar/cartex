@@ -10,6 +10,8 @@ public interface IJwtTokenGenerator
 {
     string GenerateToken(long userId, string username, string fullName, IEnumerable<string> roles,
         string? startPage, IEnumerable<string> permissions, long businessId, IEnumerable<long> branchIds, long? defaultBranchId);
+
+    string GenerateCustomerToken(long customerId, string fullName);
 }
 
 public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
@@ -41,6 +43,27 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
         var token = new JwtSecurityToken(
             issuer: settings.Issuer,
             audience: settings.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateCustomerToken(long customerId, string fullName)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new("customerId", customerId.ToString()),
+            new("fullName", fullName),
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: settings.Issuer,
+            audience: settings.CustomerAudience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(settings.ExpirationMinutes),
             signingCredentials: credentials);

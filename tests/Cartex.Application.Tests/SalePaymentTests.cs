@@ -32,7 +32,7 @@ public class SalePaymentTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        return await sender.Send(new CreateCustomerCommand("Mijoz", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, CreditLimit: creditLimit));
+        return await sender.Send(new CreateCustomerCommand("Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: creditLimit));
     }
 
     private async Task<decimal> AccountBalanceAsync(Func<ApplicationDbContext, Task<decimal>> read)

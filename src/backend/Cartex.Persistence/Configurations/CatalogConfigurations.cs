@@ -27,6 +27,7 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
         builder.Property(x => x.ShortName).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Dimension).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Factor).HasPrecision(18, 6);
+        builder.Property(x => x.IsEnabled).HasDefaultValue(true);
     }
 }
 
@@ -36,7 +37,6 @@ public class ProductTypeConfiguration : IEntityTypeConfiguration<ProductType>
     {
         builder.ToTable("product_types");
         builder.Property(x => x.Name).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.MeasureMode).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.AttributeSchema).HasColumnType("jsonb");
     }
 }

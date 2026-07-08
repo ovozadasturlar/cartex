@@ -1,14 +1,17 @@
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Application.Common.Interfaces;
+using Cartex.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Auth.Commands;
 
-public record LoginWithKeyCommand(string KeyContent, string Serial) : IRequest<LoginResponse>;
+public record LoginWithKeyCommand(string KeyContent, string Serial, string? DeviceName = null) : IRequest<LoginResponse>;
 
 public sealed class LoginWithKeyCommandHandler(
     AuthTokenBuilder tokenBuilder,
-    IHardwareKeyService hardwareKeys) : IRequestHandler<LoginWithKeyCommand, LoginResponse>
+    IHardwareKeyService hardwareKeys,
+    IApplicationDbContext db) : IRequestHandler<LoginWithKeyCommand, LoginResponse>
 {
     public async Task<LoginResponse> Handle(LoginWithKeyCommand request, CancellationToken cancellationToken)
     {
@@ -21,7 +24,10 @@ public sealed class LoginWithKeyCommandHandler(
         if (!user.IsActive)
             throw new ForbiddenException("User is deactivated.");
 
-        return await tokenBuilder.BuildAsync(user, cancellationToken);
+        if (!await db.HardwareKeys.AnyAsync(k => k.UserId == user.Id && k.Serial == request.Serial && k.RevokedAt == null, cancellationToken))
+            throw new UnauthorizedAccessException("Invalid hardware key.");
+
+        return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
     }
 }
 

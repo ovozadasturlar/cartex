@@ -7,7 +7,7 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Loyalty.Commands;
 
-public record UpdateLoyaltyProgramCommand(bool IsEnabled, decimal TotalPercent) : ICommand<Unit>;
+public record UpdateLoyaltyProgramCommand(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding = 0) : ICommand<Unit>;
 
 public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateLoyaltyProgramCommand, Unit>
 {
@@ -23,6 +23,7 @@ public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db)
 
         program.IsEnabled = request.IsEnabled;
         program.TotalPercent = request.TotalPercent;
+        program.CashbackRounding = request.CashbackRounding;
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
@@ -34,5 +35,6 @@ public sealed class UpdateLoyaltyProgramCommandValidator : AbstractValidator<Upd
     public UpdateLoyaltyProgramCommandValidator()
     {
         RuleFor(x => x.TotalPercent).InclusiveBetween(0, 100);
+        RuleFor(x => x.CashbackRounding).Must(v => v is 0 or 1 or 100 or 1000);
     }
 }

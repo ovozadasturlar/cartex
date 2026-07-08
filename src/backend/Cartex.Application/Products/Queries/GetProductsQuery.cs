@@ -23,7 +23,6 @@ public record ProductDto(
     long? ProductTypeId,
     string? ProductTypeName,
     bool TracksExpiry,
-    string? MeasureMode,
     string? Attributes,
     string? ImageKey,
     string? Code,
@@ -32,7 +31,8 @@ public record ProductDto(
     decimal? SellingPrice,
     decimal OnHand,
     string? ImageUrl = null,
-    string? PriceCurrency = null);
+    string? PriceCurrency = null,
+    string? Dimension = null);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -41,11 +41,7 @@ public sealed class GetProductsQueryHandler(
 {
     public async Task<IReadOnlyCollection<ProductDto>> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Products
-            .Include(p => p.Category)
-            .Include(p => p.Unit)
-            .Include(p => p.ProductType)
-            .AsQueryable();
+        var query = db.Products.AsQueryable();
 
         if (request.CategoryId is { } categoryId)
             query = query.Where(p => p.CategoryId == categoryId);
@@ -74,7 +70,6 @@ public sealed class GetProductsQueryHandler(
                     p.ProductTypeId,
                     p.ProductType != null ? p.ProductType.Name : null,
                     p.TracksExpiryOverride ?? (p.ProductType != null && p.ProductType.TracksExpiry),
-                    p.ProductType != null ? p.ProductType.MeasureMode.ToString() : null,
                     p.Attributes,
                     p.ImageKey,
                     p.Variants.Where(v => v.IsDefault).Select(v => v.Code).FirstOrDefault(),
@@ -83,7 +78,8 @@ public sealed class GetProductsQueryHandler(
                     p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => (decimal?)pr.SellingPrice).FirstOrDefault(),
                     p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
                     null,
-                    p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => pr.Currency).FirstOrDefault()),
+                    p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => pr.Currency).FirstOrDefault(),
+                    p.Unit.Dimension.ToString()),
                 writer, cancellationToken);
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();

@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -22,7 +24,7 @@ public record CreateSupplyCommand(
     decimal PaidCard = 0,
     string? Currency = null) : ICommand<long>;
 
-public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
+public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
 {
     public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
@@ -111,7 +113,8 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 .Where(s => s.UserId == userId && s.BranchId == warehouse.BranchId && s.Status == ShiftStatus.Open)
                 .Select(s => (long?)s.Id)
                 .FirstOrDefaultAsync(cancellationToken);
-            if (shiftId is null)
+            var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+            if (shiftId is null && policy.ShiftPolicy != "Off")
                 throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
         }
 

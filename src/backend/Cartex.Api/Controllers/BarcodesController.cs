@@ -15,7 +15,7 @@ public class BarcodesController(ISender sender) : ControllerBase
 {
     [HttpGet("by-variant/{variantId:long}")]
     [HasPermission(AppPermissions.Products.View)]
-    public async Task<IActionResult> GetByVariant(long variantId)
+    public async Task<ActionResult<IReadOnlyCollection<BarcodeDto>>> GetByVariant(long variantId)
     {
         var result = await sender.Send(new GetBarcodesByVariantQuery(variantId));
         return Ok(result);
@@ -23,7 +23,7 @@ public class BarcodesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> CreateBarcode(CreateBarcodeCommand command)
+    public async Task<ActionResult<long>> CreateBarcode(CreateBarcodeCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
@@ -39,9 +39,9 @@ public class BarcodesController(ISender sender) : ControllerBase
 
     [HttpPost("generate/{variantId:long}")]
     [HasPermission(AppPermissions.Products.PrintBarcode)]
-    public async Task<IActionResult> Generate(long variantId)
+    public async Task<ActionResult<string>> Generate(long variantId, [FromQuery] decimal packQty = 1)
     {
-        var code = await sender.Send(new GenerateBarcodeCommand(variantId));
+        var code = await sender.Send(new GenerateBarcodeCommand(variantId, packQty));
         return Ok(code);
     }
 }

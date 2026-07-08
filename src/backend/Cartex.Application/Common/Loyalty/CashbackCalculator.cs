@@ -69,7 +69,8 @@ public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICa
             }
         }
 
-        return total + percentBase * program.TotalPercent / 100;
+        var raw = total + percentBase * program.TotalPercent / 100;
+        return program.CashbackRounding > 0 ? Math.Floor(raw / program.CashbackRounding) * program.CashbackRounding : raw;
     }
 
     private static CashbackRule? ResolveRule(LoyaltyProgram program, long productId, long? categoryId)

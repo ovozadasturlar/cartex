@@ -6,7 +6,7 @@ namespace Cartex.ApiClient.Api;
 public interface IStockTransfersApi
 {
     [Get("/api/stock-transfers")]
-    Task<List<StockTransferDto>> GetAllAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null);
+    Task<List<StockTransferDto>> GetAllAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? toWarehouseId = null);
 
     [Get("/api/stock-transfers")]
     Task<IApiResponse<List<StockTransferDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,

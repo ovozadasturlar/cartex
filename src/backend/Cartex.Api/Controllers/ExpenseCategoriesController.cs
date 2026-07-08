@@ -14,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class ExpenseCategoriesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetExpenseCategories()
+    public async Task<ActionResult<IReadOnlyCollection<ExpenseCategoryDto>>> GetExpenseCategories()
     {
         var result = await sender.Send(new GetExpenseCategoriesQuery());
         return Ok(result);
@@ -22,7 +22,7 @@ public class ExpenseCategoriesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Settings.Manage)]
-    public async Task<IActionResult> CreateExpenseCategory(CreateExpenseCategoryCommand command)
+    public async Task<ActionResult<long>> CreateExpenseCategory(CreateExpenseCategoryCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

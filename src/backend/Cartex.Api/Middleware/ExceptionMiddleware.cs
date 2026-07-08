@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cartex.Domain.Common.Exceptions;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Api.Middleware;
 
@@ -29,6 +30,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             ),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, null),
             ConflictException => (StatusCodes.Status409Conflict, exception.Message, null),
+            DbUpdateException => (StatusCodes.Status409Conflict, "The operation conflicts with existing data. Retry.", null),
             ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message, null),
             BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message, null),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", null),

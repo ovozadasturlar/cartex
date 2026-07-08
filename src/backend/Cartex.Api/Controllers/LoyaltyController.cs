@@ -5,6 +5,7 @@ using Cartex.Domain.Authorization;
 using Cartex.Domain.Enums;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Application.Common.Messaging;
+using LoyaltyProgramDto = Cartex.Application.Loyalty.Queries.LoyaltyProgramDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,7 +19,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Loyalty.View)]
-    public async Task<IActionResult> GetProgram()
+    public async Task<ActionResult<LoyaltyProgramDto>> GetProgram()
     {
         var result = await sender.Send(new GetLoyaltyProgramQuery());
         return Ok(result);
@@ -34,7 +35,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
 
     [HttpPost("rules")]
     [HasPermission(AppPermissions.Loyalty.Manage)]
-    public async Task<IActionResult> CreateRule(CreateCashbackRuleRequest request)
+    public async Task<ActionResult<long>> CreateRule(CreateCashbackRuleRequest request)
     {
         var id = await sender.Send(new CreateCashbackRuleCommand(
             Enum.Parse<CashbackScope>(request.Scope, true), request.TargetId,

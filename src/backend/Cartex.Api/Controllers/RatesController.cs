@@ -16,7 +16,7 @@ public class RatesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Rates.Manage)]
-    public async Task<IActionResult> GetCurrent()
+    public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetCurrent()
     {
         var result = await sender.Send(new GetCurrentRatesQuery());
         return Ok(result);
@@ -24,7 +24,7 @@ public class RatesController(ISender sender) : ControllerBase
 
     [HttpGet("{code}/history")]
     [HasPermission(AppPermissions.Rates.Manage)]
-    public async Task<IActionResult> GetHistory(string code)
+    public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetHistory(string code)
     {
         var result = await sender.Send(new GetRateHistoryQuery(code));
         return Ok(result);
@@ -32,7 +32,7 @@ public class RatesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Rates.Manage)]
-    public async Task<IActionResult> Set(SetExchangeRateCommand command)
+    public async Task<ActionResult<long>> Set(SetExchangeRateCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

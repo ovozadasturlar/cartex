@@ -16,7 +16,7 @@ public class SuppliesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Supplies.View)]
-    public async Task<IActionResult> GetSupplies([FromQuery] GetSuppliesQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<SupplyDto>>> GetSupplies([FromQuery] GetSuppliesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -24,7 +24,7 @@ public class SuppliesController(ISender sender) : ControllerBase
 
     [HttpGet("totals")]
     [HasPermission(AppPermissions.Supplies.View)]
-    public async Task<IActionResult> GetTotals([FromQuery] GetSuppliesTotalsQuery query)
+    public async Task<ActionResult<SuppliesTotalsDto>> GetTotals([FromQuery] GetSuppliesTotalsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -32,7 +32,7 @@ public class SuppliesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Supplies.Manage)]
-    public async Task<IActionResult> CreateSupply(CreateSupplyCommand command)
+    public async Task<ActionResult<long>> CreateSupply(CreateSupplyCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

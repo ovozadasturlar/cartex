@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +14,8 @@ public record CreateProductCommand(
     string Name,
     long? CategoryId,
     long UnitId,
-    decimal MinStock,
-    List<string>? Barcodes,
+    decimal? MinStock,
+    List<BarcodeInput>? Barcodes,
     long? ProductTypeId = null,
     bool? TracksExpiryOverride = null,
     string? Attributes = null,
@@ -24,7 +26,7 @@ public record CreateProductCommand(
     decimal? SellingPrice = null,
     string? PriceCurrency = null) : ICommand<long>;
 
-public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<CreateProductCommand, long>
+public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService) : IRequestHandler<CreateProductCommand, long>
 {
     public async Task<long> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
@@ -39,7 +41,7 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             Name = request.Name,
             CategoryId = request.CategoryId,
             UnitId = request.UnitId,
-            MinStock = request.MinStock,
+            MinStock = request.MinStock ?? (await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken))?.DefaultMinStock ?? 0,
             ProductTypeId = request.ProductTypeId,
             TracksExpiryOverride = request.TracksExpiryOverride,
             Attributes = request.Attributes,
@@ -55,15 +57,21 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
         db.ProductVariants.Add(variant);
         await db.SaveChangesAsync(cancellationToken);
 
-        var codes = request.Barcodes?.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList() ?? [];
-        if (codes.Count > 0)
+        var inputs = request.Barcodes?.Where(b => !string.IsNullOrWhiteSpace(b.Code))
+            .Select(b => b with { Code = b.Code.Trim() }).DistinctBy(b => b.Code).ToList() ?? [];
+        if (inputs.Count > 0)
         {
+            var codes = inputs.Select(b => b.Code).ToList();
             var existing = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
                 throw new BusinessRuleException($"Bu barkod allaqachon mavjud: {existing}");
 
-            foreach (var code in codes)
-                db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = code, PackQty = 1 });
+            foreach (var input in inputs)
+            {
+                var packQty = input.PackQty > 0 ? input.PackQty : 1;
+                Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, packQty);
+                db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = packQty });
+            }
 
             await db.SaveChangesAsync(cancellationToken);
         }
@@ -84,5 +92,6 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
     public CreateProductCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.MinStock).GreaterThanOrEqualTo(0).When(x => x.MinStock.HasValue);
     }
 }

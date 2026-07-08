@@ -6,6 +6,8 @@ using Cartex.Shared.Models.Ordering;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CartDto = Cartex.Application.Ordering.Queries.CartDto;
+using CartListDto = Cartex.Application.Ordering.Queries.CartListDto;
 
 namespace Cartex.Api.Controllers;
 
@@ -17,7 +19,7 @@ public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]
     [HasPermission(AppPermissions.Sales.View)]
-    public async Task<IActionResult> GetCarts([FromQuery] string? status = null)
+    public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null)
     {
         var result = await sender.Send(new GetCartsQuery(status));
         return Ok(result);
@@ -35,7 +37,7 @@ public class OrderingController(ISender sender) : ControllerBase
 
     [HttpPost("carts")]
     [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<IActionResult> Submit(SubmitCartCommand command)
+    public async Task<ActionResult<string>> Submit(SubmitCartCommand command)
     {
         var code = await sender.Send(command);
         return Ok(code);
@@ -43,7 +45,7 @@ public class OrderingController(ISender sender) : ControllerBase
 
     [HttpGet("carts/{code}")]
     [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<IActionResult> GetByCode(string code)
+    public async Task<ActionResult<CartDto>> GetByCode(string code)
     {
         var cart = await sender.Send(new GetCartByCodeQuery(code));
         return cart is null ? NotFound() : Ok(cart);
@@ -51,7 +53,7 @@ public class OrderingController(ISender sender) : ControllerBase
 
     [HttpPost("carts/{code}/checkout")]
     [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<IActionResult> Checkout(string code, CheckoutCartRequest request)
+    public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
     {
         var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus));
         return Ok(saleId);

@@ -5,9 +5,9 @@ using Cartex.Application.Common.Interfaces;
 
 namespace Cartex.Application.Auth.Commands;
 
-public record LoginCommand(string Username, string Password) : IRequest<LoginResponse>;
+public record LoginCommand(string Username, string Password, string? DeviceName = null) : IRequest<LoginResponse>;
 
-public record LoginResponse(string Token, string FullName, string Role);
+public record LoginResponse(string Token, string RefreshToken, string FullName, string Role);
 
 public sealed class LoginCommandHandler(
     AuthTokenBuilder tokenBuilder,
@@ -24,7 +24,7 @@ public sealed class LoginCommandHandler(
         if (!passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid username or password.");
 
-        return await tokenBuilder.BuildAsync(user, cancellationToken);
+        return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
     }
 }
 

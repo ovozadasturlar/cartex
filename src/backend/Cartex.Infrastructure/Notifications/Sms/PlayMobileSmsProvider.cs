@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Cartex.Application.Common.Settings;
+using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Cartex.Infrastructure.Notifications.Sms;
@@ -10,15 +11,16 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
 {
     public string Name => "playmobile";
 
-    public async Task SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://send.smsxabar.uz" : settings.BaseUrl.TrimEnd('/');
         var client = httpClientFactory.CreateClient();
 
+        var messageId = Guid.NewGuid().ToString("N");
         var message = new Dictionary<string, object>
         {
             ["recipient"] = phone,
-            ["message-id"] = Guid.NewGuid().ToString("N"),
+            ["message-id"] = messageId,
             ["sms"] = new { originator = settings.Sender ?? "", content = new { text } }
         };
         var payload = new Dictionary<string, object> { ["messages"] = new[] { message } };
@@ -36,5 +38,10 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
             logger.LogWarning("PlayMobile send failed: {Status}", response.StatusCode);
             throw new InvalidOperationException($"PlayMobile: {response.StatusCode}");
         }
+
+        return new SmsSendResult(messageId);
     }
+
+    public Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken) =>
+        Task.FromResult<SmsStatus?>(null);
 }

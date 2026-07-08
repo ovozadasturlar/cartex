@@ -12,8 +12,14 @@ public class EndpointAuthorizationTests
     [
         "AuthController.Login",
         "AuthController.LoginWithKey",
+        "AuthController.Refresh",
+        "AuthController.Logout",
         "ReceiptController.GetReceipt",
         "ReceiptController.GetReceiptPdf",
+        "StoreAuthController.RequestOtp",
+        "StoreAuthController.Verify",
+        "StoreAuthController.Refresh",
+        "StoreAuthController.Logout",
     ];
 
     private static readonly HashSet<string> AuthenticatedOnlyWhitelist =
@@ -21,6 +27,15 @@ public class EndpointAuthorizationTests
         "BusinessController.Get",
         "ExpenseCategoriesController.GetExpenseCategories",
         "FeaturesController.GetEnabled",
+        "SettingsController.GetReceipt",
+        "SettingsController.GetSalesPolicy",
+        "StoreController.Me",
+        "StoreController.Info",
+        "StoreController.Catalog",
+        "StoreController.SubmitCart",
+        "StoreController.Orders",
+        "StoreController.Receipts",
+        "StoreController.Balance",
     ];
 
     private static IEnumerable<MethodInfo> ControllerActions() =>

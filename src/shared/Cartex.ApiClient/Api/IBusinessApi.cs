@@ -12,5 +12,5 @@ public interface IBusinessApi
     Task UpdateAsync([Body] UpdateBusinessRequest request);
 
     [Post("/api/business/complete-onboarding")]
-    Task CompleteOnboardingAsync();
+    Task CompleteOnboardingAsync([Body] CompleteOnboardingRequest request);
 }

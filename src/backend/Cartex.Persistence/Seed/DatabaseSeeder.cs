@@ -13,23 +13,31 @@ public static class DatabaseSeeder
     public static readonly string[] SellerPermissions =
     [
         AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View,
-        AppPermissions.Sales.Create, AppPermissions.Sales.Discount, AppPermissions.Shifts.Manage,
-        AppPermissions.Shifts.View, AppPermissions.Customers.View, AppPermissions.Stocks.View,
-        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+        AppPermissions.Sales.Create, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
+        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View,
+        AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Devices.Manage
     ];
 
-    public static readonly (string Name, string ShortName, UnitDimension Dimension, decimal Factor)[] SystemUnits =
+    public static readonly string[] AgentPermissions =
     [
-        ("Dona", "dona", UnitDimension.Count, 1),
-        ("Kilogram", "kg", UnitDimension.Weight, 1000),
-        ("Litr", "l", UnitDimension.Volume, 1000),
-        ("Metr", "m", UnitDimension.Length, 1000),
-        ("Qadoq", "pak", UnitDimension.Count, 1),
-        ("Gramm", "g", UnitDimension.Weight, 1),
-        ("Tonna", "t", UnitDimension.Weight, 1000000),
-        ("Millilitr", "ml", UnitDimension.Volume, 1),
-        ("Santimetr", "sm", UnitDimension.Length, 10),
-        ("Millimetr", "mm", UnitDimension.Length, 1),
+        AppPermissions.Products.View, AppPermissions.Sales.View, AppPermissions.Sales.Create,
+        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View,
+        AppPermissions.Customers.Manage, AppPermissions.Stocks.View, AppPermissions.StockTransfers.View,
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View, AppPermissions.Devices.Manage
+    ];
+
+    public static readonly (string Name, string ShortName, UnitDimension Dimension, decimal Factor, bool IsDefault)[] SystemUnits =
+    [
+        ("Dona", "dona", UnitDimension.Count, 1, true),
+        ("Kilogram", "kg", UnitDimension.Weight, 1000, true),
+        ("Litr", "l", UnitDimension.Volume, 1000, true),
+        ("Metr", "m", UnitDimension.Length, 1000, true),
+        ("Gramm", "g", UnitDimension.Weight, 1, false),
+        ("Tonna", "t", UnitDimension.Weight, 1000000, false),
+        ("Millilitr", "ml", UnitDimension.Volume, 1, false),
+        ("Santimetr", "sm", UnitDimension.Length, 10, false),
+        ("Millimetr", "mm", UnitDimension.Length, 1, false),
     ];
 
     public static async Task SyncUnitsAsync(ApplicationDbContext context)
@@ -37,7 +45,7 @@ public static class DatabaseSeeder
         var existing = (await context.Units.IgnoreQueryFilters().Select(u => u.ShortName).ToListAsync()).ToHashSet();
         var missing = SystemUnits
             .Where(u => !existing.Contains(u.ShortName))
-            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true })
+            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true, IsDefault = u.IsDefault })
             .ToList();
 
         if (missing.Count > 0)
@@ -80,12 +88,23 @@ public static class DatabaseSeeder
                 if (permByName.TryGetValue(name, out var pid) && have.Add(pid))
                     context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = pid });
 
-            if (grantable is not null && role.GrantablePermissions.Count == 0)
-                role.GrantablePermissions = [.. grantable];
+            if (grantable is not null)
+            {
+                var missingGrantable = grantable.Except(role.GrantablePermissions).ToList();
+                if (missingGrantable.Count > 0)
+                    role.GrantablePermissions = [.. role.GrantablePermissions, .. missingGrantable];
+            }
+        }
+
+        if (!await context.Roles.AnyAsync(r => r.Name == AppRoles.Agent))
+        {
+            context.Roles.Add(new Role { Name = AppRoles.Agent, Description = "Dala agenti (mobil savdo)", StartPage = "pos", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true });
+            await context.SaveChangesAsync();
         }
 
         await GrantAsync(AppRoles.Admin, AdminGrant, AdminGrant);
         await GrantAsync(AppRoles.Seller, SellerPermissions);
+        await GrantAsync(AppRoles.Agent, AgentPermissions);
         await context.SaveChangesAsync();
     }
 
@@ -138,8 +157,9 @@ public static class DatabaseSeeder
         var developerRole = new Role { Name = AppRoles.Developer, Description = "Vendor / tizim ishlab chiquvchi", StartPage = "dashboard", Priority = AppRoles.DeveloperLevel, Level = AppRoles.DeveloperLevel, IsSystem = true, AccessAll = true };
         var adminRole = new Role { Name = AppRoles.Admin, Description = "Biznes egasi", StartPage = "dashboard", Priority = AppRoles.AdminLevel, Level = AppRoles.AdminLevel, IsSystem = true, GrantablePermissions = [.. AdminGrant] };
         var sellerRole = new Role { Name = AppRoles.Seller, Description = "Sotuvchi (kassa)", StartPage = "pos", Priority = AppRoles.SellerLevel, Level = AppRoles.SellerLevel, IsSystem = true };
+        var agentRole = new Role { Name = AppRoles.Agent, Description = "Dala agenti (mobil savdo)", StartPage = "pos", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true };
 
-        await context.Roles.AddRangeAsync(developerRole, adminRole, sellerRole);
+        await context.Roles.AddRangeAsync(developerRole, adminRole, sellerRole, agentRole);
         await context.SaveChangesAsync();
 
         foreach (var perm in permissions.Where(p => AdminGrant.Contains(p.Name)))
@@ -150,6 +170,11 @@ public static class DatabaseSeeder
         foreach (var perm in permissions.Where(p => SellerPermissions.Contains(p.Name)))
         {
             context.RolePermissions.Add(new RolePermission { RoleId = sellerRole.Id, PermissionId = perm.Id });
+        }
+
+        foreach (var perm in permissions.Where(p => AgentPermissions.Contains(p.Name)))
+        {
+            context.RolePermissions.Add(new RolePermission { RoleId = agentRole.Id, PermissionId = perm.Id });
         }
 
         await context.SaveChangesAsync();
@@ -213,7 +238,7 @@ public static class DatabaseSeeder
         await context.Accounts.AddRangeAsync(shopCashAccount, shopCardAccount, branch2CashAccount);
 
         var defaultUnits = SystemUnits
-            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true })
+            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true, IsDefault = u.IsDefault })
             .ToList();
         await context.Units.AddRangeAsync(defaultUnits);
 
@@ -234,9 +259,9 @@ public static class DatabaseSeeder
 
         await context.Categories.AddRangeAsync(catFood, catBeverages, catDairy, catBakery, catHousehold, catPersonalCare, catSnacks);
 
-        var typeFood = new ProductType { Name = "Oziq-ovqat", TracksExpiry = true, MeasureMode = MeasureMode.Counted };
-        var typeWeighed = new ProductType { Name = "Tarozili mahsulot", TracksExpiry = true, MeasureMode = MeasureMode.Weighed };
-        var typeNonFood = new ProductType { Name = "Nooziq-ovqat", TracksExpiry = false, MeasureMode = MeasureMode.Counted };
+        var typeFood = new ProductType { Name = "Oziq-ovqat", TracksExpiry = true };
+        var typeWeighed = new ProductType { Name = "Tarozili mahsulot", TracksExpiry = true };
+        var typeNonFood = new ProductType { Name = "Nooziq-ovqat", TracksExpiry = false };
         await context.ProductTypes.AddRangeAsync(typeFood, typeWeighed, typeNonFood);
         await context.SaveChangesAsync();
 

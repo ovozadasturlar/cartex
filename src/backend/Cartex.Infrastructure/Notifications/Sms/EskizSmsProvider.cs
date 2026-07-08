@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Cartex.Application.Common.Settings;
+using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Cartex.Infrastructure.Notifications.Sms;
@@ -9,11 +10,63 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
 {
     public string Name => "eskiz";
 
-    public async Task SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
     {
-        var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://notify.eskiz.uz" : settings.BaseUrl.TrimEnd('/');
+        var baseUrl = BaseUrl(settings);
         var client = httpClientFactory.CreateClient();
+        var token = await LoginAsync(client, baseUrl, settings, password, cancellationToken);
 
+        using var sendForm = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["mobile_phone"] = phone,
+            ["message"] = text,
+            ["from"] = settings.Sender ?? "4546"
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send") { Content = sendForm };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var sendResponse = await client.SendAsync(request, cancellationToken);
+        if (!sendResponse.IsSuccessStatusCode)
+        {
+            logger.LogWarning("Eskiz send failed: {Status}", sendResponse.StatusCode);
+            throw new InvalidOperationException($"Eskiz: {sendResponse.StatusCode}");
+        }
+
+        using var doc = JsonDocument.Parse(await sendResponse.Content.ReadAsStringAsync(cancellationToken));
+        var id = doc.RootElement.TryGetProperty("id", out var idProp)
+            ? idProp.ValueKind == JsonValueKind.Number ? idProp.GetInt64().ToString() : idProp.GetString()
+            : null;
+        return new SmsSendResult(id);
+    }
+
+    public async Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken)
+    {
+        var baseUrl = BaseUrl(settings);
+        var client = httpClientFactory.CreateClient();
+        var token = await LoginAsync(client, baseUrl, settings, password, cancellationToken);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/message/sms/status_by_id/{providerMessageId}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        if (!doc.RootElement.TryGetProperty("data", out var data) || !data.TryGetProperty("status", out var statusProp))
+            return null;
+
+        return statusProp.GetString()?.ToUpperInvariant() switch
+        {
+            "DELIVRD" => SmsStatus.Delivered,
+            "UNDELIV" or "REJECTD" or "EXPIRED" or "DELETED" => SmsStatus.Undelivered,
+            _ => null
+        };
+    }
+
+    private static string BaseUrl(SmsSettings settings) =>
+        string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://notify.eskiz.uz" : settings.BaseUrl.TrimEnd('/');
+
+    private async Task<string> LoginAsync(HttpClient client, string baseUrl, SmsSettings settings, string password, CancellationToken cancellationToken)
+    {
         using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["email"] = settings.Login ?? "",
@@ -33,20 +86,6 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
             logger.LogWarning("Eskiz token missing in response");
             throw new InvalidOperationException("Eskiz: token olinmadi");
         }
-
-        using var sendForm = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["mobile_phone"] = phone,
-            ["message"] = text,
-            ["from"] = settings.Sender ?? "4546"
-        });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send") { Content = sendForm };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var sendResponse = await client.SendAsync(request, cancellationToken);
-        if (!sendResponse.IsSuccessStatusCode)
-        {
-            logger.LogWarning("Eskiz send failed: {Status}", sendResponse.StatusCode);
-            throw new InvalidOperationException($"Eskiz: {sendResponse.StatusCode}");
-        }
+        return token;
     }
 }

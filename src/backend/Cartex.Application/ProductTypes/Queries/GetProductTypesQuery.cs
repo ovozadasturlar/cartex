@@ -6,7 +6,7 @@ namespace Cartex.Application.ProductTypes.Queries;
 
 public record GetProductTypesQuery : IRequest<IReadOnlyCollection<ProductTypeDto>>;
 
-public record ProductTypeDto(long Id, string Name, bool TracksExpiry, string MeasureMode, string? AttributeSchema);
+public record ProductTypeDto(long Id, string Name, bool TracksExpiry, string? AttributeSchema);
 
 public sealed class GetProductTypesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetProductTypesQuery, IReadOnlyCollection<ProductTypeDto>>
 {
@@ -14,7 +14,7 @@ public sealed class GetProductTypesQueryHandler(IApplicationDbContext db) : IReq
     {
         return await db.ProductTypes
             .OrderBy(t => t.Name)
-            .Select(t => new ProductTypeDto(t.Id, t.Name, t.TracksExpiry, t.MeasureMode.ToString(), t.AttributeSchema))
+            .Select(t => new ProductTypeDto(t.Id, t.Name, t.TracksExpiry, t.AttributeSchema))
             .ToListAsync(cancellationToken);
     }
 }

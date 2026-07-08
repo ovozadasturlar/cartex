@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Domain.Common;
@@ -17,6 +19,7 @@ public sealed class PaySupplierDebtCommandHandler(
     ICurrentUser currentUser,
     ILedgerService ledger,
     ICurrencyService currency,
+    ISettingsService settingsService,
     IAuditService audit) : IRequestHandler<PaySupplierDebtCommand, Unit>
 {
     public async Task<Unit> Handle(PaySupplierDebtCommand request, CancellationToken cancellationToken)
@@ -51,7 +54,8 @@ public sealed class PaySupplierDebtCommandHandler(
             .Select(s => (long?)s.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (!request.ViaCard && shiftId is null)
+        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+        if (!request.ViaCard && shiftId is null && policy.ShiftPolicy != "Off")
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
         var branchAccount = await ledger.BranchAccountAsync(branchId, request.ViaCard ? AccountType.Card : AccountType.Cash, cancellationToken, payCurrency);

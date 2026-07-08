@@ -31,7 +31,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        return await sender.Send(new CreateCustomerCommand("Qarzdor Mijoz", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, CreditLimit: creditLimit));
+        return await sender.Send(new CreateCustomerCommand("Qarzdor Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: creditLimit));
     }
 
     private async Task CreditSaleAsync(long warehouse, long variantId, long customerId, decimal qty)
@@ -154,8 +154,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            debtorId = await sender.Send(new CreateCustomerCommand("Eski Qarzdor", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, OpeningBalance: 50_000m));
-            creditorId = await sender.Send(new CreateCustomerCommand("Haqdor Mijoz", "+9989" + Guid.NewGuid().ToString("N")[..8], null, 0m, OpeningBalance: -30_000m));
+            debtorId = await sender.Send(new CreateCustomerCommand("Eski Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, OpeningBalance: 50_000m));
+            creditorId = await sender.Send(new CreateCustomerCommand("Haqdor Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, OpeningBalance: -30_000m));
         }
 
         Assert.Equal(50_000m, await DebtBalanceAsync(debtorId));

@@ -27,6 +27,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Database=cartex;Username=cartex;Password=${DB_PASSWORD}
       Jwt__Key: ${JWT_KEY:?JWT_KEY .env faylida majburiy (64+ belgi)}
       Seed__DeveloperPassword: ${DEVELOPER_PASSWORD:?DEVELOPER_PASSWORD .env faylida majburiy}
+      Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
     ports:
       - "5015:5015"
 

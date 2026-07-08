@@ -1,15 +1,18 @@
 using System.Net;
 using System.Text;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
+using Cartex.Shared.Localization;
 
-namespace Cartex.Api.Services;
+namespace Cartex.Infrastructure.Notifications;
 
 public static class ReceiptHtmlRenderer
 {
-    public static string Render(ReceiptDto r)
+    public static string Render(ReceiptDto r, ReceiptSettings? opts = null)
     {
         var sb = new StringBuilder();
         string E(string? s) => WebUtility.HtmlEncode(s ?? "");
+        string T(string key) => ReceiptTexts.Get(key, r.Language);
 
         sb.Append("<!doctype html><html lang=\"uz\"><head><meta charset=\"utf-8\">");
         sb.Append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
@@ -56,6 +59,7 @@ public static class ReceiptHtmlRenderer
         sb.Append($"<p class=\"sub\">{E(r.BranchName)}</p>");
         if (!string.IsNullOrEmpty(r.BranchAddress)) sb.Append($"<p class=\"sub\">{E(r.BranchAddress)}</p>");
         if (!string.IsNullOrEmpty(r.BranchPhone)) sb.Append($"<p class=\"sub\">{E(r.BranchPhone)}</p>");
+        if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.Append($"<p class=\"sub\">{E(opts.HeaderText)}</p>");
         sb.Append("</div>");
 
         sb.Append("<div class=\"meta\">");
@@ -73,24 +77,24 @@ public static class ReceiptHtmlRenderer
         }
 
         sb.Append("<div class=\"totals\">");
-        if (r.DiscountAmount > 0) sb.Append($"<div class=\"trow\"><span>Chegirma</span><span>−{r.DiscountAmount:N0}</span></div>");
-        sb.Append($"<div class=\"trow grand\"><span>JAMI</span><span>{r.TotalAmount:N0}</span></div>");
+        if (r.DiscountAmount > 0) sb.Append($"<div class=\"trow\"><span>{T("discount")}</span><span>−{r.DiscountAmount:N0}</span></div>");
+        sb.Append($"<div class=\"trow grand\"><span>{T("total")}</span><span>{r.TotalAmount:N0}</span></div>");
         sb.Append("</div>");
 
         sb.Append("<div class=\"pays\">");
-        if (r.PaidCash > 0) Row(sb, "Naqd", $"{r.PaidCash:N0}");
-        if (r.PaidCard > 0) Row(sb, "Karta", $"{r.PaidCard:N0}");
-        if (r.PaidBonus > 0) Row(sb, "Bonus", $"{r.PaidBonus:N0}");
+        if (r.PaidCash > 0) Row(sb, T("cash"), $"{r.PaidCash:N0}");
+        if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
+        if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
         foreach (var payment in r.Payments)
-            Row(sb, $"{E(payment.Method)} {E(payment.Currency)}", $"{payment.Amount:N2}");
-        if (r.ChangeAmount > 0) Row(sb, "Qaytim", $"{r.ChangeAmount:N0}");
-        if (r.DebtAmount > 0) Row(sb, "Qarz", $"{r.DebtAmount:N0}", "debt");
+            Row(sb, $"{E(ReceiptTexts.PaymentLabel(payment.Method, r.Language))} {E(payment.Currency)}", $"{payment.Amount:N2}");
+        if (r.ChangeAmount > 0) Row(sb, T("change"), $"{r.ChangeAmount:N0}");
+        if (r.DebtAmount > 0) Row(sb, T("debt"), $"{r.DebtAmount:N0}", "debt");
         if (r.CashbackEarned > 0) Row(sb, "Cashback", $"+{r.CashbackEarned:N0}", "plus");
         sb.Append("</div>");
 
         sb.Append("<div class=\"foot\">");
-        sb.Append("<p class=\"thanks\">Xaridingiz uchun rahmat!</p>");
-        sb.Append($"<a class=\"pdf\" href=\"/r/{E(r.ReceiptToken)}/pdf\">PDF yuklab olish</a>");
+        sb.Append($"<p class=\"thanks\">{E(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText)}</p>");
+        sb.Append($"<a class=\"pdf\" href=\"/r/{E(r.ReceiptToken)}/pdf\">{T("download_pdf")}</a>");
         sb.Append($"<div class=\"token\">{E(r.ReceiptToken)}</div>");
         sb.Append("</div></div></div></body></html>");
         return sb.ToString();

@@ -26,8 +26,19 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurre
 {
     public async Task<Unit> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
+        var product = await db.Products.Include(p => p.Unit).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Product not found.");
+
+        if (request.UnitId != product.UnitId)
+        {
+            var newUnit = await db.Units.FirstOrDefaultAsync(u => u.Id == request.UnitId, cancellationToken)
+                ?? throw new NotFoundException("Unit not found.");
+            if (newUnit.Dimension != product.Unit.Dimension)
+                throw new BusinessRuleException("O'lchov birligini boshqa guruhga o'zgartirib bo'lmaydi.");
+            if (newUnit.Factor != product.Unit.Factor
+                && await db.Stocks.IgnoreQueryFilters().AnyAsync(s => s.Variant.ProductId == product.Id, cancellationToken))
+                throw new BusinessRuleException("Mahsulotning ombor harakatlari bor — o'lchov birligini o'zgartirib bo'lmaydi.");
+        }
 
         if (request.ProductTypeId is { } typeId)
         {

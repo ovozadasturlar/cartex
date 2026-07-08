@@ -6,7 +6,7 @@ using Minio.DataModel.Args;
 
 namespace Cartex.Infrastructure.Storage;
 
-public sealed class MinioObjectStorage(ISettingsService settings) : IObjectStorage
+public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtector protector) : IObjectStorage
 {
     public async Task<string> UploadAsync(Stream content, long length, string contentType, string extension, CancellationToken cancellationToken = default)
     {
@@ -72,10 +72,17 @@ public sealed class MinioObjectStorage(ISettingsService settings) : IObjectStora
 
         var client = new MinioClient()
             .WithEndpoint(s.Endpoint)
-            .WithCredentials(s.AccessKey, s.SecretKey)
+            .WithCredentials(s.AccessKey, Reveal(s.SecretKey))
             .WithSSL(s.UseSsl)
             .Build();
 
         return (client, s);
+    }
+
+    private string? Reveal(string? secret)
+    {
+        if (string.IsNullOrWhiteSpace(secret)) return secret;
+        try { return protector.Unprotect(secret); }
+        catch { return secret; }
     }
 }

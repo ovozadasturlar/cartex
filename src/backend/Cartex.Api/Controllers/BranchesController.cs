@@ -15,7 +15,7 @@ public class BranchesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Branches.View)]
-    public async Task<IActionResult> GetBranches([FromQuery] GetBranchesQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<BranchDto>>> GetBranches([FromQuery] GetBranchesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class BranchesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Branches.Manage)]
-    public async Task<IActionResult> CreateBranch(CreateBranchCommand command)
+    public async Task<ActionResult<long>> CreateBranch(CreateBranchCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

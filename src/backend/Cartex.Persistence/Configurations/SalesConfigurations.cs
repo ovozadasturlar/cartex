@@ -13,12 +13,15 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.LastName).HasMaxLength(120);
         builder.Property(x => x.Address).HasMaxLength(250);
         builder.Property(x => x.Phone).HasMaxLength(20);
-        builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"phone\" IS NOT NULL");
+        builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"phone\" IS NOT NULL AND NOT \"is_deleted\"");
         builder.Property(x => x.Email).HasMaxLength(120);
+        builder.Property(x => x.PreferredLanguage).HasMaxLength(10);
         builder.Property(x => x.CardBarcode).HasMaxLength(60);
         builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL");
         builder.Property(x => x.DiscountPct).HasPrecision(5, 2);
         builder.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        builder.HasIndex(x => x.AgentId);
+        builder.HasOne(x => x.Agent).WithMany().HasForeignKey(x => x.AgentId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -43,6 +46,8 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.ReceiptToken).IsUnique();
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
+        builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => x.BranchId);
 
         builder.HasOne<Branch>()

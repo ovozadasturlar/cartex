@@ -15,7 +15,7 @@ public class CategoriesController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Categories.View)]
-    public async Task<IActionResult> GetCategories([FromQuery] GetCategoriesQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<CategoryDto>>> GetCategories([FromQuery] GetCategoriesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class CategoriesController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Categories.Manage)]
-    public async Task<IActionResult> CreateCategory(CreateCategoryCommand command)
+    public async Task<ActionResult<long>> CreateCategory(CreateCategoryCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

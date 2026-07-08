@@ -59,11 +59,14 @@ public class ReceiptDeliveryTests(CartexApiFactory factory)
         var token = await CreateSaleAsync(admin);
 
         var anonymous = factory.CreateClient();
-        var response = await anonymous.GetAsync($"/r/{token}/pdf");
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("application/pdf", response.Content.Headers.ContentType!.MediaType);
+        foreach (var query in new[] { "", "?size=a5", "?size=a4" })
+        {
+            var response = await anonymous.GetAsync($"/r/{token}/pdf{query}");
+            response.EnsureSuccessStatusCode();
+            Assert.Equal("application/pdf", response.Content.Headers.ContentType!.MediaType);
 
-        var bytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes[..4]));
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes[..4]));
+        }
     }
 }

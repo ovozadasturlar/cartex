@@ -15,7 +15,7 @@ public class DebtApiTests(CartexApiFactory factory)
         var resp = await client.PostAsJsonAsync("/api/customers", new
         {
             fullName = name,
-            phone = "+9989" + Guid.NewGuid().ToString("N")[..8],
+            phone = "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999),
             cardBarcode = (string?)null,
             discountPct = 0m,
             creditLimit = 10_000_000m

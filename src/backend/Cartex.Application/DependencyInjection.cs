@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddScoped<AuthTokenBuilder>();
+        services.AddScoped<Store.StoreTokenBuilder>();
 
         services.AddScoped<ILedgerService, LedgerService>();
         services.AddScoped<ICurrencyService, CurrencyService>();

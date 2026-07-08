@@ -9,6 +9,8 @@ public class Warehouse : SoftDeleteEntity, IBranchScoped
 
     public string Name { get; set; } = null!;
     public bool IsOnline { get; set; }
+    public long? AssignedUserId { get; set; }
+    public User? AssignedUser { get; set; }
 
     public ICollection<Stock> Stocks { get; set; } = [];
 }

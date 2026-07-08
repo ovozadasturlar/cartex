@@ -8,7 +8,7 @@ namespace Cartex.Application.Units.Queries;
 
 public record GetUnitsQuery : FilteringRequest, IRequest<IReadOnlyCollection<UnitDto>>;
 
-public record UnitDto(long Id, string Name, string ShortName, string Dimension, decimal Factor, bool IsSystem);
+public record UnitDto(long Id, string Name, string ShortName, string Dimension, decimal Factor, bool IsSystem, bool IsEnabled = true, bool IsDefault = false);
 
 public sealed class GetUnitsQueryHandler(
     IApplicationDbContext db,
@@ -18,7 +18,7 @@ public sealed class GetUnitsQueryHandler(
     {
         return await db.Units
             .ToPagedListAsync(request,
-                u => new UnitDto(u.Id, u.Name, u.ShortName, u.Dimension.ToString(), u.Factor, u.IsSystem),
+                u => new UnitDto(u.Id, u.Name, u.ShortName, u.Dimension.ToString(), u.Factor, u.IsSystem, u.IsEnabled, u.IsDefault),
                 writer, cancellationToken);
     }
 }

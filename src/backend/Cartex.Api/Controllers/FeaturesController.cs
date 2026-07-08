@@ -7,6 +7,7 @@ using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Features;
 using Cartex.Application.Common.Messaging;
+using FeatureDto = Cartex.Application.Features.Queries.FeatureDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,7 +19,7 @@ namespace Cartex.Api.Controllers;
 public class FeaturesController(ISender sender) : ControllerBase
 {
     [HttpGet("enabled")]
-    public async Task<IActionResult> GetEnabled([FromServices] IApplicationDbContext db, [FromServices] IFeatureStateProvider features, CancellationToken cancellationToken)
+    public async Task<ActionResult<List<string>>> GetEnabled([FromServices] IApplicationDbContext db, [FromServices] IFeatureStateProvider features, CancellationToken cancellationToken)
     {
         var codes = await db.Features.Select(f => f.Code).ToListAsync(cancellationToken);
         var enabled = new List<string>();
@@ -30,7 +31,7 @@ public class FeaturesController(ISender sender) : ControllerBase
 
     [HttpGet]
     [HasPermission(AppPermissions.Features.Manage)]
-    public async Task<IActionResult> GetFeatures() =>
+    public async Task<ActionResult<IReadOnlyList<FeatureDto>>> GetFeatures() =>
         Ok(await sender.Send(new GetFeaturesQuery()));
 
     [HttpPut("{code}")]

@@ -8,4 +8,6 @@ public sealed class ReminderSettings
     public decimal MinBalance { get; set; }
     public int SendHourLocal { get; set; } = 10;
     public List<Cartex.Application.Common.Interfaces.NotificationChannel> Channels { get; set; } = [];
+    public string? OverdueTemplate { get; set; }
+    public string? DueSoonTemplate { get; set; }
 }

@@ -15,7 +15,7 @@ public class UsersController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Users.View)]
-    public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<UserDto>>> GetUsers([FromQuery] GetUsersQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);
@@ -23,7 +23,7 @@ public class UsersController(ISender sender) : ControllerBase
 
     [HttpPost]
     [HasPermission(AppPermissions.Users.Manage)]
-    public async Task<IActionResult> CreateUser(CreateUserCommand command)
+    public async Task<ActionResult<long>> CreateUser(CreateUserCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);

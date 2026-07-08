@@ -23,12 +23,42 @@ public interface ISettingsApi
     [Put("/api/settings/sms")]
     Task UpdateSmsAsync([Body] UpdateSmsSettingsRequest request);
 
+    [Get("/api/settings/sms/journal")]
+    Task<List<SmsMessageDto>> GetSmsJournalAsync([Query] int page = 1, [Query] int pageSize = 50);
+
+    [Get("/api/settings/sms/stats")]
+    Task<SmsStatsDto> GetSmsStatsAsync();
+
     [Put("/api/settings/notification")]
     Task UpdateNotificationAsync([Body] UpdateNotificationSettingsRequest request);
+
+    [Get("/api/settings/receipt")]
+    Task<ReceiptSettingsDto> GetReceiptAsync();
+
+    [Put("/api/settings/receipt")]
+    Task UpdateReceiptAsync([Body] UpdateReceiptSettingsRequest request);
+
+    [Get("/api/settings/sales-policy")]
+    Task<SalesPolicyDto> GetSalesPolicyAsync();
+
+    [Put("/api/settings/sales-policy")]
+    Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
+
+    [Get("/api/settings/storage")]
+    Task<StorageSettingsDto> GetStorageAsync();
+
+    [Put("/api/settings/storage")]
+    Task UpdateStorageAsync([Body] UpdateStorageSettingsRequest request);
 
     [Get("/api/settings/reminder")]
     Task<ReminderSettingsDto> GetReminderAsync();
 
     [Put("/api/settings/reminder")]
     Task UpdateReminderAsync([Body] UpdateReminderSettingsRequest request);
+
+    [Get("/api/settings/cloud-bridge")]
+    Task<CloudBridgeSettingsDto> GetCloudBridgeAsync();
+
+    [Put("/api/settings/cloud-bridge")]
+    Task UpdateCloudBridgeAsync([Body] UpdateCloudBridgeSettingsRequest request);
 }

@@ -10,7 +10,7 @@ namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomersQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerDto>>;
 
-public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false)
+public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null)
 {
     public IReadOnlyList<CurrencyAmountDto> DebtBalances { get; init; } = [];
 }
@@ -37,7 +37,9 @@ public sealed class GetCustomersQueryHandler(
                     c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
                         : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
                     c.CreditLimit,
-                    c.NotificationsOptOut),
+                    c.NotificationsOptOut,
+                    c.TelegramChatId != null,
+                    c.PreferredLanguage),
                 writer, cancellationToken);
 
         var ids = items.Select(i => i.Id).ToList();

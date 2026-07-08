@@ -60,6 +60,20 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SalePayment> SalePayments => Set<SalePayment>();
     public DbSet<ShiftCash> ShiftCashes => Set<ShiftCash>();
     public DbSet<DebtReminderLog> DebtReminderLogs => Set<DebtReminderLog>();
+    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
+    public DbSet<CustomerSession> CustomerSessions => Set<CustomerSession>();
+    public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
+    public DbSet<Prepack> Prepacks => Set<Prepack>();
+    public DbSet<HardwareKey> HardwareKeys => Set<HardwareKey>();
+
+    private readonly List<Action> _afterCommit = [];
+
+    public void RunAfterCommit(Action action)
+    {
+        if (Database.CurrentTransaction is null) action();
+        else _afterCommit.Add(action);
+    }
 
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
@@ -69,9 +83,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         var strategy = Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
+            _afterCommit.Clear();
             await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
             var result = await action();
             await transaction.CommitAsync(cancellationToken);
+            foreach (var deferred in _afterCommit) deferred();
+            _afterCommit.Clear();
             return result;
         });
     }

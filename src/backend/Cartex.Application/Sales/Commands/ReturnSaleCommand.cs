@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -15,7 +17,7 @@ public record ReturnLineDto(long SaleItemId, decimal Quantity, bool Restock, str
 
 public record ReturnSaleCommand(long SaleId, List<ReturnLineDto> Lines) : ICommand<Unit>;
 
-public sealed class ReturnSaleCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, IAuditService audit)
+public sealed class ReturnSaleCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ISettingsService settingsService, IAuditService audit)
     : IRequestHandler<ReturnSaleCommand, Unit>
 {
     public async Task<Unit> Handle(ReturnSaleCommand request, CancellationToken cancellationToken)
@@ -103,7 +105,8 @@ public sealed class ReturnSaleCommandHandler(IApplicationDbContext db, ICurrentU
         var cardTake = Take(sale.PaidCard - sale.RefundedCard);
         var cashTake = Take(sale.PaidCash - sale.RefundedCash);
 
-        if (cashTake > 0 && shiftId is null)
+        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+        if (cashTake > 0 && shiftId is null && policy.ShiftPolicy != "Off")
             throw new BusinessRuleException("Naqd qaytarish uchun ochiq smena talab qilinadi.");
 
         if (cardTake > 0)

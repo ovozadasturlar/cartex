@@ -5,7 +5,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Warehouses.Commands;
 
-public record UpdateWarehouseCommand(long Id, string Name, bool IsOnline = false) : ICommand<Unit>;
+public record UpdateWarehouseCommand(long Id, string Name, bool IsOnline = false, long? AssignedUserId = null) : ICommand<Unit>;
 
 public sealed class UpdateWarehouseCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateWarehouseCommand, Unit>
 {
@@ -16,6 +16,7 @@ public sealed class UpdateWarehouseCommandHandler(IApplicationDbContext db) : IR
 
         warehouse.Name = request.Name;
         warehouse.IsOnline = request.IsOnline;
+        warehouse.AssignedUserId = request.AssignedUserId == 0 ? null : request.AssignedUserId ?? warehouse.AssignedUserId;
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

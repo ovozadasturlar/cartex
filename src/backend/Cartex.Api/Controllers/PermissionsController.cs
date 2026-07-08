@@ -15,7 +15,7 @@ public class PermissionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Roles.View)]
-    public async Task<IActionResult> GetPermissions([FromQuery] GetPermissionsQuery query)
+    public async Task<ActionResult<IReadOnlyCollection<PermissionDto>>> GetPermissions([FromQuery] GetPermissionsQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);

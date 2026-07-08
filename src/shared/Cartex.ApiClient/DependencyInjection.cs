@@ -8,7 +8,7 @@ namespace Cartex.ApiClient;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Action? onUnauthorized = null)
+    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Func<CancellationToken, Task<string?>>? refreshAsync = null, Action? onUnauthorized = null)
     {
         var settings = new RefitSettings
         {
@@ -19,7 +19,7 @@ public static class DependencyInjection
             })
         };
 
-        services.AddTransient(_ => new AuthTokenHandler(tokenProvider, onUnauthorized));
+        services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, onUnauthorized));
         services.AddTransient<NoContentHandler>();
         services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
 
@@ -66,6 +66,10 @@ public static class DependencyInjection
         RegisterAuthorized<IHardwareKeysApi>(services, settings, baseUrl);
         RegisterAuthorized<IBusinessApi>(services, settings, baseUrl);
         RegisterAuthorized<IRatesApi>(services, settings, baseUrl);
+        RegisterAuthorized<ISessionsApi>(services, settings, baseUrl);
+        RegisterAuthorized<IPrepacksApi>(services, settings, baseUrl);
+        RegisterAuthorized<IAgentApi>(services, settings, baseUrl);
+        RegisterAuthorized<IOfflineCacheApi>(services, settings, baseUrl);
 
         return services;
     }

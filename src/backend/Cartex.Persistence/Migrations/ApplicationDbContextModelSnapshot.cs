@@ -427,6 +427,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -459,11 +464,13 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("BranchId")
                         .HasDatabaseName("ix_carts_branch_id");
 
-                    b.HasIndex("CustomerId")
-                        .HasDatabaseName("ix_carts_customer_id");
-
                     b.HasIndex("WarehouseId")
                         .HasDatabaseName("ix_carts_warehouse_id");
+
+                    b.HasIndex("CustomerId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_carts_customer_id_idempotency_key")
+                        .HasFilter("idempotency_key IS NOT NULL");
 
                     b.ToTable("carts", (string)null);
                 });
@@ -638,6 +645,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(250)")
                         .HasColumnName("address");
 
+                    b.Property<long?>("AgentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("agent_id");
+
                     b.Property<string>("CardBarcode")
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
@@ -693,6 +704,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("PreferredLanguage")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("preferred_language");
+
                     b.Property<string>("TelegramChatId")
                         .HasColumnType("text")
                         .HasColumnName("telegram_chat_id");
@@ -708,6 +724,9 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_customers");
 
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_customers_agent_id");
+
                     b.HasIndex("CardBarcode")
                         .IsUnique()
                         .HasDatabaseName("ix_customers_card_barcode")
@@ -716,9 +735,73 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("Phone")
                         .IsUnique()
                         .HasDatabaseName("ix_customers_phone")
-                        .HasFilter("\"phone\" IS NOT NULL");
+                        .HasFilter("\"phone\" IS NOT NULL AND NOT \"is_deleted\"");
 
                     b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("device_name");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime>("FamilyCreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("family_created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("ReplacedByHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("replaced_by_hash");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("token_hash");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_sessions");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_customer_sessions_customer_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_customer_sessions_token_hash");
+
+                    b.ToTable("customer_sessions", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.DebtReminderLog", b =>
@@ -895,6 +978,54 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("features", (string)null);
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.HardwareKey", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("Serial")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("serial");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_hardware_keys");
+
+                    b.HasIndex("UserId", "Serial")
+                        .HasDatabaseName("ix_hardware_keys_user_id_serial");
+
+                    b.ToTable("hardware_keys", (string)null);
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.LicenseState", b =>
                 {
                     b.Property<long>("Id")
@@ -957,6 +1088,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
 
+                    b.Property<decimal>("CashbackRounding")
+                        .HasColumnType("numeric")
+                        .HasColumnName("cashback_rounding");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1017,6 +1152,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("event_type");
 
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_at");
@@ -1043,6 +1182,62 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_notification_outbox_status_occurred_at");
 
                     b.ToTable("notification_outbox", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<long>("CustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_otp_challenges");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_otp_challenges_customer_id");
+
+                    b.ToTable("otp_challenges", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>
@@ -1100,6 +1295,97 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_permissions_name");
 
                     b.ToTable("permissions", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Prepack", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LabelCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("label_code");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<long?>("SoldSaleId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sold_sale_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.Property<long>("VariantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("variant_id");
+
+                    b.Property<long>("WarehouseId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_prepacks");
+
+                    b.HasIndex("LabelCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_prepacks_label_code");
+
+                    b.HasIndex("VariantId")
+                        .HasDatabaseName("ix_prepacks_variant_id");
+
+                    b.HasIndex("WarehouseId", "Status")
+                        .HasDatabaseName("ix_prepacks_warehouse_id_status");
+
+                    b.ToTable("prepacks", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Product", b =>
@@ -1295,12 +1581,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
-                    b.Property<string>("MeasureMode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("measure_mode");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1397,6 +1677,70 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_product_variants_product_id");
 
                     b.ToTable("product_variants", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.RefreshSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("device_name");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime>("FamilyCreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("family_created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("ReplacedByHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("replaced_by_hash");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refresh_sessions");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_sessions_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_refresh_sessions_user_id");
+
+                    b.ToTable("refresh_sessions", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Role", b =>
@@ -1568,6 +1912,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("discount_amount");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -1658,11 +2007,13 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_sales_receipt_token");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_sales_user_id");
-
                     b.HasIndex("WarehouseId")
                         .HasDatabaseName("ix_sales_warehouse_id");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_user_id_idempotency_key")
+                        .HasFilter("\"idempotency_key\" IS NOT NULL");
 
                     b.ToTable("sales", (string)null);
                 });
@@ -1894,6 +2245,82 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_shift_cash_shift_id_currency");
 
                     b.ToTable("shift_cash", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.SmsMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("provider_message_id");
+
+                    b.Property<int>("Segments")
+                        .HasColumnType("integer")
+                        .HasColumnName("segments");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sms_messages");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_sms_messages_status_created_at");
+
+                    b.ToTable("sms_messages", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Stock", b =>
@@ -2369,6 +2796,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("from_account_id");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -2429,8 +2861,10 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("ToAccountId")
                         .HasDatabaseName("ix_transactions_to_account_id");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_transactions_user_id");
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_transactions_user_id_idempotency_key")
+                        .HasFilter("\"idempotency_key\" IS NOT NULL");
 
                     b.ToTable("transactions", (string)null);
                 });
@@ -2467,9 +2901,19 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(18,6)")
                         .HasColumnName("factor");
 
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_enabled");
 
                     b.Property<bool>("IsSystem")
                         .HasColumnType("boolean")
@@ -2623,6 +3067,10 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("AssignedUserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("assigned_user_id");
+
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
@@ -2662,6 +3110,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_warehouses");
+
+                    b.HasIndex("AssignedUserId")
+                        .HasDatabaseName("ix_warehouses_assigned_user_id");
 
                     b.HasIndex("BranchId")
                         .HasDatabaseName("ix_warehouses_branch_id");
@@ -2801,6 +3252,41 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.Customer", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_customers_users_agent_id");
+
+                    b.Navigation("Agent");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSession", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_customer_sessions_customers_customer_id");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.HardwareKey", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_hardware_keys_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.LoyaltyProgram", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
@@ -2810,6 +3296,39 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_loyalty_programs_branches_branch_id");
 
                     b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_otp_challenges_customers_customer_id");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.Prepack", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.ProductVariant", "Variant")
+                        .WithMany()
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_prepacks_product_variants_variant_id");
+
+                    b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_prepacks_warehouses_warehouse_id");
+
+                    b.Navigation("Variant");
+
+                    b.Navigation("Warehouse");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Product", b =>
@@ -2870,6 +3389,18 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_product_variants_products_product_id");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.RefreshSession", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_sessions_users_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.RolePermission", b =>
@@ -3272,12 +3803,20 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Warehouse", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.User", "AssignedUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_warehouses_users_assigned_user_id");
+
                     b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
                         .WithMany("Warehouses")
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_warehouses_branches_branch_id");
+
+                    b.Navigation("AssignedUser");
 
                     b.Navigation("Branch");
                 });

@@ -10,6 +10,7 @@ public class LoyaltyProgram : AuditableEntity
 
     public bool IsEnabled { get; set; }
     public decimal TotalPercent { get; set; }
+    public decimal CashbackRounding { get; set; }
 
     public ICollection<CashbackRule> Rules { get; set; } = [];
 }

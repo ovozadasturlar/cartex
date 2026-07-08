@@ -21,4 +21,7 @@ public record ReceiptDto(
     decimal CashbackEarned,
     string UserName,
     List<ReceiptItemDto> Items,
-    List<ReceiptPaymentDto> Payments);
+    List<ReceiptPaymentDto> Payments,
+    long SaleId = 0,
+    string? CustomerName = null,
+    string? Language = null);

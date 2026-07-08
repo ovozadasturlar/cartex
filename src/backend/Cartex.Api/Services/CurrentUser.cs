@@ -7,7 +7,7 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
     private System.Security.Claims.ClaimsPrincipal? User => accessor.HttpContext?.User;
 
-    public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
+    public bool IsAuthenticated => (User?.Identity?.IsAuthenticated ?? false) && User?.FindFirst("userId") is not null;
 
     public long? UserId => GetLong("userId");
     public long? BusinessId => GetLong("businessId");

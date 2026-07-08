@@ -14,6 +14,21 @@ public class DebtReminderLogConfiguration : IEntityTypeConfiguration<DebtReminde
     }
 }
 
+public class SmsMessageConfiguration : IEntityTypeConfiguration<SmsMessage>
+{
+    public void Configure(EntityTypeBuilder<SmsMessage> builder)
+    {
+        builder.ToTable("sms_messages");
+        builder.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Text).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.Provider).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.ProviderMessageId).HasMaxLength(60);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.Error).HasMaxLength(1000);
+        builder.HasIndex(x => new { x.Status, x.CreatedAt });
+    }
+}
+
 public class NotificationOutboxConfiguration : IEntityTypeConfiguration<NotificationOutbox>
 {
     public void Configure(EntityTypeBuilder<NotificationOutbox> builder)

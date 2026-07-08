@@ -1,12 +1,11 @@
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 
 namespace Cartex.Application.ProductTypes.Commands;
 
-public record UpdateProductTypeCommand(long Id, string Name, bool TracksExpiry, MeasureMode MeasureMode, string? AttributeSchema = null) : ICommand<Unit>;
+public record UpdateProductTypeCommand(long Id, string Name, bool TracksExpiry, string? AttributeSchema = null) : ICommand<Unit>;
 
 public sealed class UpdateProductTypeCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateProductTypeCommand, Unit>
 {
@@ -17,7 +16,6 @@ public sealed class UpdateProductTypeCommandHandler(IApplicationDbContext db) : 
 
         type.Name = request.Name;
         type.TracksExpiry = request.TracksExpiry;
-        type.MeasureMode = request.MeasureMode;
         type.AttributeSchema = request.AttributeSchema;
 
         await db.SaveChangesAsync(cancellationToken);

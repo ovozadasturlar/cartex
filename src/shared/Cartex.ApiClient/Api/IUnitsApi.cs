@@ -13,4 +13,7 @@ public interface IUnitsApi
 
     [Put("/api/units/{id}")]
     Task UpdateAsync(long id, [Body] UpdateUnitRequest request);
+
+    [Put("/api/units/{id}/state")]
+    Task SetStateAsync(long id, [Body] SetUnitStateRequest request);
 }
