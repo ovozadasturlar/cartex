@@ -6,9 +6,18 @@
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:views="using:Cartex.UI.Views"
              x:Class="Cartex.UI.Views.SalesView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <UserControl.Styles>
+        <Style Selector="Border.cartrow">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style Selector="Border.cartrow.over">
+            <Setter Property="Background" Value="{DynamicResource DangerBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+        </Style>
         <Style Selector="Button.pcard">
             <Setter Property="Background" Value="{DynamicResource CardBg}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -121,7 +130,7 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <ScrollViewer>
+            <ScrollViewer ScrollChanged="OnProductsScroll">
                 <Panel>
                     <StackPanel>
                     <ItemsControl ItemsSource="{Binding Products}">
@@ -190,16 +199,21 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
             <DockPanel Margin="16">
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,12">
                     <TextBlock Text="{Binding L[cart]}" Classes="h2" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding OpenPrepackCommand}" ToolTip.Tip="{Binding L[prepack_title]}"
+                            IsVisible="{Binding CanPrepack}">
+                        <mi:MaterialIcon Kind="ScaleBalance" Width="18" Height="18" />
+                    </Button>
+                    <Button Grid.Column="2" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding ToggleHeldPanelCommand}" ToolTip.Tip="{Binding L[held_sales]}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <mi:MaterialIcon Kind="PauseCircleOutline" Width="18" Height="18" />
                             <TextBlock Text="{Binding HeldSales.Count}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2" Classes="paybtn" Padding="8,6"
+                    <Button Grid.Column="3" Classes="paybtn" Padding="8,6"
                             Command="{Binding ClearCartCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"
@@ -425,7 +439,8 @@
                         <ItemsControl ItemsSource="{Binding CartItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="0,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                    <Border Padding="6,8" CornerRadius="8" Classes="cartrow" Classes.over="{Binding IsOverStock}"
+                                            ToolTip.Tip="{Binding Available, StringFormat='{}{0:N0}'}">
                                         <Grid ColumnDefinitions="*,Auto,Auto">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"
@@ -448,17 +463,7 @@
                                                 <NumericUpDown Value="{Binding Quantity, Mode=TwoWay}" Minimum="0"
                                                                Increment="1" FormatString="0.###" ShowButtonSpinner="False"
                                                                MinWidth="64" MinHeight="32" VerticalAlignment="Center"
-                                                               HorizontalContentAlignment="Center" />
-                                                <ComboBox ItemsSource="{Binding AvailableUnits}"
-                                                          SelectedItem="{Binding SelectedUnit, Mode=TwoWay}"
-                                                          IsVisible="{Binding HasUnitChoice}" MinHeight="32" MinWidth="60"
-                                                          Padding="8,0" VerticalAlignment="Center">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding ShortName}" VerticalAlignment="Center" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
+                                                               HorizontalContentAlignment="Center" IsEnabled="{Binding !IsPrepack}" />
                                                 <Button Classes="step" Command="{Binding $parent[UserControl].DataContext.IncrementCommand}"
                                                         CommandParameter="{Binding}">
                                                     <mi:MaterialIcon Kind="Plus" Width="14" Height="14" />
@@ -747,6 +752,8 @@
         </Border>
 
         <views:QuickProductView Grid.ColumnSpan="3" DataContext="{Binding QuickProduct}" />
+
+        <views:PrepackView Grid.ColumnSpan="3" DataContext="{Binding Prepack}" />
 
     </Grid>
 </UserControl>

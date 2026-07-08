@@ -35,6 +35,34 @@
                                                 Header="{Binding [short_name], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="*" Binding="{Binding Dimension}"
                                                 Header="{Binding [dimension], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [default_unit], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="icon" Margin="6,0" HorizontalAlignment="Center"
+                                                Command="{Binding $parent[DataGrid].DataContext.MakeDefaultCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[make_default]}">
+                                            <Panel>
+                                                <mi:MaterialIcon Kind="Star" Width="16" Height="16" IsVisible="{Binding IsDefault}"
+                                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                <mi:MaterialIcon Kind="StarOutline" Width="16" Height="16" IsVisible="{Binding !IsDefault}"
+                                                                 Foreground="{DynamicResource TextMuted}" />
+                                            </Panel>
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [active], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}" Margin="6,0"
+                                                      Command="{Binding $parent[DataGrid].DataContext.ToggleEnabledCommand}"
+                                                      CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

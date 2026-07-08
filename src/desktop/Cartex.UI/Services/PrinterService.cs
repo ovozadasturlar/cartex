@@ -3,11 +3,14 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using Cartex.Shared.Localization;
 using Cartex.Shared.Models.Sales;
 
 namespace Cartex.UI.Services;
 
-public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, string? ServerUrl, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0);
+public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0);
+
+public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
 
 public static class LabelSize
 {
@@ -22,6 +25,7 @@ public interface IPrinterService
     void SaveSettings(PrinterSettings settings);
     bool AutoPrintEnabled { get; }
     string? BarcodePrinter { get; }
+    ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
     void PrintRaw(string? printerName, string text);
     void PrintDocument(string filePath, string? printerName);
@@ -30,7 +34,7 @@ public interface IPrinterService
 public sealed class PrinterService : IPrinterService
 {
     private readonly string? _path;
-    private PrinterSettings _settings = new(null, null, null, null, null, false);
+    private PrinterSettings _settings = new(null, null, null, null, false);
 
 
     public PrinterService()
@@ -59,6 +63,7 @@ public sealed class PrinterService : IPrinterService
     public bool AutoPrintEnabled => _settings.AutoPrintReceipt && !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter);
 
     public string? BarcodePrinter => _settings.BarcodePrinter;
+    public ReceiptPrintOptions? ReceiptOptions { get; set; }
 
     public IReadOnlyList<string> GetInstalledPrinters()
     {
@@ -81,7 +86,13 @@ public sealed class PrinterService : IPrinterService
         catch { return []; }
     }
 
-    public void PrintReceipt(ReceiptDto receipt) => PrintRaw(_settings.ReceiptPrinter, FormatReceipt(receipt));
+    public void PrintReceipt(ReceiptDto receipt)
+    {
+        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
+            ? new ReceiptPrintOptions(ReceiptOptions?.HeaderText, ReceiptOptions?.FooterText, _settings.ReceiptPaperWidth)
+            : ReceiptOptions;
+        PrintRaw(_settings.ReceiptPrinter, FormatReceipt(receipt, opts));
+    }
 
     public void PrintRaw(string? printerName, string text)
     {
@@ -105,49 +116,52 @@ public sealed class PrinterService : IPrinterService
         }
     }
 
-    private static string FormatReceipt(ReceiptDto r)
+    private static string FormatReceipt(ReceiptDto r, ReceiptPrintOptions? opts)
     {
+        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        string T(string key) => ReceiptTexts.Get(key, r.Language);
         var sb = new StringBuilder();
-        sb.AppendLine(Center(r.BusinessName));
-        if (!string.IsNullOrWhiteSpace(r.BranchName)) sb.AppendLine(Center(r.BranchName));
-        if (!string.IsNullOrWhiteSpace(r.BranchAddress)) sb.AppendLine(Center(r.BranchAddress!));
-        if (!string.IsNullOrWhiteSpace(r.BranchPhone)) sb.AppendLine(Center(r.BranchPhone!));
+        sb.AppendLine(Center(r.BusinessName, w));
+        if (!string.IsNullOrWhiteSpace(r.BranchName)) sb.AppendLine(Center(r.BranchName, w));
+        if (!string.IsNullOrWhiteSpace(r.BranchAddress)) sb.AppendLine(Center(r.BranchAddress!, w));
+        if (!string.IsNullOrWhiteSpace(r.BranchPhone)) sb.AppendLine(Center(r.BranchPhone!, w));
+        if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
         sb.AppendLine(r.SaleDate.ToString("dd.MM.yyyy HH:mm"));
-        if (!string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"Kassir: {r.UserName}");
-        sb.AppendLine(new string('-', 32));
+        if (!string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"{T("cashier")}: {r.UserName}");
+        sb.AppendLine(new string('-', w));
         foreach (var i in r.Items)
         {
             sb.AppendLine(i.ProductName);
-            sb.AppendLine(Row($"  {i.Quantity:0.###} x {i.UnitPrice:N0}", $"{i.LineTotal:N0}"));
+            sb.AppendLine(Row($"  {i.Quantity:0.###} x {i.UnitPrice:N0}", $"{i.LineTotal:N0}", w));
         }
-        sb.AppendLine(new string('-', 32));
-        if (r.DiscountAmount > 0) sb.AppendLine(Row("Chegirma", $"{r.DiscountAmount:N0}"));
-        sb.AppendLine(Row("JAMI", $"{r.TotalAmount:N0}"));
-        if (r.PaidCash > 0) sb.AppendLine(Row("Naqd", $"{r.PaidCash:N0}"));
-        if (r.PaidCard > 0) sb.AppendLine(Row("Karta", $"{r.PaidCard:N0}"));
-        if (r.PaidBonus > 0) sb.AppendLine(Row("Bonus", $"{r.PaidBonus:N0}"));
-        if (r.ChangeAmount > 0) sb.AppendLine(Row("Qaytim", $"{r.ChangeAmount:N0}"));
-        if (r.DebtAmount > 0) sb.AppendLine(Row("Qarz", $"{r.DebtAmount:N0}"));
-        if (r.CashbackEarned > 0) sb.AppendLine(Row("Bonus to'plandi", $"{r.CashbackEarned:N0}"));
-        sb.AppendLine(new string('-', 32));
-        sb.AppendLine(Center(r.DebtAmount > 0 ? "QARZ" : "TO'LANDI"));
+        sb.AppendLine(new string('-', w));
+        if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));
+        sb.AppendLine(Row(T("total"), $"{r.TotalAmount:N0}", w));
+        if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
+        if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
+        if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+        if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
+        if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
+        if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Center(T(r.DebtAmount > 0 ? "unpaid" : "paid"), w));
         sb.AppendLine();
-        sb.AppendLine(Center("Rahmat!"));
+        sb.AppendLine(Center(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText, w));
         sb.AppendLine();
         sb.AppendLine();
         return sb.ToString();
     }
 
-    private static string Center(string s)
+    private static string Center(string s, int w)
     {
-        s = s.Length > 32 ? s[..32] : s;
-        var pad = (32 - s.Length) / 2;
+        s = s.Length > w ? s[..w] : s;
+        var pad = (w - s.Length) / 2;
         return new string(' ', Math.Max(0, pad)) + s;
     }
 
-    private static string Row(string left, string right)
+    private static string Row(string left, string right, int w)
     {
-        var space = 32 - left.Length - right.Length;
+        var space = w - left.Length - right.Length;
         return space > 0 ? left + new string(' ', space) + right : left + " " + right;
     }
 }

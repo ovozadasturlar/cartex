@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Customers;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
 
@@ -78,9 +80,24 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         catch { }
     }
 
+    private IReadOnlyList<PageShortcut>? _pageShortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _pageShortcuts ??=
+    [
+        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), WorksInText: true),
+        new(Key.Escape, KeyModifiers.None, "shortcut_close", HandleEscape, WorksInText: true),
+    ];
+
+    private void HandleEscape()
+    {
+        if (IsRepayOpen) { IsRepayOpen = false; return; }
+        if (IsEditOpen) IsEditOpen = false;
+    }
+
     public bool IsEmpty => Customers.Count == 0;
     public bool HasSelection => SelectedCustomer is not null;
     public bool CanManage => _auth.HasPermission("customers.manage");
+    public bool CanMessage => _auth.HasPermission("customers.message");
     public bool CanExport => _auth.HasPermission("reports.export");
 
     public CustomersViewModel(ICustomersApi api, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi)
@@ -175,6 +192,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditDiscountPct = 0;
         EditCreditLimit = 0;
         EditNotificationsOptOut = false;
+        EditLanguage = "uz-latn";
         await EnsureCurrenciesAsync();
         EditOpeningBalance = 0;
         EditOpeningKindIndex = 0;
@@ -199,8 +217,12 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditDiscountPct = customer.DiscountPct;
         EditCreditLimit = customer.CreditLimit;
         EditNotificationsOptOut = customer.NotificationsOptOut;
+        EditLanguage = customer.PreferredLanguage ?? "uz-latn";
         IsEditOpen = true;
     }
+
+    public string[] CustomerLanguages { get; } = ["uz-latn", "uz-cyrl", "ru", "en"];
+    [ObservableProperty] private string _editLanguage = "uz-latn";
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
@@ -223,11 +245,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
                 {
                     var opening = EditOpeningKindIndex == 1 ? -EditOpeningBalance : EditOpeningBalance;
                     targetId = await _api.CreateAsync(new CreateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut,
-                        opening, IsMulticurrency ? EditOpeningCurrency : null));
+                        opening, IsMulticurrency ? EditOpeningCurrency : null, EditLanguage));
                 }
                 else
                 {
-                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut));
+                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage));
                     targetId = _editId;
                 }
             }
@@ -235,6 +257,42 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             _toast.Success(L["success"]);
             await LoadAsync();
             SelectedCustomer = Customers.FirstOrDefault(c => c.Id == targetId);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    public ObservableCollection<string> MessageChannels { get; } = [];
+    [ObservableProperty] private bool _isMessageOpen;
+    [ObservableProperty] private string? _messageChannel;
+    [ObservableProperty] private string _messageText = "";
+
+    [RelayCommand]
+    private void OpenMessage()
+    {
+        if (SelectedCustomer is null) return;
+        MessageChannels.Clear();
+        if (SelectedCustomer.HasTelegram) MessageChannels.Add("telegram");
+        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Phone)) MessageChannels.Add("sms");
+        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Email)) MessageChannels.Add("email");
+        if (MessageChannels.Count == 0) { _toast.Warning(L["message_no_channel"]); return; }
+        MessageChannel = MessageChannels[0];
+        MessageText = "";
+        IsMessageOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelMessage() => IsMessageOpen = false;
+
+    [RelayCommand]
+    private async Task SendMessageAsync()
+    {
+        if (SelectedCustomer is null || MessageChannel is null || string.IsNullOrWhiteSpace(MessageText)) { _toast.Error(L["error"]); return; }
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _api.SendMessageAsync(SelectedCustomer.Id, new SendCustomerMessageRequest(MessageChannel, MessageText.Trim()));
+            IsMessageOpen = false;
+            _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

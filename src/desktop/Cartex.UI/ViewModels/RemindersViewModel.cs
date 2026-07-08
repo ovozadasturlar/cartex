@@ -16,6 +16,8 @@ public partial class RemindersViewModel(ISettingsApi api, IToastService toast, I
     [ObservableProperty] private bool _channelTelegram;
     [ObservableProperty] private bool _channelSms;
     [ObservableProperty] private bool _channelEmail;
+    [ObservableProperty] private string _overdueTemplate = string.Empty;
+    [ObservableProperty] private string _dueSoonTemplate = string.Empty;
 
     public async Task LoadAsync()
     {
@@ -30,6 +32,8 @@ public partial class RemindersViewModel(ISettingsApi api, IToastService toast, I
             ChannelTelegram = cfg.Channels.Contains("Telegram");
             ChannelSms = cfg.Channels.Contains("Sms");
             ChannelEmail = cfg.Channels.Contains("Email");
+            OverdueTemplate = cfg.OverdueTemplate ?? string.Empty;
+            DueSoonTemplate = cfg.DueSoonTemplate ?? string.Empty;
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -45,7 +49,9 @@ public partial class RemindersViewModel(ISettingsApi api, IToastService toast, I
             if (ChannelEmail) channels.Add("Email");
 
             using (busy.Begin(L["loading"]))
-                await api.UpdateReminderAsync(new UpdateReminderSettingsRequest(Enabled, (int)MinDaysOverdue, (int)RepeatEveryDays, MinBalance, (int)SendHourLocal, channels));
+                await api.UpdateReminderAsync(new UpdateReminderSettingsRequest(Enabled, (int)MinDaysOverdue, (int)RepeatEveryDays, MinBalance, (int)SendHourLocal, channels,
+                    string.IsNullOrWhiteSpace(OverdueTemplate) ? null : OverdueTemplate.Trim(),
+                    string.IsNullOrWhiteSpace(DueSoonTemplate) ? null : DueSoonTemplate.Trim()));
             toast.Success(L["success"]);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }

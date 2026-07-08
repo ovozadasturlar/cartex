@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Paging;
+using Refit;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Units;
 using Cartex.UI.Models;
@@ -49,6 +50,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<IdOption> WarehouseOptions { get; } = [];
     public ObservableCollection<IdOption> ProductOptions { get; } = [];
     public ObservableCollection<UnitDto> UnitOptions { get; } = [];
+
+    private readonly List<UnitDto> _allUnits = [];
+    private readonly Dictionary<long, string> _variantDimensions = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -102,6 +106,37 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     partial void OnLinePriceChanged(decimal value) => OnPropertyChanged(nameof(LineMargin));
     partial void OnLineSellingPriceChanged(decimal value) => OnPropertyChanged(nameof(LineMargin));
+
+    partial void OnLineProductChanged(IdOption? value)
+    {
+        RebuildUnitOptions(value);
+        _ = FillPricesAsync(value);
+    }
+
+    private void RebuildUnitOptions(IdOption? product)
+    {
+        var dimension = product?.Id is { } id && _variantDimensions.TryGetValue(id, out var d) ? d : null;
+        UnitOptions.Clear();
+        if (dimension is null or "Count") { LineUnit = null; return; }
+        foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled)) UnitOptions.Add(u);
+        LineUnit = null;
+    }
+
+    private async Task FillPricesAsync(IdOption? product)
+    {
+        if (product?.Id is not { } variantId || SelectedWarehouse?.Id is not { } warehouseId) return;
+        if (IsMulticurrency && SupplyCurrency != _baseCurrency) return;
+        var priceSnapshot = LinePrice;
+        var sellingSnapshot = LineSellingPrice;
+        try
+        {
+            var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
+            if (LineProduct?.Id != variantId) return;
+            if (LinePrice == priceSnapshot) LinePrice = info.LastPurchasePrice ?? 0;
+            if (LineSellingPrice == sellingSnapshot) LineSellingPrice = info.SellingPrice ?? 0;
+        }
+        catch { }
+    }
 
     public PaginationState Paging { get; } = new();
     [ObservableProperty] private SuppliesTotalsDto? _totals;
@@ -196,23 +231,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _printCode;
     [ObservableProperty] private int _printQuantity = 1;
     [ObservableProperty] private Bitmap? _printPreview;
-    [ObservableProperty] private string? _printSelectedPrinter;
-    public ObservableCollection<string> PrintPrinters { get; } = [];
 
     [RelayCommand]
     private async Task OpenPrintBarcode(SupplyLine line)
     {
         PrintProductName = line.ProductName;
         PrintQuantity = 1;
-        PrintPrinters.Clear();
-        foreach (var p in _printer.GetInstalledPrinters()) PrintPrinters.Add(p);
-        PrintSelectedPrinter = _printer.BarcodePrinter ?? PrintPrinters.FirstOrDefault();
+        PrintCode = null;
+        PrintPreview = null;
+        IsPrintOpen = true;
         try
         {
             PrintCode = await _barcodesApi.GenerateAsync(line.VariantId);
             using var stream = new MemoryStream(_labels.RenderPng(PrintCode));
             PrintPreview = new Bitmap(stream);
-            IsPrintOpen = true;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -226,7 +258,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
         try
         {
-            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, PrintSelectedPrinter);
+            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, null);
             IsPrintOpen = false;
             _toast.Success(L["success"]);
         }
@@ -235,6 +267,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private async void OnQuickProductCreated(long variantId, string name)
     {
+        if (QuickProduct.SelectedUnit?.Dimension is { } dim) _variantDimensions[variantId] = dim;
         var option = new IdOption(variantId, name);
         ProductOptions.Add(option);
         LineProduct = option;
@@ -269,11 +302,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
                 var products = await _productsApi.GetAllAsync();
                 ProductOptions.Clear();
-                foreach (var p in products) ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
+                _variantDimensions.Clear();
+                foreach (var p in products)
+                {
+                    ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
+                    if (p.Dimension is { } dim) _variantDimensions[p.DefaultVariantId] = dim;
+                }
 
                 var units = await _unitsApi.GetAllAsync();
-                UnitOptions.Clear();
-                foreach (var u in units) UnitOptions.Add(u);
+                _allUnits.Clear();
+                _allUnits.AddRange(units);
+                RebuildUnitOptions(LineProduct);
 
                 await LoadSuppliesAsync();
             }
@@ -319,17 +358,24 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         try
         {
             var found = await _productsApi.GetByBarcodeAsync(code, SelectedWarehouse.Id.Value);
+            _variantDimensions[found.VariantId] = found.Dimension;
             var option = ProductOptions.FirstOrDefault(o => o.Id == found.VariantId) ?? new IdOption(found.VariantId, found.ProductName);
             if (!ProductOptions.Contains(option)) ProductOptions.Add(option);
             LineProduct = option;
+            if (found.PackQty > 1)
+            {
+                LinePackSize = found.PackQty;
+                _toast.Info($"{found.ProductName} ×{found.PackQty:0.###}");
+            }
             LineBarcode = "";
         }
-        catch (Exception)
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             LineBarcode = "";
             await QuickProduct.OpenCommand.ExecuteAsync(null);
             QuickProduct.Barcode = code;
         }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

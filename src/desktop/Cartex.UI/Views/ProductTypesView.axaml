@@ -33,8 +33,6 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Width="*" Binding="{Binding Name}"
                                                 Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="Auto" Binding="{Binding MeasureMode}"
-                                                Header="{Binding [measure_mode], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto"
                                                     Header="{Binding [tracks_expiry], Source={x:Static svc:LocalizationManager.Instance}}">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -74,14 +72,6 @@
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding EditName}" MinHeight="38" />
-                    </StackPanel>
-                    <StackPanel Spacing="5">
-                        <TextBlock Text="{Binding L[measure_mode]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <ComboBox ItemsSource="{Binding MeasureModes}" SelectedItem="{Binding SelectedMeasureMode}" HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <ToggleSwitch IsChecked="{Binding EditTracksExpiry}" />

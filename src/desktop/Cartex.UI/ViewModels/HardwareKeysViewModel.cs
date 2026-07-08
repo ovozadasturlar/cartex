@@ -10,9 +10,10 @@ using Cartex.UI.Services;
 namespace Cartex.UI.ViewModels;
 
 public partial class HardwareKeysViewModel(
-    IHardwareKeysApi api, IUsersApi usersApi, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
+    IHardwareKeysApi api, IUsersApi usersApi, IDialogService dialog, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
 {
     public ObservableCollection<UserDto> Users { get; } = [];
+    public ObservableCollection<HardwareKeyDto> Keys { get; } = [];
 
     [ObservableProperty] private UserDto? _selectedUser;
     [ObservableProperty] private string? _driveInfo;
@@ -28,7 +29,32 @@ public partial class HardwareKeysViewModel(
                 Users.Clear();
                 foreach (var u in list.Where(u => u.IsActive))
                     Users.Add(u);
+                await ReloadKeysAsync();
             }
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task ReloadKeysAsync()
+    {
+        var keys = await api.GetAllAsync();
+        Keys.Clear();
+        foreach (var k in keys) Keys.Add(k);
+    }
+
+    [RelayCommand]
+    private async Task RevokeKeyAsync(HardwareKeyDto? key)
+    {
+        if (key is null || key.RevokedAt is not null) return;
+        if (!await dialog.ConfirmDangerAsync(L["key_revoke_confirm"], L["revoke"])) return;
+        try
+        {
+            using (busy.Begin(L["loading"]))
+            {
+                await api.RevokeAsync(key.Id);
+                await ReloadKeysAsync();
+            }
+            toast.Success(L["success"]);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -51,6 +77,7 @@ public partial class HardwareKeysViewModel(
             {
                 var result = await api.GenerateAsync(new GenerateHardwareKeyRequest(SelectedUser.Id, _drive.Serial));
                 await File.WriteAllTextAsync(Path.Combine(_drive.Root, result.FileName), result.Content);
+                await ReloadKeysAsync();
             }
             toast.Success(L["key_issued"]);
         }

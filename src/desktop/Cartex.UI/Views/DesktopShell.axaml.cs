@@ -4,6 +4,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels;
 
@@ -36,6 +37,7 @@ public partial class DesktopShell : UserControl
             {
                 _keyHost = top;
                 _keyHost.AddHandler(KeyDownEvent, OnShellKeyDown, RoutingStrategies.Tunnel);
+                _keyHost.AddHandler(KeyDownEvent, OnPageShortcutKeyDown, RoutingStrategies.Bubble);
             }
         }
     }
@@ -45,6 +47,7 @@ public partial class DesktopShell : UserControl
         if (_keyHost is not null)
         {
             _keyHost.RemoveHandler(KeyDownEvent, OnShellKeyDown);
+            _keyHost.RemoveHandler(KeyDownEvent, OnPageShortcutKeyDown);
             _keyHost = null;
         }
         base.OnUnloaded(e);
@@ -54,6 +57,18 @@ public partial class DesktopShell : UserControl
     {
         if (DataContext is not MainViewModel vm) return;
 
+        if (vm.IsShortcutHelpOpen)
+        {
+            if (e.Key is Key.Escape or Key.F1)
+            {
+                vm.ToggleShortcutHelpCommand.Execute(null);
+                e.Handled = true;
+            }
+            return;
+        }
+
+        if (vm.IsOnboardingOpen) return;
+
         if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             vm.OpenPaletteCommand.Execute(null);
@@ -62,15 +77,34 @@ public partial class DesktopShell : UserControl
             return;
         }
 
-        if (!vm.IsPaletteOpen) return;
-
-        switch (e.Key)
+        if (vm.IsPaletteOpen)
         {
-            case Key.Escape: vm.ClosePaletteCommand.Execute(null); e.Handled = true; break;
-            case Key.Enter: vm.ExecutePaletteCommand.Execute(vm.SelectedPaletteItem); e.Handled = true; break;
-            case Key.Down: MovePalette(vm, 1); e.Handled = true; break;
-            case Key.Up: MovePalette(vm, -1); e.Handled = true; break;
+            switch (e.Key)
+            {
+                case Key.Escape: vm.ClosePaletteCommand.Execute(null); e.Handled = true; break;
+                case Key.Enter: vm.ExecutePaletteCommand.Execute(vm.SelectedPaletteItem); e.Handled = true; break;
+                case Key.Down: MovePalette(vm, 1); e.Handled = true; break;
+                case Key.Up: MovePalette(vm, -1); e.Handled = true; break;
+            }
+            return;
         }
+
+        if (e.Key == Key.F1)
+        {
+            vm.ToggleShortcutHelpCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnPageShortcutKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if (vm.IsShortcutHelpOpen || vm.IsPaletteOpen || vm.IsOnboardingOpen) return;
+        if (e.Source is Avalonia.Visual source && source.FindAncestorOfType<Ursa.Controls.OverlayDialogHost>() is not null) return;
+
+        var inText = _keyHost?.FocusManager?.GetFocusedElement() is TextBox;
+        if (ServiceLocator.Resolve<ShortcutService>().TryHandle(e, inText))
+            e.Handled = true;
     }
 
     private void OnPaletteItemActivated(object? sender, TappedEventArgs e)

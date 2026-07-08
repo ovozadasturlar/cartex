@@ -56,6 +56,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string this[string key] =>
         _strings.TryGetValue(key, out var value) ? value : $"[{key}]";
 
+    public string? Find(string key) => _strings.TryGetValue(key, out var value) ? value : null;
+
     public static AppLanguage[] AvailableLanguages => [AppLanguage.En, AppLanguage.Ru, AppLanguage.UzLatn, AppLanguage.UzCyrl];
 
     public static string GetLanguageDisplayName(AppLanguage lang) => lang switch

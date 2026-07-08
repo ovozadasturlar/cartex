@@ -130,13 +130,13 @@ public partial class PermissionsMatrixViewModel : ViewModelBase, ILoadable
                 Groups.Clear();
                 foreach (var group in permissions.OrderBy(p => p.Name).GroupBy(p => p.Name.Split('.')[0]).OrderBy(g => g.Key))
                 {
-                    var g = new MatrixGroup { Title = group.Key };
+                    var g = new MatrixGroup { Title = LocalizationManager.Instance.Find($"perm_group_{group.Key}") ?? group.Key };
                     foreach (var perm in group)
                     {
                         var row = new MatrixRow(ToggleGlobalAsync)
                         {
                             PermissionId = perm.Id,
-                            Name = perm.Description ?? perm.Name,
+                            Name = LocalizationManager.Instance.Find($"perm_{perm.Name}") ?? perm.Description ?? perm.Name,
                             Description = perm.Name,
                             CanGovern = CanGovern
                         };

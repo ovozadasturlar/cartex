@@ -22,6 +22,11 @@
                         </StackPanel>
 
                         <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[cashback_rounding]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <ComboBox ItemsSource="{Binding RoundingOptions}" SelectedIndex="{Binding RoundingIndex}"
+                                      MinWidth="240" HorizontalAlignment="Left" MinHeight="38" />
+                        </StackPanel>
+                        <StackPanel Spacing="5">
                             <TextBlock Text="{Binding L[cashback_percent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                             <NumericUpDown Value="{Binding TotalPercent}" Minimum="0" Maximum="100" Increment="0.5"
                                            FormatString="0.##" MinWidth="240" HorizontalAlignment="Left" />

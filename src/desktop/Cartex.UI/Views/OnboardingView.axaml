@@ -4,11 +4,28 @@
              x:Class="Cartex.UI.Views.OnboardingView"
              x:CompileBindings="False">
 
+    <UserControl.Styles>
+        <Style Selector="Button.preset">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.preset.active">
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+    </UserControl.Styles>
+
     <Border Background="{DynamicResource CardBg}" CornerRadius="16"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
             BoxShadow="0 18 50 0 #33000000"
             VerticalAlignment="Center" HorizontalAlignment="Center"
-            Width="480" Padding="36,32">
+            Width="500" Padding="36,32">
         <StackPanel Spacing="20">
 
             <StackPanel Spacing="6">
@@ -31,7 +48,34 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsStep2}" Spacing="12">
+            <StackPanel IsVisible="{Binding IsStep2}" Spacing="8">
+                <TextBlock Text="{Binding L[preset_step_title]}" Classes="caption" />
+                <ScrollViewer MaxHeight="320">
+                    <ItemsControl ItemsSource="{Binding Presets}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="preset" Classes.active="{Binding IsSelected}" Margin="0,4"
+                                        Command="{Binding $parent[UserControl].DataContext.SelectPresetCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13.5"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Text="{Binding Description}" FontSize="11.5" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextMuted}" />
+                                        </StackPanel>
+                                        <mi:MaterialIcon Grid.Column="1" Kind="CheckCircle" Width="18" Height="18"
+                                                         VerticalAlignment="Center" Foreground="{DynamicResource BrandPrimaryBrush}"
+                                                         IsVisible="{Binding IsSelected}" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding IsStep3}" Spacing="12">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{Binding L[branch]}" Classes="caption" />
                     <TextBox Text="{Binding BranchName, Mode=TwoWay}" MinHeight="44" />
@@ -42,11 +86,13 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsStep3}" Spacing="10">
+            <StackPanel IsVisible="{Binding IsStep4}" Spacing="10">
                 <mi:MaterialIcon Kind="CheckCircleOutline" Width="48" Height="48"
                                  HorizontalAlignment="Center" Foreground="{DynamicResource SuccessBrush}" />
                 <TextBlock Text="{Binding L[onboarding_done]}" HorizontalAlignment="Center"
                            TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+                <TextBlock Text="{Binding SelectedPreset.Title}" HorizontalAlignment="Center" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrandPrimaryBrush}" />
             </StackPanel>
 
             <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,0">

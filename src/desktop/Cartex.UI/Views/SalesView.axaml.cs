@@ -22,27 +22,31 @@ public partial class SalesView : UserControl
         }
     }
 
+    private void OnProductsScroll(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer sv || DataContext is not SalesViewModel vm) return;
+        if (!vm.HasMoreProducts || vm.LoadMoreProductsCommand.IsRunning) return;
+        if (sv.Offset.Y + sv.Viewport.Height >= sv.Extent.Height - 400)
+            vm.LoadMoreProductsCommand.Execute(null);
+    }
+
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        if (DataContext is SalesViewModel vm)
+        {
+            vm.ScanFocusRequested -= FocusScan;
+            vm.ScanFocusRequested += FocusScan;
+        }
         FocusScan();
     }
 
-    private void FocusScan() => this.FindControl<TextBox>("ScanBox")?.Focus();
-
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override void OnUnloaded(RoutedEventArgs e)
     {
         if (DataContext is SalesViewModel vm)
-        {
-            switch (e.Key)
-            {
-                case Key.F2: FocusScan(); e.Handled = true; break;
-                case Key.F4: vm.PayExactCommand.Execute(null); e.Handled = true; break;
-                case Key.F6: vm.HoldSaleCommand.Execute(null); e.Handled = true; break;
-                case Key.F9: vm.CompleteSaleCommand.Execute(null); e.Handled = true; break;
-                case Key.Escape: vm.ClearCartCommand.Execute(null); e.Handled = true; break;
-            }
-        }
-        base.OnKeyDown(e);
+            vm.ScanFocusRequested -= FocusScan;
+        base.OnUnloaded(e);
     }
+
+    private void FocusScan() => this.FindControl<TextBox>("ScanBox")?.Focus();
 }

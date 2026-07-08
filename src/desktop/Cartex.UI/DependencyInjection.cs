@@ -11,11 +11,17 @@ public static class DependencyInjection
     {
         services.AddSingleton<ITokenStore, TokenStore>();
         services.AddSingleton<AuthService>();
-        services.AddApiClients(() => SettingsService.Instance.ApiBaseUrl, () => ServiceLocator.Resolve<AuthService>().Token, OnUnauthorized);
+        services.AddApiClients(
+            () => SettingsService.Instance.ApiBaseUrl,
+            () => ServiceLocator.Resolve<AuthService>().Token,
+            ct => ServiceLocator.Resolve<AuthService>().EnsureFreshTokenAsync(ct),
+            OnUnauthorized);
 
         services.AddSingleton<NavigationService>();
         services.AddSingleton<BranchContextService>();
         services.AddSingleton<ConnectivityService>();
+        services.AddSingleton<OfflineStore>();
+        services.AddSingleton<OfflineSyncService>();
         services.AddSingleton(LocalizationManager.Instance);
 
         services.AddSingleton<ToastService>();
@@ -30,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<IPrinterService, PrinterService>();
         services.AddSingleton<IBarcodeLabelService, BarcodeLabelService>();
         services.AddSingleton<IScannedCodeParser, ScannedCodeParser>();
+        services.AddSingleton<ShortcutService>();
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();
@@ -37,6 +44,7 @@ public static class DependencyInjection
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<ProductsViewModel>();
         services.AddTransient<QuickProductViewModel>();
+        services.AddTransient<PrepackViewModel>();
         services.AddSingleton<SalesViewModel>();
         services.AddTransient<ShiftViewModel>();
         services.AddTransient<CustomersViewModel>();
@@ -67,9 +75,11 @@ public static class DependencyInjection
         services.AddTransient<TariffFeaturesViewModel>();
         services.AddTransient<IntegrationsViewModel>();
         services.AddTransient<PrintingViewModel>();
+        services.AddTransient<ReceiptSettingsViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
         services.AddTransient<BarcodePrintViewModel>();
         services.AddTransient<HardwareKeysViewModel>();
+        services.AddTransient<DevicesViewModel>();
         services.AddTransient<OnboardingViewModel>();
     }
 

@@ -54,14 +54,14 @@ public partial class QuickProductViewModel : ViewModelBase
             {
                 if (Units.Count == 0)
                 {
-                    foreach (var u in await _unitsApi.GetAllAsync()) Units.Add(u);
+                    foreach (var u in (await _unitsApi.GetAllAsync()).Where(u => u.IsEnabled)) Units.Add(u);
                     foreach (var c in await _categoriesApi.GetAllAsync()) Categories.Add(c);
                 }
             }
         }
         catch { _toast.Error(L["error"]); return; }
 
-        SelectedUnit = Units.FirstOrDefault();
+        SelectedUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
         IsOpen = true;
     }
 
@@ -78,8 +78,8 @@ public partial class QuickProductViewModel : ViewModelBase
         {
             using (_busy.Begin(L["loading"]))
             {
-                var barcodes = string.IsNullOrWhiteSpace(Barcode) ? null : new List<string> { Barcode.Trim() };
-                var request = new CreateProductRequest(Name.Trim(), SelectedCategory?.Id, SelectedUnit.Id, 0, barcodes,
+                var barcodes = string.IsNullOrWhiteSpace(Barcode) ? null : new List<BarcodeInput> { new(Barcode.Trim()) };
+                var request = new CreateProductRequest(Name.Trim(), SelectedCategory?.Id, SelectedUnit.Id, null, barcodes,
                     Code: string.IsNullOrWhiteSpace(Code) ? null : Code.Trim(),
                     SellingPrice: SellingPrice);
                 var productId = await _productsApi.CreateAsync(request);

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             x:Class="Cartex.UI.Views.ReceiptSettingsView"
+             x:CompileBindings="False">
+
+    <ScrollViewer>
+        <StackPanel Margin="24" MaxWidth="640" HorizontalAlignment="Left" Spacing="16">
+            <c:PageHeader Title="{Binding L[receipt_settings]}" />
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[receipt_header]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding HeaderText}" MinHeight="38" PlaceholderText="{Binding L[receipt_header_example]}" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[receipt_footer]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding FooterText}" MinHeight="38" PlaceholderText="{Binding L[receipt_footer_example]}" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[receipt_width]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding PaperWidths}" SelectedItem="{Binding PaperWidth}" MinWidth="140" MinHeight="38" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding L[receipt_settings_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                    <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

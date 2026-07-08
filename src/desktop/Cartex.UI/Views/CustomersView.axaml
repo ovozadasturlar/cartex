@@ -5,6 +5,7 @@
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.CustomersView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <Panel>
@@ -141,13 +142,22 @@
                                 </Border>
                             </Grid>
 
-                            <Button Classes="brand" HorizontalAlignment="Left" Command="{Binding OpenRepayCommand}"
-                                    IsVisible="{Binding CanManage}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <mi:MaterialIcon Kind="CashCheck" Width="17" Height="17" />
-                                    <TextBlock Text="{Binding L[repay_debt]}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="brand" Command="{Binding OpenRepayCommand}"
+                                        IsVisible="{Binding CanManage}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="CashCheck" Width="17" Height="17" />
+                                        <TextBlock Text="{Binding L[repay_debt]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="outline" Command="{Binding OpenMessageCommand}"
+                                        IsVisible="{Binding CanMessage}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="SendOutline" Width="17" Height="17" />
+                                        <TextBlock Text="{Binding L[customer_message]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
 
                             <TextBlock Text="{Binding L[recent_transactions]}" FontWeight="SemiBold" FontSize="15"
                                        Foreground="{DynamicResource TextPrimary}" Margin="0,4,0,0" />
@@ -224,6 +234,11 @@
                             <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="0.##" />
                         </StackPanel>
                     </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[customer_language]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding CustomerLanguages}" SelectedItem="{Binding EditLanguage}"
+                                  MinWidth="160" MinHeight="36" HorizontalAlignment="Left" />
+                    </StackPanel>
                     <CheckBox IsChecked="{Binding EditNotificationsOptOut}" Content="{Binding L[notifications_opt_out]}" />
                     <StackPanel Spacing="5" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -239,6 +254,30 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
                         <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
                         <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Border IsVisible="{Binding IsMessageOpen}" Background="#80000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[customer_message]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[channel]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding MessageChannels}" SelectedItem="{Binding MessageChannel}"
+                                  HorizontalAlignment="Stretch" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[message_text]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding MessageText}" MinHeight="90" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelMessageCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding SendMessageCommand}" Content="{Binding L[send]}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

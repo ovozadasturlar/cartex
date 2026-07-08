@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -80,6 +81,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ObservableCollection<CategoryDto> Categories { get; } = [];
     public ObservableCollection<CategoryDto> FilterCategories { get; } = [];
     public ObservableCollection<UnitDto> Units { get; } = [];
+    private readonly List<UnitDto> _allUnits = [];
     public ObservableCollection<ProductTypeDto> ProductTypes { get; } = [];
 
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
@@ -89,7 +91,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IPrinterService printer, IFilePickerService filePicker, IToastService toast, IBusyService busy, IExportService export, AuthService auth,
-        IBusinessApi businessApi, IRatesApi ratesApi)
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi)
     {
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
@@ -106,12 +108,15 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _auth = auth;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
+        _settingsApi = settingsApi;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);
     }
 
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
+    private readonly ISettingsApi _settingsApi;
+    private decimal _defaultMinStock;
     private string _baseCurrency = "UZS";
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private string? _editPriceCurrency;
@@ -129,11 +134,28 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             if (IsMulticurrency)
                 foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
                     PriceCurrencies.Add(r.Code);
+            _defaultMinStock = (await _settingsApi.GetSalesPolicyAsync()).DefaultMinStock;
         }
         catch { }
     }
 
     public bool CanPrintBarcode => _auth.HasPermission("products.printBarcode");
+
+    private IReadOnlyList<PageShortcut>? _pageShortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _pageShortcuts ??=
+    [
+        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), WorksInText: true),
+        new(Key.F2, KeyModifiers.None, "shortcut_save", () => SaveCommand.Execute(null), () => IsEditOpen, WorksInText: true),
+        new(Key.Escape, KeyModifiers.None, "shortcut_close", HandleEscape, WorksInText: true),
+    ];
+
+    private void HandleEscape()
+    {
+        if (IsPrintOpen) { IsPrintOpen = false; return; }
+        if (IsVariantsOpen) { IsVariantsOpen = false; return; }
+        if (IsEditOpen) IsEditOpen = false;
+    }
 
     private long _editDefaultVariantId;
     public ObservableCollection<BarcodeDto> EditBarcodeList { get; } = [];
@@ -169,7 +191,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (_editDefaultVariantId == 0) return;
         try
         {
-            await _barcodesApi.GenerateAsync(_editDefaultVariantId);
+            await _barcodesApi.GenerateAsync(_editDefaultVariantId, EditBarcodePackQty <= 0 ? 1 : EditBarcodePackQty);
+            EditBarcodePackQty = 1;
             await LoadEditBarcodesAsync();
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -191,9 +214,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _printCode;
     [ObservableProperty] private int _printQuantity = 1;
     [ObservableProperty] private Bitmap? _printPreview;
-    [ObservableProperty] private string? _printSelectedPrinter;
     private long _printVariantId;
-    public ObservableCollection<string> PrintPrinters { get; } = [];
 
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)
@@ -201,14 +222,13 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _printVariantId = product.DefaultVariantId;
         PrintProductName = product.Name;
         PrintQuantity = 1;
-        PrintPrinters.Clear();
-        foreach (var p in _printer.GetInstalledPrinters()) PrintPrinters.Add(p);
-        PrintSelectedPrinter = _printer.BarcodePrinter ?? PrintPrinters.FirstOrDefault();
+        PrintCode = null;
+        PrintPreview = null;
+        IsPrintOpen = true;
         try
         {
             PrintCode = product.Barcodes.FirstOrDefault() ?? await _barcodesApi.GenerateAsync(_printVariantId);
             UpdatePrintPreview();
-            IsPrintOpen = true;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -233,7 +253,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
         try
         {
-            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, PrintSelectedPrinter);
+            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, null);
             IsPrintOpen = false;
             _toast.Success(L["success"]);
         }
@@ -323,8 +343,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 FilterCategory = FilterCategories[0];
 
                 var units = await _unitsApi.GetAllAsync();
+                _allUnits.Clear();
+                _allUnits.AddRange(units);
                 Units.Clear();
-                foreach (var u in units) Units.Add(u);
+                foreach (var u in units.Where(u => u.IsEnabled)) Units.Add(u);
 
                 var types = await _typesApi.GetAllAsync();
                 ProductTypes.Clear();
@@ -393,12 +415,12 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editId = 0;
         EditName = string.Empty;
         EditCategory = null;
-        EditUnit = Units.FirstOrDefault();
+        EditUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
         _pendingAttributeValues = null;
         EditProductType = null;
         EditAttributes.Clear();
         OnPropertyChanged(nameof(HasAttributes));
-        EditMinStock = 0;
+        EditMinStock = _defaultMinStock;
         EditBarcodes = string.Empty;
         EditCode = string.Empty;
         EditIkpuCode = string.Empty;
@@ -422,6 +444,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditName = product.Name;
         EditCategory = Categories.FirstOrDefault(c => c.Name == product.CategoryName);
         EditUnit = Units.FirstOrDefault(u => u.Name == product.UnitName);
+        if (EditUnit is null && _allUnits.FirstOrDefault(u => u.Name == product.UnitName) is { } disabledUnit)
+        {
+            Units.Add(disabledUnit);
+            EditUnit = disabledUnit;
+        }
         _pendingAttributeValues = product.Attributes;
         EditProductType = null;
         EditProductType = ProductTypes.FirstOrDefault(t => t.Id == product.ProductTypeId);
@@ -459,7 +486,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             {
                 if (IsNew)
                 {
-                    var barcodes = EditBarcodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                    var barcodes = BarcodeSyntax.Parse(EditBarcodes);
                     var request = new CreateProductRequest(EditName.Trim(), EditCategory?.Id, EditUnit.Id, EditMinStock,
                         barcodes.Count > 0 ? barcodes : null, EditProductType?.Id,
                         Attributes: attributes,
@@ -548,7 +575,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _variantEditId = variant.Id;
         VName = variant.Name ?? string.Empty;
         VCode = variant.Code ?? string.Empty;
-        VBarcodes = string.Join(", ", variant.Barcodes);
+        VBarcodes = BarcodeSyntax.Format(variant.Barcodes);
         VImageKey = variant.ImageKey;
         VImagePreview = null;
         _ = SetPreviewAsync(variant.ImageKey, b => VImagePreview = b);
@@ -579,7 +606,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private async Task SaveVariant()
     {
         var attributes = AttributeSchemaCodec.SerializeValues(VAttributes);
-        var barcodes = VBarcodes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var barcodes = BarcodeSyntax.Parse(VBarcodes);
         var name = string.IsNullOrWhiteSpace(VName) ? null : VName.Trim();
         var code = string.IsNullOrWhiteSpace(VCode) ? null : VCode.Trim();
 

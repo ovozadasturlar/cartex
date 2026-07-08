@@ -19,7 +19,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     private long _editId;
 
     public ObservableCollection<ProductTypeDto> ProductTypes { get; } = [];
-    public ObservableCollection<LabeledValue> MeasureModes { get; } = [];
     public ObservableCollection<AttributeFieldRow> SchemaFields { get; } = [];
     public IReadOnlyList<string> FieldTypes { get; } = ["text", "number", "select", "bool"];
 
@@ -27,7 +26,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isNew;
     [ObservableProperty] private string _editName = "";
     [ObservableProperty] private bool _editTracksExpiry;
-    [ObservableProperty] private LabeledValue? _selectedMeasureMode;
     [ObservableProperty] private string? _searchText;
 
     public bool IsEmpty => ProductTypes.Count == 0;
@@ -50,7 +48,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
             {
                 _all = (await _api.GetAllAsync()).ToList();
                 ApplyFilter();
-                BuildMeasureModes();
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -83,14 +80,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    private void BuildMeasureModes()
-    {
-        MeasureModes.Clear();
-        MeasureModes.Add(new LabeledValue("Counted", L["counted"]));
-        MeasureModes.Add(new LabeledValue("Weighed", L["weighed"]));
-        MeasureModes.Add(new LabeledValue("Length", L["length"]));
-    }
-
     [RelayCommand]
     private void OpenCreate()
     {
@@ -98,7 +87,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
         _editId = 0;
         EditName = "";
         EditTracksExpiry = false;
-        SelectedMeasureMode = MeasureModes.FirstOrDefault();
         SchemaFields.Clear();
         IsEditOpen = true;
     }
@@ -110,7 +98,6 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
         _editId = type.Id;
         EditName = type.Name;
         EditTracksExpiry = type.TracksExpiry;
-        SelectedMeasureMode = MeasureModes.FirstOrDefault(m => m.Value == type.MeasureMode) ?? MeasureModes.FirstOrDefault();
         SchemaFields.Clear();
         foreach (var f in AttributeSchemaCodec.ParseSchema(type.AttributeSchema)) SchemaFields.Add(f);
         IsEditOpen = true;
@@ -129,16 +116,15 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     private async Task SaveAsync()
     {
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
-        var measureMode = SelectedMeasureMode?.Value ?? "Counted";
         var schema = AttributeSchemaCodec.SerializeSchema(SchemaFields);
         try
         {
             using (_busy.Begin(L["loading"]))
             {
                 if (IsNew)
-                    await _api.CreateAsync(new CreateProductTypeRequest(EditName.Trim(), EditTracksExpiry, measureMode, schema));
+                    await _api.CreateAsync(new CreateProductTypeRequest(EditName.Trim(), EditTracksExpiry, schema));
                 else
-                    await _api.UpdateAsync(_editId, new UpdateProductTypeRequest(EditName.Trim(), EditTracksExpiry, measureMode, schema));
+                    await _api.UpdateAsync(_editId, new UpdateProductTypeRequest(EditName.Trim(), EditTracksExpiry, schema));
             }
             IsEditOpen = false;
             _toast.Success(L["success"]);

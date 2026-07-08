@@ -28,6 +28,8 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     public bool IsEmail => SelectedSectionKey == "email";
     public bool IsSms => SelectedSectionKey == "sms";
     public bool IsReceipt => SelectedSectionKey == "receipt";
+    public bool IsStorage => SelectedSectionKey == "storage";
+    public bool IsCloudBridge => SelectedSectionKey == "cloudBridge";
 
     partial void OnSelectedSectionKeyChanged(string value)
     {
@@ -35,6 +37,26 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         OnPropertyChanged(nameof(IsEmail));
         OnPropertyChanged(nameof(IsSms));
         OnPropertyChanged(nameof(IsReceipt));
+        OnPropertyChanged(nameof(IsStorage));
+        OnPropertyChanged(nameof(IsCloudBridge));
+        if (value == "sms") _ = RefreshSmsJournalCommand.ExecuteAsync(null);
+    }
+
+    public ObservableCollection<SmsMessageDto> SmsJournal { get; } = [];
+    [ObservableProperty] private string? _smsStatsText;
+
+    [RelayCommand]
+    private async Task RefreshSmsJournal()
+    {
+        try
+        {
+            var stats = await api.GetSmsStatsAsync();
+            SmsStatsText = $"{L["sms_sent"]}: {stats.Total - stats.Failed} • {L["sms_delivered"]}: {stats.Delivered} • {L["sms_failed"]}: {stats.Failed + stats.Undelivered} • {L["sms_segments"]}: {stats.Segments}";
+            var items = await api.GetSmsJournalAsync();
+            SmsJournal.Clear();
+            foreach (var m in items) SmsJournal.Add(m);
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
@@ -74,6 +96,17 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [ObservableProperty] private bool _copyToAdmin;
     [ObservableProperty] private string? _publicBaseUrl;
     [ObservableProperty] private string _telegramFormat = "Auto";
+    [ObservableProperty] private bool _storageEnabled;
+    [ObservableProperty] private string? _storageEndpoint;
+    [ObservableProperty] private string? _storageAccessKey;
+    [ObservableProperty] private string? _storageSecretKey;
+    [ObservableProperty] private string? _storageBucket;
+    [ObservableProperty] private bool _storageUseSsl;
+    [ObservableProperty] private bool _storageHasSecret;
+    [ObservableProperty] private bool _cloudBridgeEnabled;
+    [ObservableProperty] private string? _cloudBridgeGatewayUrl;
+    [ObservableProperty] private string? _cloudBridgeLicenseKey;
+    [ObservableProperty] private bool _cloudBridgeHasLicense;
     [ObservableProperty] private string _emailFormat = "Auto";
 
     public string[] ReceiptFormats { get; } = ["Auto", "Link", "Pdf"];
@@ -117,6 +150,21 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
                 PublicBaseUrl = s.Notification.PublicBaseUrl;
                 TelegramFormat = s.Notification.TelegramFormat;
                 EmailFormat = s.Notification.EmailFormat;
+
+                var storage = await api.GetStorageAsync();
+                StorageEnabled = storage.Enabled;
+                StorageEndpoint = storage.Endpoint;
+                StorageAccessKey = storage.AccessKey;
+                StorageBucket = storage.Bucket;
+                StorageUseSsl = storage.UseSsl;
+                StorageHasSecret = storage.HasSecretKey;
+                StorageSecretKey = null;
+
+                var bridge = await api.GetCloudBridgeAsync();
+                CloudBridgeEnabled = bridge.Enabled;
+                CloudBridgeGatewayUrl = bridge.GatewayUrl;
+                CloudBridgeHasLicense = bridge.HasLicenseKey;
+                CloudBridgeLicenseKey = null;
             }
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
@@ -141,14 +189,42 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [RelayCommand]
     private async Task ConnectTelegramAsync()
     {
+        if (string.IsNullOrWhiteSpace(TelegramBotToken))
+        {
+            toast.Warning(L["bot_token_required"]);
+            return;
+        }
         try
         {
             using (busy.Begin(L["loading"]))
             {
                 var result = await api.TestTelegramAsync(new TelegramTestRequest(TelegramBotToken));
-                TelegramStatus = result.Ok ? $"✓ @{result.BotUsername}" : "✕";
-                if (result.Ok) toast.Success(L["success"]); else toast.Warning(L["error"]);
+                if (!result.Ok)
+                {
+                    TelegramStatus = "✕";
+                    toast.Warning(L["error"]);
+                    return;
+                }
+                await api.UpdateTelegramAsync(new UpdateTelegramSettingsRequest(true, TelegramChatId, TelegramBotToken));
+                await LoadAsync();
+                TelegramStatus = $"✓ @{result.BotUsername}";
+                toast.Success(L["success"]);
             }
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task DisconnectTelegramAsync()
+    {
+        try
+        {
+            using (busy.Begin(L["loading"]))
+            {
+                await api.UpdateTelegramAsync(new UpdateTelegramSettingsRequest(false, TelegramChatId, null, ClearToken: true));
+                await LoadAsync();
+            }
+            toast.Success(L["success"]);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -206,6 +282,32 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         {
             using (busy.Begin(L["loading"]))
                 await api.UpdateSmsAsync(new UpdateSmsSettingsRequest(SmsEnabled, SmsProvider, SmsLogin, SmsPassword, SmsSender, SmsBaseUrl));
+            toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task SaveStorageAsync()
+    {
+        try
+        {
+            using (busy.Begin(L["loading"]))
+                await api.UpdateStorageAsync(new UpdateStorageSettingsRequest(StorageEnabled, StorageEndpoint, StorageAccessKey, StorageSecretKey, StorageBucket, StorageUseSsl));
+            toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task SaveCloudBridgeAsync()
+    {
+        try
+        {
+            using (busy.Begin(L["loading"]))
+                await api.UpdateCloudBridgeAsync(new UpdateCloudBridgeSettingsRequest(CloudBridgeEnabled, CloudBridgeGatewayUrl, CloudBridgeLicenseKey));
             toast.Success(L["success"]);
             await LoadAsync();
         }

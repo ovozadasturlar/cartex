@@ -108,6 +108,29 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
+    private async Task ToggleEnabled(UnitDto unit)
+    {
+        try
+        {
+            await _api.SetStateAsync(unit.Id, new SetUnitStateRequest(!unit.IsEnabled, unit.IsDefault));
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task MakeDefault(UnitDto unit)
+    {
+        if (unit.IsDefault) return;
+        try
+        {
+            await _api.SetStateAsync(unit.Id, new SetUnitStateRequest(true, true));
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
 
     [RelayCommand]

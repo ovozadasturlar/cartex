@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Cartex.UI.Views.DevicesView"
+             x:CompileBindings="False">
+
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[devices]}" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding CanViewAll}">
+                    <ToggleSwitch IsChecked="{Binding ShowAll}" />
+                    <TextBlock Text="{Binding L[devices_all]}" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimary}" />
+                </StackPanel>
+                <Button Classes="outline" Command="{Binding LoadCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="Refresh" Width="17" Height="17" />
+                        <TextBlock Text="{Binding L[refresh]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </c:PageHeader>
+        <Panel>
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <DataGrid ItemsSource="{Binding Sessions}" AutoGenerateColumns="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="*" Binding="{Binding Device}"
+                                            Header="{Binding [device], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Username}"
+                                            Header="{Binding [username], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding LastUsedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                            Header="{Binding [last_used], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                            Header="{Binding [created], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding ExpiresAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                            Header="{Binding [expires], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTemplateColumn Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Classes="icon" Margin="6,0"
+                                            Command="{Binding $parent[DataGrid].DataContext.RevokeCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[revoke]}">
+                                        <mi:MaterialIcon Kind="LogoutVariant" Width="16" Height="16"
+                                                         Foreground="{DynamicResource DangerBrush}" />
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <c:EmptyState Icon="Devices" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+        </Panel>
+    </DockPanel>
+</UserControl>

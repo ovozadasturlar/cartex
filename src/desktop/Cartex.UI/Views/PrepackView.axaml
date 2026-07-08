@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Cartex.UI.Views.PrepackView"
+             x:CompileBindings="False">
+
+    <Border Background="#66000000" IsVisible="{Binding IsOpen}">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                BoxShadow="0 18 50 0 #33000000" Padding="24">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding L[prepack_title]}" Classes="h2" />
+
+                <Grid ColumnDefinitions="*,8,Auto">
+                    <TextBox Text="{Binding SearchText, Mode=TwoWay}" MinHeight="40" PlaceholderText="{Binding L[search]}" />
+                    <Button Grid.Column="2" Classes="outline" Command="{Binding SearchCommand}" Content="{Binding L[search]}" />
+                </Grid>
+
+                <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}" MaxHeight="140">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="*,10,Auto">
+                                <TextBlock Text="{Binding ProductName}" Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Grid.Column="2" Text="{Binding SellingPrice, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextSecondary}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Grid ColumnDefinitions="*,10,*,10,*">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[prepack_qty]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding Quantity}" Minimum="0.001" Increment="0.5" FormatString="0.###"
+                                       ShowButtonSpinner="False" MinHeight="40" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="5">
+                        <TextBlock Text="{Binding L[prepack_count]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding Count}" Minimum="1" Maximum="100" Increment="1" FormatString="0"
+                                       ShowButtonSpinner="False" MinHeight="40" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Spacing="5">
+                        <TextBlock Text="{Binding L[prepack_expiry]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding ExpiresHours}" Minimum="1" Increment="1" FormatString="0"
+                                       ShowButtonSpinner="False" MinHeight="40" Watermark="{Binding L[prepack_expiry_hint]}" />
+                    </StackPanel>
+                </Grid>
+
+                <Button Classes="brand" Command="{Binding CreateCommand}" Content="{Binding L[prepack_create_print]}" HorizontalAlignment="Left" />
+
+                <TextBlock Text="{Binding L[prepack_active]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0" />
+                <ScrollViewer MaxHeight="180">
+                    <ItemsControl ItemsSource="{Binding Active}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,6">
+                                    <Grid ColumnDefinitions="Auto,10,*,10,Auto,10,Auto,6,Auto">
+                                        <TextBlock Text="{Binding LabelCode}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Foreground="{DynamicResource TextPrimary}" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding ProductName}" /> <Run Text="{Binding Quantity, StringFormat='{}{0:0.###}'}" /> <Run Text="{Binding UnitName}" />
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="4" Text="{Binding Price, StringFormat='{}{0:N0}'}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="6" Text="{Binding Status}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" />
+                                        <Button Grid.Column="8" Classes="icon"
+                                                Command="{Binding $parent[ItemsControl].DataContext.CancelPrepackCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[ItemsControl].DataContext.L[delete]}">
+                                            <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Button Classes="outline" Command="{Binding CloseCommand}" Content="{Binding L[close]}" HorizontalAlignment="Right" />
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

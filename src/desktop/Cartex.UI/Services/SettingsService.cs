@@ -68,6 +68,31 @@ public sealed class SettingsService
         set { _data.PosCartWidth = value; Save(); }
     }
 
+    public string DeviceId
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_data.DeviceId))
+            {
+                _data.DeviceId = Guid.NewGuid().ToString("N");
+                Save();
+            }
+            return _data.DeviceId;
+        }
+    }
+
+    public bool OfflineCacheEnabled
+    {
+        get => _data.OfflineCacheEnabled;
+        set { _data.OfflineCacheEnabled = value; Save(); }
+    }
+
+    public long OfflineWarehouseId
+    {
+        get => _data.OfflineWarehouseId;
+        set { _data.OfflineWarehouseId = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -102,5 +127,8 @@ public sealed class SettingsService
         public string ApiBaseUrl { get; set; } = "http://localhost:5015";
         public bool RememberMe { get; set; }
         public double PosCartWidth { get; set; } = 430;
+        public string? DeviceId { get; set; }
+        public bool OfflineCacheEnabled { get; set; }
+        public long OfflineWarehouseId { get; set; }
     }
 }

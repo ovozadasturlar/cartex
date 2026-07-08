@@ -40,6 +40,10 @@
                             Command="{Binding SelectSectionCommand}" CommandParameter="sms" />
                     <Button Classes="subnav" Classes.active="{Binding IsReceipt}" Content="{Binding L[receipt_delivery]}"
                             Command="{Binding SelectSectionCommand}" CommandParameter="receipt" />
+                    <Button Classes="subnav" Classes.active="{Binding IsStorage}" Content="{Binding L[storage_settings]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="storage" />
+                    <Button Classes="subnav" Classes.active="{Binding IsCloudBridge}" Content="{Binding L[cloud_bridge]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="cloudBridge" />
                 </StackPanel>
             </Border>
 
@@ -57,9 +61,13 @@
                             </StackPanel>
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[bot_token]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <Grid ColumnDefinitions="*,8,Auto">
-                                    <TextBox Grid.Column="0" Text="{Binding TelegramBotToken}" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
-                                    <Button Grid.Column="2" Classes="outline" Command="{Binding ConnectTelegramCommand}" Content="{Binding L[connect]}" />
+                                <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding !TelegramHasToken}">
+                                    <TextBox Grid.Column="0" Text="{Binding TelegramBotToken}" PasswordChar="•" PlaceholderText="1234567890:AA..." />
+                                    <Button Grid.Column="2" Classes="brand" Command="{Binding ConnectTelegramCommand}" Content="{Binding L[connect]}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding TelegramHasToken}">
+                                    <TextBox Grid.Column="0" Text="••••••••••••••••••••" IsEnabled="False" />
+                                    <Button Grid.Column="2" Classes="danger" Command="{Binding DisconnectTelegramCommand}" Content="{Binding L[disconnect]}" />
                                 </Grid>
                                 <TextBlock Text="{Binding TelegramStatus}" Foreground="{DynamicResource BrandPrimaryBrush}" FontSize="12" />
                             </StackPanel>
@@ -171,6 +179,30 @@
                                 <TextBlock Text="{Binding L[test_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
                             <Button Classes="brand" Command="{Binding SaveSmsCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding L[sms_journal]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Classes="outline" Command="{Binding RefreshSmsJournalCommand}" Content="{Binding L[refresh]}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding SmsStatsText}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ItemsControl ItemsSource="{Binding SmsJournal}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,6">
+                                                    <Grid ColumnDefinitions="Auto,10,*,10,Auto,10,Auto">
+                                                        <TextBlock Text="{Binding Phone}" Foreground="{DynamicResource TextPrimary}" FontSize="12.5" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{DynamicResource TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="4" Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM HH:mm}'}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                                                        <TextBlock Grid.Column="6" Text="{Binding Status}" Foreground="{DynamicResource TextSecondary}" FontSize="12" FontWeight="SemiBold" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 
@@ -200,6 +232,71 @@
                             </Grid>
                             <TextBlock Text="{Binding L[receipt_format_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                             <Button Classes="brand" Command="{Binding SaveNotificationCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Storage (MinIO) -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsStorage}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="{Binding L[storage_settings]}" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[storage_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding StorageEnabled}" />
+                                <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[endpoint]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding StorageEndpoint}" MinHeight="38" PlaceholderText="localhost:9000" />
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,10,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[access_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <TextBox Text="{Binding StorageAccessKey}" MinHeight="38" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Text="{Binding L[secret_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <TextBox Text="{Binding StorageSecretKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,10,Auto">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[bucket]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <TextBox Text="{Binding StorageBucket}" MinHeight="38" PlaceholderText="cartex" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Bottom">
+                                    <TextBlock Text="SSL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ToggleSwitch IsChecked="{Binding StorageUseSsl}" />
+                                </StackPanel>
+                            </Grid>
+                            <Button Classes="brand" Command="{Binding SaveStorageCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cloud bridge (push relay) -->
+                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsCloudBridge}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="14">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="{Binding L[cloud_bridge]}" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                                <Border Background="{DynamicResource WarningBg}" CornerRadius="6" Padding="8,2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding L[coming_soon]}" FontSize="11" Foreground="{DynamicResource WarningBrush}" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="{Binding L[cloud_bridge_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding CloudBridgeEnabled}" />
+                                <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[gateway_url]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding CloudBridgeGatewayUrl}" MinHeight="38" PlaceholderText="https://push.cartex.uz" />
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[license_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <TextBox Text="{Binding CloudBridgeLicenseKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                            </StackPanel>
+                            <Button Classes="brand" Command="{Binding SaveCloudBridgeCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
                         </StackPanel>
                     </Border>
 

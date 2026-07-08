@@ -45,6 +45,39 @@
 
                 </StackPanel>
             </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding L[issued_keys]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                    <ItemsControl ItemsSource="{Binding Keys}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,7">
+                                    <Grid ColumnDefinitions="*,10,Auto,10,Auto,10,Auto">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding FullName}" Foreground="{DynamicResource TextPrimary}" FontSize="12.5" />
+                                            <TextBlock Text="{Binding Serial}" Foreground="{DynamicResource TextMuted}" FontSize="11" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding IssuedAt, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Text="{Binding $parent[ItemsControl].DataContext.L[revoked]}"
+                                                   IsVisible="{Binding RevokedAt, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                   Foreground="{DynamicResource DangerBrush}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Button Grid.Column="6" Classes="icon"
+                                                IsVisible="{Binding RevokedAt, Converter={x:Static ObjectConverters.IsNull}}"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RevokeKeyCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="{Binding $parent[ItemsControl].DataContext.L[revoke]}">
+                                            <mi:MaterialIcon Kind="Close" Width="15" Height="15" Foreground="{DynamicResource DangerBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

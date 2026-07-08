@@ -1,13 +1,15 @@
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
+using System.Text.Json;
 
 namespace Cartex.UI.Services;
 
+public sealed record TokenBundle(string Access, string Refresh);
+
 public interface ITokenStore
 {
-    void Save(string token);
-    string? Load();
+    void Save(TokenBundle bundle);
+    TokenBundle? Load();
     void Clear();
 }
 
@@ -31,12 +33,13 @@ public sealed class TokenStore : ITokenStore
         }
     }
 
-    public void Save(string token)
+    public void Save(TokenBundle bundle)
     {
         if (_path is null || !OperatingSystem.IsWindows()) return;
         try
         {
-            var data = ProtectedData.Protect(Encoding.UTF8.GetBytes(token), Entropy, DataProtectionScope.CurrentUser);
+            var json = JsonSerializer.SerializeToUtf8Bytes(bundle);
+            var data = ProtectedData.Protect(json, Entropy, DataProtectionScope.CurrentUser);
             File.WriteAllBytes(_path, data);
         }
         catch
@@ -44,13 +47,13 @@ public sealed class TokenStore : ITokenStore
         }
     }
 
-    public string? Load()
+    public TokenBundle? Load()
     {
         if (_path is null || !OperatingSystem.IsWindows() || !File.Exists(_path)) return null;
         try
         {
             var data = ProtectedData.Unprotect(File.ReadAllBytes(_path), Entropy, DataProtectionScope.CurrentUser);
-            return Encoding.UTF8.GetString(data);
+            return JsonSerializer.Deserialize<TokenBundle>(data);
         }
         catch
         {

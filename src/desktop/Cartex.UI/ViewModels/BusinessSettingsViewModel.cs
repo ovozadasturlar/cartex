@@ -4,7 +4,10 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using System.Collections.ObjectModel;
 using Cartex.Shared.Models.Business;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
 using Refit;
 
@@ -27,8 +30,21 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _logoImageKey;
     [ObservableProperty] private Bitmap? _logoPreview;
 
-    public BusinessSettingsViewModel(IBusinessApi api, IStorageApi storageApi, IFilePickerService filePicker, IToastService toast, IBusyService busy)
+    public ObservableCollection<string> Currencies { get; } = new(CurrencyCatalog.All);
+    public ObservableCollection<string> ShiftPolicies { get; } = [];
+    private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
+
+    [ObservableProperty] private int _shiftPolicyIndex = 1;
+    [ObservableProperty] private decimal _maxDiscountPercent;
+    [ObservableProperty] private decimal _defaultMinStock;
+    [ObservableProperty] private decimal _staleRateDays = 3;
+    private bool _policyLoaded;
+
+    private readonly ISettingsApi _settingsApi;
+
+    public BusinessSettingsViewModel(IBusinessApi api, IStorageApi storageApi, IFilePickerService filePicker, IToastService toast, IBusyService busy, ISettingsApi settingsApi)
     {
+        _settingsApi = settingsApi;
         _api = api;
         _storageApi = storageApi;
         _filePicker = filePicker;
@@ -38,11 +54,24 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
+        ShiftPolicies.Clear();
+        foreach (var code in ShiftPolicyCodes) ShiftPolicies.Add(L[$"shift_policy_{code.ToLowerInvariant()}"]);
+        try
+        {
+            var policy = await _settingsApi.GetSalesPolicyAsync();
+            ShiftPolicyIndex = Math.Max(0, Array.IndexOf(ShiftPolicyCodes, policy.ShiftPolicy));
+            MaxDiscountPercent = policy.MaxDiscountPercent;
+            DefaultMinStock = policy.DefaultMinStock;
+            StaleRateDays = policy.StaleRateDays;
+            _policyLoaded = true;
+        }
+        catch { }
         try
         {
             var b = await _api.GetAsync();
             Name = b.Name;
             LegalName = b.LegalName ?? string.Empty;
+            if (!Currencies.Contains(b.Currency)) Currencies.Add(b.Currency);
             Currency = b.Currency;
             Phone = b.Phone ?? string.Empty;
             Address = b.Address ?? string.Empty;
@@ -89,6 +118,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         try
         {
             using (_busy.Begin(L["loading"]))
+            {
                 await _api.UpdateAsync(new UpdateBusinessRequest(
                     Name.Trim(),
                     string.IsNullOrWhiteSpace(LegalName) ? null : LegalName.Trim(),
@@ -96,6 +126,10 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     string.IsNullOrWhiteSpace(Phone) ? null : Phone.Trim(),
                     string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
                     LogoImageKey));
+                if (_policyLoaded)
+                    await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
+                        ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));
+            }
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

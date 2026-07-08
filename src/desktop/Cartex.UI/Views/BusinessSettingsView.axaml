@@ -44,7 +44,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="6">
                             <TextBlock Text="{Binding L[currency]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <TextBox Text="{Binding Currency}" MinHeight="40" MinWidth="90" MaxLength="3" />
+                            <ComboBox ItemsSource="{Binding Currencies}" SelectedItem="{Binding Currency}" MinHeight="40" MinWidth="110" />
                         </StackPanel>
                     </Grid>
 
@@ -57,6 +57,33 @@
                         <TextBlock Text="{Binding L[address]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding Address}" MinHeight="40" />
                     </StackPanel>
+
+                    <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="16"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{Binding L[sales_policy]}" FontWeight="SemiBold" FontSize="14"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[shift_policy]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ComboBox ItemsSource="{Binding ShiftPolicies}" SelectedIndex="{Binding ShiftPolicyIndex}" HorizontalAlignment="Stretch" MinHeight="38" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Text="{Binding L[max_discount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <NumericUpDown Value="{Binding MaxDiscountPercent}" Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Spacing="5">
+                                    <TextBlock Text="{Binding L[default_min_stock]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <NumericUpDown Value="{Binding DefaultMinStock}" Minimum="0" Increment="1" FormatString="0.##" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="2" Spacing="5">
+                                    <TextBlock Text="{Binding L[stale_rate_days]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <NumericUpDown Value="{Binding StaleRateDays}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding L[sales_policy_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
 
                     <Button Classes="brand" Command="{Binding SaveCommand}" HorizontalAlignment="Left" Margin="0,4,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="8">

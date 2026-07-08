@@ -58,10 +58,12 @@ public static class NavRegistry
         new("system", "audit", MaterialIconKind.History, typeof(AuditViewModel), "audit.view"),
         new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.manage"),
         new("system", "reminders", MaterialIconKind.BellRingOutline, typeof(RemindersViewModel), "notifications.manage"),
+        new("system", "receipt_settings", MaterialIconKind.ReceiptTextOutline, typeof(ReceiptSettingsViewModel), "business.manage"),
+        new("system", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "business.manage"),
+        new("system", "devices", MaterialIconKind.Devices, typeof(DevicesViewModel), "devices.manage"),
         new("system", "app_settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null),
         new("developer", "tariff_features", MaterialIconKind.KeyVariant, typeof(TariffFeaturesViewModel), "settings.manage"),
         new("developer", "integrations", MaterialIconKind.LinkVariant, typeof(IntegrationsViewModel), "settings.manage"),
-        new("developer", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "settings.manage"),
         new("developer", "hardware_keys", MaterialIconKind.Usb, typeof(HardwareKeysViewModel), "keys.manage"),
     ];
 }

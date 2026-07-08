@@ -6,6 +6,7 @@
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:il="using:AsyncImageLoader"
              x:Class="Cartex.UI.Views.ProductsView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <UserControl.Styles>
@@ -136,7 +137,7 @@
         </DockPanel>
 
         <Border Background="#55000000" IsVisible="{Binding IsEditOpen}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="660"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="640" MaxHeight="780"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     BoxShadow="0 18 50 0 #33000000" Padding="24">
@@ -205,7 +206,7 @@
 
                     <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
-                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, ..." />
+                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, 4780000000002*6, ..." />
                     </StackPanel>
 
                     <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
@@ -386,7 +387,7 @@
                         </StackPanel>
                         <StackPanel Spacing="6">
                             <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
-                            <TextBox Text="{Binding VBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, ..." />
+                            <TextBox Text="{Binding VBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, 4780000000002*6, ..." />
                         </StackPanel>
 
                         <StackPanel Spacing="8" IsVisible="{Binding VHasAttributes}">
@@ -443,17 +444,10 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Image Source="{Binding PrintPreview}" Height="84" Stretch="Uniform" />
                     </Border>
-                    <Grid ColumnDefinitions="Auto,16,*" VerticalAlignment="Bottom">
-                        <StackPanel Grid.Column="0" Spacing="5">
-                            <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
-                            <NumericUpDown Value="{Binding PrintQuantity}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Spacing="5">
-                            <TextBlock Text="{Binding L[printer_barcode]}" Classes="caption" />
-                            <ComboBox ItemsSource="{Binding PrintPrinters}" SelectedItem="{Binding PrintSelectedPrinter}"
-                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding PrintQuantity}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
+                    </StackPanel>
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
                         <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"
                                 Command="{Binding CancelPrintCommand}" Content="{Binding L[cancel]}" />

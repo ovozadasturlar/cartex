@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Rates;
 using Cartex.UI.Services;
 
@@ -11,7 +12,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ITo
 {
     public ObservableCollection<RateDto> Rates { get; } = [];
     public ObservableCollection<RateDto> History { get; } = [];
-    public ObservableCollection<string> Codes { get; } = ["USD", "EUR", "RUB", "KZT"];
+    public ObservableCollection<string> Codes { get; } = new(CurrencyCatalog.All);
 
     [ObservableProperty] private string _baseCurrency = "";
     [ObservableProperty] private bool _isFeatureOff;

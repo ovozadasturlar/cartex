@@ -27,6 +27,9 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private bool _isEnabled;
     [ObservableProperty] private decimal _totalPercent;
+    [ObservableProperty] private int _roundingIndex;
+    public string[] RoundingOptions { get; } = ["0", "1", "100", "1000"];
+    private static readonly decimal[] RoundingValues = [0m, 1m, 100m, 1000m];
 
     [ObservableProperty] private bool _isRuleOpen;
     [ObservableProperty] private bool _isRuleNew;
@@ -76,6 +79,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     {
         var p = await _api.GetAsync();
         IsEnabled = p.IsEnabled;
+        RoundingIndex = Math.Max(0, Array.IndexOf(RoundingValues, p.CashbackRounding));
         TotalPercent = p.TotalPercent;
         Rules.Clear();
         foreach (var r in p.Rules) Rules.Add(r);
@@ -99,7 +103,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         try
         {
             using (_busy.Begin(L["loading"]))
-                await _api.UpdateAsync(new UpdateLoyaltyProgramRequest(IsEnabled, TotalPercent));
+                await _api.UpdateAsync(new UpdateLoyaltyProgramRequest(IsEnabled, TotalPercent, RoundingValues[Math.Clamp(RoundingIndex, 0, 3)]));
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

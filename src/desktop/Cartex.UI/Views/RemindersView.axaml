@@ -39,6 +39,17 @@
                             <CheckBox IsChecked="{Binding ChannelEmail}" Content="Email" />
                         </StackPanel>
                     </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[reminder_template]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding OverdueTemplate}" MinHeight="60" AcceptsReturn="True" TextWrapping="Wrap"
+                                 PlaceholderText="Hurmatli {name}! Qarzingiz: {balance} {currency} ({days} kun)" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[due_soon_template]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding DueSoonTemplate}" MinHeight="60" AcceptsReturn="True" TextWrapping="Wrap"
+                                 PlaceholderText="Hurmatli {name}! To'lov muddati: {dueDate}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding L[template_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                     <Button Classes="brand" HorizontalAlignment="Left" MinWidth="140" HorizontalContentAlignment="Center"
                             Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
                 </StackPanel>

@@ -54,6 +54,37 @@
                 </StackPanel>
             </Border>
 
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding OfflineVisible}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[offline_cache]}" FontWeight="SemiBold" FontSize="15"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding L[offline_cache_hint]}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextMuted}" />
+                    <TextBlock Text="{Binding OfflineHolderText}" FontSize="12.5"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding !OfflineEnabled}">
+                        <ComboBox MinWidth="220" ItemsSource="{Binding OfflineWarehouses}"
+                                  SelectedItem="{Binding SelectedOfflineWarehouse}"
+                                  PlaceholderText="{Binding L[offline_cache_warehouse]}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Classes="brand" Command="{Binding ToggleOfflineCommand}" Content="{Binding L[offline_cache_enable]}" />
+                    </StackPanel>
+                    <StackPanel Spacing="10" IsVisible="{Binding OfflineEnabled}">
+                        <TextBlock Text="{Binding OfflineSyncText}" FontSize="12.5"
+                                   Foreground="{DynamicResource TextSecondary}" />
+                        <Button Classes="danger" Command="{Binding ToggleOfflineCommand}" Content="{Binding L[disconnect]}"
+                                HorizontalAlignment="Left" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

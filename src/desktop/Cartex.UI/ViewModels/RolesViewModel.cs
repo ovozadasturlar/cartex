@@ -137,10 +137,10 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         if (cascade) _permIndex.Clear();
         foreach (var group in _allPermissions.Where(p => p.IsEnabled).GroupBy(p => p.Name.Split('.')[0]).OrderBy(g => g.Key))
         {
-            var g = new PermissionGroup { Title = group.Key };
+            var g = new PermissionGroup { Title = LocalizationManager.Instance.Find($"perm_group_{group.Key}") ?? group.Key };
             foreach (var perm in group)
             {
-                var item = new PermissionItem { Id = perm.Id, Name = perm.Name, Label = perm.Description ?? perm.Name };
+                var item = new PermissionItem { Id = perm.Id, Name = perm.Name, Label = LocalizationManager.Instance.Find($"perm_{perm.Name}") ?? perm.Description ?? perm.Name };
                 item.Configure(selected.Contains(perm.Name), cascade ? OnPermissionToggled : null);
                 g.Items.Add(item);
                 if (cascade) _permIndex[perm.Name] = item;

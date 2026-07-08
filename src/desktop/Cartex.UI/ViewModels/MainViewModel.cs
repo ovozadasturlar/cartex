@@ -11,6 +11,7 @@ namespace Cartex.UI.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly AuthService _authService;
+    private readonly ShortcutService _shortcuts;
     private readonly NavigationService _navigationService;
     private readonly Cartex.ApiClient.Api.IBusinessApi _businessApi;
     private readonly Action _langChangedHandler;
@@ -53,8 +54,26 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _paletteQuery = "";
     [ObservableProperty] private PaletteItem? _selectedPaletteItem;
 
-    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi)
+    [ObservableProperty] private bool _isShortcutHelpOpen;
+    public ObservableCollection<ShortcutHelpRow> ShortcutHelpRows { get; } = [];
+
+    [RelayCommand]
+    private void ToggleShortcutHelp()
     {
+        if (!IsShortcutHelpOpen)
+        {
+            ShortcutHelpRows.Clear();
+            ShortcutHelpRows.Add(new ShortcutHelpRow("Ctrl+K", L["shortcut_palette"]));
+            ShortcutHelpRows.Add(new ShortcutHelpRow("F1", L["shortcut_help"]));
+            foreach (var s in _shortcuts.Current)
+                ShortcutHelpRows.Add(new ShortcutHelpRow(s.Gesture, L[s.LabelKey]));
+        }
+        IsShortcutHelpOpen = !IsShortcutHelpOpen;
+    }
+
+    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi, ShortcutService shortcuts)
+    {
+        _shortcuts = shortcuts;
         _authService = authService;
         _navigationService = navigationService;
         _businessApi = businessApi;
@@ -83,6 +102,7 @@ public partial class MainViewModel : ViewModelBase
         BuildPalette();
         _ = LoadFeaturesAsync();
         Connectivity.Start();
+        ServiceLocator.Resolve<OfflineSyncService>().Start();
         _ = Branch.LoadAsync();
         _ = CheckOnboardingAsync();
 
@@ -336,3 +356,5 @@ public partial class MainViewModel : ViewModelBase
         _navigationService.NavigateTo(ServiceLocator.Resolve<LoginViewModel>());
     }
 }
+
+public sealed record ShortcutHelpRow(string Gesture, string Label);
