@@ -130,6 +130,7 @@
   "counted": "Штучный",
   "branch": "Филиал",
   "login": "Вход",
+  "login_failed": "Неверный логин или пароль",
   "username": "Имя пользователя",
   "password": "Пароль",
   "login_button": "Войти",

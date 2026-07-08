@@ -1,0 +1,48 @@
+<mat-sidenav-container class="shell" *transloco="let t">
+  <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav">
+    <div class="side-brand">
+      <div class="brand-mark">C</div>
+      <span>Cartex</span>
+    </div>
+    <mat-nav-list>
+      @for (item of navItems; track item.route) {
+        <a mat-list-item [routerLink]="item.route" routerLinkActive="active" (click)="!isWide() && nav.close()">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ t(item.labelKey) }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <mat-toolbar class="topbar">
+      @if (!isWide()) {
+        <button matIconButton (click)="nav.toggle()"><mat-icon>menu</mat-icon></button>
+      }
+      <span class="spacer"></span>
+      <button matIconButton (click)="toggleTheme()">
+        <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+      <button matIconButton [matMenuTriggerFor]="langMenu"><mat-icon>language</mat-icon></button>
+      <mat-menu #langMenu="matMenu">
+        @for (lang of languages; track lang.code) {
+          <button mat-menu-item (click)="setLang(lang.code)" [disabled]="lang.code === activeLang">
+            {{ lang.name }}
+          </button>
+        }
+      </mat-menu>
+      <button matButton [matMenuTriggerFor]="userMenu">
+        <mat-icon>account_circle</mat-icon>
+        {{ user()?.fullName }}
+      </button>
+      <mat-menu #userMenu="matMenu">
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          {{ t('logout') }}
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

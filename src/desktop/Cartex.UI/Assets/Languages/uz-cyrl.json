@@ -130,6 +130,7 @@
   "counted": "Донали",
   "branch": "Филиал",
   "login": "Кириш",
+  "login_failed": "Логин ёки парол нотўғри",
   "username": "Фойдаланувчи номи",
   "password": "Парол",
   "login_button": "Кириш",

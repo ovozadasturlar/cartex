@@ -130,6 +130,7 @@
   "counted": "Donali",
   "branch": "Filial",
   "login": "Kirish",
+  "login_failed": "Login yoki parol noto'g'ri",
   "username": "Foydalanuvchi nomi",
   "password": "Parol",
   "login_button": "Kirish",

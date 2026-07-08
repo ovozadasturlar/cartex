@@ -130,6 +130,7 @@
   "counted": "Counted",
   "branch": "Branch",
   "login": "Login",
+  "login_failed": "Invalid username or password",
   "username": "Username",
   "password": "Password",
   "login_button": "Sign In",

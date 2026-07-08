@@ -1,0 +1,26 @@
+<div class="login-wrap" *transloco="let t">
+  <mat-card class="login-card" appearance="outlined">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <h1>Cartex</h1>
+    </div>
+    <form (ngSubmit)="submit()">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ t('username') }}</mat-label>
+        <input matInput name="username" [(ngModel)]="username" autocomplete="username" autofocus />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ t('password') }}</mat-label>
+        <input matInput name="password" type="password" [(ngModel)]="password" autocomplete="current-password" />
+      </mat-form-field>
+      <mat-checkbox name="rememberMe" [(ngModel)]="rememberMe">{{ t('remember_me') }}</mat-checkbox>
+      @if (error(); as key) {
+        <p class="error">{{ t(key) }}</p>
+      }
+      <button matButton="filled" type="submit" [disabled]="busy()">{{ t('login') }}</button>
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </form>
+  </mat-card>
+</div>
