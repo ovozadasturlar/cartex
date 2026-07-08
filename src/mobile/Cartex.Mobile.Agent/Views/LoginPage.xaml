@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    x:DataType="vm:LoginViewModel"
+    Shell.NavBarIsVisible="False">
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
+                <Border BackgroundColor="{StaticResource Primary}" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                        WidthRequest="72" HeightRequest="72" HorizontalOptions="Center">
+                    <Label Text="C" FontSize="34" FontAttributes="Bold" TextColor="White"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <Label Text="Cartex Agent" Style="{StaticResource H1}" HorizontalOptions="Center" Margin="0,16,0,2" />
+                <Label Text="Dala savdosi" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,0,0,32" />
+                <VerticalStackLayout Spacing="12">
+                    <Border Style="{StaticResource InputWrap}">
+                        <Entry Placeholder="Login" Text="{Binding Username}" ReturnType="Next" />
+                    </Border>
+                    <Border Style="{StaticResource InputWrap}">
+                        <Entry Placeholder="Parol" Text="{Binding Password}" IsPassword="True"
+                               ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
+                    </Border>
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding Error}" Value="{x:Null}">
+                                <Setter Property="IsVisible" Value="False" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Label Text="{Binding Error}" FontSize="13"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </Border>
+                    <Button Text="Kirish" Style="{StaticResource BtnPrimary}" Command="{Binding LoginCommand}" Margin="0,6,0,0" />
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout VerticalOptions="End" Padding="28,0,28,20" Spacing="10">
+            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding IsServerVisible}">
+                <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+            </Border>
+            <Label Text="{Binding ServerUrl, StringFormat='Server: {0}'}" Style="{StaticResource MutedLabel}"
+                   FontSize="12" HorizontalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleServerCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

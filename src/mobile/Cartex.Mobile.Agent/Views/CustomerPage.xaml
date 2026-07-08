@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.CustomerPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    x:DataType="vm:CustomerViewModel"
+    Title="Mijoz">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="14">
+            <Label Text="{Binding FullName}" Style="{StaticResource H1}" />
+            <Label Text="{Binding StaleText}" Style="{StaticResource MutedLabel}" Margin="0,-10,0,0" />
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Qarz" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding DebtText}" FontSize="24" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding HasDebt}" Value="True">
+                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding LimitText}" Style="{StaticResource MutedLabel}">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding LimitText}" Value="{x:Null}">
+                                <Setter Property="IsVisible" Value="False" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{Binding Phone}" FontSize="15"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CallCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+            </Border>
+            <Button Text="Savdo qilish" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" />
+            <Button Text="To'lov qabul qilish" Style="{StaticResource BtnOutline}" Command="{Binding RepayCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
