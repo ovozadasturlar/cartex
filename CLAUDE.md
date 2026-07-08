@@ -22,10 +22,12 @@ src/
     Cartex.Persistence      # DB, EF Core, repository implementatsiyalari
     Cartex.Auth             # autentifikatsiya / avtorizatsiya
     Cartex.Api              # ASP.NET Core endpoint'lar (Scalar/OpenAPI)
-  frontend/
-    Cartex.Desktop         # WPF
-    Cartex.UI
-    Cartex.Web
+  desktop/
+    Cartex.Desktop         # Avalonia kirish nuqtasi
+    Cartex.UI              # Avalonia UI (view/viewmodel/servislar)
+  mobile/
+    Cartex.Mobile.Agent    # MAUI Android (dala agenti)
+  web/                     # W3: Angular (kelajakda)
   shared/
     Cartex.ApiClient       # backend bilan ishlash uchun mijoz
     Cartex.Shared          # umumiy DTO/contract

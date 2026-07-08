@@ -1,7 +1,7 @@
 ; Cartex lokal server o'rnatuvchisi (Inno Setup 6)
 ; Tayyorlash:
 ;   dotnet publish src/backend/Cartex.Api/Cartex.Api.csproj -c Release -r win-x64 --self-contained -o deploy/installer/publish/api
-;   dotnet publish src/frontend/Cartex.Desktop/Cartex.Desktop.csproj -c Release -r win-x64 --self-contained -o deploy/installer/publish/desktop
+;   dotnet publish src/desktop/Cartex.Desktop/Cartex.Desktop.csproj -c Release -r win-x64 --self-contained -o deploy/installer/publish/desktop
 ;   PostgreSQL 16 portable zip -> deploy/installer/pgsql (bin/initdb.exe mavjud bo'lsin)
 
 #define AppName "Cartex"

@@ -19,4 +19,8 @@
     <ProjectReference Include="..\..\src\backend\Cartex.Application\Cartex.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\src\desktop\Cartex.UI\Assets\Languages\*.json" LinkBase="Languages" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

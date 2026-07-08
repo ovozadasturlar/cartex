@@ -6,12 +6,15 @@
     <Project Path="src/backend/Cartex.Auth/Cartex.Auth.csproj" />
     <Project Path="src/backend/Cartex.Domain/Cartex.Domain.csproj" />
     <Project Path="src/backend/Cartex.Infrastructure/Cartex.Infrastructure.csproj" />
+    <Project Path="src/backend/Cartex.Mirror/Cartex.Mirror.csproj" />
     <Project Path="src/backend/Cartex.Persistence/Cartex.Persistence.csproj" />
   </Folder>
-  <Folder Name="/src/frontend/">
-    <Project Path="src/frontend/Cartex.UI/Cartex.UI.csproj" />
-    <Project Path="src/frontend/Cartex.Desktop/Cartex.Desktop.csproj" />
-    <Project Path="src/frontend/Cartex.Web/Cartex.Web.csproj" />
+  <Folder Name="/src/desktop/">
+    <Project Path="src/desktop/Cartex.UI/Cartex.UI.csproj" />
+    <Project Path="src/desktop/Cartex.Desktop/Cartex.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/src/mobile/">
+    <Project Path="src/mobile/Cartex.Mobile.Agent/Cartex.Mobile.Agent.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
