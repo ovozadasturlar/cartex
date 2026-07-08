@@ -1,4 +1,6 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -10,11 +12,10 @@ using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
-using Cartex.Domain.Measurement;
 
 namespace Cartex.Application.Sales.Commands;
 
-public record CreateSaleItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? UnitId = null);
+public record CreateSaleItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
 
 public record SalePaymentDto(PaymentMethod Method, string Currency, decimal Amount);
 
@@ -30,7 +31,8 @@ public record CreateSaleCommand(
     decimal DiscountAmount = 0,
     List<SalePaymentDto>? Payments = null,
     string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null) : ICommand<CreateSaleResult>;
+    DateOnly? DebtDueDate = null,
+    string? IdempotencyKey = null) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -39,18 +41,54 @@ public sealed class CreateSaleCommandHandler(
     ICurrencyService currency,
     IStockAllocator stockAllocator,
     ICashbackCalculator cashbackCalculator,
+    ISettingsService settingsService,
     IAuditService audit) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
     public async Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
 
-        var hasOverride = request.Items.Any(i => i.UnitPrice is not null);
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var existing = await db.Sales
+                .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
+                .Select(s => new CreateSaleResult(s.Id, s.ReceiptToken))
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return existing;
+        }
+
+        var hasOverride = request.Items.Any(i => i.UnitPrice is not null && i.PrepackId is null);
         if (hasOverride && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
+
+        var prepackIds = request.Items.Where(i => i.PrepackId is not null).Select(i => i.PrepackId!.Value).ToList();
+        Dictionary<long, Prepack> prepacks = [];
+        if (prepackIds.Count > 0)
+        {
+            if (prepackIds.Count != prepackIds.Distinct().Count())
+                throw new BusinessRuleException("Bitta qadoq ikki marta qo'shilgan.");
+
+            var now = DateTime.UtcNow;
+            prepacks = await db.Prepacks.AsNoTracking()
+                .Where(p => prepackIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+            foreach (var item in request.Items.Where(i => i.PrepackId is not null))
+            {
+                if (!prepacks.TryGetValue(item.PrepackId!.Value, out var pp) || pp.VariantId != item.VariantId || pp.WarehouseId != request.WarehouseId)
+                    throw new BusinessRuleException("Qadoq topilmadi.");
+            }
+
+            var claimed = await db.Prepacks
+                .Where(p => prepackIds.Contains(p.Id) && p.Status == PrepackStatus.Active && (p.ExpiresAt == null || p.ExpiresAt > now))
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, PrepackStatus.Sold), cancellationToken);
+            if (claimed != prepackIds.Count)
+                throw new BusinessRuleException("Qadoq allaqachon sotilgan yoki muddati o'tgan.");
+        }
 
         var shiftId = await db.Shifts
             .Where(s => s.UserId == userId && s.BranchId == warehouse.BranchId && s.Status == ShiftStatus.Open)
@@ -80,36 +118,28 @@ public sealed class CreateSaleCommandHandler(
             return (Math.Round(price.SellingPrice * rate, 2), price.Currency, rate);
         }
 
-        var lineUnitIds = request.Items.Where(i => i.UnitId is not null).Select(i => i.UnitId!.Value).Distinct().ToList();
-        Dictionary<long, Cartex.Domain.Entities.Unit> lineUnits = [];
-        Dictionary<long, Cartex.Domain.Entities.Unit> stockingUnits = [];
-        if (lineUnitIds.Count > 0)
-        {
-            lineUnits = await db.Units.Where(u => lineUnitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
-            stockingUnits = await db.ProductVariants
-                .Where(v => variantIds.Contains(v.Id))
-                .Select(v => new { v.Id, v.Product.Unit })
-                .ToDictionaryAsync(x => x.Id, x => x.Unit, cancellationToken);
-        }
-
         (decimal Quantity, decimal Price, string Currency, decimal Rate) Resolve(CreateSaleItemDto item)
         {
+            if (item.PrepackId is { } prepackId)
+            {
+                var prepack = prepacks[prepackId];
+                return (prepack.Quantity, prepack.UnitPrice, baseCode, 1m);
+            }
+
             var (price, priceCurrency, priceRate) = item.UnitPrice is { } overridePrice
                 ? (overridePrice, baseCode, 1m)
                 : PriceOf(item.VariantId);
-            if (item.UnitId is { } uid && lineUnits.TryGetValue(uid, out var from))
-            {
-                var stocking = stockingUnits[item.VariantId];
-                if (item.UnitPrice is not null)
-                    price = UnitConversion.PricePerBase(item.UnitPrice.Value, from, stocking);
-                return (UnitConversion.ToBase(item.Quantity, from, stocking), price, priceCurrency, priceRate);
-            }
             return (item.Quantity, price, priceCurrency, priceRate);
         }
+
+        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
         var resolvedItems = request.Items.Select(i => (item: i, line: Resolve(i))).ToList();
         var grossAmount = resolvedItems.Sum(x => x.line.Quantity * x.line.Price);
         var discountAmount = Math.Clamp(request.DiscountAmount, 0, grossAmount);
+        if (policy.MaxDiscountPercent > 0 && discountAmount > grossAmount * policy.MaxDiscountPercent / 100
+            && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
+            throw new BusinessRuleException($"Chegirma {policy.MaxDiscountPercent}% dan osha olmaydi.");
         var totalAmount = grossAmount - discountAmount;
 
         var payments = new List<SalePayment>();
@@ -154,7 +184,13 @@ public sealed class CreateSaleCommandHandler(
         if (changeAmount > 0 && paidCard + paidBonus > totalAmount)
             throw new BusinessRuleException("Qaytim faqat naqd to'lovdan beriladi.");
 
-        if (paidCash > 0 && shiftId is null)
+        var requiresShift = policy.ShiftPolicy switch
+        {
+            "AllSales" => true,
+            "Off" => false,
+            _ => paidCash > 0
+        };
+        if (requiresShift && shiftId is null)
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
         if ((paidBonus > 0 || debtAmount > 0) && request.CustomerId is null)
@@ -205,6 +241,7 @@ public sealed class CreateSaleCommandHandler(
             ChangeAmount = changeAmount,
             Status = SaleStatus.Completed,
             ReceiptToken = Guid.NewGuid().ToString("N"),
+            IdempotencyKey = idempotencyKey,
             Payments = payments
         };
 
@@ -239,12 +276,17 @@ public sealed class CreateSaleCommandHandler(
         await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, cashbackLines, userId, shiftId, cancellationToken);
 
         sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.BranchId, sale.CustomerId, sale.TotalAmount));
+        sale.RaiseDomainEvent(new ReceiptMirrorEvent(sale.ReceiptToken));
 
         if (hasOverride)
             audit.Add("priceOverride", "sales", null,
                 request.Items.Where(i => i.UnitPrice is not null).Select(i => new { i.VariantId, i.UnitPrice }));
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (prepackIds.Count > 0)
+            await db.Prepacks.Where(p => prepackIds.Contains(p.Id))
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.SoldSaleId, sale.Id), cancellationToken);
 
         return new CreateSaleResult(sale.Id, sale.ReceiptToken);
     }

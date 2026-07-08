@@ -12,6 +12,7 @@ public record GetStockTransfersQuery : FilteringRequest, IRequest<IReadOnlyColle
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
     public long? WarehouseId { get; set; }
+    public long? ToWarehouseId { get; set; }
 }
 
 public record StockTransferDto(
@@ -43,6 +44,8 @@ public sealed class GetStockTransfersQueryHandler(
             query = query.Where(t => t.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
         if (request.WarehouseId is { } warehouseId)
             query = query.Where(t => t.FromWarehouseId == warehouseId);
+        if (request.ToWarehouseId is { } toWarehouseId)
+            query = query.Where(t => t.ToWarehouseId == toWarehouseId);
 
         return await query
             .ToPagedListAsync(request,

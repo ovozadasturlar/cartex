@@ -16,7 +16,8 @@ public static class TariffCatalog
         [Standard] =
         [
             FeatureCatalog.Supplies, FeatureCatalog.Suppliers, FeatureCatalog.StockTransfers,
-            FeatureCatalog.Accounts, FeatureCatalog.Reports, FeatureCatalog.Loyalty
+            FeatureCatalog.Accounts, FeatureCatalog.Reports, FeatureCatalog.Loyalty, FeatureCatalog.Prepack,
+            FeatureCatalog.OfflineCache
         ],
         [Pro] = [.. FeatureCatalog.AllCodes],
     };

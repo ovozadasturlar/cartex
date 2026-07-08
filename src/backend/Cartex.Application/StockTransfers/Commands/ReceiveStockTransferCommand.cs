@@ -31,6 +31,10 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
             .OrderBy(s => s.Id)
             .ToListAsync(cancellationToken);
 
+        var available = sourceStocks.Sum(s => s.Quantity);
+        if (available < transfer.Quantity)
+            throw new BusinessRuleException($"Manba omborda qoldiq yetarli emas: kerak {transfer.Quantity:0.###}, mavjud {available:0.###}.");
+
         var remaining = transfer.Quantity;
 
         foreach (var stock in sourceStocks)
