@@ -21,6 +21,7 @@ public static class DependencyInjection
             options
                 .UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention()
+                .ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
                 .AddInterceptors(sp.GetServices<ISaveChangesInterceptor>()));
 
         services.AddScoped<IApplicationDbContext>(provider =>

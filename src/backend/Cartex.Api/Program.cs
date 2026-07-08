@@ -35,6 +35,7 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationM
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
 
@@ -44,6 +45,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
+
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 
 builder.Services.AddCors(options =>
@@ -51,11 +54,43 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Default", policy =>
     {
         if (allowedOrigins.Length > 0)
-            policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
+            policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithExposedHeaders("X-Paging");
     });
 });
 
-builder.Services.AddOpenApi();
+var trustProxyHeaders = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled");
+if (trustProxyHeaders)
+    builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+            | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = builder.Configuration.GetValue("ForwardedHeaders:ForwardLimit", 1);
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
+var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 10);
+var publicPerMinute = builder.Configuration.GetValue("RateLimiting:PublicPerMinute", 60);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
+
+    options.AddPolicy("public", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = publicPerMinute, Window = TimeSpan.FromMinutes(1) }));
+});
+
+builder.Services.AddOpenApi(options =>
+{
+    options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
+});
 
 builder.Host.UseWindowsService();
 builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5015");
@@ -82,7 +117,14 @@ using (var scope = app.Services.CreateScope())
         await DemoDataSeeder.SeedAsync(db);
 }
 
-app.UseSerilogRequestLogging();
+if (trustProxyHeaders)
+    app.UseForwardedHeaders();
+
+app.UseResponseCompression();
+app.UseSerilogRequestLogging(options => options.GetLevel = (ctx, _, ex) =>
+    ex is not null || ctx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
+    : ctx.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
+    : Serilog.Events.LogEventLevel.Information);
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
@@ -92,9 +134,12 @@ app.UseCors("Default");
 app.UseAuthentication();
 app.UseAuthorization();
 
+if (!app.Environment.IsDevelopment())
+    app.UseRateLimiter();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference(options =>
     {
         options.WithTitle("Cartex API");

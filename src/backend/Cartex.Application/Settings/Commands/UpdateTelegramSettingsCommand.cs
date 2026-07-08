@@ -2,11 +2,10 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateTelegramSettingsCommand(bool Enabled, string? ChatId, string? BotToken) : ICommand<Unit>;
+public record UpdateTelegramSettingsCommand(bool Enabled, string? ChatId, string? BotToken, bool ClearToken = false) : ICommand<Unit>;
 
 public sealed class UpdateTelegramSettingsCommandHandler(ISettingsService settings, ISecretProtector protector, IAuditService audit)
     : IRequestHandler<UpdateTelegramSettingsCommand, Unit>
@@ -16,7 +15,9 @@ public sealed class UpdateTelegramSettingsCommandHandler(ISettingsService settin
         var cfg = await settings.GetAsync<TelegramSettings>(SettingKeys.Telegram, cancellationToken) ?? new();
         cfg.Enabled = request.Enabled;
         cfg.ChatId = request.ChatId;
-        if (!string.IsNullOrWhiteSpace(request.BotToken))
+        if (request.ClearToken)
+            cfg.BotToken = null;
+        else if (!string.IsNullOrWhiteSpace(request.BotToken))
             cfg.BotToken = protector.Protect(request.BotToken);
 
         audit.Add("settings", "settings", null, new { section = "telegram" });
