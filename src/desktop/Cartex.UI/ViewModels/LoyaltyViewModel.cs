@@ -38,22 +38,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public ObservableCollection<LabeledValue> DiscountScopes { get; } = [];
     public ObservableCollection<LabeledValue> DiscountMethods { get; } = [];
     public ObservableCollection<LabeledValue> ExceptionScopes { get; } = [];
+    public ObservableCollection<LabeledValue> CombineModes { get; } = [];
     public ObservableCollection<ExceptionChip> DiscountExceptions { get; } = [];
-
-    [ObservableProperty] private string _sectionKey = "discounts";
-    public bool IsDiscountSection => SectionKey == "discounts";
-    public bool IsCashbackSection => SectionKey == "cashback";
-    public bool IsSettingsSection => SectionKey == "settings";
-
-    partial void OnSectionKeyChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsDiscountSection));
-        OnPropertyChanged(nameof(IsCashbackSection));
-        OnPropertyChanged(nameof(IsSettingsSection));
-    }
-
-    [RelayCommand]
-    private void SelectSection(string key) => SectionKey = key;
 
     [ObservableProperty] private bool _isEnabled;
     [ObservableProperty] private decimal _totalPercent;
@@ -153,16 +139,26 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private bool _suppressProgramSave;
+
     private async Task ReloadProgramAsync()
     {
         var p = await _api.GetAsync();
+        _suppressProgramSave = true;
         IsEnabled = p.IsEnabled;
         RoundingIndex = Math.Max(0, Array.IndexOf(RoundingValues, p.CashbackRounding));
         TotalPercent = p.TotalPercent;
         CombineModeIndex = p.DiscountCombineMode == "Stack" ? 1 : 0;
+        _suppressProgramSave = false;
         Rules.Clear();
         foreach (var r in p.Rules) Rules.Add(r);
         OnPropertyChanged(nameof(RulesEmpty));
+    }
+
+    partial void OnCombineModeIndexChanged(int value)
+    {
+        if (!_suppressProgramSave)
+            _ = SaveAsync();
     }
 
     private async Task ReloadDiscountsAsync()
@@ -214,6 +210,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         ExceptionScopes.Add(new LabeledValue("Product", L["product"]));
         ExceptionScopes.Add(new LabeledValue("Category", L["category"]));
         ExceptionScopes.Add(new LabeledValue("Manufacturer", L["manufacturer"]));
+        CombineModes.Add(new LabeledValue("Priority", L["discount_combine_priority"]));
+        CombineModes.Add(new LabeledValue("Stack", L["discount_combine_stack"]));
     }
 
     partial void OnRuleScopeChanged(LabeledValue? value) => OnPropertyChanged(nameof(IsProductScope));
