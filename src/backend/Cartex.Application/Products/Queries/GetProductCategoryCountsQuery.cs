@@ -12,9 +12,12 @@ public sealed class GetProductCategoryCountsQueryHandler(IApplicationDbContext d
     : IRequestHandler<GetProductCategoryCountsQuery, IReadOnlyCollection<CategoryCountDto>>
 {
     public async Task<IReadOnlyCollection<CategoryCountDto>> Handle(GetProductCategoryCountsQuery request, CancellationToken cancellationToken)
-        => await db.Products
+    {
+        var rows = await db.Products
             .GroupBy(p => p.Category != null ? p.Category.Name : null)
-            .Select(g => new CategoryCountDto(g.Key, g.Count()))
+            .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
+        return rows.Select(x => new CategoryCountDto(x.Name, x.Count)).ToList();
+    }
 }

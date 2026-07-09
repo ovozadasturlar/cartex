@@ -32,12 +32,16 @@ public sealed class GetSalesTotalsQueryHandler(IApplicationDbContext db) : IRequ
 
         var totals = await query
             .GroupBy(_ => 1)
-            .Select(g => new SalesTotalsDto(
-                g.Count(),
-                g.Sum(s => s.TotalAmount),
-                g.Sum(s => s.DiscountAmount),
-                g.Sum(s => s.DebtAmount)))
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Total = g.Sum(s => s.TotalAmount),
+                Discount = g.Sum(s => s.DiscountAmount),
+                Debt = g.Sum(s => s.DebtAmount)
+            })
             .FirstOrDefaultAsync(cancellationToken);
-        return totals ?? new SalesTotalsDto(0, 0, 0, 0);
+        return totals is null
+            ? new SalesTotalsDto(0, 0, 0, 0)
+            : new SalesTotalsDto(totals.Count, totals.Total, totals.Discount, totals.Debt);
     }
 }

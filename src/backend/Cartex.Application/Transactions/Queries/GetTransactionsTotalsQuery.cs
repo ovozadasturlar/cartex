@@ -35,8 +35,10 @@ public sealed class GetTransactionsTotalsQueryHandler(
 
         var totals = await query
             .GroupBy(_ => 1)
-            .Select(g => new TransactionsTotalsDto(g.Count(), g.Sum(t => t.Amount)))
+            .Select(g => new { Count = g.Count(), Total = g.Sum(t => t.Amount) })
             .FirstOrDefaultAsync(cancellationToken);
-        return totals ?? new TransactionsTotalsDto(0, 0);
+        return totals is null
+            ? new TransactionsTotalsDto(0, 0)
+            : new TransactionsTotalsDto(totals.Count, totals.Total);
     }
 }
