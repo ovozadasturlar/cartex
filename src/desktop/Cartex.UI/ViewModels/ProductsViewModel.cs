@@ -329,7 +329,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrEmpty(key)) return null;
         try
         {
-            var url = (await _storageApi.GetUrlAsync(key)).Url;
+            var url = ImageUrl.Absolute((await _storageApi.GetUrlAsync(key)).Url);
             var bytes = await _imageClient.GetByteArrayAsync(url);
             return new Bitmap(new MemoryStream(bytes));
         }

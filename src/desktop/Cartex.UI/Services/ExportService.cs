@@ -65,7 +65,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
             {
                 try
                 {
-                    var url = (await storageApi.GetUrlAsync(b.LogoImageKey)).Url;
+                    var url = ImageUrl.Absolute((await storageApi.GetUrlAsync(b.LogoImageKey)).Url);
                     logo = await _http.GetByteArrayAsync(url);
                 }
                 catch { }

@@ -47,7 +47,7 @@ public partial class ReceiptCard : UserControl
         {
             var business = await ServiceLocator.Resolve<IBusinessApi>().GetAsync();
             if (!string.IsNullOrEmpty(business.LogoImageKey))
-                _logoUrl = (await ServiceLocator.Resolve<IStorageApi>().GetUrlAsync(business.LogoImageKey)).Url;
+                _logoUrl = ImageUrl.Absolute((await ServiceLocator.Resolve<IStorageApi>().GetUrlAsync(business.LogoImageKey)).Url);
         }
         catch { }
         return _logoUrl;

@@ -65,6 +65,17 @@ public sealed class PackQtyConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+public sealed class ImageUrlConverter : IValueConverter
+{
+    public static readonly ImageUrlConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        ImageUrl.Absolute(value as string);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class StringNotEmptyConverter : IValueConverter
 {
     public static readonly StringNotEmptyConverter Instance = new();

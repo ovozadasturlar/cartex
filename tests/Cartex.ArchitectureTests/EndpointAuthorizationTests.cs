@@ -17,6 +17,7 @@ public class EndpointAuthorizationTests
         "AuthController.LoginMethods",
         "AuthController.Refresh",
         "AuthController.Logout",
+        "StorageController.GetContent",
         "ReceiptController.GetReceipt",
         "ReceiptController.GetReceiptPdf",
         "StoreAuthController.RequestOtp",

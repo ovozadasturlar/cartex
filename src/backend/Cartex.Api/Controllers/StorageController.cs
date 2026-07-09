@@ -42,4 +42,15 @@ public class StorageController(IObjectStorage storage) : ControllerBase
         var url = await storage.GetUrlAsync(key, HttpContext.RequestAborted);
         return url is null ? NotFound() : Ok(new { url });
     }
+
+    [AllowAnonymous]
+    [HttpGet("content")]
+    public async Task<IActionResult> GetContent([FromQuery] string key)
+    {
+        var result = await storage.DownloadAsync(key, HttpContext.RequestAborted);
+        if (result is null)
+            return NotFound();
+        Response.Headers.CacheControl = "public,max-age=86400,immutable";
+        return File(result.Value.Content, result.Value.ContentType);
+    }
 }
