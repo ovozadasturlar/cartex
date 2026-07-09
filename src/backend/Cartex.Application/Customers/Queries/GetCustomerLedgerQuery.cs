@@ -1,5 +1,6 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -27,16 +28,67 @@ public sealed class GetCustomerLedgerQueryHandler(
         var typeById = accounts.ToDictionary(a => a.Id, a => a.Type);
         var ids = typeById.Keys.ToList();
 
-        var transactions = await db.Transactions
+        var txQuery = db.Transactions
             .Where(t => (t.FromAccountId != null && ids.Contains(t.FromAccountId.Value))
-                     || (t.ToAccountId != null && ids.Contains(t.ToAccountId.Value)))
-            .OrderBy(t => t.CreatedAt).ThenBy(t => t.Id)
-            .Select(t => new { t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId })
+                     || (t.ToAccountId != null && ids.Contains(t.ToAccountId.Value)));
+
+        if (request.Page <= 0 || request.PageSize <= 0)
+        {
+            var all = await txQuery
+                .OrderBy(t => t.CreatedAt).ThenBy(t => t.Id)
+                .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
+                .ToListAsync(cancellationToken);
+            var full = BuildEntries(all, typeById, ids.ToDictionary(id => id, _ => 0m));
+            full.Reverse();
+            return full;
+        }
+
+        var total = await txQuery.CountAsync(cancellationToken);
+        writer.Write(new PagedListMetadata(total, request.Page, request.PageSize,
+            (int)Math.Ceiling(total / (double)request.PageSize)));
+
+        var pageTx = await txQuery
+            .OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
             .ToListAsync(cancellationToken);
 
-        var running = new Dictionary<long, decimal>();
-        var entries = new List<CustomerLedgerEntryDto>();
+        if (pageTx.Count == 0)
+            return [];
 
+        var oldest = pageTx[^1];
+        var prior = txQuery.Where(t => t.CreatedAt < oldest.CreatedAt
+            || (t.CreatedAt == oldest.CreatedAt && t.Id < oldest.Id));
+        var priorIn = await prior
+            .Where(t => t.ToAccountId != null && ids.Contains(t.ToAccountId.Value))
+            .GroupBy(t => t.ToAccountId!.Value)
+            .Select(g => new { Id = g.Key, Sum = g.Sum(t => t.Amount) })
+            .ToListAsync(cancellationToken);
+        var priorOut = await prior
+            .Where(t => t.FromAccountId != null && ids.Contains(t.FromAccountId.Value))
+            .GroupBy(t => t.FromAccountId!.Value)
+            .Select(g => new { Id = g.Key, Sum = g.Sum(t => t.Amount) })
+            .ToListAsync(cancellationToken);
+
+        var running = ids.ToDictionary(id => id, _ => 0m);
+        foreach (var x in priorIn) running[x.Id] += x.Sum;
+        foreach (var x in priorOut) running[x.Id] -= x.Sum;
+
+        pageTx.Reverse();
+        var entries = BuildEntries(pageTx, typeById, running);
+        entries.Reverse();
+        return entries;
+    }
+
+    private sealed record TxRow(long Id, DateTime CreatedAt, OperationType OperationType, decimal Amount, long? FromAccountId, long? ToAccountId);
+
+    private static List<CustomerLedgerEntryDto> BuildEntries(
+        List<TxRow> transactions,
+        Dictionary<long, AccountType> typeById,
+        Dictionary<long, decimal> running)
+    {
+        var entries = new List<CustomerLedgerEntryDto>();
         foreach (var t in transactions)
         {
             if (t.FromAccountId is long from && typeById.TryGetValue(from, out var fromType))
@@ -53,19 +105,6 @@ public sealed class GetCustomerLedgerQueryHandler(
                 entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance));
             }
         }
-
-        entries.Reverse();
-
-        if (request.Page <= 0 || request.PageSize <= 0)
-            return entries;
-
-        var total = entries.Count;
-        var totalPages = (int)Math.Ceiling(total / (double)request.PageSize);
-        writer.Write(new PagedListMetadata(total, request.Page, request.PageSize, totalPages));
-
-        return entries
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToList();
+        return entries;
     }
 }

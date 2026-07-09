@@ -40,17 +40,16 @@ public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db
             .OrderByDescending(c => c.Revenue)
             .ToList();
 
-        var saleIds = sales.Select(s => s.Id).ToList();
-        var items = await db.SaleItems
-            .Where(i => saleIds.Contains(i.SaleId))
-            .Select(i => new { CategoryName = i.Variant.Product.Category != null ? i.Variant.Product.Category.Name : null, i.Quantity, i.UnitPrice })
-            .ToListAsync(cancellationToken);
+        var itemsQuery = db.SaleItems.Where(i =>
+            i.Sale.Status == SaleStatus.Completed && i.Sale.CreatedAt >= from && i.Sale.CreatedAt < to);
+        if (request.WarehouseId is { } wid)
+            itemsQuery = itemsQuery.Where(i => i.Sale.WarehouseId == wid);
 
-        var byCategory = items
-            .GroupBy(i => i.CategoryName)
+        var byCategory = await itemsQuery
+            .GroupBy(i => i.Variant.Product.Category != null ? i.Variant.Product.Category.Name : null)
             .Select(g => new CategorySalesDto(g.Key, g.Sum(x => x.Quantity), g.Sum(x => x.UnitPrice * x.Quantity)))
             .OrderByDescending(c => c.Revenue)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return new SalesBreakdownReportDto(
             sales.Sum(s => s.PaidCash),

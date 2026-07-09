@@ -31,18 +31,23 @@ public sealed class GetDebtAgingReportQueryHandler(IApplicationDbContext db) : I
             .ToListAsync(cancellationToken);
 
         var accountIds = accounts.Select(a => a.Id).ToList();
-        var activity = await db.Transactions
-            .Where(t => t.OperationType == OperationType.DebtCharge || t.OperationType == OperationType.DebtPay)
-            .Where(t => (t.FromAccountId != null && accountIds.Contains(t.FromAccountId.Value))
-                     || (t.ToAccountId != null && accountIds.Contains(t.ToAccountId.Value)))
-            .Select(t => new { t.FromAccountId, t.ToAccountId, t.CreatedAt })
+        var debtOps = db.Transactions
+            .Where(t => t.OperationType == OperationType.DebtCharge || t.OperationType == OperationType.DebtPay);
+        var fromLast = await debtOps
+            .Where(t => t.FromAccountId != null && accountIds.Contains(t.FromAccountId.Value))
+            .GroupBy(t => t.FromAccountId!.Value)
+            .Select(g => new { Id = g.Key, Last = g.Max(t => t.CreatedAt) })
+            .ToListAsync(cancellationToken);
+        var toLast = await debtOps
+            .Where(t => t.ToAccountId != null && accountIds.Contains(t.ToAccountId.Value))
+            .GroupBy(t => t.ToAccountId!.Value)
+            .Select(g => new { Id = g.Key, Last = g.Max(t => t.CreatedAt) })
             .ToListAsync(cancellationToken);
 
         var lastByAccount = new Dictionary<long, DateTime>();
-        foreach (var t in activity)
-            foreach (var id in new[] { t.FromAccountId, t.ToAccountId })
-                if (id is { } aid && accountIds.Contains(aid) && (!lastByAccount.TryGetValue(aid, out var cur) || t.CreatedAt > cur))
-                    lastByAccount[aid] = t.CreatedAt;
+        foreach (var x in fromLast.Concat(toLast))
+            if (!lastByAccount.TryGetValue(x.Id, out var cur) || x.Last > cur)
+                lastByAccount[x.Id] = x.Last;
 
         var now = DateTime.UtcNow;
         var rows = accounts

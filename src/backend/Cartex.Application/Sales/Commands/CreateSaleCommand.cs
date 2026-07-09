@@ -259,6 +259,8 @@ public sealed class CreateSaleCommandHandler(
         var cashbackFactor = grossAmount > 0 ? totalAmount / grossAmount : 1m;
         var cashbackLines = new List<CashbackLine>();
 
+        await stockAllocator.PreloadAsync(request.WarehouseId, resolvedItems.Select(x => x.item.VariantId), cancellationToken);
+
         foreach (var (item, line) in resolvedItems)
         {
             var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, item.VariantId, line.Quantity, cancellationToken);

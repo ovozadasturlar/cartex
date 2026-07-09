@@ -30,10 +30,14 @@ public sealed class GetSalesTotalsQueryHandler(IApplicationDbContext db) : IRequ
 
         query = query.AsFilterable(request);
 
-        return new SalesTotalsDto(
-            await query.CountAsync(cancellationToken),
-            await query.SumAsync(s => (decimal?)s.TotalAmount, cancellationToken) ?? 0,
-            await query.SumAsync(s => (decimal?)s.DiscountAmount, cancellationToken) ?? 0,
-            await query.SumAsync(s => (decimal?)s.DebtAmount, cancellationToken) ?? 0);
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new SalesTotalsDto(
+                g.Count(),
+                g.Sum(s => s.TotalAmount),
+                g.Sum(s => s.DiscountAmount),
+                g.Sum(s => s.DebtAmount)))
+            .FirstOrDefaultAsync(cancellationToken);
+        return totals ?? new SalesTotalsDto(0, 0, 0, 0);
     }
 }

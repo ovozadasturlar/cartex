@@ -37,9 +37,12 @@ public sealed class GetSalesReportQueryHandler(IApplicationDbContext db) : IRequ
             .Select(s => new { s.Id, s.CreatedAt, s.TotalAmount, s.DiscountAmount })
             .ToListAsync(cancellationToken);
 
-        var saleIds = sales.Select(s => s.Id).ToList();
-        var items = await db.SaleItems
-            .Where(i => saleIds.Contains(i.SaleId))
+        var itemsQuery = db.SaleItems.Where(i =>
+            (i.Sale.Status == SaleStatus.Completed || i.Sale.Status == SaleStatus.PartialReturn)
+            && i.Sale.CreatedAt >= from && i.Sale.CreatedAt < to);
+        if (request.WarehouseId is { } wid)
+            itemsQuery = itemsQuery.Where(i => i.Sale.WarehouseId == wid);
+        var items = await itemsQuery
             .Select(i => new { i.SaleId, ProductId = i.Variant.ProductId, ProductName = i.Variant.Product.Name, i.Quantity, i.ReturnedQuantity, i.UnitPrice, i.PurchasePrice })
             .ToListAsync(cancellationToken);
 

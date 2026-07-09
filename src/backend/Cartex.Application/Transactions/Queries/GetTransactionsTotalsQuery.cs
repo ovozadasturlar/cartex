@@ -33,8 +33,10 @@ public sealed class GetTransactionsTotalsQueryHandler(
         if (!string.IsNullOrEmpty(request.OperationType) && Enum.TryParse<Cartex.Domain.Enums.OperationType>(request.OperationType, out var ot))
             query = query.Where(t => t.OperationType == ot);
 
-        return new TransactionsTotalsDto(
-            await query.CountAsync(cancellationToken),
-            await query.SumAsync(t => (decimal?)t.Amount, cancellationToken) ?? 0);
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new TransactionsTotalsDto(g.Count(), g.Sum(t => t.Amount)))
+            .FirstOrDefaultAsync(cancellationToken);
+        return totals ?? new TransactionsTotalsDto(0, 0);
     }
 }

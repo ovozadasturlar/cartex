@@ -26,9 +26,12 @@ public sealed class GetTopCustomersReportQueryHandler(IApplicationDbContext db) 
             .Select(s => new { s.Id, CustomerId = s.CustomerId!.Value, CustomerName = s.Customer!.FullName, s.CreatedAt, s.DiscountAmount })
             .ToListAsync(cancellationToken);
 
-        var saleIds = sales.Select(s => s.Id).ToList();
-        var items = await db.SaleItems
-            .Where(i => saleIds.Contains(i.SaleId))
+        var itemsQuery = db.SaleItems.Where(i =>
+            (i.Sale.Status == SaleStatus.Completed || i.Sale.Status == SaleStatus.PartialReturn)
+            && i.Sale.CustomerId != null && i.Sale.CreatedAt >= from && i.Sale.CreatedAt < to);
+        if (request.WarehouseId is { } wid)
+            itemsQuery = itemsQuery.Where(i => i.Sale.WarehouseId == wid);
+        var items = await itemsQuery
             .Select(i => new { i.SaleId, i.Quantity, i.ReturnedQuantity, i.UnitPrice, i.PurchasePrice })
             .ToListAsync(cancellationToken);
 
