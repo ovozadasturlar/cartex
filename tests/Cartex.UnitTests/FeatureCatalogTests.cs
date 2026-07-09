@@ -13,9 +13,9 @@ public class FeatureCatalogTests
     }
 
     [Fact]
-    public void PermissionsFor_CommunicationCodes_AreEmpty()
+    public void PermissionsFor_ModulesWithoutPermissions_AreEmpty()
     {
-        var perms = FeatureCatalog.PermissionsFor([FeatureCatalog.Telegram, FeatureCatalog.Email, FeatureCatalog.Sms, FeatureCatalog.Ordering]);
+        var perms = FeatureCatalog.PermissionsFor([FeatureCatalog.Ordering, FeatureCatalog.Agents, FeatureCatalog.OfflineCache]);
         Assert.Empty(perms);
     }
 

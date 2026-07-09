@@ -9,12 +9,8 @@ namespace Cartex.UI.ViewModels;
 
 public sealed record SmtpPreset(string Name, string? Host, int Port, bool Ssl);
 
-public partial class IntegrationsViewModel(ISettingsApi api, IFeaturesApi featuresApi, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
+public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
 {
-    [ObservableProperty] private bool _telegramFeatureOff;
-    [ObservableProperty] private bool _emailFeatureOff;
-    [ObservableProperty] private bool _smsFeatureOff;
-
     public ObservableCollection<string> SmsProviders { get; } = ["eskiz", "playmobile"];
 
     public ObservableCollection<SmtpPreset> SmtpPresets { get; } =
@@ -174,14 +170,6 @@ public partial class IntegrationsViewModel(ISettingsApi api, IFeaturesApi featur
             }
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
-        try
-        {
-            var enabled = await featuresApi.GetEnabledAsync();
-            TelegramFeatureOff = !enabled.Contains("telegram");
-            EmailFeatureOff = !enabled.Contains("email");
-            SmsFeatureOff = !enabled.Contains("sms");
-        }
-        catch { }
     }
 
     partial void OnSelectedSmtpPresetChanged(SmtpPreset? value)

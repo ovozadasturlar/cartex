@@ -14,9 +14,6 @@ public static class FeatureCatalog
     public const string Prepack = "prepack";
     public const string Agents = "agents";
     public const string OfflineCache = "offline_cache";
-    public const string Telegram = "telegram";
-    public const string Email = "email";
-    public const string Sms = "sms";
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
     {
@@ -32,9 +29,6 @@ public static class FeatureCatalog
         [Prepack] = [AppPermissions.Sales.Prepack],
         [Agents] = [],
         [OfflineCache] = [],
-        [Telegram] = [],
-        [Email] = [],
-        [Sms] = [],
     };
 
     public static readonly IReadOnlyDictionary<string, string> Names = new Dictionary<string, string>
@@ -51,9 +45,6 @@ public static class FeatureCatalog
         [Prepack] = "Qadoqlash (tarozi)",
         [Agents] = "Agentlar (dala savdosi)",
         [OfflineCache] = "Oflayn kassa (bitta qurilma)",
-        [Telegram] = "Telegram",
-        [Email] = "Email",
-        [Sms] = "SMS",
     };
 
     public static readonly IReadOnlyList<string> AllCodes = [.. Names.Keys];

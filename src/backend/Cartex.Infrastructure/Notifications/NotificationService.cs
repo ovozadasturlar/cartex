@@ -2,7 +2,6 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
-using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.Extensions.Logging;
 
@@ -15,24 +14,10 @@ public sealed class NotificationService(
     ISmsService sms,
     ISender sender,
     IReceiptPdfRenderer pdfRenderer,
-    IFeatureStateProvider features,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendAsync(NotificationMessage message, CancellationToken cancellationToken = default)
     {
-        var feature = message.Channel switch
-        {
-            NotificationChannel.Telegram => FeatureCatalog.Telegram,
-            NotificationChannel.Email => FeatureCatalog.Email,
-            NotificationChannel.Sms => FeatureCatalog.Sms,
-            _ => null
-        };
-        if (feature is not null && !await features.IsEnabledAsync(feature, cancellationToken))
-        {
-            logger.LogInformation("Channel {Channel} feature disabled; notification skipped", message.Channel);
-            return;
-        }
-
         if (message.Template == "sale_receipt")
         {
             await SendReceiptAsync(message, cancellationToken);
