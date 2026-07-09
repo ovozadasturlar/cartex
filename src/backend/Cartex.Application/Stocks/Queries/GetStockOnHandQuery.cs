@@ -16,30 +16,6 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
 {
     public async Task<StockOnHandPageDto> Handle(GetStockOnHandQuery request, CancellationToken cancellationToken)
     {
-        var onHand = await db.Stocks
-            .Where(s => s.WarehouseId == request.WarehouseId)
-            .GroupBy(s => s.VariantId)
-            .Select(g => new { VariantId = g.Key, OnHand = g.Sum(s => s.Quantity), NearestExpiry = g.Min(s => s.ExpiredAt) })
-            .ToListAsync(cancellationToken);
-
-        if (onHand.Count == 0)
-            return new StockOnHandPageDto([], 0, 0, 0);
-
-        var variantIds = onHand.Select(o => o.VariantId).ToList();
-
-        var variants = await db.ProductVariants
-            .Where(v => variantIds.Contains(v.Id))
-            .Select(v => new { v.Id, ProductName = v.Product.Name, v.Product.CategoryId, CategoryName = v.Product.Category != null ? v.Product.Category.Name : null, UnitName = v.Product.Unit.Name, Dimension = v.Product.Unit.Dimension, ImageKey = v.ImageKey ?? v.Product.ImageKey })
-            .ToDictionaryAsync(v => v.Id, cancellationToken);
-
-        var prices = await db.ProductPrices
-            .Where(pp => variantIds.Contains(pp.VariantId) && (pp.WarehouseId == request.WarehouseId || pp.WarehouseId == null))
-            .ToListAsync(cancellationToken);
-
-        decimal PriceOf(long variantId) =>
-            (prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == request.WarehouseId)
-             ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null))?.SellingPrice ?? 0;
-
         HashSet<long>? subtree = null;
         if (request.CategoryId is { } categoryId)
         {
@@ -55,25 +31,54 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
             }
         }
 
-        var filtered = onHand
-            .Where(o => variants.ContainsKey(o.VariantId))
-            .Select(o =>
+        var query = db.Stocks
+            .Where(s => s.WarehouseId == request.WarehouseId)
+            .GroupBy(s => s.VariantId)
+            .Select(g => new { VariantId = g.Key, OnHand = g.Sum(s => s.Quantity), NearestExpiry = g.Min(s => s.ExpiredAt) })
+            .Join(db.ProductVariants, o => o.VariantId, v => v.Id, (o, v) => new
             {
-                var variant = variants[o.VariantId];
-                return new { o.VariantId, variant.ProductName, variant.CategoryId, variant.CategoryName, variant.UnitName, variant.Dimension, o.OnHand, Price = PriceOf(o.VariantId), o.NearestExpiry, variant.ImageKey };
-            })
-            .Where(o => subtree == null || (o.CategoryId is { } cid && subtree.Contains(cid)))
-            .Where(o => string.IsNullOrWhiteSpace(request.Search) || o.ProductName.Contains(request.Search.Trim(), StringComparison.OrdinalIgnoreCase))
-            .OrderBy(o => o.ProductName)
-            .ToList();
+                o.VariantId,
+                o.OnHand,
+                o.NearestExpiry,
+                ProductName = v.Product.Name,
+                v.Product.CategoryId,
+                CategoryName = v.Product.Category != null ? v.Product.Category.Name : null,
+                UnitName = v.Product.Unit.Name,
+                Dimension = v.Product.Unit.Dimension,
+                ImageKey = v.ImageKey ?? v.Product.ImageKey,
+                Price = db.ProductPrices
+                        .Where(pp => pp.VariantId == v.Id && pp.WarehouseId == request.WarehouseId)
+                        .Select(pp => (decimal?)pp.SellingPrice)
+                        .FirstOrDefault()
+                    ?? db.ProductPrices
+                        .Where(pp => pp.VariantId == v.Id && pp.WarehouseId == null)
+                        .Select(pp => (decimal?)pp.SellingPrice)
+                        .FirstOrDefault()
+                    ?? 0
+            });
 
-        var totalCount = filtered.Count;
-        var totalQuantity = filtered.Sum(o => o.OnHand);
-        var totalValue = filtered.Sum(o => o.OnHand * o.Price);
+        if (subtree is not null)
+        {
+            var ids = subtree.ToList();
+            query = query.Where(o => o.CategoryId != null && ids.Contains(o.CategoryId.Value));
+        }
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = $"%{request.Search.Trim()}%";
+            query = query.Where(o => EF.Functions.ILike(o.ProductName, term));
+        }
 
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new { Count = g.Count(), Quantity = g.Sum(x => x.OnHand), Value = g.Sum(x => x.OnHand * x.Price) })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (totals is null)
+            return new StockOnHandPageDto([], 0, 0, 0);
+
+        var ordered = query.OrderBy(o => o.ProductName);
         var page = request.Page <= 0 || request.PageSize <= 0
-            ? filtered
-            : filtered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToList();
+            ? await ordered.ToListAsync(cancellationToken)
+            : await ordered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
 
         var imageKeys = page.Select(o => o.ImageKey).Where(k => k != null).Select(k => k!).Distinct().ToList();
         var imageUrls = await storage.GetUrlsAsync(imageKeys, cancellationToken);
@@ -86,6 +91,6 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
             })
             .ToList();
 
-        return new StockOnHandPageDto(items, totalCount, totalQuantity, totalValue);
+        return new StockOnHandPageDto(items, totals.Count, totals.Quantity, totals.Value);
     }
 }
