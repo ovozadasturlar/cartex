@@ -1,0 +1,103 @@
+<div class="page" *transloco="let t">
+  <cx-page-header [title]="t('products')" [subtitle]="t('products_subtitle')" />
+
+  <div class="cx-grid stats">
+    <cx-stat-card [label]="t('products')" [value]="totals()?.count | cxMoney" [icon]="'inventory_2'" />
+    <cx-stat-card
+      [label]="t('total_on_hand')"
+      [value]="totals()?.totalOnHand | cxMoney"
+      [icon]="'warehouse'"
+      [tone]="'success'" />
+  </div>
+
+  <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput #q [placeholder]="t('search')" (input)="onSearch(q.value)" />
+  </mat-form-field>
+
+  <div class="cx-table-card">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (paged().items.length) {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="paged().items">
+          <ng-container matColumnDef="image">
+            <th mat-header-cell *matHeaderCellDef class="col-img"></th>
+            <td mat-cell *matCellDef="let p" class="col-img">
+              @if (p.imageUrl) {
+                <img class="thumb" [src]="p.imageUrl" [alt]="p.name" (error)="p.imageUrl = null" />
+              } @else {
+                <div class="thumb ph"><mat-icon>inventory_2</mat-icon></div>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+            <td mat-cell *matCellDef="let p">
+              <div class="pname">{{ p.name }}</div>
+              @if (p.categoryName) {
+                <div class="pcat">{{ p.categoryName }}</div>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="code">
+            <th mat-header-cell *matHeaderCellDef>{{ t('code') }}</th>
+            <td mat-cell *matCellDef="let p">{{ p.code || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="barcode">
+            <th mat-header-cell *matHeaderCellDef>{{ t('barcode') }}</th>
+            <td mat-cell *matCellDef="let p">
+              @if (p.barcodes.length) {
+                <span class="cx-money">{{ p.barcodes[0] }}</span>
+                @if (p.barcodes.length > 1) {
+                  <span class="more">+{{ p.barcodes.length - 1 }}</span>
+                }
+              } @else {
+                —
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="unit">
+            <th mat-header-cell *matHeaderCellDef>{{ t('unit') }}</th>
+            <td mat-cell *matCellDef="let p">{{ p.unitName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef class="num">{{ t('price') }}</th>
+            <td mat-cell *matCellDef="let p" class="num cx-money">
+              @if (p.sellingPrice !== null) {
+                {{ p.sellingPrice | cxMoney }} {{ p.priceCurrency }}
+              } @else {
+                —
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="stock">
+            <th mat-header-cell *matHeaderCellDef class="num">{{ t('on_hand') }}</th>
+            <td mat-cell *matCellDef="let p" class="num">
+              @if (p.onHand <= p.minStock) {
+                <span class="cx-chip bad">{{ p.onHand | cxMoney }} {{ p.unitName }}</span>
+              } @else {
+                <span class="cx-money">{{ p.onHand | cxMoney }} {{ p.unitName }}</span>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      </div>
+    } @else if (!loading()) {
+      <cx-empty-state [icon]="'inventory_2'" [message]="t('no_products')" />
+    }
+    @if (paged().meta.totalCount) {
+      <cx-paging-bar [meta]="paged().meta" (changed)="onPage($event)" />
+    }
+  </div>
+</div>

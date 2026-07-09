@@ -1,0 +1,135 @@
+:host {
+  display: block;
+}
+
+.load-bar {
+  margin-bottom: 14px;
+  border-radius: 3px;
+}
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--cx-border);
+  border-radius: 11px;
+  background: var(--cx-surface-2);
+
+  button {
+    border: 0;
+    padding: 6px 16px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--cx-text-2);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      color: var(--cx-text-1);
+    }
+
+    &.active {
+      background: var(--cx-card);
+      color: var(--cx-brand);
+      box-shadow: var(--cx-shadow);
+    }
+  }
+}
+
+.stats {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin-bottom: 14px;
+}
+
+.block {
+  margin-bottom: 14px;
+}
+
+.pad {
+  padding: 18px 20px;
+}
+
+h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tbl-title {
+  padding: 18px 20px 0;
+}
+
+.two-col {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.num {
+  text-align: right;
+}
+
+.profit {
+  color: var(--cx-success);
+  font-weight: 600;
+}
+
+.aging {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0 20px 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mini {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: 12px;
+
+  .lbl {
+    font-size: 12px;
+    opacity: 0.85;
+  }
+
+  .val {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  &.ok {
+    background: var(--cx-success-soft);
+    color: var(--cx-success);
+  }
+
+  &.warn {
+    background: var(--cx-warning-soft);
+    color: var(--cx-warning);
+  }
+
+  &.bad {
+    background: var(--cx-danger-soft);
+    color: var(--cx-danger);
+  }
+}

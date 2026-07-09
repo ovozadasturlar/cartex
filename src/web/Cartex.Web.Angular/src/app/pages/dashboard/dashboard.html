@@ -1,0 +1,105 @@
+<div class="dash" *transloco="let t">
+  <cx-page-header [title]="t('dashboard')" [subtitle]="t('dashboard_subtitle')">
+    <mat-button-toggle-group
+      hideSingleSelectionIndicator
+      [value]="days()"
+      (change)="setDays($event.value)"
+    >
+      <mat-button-toggle [value]="1">{{ t('period_today') }}</mat-button-toggle>
+      <mat-button-toggle [value]="7">{{ t('period_7d') }}</mat-button-toggle>
+      <mat-button-toggle [value]="30">{{ t('period_30d') }}</mat-button-toggle>
+    </mat-button-toggle-group>
+  </cx-page-header>
+
+  <div class="load-slot">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  <div class="cx-grid stats">
+    <cx-stat-card [label]="t('revenue')" [value]="money(report()?.revenue)" [icon]="'payments'" />
+    <cx-stat-card
+      [label]="t('profit')"
+      [value]="money(report()?.profit)"
+      [icon]="'trending_up'"
+      [tone]="'success'"
+    />
+    <cx-stat-card
+      [label]="t('sales_count')"
+      [value]="money(report()?.salesCount)"
+      [icon]="'receipt_long'"
+    />
+    <cx-stat-card
+      [label]="t('average_sale')"
+      [value]="money(report()?.averageSale)"
+      [icon]="'functions'"
+    />
+  </div>
+
+  <section class="cx-card block trend">
+    <h2>{{ t('revenue_trend') }}</h2>
+    @if (chartPoints().length) {
+      <cx-line-chart [points]="chartPoints()" />
+    } @else {
+      <cx-empty-state [icon]="'show_chart'" [message]="t('no_data')" />
+    }
+  </section>
+
+  <div class="two-col">
+    <section class="cx-card block">
+      <h2>{{ t('top_products') }}</h2>
+      <cx-bar-list [items]="topItems()" />
+    </section>
+    <section class="cx-card block">
+      <h2>{{ t('payment_breakdown') }}</h2>
+      <cx-bar-list [items]="payItems(t)" />
+    </section>
+  </div>
+
+  @if (debt(); as d) {
+    <section class="debt">
+      <h2>{{ t('debt_aging') }}</h2>
+      <div class="cx-grid stats">
+        <cx-stat-card
+          [label]="t('debt_total')"
+          [value]="money(d.total)"
+          [icon]="'account_balance_wallet'"
+          [tone]="'warning'"
+        />
+        <cx-stat-card [label]="t('days_0_30')" [value]="money(d.bucket0_30)" />
+        <cx-stat-card
+          [label]="t('days_31_60')"
+          [value]="money(d.bucket31_60)"
+          [tone]="'warning'"
+        />
+        <cx-stat-card
+          [label]="t('days_60_plus')"
+          [value]="money(d.bucket60Plus)"
+          [tone]="'danger'"
+        />
+      </div>
+    </section>
+  }
+
+  @if (low(); as items) {
+    <section class="cx-card block">
+      <h2>{{ t('low_stock') }}</h2>
+      @if (items.length) {
+        <div class="low-list">
+          @for (row of items; track row.variantId) {
+            <div class="low-row">
+              <div class="info">
+                <span class="name">{{ row.productName }}</span>
+                <span class="wh">{{ row.warehouseName }}</span>
+              </div>
+              <span class="cx-chip bad cx-money">{{ money(row.onHand) }} / {{ money(row.minStock) }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <cx-empty-state [icon]="'check_circle'" [message]="t('stock_ok')" />
+      }
+    </section>
+  }
+</div>

@@ -1,0 +1,98 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('customers')" [subtitle]="t('customers_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (totals(); as tt) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('customers')" [value]="tt.count | cxMoney" icon="group" />
+        <cx-stat-card [label]="t('total_debt')" [value]="tt.totalDebt | cxMoney" icon="money_off" tone="danger" />
+        <cx-stat-card [label]="t('bonus')" [value]="tt.totalBonus | cxMoney" icon="redeem" tone="success" />
+      </div>
+    }
+
+    <mat-form-field class="search" appearance="outline" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [placeholder]="t('search')" [ngModel]="search" (ngModelChange)="onSearch($event)" />
+    </mat-form-field>
+
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+                <td mat-cell *matCellDef="let c" class="strong">{{ name(c) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="phone">
+                <th mat-header-cell *matHeaderCellDef>{{ t('phone') }}</th>
+                <td mat-cell *matCellDef="let c">
+                  @if (c.phone) {
+                    <span class="phone">
+                      {{ c.phone }}
+                      @if (c.hasTelegram) {
+                        <mat-icon class="tg" [title]="t('telegram')">send</mat-icon>
+                      }
+                    </span>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="debt">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('debt') }}</th>
+                <td mat-cell *matCellDef="let c" class="num">
+                  @if (c.debtBalances.length > 1) {
+                    <span class="multi">
+                      @for (b of c.debtBalances; track b.currency) {
+                        <span class="cx-chip cx-money" [class.bad]="b.amount > 0">{{ b.amount | cxMoney }} {{ b.currency }}</span>
+                      }
+                    </span>
+                  } @else if (c.debtBalance > 0) {
+                    <span class="cx-chip bad cx-money">{{ c.debtBalance | cxMoney }}</span>
+                  } @else {
+                    <span class="muted cx-money">{{ c.debtBalance | cxMoney }}</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="bonus">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('bonus') }}</th>
+                <td mat-cell *matCellDef="let c" class="num cx-money">{{ c.cashbackBalance | cxMoney }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="discount">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('discount_pct') }}</th>
+                <td mat-cell *matCellDef="let c" class="num">
+                  @if (c.discountPct > 0) {
+                    <span class="cx-chip ok">{{ c.discountPct }}%</span>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="credit">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('credit_limit') }}</th>
+                <td mat-cell *matCellDef="let c" class="num cx-money">{{ c.creditLimit | cxMoney }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let c; columns: cols" class="clickable" (click)="open(c)"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else {
+          <cx-empty-state icon="group" [message]="t('no_customers')" />
+        }
+      }
+    </div>
+  }
+</ng-container>

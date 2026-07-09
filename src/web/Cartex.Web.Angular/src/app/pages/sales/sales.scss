@@ -1,0 +1,52 @@
+.stats {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin-bottom: 18px;
+}
+
+.search {
+  width: min(360px, 100%);
+  margin-bottom: 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    min-width: 840px;
+  }
+}
+
+th.num,
+td.num {
+  text-align: right;
+}
+
+td.strong {
+  font-weight: 600;
+}
+
+.dim {
+  color: var(--cx-text-3);
+}
+
+.pay {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--cx-text-2);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
