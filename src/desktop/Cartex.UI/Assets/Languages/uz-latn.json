@@ -43,6 +43,8 @@
   "chat_id": "Chat ID",
   "bot_token": "Bot tokeni",
   "connect": "Bog'lash",
+  "discounts_desc": "Chek summasini hozir, kassada kamaytiradi — aksiya va maxsus narxlar uchun. Muddat kiritilmasa qoida doimiy amal qiladi.",
+  "cashback_desc": "Mijoz to'liq to'laydi, lekin xariddan bonus to'playdi — bonusni keyingi xaridda to'lov sifatida ishlatadi. Bu mijozni qaytarib keladigan sodiqlik vositasi.",
   "loyalty_discount": "Sodiqlik chegirmasi",
   "discounts": "Chegirmalar",
   "manufacturer": "Ishlab chiqaruvchi",

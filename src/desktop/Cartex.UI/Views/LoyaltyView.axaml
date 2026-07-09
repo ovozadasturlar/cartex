@@ -16,8 +16,12 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel Spacing="14">
                         <Grid ColumnDefinitions="*,Auto,12,Auto">
-                            <TextBlock Text="{Binding L[discounts]}" FontWeight="SemiBold" FontSize="15"
-                                       Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding L[discounts]}" FontWeight="SemiBold" FontSize="15"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="{Binding L[discounts_desc]}" FontSize="11.5" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextMuted}" MaxWidth="440" HorizontalAlignment="Left" />
+                            </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding L[discount_combine_mode]}" FontSize="12.5"
                                            Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
@@ -97,8 +101,12 @@
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="{Binding L[cashback_rules]}" FontWeight="SemiBold" FontSize="15"
-                                   Foreground="{DynamicResource TextPrimary}" />
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding L[cashback_rules]}" FontWeight="SemiBold" FontSize="15"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[cashback_desc]}" FontSize="11.5" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextMuted}" MaxWidth="620" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <ToggleSwitch IsChecked="{Binding IsEnabled}" />
                             <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center"
