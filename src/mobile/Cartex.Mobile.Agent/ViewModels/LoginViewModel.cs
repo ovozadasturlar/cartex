@@ -15,8 +15,20 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [ObservableProperty] private bool _isServerVisible;
     [ObservableProperty] private string? _error;
 
+    public string ServerText => $"{Loc.Instance["server"]}: {ServerUrl}";
+
+    partial void OnServerUrlChanged(string value) => OnPropertyChanged(nameof(ServerText));
+
     [RelayCommand]
     private void ToggleServer() => IsServerVisible = !IsServerVisible;
+
+    [RelayCommand]
+    private async Task SetLanguageAsync(string code)
+    {
+        await Loc.Instance.SetLanguageAsync(code);
+        Error = null;
+        OnPropertyChanged(nameof(ServerText));
+    }
 
     public async Task InitializeAsync()
     {
@@ -31,12 +43,12 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         Error = null;
         if (string.IsNullOrWhiteSpace(ServerUrl) || string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
         {
-            Error = "Barcha maydonlarni to'ldiring";
+            Error = Loc.Instance["err_fill_all"];
             return;
         }
         if (!Uri.TryCreate(ServerUrl.Trim(), UriKind.Absolute, out _))
         {
-            Error = "Server manzili noto'g'ri";
+            Error = Loc.Instance["err_bad_server"];
             return;
         }
         IsBusy = true;
@@ -49,11 +61,11 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
-            Error = "Login yoki parol noto'g'ri";
+            Error = Loc.Instance["err_bad_credentials"];
         }
         catch
         {
-            Error = "Serverga ulanib bo'lmadi";
+            Error = Loc.Instance["err_no_connection"];
         }
         finally
         {

@@ -29,7 +29,7 @@ public partial class RepayViewModel(AgentDb db, SyncService sync) : ObservableOb
         _currency = await db.GetMetaAsync("base_currency") ?? "";
         if (_customer is null) return;
         CustomerName = _customer.FullName;
-        DebtText = $"Joriy qarz: {_customer.DebtBalance:N0} {_currency} (holat: {await db.GetMetaAsync("last_sync") ?? "—"})";
+        DebtText = string.Format(Loc.Instance["current_debt_fmt"], _customer.DebtBalance, _currency, await db.GetMetaAsync("last_sync") ?? "—");
     }
 
     [RelayCommand]
@@ -39,11 +39,11 @@ public partial class RepayViewModel(AgentDb db, SyncService sync) : ObservableOb
         if (_customer is null) return;
         if (!decimal.TryParse(AmountText?.Replace(" ", ""), out var amount) || amount <= 0)
         {
-            Error = "Summani kiriting";
+            Error = Loc.Instance["err_enter_amount"];
             return;
         }
         await sync.EnqueueRepayAsync(new RepayDraft(_customer.Id, _customer.FullName, amount));
-        Ui.Toast("To'lov navbatga qo'shildi");
+        Ui.Toast(Loc.Instance["repay_queued"]);
         await Shell.Current.GoToAsync("..");
     }
 }

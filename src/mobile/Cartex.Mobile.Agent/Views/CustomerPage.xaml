@@ -4,15 +4,16 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:CustomerViewModel"
-    Title="Mijoz">
+    Title="{svc:T customer_title}">
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="14">
             <Label Text="{Binding FullName}" Style="{StaticResource H1}" />
             <Label Text="{Binding StaleText}" Style="{StaticResource MutedLabel}" Margin="0,-10,0,0" />
             <Border Style="{StaticResource Card}">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="Qarz" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{svc:T debt}" Style="{StaticResource MutedLabel}" />
                     <Label Text="{Binding DebtText}" FontSize="24" FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
                         <Label.Triggers>
@@ -41,8 +42,8 @@
                     <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
             </Border>
-            <Button Text="Savdo qilish" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" />
-            <Button Text="To'lov qabul qilish" Style="{StaticResource BtnOutline}" Command="{Binding RepayCommand}" />
+            <Button Text="{svc:T sale_action}" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" />
+            <Button Text="{svc:T repay_title}" Style="{StaticResource BtnOutline}" Command="{Binding RepayCommand}" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

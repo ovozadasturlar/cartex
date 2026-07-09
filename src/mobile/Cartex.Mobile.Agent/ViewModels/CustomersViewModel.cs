@@ -46,6 +46,6 @@ public partial class CustomersViewModel(AgentDb db, SyncService sync) : Observab
 
 public sealed record CustomerRow(LocalCustomer Customer, string Currency)
 {
-    public string DebtText => Customer.DebtBalance > 0 ? $"{Customer.DebtBalance:N0} {Currency}" : "Qarzi yo'q";
+    public string DebtText => Customer.DebtBalance > 0 ? $"{Customer.DebtBalance:N0} {Currency}" : Loc.Instance["no_debt"];
     public bool HasDebt => Customer.DebtBalance > 0;
 }

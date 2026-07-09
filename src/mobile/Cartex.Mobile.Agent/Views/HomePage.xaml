@@ -4,17 +4,19 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:HomeViewModel"
     Title="Cartex Agent">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Chiqish" Command="{Binding LogoutCommand}" />
+        <ToolbarItem Text="{svc:T language}" Command="{Binding ChooseLanguageCommand}" />
+        <ToolbarItem Text="{svc:T logout}" Command="{Binding LogoutCommand}" />
     </ContentPage.ToolbarItems>
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="14">
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
                     StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
                     IsVisible="{Binding IsOffline}">
-                <Label Text="Oflayn — mahalliy kesh bilan ishlayapsiz" FontSize="13"
+                <Label Text="{svc:T offline_banner}" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
             </Border>
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
@@ -28,33 +30,40 @@
                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             </Border>
             <Label Text="{Binding WarehouseName}" Style="{StaticResource H1}" />
-            <Label Text="{Binding LastSync, StringFormat='Yangilangan: {0}'}" Style="{StaticResource MutedLabel}" Margin="0,-10,0,0" />
+            <Label Style="{StaticResource MutedLabel}" Margin="0,-10,0,0">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="{svc:T home_updated}" />
+                        <Span Text="{Binding LastSync}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                 <Border Style="{StaticResource Card}">
                     <VerticalStackLayout Spacing="2">
                         <Label Text="{Binding CustomerCount}" Style="{StaticResource StatValue}" />
-                        <Label Text="Mijozlar" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{svc:T customers}" Style="{StaticResource MutedLabel}" />
                     </VerticalStackLayout>
                 </Border>
                 <Border Grid.Column="1" Style="{StaticResource Card}">
                     <VerticalStackLayout Spacing="2">
                         <Label Text="{Binding StockCount}" Style="{StaticResource StatValue}" />
-                        <Label Text="Tovar turlari" Style="{StaticResource MutedLabel}" />
+                        <Label Text="{svc:T stock_types}" Style="{StaticResource MutedLabel}" />
                     </VerticalStackLayout>
                 </Border>
             </Grid>
             <Border Style="{StaticResource Card}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <VerticalStackLayout Spacing="2" VerticalOptions="Center">
-                        <Label Text="Smena" FontAttributes="Bold" FontSize="15"
+                        <Label Text="{svc:T shift}" FontAttributes="Bold" FontSize="15"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         <Label Text="{Binding ShiftText}" Style="{StaticResource MutedLabel}" />
                     </VerticalStackLayout>
                     <Button Grid.Column="1" Style="{StaticResource BtnOutline}" HeightRequest="42" FontSize="13"
-                            Command="{Binding ToggleShiftCommand}" Text="Ochish">
+                            Command="{Binding ToggleShiftCommand}" Text="{svc:T shift_open_btn}">
                         <Button.Triggers>
                             <DataTrigger TargetType="Button" Binding="{Binding ShiftOpen}" Value="True">
-                                <Setter Property="Text" Value="Yopish" />
+                                <Setter Property="Text" Value="{svc:T shift_close_btn}" />
                             </DataTrigger>
                         </Button.Triggers>
                     </Button>
@@ -66,13 +75,15 @@
                 </Border.GestureRecognizers>
                 <Grid ColumnDefinitions="*,Auto">
                     <VerticalStackLayout Spacing="2">
-                        <Label Text="Yuborish navbati" FontAttributes="Bold" FontSize="15"
+                        <Label Text="{svc:T outbox_title}" FontAttributes="Bold" FontSize="15"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         <Label Style="{StaticResource MutedLabel}">
                             <Label.FormattedText>
                                 <FormattedString>
-                                    <Span Text="{Binding PendingCount, StringFormat='Kutilmoqda: {0}'}" />
-                                    <Span Text="{Binding ErrorCount, StringFormat='  •  Xato: {0}'}" />
+                                    <Span Text="{svc:T home_pending}" />
+                                    <Span Text="{Binding PendingCount, StringFormat='{0}'}" />
+                                    <Span Text="{svc:T home_errors}" />
+                                    <Span Text="{Binding ErrorCount, StringFormat='{0}'}" />
                                 </FormattedString>
                             </Label.FormattedText>
                         </Label>
@@ -81,8 +92,11 @@
                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
                 </Grid>
             </Border>
-            <Button Text="Yangi savdo" Style="{StaticResource BtnPrimary}" Command="{Binding NewSaleCommand}" />
-            <Button Text="Sinxronlash" Style="{StaticResource BtnOutline}" Command="{Binding SyncCommand}" />
+            <Button Text="{svc:T new_sale}" Style="{StaticResource BtnPrimary}" Command="{Binding NewSaleCommand}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Button Text="{svc:T sync}" Style="{StaticResource BtnOutline}" Command="{Binding SyncCommand}" />
+                <Button Grid.Column="1" Text="{svc:T qr_scanner}" Style="{StaticResource BtnOutline}" Command="{Binding OpenScanCommand}" />
+            </Grid>
             <ActivityIndicator IsRunning="{Binding IsBusy}"
                                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         </VerticalStackLayout>

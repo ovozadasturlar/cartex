@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cartex.Mobile.Agent.Data;
+using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Common;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -33,9 +34,9 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         Phone = c.Phone;
         Address = c.Address;
         HasDebt = c.DebtBalance > 0;
-        DebtText = HasDebt ? BuildDebtText(c, currency) : "Qarzi yo'q";
-        LimitText = c.CreditLimit > 0 ? $"Kredit limiti: {c.CreditLimit:N0} {currency}" : null;
-        StaleText = $"Holat: {await db.GetMetaAsync("last_sync") ?? "—"}";
+        DebtText = HasDebt ? BuildDebtText(c, currency) : Loc.Instance["no_debt"];
+        LimitText = c.CreditLimit > 0 ? string.Format(Loc.Instance["limit_fmt"], c.CreditLimit, currency) : null;
+        StaleText = string.Format(Loc.Instance["status_fmt"], await db.GetMetaAsync("last_sync") ?? "—");
     }
 
     private static string BuildDebtText(LocalCustomer c, string currency)

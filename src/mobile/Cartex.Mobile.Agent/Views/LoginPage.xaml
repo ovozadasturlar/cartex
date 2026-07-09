@@ -4,9 +4,24 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:LoginViewModel"
     Shell.NavBarIsVisible="False">
     <Grid>
+        <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Start" Margin="0,14,0,0" Spacing="2">
+            <Button Text="O'z" Command="{Binding SetLanguageCommand}" CommandParameter="uz-latn"
+                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
+                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Button Text="Ўз" Command="{Binding SetLanguageCommand}" CommandParameter="uz-cyrl"
+                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
+                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Button Text="Ру" Command="{Binding SetLanguageCommand}" CommandParameter="ru"
+                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
+                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Button Text="En" Command="{Binding SetLanguageCommand}" CommandParameter="en"
+                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
+                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+        </HorizontalStackLayout>
         <ScrollView>
             <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
                 <Border BackgroundColor="{StaticResource Primary}" StrokeThickness="0" StrokeShape="RoundRectangle 22"
@@ -15,13 +30,13 @@
                            HorizontalOptions="Center" VerticalOptions="Center" />
                 </Border>
                 <Label Text="Cartex Agent" Style="{StaticResource H1}" HorizontalOptions="Center" Margin="0,16,0,2" />
-                <Label Text="Dala savdosi" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,0,0,32" />
+                <Label Text="{svc:T login_subtitle}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,0,0,32" />
                 <VerticalStackLayout Spacing="12">
                     <Border Style="{StaticResource InputWrap}">
-                        <Entry Placeholder="Login" Text="{Binding Username}" ReturnType="Next" />
+                        <Entry Placeholder="{svc:T login_username}" Text="{Binding Username}" ReturnType="Next" />
                     </Border>
                     <Border Style="{StaticResource InputWrap}">
-                        <Entry Placeholder="Parol" Text="{Binding Password}" IsPassword="True"
+                        <Entry Placeholder="{svc:T login_password}" Text="{Binding Password}" IsPassword="True"
                                ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
                     </Border>
                     <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
@@ -34,7 +49,7 @@
                         <Label Text="{Binding Error}" FontSize="13"
                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
                     </Border>
-                    <Button Text="Kirish" Style="{StaticResource BtnPrimary}" Command="{Binding LoginCommand}" Margin="0,6,0,0" />
+                    <Button Text="{svc:T login_button}" Style="{StaticResource BtnPrimary}" Command="{Binding LoginCommand}" Margin="0,6,0,0" />
                     <ActivityIndicator IsRunning="{Binding IsBusy}"
                                        Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                 </VerticalStackLayout>
@@ -44,7 +59,7 @@
             <Border Style="{StaticResource InputWrap}" IsVisible="{Binding IsServerVisible}">
                 <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
             </Border>
-            <Label Text="{Binding ServerUrl, StringFormat='Server: {0}'}" Style="{StaticResource MutedLabel}"
+            <Label Text="{Binding ServerText}" Style="{StaticResource MutedLabel}"
                    FontSize="12" HorizontalOptions="Center">
                 <Label.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding ToggleServerCommand}" />

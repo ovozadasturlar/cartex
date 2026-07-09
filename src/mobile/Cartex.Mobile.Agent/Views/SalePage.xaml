@@ -5,14 +5,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
     xmlns:data="clr-namespace:Cartex.Mobile.Agent.Data"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:SaleViewModel"
-    Title="Yangi savdo">
+    Title="{svc:T new_sale}">
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
             <Label Text="{Binding CustomerName}" FontSize="18" FontAttributes="Bold"
                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
             <Border Style="{StaticResource InputWrap}">
-                <Entry Placeholder="Tovar qidirish" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
+                <Entry Placeholder="{svc:T search_product}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
             </Border>
             <Border Style="{StaticResource Card}" Padding="6" IsVisible="{Binding HasResults}">
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Results}">
@@ -29,7 +30,8 @@
                                     <Label FontSize="12" TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}">
                                         <Label.FormattedText>
                                             <FormattedString>
-                                                <Span Text="{Binding Quantity, StringFormat='Qoldiq: {0:0.###} '}" />
+                                                <Span Text="{svc:T stock_label}" />
+                                                <Span Text="{Binding Quantity, StringFormat='{0:0.###} '}" />
                                                 <Span Text="{Binding UnitName}" />
                                             </FormattedString>
                                         </Label.FormattedText>
@@ -57,7 +59,7 @@
                                     <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14"
                                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                     <Label Text="{Binding PriceText}" Style="{StaticResource MutedLabel}" FontSize="12" />
-                                    <Label Text="Qoldiqdan ko'p!" FontSize="11" IsVisible="{Binding IsOverStock}"
+                                    <Label Text="{svc:T over_stock}" FontSize="11" IsVisible="{Binding IsOverStock}"
                                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
                                 </VerticalStackLayout>
                                 <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
@@ -80,16 +82,16 @@
             <Border Style="{StaticResource Card}" IsVisible="{Binding HasLines}">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
-                        <Label Text="Jami" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        <Label Text="{svc:T total}" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                         <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="20" FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                     </Grid>
                     <Border Style="{StaticResource InputWrap}">
-                        <Entry Placeholder="Naqd olindi" Text="{Binding PaidCashText}" Keyboard="Numeric" />
+                        <Entry Placeholder="{svc:T paid_cash}" Text="{Binding PaidCashText}" Keyboard="Numeric" />
                     </Border>
                     <HorizontalStackLayout Spacing="8">
-                        <Button Text="To'liq naqd" Style="{StaticResource BtnOutline}" HeightRequest="40" FontSize="13" Command="{Binding FullCashCommand}" />
-                        <Button Text="Qarzga" Style="{StaticResource BtnOutline}" HeightRequest="40" FontSize="13" Command="{Binding FullDebtCommand}" />
+                        <Button Text="{svc:T full_cash}" Style="{StaticResource BtnOutline}" HeightRequest="40" FontSize="13" Command="{Binding FullCashCommand}" />
+                        <Button Text="{svc:T on_credit}" Style="{StaticResource BtnOutline}" HeightRequest="40" FontSize="13" Command="{Binding FullDebtCommand}" />
                     </HorizontalStackLayout>
                     <Label Text="{Binding DebtInfo}" FontSize="14" FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}">
@@ -121,7 +123,7 @@
                 <Label Text="{Binding Error}" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             </Border>
-            <Button Text="Saqlash" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" IsVisible="{Binding HasLines}" />
+            <Button Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" IsVisible="{Binding HasLines}" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

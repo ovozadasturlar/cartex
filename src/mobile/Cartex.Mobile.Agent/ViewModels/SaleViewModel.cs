@@ -12,7 +12,7 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
     public ObservableCollection<SaleLine> Lines { get; } = [];
     public ObservableCollection<LocalVanStock> Results { get; } = [];
 
-    [ObservableProperty] private string _customerName = "Naqd mijoz";
+    [ObservableProperty] private string _customerName = Loc.Instance["cash_customer"];
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private string _paidCashText = "";
     [ObservableProperty] private string _totalText = "";
@@ -42,7 +42,7 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
         if (_customerId is { } cid)
         {
             _customer = await db.GetCustomerAsync(cid);
-            CustomerName = _customer?.FullName ?? "Naqd mijoz";
+            CustomerName = _customer?.FullName ?? Loc.Instance["cash_customer"];
         }
         Recalc();
     }
@@ -112,9 +112,9 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
 
         var paid = ParsePaid();
         var debt = total - paid;
-        DebtInfo = debt > 0 ? $"Qarzga: {debt:N0} {_currency}" : null;
+        DebtInfo = debt > 0 ? string.Format(Loc.Instance["debt_info_fmt"], debt, _currency) : null;
         CreditWarning = debt > 0 && _customer is { CreditLimit: > 0 } c && c.DebtBalance + debt > c.CreditLimit
-            ? "Kredit limitidan oshadi (kesh bo'yicha) — yakuniy qarorni server beradi"
+            ? Loc.Instance["credit_warning"]
             : null;
         foreach (var line in Lines)
             line.RefreshOverStock();
@@ -141,17 +141,17 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
     private async Task SaveAsync()
     {
         Error = null;
-        if (Lines.Count == 0) { Error = "Tovar qo'shilmagan"; return; }
-        if (_warehouseId == 0) { Error = "Ombor biriktirilmagan — avval sinxronlang"; return; }
+        if (Lines.Count == 0) { Error = Loc.Instance["err_no_items"]; return; }
+        if (_warehouseId == 0) { Error = Loc.Instance["err_no_warehouse"]; return; }
         var total = Lines.Sum(l => l.Total);
         var paid = ParsePaid();
-        if (paid > total) { Error = "Naqd summa jami summadan katta"; return; }
-        if (paid < total && _customerId is null) { Error = "Qarzga savdo uchun mijoz tanlanishi kerak"; return; }
+        if (paid > total) { Error = Loc.Instance["err_paid_gt_total"]; return; }
+        if (paid < total && _customerId is null) { Error = Loc.Instance["err_debt_needs_customer"]; return; }
 
         var draft = new SaleDraft(_warehouseId, _customerId, _customer?.FullName, paid,
             Lines.Select(l => new SaleDraftItem(l.VariantId, l.Name, l.Quantity, l.UnitPrice)).ToList());
         await sync.EnqueueSaleAsync(draft);
-        Ui.Toast("Savdo navbatga qo'shildi");
+        Ui.Toast(Loc.Instance["sale_queued"]);
         await Shell.Current.GoToAsync("..");
     }
 }

@@ -1,9 +1,12 @@
-﻿namespace Cartex.Mobile.Agent;
+﻿using Cartex.Mobile.Agent.Services;
+
+namespace Cartex.Mobile.Agent;
 
 public partial class App : Application
 {
 	public App()
 	{
+		Loc.Instance.InitAsync().GetAwaiter().GetResult();
 		InitializeComponent();
 	}
 

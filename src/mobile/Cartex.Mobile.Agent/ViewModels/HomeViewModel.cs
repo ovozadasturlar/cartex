@@ -34,7 +34,7 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
 
     private async Task LoadLocalAsync()
     {
-        WarehouseName = await db.GetMetaAsync("warehouse_name") is { Length: > 0 } name ? name : "Ombor biriktirilmagan";
+        WarehouseName = await db.GetMetaAsync("warehouse_name") is { Length: > 0 } name ? name : Loc.Instance["warehouse_none"];
         LastSync = await db.GetMetaAsync("last_sync") ?? "—";
         CustomerCount = await db.CountAsync<LocalCustomer>();
         StockCount = await db.CountAsync<LocalVanStock>();
@@ -68,7 +68,9 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
             var shift = await shiftsApi.GetCurrentAsync();
             _shiftId = shift?.Id;
             ShiftOpen = shift is not null;
-            ShiftText = shift is null ? "Yopiq" : $"Ochiq — {shift.OpenedAt.ToLocalTime():HH:mm} dan";
+            ShiftText = shift is null
+                ? Loc.Instance["shift_closed"]
+                : string.Format(Loc.Instance["shift_open_fmt"], shift.OpenedAt.ToLocalTime().ToString("HH:mm"));
         }
         catch
         {
@@ -85,24 +87,40 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
         {
             if (ShiftOpen && _shiftId is { } id)
             {
-                var input = await page.DisplayPromptAsync("Smenani yopish", "Sanalgan naqd pul:", "Yopish", "Bekor", keyboard: Keyboard.Numeric);
+                var input = await page.DisplayPromptAsync(Loc.Instance["shift_close_title"], Loc.Instance["counted_cash"],
+                    Loc.Instance["shift_close_btn"], Loc.Instance["cancel"], keyboard: Keyboard.Numeric);
                 if (input is null) return;
-                if (!decimal.TryParse(input, out var counted)) { Ui.Toast("Summa noto'g'ri"); return; }
+                if (!decimal.TryParse(input, out var counted)) { Ui.Toast(Loc.Instance["amount_invalid"]); return; }
                 var report = await shiftsApi.CloseAsync(id, new CloseShiftRequest(counted));
-                await page.DisplayAlert("Smena yopildi",
-                    $"Kutilgan: {report.ExpectedCash:N0}\nSanalgan: {report.CountedCash:N0}\nFarq: {report.Difference:N0}", "OK");
+                await page.DisplayAlert(Loc.Instance["shift_closed_title"],
+                    string.Format(Loc.Instance["shift_report_fmt"], report.ExpectedCash, report.CountedCash, report.Difference),
+                    Loc.Instance["ok"]);
             }
             else
             {
                 await shiftsApi.OpenAsync(new OpenShiftRequest(0));
-                Ui.Toast("Smena ochildi");
+                Ui.Toast(Loc.Instance["shift_opened"]);
             }
             await LoadShiftAsync();
         }
         catch (Exception ex)
         {
-            Ui.Toast(ex is Refit.ApiException api ? SyncService.DescribeError(api) : "Serverga ulanib bo'lmadi");
+            Ui.Toast(ex is Refit.ApiException api ? SyncService.DescribeError(api) : Loc.Instance["err_no_connection"]);
         }
+    }
+
+    [RelayCommand]
+    private async Task ChooseLanguageAsync()
+    {
+        string[] names = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
+        string[] codes = ["uz-latn", "uz-cyrl", "ru", "en"];
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+            Loc.Instance["language"], Loc.Instance["cancel"], null, names);
+        var index = Array.IndexOf(names, choice);
+        if (index < 0) return;
+        await Loc.Instance.SetLanguageAsync(codes[index]);
+        await LoadLocalAsync();
+        await LoadShiftAsync();
     }
 
     [RelayCommand]
@@ -112,12 +130,15 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("//outbox");
 
     [RelayCommand]
+    private Task OpenScanAsync() => Shell.Current.GoToAsync("scan");
+
+    [RelayCommand]
     private async Task LogoutAsync()
     {
         if (await db.CountOutboxAsync("pending") > 0)
         {
-            await Shell.Current.CurrentPage.DisplayAlert("Chiqib bo'lmaydi",
-                "Navbatda yuborilmagan amallar bor. Avval sinxronlang.", "OK");
+            await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["logout_blocked_title"],
+                Loc.Instance["logout_blocked_msg"], Loc.Instance["ok"]);
             return;
         }
         await auth.LogoutAsync();

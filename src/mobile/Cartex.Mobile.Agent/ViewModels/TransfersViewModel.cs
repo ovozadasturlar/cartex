@@ -25,7 +25,7 @@ public partial class TransfersViewModel(IStockTransfersApi api, AgentDb db, Sync
         Error = null;
         if (!long.TryParse(await db.GetMetaAsync("warehouse_id"), out var warehouseId) || warehouseId == 0)
         {
-            Error = "Ombor biriktirilmagan — avval sinxronlang";
+            Error = Loc.Instance["err_no_warehouse"];
             return;
         }
         IsBusy = true;
@@ -44,7 +44,7 @@ public partial class TransfersViewModel(IStockTransfersApi api, AgentDb db, Sync
         }
         catch
         {
-            Error = "Internet yo'q — yuk xati faqat onlayn ko'rinadi";
+            Error = Loc.Instance["transfers_offline"];
         }
         finally
         {
@@ -65,13 +65,13 @@ public partial class TransfersViewModel(IStockTransfersApi api, AgentDb db, Sync
         try
         {
             await api.ReceiveAsync(row.Transfer.Id);
-            Ui.Toast("Qabul qilindi");
+            Ui.Toast(Loc.Instance["received_toast"]);
             await sync.SyncAsync();
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Ui.Toast(ex is ApiException api2 ? SyncService.DescribeError(api2) : "Serverga ulanib bo'lmadi");
+            Ui.Toast(ex is ApiException api2 ? SyncService.DescribeError(api2) : Loc.Instance["err_no_connection"]);
         }
     }
 }
@@ -83,9 +83,9 @@ public sealed record TransferRow(StockTransferDto Transfer)
     public bool CanReceive => Transfer.Status == "Sent";
     public string StatusText => Transfer.Status switch
     {
-        "Sent" => "Yo'lda",
-        "Received" => "Qabul qilingan",
-        "Cancelled" => "Bekor qilingan",
+        "Sent" => Loc.Instance["status_sent"],
+        "Received" => Loc.Instance["status_received"],
+        "Cancelled" => Loc.Instance["status_cancelled"],
         _ => Transfer.Status
     };
 }

@@ -4,11 +4,12 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:CustomersViewModel"
-    Title="Mijozlarim">
+    Title="{svc:T customers_title}">
     <Grid RowDefinitions="Auto,*" Padding="16,8,16,0" RowSpacing="10">
         <Border Style="{StaticResource InputWrap}">
-            <Entry Placeholder="Qidirish (ism yoki telefon)" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
+            <Entry Placeholder="{svc:T search_customer}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
         </Border>
         <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Customers}">
@@ -39,7 +40,7 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
                 <CollectionView.EmptyView>
-                    <Label Text="Mijoz topilmadi" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40,0,0" />
+                    <Label Text="{svc:T no_customers}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40,0,0" />
                 </CollectionView.EmptyView>
             </CollectionView>
         </RefreshView>

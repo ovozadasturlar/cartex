@@ -4,13 +4,14 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:RepayViewModel"
-    Title="To'lov qabul qilish">
+    Title="{svc:T repay_title}">
     <VerticalStackLayout Padding="20" Spacing="14">
         <Label Text="{Binding CustomerName}" Style="{StaticResource H1}" />
         <Label Text="{Binding DebtText}" Style="{StaticResource MutedLabel}" Margin="0,-10,0,0" />
         <Border Style="{StaticResource InputWrap}">
-            <Entry Placeholder="To'lov summasi (naqd)" Text="{Binding AmountText}" Keyboard="Numeric" FontSize="18" />
+            <Entry Placeholder="{svc:T amount_placeholder}" Text="{Binding AmountText}" Keyboard="Numeric" FontSize="18" />
         </Border>
         <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
@@ -22,6 +23,6 @@
             <Label Text="{Binding Error}" FontSize="13"
                    TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
         </Border>
-        <Button Text="Qabul qilish" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" />
+        <Button Text="{svc:T repay_accept}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" />
     </VerticalStackLayout>
 </ContentPage>

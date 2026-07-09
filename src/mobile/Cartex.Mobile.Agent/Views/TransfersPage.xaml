@@ -4,8 +4,9 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:TransfersViewModel"
-    Title="Yuk xati (bugun)">
+    Title="{svc:T transfers_title}">
     <Grid RowDefinitions="Auto,Auto,*" Padding="16,8,16,0" RowSpacing="10">
         <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
@@ -32,7 +33,7 @@
                                     <Label Text="{Binding StatusText}" FontSize="12"
                                            TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                                 </VerticalStackLayout>
-                                <Button Grid.Column="1" Text="Qabul qilish" Style="{StaticResource BtnOutline}"
+                                <Button Grid.Column="1" Text="{svc:T transfer_receive}" Style="{StaticResource BtnOutline}"
                                         HeightRequest="38" FontSize="12" VerticalOptions="Center"
                                         IsVisible="{Binding CanReceive}"
                                         Command="{Binding ReceiveCommand, Source={RelativeSource AncestorType={x:Type vm:TransfersViewModel}}}"
@@ -42,7 +43,7 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
                 <CollectionView.EmptyView>
-                    <Label Text="Bugun yuk xati yo'q" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40,0,0" />
+                    <Label Text="{svc:T no_transfers}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40,0,0" />
                 </CollectionView.EmptyView>
             </CollectionView>
         </RefreshView>
