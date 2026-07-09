@@ -6,6 +6,23 @@
              x:CompileBindings="False">
 
     <UserControl.Styles>
+        <Style Selector="Button.subnav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.subnav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.subnav.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
         <Style Selector="Border.printcard">
             <Setter Property="Background" Value="{DynamicResource CardBg}" />
             <Setter Property="CornerRadius" Value="12" />
@@ -13,118 +30,151 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
-        <Style Selector="TextBlock.cardtitle">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
         <Style Selector="TextBlock.fieldlabel">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
             <Setter Property="FontSize" Value="12.5" />
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer>
-        <StackPanel Margin="24" Spacing="16" MaxWidth="860" HorizontalAlignment="Left">
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[printing]}" Margin="0,0,0,16" />
 
-            <c:PageHeader Title="{Binding L[printing]}" />
+        <Grid ColumnDefinitions="220,*">
+            <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="8" Margin="0,0,16,0"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
+                <StackPanel Spacing="2">
+                    <Button Classes="subnav" Classes.active="{Binding IsReceiptSection}" Content="{Binding L[print_section_receipt]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="receipt" />
+                    <Button Classes="subnav" Classes.active="{Binding IsBarcodeSection}" Content="{Binding L[print_section_barcode]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="barcode" />
+                    <Button Classes="subnav" Classes.active="{Binding IsDocumentSection}" Content="{Binding L[print_section_document]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="document" />
+                    <Button Classes="subnav" Classes.active="{Binding IsZSection}" Content="{Binding L[print_section_zreport]}"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="zreport" />
+                </StackPanel>
+            </Border>
 
-            <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,16,Auto">
+            <ScrollViewer Grid.Column="1">
+                <Panel MaxWidth="640" HorizontalAlignment="Left">
 
-                <!-- Chek -->
-                <Border Grid.Row="0" Grid.Column="0" Classes="printcard">
-                    <StackPanel Spacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <mi:MaterialIcon Kind="ReceiptTextOutline" Width="18" Height="18" Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            <TextBlock Classes="cardtitle" Text="{Binding L[print_section_receipt]}" />
-                        </StackPanel>
-                        <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_mode]}" />
-                            <ComboBox ItemsSource="{Binding ReceiptModes}" SelectedItem="{Binding ReceiptMode}" HorizontalAlignment="Stretch" />
-                            <TextBlock Text="{Binding L[receipt_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Spacing="12" IsVisible="{Binding IsThermal}">
+                    <Border Classes="printcard" IsVisible="{Binding IsReceiptSection}">
+                        <StackPanel Spacing="14">
                             <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer_receipt]}" />
-                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ReceiptPrinter}"
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_mode]}" />
+                                <ComboBox ItemsSource="{Binding ReceiptModes}" SelectedItem="{Binding ReceiptMode}" HorizontalAlignment="Stretch" />
+                                <TextBlock Text="{Binding L[receipt_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="14" IsVisible="{Binding IsThermal}">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[printer_receipt]}" />
+                                    <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ReceiptPrinter}"
+                                              HorizontalAlignment="Stretch" PlaceholderText="—" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,12,*">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width]}" />
+                                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ReceiptPaperWidth}" HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[print_copies]}" />
+                                        <NumericUpDown Value="{Binding ReceiptCopies}" Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding L[receipt_width_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+
+                                <Separator Background="{DynamicResource BorderBrush}" Height="1" />
+
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
+                                    <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding BusinessPaperWidth}" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
+                                    <TextBox Text="{Binding HeaderText}" MinHeight="36" />
+                                </StackPanel>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
+                                    <TextBox Text="{Binding FooterText}" MinHeight="36" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding L[print_receipt_doc_hint]}" IsVisible="{Binding !IsThermal}"
+                                       Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding AutoPrintReceipt}" />
+                                <TextBlock Text="{Binding L[printer_auto]}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
+                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                                <Button Classes="outline" Command="{Binding TestPrintCommand}" Content="{Binding L[printer_test]}"
+                                        IsVisible="{Binding IsThermal}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="printcard" IsVisible="{Binding IsBarcodeSection}">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
+                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding BarcodePrinter}"
                                           HorizontalAlignment="Stretch" PlaceholderText="—" />
                             </StackPanel>
                             <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width]}" />
-                                <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ReceiptPaperWidth}" HorizontalAlignment="Stretch" />
-                                <TextBlock Text="{Binding L[receipt_width_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
+                                <Grid ColumnDefinitions="*,8,90,8,90">
+                                    <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" HorizontalAlignment="Stretch" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                                    <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
+                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                                <Button Classes="outline" Command="{Binding TestLabelPrintCommand}" Content="{Binding L[printer_test]}" />
                             </StackPanel>
                         </StackPanel>
-                        <TextBlock Text="{Binding L[print_receipt_doc_hint]}" IsVisible="{Binding !IsThermal}"
-                                   Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <ToggleSwitch IsChecked="{Binding AutoPrintReceipt}" />
-                            <TextBlock Text="{Binding L[printer_auto]}" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextPrimary}" />
-                        </StackPanel>
-                        <Button Classes="outline" Command="{Binding TestPrintCommand}" Content="{Binding L[printer_test]}"
-                                HorizontalAlignment="Left" IsVisible="{Binding IsThermal}" />
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <!-- Hujjat -->
-                <Border Grid.Row="0" Grid.Column="2" Classes="printcard" VerticalAlignment="Stretch">
-                    <StackPanel Spacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <mi:MaterialIcon Kind="FileDocumentOutline" Width="18" Height="18" Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            <TextBlock Classes="cardtitle" Text="{Binding L[print_section_document]}" />
+                    <Border Classes="printcard" IsVisible="{Binding IsDocumentSection}">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
+                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding DocumentPrinter}"
+                                          HorizontalAlignment="Stretch" PlaceholderText="—" />
+                                <TextBlock Text="{Binding L[print_document_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
+                                    Command="{Binding SaveCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
                         </StackPanel>
-                        <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
-                            <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding DocumentPrinter}"
-                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
-                            <TextBlock Text="{Binding L[print_document_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <!-- Barkod yorliq -->
-                <Border Grid.Row="2" Grid.Column="0" Classes="printcard">
-                    <StackPanel Spacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <mi:MaterialIcon Kind="BarcodeScan" Width="18" Height="18" Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            <TextBlock Classes="cardtitle" Text="{Binding L[print_section_barcode]}" />
+                    <Border Classes="printcard" IsVisible="{Binding IsZSection}">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
+                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ZReportPrinter}"
+                                          HorizontalAlignment="Stretch" PlaceholderText="—" />
+                                <TextBlock Text="{Binding L[zreport_printer_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <ToggleSwitch IsChecked="{Binding AutoPrintZReport}" />
+                                <TextBlock Text="{Binding L[auto_print_zreport]}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
+                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                                <Button Classes="outline" Command="{Binding TestZPrintCommand}" Content="{Binding L[printer_test]}" />
+                            </StackPanel>
                         </StackPanel>
-                        <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
-                            <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding BarcodePrinter}"
-                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
-                        </StackPanel>
-                        <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
-                            <Grid ColumnDefinitions="*,8,90,8,90">
-                                <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" HorizontalAlignment="Stretch" />
-                                <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
-                                <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- Z-hisobot -->
-                <Border Grid.Row="2" Grid.Column="2" Classes="printcard" VerticalAlignment="Stretch">
-                    <StackPanel Spacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <mi:MaterialIcon Kind="CashRegister" Width="18" Height="18" Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            <TextBlock Classes="cardtitle" Text="{Binding L[print_section_zreport]}" />
-                        </StackPanel>
-                        <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
-                            <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ZReportPrinter}"
-                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <Button Classes="brand" MinWidth="140" HorizontalContentAlignment="Center"
-                    Command="{Binding SaveCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
-        </StackPanel>
-    </ScrollViewer>
+                    </Border>
+                </Panel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
 </UserControl>

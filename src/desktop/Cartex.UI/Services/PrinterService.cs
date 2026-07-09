@@ -5,10 +5,11 @@ using System.Text;
 using System.Text.Json;
 using Cartex.Shared.Localization;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.UI.Services;
 
-public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0);
+public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false);
 
 public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
 
@@ -27,6 +28,7 @@ public interface IPrinterService
     string? BarcodePrinter { get; }
     ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
+    void PrintZReport(ZReportDto report);
     void PrintRaw(string? printerName, string text);
     void PrintDocument(string filePath, string? printerName);
 }
@@ -70,18 +72,8 @@ public sealed class PrinterService : IPrinterService
         if (!OperatingSystem.IsWindows()) return [];
         try
         {
-            var psi = new ProcessStartInfo("powershell",
-                "-NoProfile -Command \"Get-Printer | Select-Object -ExpandProperty Name\"")
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
-            if (proc is null) return [];
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
-            return output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Print\Printers");
+            return key?.GetSubKeyNames().OrderBy(n => n).ToArray() ?? [];
         }
         catch { return []; }
     }
@@ -91,7 +83,41 @@ public sealed class PrinterService : IPrinterService
         var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
             ? new ReceiptPrintOptions(ReceiptOptions?.HeaderText, ReceiptOptions?.FooterText, _settings.ReceiptPaperWidth)
             : ReceiptOptions;
-        PrintRaw(_settings.ReceiptPrinter, FormatReceipt(receipt, opts));
+        var text = FormatReceipt(receipt, opts);
+        for (var i = 0; i < Math.Clamp(_settings.ReceiptCopies, 1, 5); i++)
+            PrintRaw(_settings.ReceiptPrinter, text);
+    }
+
+    public void PrintZReport(ZReportDto r)
+    {
+        var w = _settings.ReceiptPaperWidth is 42 or 48 ? _settings.ReceiptPaperWidth : 32;
+        var l = LocalizationManager.Instance;
+        var sb = new StringBuilder();
+        sb.AppendLine(Center(l["z_report"], w));
+        sb.AppendLine(Center(DateTime.Now.ToString("dd.MM.yyyy HH:mm"), w));
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
+        sb.AppendLine(Row(l["cash_sales"], $"{r.CashSales:N0}", w));
+        if (r.CashReturns > 0) sb.AppendLine(Row(l["cash_returns"], $"-{r.CashReturns:N0}", w));
+        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
+        if (r.PayIn > 0) sb.AppendLine(Row(l["pay_in"], $"{r.PayIn:N0}", w));
+        if (r.PayOut > 0) sb.AppendLine(Row(l["pay_out"], $"-{r.PayOut:N0}", w));
+        if (r.SupplyPayOut > 0) sb.AppendLine(Row(l["supply_pay_out"], $"-{r.SupplyPayOut:N0}", w));
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Row(l["expected_cash"], $"{r.ExpectedCash:N0}", w));
+        sb.AppendLine(Row(l["counted_cash"], $"{r.CountedCash:N0}", w));
+        sb.AppendLine(Row(l["difference"], $"{r.Difference:N0}", w));
+        foreach (var c in r.Currencies)
+        {
+            sb.AppendLine(new string('-', w));
+            sb.AppendLine(Center(c.Currency, w));
+            sb.AppendLine(Row(l["expected_cash"], $"{c.ExpectedCash:N0}", w));
+            sb.AppendLine(Row(l["counted_cash"], $"{c.CountedCash:N0}", w));
+            sb.AppendLine(Row(l["difference"], $"{c.Difference:N0}", w));
+        }
+        sb.AppendLine();
+        sb.AppendLine();
+        PrintRaw(string.IsNullOrWhiteSpace(_settings.ZReportPrinter) ? _settings.ReceiptPrinter : _settings.ZReportPrinter, sb.ToString());
     }
 
     public void PrintRaw(string? printerName, string text)

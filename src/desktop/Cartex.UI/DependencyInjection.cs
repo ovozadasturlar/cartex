@@ -76,7 +76,6 @@ public static class DependencyInjection
         services.AddTransient<TariffFeaturesViewModel>();
         services.AddTransient<IntegrationsViewModel>();
         services.AddTransient<PrintingViewModel>();
-        services.AddTransient<ReceiptSettingsViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
         services.AddTransient<BarcodePrintViewModel>();
         services.AddTransient<HardwareKeysViewModel>();
