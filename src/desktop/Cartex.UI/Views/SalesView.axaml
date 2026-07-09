@@ -133,8 +133,8 @@
                 <ToggleButton DockPanel.Dock="Right" IsChecked="{Binding PosListMode}" Padding="11,0" Margin="8,0,0,0"
                               VerticalAlignment="Stretch" ToolTip.Tip="{Binding L[pos_view_mode]}">
                     <Panel>
-                        <mi:MaterialIcon Kind="FormatListBulletedSquare" Width="17" Height="17" IsVisible="{Binding !PosListMode}" />
-                        <mi:MaterialIcon Kind="ViewGridOutline" Width="17" Height="17" IsVisible="{Binding PosListMode}" />
+                        <mi:MaterialIcon Kind="FormatListBulletedSquare" Width="24" Height="24" IsVisible="{Binding !PosListMode}" />
+                        <mi:MaterialIcon Kind="ViewGridOutline" Width="24" Height="24" IsVisible="{Binding PosListMode}" />
                     </Panel>
                 </ToggleButton>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="10"
