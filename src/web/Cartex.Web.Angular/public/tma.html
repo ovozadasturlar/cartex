@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Cartex</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: var(--tg-theme-secondary-bg-color, #f4f6f8);
+      --card: var(--tg-theme-bg-color, #ffffff);
+      --text: var(--tg-theme-text-color, #0f172a);
+      --muted: var(--tg-theme-hint-color, #7c8698);
+      --link: var(--tg-theme-link-color, #16a34a);
+      --brand: #16a34a;
+      --danger: #dc2626;
+      --border: color-mix(in srgb, var(--text) 12%, transparent);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 14px 14px 40px;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; margin: 4px 2px 16px; }
+    .brand svg { width: 26px; height: 26px; }
+    .brand b { font-size: 18px; letter-spacing: -.02em; }
+    .hi { color: var(--muted); font-size: 13px; margin: 0 2px 14px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+    .bal { display: flex; gap: 12px; }
+    .bal > div { flex: 1; }
+    .bal .lbl { color: var(--muted); font-size: 12.5px; margin-bottom: 4px; }
+    .bal .val { font-size: 21px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .val.debt { color: var(--danger); }
+    .val.bonus { color: var(--brand); }
+    .tabs { display: flex; gap: 8px; margin: 4px 0 14px; overflow-x: auto; }
+    .tab { flex: 0 0 auto; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--card); color: var(--muted); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+    .tab.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      padding: 13px 0; border-bottom: 1px solid var(--border); }
+    .row:last-child { border-bottom: 0; }
+    .row .t { font-weight: 600; font-size: 14px; }
+    .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+    .row .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .chip { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+      background: color-mix(in srgb, var(--brand) 15%, transparent); color: var(--brand); }
+    .empty { text-align: center; color: var(--muted); padding: 34px 0; font-size: 14px; }
+    .langs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lang { padding: 13px; border-radius: 12px; border: 1px solid var(--border); background: var(--card);
+      color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; }
+    .lang.on { border-color: var(--brand); color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+    a.rlink { color: inherit; text-decoration: none; }
+    .center { text-align: center; padding: 60px 0; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="app"><div class="center" id="boot">…</div></div>
+
+  <script>
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    const app = document.getElementById('app');
+    const money = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+    const fmtDate = (s) => { const d = new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+      const p = (n) => String(n).padStart(2, '0');
+      return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+    const I18N = {
+      'uz-latn': { balance:'Balans', debt:'Qarz', bonus:'Bonus', purchases:'Xaridlar', orders:'Buyurtmalar',
+        language:'Til', open:'Ochish', none:'Hozircha yo’q', authErr:'Kirish amalga oshmadi',
+        notLinked:'Avval botda telefon raqamingizni ulang', hi:'Assalomu alaykum',
+        st:{Open:'Yangi',Confirmed:'Tasdiqlangan',Ready:'Tayyor',CheckedOut:'Yetkazilgan',Cancelled:'Bekor'} },
+      'uz-cyrl': { balance:'Баланс', debt:'Қарз', bonus:'Бонус', purchases:'Харидлар', orders:'Буюртмалар',
+        language:'Тил', open:'Очиш', none:'Ҳозирча йўқ', authErr:'Кириш амалга ошмади',
+        notLinked:'Аввал ботда телефон рақамингизни уланг', hi:'Ассалому алайкум',
+        st:{Open:'Янги',Confirmed:'Тасдиқланган',Ready:'Тайёр',CheckedOut:'Етказилган',Cancelled:'Бекор'} },
+      'ru': { balance:'Баланс', debt:'Долг', bonus:'Бонус', purchases:'Покупки', orders:'Заказы',
+        language:'Язык', open:'Открыть', none:'Пока пусто', authErr:'Не удалось войти',
+        notLinked:'Сначала привяжите номер в боте', hi:'Здравствуйте',
+        st:{Open:'Новый',Confirmed:'Подтверждён',Ready:'Готов',CheckedOut:'Доставлен',Cancelled:'Отменён'} },
+      'en': { balance:'Balance', debt:'Debt', bonus:'Bonus', purchases:'Purchases', orders:'Orders',
+        language:'Language', open:'Open', none:'Nothing yet', authErr:'Sign-in failed',
+        notLinked:'Link your phone in the bot first', hi:'Welcome',
+        st:{Open:'New',Confirmed:'Confirmed',Ready:'Ready',CheckedOut:'Delivered',Cancelled:'Cancelled'} },
+    };
+    const LANGS = [['uz-latn','O’zbekcha'],['uz-cyrl','Ўзбекча'],['ru','Русский'],['en','English']];
+
+    let token = null, fullName = '', lang = 'uz-latn', tab = 'purchases';
+    let balance = null, receipts = [], orders = [];
+    const t = (k) => I18N[lang][k];
+
+    async function authenticate() {
+      if (!tg || !tg.initData) throw new Error('no-init');
+      const r = await fetch('/api/store/auth/telegram', { method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({ initData: tg.initData }) });
+      if (!r.ok) throw new Error('auth-' + r.status);
+      const d = await r.json(); token = d.token; fullName = d.fullName || '';
+    }
+    async function api(path, opts) {
+      opts = opts || {}; opts.headers = Object.assign({ Authorization:'Bearer ' + token }, opts.headers || {});
+      let r = await fetch(path, opts);
+      if (r.status === 401) { await authenticate(); opts.headers.Authorization = 'Bearer ' + token; r = await fetch(path, opts); }
+      return r;
+    }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    const cur = () => (balance && balance.currency) ? ' ' + esc(balance.currency) : '';
+
+    function render() {
+      const rows = tab === 'purchases'
+        ? (receipts.length ? receipts.map((r) =>
+            `<a class="rlink" href="#" onclick="openReceipt('${esc(r.receiptToken)}');return false;"><div class="row">
+              <div><div class="t">${fmtDate(r.createdAt)}</div><div class="s">${t('open')} ↗</div></div>
+              <div class="amt">${money.format(r.totalAmount)}${cur()}</div></div></a>`).join('')
+            : `<div class="empty">${t('none')}</div>`)
+        : tab === 'orders'
+        ? (orders.length ? orders.map((o) =>
+            `<div class="row"><div><div class="t">${esc(o.code).slice(0,8)}</div>
+              <div class="s">${fmtDate(o.createdAt)} · ${o.itemCount}</div></div>
+              <span class="chip">${esc((I18N[lang].st[o.status]) || o.status)}</span></div>`).join('')
+            : `<div class="empty">${t('none')}</div>`)
+        : `<div class="langs">${LANGS.map(([c,n]) =>
+            `<div class="lang ${c===lang?'on':''}" onclick="setLang('${c}')">${esc(n)}</div>`).join('')}</div>`;
+
+      app.innerHTML =
+        `<div class="brand">${LOGO}<b>cartex</b></div>
+         <div class="hi">${t('hi')}${fullName ? ', ' + esc(fullName) : ''}</div>
+         <div class="card bal">
+           <div><div class="lbl">${t('debt')}</div><div class="val debt">${balance?money.format(balance.debt):'—'}${cur()}</div></div>
+           <div><div class="lbl">${t('bonus')}</div><div class="val bonus">${balance?money.format(balance.bonus):'—'}${cur()}</div></div>
+         </div>
+         <div class="tabs">
+           <div class="tab ${tab==='purchases'?'on':''}" onclick="go('purchases')">${t('purchases')}</div>
+           <div class="tab ${tab==='orders'?'on':''}" onclick="go('orders')">${t('orders')}</div>
+           <div class="tab ${tab==='language'?'on':''}" onclick="go('language')">${t('language')}</div>
+         </div>
+         <div class="card">${rows}</div>`;
+    }
+
+    window.go = (x) => { tab = x; render(); };
+    window.openReceipt = (tok) => { const u = location.origin + '/r/' + tok; tg ? tg.openLink(u) : window.open(u); };
+    window.setLang = async (c) => {
+      lang = c; render();
+      try { await api('/api/store/me/language', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ language: c }) }); } catch (e) {}
+    };
+
+    const LOGO = '<svg viewBox="0 0 64 64" fill="none" stroke-width="11" stroke-linecap="round">'
+      + '<path d="M33.64 20.51 A15 15 0 1 0 33.64 43.49" stroke="currentColor"/>'
+      + '<path d="M31 20 L55 44 M31 44 L55 20" stroke="#16a34a"/></svg>';
+
+    async function boot() {
+      if (tg) { tg.ready(); tg.expand(); }
+      const uCode = tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code;
+      if (uCode === 'ru') lang = 'ru'; else if (uCode === 'en') lang = 'en';
+      try {
+        await authenticate();
+        const [p, b, rc, or] = await Promise.all([
+          api('/api/store/me'), api('/api/store/balance'),
+          api('/api/store/receipts'), api('/api/store/orders'),
+        ]);
+        if (p.ok) { const pr = await p.json(); if (pr.language && I18N[pr.language]) lang = pr.language; }
+        if (b.ok) balance = await b.json();
+        if (rc.ok) receipts = await rc.json();
+        if (or.ok) orders = await or.json();
+        render();
+      } catch (e) {
+        const msg = String(e.message || '').startsWith('auth-401') ? t('notLinked') : t('authErr');
+        app.innerHTML = `<div class="center">${esc(msg)}</div>`;
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>
