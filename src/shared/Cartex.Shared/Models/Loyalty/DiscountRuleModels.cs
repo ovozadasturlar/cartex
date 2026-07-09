@@ -20,6 +20,8 @@ public record DiscountApplicationDto(string Name, decimal Amount);
 
 public record PreviewDiscountResultDto(decimal Total, List<DiscountApplicationDto> Applied);
 
+public record LoyaltyStatsDto(int SalesCount, int DiscountedSales, decimal DiscountTotal, decimal GrossTotal, decimal BonusOutstanding);
+
 public record ManufacturerDto(long Id, string Name);
 
 public record SaveManufacturerRequest(string Name);

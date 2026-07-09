@@ -31,4 +31,7 @@ public interface ILoyaltyApi
 
     [Post("/api/loyalty/discount-preview")]
     Task<PreviewDiscountResultDto> PreviewDiscountAsync([Body] PreviewDiscountRequest request);
+
+    [Get("/api/loyalty/stats")]
+    Task<LoyaltyStatsDto> GetStatsAsync([Query] DateTime fromDate, [Query] DateTime toDate);
 }

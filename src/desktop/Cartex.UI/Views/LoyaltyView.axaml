@@ -6,176 +6,281 @@
              x:Class="Cartex.UI.Views.LoyaltyView"
              x:CompileBindings="False">
 
+    <UserControl.Styles>
+        <Style Selector="Button.subnav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.subnav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.subnav.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.stat">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16,12" />
+        </Style>
+    </UserControl.Styles>
+
     <Panel>
-        <ScrollViewer>
-            <StackPanel Margin="24" Spacing="16" MaxWidth="960" HorizontalAlignment="Left">
+        <DockPanel Margin="24">
+            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[loyalty]}" Margin="0,0,0,16" />
 
-                <c:PageHeader Title="{Binding L[loyalty]}" />
-
-                <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                    <StackPanel Spacing="14">
-                        <Grid ColumnDefinitions="*,Auto,12,Auto">
-                            <StackPanel Spacing="3" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding L[discounts]}" FontWeight="SemiBold" FontSize="15"
-                                           Foreground="{DynamicResource TextPrimary}" />
-                                <TextBlock Text="{Binding L[discounts_desc]}" FontSize="11.5" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextMuted}" MaxWidth="440" HorizontalAlignment="Left" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding L[discount_combine_mode]}" FontSize="12.5"
-                                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                                <ComboBox ItemsSource="{Binding CombineModes}" SelectedIndex="{Binding CombineModeIndex}"
-                                          MinWidth="230" MinHeight="34"
-                                          ToolTip.Tip="{Binding L[discount_combine_hint]}">
-                                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-                            <Button Grid.Column="3" Classes="brand" Command="{Binding OpenCreateDiscountCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <mi:MaterialIcon Kind="Plus" Width="16" Height="16" />
-                                    <TextBlock Text="{Binding L[add_rule]}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-                        </Grid>
-
-                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
-                            <DataGrid ItemsSource="{Binding DiscountRules}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" MinHeight="160">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Width="*" Binding="{Binding Dto.Name}"
-                                                        Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="*" Binding="{Binding ScopeText}"
-                                                        Header="{Binding [type], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding ValueText}"
-                                                        Header="{Binding [value], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding ConditionText}"
-                                                        Header="{Binding [discount_min_amount], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding PeriodText}"
-                                                        Header="{Binding [discount_period], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding Dto.Priority}"
-                                                        Header="{Binding [priority], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTemplateColumn Width="Auto"
-                                                            Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Border CornerRadius="999" Padding="10,3" VerticalAlignment="Center" HorizontalAlignment="Left"
-                                                        Background="{DynamicResource SidebarItemHover}">
-                                                    <TextBlock Text="{Binding StatusText}" FontSize="11.5"
-                                                               Foreground="{DynamicResource TextSecondary}" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Width="Auto">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}" Margin="4,0"
-                                                                  Command="{Binding $parent[DataGrid].DataContext.ToggleDiscountCommand}"
-                                                                  CommandParameter="{Binding}" />
-                                                    <Button Classes="icon" Margin="4,0"
-                                                            Command="{Binding $parent[DataGrid].DataContext.OpenEditDiscountCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <mi:MaterialIcon Kind="Pencil" Width="15" Height="15"
-                                                                         Foreground="{DynamicResource TextSecondary}" />
-                                                    </Button>
-                                                    <Button Classes="icon" Margin="4,0"
-                                                            Command="{Binding $parent[DataGrid].DataContext.DeleteDiscountCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <mi:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15"
-                                                                         Foreground="{DynamicResource DangerBrush}" />
-                                                    </Button>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </Border>
-                        <TextBlock Text="{Binding L[discount_hint]}" Foreground="{DynamicResource TextMuted}"
-                                   FontSize="11.5" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="220,*">
+                <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="8" Margin="0,0,16,0"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
+                    <StackPanel Spacing="2">
+                        <Button Classes="subnav" Classes.active="{Binding IsDiscountSection}" Content="{Binding L[discounts]}"
+                                Command="{Binding SelectSectionCommand}" CommandParameter="discounts" />
+                        <Button Classes="subnav" Classes.active="{Binding IsBonusSection}" Content="{Binding L[bonus]}"
+                                Command="{Binding SelectSectionCommand}" CommandParameter="bonus" />
+                        <Button Classes="subnav" Classes.active="{Binding IsSettingsSection}" Content="{Binding L[app_settings]}"
+                                Command="{Binding SelectSectionCommand}" CommandParameter="settings" />
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                    <StackPanel Spacing="16">
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="{Binding L[cashback_rules]}" FontWeight="SemiBold" FontSize="15"
-                                       Foreground="{DynamicResource TextPrimary}" />
-                            <TextBlock Text="{Binding L[cashback_desc]}" FontSize="11.5" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource TextMuted}" MaxWidth="620" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <ToggleSwitch IsChecked="{Binding IsEnabled}" />
-                            <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextPrimary}" />
-                        </StackPanel>
-                        <Grid ColumnDefinitions="Auto,24,Auto">
-                            <StackPanel Spacing="5">
-                                <TextBlock Text="{Binding L[cashback_rounding]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <ComboBox ItemsSource="{Binding RoundingOptions}" SelectedIndex="{Binding RoundingIndex}"
-                                          MinWidth="240" MinHeight="38" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Spacing="5">
-                                <TextBlock Text="{Binding L[cashback_percent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <NumericUpDown Value="{Binding TotalPercent}" Minimum="0" Maximum="100" Increment="0.5"
-                                               FormatString="0.##" MinWidth="240" />
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock Text="{Binding L[cashback_hint]}" Foreground="{DynamicResource TextMuted}"
-                                   FontSize="11.5" TextWrapping="Wrap" MaxWidth="620" />
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                            <Button Grid.Column="2" Classes="outline" Command="{Binding OpenCreateRuleCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <mi:MaterialIcon Kind="Plus" Width="16" Height="16" />
-                                    <TextBlock Text="{Binding L[add_rule]}" VerticalAlignment="Center" />
+                <ScrollViewer Grid.Column="1">
+                    <Panel>
+
+                        <StackPanel Spacing="14" IsVisible="{Binding IsDiscountSection}">
+                            <TextBlock Text="{Binding L[discounts_desc]}" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextMuted}" MaxWidth="700" HorizontalAlignment="Left" />
+
+                            <Grid ColumnDefinitions="*,12,*,12,*,12,Auto">
+                                <Border Classes="stat">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding StatDiscountTotal}" FontSize="20" FontWeight="Bold"
+                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        <TextBlock Text="{Binding L[stat_discount_total]}" FontSize="11.5"
+                                                   Foreground="{DynamicResource TextMuted}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Classes="stat">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding StatDiscountSales}" FontSize="20" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="{Binding L[stat_discount_sales]}" FontSize="11.5"
+                                                   Foreground="{DynamicResource TextMuted}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="4" Classes="stat">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding StatDiscountShare}" FontSize="20" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="{Binding L[stat_discount_share]}" FontSize="11.5"
+                                                   Foreground="{DynamicResource TextMuted}" />
+                                    </StackPanel>
+                                </Border>
+                                <ComboBox Grid.Column="6" ItemsSource="{Binding StatPeriods}" SelectedIndex="{Binding StatPeriodIndex}"
+                                          MinWidth="140" VerticalAlignment="Top" MinHeight="38" />
+                            </Grid>
+
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding L[discounts]}" FontWeight="SemiBold" FontSize="15"
+                                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Classes="brand" Command="{Binding OpenCreateDiscountCommand}"
+                                                IsVisible="{Binding CanManage}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <mi:MaterialIcon Kind="Plus" Width="16" Height="16" />
+                                                <TextBlock Text="{Binding L[add_rule]}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
+                                        <DataGrid ItemsSource="{Binding DiscountRules}" AutoGenerateColumns="False" IsReadOnly="True"
+                                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" MinHeight="160">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Width="*" Binding="{Binding Dto.Name}"
+                                                                    Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="*" Binding="{Binding ScopeText}"
+                                                                    Header="{Binding [type], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding ValueText}"
+                                                                    Header="{Binding [value], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding ConditionText}"
+                                                                    Header="{Binding [discount_min_amount], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding PeriodText}"
+                                                                    Header="{Binding [discount_period], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding Dto.Priority}"
+                                                                    Header="{Binding [priority], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTemplateColumn Width="Auto"
+                                                                        Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="999" Padding="10,3" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                                                    Background="{DynamicResource SidebarItemHover}">
+                                                                <TextBlock Text="{Binding StatusText}" FontSize="11.5"
+                                                                           Foreground="{DynamicResource TextSecondary}" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTemplateColumn Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        IsVisible="{Binding $parent[DataGrid].DataContext.CanManage}">
+                                                                <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}" Margin="4,0"
+                                                                              Command="{Binding $parent[DataGrid].DataContext.ToggleDiscountCommand}"
+                                                                              CommandParameter="{Binding}" />
+                                                                <Button Classes="icon" Margin="4,0"
+                                                                        Command="{Binding $parent[DataGrid].DataContext.OpenEditDiscountCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <mi:MaterialIcon Kind="Pencil" Width="15" Height="15"
+                                                                                     Foreground="{DynamicResource TextSecondary}" />
+                                                                </Button>
+                                                                <Button Classes="icon" Margin="4,0"
+                                                                        Command="{Binding $parent[DataGrid].DataContext.DeleteDiscountCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <mi:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15"
+                                                                                     Foreground="{DynamicResource DangerBrush}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Border>
+                                    <TextBlock Text="{Binding L[discount_hint]}" Foreground="{DynamicResource TextMuted}"
+                                               FontSize="11.5" TextWrapping="Wrap" />
                                 </StackPanel>
-                            </Button>
-                        </Grid>
-                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
-                            <DataGrid ItemsSource="{Binding Rules}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" MinHeight="120">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding Scope}"
-                                                        Header="{Binding [type], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="*" Binding="{Binding TargetName}"
-                                                        Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding Method}"
-                                                        Header="{Binding [method], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding Value, StringFormat='{}{0:0.##}'}"
-                                                        Header="{Binding [value], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="Auto" Binding="{Binding Priority}"
-                                                        Header="{Binding [priority], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTemplateColumn Width="Auto">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Button Classes="icon" Margin="4,0"
-                                                            Command="{Binding $parent[DataGrid].DataContext.OpenEditRuleCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <mi:MaterialIcon Kind="Pencil" Width="15" Height="15"
-                                                                         Foreground="{DynamicResource TextSecondary}" />
-                                                    </Button>
-                                                    <Button Classes="icon" Margin="4,0"
-                                                            Command="{Binding $parent[DataGrid].DataContext.DeleteRuleCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <mi:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15"
-                                                                         Foreground="{DynamicResource DangerBrush}" />
-                                                    </Button>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </Border>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Spacing="14" IsVisible="{Binding IsBonusSection}">
+                            <TextBlock Text="{Binding L[cashback_desc]}" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextMuted}" MaxWidth="700" HorizontalAlignment="Left" />
+
+                            <Border Classes="stat" HorizontalAlignment="Left" MinWidth="260">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding StatBonusOutstanding}" FontSize="20" FontWeight="Bold"
+                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    <TextBlock Text="{Binding L[stat_bonus_outstanding]}" FontSize="11.5"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding L[cashback_rules]}" FontWeight="SemiBold" FontSize="15"
+                                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Classes="brand" Command="{Binding OpenCreateRuleCommand}"
+                                                IsVisible="{Binding CanManage}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <mi:MaterialIcon Kind="Plus" Width="16" Height="16" />
+                                                <TextBlock Text="{Binding L[add_rule]}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True">
+                                        <DataGrid ItemsSource="{Binding Rules}" AutoGenerateColumns="False" IsReadOnly="True"
+                                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" MinHeight="120">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding Scope}"
+                                                                    Header="{Binding [type], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="*" Binding="{Binding TargetName}"
+                                                                    Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding Method}"
+                                                                    Header="{Binding [method], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding Value, StringFormat='{}{0:0.##}'}"
+                                                                    Header="{Binding [value], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTextColumn Width="Auto" Binding="{Binding Priority}"
+                                                                    Header="{Binding [priority], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                <DataGridTemplateColumn Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        IsVisible="{Binding $parent[DataGrid].DataContext.CanManage}">
+                                                                <Button Classes="icon" Margin="4,0"
+                                                                        Command="{Binding $parent[DataGrid].DataContext.OpenEditRuleCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <mi:MaterialIcon Kind="Pencil" Width="15" Height="15"
+                                                                                     Foreground="{DynamicResource TextSecondary}" />
+                                                                </Button>
+                                                                <Button Classes="icon" Margin="4,0"
+                                                                        Command="{Binding $parent[DataGrid].DataContext.DeleteRuleCommand}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <mi:MaterialIcon Kind="TrashCanOutline" Width="15" Height="15"
+                                                                                     Foreground="{DynamicResource DangerBrush}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left" IsVisible="{Binding IsSettingsSection}">
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="14" IsEnabled="{Binding CanManage}">
+                                    <TextBlock Text="{Binding L[discount_combine_mode]}" FontWeight="SemiBold" FontSize="15"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <StackPanel Spacing="8">
+                                        <RadioButton GroupName="combine" Content="{Binding L[discount_combine_priority]}"
+                                                     IsChecked="{Binding !CombineModeIndex}" />
+                                        <RadioButton GroupName="combine" Content="{Binding L[discount_combine_stack]}"
+                                                     IsChecked="{Binding CombineModeIndex}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding L[discount_combine_hint]}" Foreground="{DynamicResource TextMuted}"
+                                               FontSize="11.5" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="16" IsEnabled="{Binding CanManage}">
+                                    <TextBlock Text="{Binding L[bonus]}" FontWeight="SemiBold" FontSize="15"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <ToggleSwitch IsChecked="{Binding IsEnabled}" />
+                                        <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                    </StackPanel>
+                                    <Grid ColumnDefinitions="Auto,24,Auto">
+                                        <StackPanel Spacing="5">
+                                            <TextBlock Text="{Binding L[cashback_rounding]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                            <ComboBox ItemsSource="{Binding RoundingOptions}" SelectedIndex="{Binding RoundingIndex}"
+                                                      MinWidth="240" MinHeight="38" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="5">
+                                            <TextBlock Text="{Binding L[cashback_percent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                            <NumericUpDown Value="{Binding TotalPercent}" Minimum="0" Maximum="100" Increment="0.5"
+                                                           FormatString="0.##" MinWidth="240" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="{Binding L[cashback_hint]}" Foreground="{DynamicResource TextMuted}"
+                                               FontSize="11.5" TextWrapping="Wrap" MaxWidth="620" />
+                                    <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}"
+                                            HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Panel>
+                </ScrollViewer>
+            </Grid>
+        </DockPanel>
 
         <Border IsVisible="{Binding IsRuleOpen}" Background="#80000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"

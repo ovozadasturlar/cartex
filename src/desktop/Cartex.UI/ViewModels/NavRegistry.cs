@@ -54,7 +54,7 @@ public static class NavRegistry
         new("access", "users", MaterialIconKind.AccountCog, typeof(UsersViewModel), "users.view"),
         new("access", "roles", MaterialIconKind.ShieldAccount, typeof(RolesViewModel), "roles.view"),
         new("access", "permissions_matrix", MaterialIconKind.ShieldKeyOutline, typeof(PermissionsMatrixViewModel), "roles.manage"),
-        new("system", "loyalty", MaterialIconKind.GiftOutline, typeof(LoyaltyViewModel), "loyalty.manage"),
+        new("system", "loyalty", MaterialIconKind.GiftOutline, typeof(LoyaltyViewModel), "loyalty.view"),
         new("system", "expense_categories", MaterialIconKind.CashMinus, typeof(ExpenseCategoriesViewModel), "settings.manage"),
         new("system", "audit", MaterialIconKind.History, typeof(AuditViewModel), "audit.view"),
         new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.manage"),

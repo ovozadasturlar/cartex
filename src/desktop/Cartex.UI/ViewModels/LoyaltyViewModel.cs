@@ -24,8 +24,55 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     private readonly IManufacturersApi _manufacturersApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly AuthService _auth;
     private long _editRuleId;
     private long _editDiscountId;
+
+    public bool CanManage => _auth.HasPermission("loyalty.manage");
+
+    [ObservableProperty] private string _sectionKey = "discounts";
+    public bool IsDiscountSection => SectionKey == "discounts";
+    public bool IsBonusSection => SectionKey == "bonus";
+    public bool IsSettingsSection => SectionKey == "settings";
+
+    partial void OnSectionKeyChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsDiscountSection));
+        OnPropertyChanged(nameof(IsBonusSection));
+        OnPropertyChanged(nameof(IsSettingsSection));
+    }
+
+    [RelayCommand]
+    private void SelectSection(string key) => SectionKey = key;
+
+    [ObservableProperty] private int _statPeriodIndex = 2;
+    [ObservableProperty] private string _statDiscountTotal = "0";
+    [ObservableProperty] private string _statDiscountSales = "0";
+    [ObservableProperty] private string _statDiscountShare = "0%";
+    [ObservableProperty] private string _statBonusOutstanding = "0";
+    public ObservableCollection<string> StatPeriods { get; } = [];
+
+    partial void OnStatPeriodIndexChanged(int value) => _ = LoadStatsAsync();
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            var to = DateTime.UtcNow.AddDays(1);
+            var from = StatPeriodIndex switch
+            {
+                0 => DateTime.UtcNow.Date,
+                1 => DateTime.UtcNow.Date.AddDays(-7),
+                _ => DateTime.UtcNow.Date.AddDays(-30)
+            };
+            var stats = await _api.GetStatsAsync(from, to);
+            StatDiscountTotal = stats.DiscountTotal.ToString("N0");
+            StatDiscountSales = $"{stats.DiscountedSales} / {stats.SalesCount}";
+            StatDiscountShare = stats.GrossTotal > 0 ? $"{stats.DiscountTotal / stats.GrossTotal * 100:0.#}%" : "0%";
+            StatBonusOutstanding = stats.BonusOutstanding.ToString("N0");
+        }
+        catch { }
+    }
 
     public ObservableCollection<LabeledValue> Scopes { get; } = [];
     public ObservableCollection<LabeledValue> Methods { get; } = [];
@@ -97,7 +144,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public bool IsDiscountManufacturerScope => DiscountScope?.Value == "Manufacturer";
 
     public LoyaltyViewModel(ILoyaltyApi api, IProductsApi productsApi, ICategoriesApi categoriesApi,
-        ICustomersApi customersApi, IManufacturersApi manufacturersApi, IToastService toast, IBusyService busy)
+        ICustomersApi customersApi, IManufacturersApi manufacturersApi, IToastService toast, IBusyService busy, AuthService auth)
     {
         _api = api;
         _productsApi = productsApi;
@@ -106,6 +153,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         _manufacturersApi = manufacturersApi;
         _toast = toast;
         _busy = busy;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -134,6 +182,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
 
                 await ReloadProgramAsync();
                 await ReloadDiscountsAsync();
+                await LoadStatsAsync();
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -212,6 +261,9 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         ExceptionScopes.Add(new LabeledValue("Manufacturer", L["manufacturer"]));
         CombineModes.Add(new LabeledValue("Priority", L["discount_combine_priority"]));
         CombineModes.Add(new LabeledValue("Stack", L["discount_combine_stack"]));
+        StatPeriods.Add(L["period_today"]);
+        StatPeriods.Add(L["period_7d"]);
+        StatPeriods.Add(L["period_30d"]);
     }
 
     partial void OnRuleScopeChanged(LabeledValue? value) => OnPropertyChanged(nameof(IsProductScope));

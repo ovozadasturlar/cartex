@@ -7,6 +7,7 @@ using Cartex.Shared.Models.Loyalty;
 using Cartex.Application.Common.Messaging;
 using LoyaltyProgramDto = Cartex.Application.Loyalty.Queries.LoyaltyProgramDto;
 using DiscountRuleDto = Cartex.Application.Loyalty.Queries.DiscountRuleDto;
+using LoyaltyStatsDto = Cartex.Application.Loyalty.Queries.LoyaltyStatsDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -90,6 +91,13 @@ public class LoyaltyController(ISender sender) : ControllerBase
     public async Task<ActionResult<PreviewDiscountResult>> PreviewDiscount(PreviewDiscountQuery query)
     {
         var result = await sender.Send(query);
+        return Ok(result);
+    }
+    [HttpGet("stats")]
+    [HasPermission(AppPermissions.Loyalty.View)]
+    public async Task<ActionResult<LoyaltyStatsDto>> GetStats([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+    {
+        var result = await sender.Send(new GetLoyaltyStatsQuery(fromDate, toDate));
         return Ok(result);
     }
 }
