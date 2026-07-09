@@ -39,12 +39,15 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
         {
             await using (stream)
             {
-                switch (format)
+                await Task.Run(() =>
                 {
-                    case ExportFormat.Csv: WriteCsv(stream, columns, rows); break;
-                    case ExportFormat.Excel: WriteExcel(stream, title, columns, rows); break;
-                    default: WritePdf(stream, title, columns, rows, company); break;
-                }
+                    switch (format)
+                    {
+                        case ExportFormat.Csv: WriteCsv(stream, columns, rows); break;
+                        case ExportFormat.Excel: WriteExcel(stream, title, columns, rows); break;
+                        default: WritePdf(stream, title, columns, rows, company); break;
+                    }
+                });
             }
             toast.Success(LocalizationManager.Instance["export_done"]);
         }

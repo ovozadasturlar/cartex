@@ -123,7 +123,11 @@ public sealed class PrinterService : IPrinterService
     public void PrintRaw(string? printerName, string text)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName)) return;
-        RawPrinter.SendString(printerName, text);
+        Task.Run(() =>
+        {
+            try { RawPrinter.SendString(printerName, text); }
+            catch { }
+        });
     }
 
     public void PrintDocument(string filePath, string? printerName)

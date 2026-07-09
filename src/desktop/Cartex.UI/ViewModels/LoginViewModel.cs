@@ -59,13 +59,13 @@ public partial class LoginViewModel : ViewModelBase
         _authService = authService;
         _navigationService = navigationService;
         _rememberMe = SettingsService.Instance.RememberMe;
-        DetectKey();
+        _ = DetectKey();
     }
 
     [RelayCommand]
-    private void DetectKey()
+    private async Task DetectKey()
     {
-        _detectedDrive = HardwareKeyReader.ScanForKey();
+        _detectedDrive = await Task.Run(HardwareKeyReader.ScanForKey);
         KeyDetected = _detectedDrive is not null;
     }
 

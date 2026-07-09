@@ -28,31 +28,37 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
     {
         if (string.IsNullOrWhiteSpace(code) || quantity < 1) return;
 
-        var image = RenderCode128(code);
         var (width, height) = LabelSize.Resolve(printer.GetSettings().LabelWidthMm, printer.GetSettings().LabelHeightMm);
-
-        var document = Document.Create(container =>
+        Task.Run(() =>
         {
-            for (var i = 0; i < quantity; i++)
+            try
             {
-                container.Page(page =>
+                var image = RenderCode128(code);
+                var document = Document.Create(container =>
                 {
-                    page.Size((float)width, (float)height, Unit.Millimetre);
-                    page.Margin(height < 40 ? 2 : 3, Unit.Millimetre);
-                    page.Content().Column(col =>
+                    for (var i = 0; i < quantity; i++)
                     {
-                        col.Spacing(1);
-                        col.Item().AlignCenter().Text(name).FontSize(width < 50 ? 7 : 8).SemiBold();
-                        col.Item().Image(image).FitWidth();
-                        col.Item().AlignCenter().Text(code).FontSize(9).FontFamily("Consolas").LetterSpacing(0.05f);
-                    });
+                        container.Page(page =>
+                        {
+                            page.Size((float)width, (float)height, Unit.Millimetre);
+                            page.Margin(height < 40 ? 2 : 3, Unit.Millimetre);
+                            page.Content().Column(col =>
+                            {
+                                col.Spacing(1);
+                                col.Item().AlignCenter().Text(name).FontSize(width < 50 ? 7 : 8).SemiBold();
+                                col.Item().Image(image).FitWidth();
+                                col.Item().AlignCenter().Text(code).FontSize(9).FontFamily("Consolas").LetterSpacing(0.05f);
+                            });
+                        });
+                    }
                 });
-            }
-        });
 
-        var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
-        document.GeneratePdf(path);
-        printer.PrintDocument(path, printerName ?? printer.BarcodePrinter);
+                var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
+                document.GeneratePdf(path);
+                printer.PrintDocument(path, printerName ?? printer.BarcodePrinter);
+            }
+            catch { }
+        });
     }
 
     private static byte[] RenderCode128(string code)
