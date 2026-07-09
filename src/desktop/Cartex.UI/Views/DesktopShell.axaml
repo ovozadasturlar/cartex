@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:controls="using:Cartex.UI.Controls"
              xmlns:u="https://irihi.tech/ursa"
              x:Class="Cartex.UI.Views.DesktopShell"
              x:CompileBindings="False">
@@ -82,7 +83,7 @@
 
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="16,18,12,14">
-                    <Image Source="avares://Cartex.UI/Assets/logo.png"
+                    <controls:CxLogo
                            Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            Height="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            VerticalAlignment="Center" />

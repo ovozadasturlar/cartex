@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:controls="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.LoginView"
              x:CompileBindings="False">
 
@@ -14,8 +15,7 @@
                 Width="430" Padding="40,38">
             <StackPanel Spacing="18">
 
-                <Image Source="avares://Cartex.UI/Assets/logo.png"
-                       Width="76" Height="76" HorizontalAlignment="Center" />
+                <controls:CxLogo Width="76" Height="76" HorizontalAlignment="Center" />
 
                 <StackPanel Spacing="18" IsVisible="{Binding !IsQrOpen}">
                     <StackPanel Spacing="4">

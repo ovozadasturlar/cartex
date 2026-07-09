@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Cartex.UI.Controls.CxLogo">
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="64" Height="64">
+            <Path Data="M33.64 20.51 A15 15 0 1 0 33.64 43.49"
+                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="11" StrokeLineCap="Round" />
+            <Path Data="M31 20 L55 44 M31 44 L55 20"
+                  Stroke="#16A34A" StrokeThickness="11" StrokeLineCap="Round" />
+        </Canvas>
+    </Viewbox>
+</UserControl>
