@@ -153,7 +153,7 @@
                                                 <mi:MaterialIcon Kind="PackageVariantClosed" Width="30" Height="30"
                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                  Foreground="{DynamicResource TextMuted}" />
-                                                <Image il:ImageLoader.Source="{Binding ImageUrl}" Stretch="UniformToFill" />
+                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
                                             </Panel>
                                         </Border>
 
@@ -430,16 +430,6 @@
                                     Content="{Binding L[complete_sale]}" />
                         </Grid>
 
-                        <Button Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                HorizontalAlignment="Center" Padding="6"
-                                Command="{Binding OpenReceiptCommand}" IsVisible="{Binding HasLastReceipt}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <mi:MaterialIcon Kind="ReceiptTextOutline" Width="16" Height="16"
-                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
-                                <TextBlock Text="{Binding L[recent_transactions]}" FontSize="12"
-                                           Foreground="{DynamicResource BrandPrimaryBrush}" />
-                            </StackPanel>
-                        </Button>
                     </StackPanel>
                 </Border>
 
@@ -700,7 +690,7 @@
                             <mi:MaterialIcon Kind="PackageVariantClosed" Width="48" Height="48"
                                              HorizontalAlignment="Center" VerticalAlignment="Center"
                                              Foreground="{DynamicResource TextMuted}" />
-                            <Image il:ImageLoader.Source="{Binding DetailProduct.ImageUrl}" Stretch="UniformToFill" />
+                            <Image il:ImageLoader.Source="{Binding DetailProduct.ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
                         </Panel>
                     </Border>
                     <StackPanel Margin="22" Spacing="12">

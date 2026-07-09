@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -118,7 +117,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private bool _discountByPercent;
     [ObservableProperty] private bool _isCustomerPanelOpen;
     [ObservableProperty] private bool _isHeldPanelOpen;
-    [ObservableProperty] private string? _lastReceiptToken;
     [ObservableProperty] private bool _isReceiptOpen;
     [ObservableProperty] private ReceiptDto? _currentReceipt;
     [ObservableProperty] private bool _isProductDetailOpen;
@@ -180,7 +178,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public decimal ChangeAmount => TotalPaid > TotalAmount ? TotalPaid - TotalAmount : 0;
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
     public bool IsCartEmpty => CartItems.Count == 0;
-    public bool HasLastReceipt => !string.IsNullOrEmpty(LastReceiptToken);
     public bool CanOverridePrice => _auth.HasPermission("sales.priceOverride");
     [ObservableProperty] private bool _canPrepack;
 
@@ -537,8 +534,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         try { await Task.Delay(300, token); } catch { return; }
         if (!token.IsCancellationRequested) await LoadProductsAsync();
     }
-    partial void OnLastReceiptTokenChanged(string? value) => OnPropertyChanged(nameof(HasLastReceipt));
-
     private Task LoadProductsAsync() => LoadProductsPageAsync(reset: true);
 
     private static bool IsOfflineMode =>
@@ -1026,20 +1021,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void ToggleHeldPanel() => IsHeldPanelOpen = !IsHeldPanelOpen;
 
     [RelayCommand]
-    private void OpenReceipt()
-    {
-        if (string.IsNullOrEmpty(LastReceiptToken)) return;
-        var url = $"{SettingsService.Instance.ApiBaseUrl}/r/{LastReceiptToken}";
-        try
-        {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch
-        {
-        }
-    }
-
-    [RelayCommand]
     private async Task CompleteSaleAsync()
     {
         if (CartItems.Count == 0) return;
@@ -1100,7 +1081,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _activeCartCode = null;
             }
 
-            LastReceiptToken = result.ReceiptToken;
             ClearCart();
             _toast.Success(L["complete_sale"]);
             await ShowReceiptAsync(result.ReceiptToken);
