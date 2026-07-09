@@ -19,6 +19,13 @@ public class StoreController(ISender sender) : ControllerBase
     public async Task<ActionResult<StoreProfileDto>> Me() =>
         Ok(await sender.Send(new GetStoreProfileQuery()));
 
+    [HttpPost("me/language")]
+    public async Task<IActionResult> SetLanguage(SetStoreLanguageCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("info")]
     public async Task<ActionResult<StoreInfoDto>> Info() =>
         Ok(await sender.Send(new GetStoreInfoQuery()));

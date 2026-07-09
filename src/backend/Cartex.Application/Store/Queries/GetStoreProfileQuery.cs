@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Store.Queries;
 
-public record StoreProfileDto(long Id, string FullName, string? Phone);
+public record StoreProfileDto(long Id, string FullName, string? Phone, string? Language);
 
 public record GetStoreProfileQuery : IRequest<StoreProfileDto>;
 
@@ -17,7 +17,7 @@ public sealed class GetStoreProfileQueryHandler(IApplicationDbContext db, ICurre
         var customerId = currentCustomer.CustomerId ?? throw new UnauthorizedAccessException("Not authenticated.");
         return await db.Customers
             .Where(c => c.Id == customerId)
-            .Select(c => new StoreProfileDto(c.Id, c.FullName, c.Phone))
+            .Select(c => new StoreProfileDto(c.Id, c.FullName, c.Phone, c.PreferredLanguage))
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new UnauthorizedAccessException("Not authenticated.");
     }

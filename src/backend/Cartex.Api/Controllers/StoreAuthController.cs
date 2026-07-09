@@ -21,6 +21,10 @@ public class StoreAuthController(ISender sender) : ControllerBase
     public async Task<ActionResult<StoreLoginResponse>> Verify(VerifyStoreOtpCommand command) =>
         Ok(await sender.Send(command));
 
+    [HttpPost("telegram")]
+    public async Task<ActionResult<StoreLoginResponse>> Telegram(TelegramStoreLoginCommand command) =>
+        Ok(await sender.Send(command));
+
     [HttpPost("refresh")]
     public async Task<ActionResult<StoreLoginResponse>> Refresh(RefreshStoreTokenCommand command) =>
         Ok(await sender.Send(command));
