@@ -136,6 +136,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
     public ObservableCollection<HeldSale> HeldSales { get; } = [];
     public ObservableCollection<CategoryChip> NavCategories { get; } = [];
+    public ObservableCollection<CategoryChip> SubCategories { get; } = [];
+    [ObservableProperty] private bool _hasSubCategories;
 
     private const int PosPageSize = 120;
     private int _productsPage = 1;
@@ -408,6 +410,23 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         NavCategories.Add(new CategoryChip(null, L["all"]) { IsSelected = _selectedCategoryId is null });
         foreach (var c in _allCategories.Where(c => c.ParentId is null).OrderBy(c => c.Name))
             NavCategories.Add(new CategoryChip(c.Id, c.Name) { IsSelected = c.Id == _selectedCategoryId });
+        BuildSubChips(_selectedCategoryId);
+    }
+
+    private void BuildSubChips(long? rootId)
+    {
+        SubCategories.Clear();
+        if (rootId is not null)
+        {
+            var children = _allCategories.Where(c => c.ParentId == rootId).OrderBy(c => c.Name).ToList();
+            if (children.Count > 0)
+            {
+                SubCategories.Add(new CategoryChip(rootId, L["all"]) { IsSelected = true });
+                foreach (var c in children)
+                    SubCategories.Add(new CategoryChip(c.Id, c.Name));
+            }
+        }
+        HasSubCategories = SubCategories.Count > 0;
     }
 
     [RelayCommand]
@@ -416,6 +435,16 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _selectedCategoryId = chip.Id;
         foreach (var c in NavCategories)
             c.IsSelected = c.Id == _selectedCategoryId;
+        BuildSubChips(chip.Id);
+        await LoadProductsAsync();
+    }
+
+    [RelayCommand]
+    private async Task SelectSubCategory(CategoryChip chip)
+    {
+        _selectedCategoryId = chip.Id;
+        foreach (var c in SubCategories)
+            c.IsSelected = ReferenceEquals(c, chip);
         await LoadProductsAsync();
     }
 
