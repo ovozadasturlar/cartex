@@ -119,8 +119,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IPrinterService printer, IFilePickerService filePicker, IToastService toast, IBusyService busy, IExportService export, AuthService auth,
-        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi)
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache)
     {
+        _cache = cache;
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
@@ -144,6 +145,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
     private readonly ISettingsApi _settingsApi;
+    private readonly ReferenceCache _cache;
     private decimal _defaultMinStock;
     private string _baseCurrency = "UZS";
     [ObservableProperty] private bool _isMulticurrency;
@@ -155,14 +157,14 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (PriceCurrencies.Count > 0) return;
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
             PriceCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)
-                foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
+                foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
                     PriceCurrencies.Add(r.Code);
-            _defaultMinStock = (await _settingsApi.GetSalesPolicyAsync()).DefaultMinStock;
+            _defaultMinStock = (await _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync)).DefaultMinStock;
         }
         catch { }
     }
@@ -363,10 +365,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             {
                 _suppressReload = true;
 
-                var categoriesTask = _categoriesApi.GetAllAsync();
-                var unitsTask = _unitsApi.GetAllAsync();
-                var typesTask = _typesApi.GetAllAsync();
-                var manufacturersTask = ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync();
+                var categoriesTask = _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
+                var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
+                var typesTask = _cache.GetAsync(CacheKeys.ProductTypes, () => _typesApi.GetAllAsync());
+                var manufacturersTask = _cache.GetAsync(CacheKeys.Manufacturers, () => ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync());
                 var currenciesTask = EnsureCurrenciesAsync();
 
                 var categories = await categoriesTask;
@@ -556,6 +558,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             }
 
             IsEditOpen = false;
+            _cache.Invalidate(CacheKeys.ProductLookup);
             _toast.Success(L["success"]);
             await LoadAsync();
         }
@@ -664,6 +667,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                     await _productsApi.UpdateVariantAsync(_variantEditId,
                         new UpdateVariantRequest(name, code, attributes, VImageKey, barcodes.Count > 0 ? barcodes : null));
 
+                _cache.Invalidate(CacheKeys.ProductLookup);
                 await ReloadVariantsAsync();
             }
             IsVariantEditOpen = false;
@@ -684,6 +688,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 await _productsApi.DeleteVariantAsync(variant.Id);
+                _cache.Invalidate(CacheKeys.ProductLookup);
                 await ReloadVariantsAsync();
             }
             _toast.Success(L["success"]);

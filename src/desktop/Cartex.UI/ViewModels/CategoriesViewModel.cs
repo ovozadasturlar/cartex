@@ -144,6 +144,7 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
                     await _api.UpdateAsync(_editId, new UpdateCategoryRequest(EditName.Trim(), SelectedParent?.Id, description));
             }
             IsEditOpen = false;
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Categories);
             _toast.Success(L["success"]);
             await LoadAsync();
         }

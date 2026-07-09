@@ -37,6 +37,12 @@ public static class DependencyInjection
         services.AddSingleton<IBarcodeLabelService, BarcodeLabelService>();
         services.AddSingleton<IScannedCodeParser, ScannedCodeParser>();
         services.AddSingleton<ShortcutService>();
+        services.AddSingleton<ReferenceCache>(sp =>
+        {
+            var cache = new ReferenceCache();
+            sp.GetRequiredService<AuthService>().LoggedOut += cache.Clear;
+            return cache;
+        });
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainViewModel>();

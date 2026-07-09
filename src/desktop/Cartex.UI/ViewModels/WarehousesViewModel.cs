@@ -93,6 +93,7 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
                     await _api.UpdateAsync(_editId, new UpdateWarehouseRequest(EditName.Trim(), EditIsOnline));
             }
             IsEditOpen = false;
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Warehouses);
             _toast.Success(L["success"]);
             await LoadAsync();
         }

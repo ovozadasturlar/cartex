@@ -66,6 +66,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ITo
         {
             using (busy.Begin(L["loading"]))
                 await api.SetAsync(new SetRateRequest(NewCode.Trim().ToUpperInvariant(), NewRate));
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Rates);
             toast.Success(L["success"]);
             await LoadAsync();
         }

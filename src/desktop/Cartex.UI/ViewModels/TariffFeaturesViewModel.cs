@@ -84,6 +84,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                 foreach (var f in Features)
                     await featuresApi.SetAsync(f.Code, new SetFeatureRequest(f.IsEnabled));
             }
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features);
             toast.Success(L["success"]);
             await LoadAsync();
         }

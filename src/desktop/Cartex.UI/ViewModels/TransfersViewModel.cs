@@ -19,6 +19,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly ReferenceCache _cache;
 
     public ObservableCollection<StockTransferDto> Transfers { get; } = [];
     public ObservableCollection<IdOption> WarehouseOptions { get; } = [];
@@ -43,8 +44,9 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     public bool IsEmpty => Transfers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
 
-    public TransfersViewModel(IStockTransfersApi api, IWarehousesApi warehousesApi, IProductsApi productsApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
+    public TransfersViewModel(IStockTransfersApi api, IWarehousesApi warehousesApi, IProductsApi productsApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth, ReferenceCache cache)
     {
+        _cache = cache;
         _api = api;
         _warehousesApi = warehousesApi;
         _productsApi = productsApi;
@@ -79,8 +81,8 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                var warehousesTask = _warehousesApi.GetAllAsync();
-                var productsTask = _productsApi.GetLookupAsync();
+                var warehousesTask = _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync());
+                var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
 
                 var warehouses = await warehousesTask;
                 WarehouseOptions.Clear();

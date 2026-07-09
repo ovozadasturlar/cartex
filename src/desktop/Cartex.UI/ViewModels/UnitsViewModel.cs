@@ -147,6 +147,7 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
                     await _api.UpdateAsync(_editId, new UpdateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor));
             }
             IsEditOpen = false;
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Units);
             _toast.Success(L["success"]);
             await LoadAsync();
         }

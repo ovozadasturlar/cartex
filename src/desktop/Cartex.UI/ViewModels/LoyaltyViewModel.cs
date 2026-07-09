@@ -25,6 +25,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
+    private readonly ReferenceCache _cache;
     private long _editRuleId;
     private long _editDiscountId;
 
@@ -79,7 +80,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public ObservableCollection<CashbackRuleDto> Rules { get; } = [];
     public ObservableCollection<ProductOptionDto> Products { get; } = [];
     public ObservableCollection<CategoryDto> Categories { get; } = [];
-    public ObservableCollection<CustomerDto> Customers { get; } = [];
+    public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
     public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
     public ObservableCollection<DiscountRow> DiscountRules { get; } = [];
     public ObservableCollection<LabeledValue> DiscountScopes { get; } = [];
@@ -115,6 +116,40 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private CategoryDto? _discountCategory;
     [ObservableProperty] private ManufacturerDto? _discountManufacturer;
     [ObservableProperty] private CustomerDto? _discountCustomer;
+    [ObservableProperty] private string _customerSearch = "";
+    private CancellationTokenSource? _customerSearchCts;
+
+    partial void OnCustomerSearchChanged(string value)
+    {
+        _customerSearchCts?.Cancel();
+        var cts = _customerSearchCts = new CancellationTokenSource();
+        _ = DebouncedCustomerSearchAsync(cts.Token);
+    }
+
+    private async Task DebouncedCustomerSearchAsync(CancellationToken token)
+    {
+        try { await Task.Delay(300, token); } catch { return; }
+        if (token.IsCancellationRequested) return;
+        var query = CustomerSearch.Trim();
+        CustomerResults.Clear();
+        if (query.Length < 2) return;
+        try
+        {
+            var result = await _customersApi.GetPagedAsync(1, 20, search: query);
+            if (token.IsCancellationRequested) return;
+            foreach (var c in result.Content ?? []) CustomerResults.Add(c);
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void PickDiscountCustomer(CustomerDto customer)
+    {
+        DiscountCustomer = customer;
+        CustomerSearch = "";
+        CustomerResults.Clear();
+    }
+
     [ObservableProperty] private decimal _discountMinAmount;
     [ObservableProperty] private decimal _discountValue;
     [ObservableProperty] private int _discountPriority;
@@ -149,8 +184,9 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public bool IsDiscountManufacturerScope => DiscountScope?.Value == "Manufacturer";
 
     public LoyaltyViewModel(ILoyaltyApi api, IProductsApi productsApi, ICategoriesApi categoriesApi,
-        ICustomersApi customersApi, IManufacturersApi manufacturersApi, IToastService toast, IBusyService busy, AuthService auth)
+        ICustomersApi customersApi, IManufacturersApi manufacturersApi, IToastService toast, IBusyService busy, AuthService auth, ReferenceCache cache)
     {
+        _cache = cache;
         _api = api;
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
@@ -171,10 +207,9 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
                 if (StatPeriodIndex < 0) StatPeriodIndex = 2;
                 OnPropertyChanged(nameof(StatPeriodIndex));
 
-                var productsTask = _productsApi.GetLookupAsync();
-                var categoriesTask = _categoriesApi.GetAllAsync();
-                var customersTask = _customersApi.GetAllAsync(null);
-                var manufacturersTask = _manufacturersApi.GetAllAsync();
+                var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
+                var categoriesTask = _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
+                var manufacturersTask = _cache.GetAsync(CacheKeys.Manufacturers, () => _manufacturersApi.GetAllAsync());
 
                 var products = await productsTask;
                 Products.Clear();
@@ -183,10 +218,6 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
                 var categories = await categoriesTask;
                 Categories.Clear();
                 foreach (var c in categories) Categories.Add(c);
-
-                var customers = await customersTask;
-                Customers.Clear();
-                foreach (var c in customers) Customers.Add(c);
 
                 var manufacturers = await manufacturersTask;
                 Manufacturers.Clear();
@@ -395,7 +426,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenEditDiscount(DiscountRow row)
+    private async Task OpenEditDiscount(DiscountRow row)
     {
         var r = row.Dto;
         IsDiscountNew = false;
@@ -407,7 +438,12 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         DiscountProduct = r.Scope == "Product" ? Products.FirstOrDefault(p => p.Id == r.TargetId) : null;
         DiscountCategory = r.Scope == "Category" ? Categories.FirstOrDefault(c => c.Id == r.TargetId) : null;
         DiscountManufacturer = r.Scope == "Manufacturer" ? Manufacturers.FirstOrDefault(m => m.Id == r.TargetId) : null;
-        DiscountCustomer = Customers.FirstOrDefault(c => c.Id == r.CustomerId);
+        DiscountCustomer = null;
+        if (r.CustomerId is { } customerId)
+        {
+            try { DiscountCustomer = await _customersApi.GetByIdAsync(customerId); }
+            catch { }
+        }
         DiscountMinAmount = r.MinAmount;
         DiscountValue = r.Value;
         DiscountPriority = r.Priority;

@@ -187,8 +187,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         IProductsApi productsApi, ICategoriesApi categoriesApi, IReceiptApi receiptApi, IBarcodesApi barcodesApi, BranchContextService branch,
         QuickProductViewModel quickProduct, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
-        IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi)
+        IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache)
     {
+        _cache = cache;
         _prepacksApi = prepacksApi;
         Prepack = prepack;
         _featuresApi = featuresApi;
@@ -261,14 +262,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     private ISettingsApi _settingsApi = null!;
+    private ReferenceCache _cache = null!;
     private int _staleRateDays = 3;
 
     private async Task LoadClientPolicyAsync()
     {
         try
         {
-            var policyTask = _settingsApi.GetSalesPolicyAsync();
-            var receiptTask = _settingsApi.GetReceiptAsync();
+            var policyTask = _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync);
+            var receiptTask = _cache.GetAsync(CacheKeys.Receipt, _settingsApi.GetReceiptAsync);
             _staleRateDays = (await policyTask).StaleRateDays;
             var receipt = await receiptTask;
             _printer.ReceiptOptions = new ReceiptPrintOptions(receipt.HeaderText, receipt.FooterText, receipt.PaperWidth);
@@ -341,12 +343,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
             if (!IsMulticurrency) return;
 
-            var rates = await _ratesApi.GetCurrentAsync();
+            var rates = await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync);
             _rates.Clear();
             foreach (var r in rates) _rates[r.Code] = r.Rate;
             await policyTask;
@@ -383,7 +385,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var categories = await _categoriesApi.GetAllAsync();
+            var categories = await _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
             _allCategories.Clear();
             _allCategories.AddRange(categories);
             _selectedCategoryId = null;
@@ -739,7 +741,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
         try
         {
-            var enabled = await _featuresApi.GetEnabledAsync();
+            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
             CanPrepack = enabled.Contains("prepack");
         }
         catch { CanPrepack = false; }

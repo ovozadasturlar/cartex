@@ -69,19 +69,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private bool _currenciesLoaded;
     private IBusinessApi _businessApi = null!;
     private IRatesApi _ratesApi = null!;
+    private ReferenceCache _cache = null!;
 
     private async Task EnsureCurrenciesAsync()
     {
         if (_currenciesLoaded) return;
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
             Currencies.Clear();
             Currencies.Add(_baseCurrency);
             if (IsMulticurrency)
-                foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
+                foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
                     Currencies.Add(r.Code);
             _currenciesLoaded = true;
         }
@@ -154,8 +155,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
-        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi)
+        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
     {
+        _cache = cache;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _api = api;
@@ -294,9 +296,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var suppliersTask = _suppliersApi.GetAllAsync();
-                var warehousesTask = _warehousesApi.GetAllAsync();
-                var productsTask = _productsApi.GetLookupAsync();
-                var unitsTask = _unitsApi.GetAllAsync();
+                var warehousesTask = _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync());
+                var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
+                var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
 
                 var suppliers = await suppliersTask;
                 SupplierOptions.Clear();

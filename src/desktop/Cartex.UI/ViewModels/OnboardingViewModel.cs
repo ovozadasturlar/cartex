@@ -110,6 +110,7 @@ public partial class OnboardingViewModel(IBusinessApi businessApi, IBranchesApi 
                     _ => "uz-latn"
                 }));
             }
+            ServiceLocator.Resolve<ReferenceCache>().Clear();
             toast.Success(L["success"]);
             Completed?.Invoke();
         }

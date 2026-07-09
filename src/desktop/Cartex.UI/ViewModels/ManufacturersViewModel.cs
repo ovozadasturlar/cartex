@@ -79,6 +79,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
                     await _api.UpdateAsync(_editId, new SaveManufacturerRequest(EditName.Trim()));
             }
             IsEditOpen = false;
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Manufacturers);
             _toast.Success(L["success"]);
             await LoadAsync();
         }
@@ -92,6 +93,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
                 await _api.DeleteAsync(manufacturer.Id);
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Manufacturers);
             _toast.Success(L["success"]);
             await LoadAsync();
         }

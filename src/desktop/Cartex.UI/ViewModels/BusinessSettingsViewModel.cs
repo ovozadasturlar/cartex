@@ -130,6 +130,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));
             }
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business, CacheKeys.SalesPolicy);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

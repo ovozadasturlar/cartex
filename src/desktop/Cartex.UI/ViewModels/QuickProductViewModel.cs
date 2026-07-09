@@ -17,6 +17,7 @@ public partial class QuickProductViewModel : ViewModelBase
     private readonly IUnitsApi _unitsApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly ReferenceCache _cache;
 
     public ObservableCollection<CategoryDto> Categories { get; } = [];
     public ObservableCollection<UnitDto> Units { get; } = [];
@@ -31,13 +32,14 @@ public partial class QuickProductViewModel : ViewModelBase
 
     public event Action<long, string>? Created;
 
-    public QuickProductViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi, IToastService toast, IBusyService busy)
+    public QuickProductViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi, IToastService toast, IBusyService busy, ReferenceCache cache)
     {
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
         _toast = toast;
         _busy = busy;
+        _cache = cache;
     }
 
     [RelayCommand]
@@ -54,8 +56,8 @@ public partial class QuickProductViewModel : ViewModelBase
             {
                 if (Units.Count == 0)
                 {
-                    foreach (var u in (await _unitsApi.GetAllAsync()).Where(u => u.IsEnabled)) Units.Add(u);
-                    foreach (var c in await _categoriesApi.GetAllAsync()) Categories.Add(c);
+                    foreach (var u in (await _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync())).Where(u => u.IsEnabled)) Units.Add(u);
+                    foreach (var c in await _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync())) Categories.Add(c);
                 }
             }
         }
@@ -83,6 +85,7 @@ public partial class QuickProductViewModel : ViewModelBase
                     Code: string.IsNullOrWhiteSpace(Code) ? null : Code.Trim(),
                     SellingPrice: SellingPrice);
                 var productId = await _productsApi.CreateAsync(request);
+                _cache.Invalidate(CacheKeys.ProductLookup);
                 var variants = await _productsApi.GetVariantsAsync(productId);
                 var variantId = variants.FirstOrDefault(v => v.IsDefault)?.Id ?? variants.FirstOrDefault()?.Id ?? 0;
 

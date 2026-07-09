@@ -127,6 +127,7 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
                     await _api.UpdateAsync(_editId, new UpdateProductTypeRequest(EditName.Trim(), EditTracksExpiry, schema));
             }
             IsEditOpen = false;
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.ProductTypes);
             _toast.Success(L["success"]);
             await LoadAsync();
         }

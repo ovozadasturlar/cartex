@@ -135,6 +135,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             _toast.Error(ApiErrors.Describe(ex));
             return;
         }
+        ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Receipt);
         _toast.Success(L["success"]);
     }
 

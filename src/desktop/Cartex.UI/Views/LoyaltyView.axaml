@@ -401,15 +401,36 @@
 
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[customer]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <Grid ColumnDefinitions="*,8,Auto">
-                                    <ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding DiscountCustomer}" HorizontalAlignment="Stretch"
-                                              MinHeight="38" PlaceholderText="{Binding L[all_customers]}">
-                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding FullName}" /></DataTemplate></ComboBox.ItemTemplate>
-                                    </ComboBox>
+                                <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding DiscountCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Border Background="{DynamicResource InputBg}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="6" MinHeight="38" Padding="12,0">
+                                        <TextBlock Text="{Binding DiscountCustomer.FullName}" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                    </Border>
                                     <Button Grid.Column="2" Classes="icon" Command="{Binding ClearDiscountCustomerCommand}" VerticalAlignment="Center">
                                         <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
                                     </Button>
                                 </Grid>
+                                <StackPanel Spacing="4" IsVisible="{Binding DiscountCustomer, Converter={x:Static ObjectConverters.IsNull}}">
+                                    <TextBox Text="{Binding CustomerSearch}" Watermark="{Binding L[all_customers]}" MinHeight="38" />
+                                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" IsVisible="{Binding !!CustomerResults.Count}">
+                                        <ScrollViewer MaxHeight="160">
+                                            <ItemsControl ItemsSource="{Binding CustomerResults}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Background="Transparent" BorderThickness="0" Padding="12,8" Cursor="Hand"
+                                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                Command="{Binding $parent[ItemsControl].DataContext.PickDiscountCustomerCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <TextBlock Text="{Binding FullName}" Foreground="{DynamicResource TextPrimary}" />
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
 
                             <Separator Background="{DynamicResource BorderBrush}" Height="1" />
