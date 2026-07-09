@@ -70,6 +70,7 @@ public static class DependencyInjection
         RegisterAuthorized<IPrepacksApi>(services, settings, baseUrl);
         RegisterAuthorized<IAgentApi>(services, settings, baseUrl);
         RegisterAuthorized<IOfflineCacheApi>(services, settings, baseUrl);
+        RegisterAuthorized<IManufacturersApi>(services, settings, baseUrl);
 
         return services;
     }

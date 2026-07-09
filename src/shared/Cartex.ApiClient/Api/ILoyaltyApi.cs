@@ -19,4 +19,16 @@ public interface ILoyaltyApi
 
     [Delete("/api/loyalty/rules/{id}")]
     Task DeleteRuleAsync(long id);
+
+    [Get("/api/loyalty/discounts")]
+    Task<List<DiscountRuleDto>> GetDiscountRulesAsync();
+
+    [Post("/api/loyalty/discounts")]
+    Task<long> SaveDiscountRuleAsync([Body] SaveDiscountRuleRequest request);
+
+    [Delete("/api/loyalty/discounts/{id}")]
+    Task DeleteDiscountRuleAsync(long id);
+
+    [Post("/api/loyalty/discount-preview")]
+    Task<PreviewDiscountResultDto> PreviewDiscountAsync([Body] PreviewDiscountRequest request);
 }
