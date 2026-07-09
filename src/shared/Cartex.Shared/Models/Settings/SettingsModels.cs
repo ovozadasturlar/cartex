@@ -21,8 +21,8 @@ public record ReceiptSettingsDto(string? HeaderText, string? FooterText, int Pap
 public record UpdateReceiptSettingsRequest(string? HeaderText, string? FooterText, int PaperWidth);
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays);
-public record QrLoginSettingsDto(int RefreshSeconds);
-public record UpdateQrLoginSettingsRequest(int RefreshSeconds);
+public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
+public record UpdateLoginMethodsRequest(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
 public record StorageSettingsDto(bool Enabled, string? Endpoint, string? AccessKey, string? Bucket, bool UseSsl, bool HasSecretKey);
 public record UpdateStorageSettingsRequest(bool Enabled, string? Endpoint, string? AccessKey, string? SecretKey, string? Bucket, bool UseSsl);
 public record CloudBridgeSettingsDto(bool Enabled, string? GatewayUrl, bool HasLicenseKey);

@@ -44,11 +44,11 @@ public interface ISettingsApi
     [Put("/api/settings/sales-policy")]
     Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
 
-    [Get("/api/settings/qr-login")]
-    Task<QrLoginSettingsDto> GetQrLoginAsync();
+    [Get("/api/settings/login-methods")]
+    Task<LoginMethodsSettingsDto> GetLoginMethodsAsync();
 
-    [Put("/api/settings/qr-login")]
-    Task UpdateQrLoginAsync([Body] UpdateQrLoginSettingsRequest request);
+    [Put("/api/settings/login-methods")]
+    Task UpdateLoginMethodsAsync([Body] UpdateLoginMethodsRequest request);
 
     [Get("/api/settings/storage")]
     Task<StorageSettingsDto> GetStorageAsync();

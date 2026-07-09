@@ -119,9 +119,12 @@ public static class DatabaseSeeder
             .Select(kv => new Feature { Code = kv.Key, Name = kv.Value, IsEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key) })
             .ToList();
 
-        if (missing.Count > 0)
+        var stale = await context.Features.Where(f => !FeatureCatalog.AllCodes.Contains(f.Code)).ToListAsync();
+
+        if (missing.Count > 0 || stale.Count > 0)
         {
             await context.Features.AddRangeAsync(missing);
+            context.Features.RemoveRange(stale);
             await context.SaveChangesAsync();
         }
     }

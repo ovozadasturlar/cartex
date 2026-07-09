@@ -38,9 +38,11 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _maxDiscountPercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
+    [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
+    [ObservableProperty] private bool _keyLoginEnabled = true;
     private bool _policyLoaded;
-    private bool _qrLoaded;
+    private bool _loginLoaded;
 
     private readonly ISettingsApi _settingsApi;
 
@@ -70,8 +72,11 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         catch { }
         try
         {
-            QrRefreshSeconds = (await _settingsApi.GetQrLoginAsync()).RefreshSeconds;
-            _qrLoaded = true;
+            var login = await _settingsApi.GetLoginMethodsAsync();
+            QrLoginEnabled = login.QrEnabled;
+            QrRefreshSeconds = login.QrRefreshSeconds;
+            KeyLoginEnabled = login.KeyEnabled;
+            _loginLoaded = true;
         }
         catch { }
         try
@@ -137,8 +142,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));
-                if (_qrLoaded)
-                    await _settingsApi.UpdateQrLoginAsync(new UpdateQrLoginSettingsRequest((int)Math.Clamp(QrRefreshSeconds, 30, 600)));
+                if (_loginLoaded)
+                    await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
+                        QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));
             }
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business, CacheKeys.SalesPolicy);
             _toast.Success(L["success"]);

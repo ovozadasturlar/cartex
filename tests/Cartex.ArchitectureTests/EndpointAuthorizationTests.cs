@@ -14,7 +14,7 @@ public class EndpointAuthorizationTests
         "AuthController.LoginWithKey",
         "AuthController.StartQrLogin",
         "AuthController.PollQrLogin",
-        "AuthController.QrLoginEnabled",
+        "AuthController.LoginMethods",
         "AuthController.Refresh",
         "AuthController.Logout",
         "ReceiptController.GetReceipt",

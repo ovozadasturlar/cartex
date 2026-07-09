@@ -1,6 +1,7 @@
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,10 +12,15 @@ public record LoginWithKeyCommand(string KeyContent, string Serial, string? Devi
 public sealed class LoginWithKeyCommandHandler(
     AuthTokenBuilder tokenBuilder,
     IHardwareKeyService hardwareKeys,
+    ISettingsService settings,
     IApplicationDbContext db) : IRequestHandler<LoginWithKeyCommand, LoginResponse>
 {
     public async Task<LoginResponse> Handle(LoginWithKeyCommand request, CancellationToken cancellationToken)
     {
+        var cfg = await settings.GetAsync<LoginMethodsSettings>(SettingKeys.LoginMethods, cancellationToken) ?? new();
+        if (!cfg.KeyEnabled)
+            throw new ForbiddenException("USB kalit bilan kirish o'chirilgan.");
+
         var username = await hardwareKeys.VerifyAsync(request.KeyContent, request.Serial, cancellationToken)
             ?? throw new UnauthorizedAccessException("Invalid hardware key.");
 

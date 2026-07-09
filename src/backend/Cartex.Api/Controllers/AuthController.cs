@@ -25,9 +25,9 @@ public class AuthController(ISender sender) : ControllerBase
         Ok(await sender.Send(command));
 
     [AllowAnonymous]
-    [HttpGet("qr/enabled")]
-    public async Task<ActionResult<bool>> QrLoginEnabled() =>
-        Ok(await sender.Send(new GetQrLoginEnabledQuery()));
+    [HttpGet("login-methods")]
+    public async Task<ActionResult<LoginMethodsDto>> LoginMethods() =>
+        Ok(await sender.Send(new GetLoginMethodsQuery()));
 
     [AllowAnonymous]
     [HttpPost("qr/start")]

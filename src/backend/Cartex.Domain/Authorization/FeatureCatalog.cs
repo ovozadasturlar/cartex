@@ -17,7 +17,6 @@ public static class FeatureCatalog
     public const string Telegram = "telegram";
     public const string Email = "email";
     public const string Sms = "sms";
-    public const string QrLogin = "qr_login";
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
     {
@@ -36,7 +35,6 @@ public static class FeatureCatalog
         [Telegram] = [],
         [Email] = [],
         [Sms] = [],
-        [QrLogin] = [],
     };
 
     public static readonly IReadOnlyDictionary<string, string> Names = new Dictionary<string, string>
@@ -56,12 +54,11 @@ public static class FeatureCatalog
         [Telegram] = "Telegram",
         [Email] = "Email",
         [Sms] = "SMS",
-        [QrLogin] = "QR kod bilan kirish",
     };
 
     public static readonly IReadOnlyList<string> AllCodes = [.. Names.Keys];
 
-    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string> { Ordering, Multicurrency, Agents, OfflineCache, QrLogin };
+    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string> { Ordering, Multicurrency, Agents, OfflineCache };
 
     public static IReadOnlySet<string> PermissionsFor(IEnumerable<string> codes) =>
         codes.SelectMany(c => Map.TryGetValue(c, out var p) ? p : []).ToHashSet();

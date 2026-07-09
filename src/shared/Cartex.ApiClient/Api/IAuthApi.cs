@@ -11,17 +11,17 @@ public interface IAuthApi
     [Post("/api/auth/login-with-key")]
     Task<LoginResponse> LoginWithKeyAsync([Body] LoginWithKeyRequest request);
 
-    [Get("/api/auth/qr/enabled")]
-    Task<bool> GetQrEnabledAsync();
+    [Get("/api/auth/login-methods")]
+    Task<LoginMethodsDto> GetLoginMethodsAsync();
 
     [Post("/api/auth/qr/start")]
-    Task<QrLoginStartResponse> StartQrAsync();
+    Task<QrLoginStartResponse> StartQrAsync(CancellationToken cancellationToken = default);
 
     [Post("/api/auth/qr/approve")]
     Task ApproveQrAsync([Body] ApproveQrLoginRequest request);
 
     [Post("/api/auth/qr/poll")]
-    Task<IApiResponse<LoginResponse>> PollQrAsync([Body] PollQrLoginRequest request);
+    Task<IApiResponse<LoginResponse>> PollQrAsync([Body] PollQrLoginRequest request, CancellationToken cancellationToken = default);
 
     [Post("/api/auth/refresh")]
     Task<LoginResponse> RefreshAsync([Body] RefreshRequest request);

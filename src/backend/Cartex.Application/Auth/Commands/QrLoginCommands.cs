@@ -1,7 +1,6 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
-using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using FluentValidation;
@@ -12,30 +11,34 @@ public record StartQrLoginCommand : IRequest<QrLoginStartResponse>;
 
 public record QrLoginStartResponse(string Code, int ExpiresInSeconds);
 
-public record GetQrLoginEnabledQuery : IRequest<bool>;
+public record LoginMethodsDto(bool QrEnabled, bool KeyEnabled);
+
+public record GetLoginMethodsQuery : IRequest<LoginMethodsDto>;
 
 public record ApproveQrLoginCommand(string Code) : ICommand<Unit>;
 
 public record PollQrLoginCommand(string Code, string? DeviceName = null) : IRequest<LoginResponse?>;
 
-public sealed class GetQrLoginEnabledQueryHandler(IFeatureStateProvider features) : IRequestHandler<GetQrLoginEnabledQuery, bool>
+public sealed class GetLoginMethodsQueryHandler(ISettingsService settings) : IRequestHandler<GetLoginMethodsQuery, LoginMethodsDto>
 {
-    public Task<bool> Handle(GetQrLoginEnabledQuery request, CancellationToken cancellationToken) =>
-        features.IsEnabledAsync(FeatureCatalog.QrLogin, cancellationToken);
+    public async Task<LoginMethodsDto> Handle(GetLoginMethodsQuery request, CancellationToken cancellationToken)
+    {
+        var cfg = await settings.GetAsync<LoginMethodsSettings>(SettingKeys.LoginMethods, cancellationToken) ?? new();
+        return new LoginMethodsDto(cfg.QrEnabled, cfg.KeyEnabled);
+    }
 }
 
 public sealed class StartQrLoginCommandHandler(
     IQrLoginStore store,
-    IFeatureStateProvider features,
     ISettingsService settings) : IRequestHandler<StartQrLoginCommand, QrLoginStartResponse>
 {
     public async Task<QrLoginStartResponse> Handle(StartQrLoginCommand request, CancellationToken cancellationToken)
     {
-        if (!await features.IsEnabledAsync(FeatureCatalog.QrLogin, cancellationToken))
+        var cfg = await settings.GetAsync<LoginMethodsSettings>(SettingKeys.LoginMethods, cancellationToken) ?? new();
+        if (!cfg.QrEnabled)
             throw new BusinessRuleException("QR bilan kirish o'chirilgan.");
 
-        var cfg = await settings.GetAsync<QrLoginSettings>(SettingKeys.QrLogin, cancellationToken) ?? new();
-        var seconds = Math.Clamp(cfg.RefreshSeconds, 30, 600);
+        var seconds = Math.Clamp(cfg.QrRefreshSeconds, 30, 600);
         return new QrLoginStartResponse(store.Start(TimeSpan.FromSeconds(seconds)), seconds);
     }
 }

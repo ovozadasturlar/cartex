@@ -51,17 +51,17 @@ public sealed class AuthService
         return response;
     }
 
-    public async Task<bool> IsQrEnabledAsync()
+    public async Task<LoginMethodsDto> GetLoginMethodsAsync()
     {
-        try { return await _authApi.GetQrEnabledAsync(); }
-        catch { return false; }
+        try { return await _authApi.GetLoginMethodsAsync(); }
+        catch { return new LoginMethodsDto(false, true); }
     }
 
-    public Task<QrLoginStartResponse> StartQrAsync() => _authApi.StartQrAsync();
+    public Task<QrLoginStartResponse> StartQrAsync(CancellationToken cancellationToken) => _authApi.StartQrAsync(cancellationToken);
 
-    public async Task<LoginResponse?> TryQrPollAsync(string code)
+    public async Task<LoginResponse?> TryQrPollAsync(string code, CancellationToken cancellationToken)
     {
-        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR"));
+        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR"), cancellationToken);
         if (response.Content is null) return null;
         Apply(response.Content, true);
         return response.Content;

@@ -88,13 +88,21 @@
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="16"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="12">
-                            <TextBlock Text="{Binding L[login_with_qr]}" FontWeight="SemiBold" FontSize="14"
+                            <TextBlock Text="{Binding L[login_methods]}" FontWeight="SemiBold" FontSize="14"
                                        Foreground="{DynamicResource TextPrimary}" />
-                            <StackPanel Spacing="5" MaxWidth="260" HorizontalAlignment="Left">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[login_with_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding KeyLoginEnabled}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[login_with_qr]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding QrLoginEnabled}" />
+                            </Grid>
+                            <StackPanel Spacing="5" MaxWidth="260" HorizontalAlignment="Left" IsVisible="{Binding QrLoginEnabled}">
                                 <TextBlock Text="{Binding L[qr_refresh_seconds]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                 <NumericUpDown Value="{Binding QrRefreshSeconds}" Minimum="30" Maximum="600" Increment="10" FormatString="0" />
                             </StackPanel>
-                            <TextBlock Text="{Binding L[qr_refresh_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding L[login_methods_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 

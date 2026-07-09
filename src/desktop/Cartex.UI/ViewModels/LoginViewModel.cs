@@ -58,7 +58,8 @@ public partial class LoginViewModel : ViewModelBase
             while (!cts.IsCancellationRequested && IsQrOpen)
             {
                 QrLoginStartResponse start;
-                try { start = await _authService.StartQrAsync(); }
+                try { start = await _authService.StartQrAsync(cts.Token); }
+                catch (OperationCanceledException) { return; }
                 catch { await Task.Delay(3000, cts.Token); continue; }
 
                 QrImage = QrRenderer.Render($"cartexqr:{start.Code}");
@@ -73,10 +74,12 @@ public partial class LoginViewModel : ViewModelBase
                     QrProgress = remaining.TotalSeconds / lifetime.TotalSeconds * 100;
 
                     LoginResponse? response = null;
-                    try { response = await _authService.TryQrPollAsync(start.Code); }
+                    try { response = await _authService.TryQrPollAsync(start.Code, cts.Token); }
+                    catch (OperationCanceledException) { return; }
                     catch { }
                     if (response is not null)
                     {
+                        if (cts.IsCancellationRequested) return;
                         CloseQr();
                         StopDrivePolling();
                         var mainVm = ServiceLocator.Resolve<MainViewModel>();
@@ -159,12 +162,17 @@ public partial class LoginViewModel : ViewModelBase
         _authService = authService;
         _navigationService = navigationService;
         _rememberMe = SettingsService.Instance.RememberMe;
-        _ = DetectKey();
-        StartDrivePolling();
-        _ = LoadQrAvailabilityAsync();
+        _ = InitLoginMethodsAsync();
     }
 
-    private async Task LoadQrAvailabilityAsync() => QrAvailable = await _authService.IsQrEnabledAsync();
+    private async Task InitLoginMethodsAsync()
+    {
+        var methods = await _authService.GetLoginMethodsAsync();
+        QrAvailable = methods.QrEnabled;
+        if (!methods.KeyEnabled) return;
+        await DetectKey();
+        StartDrivePolling();
+    }
 
     [RelayCommand]
     private async Task DetectKey()

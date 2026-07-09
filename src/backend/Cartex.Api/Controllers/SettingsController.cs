@@ -95,17 +95,17 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("qr-login")]
+    [HttpGet("login-methods")]
     [HasPermission(AppPermissions.Business.Manage)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.QrLoginSettingsDto>> GetQrLogin()
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.LoginMethodsSettingsDto>> GetLoginMethods()
     {
-        var result = await sender.Send(new GetQrLoginSettingsQuery());
+        var result = await sender.Send(new GetLoginMethodsSettingsQuery());
         return Ok(result);
     }
 
-    [HttpPut("qr-login")]
+    [HttpPut("login-methods")]
     [HasPermission(AppPermissions.Business.Manage)]
-    public async Task<IActionResult> UpdateQrLogin(UpdateQrLoginSettingsCommand command)
+    public async Task<IActionResult> UpdateLoginMethods(UpdateLoginMethodsSettingsCommand command)
     {
         await sender.Send(command);
         return NoContent();
