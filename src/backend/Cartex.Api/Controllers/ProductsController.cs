@@ -30,6 +30,14 @@ public class ProductsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("lookup")]
+    [HasPermission(AppPermissions.Products.View)]
+    public async Task<ActionResult<IReadOnlyCollection<ProductOptionDto>>> GetLookup()
+    {
+        var result = await sender.Send(new GetProductLookupQuery());
+        return Ok(result);
+    }
+
     [HttpGet("category-counts")]
     [HasPermission(AppPermissions.Products.View)]
     public async Task<ActionResult<IReadOnlyCollection<CategoryCountDto>>> GetCategoryCounts()

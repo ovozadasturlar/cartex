@@ -54,6 +54,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(x => x.OperationType).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
         builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
+        builder.HasIndex(x => x.CreatedAt);
 
         builder.HasOne(x => x.FromAccount)
             .WithMany()

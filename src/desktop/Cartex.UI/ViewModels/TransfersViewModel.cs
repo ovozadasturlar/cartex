@@ -79,7 +79,10 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                var warehouses = await _warehousesApi.GetAllAsync();
+                var warehousesTask = _warehousesApi.GetAllAsync();
+                var productsTask = _productsApi.GetLookupAsync();
+
+                var warehouses = await warehousesTask;
                 WarehouseOptions.Clear();
                 FilterWarehouseOptions.Clear();
                 FilterWarehouseOptions.Add(new IdOption(null, L["all"]));
@@ -90,7 +93,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
                 }
                 FilterWarehouse = FilterWarehouseOptions.FirstOrDefault();
 
-                var products = await _productsApi.GetAllAsync();
+                var products = await productsTask;
                 ProductOptions.Clear();
                 foreach (var p in products) ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
 

@@ -293,15 +293,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                var suppliers = await _suppliersApi.GetAllAsync();
+                var suppliersTask = _suppliersApi.GetAllAsync();
+                var warehousesTask = _warehousesApi.GetAllAsync();
+                var productsTask = _productsApi.GetLookupAsync();
+                var unitsTask = _unitsApi.GetAllAsync();
+
+                var suppliers = await suppliersTask;
                 SupplierOptions.Clear();
                 foreach (var s in suppliers) SupplierOptions.Add(new IdOption(s.Id, s.Name));
 
-                var warehouses = await _warehousesApi.GetAllAsync();
+                var warehouses = await warehousesTask;
                 WarehouseOptions.Clear();
                 foreach (var w in warehouses) WarehouseOptions.Add(new IdOption(w.Id, w.Name));
 
-                var products = await _productsApi.GetAllAsync();
+                var products = await productsTask;
                 ProductOptions.Clear();
                 _variantDimensions.Clear();
                 foreach (var p in products)
@@ -310,7 +315,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                     if (p.Dimension is { } dim) _variantDimensions[p.DefaultVariantId] = dim;
                 }
 
-                var units = await _unitsApi.GetAllAsync();
+                var units = await unitsTask;
                 _allUnits.Clear();
                 _allUnits.AddRange(units);
                 RebuildUnitOptions(LineProduct);

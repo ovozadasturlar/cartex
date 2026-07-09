@@ -77,7 +77,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public ObservableCollection<LabeledValue> Scopes { get; } = [];
     public ObservableCollection<LabeledValue> Methods { get; } = [];
     public ObservableCollection<CashbackRuleDto> Rules { get; } = [];
-    public ObservableCollection<ProductDto> Products { get; } = [];
+    public ObservableCollection<ProductOptionDto> Products { get; } = [];
     public ObservableCollection<CategoryDto> Categories { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
     public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
@@ -99,7 +99,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isRuleNew;
     [ObservableProperty] private LabeledValue? _ruleScope;
     [ObservableProperty] private LabeledValue? _ruleMethod;
-    [ObservableProperty] private ProductDto? _ruleProduct;
+    [ObservableProperty] private ProductOptionDto? _ruleProduct;
     [ObservableProperty] private CategoryDto? _ruleCategory;
     [ObservableProperty] private decimal _ruleValue;
     [ObservableProperty] private int _rulePriority;
@@ -111,7 +111,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _discountEnabled = true;
     [ObservableProperty] private LabeledValue? _discountScope;
     [ObservableProperty] private LabeledValue? _discountMethod;
-    [ObservableProperty] private ProductDto? _discountProduct;
+    [ObservableProperty] private ProductOptionDto? _discountProduct;
     [ObservableProperty] private CategoryDto? _discountCategory;
     [ObservableProperty] private ManufacturerDto? _discountManufacturer;
     [ObservableProperty] private CustomerDto? _discountCustomer;
@@ -126,7 +126,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     partial void OnIsRuleOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsDiscountOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     [ObservableProperty] private LabeledValue? _exceptionScope;
-    [ObservableProperty] private ProductDto? _exceptionProduct;
+    [ObservableProperty] private ProductOptionDto? _exceptionProduct;
     [ObservableProperty] private CategoryDto? _exceptionCategory;
     [ObservableProperty] private ManufacturerDto? _exceptionManufacturer;
 
@@ -171,25 +171,28 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
                 if (StatPeriodIndex < 0) StatPeriodIndex = 2;
                 OnPropertyChanged(nameof(StatPeriodIndex));
 
-                var products = await _productsApi.GetAllAsync();
+                var productsTask = _productsApi.GetLookupAsync();
+                var categoriesTask = _categoriesApi.GetAllAsync();
+                var customersTask = _customersApi.GetAllAsync(null);
+                var manufacturersTask = _manufacturersApi.GetAllAsync();
+
+                var products = await productsTask;
                 Products.Clear();
                 foreach (var p in products) Products.Add(p);
 
-                var categories = await _categoriesApi.GetAllAsync();
+                var categories = await categoriesTask;
                 Categories.Clear();
                 foreach (var c in categories) Categories.Add(c);
 
-                var customers = await _customersApi.GetAllAsync(null);
+                var customers = await customersTask;
                 Customers.Clear();
                 foreach (var c in customers) Customers.Add(c);
 
-                var manufacturers = await _manufacturersApi.GetAllAsync();
+                var manufacturers = await manufacturersTask;
                 Manufacturers.Clear();
                 foreach (var m in manufacturers) Manufacturers.Add(m);
 
-                await ReloadProgramAsync();
-                await ReloadDiscountsAsync();
-                await LoadStatsAsync();
+                await Task.WhenAll(ReloadProgramAsync(), ReloadDiscountsAsync(), LoadStatsAsync());
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
