@@ -111,8 +111,17 @@
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24">
                 <DockPanel>
-                    <Button DockPanel.Dock="Bottom" Classes="brand" HorizontalAlignment="Stretch" Margin="0,16,0,0"
-                            Command="{Binding CloseReceiptCommand}" Content="{Binding L[cancel]}" />
+                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,16,0,0">
+                        <Button Grid.Column="0" Classes="brand" HorizontalAlignment="Stretch"
+                                Command="{Binding CloseReceiptCommand}" Content="{Binding L[cancel]}" />
+                        <Button Grid.Column="2" Classes="outline" Command="{Binding ResendReceiptCommand}"
+                                IsVisible="{Binding CanResendReceipt}">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <mi:MaterialIcon Kind="SendOutline" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[resend_receipt]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                     <c:ReceiptCard DataContext="{Binding Receipt}" />
                 </DockPanel>
             </Border>

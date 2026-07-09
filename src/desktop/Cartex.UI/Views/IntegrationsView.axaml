@@ -55,6 +55,11 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
                             <TextBlock Text="Telegram" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="12,8"
+                                    IsVisible="{Binding TelegramFeatureOff}">
+                                <TextBlock Text="{Binding L[channel_feature_off]}" Foreground="{DynamicResource WarningBrush}"
+                                           FontSize="12.5" TextWrapping="Wrap" />
+                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <ToggleSwitch IsChecked="{Binding TelegramEnabled}" />
                                 <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
@@ -95,6 +100,11 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
                             <TextBlock Text="Email (SMTP)" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="12,8"
+                                    IsVisible="{Binding EmailFeatureOff}">
+                                <TextBlock Text="{Binding L[channel_feature_off]}" Foreground="{DynamicResource WarningBrush}"
+                                           FontSize="12.5" TextWrapping="Wrap" />
+                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <ToggleSwitch IsChecked="{Binding EmailEnabled}" />
                                 <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
@@ -152,6 +162,11 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
                             <TextBlock Text="SMS" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimary}" />
+                            <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="12,8"
+                                    IsVisible="{Binding SmsFeatureOff}">
+                                <TextBlock Text="{Binding L[channel_feature_off]}" Foreground="{DynamicResource WarningBrush}"
+                                           FontSize="12.5" TextWrapping="Wrap" />
+                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <ToggleSwitch IsChecked="{Binding SmsEnabled}" />
                                 <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />

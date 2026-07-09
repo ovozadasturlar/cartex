@@ -115,7 +115,25 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
                 Receipt = await _receiptApi.GetAsync(sale.ReceiptToken);
+            _receiptSale = sale;
+            OnPropertyChanged(nameof(CanResendReceipt));
             IsReceiptOpen = true;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private SaleDto? _receiptSale;
+    public bool CanResendReceipt => _auth.HasPermission("customers.message") && _receiptSale?.CustomerName is not null;
+
+    [RelayCommand]
+    private async Task ResendReceiptAsync()
+    {
+        if (_receiptSale is null) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _salesApi.ResendReceiptAsync(_receiptSale.Id);
+            _toast.Success(L["receipt_resent"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

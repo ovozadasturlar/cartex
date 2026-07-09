@@ -19,4 +19,7 @@ public interface ISalesApi
 
     [Post("/api/sales/{id}/return")]
     Task ReturnAsync(long id, [Body] ReturnSaleRequest request);
+
+    [Post("/api/sales/{id}/resend-receipt")]
+    Task ResendReceiptAsync(long id);
 }

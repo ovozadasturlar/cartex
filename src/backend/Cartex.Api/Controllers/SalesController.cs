@@ -1,3 +1,4 @@
+using Cartex.Application.Notifications;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Sales.Queries;
 using Cartex.Auth.Authorization;
@@ -39,6 +40,14 @@ public class SalesController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(command);
         return Ok(result);
+    }
+
+    [HttpPost("{id:long}/resend-receipt")]
+    [HasPermission(AppPermissions.Customers.Message)]
+    public async Task<IActionResult> ResendReceipt(long id)
+    {
+        await sender.Send(new ResendReceiptCommand(id));
+        return NoContent();
     }
 
     [HttpPost("{id:long}/return")]
