@@ -49,7 +49,7 @@
   "key_group_drive": "Same drive",
   "login_choose_profile": "Which profile do you want to use?",
   "login_with_qr": "Log in with QR code",
-  "qr_scan_hint": "Scan the QR code in the Cartex app on your phone — this computer will log in automatically",
+  "qr_scan_hint": "Scan the QR code in the Cartex mobile app — this computer will log in automatically",
   "feature_effect_agents": "Field agents mobile app and agent sync API",
   "feature_effect_offline_cache": "Offline sales on a single till (SQLite cache, later sync)",
   "feature_effect_qr_login": "Login screen shows a QR code; the phone app approves it",

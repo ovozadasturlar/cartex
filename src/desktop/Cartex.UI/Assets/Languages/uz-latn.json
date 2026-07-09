@@ -49,7 +49,7 @@
   "key_group_drive": "Bitta fleshka",
   "login_choose_profile": "Qaysi profil bilan kirasiz?",
   "login_with_qr": "QR kod orqali kirish",
-  "qr_scan_hint": "Telefondagi Cartex ilovasida QR kodni skanerlang — kompyuter avtomatik kiradi",
+  "qr_scan_hint": "Cartex mobil ilovasida QR kodni skanerlang — kompyuter avtomatik kiradi",
   "feature_effect_agents": "Dala agentlari mobil ilovasi va agent sync API",
   "feature_effect_offline_cache": "Bitta kassada oflayn savdo (SQLite kesh, keyin sinxron)",
   "feature_effect_qr_login": "Login oynasida QR ko'rsatiladi, telefondagi ilova tasdiqlaydi",

@@ -35,11 +35,11 @@ public partial class LoginViewModel : ViewModelBase
     private CancellationTokenSource? _qrCts;
 
     [RelayCommand]
-    private async Task ToggleQr()
+    private void ToggleQr()
     {
         if (IsQrOpen) { CloseQr(); return; }
         IsQrOpen = true;
-        await RunQrLoopAsync();
+        _ = RunQrLoopAsync();
     }
 
     private void CloseQr()
