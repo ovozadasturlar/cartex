@@ -31,6 +31,7 @@ public class OutboxItem
     public string PayloadJson { get; set; } = "";
     public string Status { get; set; } = "pending";
     public string? Error { get; set; }
+    public string? ReceiptToken { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

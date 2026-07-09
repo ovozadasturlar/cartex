@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class OutboxViewModel(AgentDb db, SyncService sync) : ObservableObject
+public partial class OutboxViewModel(AgentDb db, SyncService sync, SessionStore session) : ObservableObject
 {
     public ObservableCollection<OutboxRow> Items { get; } = [];
 
@@ -41,26 +41,34 @@ public partial class OutboxViewModel(AgentDb db, SyncService sync) : ObservableO
     [RelayCommand]
     private async Task DeleteAsync(OutboxRow row)
     {
-        var ok = await Shell.Current.CurrentPage.DisplayAlert("O'chirish",
-            "Bu amal serverga yuborilmaydi. O'chirilsinmi?", "Ha", "Yo'q");
+        var ok = await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["delete_title"],
+            Loc.Instance["delete_msg"], Loc.Instance["yes"], Loc.Instance["no"]);
         if (!ok) return;
-        await db.DeleteOutboxAsync(row.Item.Id);
-        await sync.SyncAsync();
+        await sync.DeleteAsync(row.Item);
         await LoadAsync();
+    }
+
+    [RelayCommand]
+    private async Task ShareReceiptAsync(OutboxRow row)
+    {
+        if (string.IsNullOrEmpty(row.Item.ReceiptToken)) return;
+        var url = $"{session.ServerUrl}/r/{row.Item.ReceiptToken}";
+        await Share.Default.RequestAsync(new ShareTextRequest(url, Loc.Instance["receipt"]));
     }
 }
 
 public sealed record OutboxRow(OutboxItem Item)
 {
-    public string Title => Item.Kind == "sale" ? "Savdo" : "Qarz to'lovi";
+    public string Title => Loc.Instance[Item.Kind == "sale" ? "kind_sale" : "kind_repay"];
     public string SubLine => Item.CreatedAt.ToString("dd.MM HH:mm");
     public string StatusText => Item.Status switch
     {
-        "pending" => "Kutilmoqda",
-        "done" => "Yuborildi",
-        _ => Item.Error ?? "Xato"
+        "pending" => Loc.Instance["status_pending"],
+        "done" => Loc.Instance["status_done"],
+        _ => Item.Error ?? Loc.Instance["status_error"]
     };
     public bool IsError => Item.Status == "error";
     public bool IsPending => Item.Status == "pending";
     public bool IsDone => Item.Status == "done";
+    public bool HasReceipt => Item.Status == "done" && !string.IsNullOrEmpty(Item.ReceiptToken);
 }

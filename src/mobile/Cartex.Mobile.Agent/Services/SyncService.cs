@@ -80,14 +80,38 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         {
             var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
             var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
-            await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
+            var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
                 DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
+            item.ReceiptToken = result.ReceiptToken;
         }
         else
         {
             var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
             await customersApi.RepayDebtAsync(r.CustomerId, new RepayDebtRequest(r.Amount, false, IdempotencyKey: item.Key));
         }
+    }
+
+    public async Task DeleteAsync(OutboxItem item)
+    {
+        if (item.Status != "done")
+        {
+            if (item.Kind == "sale")
+            {
+                var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
+                foreach (var line in d.Items)
+                    await db.AdjustStockAsync(line.VariantId, line.Quantity);
+                var total = d.Items.Sum(i => i.Quantity * i.UnitPrice);
+                if (d.CustomerId is { } customerId && total > d.PaidCash)
+                    await db.AdjustDebtAsync(customerId, -(total - d.PaidCash));
+            }
+            else
+            {
+                var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
+                await db.AdjustDebtAsync(r.CustomerId, r.Amount);
+            }
+        }
+        await db.DeleteOutboxAsync(item.Id);
+        StateChanged?.Invoke();
     }
 
     private async Task PullAsync()
@@ -168,9 +192,9 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         catch { }
         return (int)ex.StatusCode switch
         {
-            401 => "Sessiya tugagan — qayta kiring",
-            403 => "Ruxsat yo'q yoki modul yoqilmagan",
-            _ => $"Server xatosi ({(int)ex.StatusCode})"
+            401 => Loc.Instance["err_session_expired"],
+            403 => Loc.Instance["err_forbidden"],
+            _ => string.Format(Loc.Instance["err_server_fmt"], (int)ex.StatusCode)
         };
     }
 }
