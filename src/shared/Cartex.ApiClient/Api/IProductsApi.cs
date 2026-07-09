@@ -16,6 +16,9 @@ public interface IProductsApi
     [Get("/api/products/totals")]
     Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null);
 
+    [Get("/api/products/category-counts")]
+    Task<List<CategoryCountDto>> GetCategoryCountsAsync();
+
     [Get("/api/products/by-barcode")]
     Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId);
 

@@ -66,11 +66,24 @@ public partial class DashboardViewModel(
         IsLoading = true;
         WelcomeMessage = $"{L["welcome"]}, {ServiceLocator.Resolve<AuthService>().UserInfo?.FullName ?? ""}!";
 
+        var todayStart = new DateTimeOffset(DateTime.Today).UtcDateTime;
+        var todayEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
+        var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
+        var warehouseId = branch.CurrentWarehouseId;
+
+        var todayReportTask = reportsApi.GetSalesReportAsync(todayStart, todayEnd);
+        var totalsTask = productsApi.GetTotalsAsync();
+        var categoriesTask = productsApi.GetCategoryCountsAsync();
+        var lowStockTask = warehouseId is { } wid ? stocksApi.GetLowStockAsync(wid) : null;
+        var transactionsTask = transactionsApi.GetPagedAsync(1, 10, sortBy: "CreatedAt", descending: true,
+            fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1));
+        var weekReportTask = reportsApi.GetSalesReportAsync(weekStart, todayEnd);
+        var flowTask = reportsApi.GetCashFlowAsync(weekStart, todayEnd);
+        var topCustomersTask = reportsApi.GetTopCustomersAsync(weekStart, todayEnd);
+
         try
         {
-            var todayStart = new DateTimeOffset(DateTime.Today).UtcDateTime;
-            var todayEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
-            var report = await reportsApi.GetSalesReportAsync(todayStart, todayEnd);
+            var report = await todayReportTask;
             TodaySales = report.Revenue;
             TodayProfit = report.Profit;
         }
@@ -83,15 +96,8 @@ public partial class DashboardViewModel(
 
         try
         {
-            var products = await productsApi.GetAllAsync();
-            TotalProducts = products.Count;
-
-            var categoryGroups = products
-                .GroupBy(p => p.CategoryName ?? "—")
-                .Select(g => new { Name = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(PieColors.Length)
-                .ToList();
+            TotalProducts = (await totalsTask).Count;
+            var categoryGroups = (await categoriesTask).Take(PieColors.Length).ToList();
 
             CategoryBars.Clear();
             var maxCount = categoryGroups.Count > 0 ? categoryGroups.Max(g => g.Count) : 0;
@@ -99,7 +105,7 @@ public partial class DashboardViewModel(
             {
                 var brush = new SolidColorBrush(Color.Parse(PieColors[i % PieColors.Length]));
                 var height = maxCount > 0 ? categoryGroups[i].Count / (double)maxCount * ChartHeight : 0;
-                CategoryBars.Add(new ChartColumn(categoryGroups[i].Name, categoryGroups[i].Count.ToString(),
+                CategoryBars.Add(new ChartColumn(categoryGroups[i].Name ?? "—", categoryGroups[i].Count.ToString(),
                     [new ChartBar(height, brush)]));
             }
         }
@@ -111,11 +117,10 @@ public partial class DashboardViewModel(
 
         try
         {
-            var warehouseId = branch.CurrentWarehouseId;
             LowStockItems.Clear();
-            if (warehouseId is not null)
+            if (lowStockTask is not null)
             {
-                var lowItems = await stocksApi.GetLowStockAsync(warehouseId.Value);
+                var lowItems = await lowStockTask;
                 LowStockCount = lowItems.Count;
                 foreach (var item in lowItems)
                     LowStockItems.Add(item);
@@ -132,11 +137,9 @@ public partial class DashboardViewModel(
 
         try
         {
-            var today = DateTime.Today;
-            var tomorrow = today.AddDays(1);
-            var transactions = await transactionsApi.GetAllAsync(fromDate: today, toDate: tomorrow);
+            var transactions = await transactionsTask;
             RecentTransactions.Clear();
-            foreach (var t in transactions.Take(10))
+            foreach (var t in transactions.Content ?? [])
                 RecentTransactions.Add(t);
         }
         catch
@@ -146,10 +149,8 @@ public partial class DashboardViewModel(
 
         try
         {
-            var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
-            var weekEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
-            var report = await reportsApi.GetSalesReportAsync(weekStart, weekEnd);
-            var flow = await reportsApi.GetCashFlowAsync(weekStart, weekEnd);
+            var report = await weekReportTask;
+            var flow = await flowTask;
 
             CashFlowSeries.Clear();
             CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Sales)], L["sales"], "#2563EB"));
@@ -174,9 +175,7 @@ public partial class DashboardViewModel(
 
         try
         {
-            var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
-            var weekEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
-            var top = await reportsApi.GetTopCustomersAsync(weekStart, weekEnd);
+            var top = await topCustomersTask;
             TopCustomers.Clear();
             foreach (var c in top.Take(2)) TopCustomers.Add(c);
         }

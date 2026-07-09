@@ -30,6 +30,14 @@ public class ProductsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("category-counts")]
+    [HasPermission(AppPermissions.Products.View)]
+    public async Task<ActionResult<IReadOnlyCollection<CategoryCountDto>>> GetCategoryCounts()
+    {
+        var result = await sender.Send(new GetProductCategoryCountsQuery());
+        return Ok(result);
+    }
+
     [HttpGet("by-barcode")]
     [HasPermission(AppPermissions.Sales.Create)]
     public async Task<ActionResult<ProductLookupDto>> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)

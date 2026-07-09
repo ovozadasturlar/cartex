@@ -363,28 +363,34 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             {
                 _suppressReload = true;
 
-                var categories = await _categoriesApi.GetAllAsync();
+                var categoriesTask = _categoriesApi.GetAllAsync();
+                var unitsTask = _unitsApi.GetAllAsync();
+                var typesTask = _typesApi.GetAllAsync();
+                var manufacturersTask = ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync();
+                var currenciesTask = EnsureCurrenciesAsync();
+
+                var categories = await categoriesTask;
                 Categories.Clear();
                 FilterCategories.Clear();
                 FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
                 foreach (var c in categories) { Categories.Add(c); FilterCategories.Add(c); }
                 FilterCategory = FilterCategories[0];
 
-                var units = await _unitsApi.GetAllAsync();
+                var units = await unitsTask;
                 _allUnits.Clear();
                 _allUnits.AddRange(units);
                 Units.Clear();
                 foreach (var u in units.Where(u => u.IsEnabled)) Units.Add(u);
 
-                var types = await _typesApi.GetAllAsync();
+                var types = await typesTask;
                 ProductTypes.Clear();
                 foreach (var t in types) ProductTypes.Add(t);
 
-                var manufacturers = await ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync();
+                var manufacturers = await manufacturersTask;
                 Manufacturers.Clear();
                 foreach (var m in manufacturers) Manufacturers.Add(m);
 
-                await EnsureCurrenciesAsync();
+                await currenciesTask;
 
                 _suppressReload = false;
                 await LoadProductsAsync();
@@ -399,12 +405,13 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             long? categoryId = FilterCategory is { Id: > 0 } ? FilterCategory.Id : null;
-            var result = await _productsApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search, categoryId);
-            var paged = result.ToPaged();
+            var pagedTask = _productsApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search, categoryId);
+            var totalsTask = _productsApi.GetTotalsAsync(search, categoryId);
+            var paged = (await pagedTask).ToPaged();
             Products.Clear();
             foreach (var p in paged.Items) Products.Add(p);
             Paging.Apply(paged.Meta);
-            Totals = await _productsApi.GetTotalsAsync(search, categoryId);
+            Totals = await totalsTask;
             OnPropertyChanged(nameof(IsEmpty));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

@@ -81,14 +81,15 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
             {
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-                var result = await _salesApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
+                var pagedTask = _salesApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
                     null, null, from, to);
-                var paged = result.ToPaged();
+                var totalsTask = _salesApi.GetTotalsAsync(null, from, to);
+                var paged = (await pagedTask).ToPaged();
                 Sales.Clear();
                 foreach (var s in paged.Items) Sales.Add(s);
                 Paging.Apply(paged.Meta);
                 OnPropertyChanged(nameof(IsEmpty));
-                Totals = await _salesApi.GetTotalsAsync(null, from, to);
+                Totals = await totalsTask;
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

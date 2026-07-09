@@ -97,11 +97,12 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
         IsLoading = true;
         try
         {
-            await LoadSalesAsync();
-            await LoadDebtAgingAsync();
-            await LoadInventoryAsync();
-            await LoadBreakdownAsync();
-            await LoadTopCustomersAsync();
+            await Task.WhenAll(
+                LoadSalesAsync(),
+                LoadDebtAgingAsync(),
+                LoadInventoryAsync(),
+                LoadBreakdownAsync(),
+                LoadTopCustomersAsync());
         }
         finally
         {

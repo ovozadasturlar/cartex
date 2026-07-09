@@ -74,13 +74,14 @@ public partial class TransactionsViewModel : ViewModelBase, ILoadable
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
                 var op = string.IsNullOrEmpty(SelectedOperationType) ? null : SelectedOperationType;
-                var result = await _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
+                var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
                     null, from, to, op);
-                var paged = result.ToPaged();
+                var totalsTask = _api.GetTotalsAsync(null, from, to, op);
+                var paged = (await pagedTask).ToPaged();
                 Transactions.Clear();
                 foreach (var t in paged.Items) Transactions.Add(t);
                 Paging.Apply(paged.Meta);
-                Totals = await _api.GetTotalsAsync(null, from, to, op);
+                Totals = await totalsTask;
                 OnPropertyChanged(nameof(IsEmpty));
             }
         }

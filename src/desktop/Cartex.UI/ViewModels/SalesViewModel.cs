@@ -267,9 +267,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var policy = await _settingsApi.GetSalesPolicyAsync();
-            _staleRateDays = policy.StaleRateDays;
-            var receipt = await _settingsApi.GetReceiptAsync();
+            var policyTask = _settingsApi.GetSalesPolicyAsync();
+            var receiptTask = _settingsApi.GetReceiptAsync();
+            _staleRateDays = (await policyTask).StaleRateDays;
+            var receipt = await receiptTask;
             _printer.ReceiptOptions = new ReceiptPrintOptions(receipt.HeaderText, receipt.FooterText, receipt.PaperWidth);
         }
         catch { }
@@ -277,11 +278,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
-        await LoadClientPolicyAsync();
-        await LoadMulticurrencyAsync();
-        await LoadCategoriesAsync();
-        await LoadProductsAsync();
-        await LoadPrepackAccessAsync();
+        var policyTask = LoadClientPolicyAsync();
+        await Task.WhenAll(
+            policyTask,
+            LoadMulticurrencyAsync(policyTask),
+            LoadCategoriesAsync(),
+            LoadProductsAsync(),
+            LoadPrepackAccessAsync());
 
         if (_handoff.PendingCartCode is { } pending)
         {
@@ -334,7 +337,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
     }
 
-    private async Task LoadMulticurrencyAsync()
+    private async Task LoadMulticurrencyAsync(Task policyTask)
     {
         try
         {
@@ -346,6 +349,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             var rates = await _ratesApi.GetCurrentAsync();
             _rates.Clear();
             foreach (var r in rates) _rates[r.Code] = r.Rate;
+            await policyTask;
             HasStaleRate = rates.Any(r => r.EffectiveAt < DateTime.UtcNow.AddDays(-_staleRateDays));
 
             Currencies.Clear();
@@ -889,9 +893,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     CustomerResults.Add(ToCustomerDto(c));
                 return;
             }
-            var customers = await _customersApi.GetAllAsync(string.IsNullOrEmpty(query) ? null : query);
+            var customers = await _customersApi.GetPagedAsync(1, 30, search: string.IsNullOrEmpty(query) ? null : query);
             CustomerResults.Clear();
-            foreach (var c in customers.Take(30))
+            foreach (var c in customers.Content ?? [])
                 CustomerResults.Add(c);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

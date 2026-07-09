@@ -181,12 +181,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
             var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-            var result = await _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, null, from, to, FilterSupplier?.Id);
-            var paged = result.ToPaged();
+            var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, null, from, to, FilterSupplier?.Id);
+            var totalsTask = _api.GetTotalsAsync(null, from, to, FilterSupplier?.Id);
+            var paged = (await pagedTask).ToPaged();
             Supplies.Clear();
             foreach (var x in paged.Items) Supplies.Add(x);
             Paging.Apply(paged.Meta);
-            Totals = await _api.GetTotalsAsync(null, from, to, FilterSupplier?.Id);
+            Totals = await totalsTask;
             OnPropertyChanged(nameof(IsEmpty));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

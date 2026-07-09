@@ -61,12 +61,13 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
             var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-            var result = await _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, null, FilterWarehouse?.Id, from, to);
-            var paged = result.ToPaged();
+            var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, null, FilterWarehouse?.Id, from, to);
+            var totalsTask = _api.GetTotalsAsync(FilterWarehouse?.Id, from, to);
+            var paged = (await pagedTask).ToPaged();
             Transfers.Clear();
             foreach (var t in paged.Items) Transfers.Add(t);
             Paging.Apply(paged.Meta);
-            Totals = await _api.GetTotalsAsync(FilterWarehouse?.Id, from, to);
+            Totals = await totalsTask;
             OnPropertyChanged(nameof(IsEmpty));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

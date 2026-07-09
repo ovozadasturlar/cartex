@@ -142,12 +142,13 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-                var result = await _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search);
-                var paged = result.ToPaged();
+                var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search);
+                var totalsTask = _api.GetTotalsAsync(search);
+                var paged = (await pagedTask).ToPaged();
                 Customers.Clear();
                 foreach (var c in paged.Items) Customers.Add(c);
                 Paging.Apply(paged.Meta);
-                Totals = await _api.GetTotalsAsync(search);
+                Totals = await totalsTask;
                 OnPropertyChanged(nameof(IsEmpty));
             }
         }
