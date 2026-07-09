@@ -12,6 +12,7 @@ public static class SettingKeys
     public const string Storage = "storage";
     public const string CloudBridge = "cloudBridge";
     public const string HardwareKey = "hardwareKey";
+    public const string QrLogin = "qrLogin";
     public const string OfflineCache = "offlineCache";
     public const string Onboarded = "onboarded";
 }

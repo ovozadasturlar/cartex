@@ -64,7 +64,10 @@ public sealed class NotificationService(
 
         if (mode == "text")
         {
-            var text = $"{T("your_purchase")}: {total}. {T("thanks")}";
+            var fullReceipt = await sender.Send(new GetReceiptByTokenQuery(token), cancellationToken);
+            var text = fullReceipt is null
+                ? $"{T("your_purchase")}: {total}. {T("thanks")}"
+                : ReceiptTextRenderer.Render(fullReceipt, await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken));
             await SendTextAsync(message.Channel, message.Recipient, text, T("your_receipt"), cancellationToken);
             return;
         }

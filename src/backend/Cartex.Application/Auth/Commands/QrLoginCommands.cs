@@ -1,5 +1,7 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Settings;
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using FluentValidation;
@@ -8,16 +10,34 @@ namespace Cartex.Application.Auth.Commands;
 
 public record StartQrLoginCommand : IRequest<QrLoginStartResponse>;
 
-public record QrLoginStartResponse(string Code);
+public record QrLoginStartResponse(string Code, int ExpiresInSeconds);
+
+public record GetQrLoginEnabledQuery : IRequest<bool>;
 
 public record ApproveQrLoginCommand(string Code) : ICommand<Unit>;
 
 public record PollQrLoginCommand(string Code, string? DeviceName = null) : IRequest<LoginResponse?>;
 
-public sealed class StartQrLoginCommandHandler(IQrLoginStore store) : IRequestHandler<StartQrLoginCommand, QrLoginStartResponse>
+public sealed class GetQrLoginEnabledQueryHandler(IFeatureStateProvider features) : IRequestHandler<GetQrLoginEnabledQuery, bool>
 {
-    public Task<QrLoginStartResponse> Handle(StartQrLoginCommand request, CancellationToken cancellationToken) =>
-        Task.FromResult(new QrLoginStartResponse(store.Start()));
+    public Task<bool> Handle(GetQrLoginEnabledQuery request, CancellationToken cancellationToken) =>
+        features.IsEnabledAsync(FeatureCatalog.QrLogin, cancellationToken);
+}
+
+public sealed class StartQrLoginCommandHandler(
+    IQrLoginStore store,
+    IFeatureStateProvider features,
+    ISettingsService settings) : IRequestHandler<StartQrLoginCommand, QrLoginStartResponse>
+{
+    public async Task<QrLoginStartResponse> Handle(StartQrLoginCommand request, CancellationToken cancellationToken)
+    {
+        if (!await features.IsEnabledAsync(FeatureCatalog.QrLogin, cancellationToken))
+            throw new BusinessRuleException("QR bilan kirish o'chirilgan.");
+
+        var cfg = await settings.GetAsync<QrLoginSettings>(SettingKeys.QrLogin, cancellationToken) ?? new();
+        var seconds = Math.Clamp(cfg.RefreshSeconds, 30, 600);
+        return new QrLoginStartResponse(store.Start(TimeSpan.FromSeconds(seconds)), seconds);
+    }
 }
 
 public sealed class ApproveQrLoginCommandHandler(

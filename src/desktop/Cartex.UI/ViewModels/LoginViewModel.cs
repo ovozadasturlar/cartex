@@ -29,6 +29,8 @@ public partial class LoginViewModel : ViewModelBase
     public sealed record KeyProfile(string Username, string Serial, string Content);
 
     [ObservableProperty] private bool _isQrOpen;
+    [ObservableProperty] private bool _qrAvailable;
+    [ObservableProperty] private double _qrProgress = 100;
     [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _qrImage;
     private CancellationTokenSource? _qrCts;
 
@@ -55,21 +57,28 @@ public partial class LoginViewModel : ViewModelBase
         {
             while (!cts.IsCancellationRequested && IsQrOpen)
             {
-                string code;
-                try { code = await _authService.StartQrAsync(); }
+                QrLoginStartResponse start;
+                try { start = await _authService.StartQrAsync(); }
                 catch { await Task.Delay(3000, cts.Token); continue; }
 
-                QrImage = QrRenderer.Render($"cartexqr:{code}");
-                var deadline = DateTime.UtcNow.AddSeconds(110);
-                while (!cts.IsCancellationRequested && DateTime.UtcNow < deadline)
+                QrImage = QrRenderer.Render($"cartexqr:{start.Code}");
+                var lifetime = TimeSpan.FromSeconds(Math.Max(30, start.ExpiresInSeconds - 5));
+                var issuedAt = DateTime.UtcNow;
+                QrProgress = 100;
+                while (!cts.IsCancellationRequested)
                 {
-                    await Task.Delay(2000, cts.Token);
+                    await Task.Delay(1000, cts.Token);
+                    var remaining = lifetime - (DateTime.UtcNow - issuedAt);
+                    if (remaining <= TimeSpan.Zero) break;
+                    QrProgress = remaining.TotalSeconds / lifetime.TotalSeconds * 100;
+
                     LoginResponse? response = null;
-                    try { response = await _authService.TryQrPollAsync(code); }
+                    try { response = await _authService.TryQrPollAsync(start.Code); }
                     catch { }
                     if (response is not null)
                     {
                         CloseQr();
+                        StopDrivePolling();
                         var mainVm = ServiceLocator.Resolve<MainViewModel>();
                         mainVm.Initialize();
                         _navigationService.NavigateTo(mainVm);
@@ -79,6 +88,39 @@ public partial class LoginViewModel : ViewModelBase
             }
         }
         catch (OperationCanceledException) { }
+    }
+
+    private CancellationTokenSource? _driveCts;
+
+    private void StartDrivePolling()
+    {
+        var cts = _driveCts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                try { await Task.Delay(3000, cts.Token); } catch { return; }
+                var keys = HardwareKeyReader.ScanForKeys();
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (cts.IsCancellationRequested) return;
+                    if (keys.Count == KeyProfiles.Count &&
+                        keys.All(k => KeyProfiles.Any(p => p.Serial == k.Serial && p.Content == k.Content)))
+                        return;
+                    KeyProfiles.Clear();
+                    foreach (var k in keys)
+                        KeyProfiles.Add(new KeyProfile(k.Username ?? "—", k.Serial, k.Content));
+                    KeyDetected = KeyProfiles.Count > 0;
+                    OnPropertyChanged(nameof(HasMultipleKeys));
+                });
+            }
+        }, cts.Token);
+    }
+
+    private void StopDrivePolling()
+    {
+        _driveCts?.Cancel();
+        _driveCts = null;
     }
 
     public AppTheme CurrentTheme
@@ -118,7 +160,11 @@ public partial class LoginViewModel : ViewModelBase
         _navigationService = navigationService;
         _rememberMe = SettingsService.Instance.RememberMe;
         _ = DetectKey();
+        StartDrivePolling();
+        _ = LoadQrAvailabilityAsync();
     }
+
+    private async Task LoadQrAvailabilityAsync() => QrAvailable = await _authService.IsQrEnabledAsync();
 
     [RelayCommand]
     private async Task DetectKey()
@@ -140,6 +186,7 @@ public partial class LoginViewModel : ViewModelBase
         try
         {
             await _authService.LoginWithKeyAsync(profile.Content, profile.Serial);
+            StopDrivePolling();
             var mainVm = ServiceLocator.Resolve<MainViewModel>();
             mainVm.Initialize();
             _navigationService.NavigateTo(mainVm);
@@ -179,6 +226,7 @@ public partial class LoginViewModel : ViewModelBase
         {
             SettingsService.Instance.RememberMe = RememberMe;
             await _authService.LoginAsync(Username, Password, RememberMe);
+            StopDrivePolling();
             var mainVm = ServiceLocator.Resolve<MainViewModel>();
             mainVm.Initialize();
             _navigationService.NavigateTo(mainVm);

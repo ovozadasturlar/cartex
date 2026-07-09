@@ -58,7 +58,7 @@ public static class HardwareKeyReader
 
     private static IEnumerable<string> SafeFindKeys(string root)
     {
-        try { return Directory.EnumerateFiles(root, "*.key").ToList(); }
+        try { return Directory.EnumerateFiles(root, "cartex-*.key").ToList(); }
         catch (IOException) { return []; }
         catch (UnauthorizedAccessException) { return []; }
     }

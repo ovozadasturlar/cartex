@@ -13,17 +13,16 @@ public sealed class QrLoginStore : IQrLoginStore
         public long? UserId { get; set; }
     }
 
-    private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(2);
     private const int MaxPending = 200;
     private readonly ConcurrentDictionary<string, Entry> _sessions = new();
 
-    public string Start()
+    public string Start(TimeSpan ttl)
     {
         Cleanup();
         if (_sessions.Count >= MaxPending)
             throw new BusinessRuleException("Keyinroq urinib ko'ring.");
         var code = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-        _sessions[code] = new Entry { ExpiresAt = DateTime.UtcNow + Ttl };
+        _sessions[code] = new Entry { ExpiresAt = DateTime.UtcNow + ttl };
         return code;
     }
 

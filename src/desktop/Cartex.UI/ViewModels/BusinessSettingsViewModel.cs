@@ -38,7 +38,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _maxDiscountPercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
+    [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     private bool _policyLoaded;
+    private bool _qrLoaded;
 
     private readonly ISettingsApi _settingsApi;
 
@@ -64,6 +66,12 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             DefaultMinStock = policy.DefaultMinStock;
             StaleRateDays = policy.StaleRateDays;
             _policyLoaded = true;
+        }
+        catch { }
+        try
+        {
+            QrRefreshSeconds = (await _settingsApi.GetQrLoginAsync()).RefreshSeconds;
+            _qrLoaded = true;
         }
         catch { }
         try
@@ -129,6 +137,8 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));
+                if (_qrLoaded)
+                    await _settingsApi.UpdateQrLoginAsync(new UpdateQrLoginSettingsRequest((int)Math.Clamp(QrRefreshSeconds, 30, 600)));
             }
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business, CacheKeys.SalesPolicy);
             _toast.Success(L["success"]);

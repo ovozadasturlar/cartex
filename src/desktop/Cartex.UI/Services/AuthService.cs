@@ -51,7 +51,13 @@ public sealed class AuthService
         return response;
     }
 
-    public async Task<string> StartQrAsync() => (await _authApi.StartQrAsync()).Code;
+    public async Task<bool> IsQrEnabledAsync()
+    {
+        try { return await _authApi.GetQrEnabledAsync(); }
+        catch { return false; }
+    }
+
+    public Task<QrLoginStartResponse> StartQrAsync() => _authApi.StartQrAsync();
 
     public async Task<LoginResponse?> TryQrPollAsync(string code)
     {

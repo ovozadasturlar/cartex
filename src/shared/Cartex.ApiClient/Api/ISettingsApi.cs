@@ -44,6 +44,12 @@ public interface ISettingsApi
     [Put("/api/settings/sales-policy")]
     Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
 
+    [Get("/api/settings/qr-login")]
+    Task<QrLoginSettingsDto> GetQrLoginAsync();
+
+    [Put("/api/settings/qr-login")]
+    Task UpdateQrLoginAsync([Body] UpdateQrLoginSettingsRequest request);
+
     [Get("/api/settings/storage")]
     Task<StorageSettingsDto> GetStorageAsync();
 

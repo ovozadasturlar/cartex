@@ -11,6 +11,9 @@ public interface IAuthApi
     [Post("/api/auth/login-with-key")]
     Task<LoginResponse> LoginWithKeyAsync([Body] LoginWithKeyRequest request);
 
+    [Get("/api/auth/qr/enabled")]
+    Task<bool> GetQrEnabledAsync();
+
     [Post("/api/auth/qr/start")]
     Task<QrLoginStartResponse> StartQrAsync();
 

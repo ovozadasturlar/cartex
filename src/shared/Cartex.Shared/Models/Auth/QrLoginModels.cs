@@ -1,6 +1,6 @@
 namespace Cartex.Shared.Models.Auth;
 
-public record QrLoginStartResponse(string Code);
+public record QrLoginStartResponse(string Code, int ExpiresInSeconds);
 
 public record ApproveQrLoginRequest(string Code);
 

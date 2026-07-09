@@ -6,7 +6,8 @@ public enum ReceiptDeliveryFormat
 {
     Auto,
     Link,
-    Pdf
+    Pdf,
+    Text
 }
 
 public sealed class NotificationSettings
@@ -30,6 +31,7 @@ public static class ReceiptDeliveryPolicy
         return format switch
         {
             ReceiptDeliveryFormat.Pdf => "pdf",
+            ReceiptDeliveryFormat.Text => "text",
             ReceiptDeliveryFormat.Link => hasUrl ? "link" : "pdf",
             _ => hasUrl ? "link" : "pdf"
         };

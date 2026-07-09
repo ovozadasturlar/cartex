@@ -66,6 +66,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [ObservableProperty] private string? _telegramChatId;
     [ObservableProperty] private string? _telegramBotToken;
     [ObservableProperty] private bool _telegramHasToken;
+    [ObservableProperty] private string? _telegramTokenMask;
     [ObservableProperty] private string? _telegramStatus;
 
     [ObservableProperty] private bool _emailEnabled;
@@ -109,7 +110,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [ObservableProperty] private bool _cloudBridgeHasLicense;
     [ObservableProperty] private string _emailFormat = "Auto";
 
-    public string[] ReceiptFormats { get; } = ["Auto", "Link", "Pdf"];
+    public string[] ReceiptFormats { get; } = ["Auto", "Link", "Pdf", "Text"];
 
     public async Task LoadAsync()
     {
@@ -122,6 +123,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
                 TelegramEnabled = s.Telegram.Enabled;
                 TelegramChatId = s.Telegram.ChatId;
                 TelegramHasToken = s.Telegram.HasBotToken;
+                TelegramTokenMask = s.Telegram.BotTokenLength > 0 ? new string('•', s.Telegram.BotTokenLength) : null;
                 TelegramBotToken = null;
                 TelegramStatus = null;
 
@@ -189,7 +191,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [RelayCommand]
     private async Task ConnectTelegramAsync()
     {
-        if (string.IsNullOrWhiteSpace(TelegramBotToken))
+        if (string.IsNullOrWhiteSpace(TelegramBotToken) && !TelegramHasToken)
         {
             toast.Warning(L["bot_token_required"]);
             return;
@@ -221,7 +223,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         {
             using (busy.Begin(L["loading"]))
             {
-                await api.UpdateTelegramAsync(new UpdateTelegramSettingsRequest(false, TelegramChatId, null, ClearToken: true));
+                await api.UpdateTelegramAsync(new UpdateTelegramSettingsRequest(false, TelegramChatId, null));
                 await LoadAsync();
             }
             toast.Success(L["success"]);

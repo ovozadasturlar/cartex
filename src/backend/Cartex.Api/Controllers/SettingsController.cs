@@ -95,6 +95,22 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("qr-login")]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.QrLoginSettingsDto>> GetQrLogin()
+    {
+        var result = await sender.Send(new GetQrLoginSettingsQuery());
+        return Ok(result);
+    }
+
+    [HttpPut("qr-login")]
+    [HasPermission(AppPermissions.Business.Manage)]
+    public async Task<IActionResult> UpdateQrLogin(UpdateQrLoginSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("sales-policy")]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.SalesPolicyDto>> GetSalesPolicy()
     {
