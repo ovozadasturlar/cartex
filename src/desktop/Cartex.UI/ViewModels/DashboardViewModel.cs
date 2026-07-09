@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Reports;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Transactions;
@@ -75,8 +76,12 @@ public partial class DashboardViewModel(
         var totalsTask = productsApi.GetTotalsAsync();
         var categoriesTask = productsApi.GetCategoryCountsAsync();
         var lowStockTask = warehouseId is { } wid ? stocksApi.GetLowStockAsync(wid) : null;
-        var transactionsTask = transactionsApi.GetPagedAsync(1, 10, sortBy: "CreatedAt", descending: true,
-            fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1));
+        var transactionsTask = transactionsApi.QueryAsync(QueryRequest.Create()
+            .Page(1, 10)
+            .Sort("CreatedAt", descending: true)
+            .With("fromDate", DateTime.Today)
+            .With("toDate", DateTime.Today.AddDays(1))
+            .Build());
         var weekReportTask = reportsApi.GetSalesReportAsync(weekStart, todayEnd);
         var flowTask = reportsApi.GetCashFlowAsync(weekStart, todayEnd);
         var topCustomersTask = reportsApi.GetTopCustomersAsync(weekStart, todayEnd);

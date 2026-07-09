@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Sales;
 using Cartex.UI.Services;
@@ -85,8 +86,12 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
             {
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-                var pagedTask = _salesApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
-                    null, null, from, to);
+                var pagedTask = _salesApi.QueryAsync(QueryRequest.Create()
+                    .Page(Paging.Page, Paging.PageSize)
+                    .Sort(Paging.SortBy, Paging.Descending)
+                    .With("fromDate", from)
+                    .With("toDate", to)
+                    .Build());
                 var totalsTask = _salesApi.GetTotalsAsync(null, from, to);
                 var paged = (await pagedTask).ToPaged();
                 Sales.Clear();

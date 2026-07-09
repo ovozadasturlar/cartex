@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Transactions;
 using Cartex.UI.Services;
@@ -74,8 +75,13 @@ public partial class TransactionsViewModel : ViewModelBase, ILoadable
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
                 var op = string.IsNullOrEmpty(SelectedOperationType) ? null : SelectedOperationType;
-                var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
-                    null, from, to, op);
+                var pagedTask = _api.QueryAsync(QueryRequest.Create()
+                    .Page(Paging.Page, Paging.PageSize)
+                    .Sort(Paging.SortBy, Paging.Descending)
+                    .With("fromDate", from)
+                    .With("toDate", to)
+                    .With("operationType", op)
+                    .Build());
                 var totalsTask = _api.GetTotalsAsync(null, from, to, op);
                 var paged = (await pagedTask).ToPaged();
                 Transactions.Clear();

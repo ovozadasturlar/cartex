@@ -3,6 +3,7 @@ using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Customers;
 using Cartex.UI.Models;
@@ -146,7 +147,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-                var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search);
+                var pagedTask = _api.QueryAsync(QueryRequest.Create()
+                    .Page(Paging.Page, Paging.PageSize)
+                    .Sort(Paging.SortBy, Paging.Descending)
+                    .Search(search)
+                    .Build());
                 var totalsTask = _api.GetTotalsAsync(search);
                 var paged = (await pagedTask).ToPaged();
                 Customers.Clear();

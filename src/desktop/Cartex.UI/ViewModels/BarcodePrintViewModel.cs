@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Products;
 using Cartex.UI.Services;
 
@@ -67,7 +68,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var response = await _productsApi.GetPagedAsync(1, 50, null, false, string.IsNullOrWhiteSpace(Search) ? null : Search.Trim());
+            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(1, 50).Search(Search).Build());
             Products.Clear();
             foreach (var p in response.Content ?? []) Products.Add(p);
             if (Products.Count == 1) SelectedProduct = Products[0];

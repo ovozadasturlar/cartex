@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.StockTransfers;
 using Cartex.UI.Models;
@@ -67,7 +68,13 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
             var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-            var pagedTask = _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, null, FilterWarehouse?.Id, from, to);
+            var pagedTask = _api.QueryAsync(QueryRequest.Create()
+                .Page(Paging.Page, Paging.PageSize)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .With("warehouseId", FilterWarehouse?.Id)
+                .With("fromDate", from)
+                .With("toDate", to)
+                .Build());
             var totalsTask = _api.GetTotalsAsync(FilterWarehouse?.Id, from, to);
             var paged = (await pagedTask).ToPaged();
             Transfers.Clear();

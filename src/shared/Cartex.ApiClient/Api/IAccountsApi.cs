@@ -9,8 +9,7 @@ public interface IAccountsApi
     Task<List<AccountDto>> GetAllAsync();
 
     [Get("/api/accounts")]
-    Task<IApiResponse<List<AccountDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
-        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null);
+    Task<IApiResponse<List<AccountDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/accounts/totals")]
     Task<AccountsTotalsDto> GetTotalsAsync([Query] string? search = null);

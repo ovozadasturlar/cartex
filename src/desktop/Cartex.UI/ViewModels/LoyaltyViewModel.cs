@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Loyalty;
@@ -135,7 +136,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         if (query.Length < 2) return;
         try
         {
-            var result = await _customersApi.GetPagedAsync(1, 20, search: query);
+            var result = await _customersApi.QueryAsync(QueryRequest.Create().Page(1, 20).Search(query).Build());
             if (token.IsCancellationRequested) return;
             foreach (var c in result.Content ?? []) CustomerResults.Add(c);
         }

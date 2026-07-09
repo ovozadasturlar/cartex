@@ -9,9 +9,7 @@ public interface ISuppliesApi
     Task<List<SupplyDto>> GetAllAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
 
     [Get("/api/supplies")]
-    Task<IApiResponse<List<SupplyDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
-        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null,
-        [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
+    Task<IApiResponse<List<SupplyDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/supplies/totals")]
     Task<SuppliesTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);

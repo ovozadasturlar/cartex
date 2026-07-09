@@ -9,8 +9,7 @@ public interface ICustomersApi
     Task<List<CustomerDto>> GetAllAsync([Query] string? search = null);
 
     [Get("/api/customers")]
-    Task<IApiResponse<List<CustomerDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
-        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null);
+    Task<IApiResponse<List<CustomerDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/customers/by-card/{code}")]
     Task<CustomerDto?> GetByCardAsync(string code);

@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
@@ -413,7 +414,12 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             long? categoryId = FilterCategory is { Id: > 0 } ? FilterCategory.Id : null;
-            var pagedTask = _productsApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search, categoryId);
+            var pagedTask = _productsApi.QueryAsync(QueryRequest.Create()
+                .Page(Paging.Page, Paging.PageSize)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .With("categoryId", categoryId)
+                .Build());
             var totalsTask = _productsApi.GetTotalsAsync(search, categoryId);
             var paged = (await pagedTask).ToPaged();
             Products.Clear();

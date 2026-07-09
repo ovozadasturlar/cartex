@@ -9,8 +9,7 @@ public interface ISuppliersApi
     Task<List<SupplierDto>> GetAllAsync();
 
     [Get("/api/suppliers")]
-    Task<IApiResponse<List<SupplierDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
-        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null);
+    Task<IApiResponse<List<SupplierDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Post("/api/suppliers")]
     Task<long> CreateAsync([Body] CreateSupplierRequest request);

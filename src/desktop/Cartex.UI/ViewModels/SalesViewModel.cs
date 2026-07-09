@@ -4,6 +4,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Prepacks;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
@@ -902,7 +903,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     CustomerResults.Add(ToCustomerDto(c));
                 return;
             }
-            var customers = await _customersApi.GetPagedAsync(1, 30, search: string.IsNullOrEmpty(query) ? null : query);
+            var customers = await _customersApi.QueryAsync(QueryRequest.Create().Page(1, 30).Search(query).Build());
             CustomerResults.Clear();
             foreach (var c in customers.Content ?? [])
                 CustomerResults.Add(c);

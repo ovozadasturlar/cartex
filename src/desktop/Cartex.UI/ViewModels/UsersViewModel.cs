@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Users;
 using Cartex.Shared.Models.Roles;
@@ -99,7 +100,11 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         try
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var result = await _usersApi.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending, search);
+            var result = await _usersApi.QueryAsync(QueryRequest.Create()
+                .Page(Paging.Page, Paging.PageSize)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .Build());
             var paged = result.ToPaged();
             Users.Clear();
             foreach (var u in paged.Items) Users.Add(u);

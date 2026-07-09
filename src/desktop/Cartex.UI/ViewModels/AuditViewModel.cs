@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.AuditLogs;
 using Cartex.UI.Services;
@@ -68,8 +69,15 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
             {
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-                var result = await _api.GetPagedAsync(Paging.Page, Paging.PageSize, Paging.SortBy, Paging.Descending,
-                    null, SearchTable, SearchUser, SearchAction, from, to);
+                var result = await _api.QueryAsync(QueryRequest.Create()
+                    .Page(Paging.Page, Paging.PageSize)
+                    .Sort(Paging.SortBy, Paging.Descending)
+                    .With("tableName", SearchTable)
+                    .With("userName", SearchUser)
+                    .With("action", SearchAction)
+                    .With("fromDate", from)
+                    .With("toDate", to)
+                    .Build());
                 var paged = result.ToPaged();
                 Logs.Clear();
                 foreach (var a in paged.Items) Logs.Add(a);

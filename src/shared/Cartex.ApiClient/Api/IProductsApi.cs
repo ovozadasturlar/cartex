@@ -9,9 +9,7 @@ public interface IProductsApi
     Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null);
 
     [Get("/api/products")]
-    Task<IApiResponse<List<ProductDto>>> GetPagedAsync([Query] int page, [Query] int pageSize,
-        [Query] string? sortBy = null, [Query] bool descending = false, [Query] string? search = null,
-        [Query] long? categoryId = null);
+    Task<IApiResponse<List<ProductDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/products/totals")]
     Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null);
