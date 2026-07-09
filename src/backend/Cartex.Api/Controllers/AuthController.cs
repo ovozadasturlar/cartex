@@ -25,6 +25,28 @@ public class AuthController(ISender sender) : ControllerBase
         Ok(await sender.Send(command));
 
     [AllowAnonymous]
+    [HttpPost("qr/start")]
+    public async Task<ActionResult<QrLoginStartResponse>> StartQrLogin() =>
+        Ok(await sender.Send(new StartQrLoginCommand()));
+
+    [Authorize]
+    [HttpPost("qr/approve")]
+    public async Task<IActionResult> ApproveQrLogin(ApproveQrLoginCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("public")]
+    [HttpPost("qr/poll")]
+    public async Task<ActionResult<LoginResponse>> PollQrLogin(PollQrLoginCommand command)
+    {
+        var result = await sender.Send(command);
+        return result is null ? NoContent() : Ok(result);
+    }
+
+    [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<ActionResult<LoginResponse>> Refresh(RefreshTokenCommand command) =>
         Ok(await sender.Send(command));

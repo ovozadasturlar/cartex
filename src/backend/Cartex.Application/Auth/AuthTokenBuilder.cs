@@ -29,6 +29,9 @@ public sealed class AuthTokenBuilder(
     public Task<User?> LoadUserAsync(string username, CancellationToken cancellationToken) =>
         UsersWithGraph().FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
 
+    public Task<User?> LoadUserByIdAsync(long id, CancellationToken cancellationToken) =>
+        UsersWithGraph().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+
     public async Task<LoginResponse> IssueAsync(User user, string? deviceName, CancellationToken cancellationToken)
     {
         var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);

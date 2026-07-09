@@ -19,7 +19,9 @@ public partial class HardwareKeysViewModel(
 
     [ObservableProperty] private UserDto? _selectedUser;
     [ObservableProperty] private string? _driveInfo;
-    private DetectedDrive? _drive;
+    public ObservableCollection<DetectedDrive> Drives { get; } = [];
+    [ObservableProperty] private DetectedDrive? _selectedDrive;
+    public bool HasMultipleDrives => Drives.Count > 1;
 
     public async Task LoadAsync()
     {
@@ -81,10 +83,18 @@ public partial class HardwareKeysViewModel(
     [RelayCommand]
     private void DetectDrive()
     {
-        _drive = HardwareKeyReader.ScanForBlankDrive();
-        if (_drive is null) { DriveInfo = L["no_drive_detected"]; return; }
-        var keyCount = HardwareKeyReader.CountKeys(_drive.Root);
-        DriveInfo = $"{_drive.Root}  ·  {_drive.Serial}"
+        Drives.Clear();
+        foreach (var d in HardwareKeyReader.ScanForDrives()) Drives.Add(d);
+        OnPropertyChanged(nameof(HasMultipleDrives));
+        SelectedDrive = Drives.FirstOrDefault();
+        if (SelectedDrive is null) DriveInfo = L["no_drive_detected"];
+    }
+
+    partial void OnSelectedDriveChanged(DetectedDrive? value)
+    {
+        if (value is null) return;
+        var keyCount = HardwareKeyReader.CountKeys(value.Root);
+        DriveInfo = $"{value.Root}  ·  {value.Serial}"
             + (keyCount > 0 ? $"  ·  {string.Format(L["key_drive_has_keys"], keyCount)}" : "");
     }
 
@@ -92,15 +102,16 @@ public partial class HardwareKeysViewModel(
     private async Task IssueKeyAsync()
     {
         if (SelectedUser is null) { toast.Warning(L["error"]); return; }
-        if (_drive is null) { toast.Warning(L["no_drive_detected"]); return; }
+        if (SelectedDrive is not { } drive) { toast.Warning(L["no_drive_detected"]); return; }
         try
         {
             using (busy.Begin(L["loading"]))
             {
-                var result = await api.GenerateAsync(new GenerateHardwareKeyRequest(SelectedUser.Id, _drive.Serial));
-                await File.WriteAllTextAsync(Path.Combine(_drive.Root, result.FileName), result.Content);
+                var result = await api.GenerateAsync(new GenerateHardwareKeyRequest(SelectedUser.Id, drive.Serial));
+                await File.WriteAllTextAsync(Path.Combine(drive.Root, result.FileName), result.Content);
                 await ReloadKeysAsync();
             }
+            OnSelectedDriveChanged(drive);
             toast.Success(L["key_issued"]);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Shared.Models.Auth;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Material.Icons;
@@ -26,6 +27,59 @@ public partial class LoginViewModel : ViewModelBase
     public bool HasMultipleKeys => KeyProfiles.Count > 1;
 
     public sealed record KeyProfile(string Username, string Serial, string Content);
+
+    [ObservableProperty] private bool _isQrOpen;
+    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _qrImage;
+    private CancellationTokenSource? _qrCts;
+
+    [RelayCommand]
+    private async Task ToggleQr()
+    {
+        if (IsQrOpen) { CloseQr(); return; }
+        IsQrOpen = true;
+        await RunQrLoopAsync();
+    }
+
+    private void CloseQr()
+    {
+        _qrCts?.Cancel();
+        _qrCts = null;
+        IsQrOpen = false;
+        QrImage = null;
+    }
+
+    private async Task RunQrLoopAsync()
+    {
+        var cts = _qrCts = new CancellationTokenSource();
+        try
+        {
+            while (!cts.IsCancellationRequested && IsQrOpen)
+            {
+                string code;
+                try { code = await _authService.StartQrAsync(); }
+                catch { await Task.Delay(3000, cts.Token); continue; }
+
+                QrImage = QrRenderer.Render($"cartexqr:{code}");
+                var deadline = DateTime.UtcNow.AddSeconds(110);
+                while (!cts.IsCancellationRequested && DateTime.UtcNow < deadline)
+                {
+                    await Task.Delay(2000, cts.Token);
+                    LoginResponse? response = null;
+                    try { response = await _authService.TryQrPollAsync(code); }
+                    catch { }
+                    if (response is not null)
+                    {
+                        CloseQr();
+                        var mainVm = ServiceLocator.Resolve<MainViewModel>();
+                        mainVm.Initialize();
+                        _navigationService.NavigateTo(mainVm);
+                        return;
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
 
     public AppTheme CurrentTheme
     {
@@ -80,6 +134,7 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task LoginWithKeyAsync(KeyProfile profile)
     {
+        CloseQr();
         ErrorMessage = null;
         IsLoading = true;
         try
@@ -116,6 +171,7 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task LoginAsync()
     {
+        CloseQr();
         ErrorMessage = null;
         IsLoading = true;
 

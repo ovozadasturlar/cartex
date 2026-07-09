@@ -48,6 +48,8 @@
   "key_drive_has_keys": "{0} key(s) already on this drive",
   "key_group_drive": "Same drive",
   "login_choose_profile": "Which profile do you want to use?",
+  "login_with_qr": "Log in with QR code",
+  "qr_scan_hint": "Scan the QR code in the Cartex app on your phone — this computer will log in automatically",
   "connect": "Connect",
   "cash_returns": "Cash returns",
   "print_copies": "Receipt copies",

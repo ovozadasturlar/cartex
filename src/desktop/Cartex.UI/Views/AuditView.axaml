@@ -25,9 +25,12 @@
             <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}" MinWidth="140" MinHeight="36" />
             <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="8,0,0,0" />
             <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}" MinWidth="140" MinHeight="36" />
-            <TextBox Text="{Binding SearchUser}" PlaceholderText="{Binding L[user]}" MinWidth="150" MinHeight="36" VerticalContentAlignment="Center" />
-            <TextBox Text="{Binding SearchTable}" PlaceholderText="{Binding L[table_name]}" MinWidth="140" MinHeight="36" VerticalContentAlignment="Center" />
-            <TextBox Text="{Binding SearchAction}" PlaceholderText="{Binding L[action]}" MinWidth="140" MinHeight="36" VerticalContentAlignment="Center" />
+            <ComboBox ItemsSource="{Binding UserOptions}" SelectedItem="{Binding SearchUser}"
+                      PlaceholderText="{Binding L[user]}" MinWidth="150" MinHeight="36" />
+            <ComboBox ItemsSource="{Binding TableOptions}" SelectedItem="{Binding SearchTable}"
+                      PlaceholderText="{Binding L[table_name]}" MinWidth="140" MinHeight="36" />
+            <ComboBox ItemsSource="{Binding ActionOptions}" SelectedItem="{Binding SearchAction}"
+                      PlaceholderText="{Binding L[action]}" MinWidth="140" MinHeight="36" />
             <Button Classes="brand" Command="{Binding RefreshCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <mi:MaterialIcon Kind="Magnify" Width="17" Height="17" />

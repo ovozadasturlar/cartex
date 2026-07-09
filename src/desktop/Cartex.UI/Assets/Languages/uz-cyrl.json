@@ -48,6 +48,8 @@
   "key_drive_has_keys": "Флешкада {0} та калит бор",
   "key_group_drive": "Битта флешка",
   "login_choose_profile": "Қайси профиль билан кирасиз?",
+  "login_with_qr": "QR код орқали кириш",
+  "qr_scan_hint": "Телефондаги Cartex иловасида QR кодни сканерланг — компьютер автоматик киради",
   "connect": "Боғлаш",
   "cash_returns": "Нақд қайтаришлар",
   "print_copies": "Чек нусхалари",

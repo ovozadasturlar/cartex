@@ -46,9 +46,19 @@ public sealed class AuthService
 
     public async Task<LoginResponse> LoginWithKeyAsync(string keyContent, string serial)
     {
-        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, DeviceName));
-        Apply(response, false);
+        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, $"{DeviceName} · USB kalit"));
+        Apply(response, true);
         return response;
+    }
+
+    public async Task<string> StartQrAsync() => (await _authApi.StartQrAsync()).Code;
+
+    public async Task<LoginResponse?> TryQrPollAsync(string code)
+    {
+        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR"));
+        if (response.Content is null) return null;
+        Apply(response.Content, true);
+        return response.Content;
     }
 
     private void Apply(LoginResponse response, bool persist)

@@ -11,4 +11,7 @@ public interface IAuditLogsApi
 
     [Get("/api/audit-logs")]
     Task<IApiResponse<List<AuditLogDto>>> QueryAsync([Query] IDictionary<string, object> query);
+
+    [Get("/api/audit-logs/options")]
+    Task<AuditFilterOptionsDto> GetOptionsAsync();
 }

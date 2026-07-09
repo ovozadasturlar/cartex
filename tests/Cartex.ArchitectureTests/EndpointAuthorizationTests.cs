@@ -12,6 +12,8 @@ public class EndpointAuthorizationTests
     [
         "AuthController.Login",
         "AuthController.LoginWithKey",
+        "AuthController.StartQrLogin",
+        "AuthController.PollQrLogin",
         "AuthController.Refresh",
         "AuthController.Logout",
         "ReceiptController.GetReceipt",
@@ -24,6 +26,7 @@ public class EndpointAuthorizationTests
 
     private static readonly HashSet<string> AuthenticatedOnlyWhitelist =
     [
+        "AuthController.ApproveQrLogin",
         "BusinessController.Get",
         "ExpenseCategoriesController.GetExpenseCategories",
         "FeaturesController.GetEnabled",

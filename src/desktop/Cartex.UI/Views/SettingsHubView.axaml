@@ -60,11 +60,10 @@
                                             <DataTemplate>
                                                 <Button Classes="sub-nav" Classes.active="{Binding IsActive}"
                                                         Command="{Binding $parent[UserControl].DataContext.SelectSectionCommand}"
-                                                        CommandParameter="{Binding}">
+                                                        CommandParameter="{Binding}" ToolTip.Tip="{Binding Title}">
                                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                                         <mi:MaterialIcon Kind="{Binding Icon}" Width="19" Height="19"
-                                                                         Foreground="{DynamicResource TextSecondary}"
-                                                                         ToolTip.Tip="{Binding Title}" />
+                                                                         Foreground="{DynamicResource TextSecondary}" />
                                                         <TextBlock Text="{Binding Title}" FontSize="13.5" VerticalAlignment="Center"
                                                                    Foreground="{DynamicResource TextPrimary}"
                                                                    IsVisible="{Binding !$parent[UserControl].DataContext.IsSidebarCollapsed}" />

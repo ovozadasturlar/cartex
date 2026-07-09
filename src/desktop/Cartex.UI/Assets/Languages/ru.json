@@ -48,6 +48,8 @@
   "key_drive_has_keys": "На флешке уже есть ключей: {0}",
   "key_group_drive": "Одна флешка",
   "login_choose_profile": "С каким профилем войти?",
+  "login_with_qr": "Войти по QR-коду",
+  "qr_scan_hint": "Отсканируйте QR-код в приложении Cartex на телефоне — компьютер войдёт автоматически",
   "connect": "Подключить",
   "cash_returns": "Возвраты наличными",
   "print_copies": "Копий чека",

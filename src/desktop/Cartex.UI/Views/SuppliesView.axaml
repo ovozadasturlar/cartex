@@ -71,7 +71,7 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#80000000">
+        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" MaxWidth="1000" MaxHeight="820" Margin="32"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
@@ -247,7 +247,7 @@
             </Border>
         </Border>
 
-        <Border Background="#80000000" IsVisible="{Binding IsDetailOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsDetailOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="24">
@@ -291,7 +291,7 @@
             </Border>
         </Border>
 
-        <Border Background="#80000000" IsVisible="{Binding IsPrintOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsPrintOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">

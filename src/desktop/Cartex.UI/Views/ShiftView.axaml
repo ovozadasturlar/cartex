@@ -183,7 +183,7 @@
         </StackPanel>
     </ScrollViewer>
 
-    <Border Background="#80000000" IsVisible="{Binding IsReportOpen}">
+    <Border Background="#30000000" IsVisible="{Binding IsReportOpen}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="360"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">

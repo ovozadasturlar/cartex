@@ -136,7 +136,7 @@
             </Panel>
         </DockPanel>
 
-        <Border Background="#55000000" IsVisible="{Binding IsEditOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsEditOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="640" MaxHeight="780"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -331,7 +331,7 @@
                 </ScrollViewer>
             </Border>
         </Border>
-        <Border Background="#55000000" IsVisible="{Binding IsVariantsOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsVariantsOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -390,7 +390,7 @@
             </Border>
         </Border>
 
-        <Border Background="#66000000" IsVisible="{Binding IsVariantEditOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -454,7 +454,7 @@
             </Border>
         </Border>
 
-        <Border Background="#55000000" IsVisible="{Binding IsPrintOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsPrintOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">

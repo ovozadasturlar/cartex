@@ -127,7 +127,7 @@ public partial class DashboardViewModel(
             {
                 var lowItems = await lowStockTask;
                 LowStockCount = lowItems.Count;
-                foreach (var item in lowItems)
+                foreach (var item in lowItems.Take(8))
                     LowStockItems.Add(item);
             }
             else

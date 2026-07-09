@@ -35,6 +35,18 @@
                                     <TextBlock Text="{Binding L[detect_drive]}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}"
+                                      IsVisible="{Binding HasMultipleDrives}" MinWidth="150" VerticalAlignment="Center">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <mi:MaterialIcon Kind="Usb" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
+                                            <TextBlock Text="{Binding Root}" />
+                                            <TextBlock Text="{Binding Serial}" FontFamily="Consolas" Foreground="{DynamicResource TextMuted}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <TextBlock Text="{Binding DriveInfo}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondary}" />
                         </StackPanel>

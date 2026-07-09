@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddSingleton<ISecretProtector, SecretProtector>();
         services.AddScoped<IHardwareKeyService, HardwareKeyService>();
+        services.AddSingleton<IQrLoginStore, QrLoginStore>();
 
         services.AddHttpClient();
         services.AddScoped<ITelegramService, TelegramService>();

@@ -20,4 +20,12 @@ public class AuditLogsController(ISender sender) : ControllerBase
         var result = await sender.Send(query);
         return Ok(result);
     }
+
+    [HttpGet("options")]
+    [HasPermission(AppPermissions.Audit.View)]
+    public async Task<ActionResult<AuditFilterOptionsDto>> GetOptions()
+    {
+        var result = await sender.Send(new GetAuditFilterOptionsQuery());
+        return Ok(result);
+    }
 }

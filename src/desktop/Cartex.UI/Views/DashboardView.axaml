@@ -8,8 +8,8 @@
              x:Class="Cartex.UI.Views.DashboardView"
              x:CompileBindings="False">
 
-    <ScrollViewer Padding="24">
-        <StackPanel Spacing="20">
+    <ScrollViewer x:Name="PageScroll" Padding="24">
+        <StackPanel Spacing="20" MinHeight="1150">
 
             <TextBlock Text="{Binding WelcomeMessage}" Classes="title" />
 
@@ -91,7 +91,7 @@
                         <lvc:CartesianChart Series="{Binding CashFlowSeries}"
                                             XAxes="{Binding CashFlowXAxes}"
                                             YAxes="{Binding CashFlowYAxes}"
-                                            MinHeight="280"
+                                            Height="280"
                                             LegendPosition="Top"
                                             LegendTextSize="12"
                                             TooltipTextSize="12" />
@@ -111,8 +111,7 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{Binding L[recent_transactions]}"
                                    Classes="subtitle" Margin="0,0,0,12" />
-                        <ScrollViewer MaxHeight="300">
-                            <ItemsControl ItemsSource="{Binding RecentTransactions}">
+                        <ItemsControl ItemsSource="{Binding RecentTransactions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" Padding="10"
@@ -138,7 +137,6 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </ScrollViewer>
                     </DockPanel>
                 </Border>
 
@@ -146,8 +144,7 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{Binding L[low_stock_alert]}"
                                    Classes="subtitle" Margin="0,0,0,12" />
-                        <ScrollViewer MaxHeight="300">
-                            <ItemsControl ItemsSource="{Binding LowStockItems}">
+                        <ItemsControl ItemsSource="{Binding LowStockItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,6" Padding="10"
@@ -169,17 +166,18 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </ScrollViewer>
                     </DockPanel>
                 </Border>
 
             </Grid>
 
-            <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
-                <Border Classes="card" Grid.Column="0" Margin="0,0,8,0" Padding="16">
+            <Grid ColumnDefinitions="*,*" Margin="0,8,0,24">
+                <Border Classes="card" Grid.Column="0" Margin="0,0,8,0" Padding="16" MinHeight="110">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{Binding L[top_customer_profit]}"
                                    Classes="subtitle" Margin="0,0,0,12" />
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[no_data]}" IsVisible="{Binding !TopCustomers.Count}"
+                                   Foreground="{DynamicResource TextMuted}" FontSize="12.5" />
                         <ItemsControl ItemsSource="{Binding TopCustomers}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -195,10 +193,12 @@
                         </ItemsControl>
                     </DockPanel>
                 </Border>
-                <Border Classes="card" Grid.Column="1" Margin="8,0,0,0" Padding="16">
+                <Border Classes="card" Grid.Column="1" Margin="8,0,0,0" Padding="16" MinHeight="110">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{Binding L[top_product]}"
                                    Classes="subtitle" Margin="0,0,0,12" />
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding L[no_data]}" IsVisible="{Binding !TopProducts.Count}"
+                                   Foreground="{DynamicResource TextMuted}" FontSize="12.5" />
                         <ItemsControl ItemsSource="{Binding TopProducts}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

@@ -4,7 +4,7 @@
              x:Class="Cartex.UI.Views.QuickProductView"
              x:CompileBindings="False">
 
-    <Border Background="#66000000" IsVisible="{Binding IsOpen}">
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

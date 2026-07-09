@@ -55,7 +55,14 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private PaletteItem? _selectedPaletteItem;
 
     [ObservableProperty] private bool _isShortcutHelpOpen;
+    [ObservableProperty] private bool _isDialogOpen;
     public ObservableCollection<ShortcutHelpRow> ShortcutHelpRows { get; } = [];
+
+    public bool IsShellOverlayOpen => IsPaletteOpen || IsShortcutHelpOpen || IsOnboardingOpen || IsDialogOpen;
+    partial void OnIsPaletteOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
+    partial void OnIsShortcutHelpOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
+    partial void OnIsOnboardingOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
+    partial void OnIsDialogOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
 
     [RelayCommand]
     private void ToggleShortcutHelp()
@@ -85,6 +92,8 @@ public partial class MainViewModel : ViewModelBase
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
+        if (ServiceLocator.Resolve<IDialogService>() is DialogService dialogs)
+            dialogs.OpenChanged += open => Avalonia.Threading.Dispatcher.UIThread.Post(() => IsDialogOpen = open);
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
         LocalizationManager.Instance.LanguageChanged += _langChangedHandler;

@@ -371,7 +371,7 @@
         </TabControl>
     </DockPanel>
 
-        <Border IsVisible="{Binding IsBonusOpen}" Background="#80000000">
+        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">

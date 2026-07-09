@@ -25,9 +25,35 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;
-    [ObservableProperty] private string _searchUser = "";
-    [ObservableProperty] private string _searchTable = "";
-    [ObservableProperty] private string _searchAction = "";
+    [ObservableProperty] private string? _searchUser;
+    [ObservableProperty] private string? _searchTable;
+    [ObservableProperty] private string? _searchAction;
+
+    public ObservableCollection<string> UserOptions { get; } = [];
+    public ObservableCollection<string> TableOptions { get; } = [];
+    public ObservableCollection<string> ActionOptions { get; } = [];
+
+    private static string? Norm(string? value) => string.IsNullOrWhiteSpace(value) || value == "—" ? null : value;
+
+    partial void OnSearchUserChanged(string? value) { Paging.Page = 1; _ = LoadAsync(); }
+    partial void OnSearchTableChanged(string? value) { Paging.Page = 1; _ = LoadAsync(); }
+    partial void OnSearchActionChanged(string? value) { Paging.Page = 1; _ = LoadAsync(); }
+
+    private async Task EnsureOptionsAsync()
+    {
+        if (TableOptions.Count > 0) return;
+        try
+        {
+            var options = await _api.GetOptionsAsync();
+            TableOptions.Add("—");
+            foreach (var t in options.Tables) TableOptions.Add(t);
+            ActionOptions.Add("—");
+            foreach (var a in options.Actions) ActionOptions.Add(a);
+            UserOptions.Add("—");
+            foreach (var u in options.Users) UserOptions.Add(u);
+        }
+        catch { }
+    }
 
     public AuditViewModel(IAuditLogsApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {
@@ -48,7 +74,7 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
             var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
-            var all = await _api.GetAllAsync(SearchTable, SearchUser, SearchAction, from, to);
+            var all = await _api.GetAllAsync(Norm(SearchTable), Norm(SearchUser), Norm(SearchAction), from, to);
             await _export.ExportAsync(L["audit"], all,
             [
                 new(L["time"], a => a.CreatedAt),
@@ -67,14 +93,15 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
+                await EnsureOptionsAsync();
                 var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
                 var to = new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
                 var result = await _api.QueryAsync(QueryRequest.Create()
                     .Page(Paging.Page, Paging.PageSize)
                     .Sort(Paging.SortBy, Paging.Descending)
-                    .With("tableName", SearchTable)
-                    .With("userName", SearchUser)
-                    .With("action", SearchAction)
+                    .With("tableName", Norm(SearchTable))
+                    .With("userName", Norm(SearchUser))
+                    .With("action", Norm(SearchAction))
                     .With("fromDate", from)
                     .With("toDate", to)
                     .Build());

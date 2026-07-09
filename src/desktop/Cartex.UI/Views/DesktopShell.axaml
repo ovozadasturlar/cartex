@@ -73,7 +73,7 @@
                 Background="{DynamicResource SidebarBg}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
                 Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.Instance}}"
-                ClipToBounds="True">
+                ClipToBounds="True" Classes.blurred="{Binding IsShellOverlayOpen}">
             <Border.Transitions>
                 <Transitions>
                     <DoubleTransition Property="Width" Duration="0:0:0.18" />
@@ -152,7 +152,7 @@
             </DockPanel>
         </Border>
 
-        <DockPanel Grid.Column="1" Background="{DynamicResource AppBg}">
+        <DockPanel Grid.Column="1" Background="{DynamicResource AppBg}" Classes.blurred="{Binding IsShellOverlayOpen}">
 
             <Border DockPanel.Dock="Top" Background="#B45309" Padding="14,7"
                     IsVisible="{Binding !Connectivity.IsOnline}">
@@ -321,13 +321,13 @@
             </Border>
 
             <Panel>
-                <TransitioningContentControl Content="{Binding CurrentPage}">
+                <TransitioningContentControl Content="{Binding CurrentPage}" Classes.blurred="{Binding Busy.IsBusy}">
                     <TransitioningContentControl.PageTransition>
                         <CrossFade Duration="0:0:0.18" />
                     </TransitioningContentControl.PageTransition>
                 </TransitioningContentControl>
 
-                <Border IsVisible="{Binding Busy.IsBusy}" Background="#33000000">
+                <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000">
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -343,7 +343,7 @@
         </DockPanel>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsPaletteOpen}"
-                Background="#55000000">
+                Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="580" MaxHeight="460"
                     VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,100,0,0"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -376,7 +376,7 @@
         </Border>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsShortcutHelpOpen}"
-                Background="#55000000">
+                Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="440" MaxHeight="540"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -406,7 +406,7 @@
         </Border>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsOnboardingOpen}"
-                Background="#88000000">
+                Background="#30000000">
             <ContentControl Content="{Binding Onboarding}" />
         </Border>
 

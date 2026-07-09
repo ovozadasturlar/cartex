@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Cartex.UI.Services;
 
-public sealed record DetectedDrive(string Root, string Serial, string? KeyFile, string? KeyContent);
+public sealed record DetectedDrive(string Root, string Serial);
 
 public sealed record DetectedKey(string Root, string Serial, string File, string Content, string? Username);
 
@@ -41,12 +41,7 @@ public static class HardwareKeyReader
         catch { return null; }
     }
 
-    public static DetectedDrive? ScanForBlankDrive()
-    {
-        foreach (var drive in EnumerateRemovable())
-            return drive;
-        return null;
-    }
+    public static List<DetectedDrive> ScanForDrives() => [.. EnumerateRemovable()];
 
     private static IEnumerable<DetectedDrive> EnumerateRemovable()
     {
@@ -57,7 +52,7 @@ public static class HardwareKeyReader
             if (drive.DriveType != DriveType.Removable || !drive.IsReady) continue;
             var serial = VolumeSerial(drive.RootDirectory.FullName);
             if (serial is null) continue;
-            yield return new DetectedDrive(drive.RootDirectory.FullName, serial, null, null);
+            yield return new DetectedDrive(drive.RootDirectory.FullName, serial);
         }
     }
 

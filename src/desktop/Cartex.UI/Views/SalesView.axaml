@@ -504,7 +504,7 @@
             </DockPanel>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#80000000" IsVisible="{Binding IsCustomerPanelOpen}">
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsCustomerPanelOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="560"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22"
@@ -690,7 +690,7 @@
             </Border>
         </Popup>
 
-        <Border Grid.ColumnSpan="3" Background="#80000000" IsVisible="{Binding IsProductDetailOpen}">
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsProductDetailOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380" MaxHeight="600"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="0" ClipToBounds="True">
@@ -738,7 +738,7 @@
             </Border>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#80000000" IsVisible="{Binding IsReceiptOpen}">
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsReceiptOpen}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="360" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22"

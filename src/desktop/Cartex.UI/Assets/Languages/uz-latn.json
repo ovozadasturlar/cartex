@@ -48,6 +48,8 @@
   "key_drive_has_keys": "Fleshkada {0} ta kalit bor",
   "key_group_drive": "Bitta fleshka",
   "login_choose_profile": "Qaysi profil bilan kirasiz?",
+  "login_with_qr": "QR kod orqali kirish",
+  "qr_scan_hint": "Telefondagi Cartex ilovasida QR kodni skanerlang — kompyuter avtomatik kiradi",
   "connect": "Bog'lash",
   "cash_returns": "Naqd qaytarishlar",
   "print_copies": "Chek nusxalari",
