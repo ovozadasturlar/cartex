@@ -25,6 +25,6 @@ public class DiscountRuleException : BaseEntity
 {
     public long DiscountRuleId { get; set; }
     public DiscountRule DiscountRule { get; set; } = null!;
-    public long ProductId { get; set; }
-    public Product Product { get; set; } = null!;
+    public DiscountScope Scope { get; set; }
+    public long TargetId { get; set; }
 }

@@ -29,9 +29,8 @@ public static class DiscountEngine
             if (rule.StartsOn is { } from && today < from) continue;
             if (rule.EndsOn is { } to && today > to) continue;
 
-            var excluded = rule.Exceptions.Count > 0 ? rule.Exceptions.Select(e => e.ProductId).ToHashSet() : null;
             var matched = lines
-                .Where(l => (excluded is null || !excluded.Contains(l.ProductId)) && Matches(rule, l))
+                .Where(l => Matches(rule, l) && !IsExcluded(rule, l))
                 .Sum(l => l.LineTotal);
 
             if (matched <= 0) continue;
@@ -71,4 +70,13 @@ public static class DiscountEngine
         DiscountScope.Manufacturer => rule.TargetId is not null && rule.TargetId == line.ManufacturerId,
         _ => false
     };
+
+    private static bool IsExcluded(DiscountRule rule, DiscountLine line) =>
+        rule.Exceptions.Any(e => e.Scope switch
+        {
+            DiscountScope.Product => e.TargetId == line.ProductId,
+            DiscountScope.Category => e.TargetId == line.CategoryId,
+            DiscountScope.Manufacturer => e.TargetId == line.ManufacturerId,
+            _ => false
+        });
 }

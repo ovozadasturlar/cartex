@@ -177,14 +177,23 @@
 
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding L[manufacturer]}" Classes="caption" />
-                        <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding EditManufacturer}"
-                                  HorizontalAlignment="Stretch" PlaceholderText="—">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <Grid ColumnDefinitions="*,6,Auto">
+                            <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding EditManufacturer}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding ToggleAddManufacturerCommand}"
+                                    Content="+" MinWidth="36" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,6,Auto" IsVisible="{Binding IsAddingManufacturer}">
+                            <TextBox Text="{Binding NewManufacturerName}" PlaceholderText="{Binding L[manufacturer]}" MinHeight="34" />
+                            <Button Grid.Column="2" Classes="brand" Command="{Binding AddManufacturerCommand}"
+                                    Content="{Binding L[save]}" />
+                        </Grid>
                     </StackPanel>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">

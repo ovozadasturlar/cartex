@@ -49,6 +49,31 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private ProductTypeDto? _editProductType;
     [ObservableProperty] private decimal _editMinStock;
     [ObservableProperty] private ManufacturerDto? _editManufacturer;
+    [ObservableProperty] private bool _isAddingManufacturer;
+    [ObservableProperty] private string _newManufacturerName = string.Empty;
+
+    [RelayCommand]
+    private void ToggleAddManufacturer()
+    {
+        NewManufacturerName = string.Empty;
+        IsAddingManufacturer = !IsAddingManufacturer;
+    }
+
+    [RelayCommand]
+    private async Task AddManufacturerAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewManufacturerName)) return;
+        try
+        {
+            var api = ServiceLocator.Resolve<IManufacturersApi>();
+            var id = await api.CreateAsync(new SaveManufacturerRequest(NewManufacturerName.Trim()));
+            Manufacturers.Clear();
+            foreach (var m in await api.GetAllAsync()) Manufacturers.Add(m);
+            EditManufacturer = Manufacturers.FirstOrDefault(m => m.Id == id);
+            IsAddingManufacturer = false;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
     [ObservableProperty] private string _editBarcodes = string.Empty;
     [ObservableProperty] private string _editCode = string.Empty;
     [ObservableProperty] private string _editIkpuCode = string.Empty;

@@ -49,18 +49,14 @@ public class DiscountRuleExceptionConfiguration : IEntityTypeConfiguration<Disco
     public void Configure(EntityTypeBuilder<DiscountRuleException> builder)
     {
         builder.ToTable("discount_rule_exceptions");
+        builder.Property(x => x.Scope).HasConversion<string>().HasMaxLength(20);
 
         builder.HasOne(x => x.DiscountRule)
             .WithMany(r => r.Exceptions)
             .HasForeignKey(x => x.DiscountRuleId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(x => x.Product)
-            .WithMany()
-            .HasForeignKey(x => x.ProductId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(x => new { x.DiscountRuleId, x.ProductId }).IsUnique();
+        builder.HasIndex(x => new { x.DiscountRuleId, x.Scope, x.TargetId }).IsUnique();
     }
 }
 

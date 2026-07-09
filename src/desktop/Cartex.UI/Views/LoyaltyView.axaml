@@ -220,33 +220,6 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <StackPanel Spacing="12">
-                                    <TextBlock Text="{Binding L[manufacturers]}" FontWeight="SemiBold" FontSize="15"
-                                               Foreground="{DynamicResource TextPrimary}" />
-                                    <Grid ColumnDefinitions="*,8,Auto">
-                                        <TextBox Text="{Binding NewManufacturerName}" PlaceholderText="{Binding L[name]}" MinHeight="36" />
-                                        <Button Grid.Column="2" Classes="brand" Command="{Binding AddManufacturerCommand}" Content="+" MinWidth="40" />
-                                    </Grid>
-                                    <ItemsControl ItemsSource="{Binding Manufacturers}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource TextPrimary}" />
-                                                    <Button Grid.Column="1" Classes="icon"
-                                                            Command="{Binding $parent[ItemsControl].DataContext.DeleteManufacturerCommand}"
-                                                            CommandParameter="{Binding}">
-                                                        <mi:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14"
-                                                                         Foreground="{DynamicResource DangerBrush}" />
-                                                    </Button>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
                     </Panel>
                 </ScrollViewer>
@@ -391,11 +364,25 @@
                         </Grid>
                         <StackPanel Spacing="5">
                             <TextBlock Text="{Binding L[discount_exceptions]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <Grid ColumnDefinitions="*,8,Auto">
-                                <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding ExceptionCandidate}" HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                            <Grid ColumnDefinitions="Auto,8,*,8,Auto">
+                                <ComboBox ItemsSource="{Binding ExceptionScopes}" SelectedItem="{Binding ExceptionScope}" MinWidth="150">
+                                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <Button Grid.Column="2" Classes="outline" Command="{Binding AddExceptionCommand}" Content="+" MinWidth="40" />
+                                <Panel Grid.Column="2">
+                                    <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding ExceptionProduct}"
+                                              HorizontalAlignment="Stretch" IsVisible="{Binding IsExceptionProduct}">
+                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding ExceptionCategory}"
+                                              HorizontalAlignment="Stretch" IsVisible="{Binding IsExceptionCategory}">
+                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding ExceptionManufacturer}"
+                                              HorizontalAlignment="Stretch" IsVisible="{Binding IsExceptionManufacturer}">
+                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Panel>
+                                <Button Grid.Column="4" Classes="outline" Command="{Binding AddExceptionCommand}" Content="+" MinWidth="40" />
                             </Grid>
                             <ItemsControl ItemsSource="{Binding DiscountExceptions}">
                                 <ItemsControl.ItemsPanel>
@@ -406,7 +393,7 @@
                                         <Border CornerRadius="999" Padding="10,4" Margin="0,4,6,0"
                                                 Background="{DynamicResource SidebarItemHover}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <TextBlock Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"
+                                                <TextBlock Text="{Binding Display}" FontSize="12" VerticalAlignment="Center"
                                                            Foreground="{DynamicResource TextPrimary}" />
                                                 <Button Classes="icon" Padding="0"
                                                         Command="{Binding $parent[ItemsControl].DataContext.RemoveExceptionCommand}"

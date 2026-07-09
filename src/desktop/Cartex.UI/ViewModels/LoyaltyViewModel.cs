@@ -13,6 +13,8 @@ namespace Cartex.UI.ViewModels;
 
 public sealed record DiscountRow(DiscountRuleDto Dto, string ScopeText, string ValueText, string ConditionText, string PeriodText, string StatusText, bool IsEnabled);
 
+public sealed record ExceptionChip(string Scope, long TargetId, string Display);
+
 public partial class LoyaltyViewModel : ViewModelBase, ILoadable
 {
     private readonly ILoyaltyApi _api;
@@ -35,7 +37,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     public ObservableCollection<DiscountRow> DiscountRules { get; } = [];
     public ObservableCollection<LabeledValue> DiscountScopes { get; } = [];
     public ObservableCollection<LabeledValue> DiscountMethods { get; } = [];
-    public ObservableCollection<ProductDto> DiscountExceptions { get; } = [];
+    public ObservableCollection<LabeledValue> ExceptionScopes { get; } = [];
+    public ObservableCollection<ExceptionChip> DiscountExceptions { get; } = [];
 
     [ObservableProperty] private string _sectionKey = "discounts";
     public bool IsDiscountSection => SectionKey == "discounts";
@@ -84,7 +87,21 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _discountPriority;
     [ObservableProperty] private DateTimeOffset? _discountStartsOn;
     [ObservableProperty] private DateTimeOffset? _discountEndsOn;
-    [ObservableProperty] private ProductDto? _exceptionCandidate;
+    [ObservableProperty] private LabeledValue? _exceptionScope;
+    [ObservableProperty] private ProductDto? _exceptionProduct;
+    [ObservableProperty] private CategoryDto? _exceptionCategory;
+    [ObservableProperty] private ManufacturerDto? _exceptionManufacturer;
+
+    public bool IsExceptionProduct => ExceptionScope?.Value != "Category" && ExceptionScope?.Value != "Manufacturer";
+    public bool IsExceptionCategory => ExceptionScope?.Value == "Category";
+    public bool IsExceptionManufacturer => ExceptionScope?.Value == "Manufacturer";
+
+    partial void OnExceptionScopeChanged(LabeledValue? value)
+    {
+        OnPropertyChanged(nameof(IsExceptionProduct));
+        OnPropertyChanged(nameof(IsExceptionCategory));
+        OnPropertyChanged(nameof(IsExceptionManufacturer));
+    }
 
     public bool IsProductScope => RuleScope?.Value == "Product";
     public bool RulesEmpty => Rules.Count == 0;
@@ -194,6 +211,9 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         DiscountScopes.Add(new LabeledValue("Manufacturer", L["manufacturer"]));
         DiscountMethods.Add(new LabeledValue("Percent", L["cashback_method_percent"]));
         DiscountMethods.Add(new LabeledValue("FixedAmount", L["discount_method_amount"]));
+        ExceptionScopes.Add(new LabeledValue("Product", L["product"]));
+        ExceptionScopes.Add(new LabeledValue("Category", L["category"]));
+        ExceptionScopes.Add(new LabeledValue("Manufacturer", L["manufacturer"]));
     }
 
     partial void OnRuleScopeChanged(LabeledValue? value) => OnPropertyChanged(nameof(IsProductScope));
@@ -309,6 +329,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         DiscountPriority = 0;
         DiscountStartsOn = null;
         DiscountEndsOn = null;
+        ExceptionScope = ExceptionScopes.FirstOrDefault();
         DiscountExceptions.Clear();
         IsDiscountOpen = true;
     }
@@ -332,13 +353,22 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         DiscountPriority = r.Priority;
         DiscountStartsOn = r.StartsOn is { } s ? new DateTimeOffset(s.ToDateTime(TimeOnly.MinValue)) : null;
         DiscountEndsOn = r.EndsOn is { } e ? new DateTimeOffset(e.ToDateTime(TimeOnly.MinValue)) : null;
+        ExceptionScope = ExceptionScopes.FirstOrDefault();
         DiscountExceptions.Clear();
         foreach (var ex in r.Exceptions)
-        {
-            var product = Products.FirstOrDefault(p => p.Id == ex.ProductId);
-            if (product is not null) DiscountExceptions.Add(product);
-        }
+            DiscountExceptions.Add(ToChip(ex.Scope, ex.TargetId, ex.TargetName));
         IsDiscountOpen = true;
+    }
+
+    private ExceptionChip ToChip(string scope, long targetId, string name)
+    {
+        var kind = scope switch
+        {
+            "Category" => L["category"],
+            "Manufacturer" => L["manufacturer"],
+            _ => L["product"]
+        };
+        return new ExceptionChip(scope, targetId, $"{name} ({kind})");
     }
 
     [RelayCommand]
@@ -350,13 +380,22 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void AddException()
     {
-        if (ExceptionCandidate is { } candidate && DiscountExceptions.All(p => p.Id != candidate.Id))
-            DiscountExceptions.Add(candidate);
-        ExceptionCandidate = null;
+        (string Scope, long Id, string Name)? picked = ExceptionScope?.Value switch
+        {
+            "Category" when ExceptionCategory is { } c => ("Category", c.Id, c.Name),
+            "Manufacturer" when ExceptionManufacturer is { } m => ("Manufacturer", m.Id, m.Name),
+            _ when ExceptionProduct is { } p => ("Product", p.Id, p.Name),
+            _ => null
+        };
+        if (picked is { } value && DiscountExceptions.All(e => e.Scope != value.Scope || e.TargetId != value.Id))
+            DiscountExceptions.Add(ToChip(value.Scope, value.Id, value.Name));
+        ExceptionProduct = null;
+        ExceptionCategory = null;
+        ExceptionManufacturer = null;
     }
 
     [RelayCommand]
-    private void RemoveException(ProductDto product) => DiscountExceptions.Remove(product);
+    private void RemoveException(ExceptionChip chip) => DiscountExceptions.Remove(chip);
 
     private SaveDiscountRuleRequest BuildDiscountRequest(long id)
     {
@@ -372,7 +411,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
             DiscountCustomer?.Id, DiscountMinAmount, DiscountMethod?.Value ?? "Percent", DiscountValue, DiscountPriority,
             DiscountStartsOn is { } s ? DateOnly.FromDateTime(s.Date) : null,
             DiscountEndsOn is { } e ? DateOnly.FromDateTime(e.Date) : null,
-            DiscountExceptions.Select(p => p.Id).ToList());
+            DiscountExceptions.Select(c => new DiscountExceptionInputDto(c.Scope, c.TargetId)).ToList());
     }
 
     [RelayCommand]
@@ -403,37 +442,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         {
             await _api.SaveDiscountRuleAsync(new SaveDiscountRuleRequest(r.Id, r.Name, !r.IsEnabled, r.Scope, r.TargetId,
                 r.CustomerId, r.MinAmount, r.Method, r.Value, r.Priority, r.StartsOn, r.EndsOn,
-                r.Exceptions.Select(e => e.ProductId).ToList()));
+                r.Exceptions.Select(e => new DiscountExceptionInputDto(e.Scope, e.TargetId)).ToList()));
             await ReloadDiscountsAsync();
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [ObservableProperty] private string _newManufacturerName = "";
-
-    [RelayCommand]
-    private async Task AddManufacturerAsync()
-    {
-        if (string.IsNullOrWhiteSpace(NewManufacturerName)) return;
-        try
-        {
-            await _manufacturersApi.CreateAsync(new SaveManufacturerRequest(NewManufacturerName.Trim()));
-            NewManufacturerName = "";
-            var manufacturers = await _manufacturersApi.GetAllAsync();
-            Manufacturers.Clear();
-            foreach (var m in manufacturers) Manufacturers.Add(m);
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [RelayCommand]
-    private async Task DeleteManufacturerAsync(ManufacturerDto manufacturer)
-    {
-        try
-        {
-            await _manufacturersApi.DeleteAsync(manufacturer.Id);
-            Manufacturers.Remove(manufacturer);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

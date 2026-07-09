@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Loyalty.Commands;
 
+public record DiscountExceptionInput(DiscountScope Scope, long TargetId);
+
 public record SaveDiscountRuleCommand(long Id, string Name, bool IsEnabled, DiscountScope Scope, long? TargetId,
     long? CustomerId, decimal MinAmount, DiscountMethod Method, decimal Value, int Priority,
-    DateOnly? StartsOn, DateOnly? EndsOn, List<long>? ExceptionProductIds = null) : ICommand<long>;
+    DateOnly? StartsOn, DateOnly? EndsOn, List<DiscountExceptionInput>? Exceptions = null) : ICommand<long>;
 
 public sealed class SaveDiscountRuleCommandHandler(IApplicationDbContext db) : IRequestHandler<SaveDiscountRuleCommand, long>
 {
@@ -39,11 +41,11 @@ public sealed class SaveDiscountRuleCommandHandler(IApplicationDbContext db) : I
         rule.StartsOn = request.StartsOn;
         rule.EndsOn = request.EndsOn;
 
-        var wanted = (request.ExceptionProductIds ?? []).Distinct().ToHashSet();
-        foreach (var stale in rule.Exceptions.Where(e => !wanted.Contains(e.ProductId)).ToList())
+        var wanted = (request.Exceptions ?? []).Distinct().ToHashSet();
+        foreach (var stale in rule.Exceptions.Where(e => !wanted.Contains(new DiscountExceptionInput(e.Scope, e.TargetId))).ToList())
             rule.Exceptions.Remove(stale);
-        foreach (var productId in wanted.Where(id => rule.Exceptions.All(e => e.ProductId != id)))
-            rule.Exceptions.Add(new DiscountRuleException { ProductId = productId });
+        foreach (var entry in wanted.Where(w => rule.Exceptions.All(e => e.Scope != w.Scope || e.TargetId != w.TargetId)))
+            rule.Exceptions.Add(new DiscountRuleException { Scope = entry.Scope, TargetId = entry.TargetId });
 
         await db.SaveChangesAsync(cancellationToken);
         return rule.Id;

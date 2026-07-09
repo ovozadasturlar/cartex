@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddTransient<ExpenseCategoriesViewModel>();
         services.AddTransient<UnitsViewModel>();
         services.AddTransient<ProductTypesViewModel>();
+        services.AddTransient<ManufacturersViewModel>();
         services.AddTransient<BranchesViewModel>();
         services.AddTransient<WarehousesViewModel>();
         services.AddTransient<SuppliersViewModel>();

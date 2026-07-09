@@ -12,7 +12,7 @@ public class DiscountEngineTests
     private static DiscountRule Rule(string name, DiscountScope scope = DiscountScope.All, long? targetId = null,
         decimal value = 10, DiscountMethod method = DiscountMethod.Percent, int priority = 0,
         decimal minAmount = 0, long? customerId = null, DateOnly? startsOn = null, DateOnly? endsOn = null,
-        params long[] exceptions) =>
+        params DiscountRuleException[] exceptions) =>
         new()
         {
             Name = name,
@@ -26,8 +26,11 @@ public class DiscountEngineTests
             Priority = priority,
             StartsOn = startsOn,
             EndsOn = endsOn,
-            Exceptions = exceptions.Select(p => new DiscountRuleException { ProductId = p }).ToList()
+            Exceptions = exceptions.ToList()
         };
+
+    private static DiscountRuleException Except(DiscountScope scope, long targetId) =>
+        new() { Scope = scope, TargetId = targetId };
 
     private static DiscountLine Line(long productId, decimal total, long? categoryId = null, long? manufacturerId = null) =>
         new(productId, categoryId, manufacturerId, total);
@@ -64,9 +67,35 @@ public class DiscountEngineTests
     [Fact]
     public void Exceptions_exclude_products_from_scope()
     {
-        var rules = new[] { Rule("Hammasi", value: 10, exceptions: 2) };
+        var rules = new[] { Rule("Hammasi", value: 10, exceptions: Except(DiscountScope.Product, 2)) };
         var applied = DiscountEngine.Compute(rules, 0, DiscountCombineMode.Priority, null, Today,
             [Line(1, 100_000), Line(2, 50_000)]);
+        Assert.Equal(10_000, Assert.Single(applied).Amount);
+    }
+
+    [Fact]
+    public void Category_rule_can_exclude_manufacturer()
+    {
+        var rules = new[] { Rule("Telefonlar", scope: DiscountScope.Category, targetId: 3, value: 10,
+            exceptions: Except(DiscountScope.Manufacturer, 7)) };
+        var applied = DiscountEngine.Compute(rules, 0, DiscountCombineMode.Priority, null, Today,
+        [
+            Line(1, 100_000, categoryId: 3, manufacturerId: 7),
+            Line(2, 200_000, categoryId: 3, manufacturerId: 9)
+        ]);
+        Assert.Equal(20_000, Assert.Single(applied).Amount);
+    }
+
+    [Fact]
+    public void Manufacturer_rule_can_exclude_product()
+    {
+        var rules = new[] { Rule("Apple", scope: DiscountScope.Manufacturer, targetId: 7, value: 10,
+            exceptions: Except(DiscountScope.Product, 5)) };
+        var applied = DiscountEngine.Compute(rules, 0, DiscountCombineMode.Priority, null, Today,
+        [
+            Line(5, 900_000, manufacturerId: 7),
+            Line(6, 100_000, manufacturerId: 7)
+        ]);
         Assert.Equal(10_000, Assert.Single(applied).Amount);
     }
 
