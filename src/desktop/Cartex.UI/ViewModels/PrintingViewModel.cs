@@ -20,14 +20,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _sectionKey = "receipt";
     public bool IsReceiptSection => SectionKey == "receipt";
     public bool IsBarcodeSection => SectionKey == "barcode";
-    public bool IsDocumentSection => SectionKey == "document";
     public bool IsZSection => SectionKey == "zreport";
 
     partial void OnSectionKeyChanged(string value)
     {
         OnPropertyChanged(nameof(IsReceiptSection));
         OnPropertyChanged(nameof(IsBarcodeSection));
-        OnPropertyChanged(nameof(IsDocumentSection));
         OnPropertyChanged(nameof(IsZSection));
     }
 
