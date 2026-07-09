@@ -57,6 +57,13 @@ public sealed class TelegramUpdatePoller(
             }
             return;
         }
+        catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.NotFound)
+        {
+            cfg.Enabled = false;
+            await settings.SetAsync(SettingKeys.Telegram, cfg, ct);
+            logger.LogWarning("Telegram bot tokeni yaroqsiz — integratsiya avtomatik o'chirildi. Sozlamalar → Integratsiyalar'da yangi token bog'lang.");
+            return;
+        }
 
         if (response is not { Ok: true, Result.Count: > 0 })
             return;
