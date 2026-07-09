@@ -142,7 +142,20 @@ public static class DatabaseSeeder
         }
     }
 
-    public static async Task SeedAsync(ApplicationDbContext context, Func<string, string> hashPassword, string? developerPassword = null)
+    public static async Task EnsureAdminPasswordAsync(ApplicationDbContext context, Func<string, string, bool> verify, Func<string, string> hashPassword, string? adminPassword)
+    {
+        if (string.IsNullOrWhiteSpace(adminPassword))
+            return;
+
+        var admin = await context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        if (admin is not null && verify("admin123", admin.PasswordHash))
+        {
+            admin.PasswordHash = hashPassword(adminPassword);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    public static async Task SeedAsync(ApplicationDbContext context, Func<string, string> hashPassword, string? developerPassword = null, string? adminPassword = null, bool seedSeller = true)
     {
         if (await context.Roles.AnyAsync())
             return;
@@ -210,30 +223,36 @@ public static class DatabaseSeeder
         {
             FullName = "Administrator",
             Username = AppRoles.Admin,
-            PasswordHash = hashPassword("admin123"),
+            PasswordHash = hashPassword(string.IsNullOrWhiteSpace(adminPassword) ? "admin123" : adminPassword),
             UserRoles = [new UserRole { RoleId = adminRole.Id }],
             DefaultBranchId = branch1.Id,
             IsActive = true
         };
-        var seller = new User
-        {
-            FullName = "Muqimjon Mamadaliyev",
-            Username = AppRoles.Seller,
-            PasswordHash = hashPassword("seller123"),
-            UserRoles = [new UserRole { RoleId = sellerRole.Id }],
-            DefaultBranchId = branch1.Id,
-            IsActive = true
-        };
         await context.Warehouses.AddRangeAsync(warehouse, warehouse2);
-        await context.Users.AddRangeAsync(developer, admin, seller);
+        await context.Users.AddRangeAsync(developer, admin);
         await context.SaveChangesAsync();
 
         await context.UserBranches.AddRangeAsync(
             new UserBranch { UserId = developer.Id, BranchId = branch1.Id },
             new UserBranch { UserId = developer.Id, BranchId = branch2.Id },
             new UserBranch { UserId = admin.Id, BranchId = branch1.Id },
-            new UserBranch { UserId = admin.Id, BranchId = branch2.Id },
-            new UserBranch { UserId = seller.Id, BranchId = branch1.Id });
+            new UserBranch { UserId = admin.Id, BranchId = branch2.Id });
+
+        if (seedSeller)
+        {
+            var seller = new User
+            {
+                FullName = "Sotuvchi",
+                Username = AppRoles.Seller,
+                PasswordHash = hashPassword("seller123"),
+                UserRoles = [new UserRole { RoleId = sellerRole.Id }],
+                DefaultBranchId = branch1.Id,
+                IsActive = true
+            };
+            await context.Users.AddAsync(seller);
+            await context.SaveChangesAsync();
+            await context.UserBranches.AddAsync(new UserBranch { UserId = seller.Id, BranchId = branch1.Id });
+        }
 
         var shopCashAccount = new Account { BranchId = branch1.Id, Name = "Naqd kassa", Type = AccountType.Cash, Balance = 0 };
         var shopCardAccount = new Account { BranchId = branch1.Id, Name = "Bank karta", Type = AccountType.Card, Balance = 0 };

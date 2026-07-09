@@ -98,8 +98,11 @@ builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5015"
 var app = builder.Build();
 
 var developerPassword = builder.Configuration["Seed:DeveloperPassword"];
+var adminPassword = builder.Configuration["Seed:AdminPassword"];
 if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(developerPassword))
     throw new InvalidOperationException("Seed:DeveloperPassword production muhitida majburiy.");
+if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(adminPassword))
+    throw new InvalidOperationException("Seed:AdminPassword production muhitida majburiy.");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -107,11 +110,12 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DatabaseSeeder.SeedAsync(db, hasher.Hash, developerPassword);
+    await DatabaseSeeder.SeedAsync(db, hasher.Hash, developerPassword, adminPassword, seedSeller: app.Environment.IsDevelopment());
     await DatabaseSeeder.SyncPermissionsAsync(db);
     await DatabaseSeeder.SyncUnitsAsync(db);
     await DatabaseSeeder.SyncFeaturesAsync(db);
     await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
+    await DatabaseSeeder.EnsureAdminPasswordAsync(db, hasher.Verify, hasher.Hash, adminPassword);
 
     if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Demo"))
         await DemoDataSeeder.SeedAsync(db);

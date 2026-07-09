@@ -248,7 +248,15 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private long _printVariantId;
 
     public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen;
-    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsEditOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsModalOpen));
+        if (!value && _needsReload)
+        {
+            _needsReload = false;
+            _ = LoadAsync();
+        }
+    }
     partial void OnIsVariantsOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsVariantEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -527,11 +535,48 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
 
+    private bool _needsReload;
+    public event Action? EditNameFocusRequested;
+
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(EditName)) { _toast.Warning(L["name"]); return; }
-        if (EditUnit is null) { _toast.Warning(L["unit"]); return; }
+        if (await SaveCoreAsync())
+            IsEditOpen = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveAndNewAsync()
+    {
+        if (!await SaveCoreAsync()) return;
+        ResetForNext();
+        EditNameFocusRequested?.Invoke();
+    }
+
+    private void ResetForNext()
+    {
+        IsNew = true;
+        _editId = 0;
+        EditName = string.Empty;
+        EditBarcodes = string.Empty;
+        EditCode = string.Empty;
+        EditIkpuCode = string.Empty;
+        EditSellingPrice = null;
+        EditImageKey = null;
+        EditImagePreview = null;
+        _editDefaultVariantId = 0;
+        EditBarcodeList.Clear();
+        EditBarcodeInput = string.Empty;
+        EditBarcodePackQty = 1;
+        var type = EditProductType;
+        EditProductType = null;
+        EditProductType = type;
+    }
+
+    private async Task<bool> SaveCoreAsync()
+    {
+        if (string.IsNullOrWhiteSpace(EditName)) { _toast.Warning(L["name"]); return false; }
+        if (EditUnit is null) { _toast.Warning(L["unit"]); return false; }
 
         var attributes = EditProductType is null ? null : AttributeSchemaCodec.SerializeValues(EditAttributes);
 
@@ -569,14 +614,15 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 }
             }
 
-            IsEditOpen = false;
+            _needsReload = true;
             _cache.Invalidate(CacheKeys.ProductLookup);
             _toast.Success(L["success"]);
-            await LoadAsync();
+            return true;
         }
         catch (Exception ex)
         {
             _toast.Error(ApiErrors.Describe(ex));
+            return false;
         }
     }
 

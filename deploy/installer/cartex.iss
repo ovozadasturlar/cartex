@@ -29,6 +29,7 @@ Name: "{autodesktop}\Cartex"; Filename: "{app}\desktop\Cartex.Desktop.exe"
 [Code]
 var
   DevPasswordPage: TInputQueryWizardPage;
+  AdminPasswordPage: TInputQueryWizardPage;
 
 function PgExists: Boolean;
 begin
@@ -41,12 +42,22 @@ begin
     'Developer parol', 'Tizim sozlovchisi (developer) uchun parol',
     'Bu parol bilan siz dasturga developer sifatida kirasiz. Kamida 8 belgi.');
   DevPasswordPage.Add('Parol:', True);
+
+  AdminPasswordPage := CreateInputQueryPage(DevPasswordPage.ID,
+    'Egasi (admin) paroli', 'Do''kon egasi (admin) uchun parol',
+    'Do''kon egasi shu parol bilan kiradi (login: admin). Kamida 8 belgi.');
+  AdminPasswordPage.Add('Parol:', True);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
   if (CurPageID = DevPasswordPage.ID) and (Length(DevPasswordPage.Values[0]) < 8) then
+  begin
+    MsgBox('Parol kamida 8 belgi bo''lishi kerak.', mbError, MB_OK);
+    Result := False;
+  end;
+  if (CurPageID = AdminPasswordPage.ID) and (Length(AdminPasswordPage.Values[0]) < 8) then
   begin
     MsgBox('Parol kamida 8 belgi bo''lishi kerak.', mbError, MB_OK);
     Result := False;
@@ -91,7 +102,7 @@ begin
     '  "Urls": "http://0.0.0.0:5015",' + #13#10 +
     '  "ConnectionStrings": { "DefaultConnection": "Host=localhost;Database=cartex;Username=cartex;Password=' + DbPassword + '" },' + #13#10 +
     '  "Jwt": { "Key": "' + JwtKey + '" },' + #13#10 +
-    '  "Seed": { "DeveloperPassword": "' + DevPasswordPage.Values[0] + '" }' + #13#10 +
+    '  "Seed": { "DeveloperPassword": "' + DevPasswordPage.Values[0] + '", "AdminPassword": "' + AdminPasswordPage.Values[0] + '" }' + #13#10 +
     '}';
   SaveStringToFile(ExpandConstant('{app}\api\appsettings.Production.json'), Config, False);
 
@@ -110,5 +121,7 @@ begin
 
   MsgBox('O''rnatish tugadi.' + #13#10 + #13#10 +
     'Boshqa kassalarda: Sozlamalar -> Server manzili -> http://<shu-kompyuter-IP>:5015' + #13#10 +
-    'Developer login: developer / siz kiritgan parol', mbInformation, MB_OK);
+    'Egasi: admin / siz kiritgan parol' + #13#10 +
+    'Sozlovchi: developer / siz kiritgan parol' + #13#10 + #13#10 +
+    'Sotuvchilarni Foydalanuvchilar bo''limidan qo''shasiz.', mbInformation, MB_OK);
 end;

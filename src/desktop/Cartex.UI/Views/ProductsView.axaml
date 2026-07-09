@@ -147,7 +147,7 @@
 
                     <StackPanel Spacing="6">
                         <c:FieldLabel Text="{Binding L[name]}" Required="True" />
-                        <TextBox Text="{Binding EditName, Mode=TwoWay}" MinHeight="40" />
+                        <TextBox x:Name="EditNameBox" Text="{Binding EditName, Mode=TwoWay}" MinHeight="40" />
                     </StackPanel>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
@@ -320,11 +320,14 @@
                         </Grid>
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,6,0,0">
-                        <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,6,0,0">
+                        <Button Grid.Column="0" Classes="outline" MinWidth="140" HorizontalContentAlignment="Center"
+                                Command="{Binding SaveAndNewCommand}" Content="{Binding L[save_and_new]}"
+                                IsVisible="{Binding IsNew}" />
+                        <Button Grid.Column="2" Classes="outline" Margin="0,0,10,0" MinWidth="100"
                                 HorizontalContentAlignment="Center"
                                 Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
-                        <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                        <Button Grid.Column="3" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
                                 Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
                     </Grid>
                 </StackPanel>
