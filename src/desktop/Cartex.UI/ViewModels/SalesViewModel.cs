@@ -9,6 +9,7 @@ using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Categories;
+using Cartex.Shared.Models.Loyalty;
 using Avalonia.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -166,7 +167,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private decimal PaidBonusBase => IsMulticurrency ? PaymentRows.Where(r => r.Method?.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
-    public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount);
+    public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
+    [ObservableProperty] private decimal _autoDiscountAmount;
+    public bool HasAutoDiscount => AutoDiscountAmount > 0;
     public decimal TotalPaid => IsMulticurrency ? PaymentRows.Sum(r => r.AmountBase) : PaidCash + PaidCard + PaidBonus;
     public decimal ChangeAmount => TotalPaid > TotalAmount ? TotalPaid - TotalAmount : 0;
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
@@ -423,6 +426,53 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(DebtAmount));
         OnPropertyChanged(nameof(IsCartEmpty));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        SchedulePreview();
+    }
+
+    private CancellationTokenSource? _previewCts;
+
+    private void SchedulePreview()
+    {
+        _previewCts?.Cancel();
+        var cts = _previewCts = new CancellationTokenSource();
+        _ = PreviewAsync(cts.Token);
+    }
+
+    private async Task PreviewAsync(CancellationToken token)
+    {
+        try { await Task.Delay(400, token); } catch { return; }
+        if (token.IsCancellationRequested) return;
+
+        if (CartItems.Count == 0 || IsOfflineMode)
+        {
+            SetAutoDiscount(0);
+            return;
+        }
+        try
+        {
+            var items = CartItems
+                .Select(c => new PreviewDiscountItemRequest(c.VariantId, c.Quantity, c.UnitPrice))
+                .ToList();
+            var result = await ServiceLocator.Resolve<ILoyaltyApi>()
+                .PreviewDiscountAsync(new PreviewDiscountRequest(SelectedCustomer?.Id, items));
+            if (!token.IsCancellationRequested)
+                SetAutoDiscount(result.Total);
+        }
+        catch
+        {
+            SetAutoDiscount(0);
+        }
+    }
+
+    private void SetAutoDiscount(decimal value)
+    {
+        if (AutoDiscountAmount == value) return;
+        AutoDiscountAmount = value;
+        OnPropertyChanged(nameof(HasAutoDiscount));
+        OnPropertyChanged(nameof(TotalAmount));
+        OnPropertyChanged(nameof(ChangeAmount));
+        OnPropertyChanged(nameof(DebtAmount));
+        OnPropertyChanged(nameof(IsOverCreditLimit));
     }
 
     partial void OnSelectedCustomerChanged(CustomerDto? value)
@@ -431,6 +481,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(HasCreditLimit));
         OnPropertyChanged(nameof(RemainingCredit));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        SchedulePreview();
     }
 
     partial void OnPaidCashChanged(decimal value) => NotifyTotals();

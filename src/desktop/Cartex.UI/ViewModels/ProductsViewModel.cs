@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Paging;
+using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Barcodes;
@@ -47,6 +48,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private UnitDto? _editUnit;
     [ObservableProperty] private ProductTypeDto? _editProductType;
     [ObservableProperty] private decimal _editMinStock;
+    [ObservableProperty] private ManufacturerDto? _editManufacturer;
     [ObservableProperty] private string _editBarcodes = string.Empty;
     [ObservableProperty] private string _editCode = string.Empty;
     [ObservableProperty] private string _editIkpuCode = string.Empty;
@@ -83,6 +85,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ObservableCollection<UnitDto> Units { get; } = [];
     private readonly List<UnitDto> _allUnits = [];
     public ObservableCollection<ProductTypeDto> ProductTypes { get; } = [];
+    public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
 
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
     public bool IsEmpty => Products.Count == 0;
@@ -352,6 +355,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 ProductTypes.Clear();
                 foreach (var t in types) ProductTypes.Add(t);
 
+                var manufacturers = await ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync();
+                Manufacturers.Clear();
+                foreach (var m in manufacturers) Manufacturers.Add(m);
+
                 await EnsureCurrenciesAsync();
 
                 _suppressReload = false;
@@ -418,6 +425,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
         _pendingAttributeValues = null;
         EditProductType = null;
+        EditManufacturer = null;
         EditAttributes.Clear();
         OnPropertyChanged(nameof(HasAttributes));
         EditMinStock = _defaultMinStock;
@@ -452,6 +460,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _pendingAttributeValues = product.Attributes;
         EditProductType = null;
         EditProductType = ProductTypes.FirstOrDefault(t => t.Id == product.ProductTypeId);
+        EditManufacturer = Manufacturers.FirstOrDefault(m => m.Id == product.ManufacturerId);
         EditMinStock = product.MinStock;
         EditBarcodes = string.Join(", ", product.Barcodes);
         EditCode = product.Code ?? string.Empty;
@@ -495,7 +504,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         VatRate: EditVatRate,
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
-                        PriceCurrency: IsMulticurrency ? EditPriceCurrency : null);
+                        PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
+                        ManufacturerId: EditManufacturer?.Id);
                     await _productsApi.CreateAsync(request);
                 }
                 else
@@ -507,7 +517,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         VatRate: EditVatRate,
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
-                        PriceCurrency: IsMulticurrency ? EditPriceCurrency : null);
+                        PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
+                        ManufacturerId: EditManufacturer?.Id);
                     await _productsApi.UpdateAsync(_editId, request);
                 }
             }

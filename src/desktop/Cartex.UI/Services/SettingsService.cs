@@ -93,6 +93,12 @@ public sealed class SettingsService
         set { _data.OfflineWarehouseId = value; Save(); }
     }
 
+    public bool SettingsSidebarCollapsed
+    {
+        get => _data.SettingsSidebarCollapsed;
+        set { _data.SettingsSidebarCollapsed = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -130,5 +136,6 @@ public sealed class SettingsService
         public string? DeviceId { get; set; }
         public bool OfflineCacheEnabled { get; set; }
         public long OfflineWarehouseId { get; set; }
+        public bool SettingsSidebarCollapsed { get; set; }
     }
 }

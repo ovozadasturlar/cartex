@@ -6,6 +6,7 @@ using Cartex.Domain.Enums;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Application.Common.Messaging;
 using LoyaltyProgramDto = Cartex.Application.Loyalty.Queries.LoyaltyProgramDto;
+using DiscountRuleDto = Cartex.Application.Loyalty.Queries.DiscountRuleDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

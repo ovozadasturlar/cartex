@@ -12,6 +12,18 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private ViewModelBase? _currentSection;
     [ObservableProperty] private MenuItem? _selectedSection;
+    [ObservableProperty] private bool _isSidebarCollapsed = SettingsService.Instance.SettingsSidebarCollapsed;
+
+    public double SidebarWidth => IsSidebarCollapsed ? 64 : 248;
+
+    partial void OnIsSidebarCollapsedChanged(bool value)
+    {
+        SettingsService.Instance.SettingsSidebarCollapsed = value;
+        OnPropertyChanged(nameof(SidebarWidth));
+    }
+
+    [RelayCommand]
+    private void ToggleSidebar() => IsSidebarCollapsed = !IsSidebarCollapsed;
 
     public ObservableCollection<MenuSection> Sections { get; } = [];
 

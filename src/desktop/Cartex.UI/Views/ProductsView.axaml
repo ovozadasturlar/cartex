@@ -175,6 +175,18 @@
                         </StackPanel>
                     </Grid>
 
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[manufacturer]}" Classes="caption" />
+                        <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding EditManufacturer}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="—">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <StackPanel Spacing="6">
                             <c:FieldLabel Text="{Binding L[unit]}" Required="True" />

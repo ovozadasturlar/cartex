@@ -296,6 +296,13 @@
                             </NumericUpDown>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAutoDiscount}">
+                            <TextBlock Text="{Binding L[loyalty_discount]}" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
+                        </Grid>
+
                         <Separator Background="{DynamicResource BorderBrush}" Height="1" />
 
                         <Grid ColumnDefinitions="*,Auto">
