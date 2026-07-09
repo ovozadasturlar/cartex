@@ -32,7 +32,8 @@ public record CreateSaleCommand(
     List<SalePaymentDto>? Payments = null,
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
-    string? IdempotencyKey = null) : ICommand<CreateSaleResult>;
+    string? IdempotencyKey = null,
+    bool ApplyAutoDiscount = true) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -41,6 +42,7 @@ public sealed class CreateSaleCommandHandler(
     ICurrencyService currency,
     IStockAllocator stockAllocator,
     ICashbackCalculator cashbackCalculator,
+    IDiscountCalculator discountCalculator,
     ISettingsService settingsService,
     IAuditService audit) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
@@ -140,6 +142,15 @@ public sealed class CreateSaleCommandHandler(
         if (policy.MaxDiscountPercent > 0 && discountAmount > grossAmount * policy.MaxDiscountPercent / 100
             && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
             throw new BusinessRuleException($"Chegirma {policy.MaxDiscountPercent}% dan osha olmaydi.");
+
+        if (request.ApplyAutoDiscount)
+        {
+            var autoApplied = await discountCalculator.CalculateAsync(request.CustomerId,
+                resolvedItems.Select(x => new DiscountCalcLine(x.item.VariantId, x.line.Quantity * x.line.Price)).ToList(),
+                cancellationToken);
+            discountAmount = Math.Clamp(discountAmount + autoApplied.Sum(a => a.Amount), 0, grossAmount);
+        }
+
         var totalAmount = grossAmount - discountAmount;
 
         var payments = new List<SalePayment>();

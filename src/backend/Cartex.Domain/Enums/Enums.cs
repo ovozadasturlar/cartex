@@ -60,6 +60,26 @@ public enum CashbackMethod
     FixedPerUnit
 }
 
+public enum DiscountScope
+{
+    All,
+    Product,
+    Category,
+    Manufacturer
+}
+
+public enum DiscountMethod
+{
+    Percent,
+    FixedAmount
+}
+
+public enum DiscountCombineMode
+{
+    Priority,
+    Stack
+}
+
 public enum UnitDimension
 {
     Count,

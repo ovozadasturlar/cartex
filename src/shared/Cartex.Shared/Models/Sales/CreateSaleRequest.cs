@@ -15,4 +15,5 @@ public record CreateSaleRequest(
     List<SalePaymentRequest>? Payments = null,
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
-    string? IdempotencyKey = null);
+    string? IdempotencyKey = null,
+    bool ApplyAutoDiscount = true);

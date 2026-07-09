@@ -14,4 +14,5 @@ public record CreateProductRequest(
     string? IkpuCode = null,
     decimal? VatRate = null,
     decimal? SellingPrice = null,
-    string? PriceCurrency = null);
+    string? PriceCurrency = null,
+    long? ManufacturerId = null);

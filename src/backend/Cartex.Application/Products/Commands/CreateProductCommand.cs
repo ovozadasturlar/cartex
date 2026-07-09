@@ -24,7 +24,8 @@ public record CreateProductCommand(
     string? IkpuCode = null,
     decimal? VatRate = null,
     decimal? SellingPrice = null,
-    string? PriceCurrency = null) : ICommand<long>;
+    string? PriceCurrency = null,
+    long? ManufacturerId = null) : ICommand<long>;
 
 public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService) : IRequestHandler<CreateProductCommand, long>
 {
@@ -43,6 +44,7 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             UnitId = request.UnitId,
             MinStock = request.MinStock ?? (await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken))?.DefaultMinStock ?? 0,
             ProductTypeId = request.ProductTypeId,
+            ManufacturerId = request.ManufacturerId,
             TracksExpiryOverride = request.TracksExpiryOverride,
             Attributes = request.Attributes,
             ImageKey = request.ImageKey,

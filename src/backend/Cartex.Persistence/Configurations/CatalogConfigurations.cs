@@ -67,6 +67,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithMany(t => t.Products)
             .HasForeignKey(x => x.ProductTypeId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.Manufacturer)
+            .WithMany()
+            .HasForeignKey(x => x.ManufacturerId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

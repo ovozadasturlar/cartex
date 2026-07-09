@@ -20,4 +20,5 @@ public record ProductDto(
     decimal OnHand = 0,
     string? ImageUrl = null,
     string? PriceCurrency = null,
-    string? Dimension = null);
+    string? Dimension = null,
+    long? ManufacturerId = null);

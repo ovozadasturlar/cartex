@@ -60,4 +60,35 @@ public class LoyaltyController(ISender sender) : ControllerBase
         await sender.Send(new DeleteCashbackRuleCommand(id));
         return NoContent();
     }
+    [HttpGet("discounts")]
+    [HasPermission(AppPermissions.Loyalty.View)]
+    public async Task<ActionResult<IReadOnlyCollection<DiscountRuleDto>>> GetDiscountRules()
+    {
+        var result = await sender.Send(new GetDiscountRulesQuery());
+        return Ok(result);
+    }
+
+    [HttpPost("discounts")]
+    [HasPermission(AppPermissions.Loyalty.Manage)]
+    public async Task<ActionResult<long>> SaveDiscountRule(SaveDiscountRuleCommand command)
+    {
+        var id = await sender.Send(command);
+        return Ok(id);
+    }
+
+    [HttpDelete("discounts/{id:long}")]
+    [HasPermission(AppPermissions.Loyalty.Manage)]
+    public async Task<IActionResult> DeleteDiscountRule(long id)
+    {
+        await sender.Send(new DeleteDiscountRuleCommand(id));
+        return NoContent();
+    }
+
+    [HttpPost("discount-preview")]
+    [HasPermission(AppPermissions.Sales.Create)]
+    public async Task<ActionResult<PreviewDiscountResult>> PreviewDiscount(PreviewDiscountQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
 }

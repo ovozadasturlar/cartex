@@ -100,7 +100,7 @@ public sealed class OfflineSyncService(IOfflineCacheApi offlineApi, ISalesApi sa
                     var d = JsonSerializer.Deserialize<OfflineSaleDraft>(item.PayloadJson)!;
                     var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
                     await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, d.PaidCard, 0, items,
-                        d.DiscountAmount, IdempotencyKey: item.Key));
+                        d.DiscountAmount, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
                 }
                 else
                 {

@@ -9,7 +9,7 @@ public record GetLoyaltyProgramQuery : IRequest<LoyaltyProgramDto>;
 
 public record CashbackRuleDto(long Id, string Scope, long TargetId, string TargetName, string Method, decimal Value, int Priority, bool ExcludeFromTotalPercent);
 
-public record LoyaltyProgramDto(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding, List<CashbackRuleDto> Rules);
+public record LoyaltyProgramDto(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding, List<CashbackRuleDto> Rules, string DiscountCombineMode = "Priority");
 
 public sealed class GetLoyaltyProgramQueryHandler(IApplicationDbContext db) : IRequestHandler<GetLoyaltyProgramQuery, LoyaltyProgramDto>
 {
@@ -45,6 +45,6 @@ public sealed class GetLoyaltyProgramQueryHandler(IApplicationDbContext db) : IR
                 r.ExcludeFromTotalPercent))
             .ToList();
 
-        return new LoyaltyProgramDto(program.IsEnabled, program.TotalPercent, program.CashbackRounding, rules);
+        return new LoyaltyProgramDto(program.IsEnabled, program.TotalPercent, program.CashbackRounding, rules, program.DiscountCombineMode.ToString());
     }
 }

@@ -28,6 +28,8 @@ public interface IApplicationDbContext
     DbSet<Account> Accounts { get; }
     DbSet<Transaction> Transactions { get; }
     DbSet<LoyaltyProgram> LoyaltyPrograms { get; }
+    DbSet<DiscountRule> DiscountRules { get; }
+    DbSet<Manufacturer> Manufacturers { get; }
     DbSet<CashbackRule> CashbackRules { get; }
     DbSet<Sale> Sales { get; }
     DbSet<SaleItem> SaleItems { get; }

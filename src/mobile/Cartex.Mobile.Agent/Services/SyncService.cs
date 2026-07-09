@@ -81,7 +81,7 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
             var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
             await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
-                DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key));
+                DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
         }
         else
         {

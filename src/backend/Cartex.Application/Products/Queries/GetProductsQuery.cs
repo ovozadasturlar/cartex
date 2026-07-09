@@ -32,7 +32,8 @@ public record ProductDto(
     decimal OnHand,
     string? ImageUrl = null,
     string? PriceCurrency = null,
-    string? Dimension = null);
+    string? Dimension = null,
+    long? ManufacturerId = null);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -79,7 +80,8 @@ public sealed class GetProductsQueryHandler(
                     p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
                     null,
                     p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => pr.Currency).FirstOrDefault(),
-                    p.Unit.Dimension.ToString()),
+                    p.Unit.Dimension.ToString(),
+                    p.ManufacturerId),
                 writer, cancellationToken);
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();

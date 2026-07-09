@@ -1,13 +1,14 @@
 using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Loyalty.Commands;
 
-public record UpdateLoyaltyProgramCommand(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding = 0) : ICommand<Unit>;
+public record UpdateLoyaltyProgramCommand(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding = 0, DiscountCombineMode DiscountCombineMode = DiscountCombineMode.Priority) : ICommand<Unit>;
 
 public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateLoyaltyProgramCommand, Unit>
 {
@@ -24,6 +25,7 @@ public sealed class UpdateLoyaltyProgramCommandHandler(IApplicationDbContext db)
         program.IsEnabled = request.IsEnabled;
         program.TotalPercent = request.TotalPercent;
         program.CashbackRounding = request.CashbackRounding;
+        program.DiscountCombineMode = request.DiscountCombineMode;
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

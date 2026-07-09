@@ -20,7 +20,8 @@ public record UpdateProductCommand(
     string? IkpuCode = null,
     decimal? VatRate = null,
     decimal? SellingPrice = null,
-    string? PriceCurrency = null) : ICommand<Unit>;
+    string? PriceCurrency = null,
+    long? ManufacturerId = null) : ICommand<Unit>;
 
 public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<UpdateProductCommand, Unit>
 {
@@ -51,6 +52,7 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurre
         product.UnitId = request.UnitId;
         product.MinStock = request.MinStock;
         product.ProductTypeId = request.ProductTypeId;
+        product.ManufacturerId = request.ManufacturerId;
         product.TracksExpiryOverride = request.TracksExpiryOverride;
         product.Attributes = request.Attributes;
         product.ImageKey = request.ImageKey;

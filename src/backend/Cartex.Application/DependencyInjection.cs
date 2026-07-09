@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ICashbackCalculator, CashbackCalculator>();
         services.AddScoped<ICashbackStrategy, PercentCashbackStrategy>();
         services.AddScoped<ICashbackStrategy, FixedPerUnitCashbackStrategy>();
+        services.AddScoped<IDiscountCalculator, DiscountCalculator>();
 
         services.AddScoped<IStockAllocator, StockAllocator>();
 
