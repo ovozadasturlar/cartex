@@ -313,18 +313,21 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Grid ColumnDefinitions="*,12,*,12,*">
+                            <StackPanel Spacing="5" HorizontalAlignment="Left" MinWidth="240">
+                                <TextBlock Text="{Binding L[discount_min_amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <NumericUpDown Value="{Binding DiscountMinAmount}" Minimum="0" FormatString="N0" MinHeight="38" ShowButtonSpinner="False" />
+                            </StackPanel>
+
+                            <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
-                                    <TextBlock Text="{Binding L[discount_min_amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding DiscountMinAmount}" Minimum="0" FormatString="N0" MinHeight="38" ShowButtonSpinner="False" />
+                                    <TextBlock Text="{Binding L[discount_starts]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <DatePicker SelectedDate="{Binding DiscountStartsOn}" HorizontalAlignment="Stretch"
+                                                DayFormat="dd" MonthFormat="MM" YearFormat="yyyy" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Text="{Binding L[discount_starts]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <DatePicker SelectedDate="{Binding DiscountStartsOn}" HorizontalAlignment="Stretch" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="4" Spacing="5">
                                     <TextBlock Text="{Binding L[discount_ends]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <DatePicker SelectedDate="{Binding DiscountEndsOn}" HorizontalAlignment="Stretch" />
+                                    <DatePicker SelectedDate="{Binding DiscountEndsOn}" HorizontalAlignment="Stretch"
+                                                DayFormat="dd" MonthFormat="MM" YearFormat="yyyy" />
                                 </StackPanel>
                             </Grid>
 

@@ -19,9 +19,11 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
             options
-                .UseNpgsql(connectionString)
+                .UseNpgsql(connectionString, npgsql => npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
                 .UseSnakeCaseNamingConvention()
-                .ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
+                .ConfigureWarnings(w => w.Ignore(
+                    CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning,
+                    CoreEventId.FirstWithoutOrderByAndFilterWarning))
                 .AddInterceptors(sp.GetServices<ISaveChangesInterceptor>()));
 
         services.AddScoped<IApplicationDbContext>(provider =>
