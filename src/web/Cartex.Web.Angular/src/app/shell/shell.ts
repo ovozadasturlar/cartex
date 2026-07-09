@@ -11,7 +11,8 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
-import { NAV_ITEMS } from '../core/nav';
+import { NAV_SECTIONS } from '../core/nav';
+import { Logo } from '../shared/logo';
 
 const LANGS: Record<string, string> = {
   'uz-latn': "O'zbekcha",
@@ -33,6 +34,7 @@ const LANGS: Record<string, string> = {
     MatButtonModule,
     MatMenuModule,
     TranslocoModule,
+    Logo,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -48,7 +50,10 @@ export class Shell {
   );
   readonly isDark = signal(localStorage.getItem('cartex.theme') === 'dark');
   readonly user = this.auth.currentUser;
-  readonly navItems = NAV_ITEMS.filter((i) => i.permission === null || this.auth.hasPermission(i.permission));
+  readonly navSections = NAV_SECTIONS.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => i.permission === null || this.auth.hasPermission(i.permission)),
+  })).filter((s) => s.items.length > 0);
   readonly languages = Object.entries(LANGS).map(([code, name]) => ({ code, name }));
 
   constructor() {

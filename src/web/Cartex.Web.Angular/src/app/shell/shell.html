@@ -1,17 +1,23 @@
 <mat-sidenav-container class="shell" *transloco="let t">
   <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav">
     <div class="side-brand">
-      <div class="brand-mark">C</div>
-      <span>Cartex</span>
+      <cx-logo [size]="30" [wordmark]="true" />
     </div>
-    <mat-nav-list>
-      @for (item of navItems; track item.route) {
-        <a mat-list-item [routerLink]="item.route" routerLinkActive="active" (click)="!isWide() && nav.close()">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ t(item.labelKey) }}</span>
-        </a>
+    <div class="side-nav">
+      @for (section of navSections; track section.labelKey) {
+        @if (section.labelKey) {
+          <div class="side-section">{{ t(section.labelKey) }}</div>
+        }
+        <mat-nav-list>
+          @for (item of section.items; track item.route) {
+            <a mat-list-item [routerLink]="item.route" routerLinkActive="active" (click)="!isWide() && nav.close()">
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ t(item.labelKey) }}</span>
+            </a>
+          }
+        </mat-nav-list>
       }
-    </mat-nav-list>
+    </div>
   </mat-sidenav>
   <mat-sidenav-content>
     <mat-toolbar class="topbar">

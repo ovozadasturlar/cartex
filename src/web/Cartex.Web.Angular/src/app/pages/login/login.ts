@@ -9,6 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth.service';
+import { Logo } from '../../shared/logo';
 
 @Component({
   selector: 'app-login',
@@ -21,6 +22,7 @@ import { AuthService } from '../../core/auth.service';
     MatCheckboxModule,
     MatProgressBarModule,
     TranslocoModule,
+    Logo,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',

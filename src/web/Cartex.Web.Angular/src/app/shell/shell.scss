@@ -4,31 +4,33 @@
 
 .sidenav {
   width: 248px;
-  border-right: 1px solid var(--mat-sys-outline-variant);
+  border-right: 1px solid var(--cx-border);
+  background: var(--cx-card);
 }
 
 .side-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px 16px;
-  font: var(--mat-sys-title-medium);
+  padding: 20px 18px 14px;
+  color: var(--cx-text-1);
+}
 
-  .brand-mark {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    background: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
-    font-weight: 700;
-  }
+.side-nav {
+  padding: 0 10px 16px;
+}
+
+.side-section {
+  padding: 14px 14px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cx-text-3);
 }
 
 .topbar {
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--cx-border);
+  background: var(--cx-card);
   gap: 4px;
 }
 
@@ -38,11 +40,12 @@
 
 .content {
   padding: 24px;
+  max-width: 1440px;
 }
 
 a.active {
-  --mat-list-list-item-label-text-color: var(--mat-sys-primary);
-  --mat-list-list-item-leading-icon-color: var(--mat-sys-primary);
-  background: var(--mat-sys-primary-container);
+  --mat-list-list-item-label-text-color: var(--cx-brand-ink);
+  --mat-list-list-item-leading-icon-color: var(--cx-brand-ink);
+  background: var(--cx-brand-soft);
   border-radius: 12px;
 }
