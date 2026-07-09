@@ -3,12 +3,14 @@ using Cartex.ApiClient.Api;
 using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Models;
 using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Ordering;
 using Cartex.Shared.Models.Sales;
+using Microsoft.Maui.Networking;
 using Refit;
 
 namespace Cartex.Mobile.Agent.Services;
 
-public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustomersApi customersApi, AgentDb db)
+public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustomersApi customersApi, IOrderingApi orderingApi, AgentDb db)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -16,6 +18,19 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
     public DateTime? LastAttempt { get; private set; }
     public bool IsOffline { get; private set; }
     public string? LastError { get; private set; }
+
+    private bool _watching;
+
+    public void StartConnectivityWatch()
+    {
+        if (_watching) return;
+        _watching = true;
+        Connectivity.Current.ConnectivityChanged += async (_, e) =>
+        {
+            if (e.NetworkAccess == NetworkAccess.Internet && await db.CountOutboxAsync("pending") > 0)
+                await SyncAsync();
+        };
+    }
 
     public async Task<bool> SyncAsync()
     {
@@ -76,18 +91,39 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
 
     private async Task SendAsync(OutboxItem item)
     {
-        if (item.Kind == "sale")
+        switch (item.Kind)
         {
-            var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
-            var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
-            var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
-                DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
-            item.ReceiptToken = result.ReceiptToken;
-        }
-        else
-        {
-            var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
-            await customersApi.RepayDebtAsync(r.CustomerId, new RepayDebtRequest(r.Amount, false, IdempotencyKey: item.Key));
+            case "sale":
+            {
+                var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
+                var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
+                var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
+                    DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
+                item.ReceiptToken = result.ReceiptToken;
+                break;
+            }
+            case "repay":
+            {
+                var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
+                await customersApi.RepayDebtAsync(r.CustomerId, new RepayDebtRequest(r.Amount, false, IdempotencyKey: item.Key));
+                break;
+            }
+            case "cart":
+            {
+                var o = JsonSerializer.Deserialize<OrderDraft>(item.PayloadJson)!;
+                var req = new SubmitCartRequest(o.WarehouseId, o.CustomerId,
+                    o.Items.Select(i => new SubmitCartItemRequest(i.VariantId, i.Quantity)).ToList(), IdempotencyKey: item.Key);
+                var code = await orderingApi.SubmitAsync(req);
+                await db.SetOrderCodeAsync(o.LocalId, code);
+                break;
+            }
+            case "checkout":
+            {
+                var c = JsonSerializer.Deserialize<CheckoutDraft>(item.PayloadJson)!;
+                await orderingApi.CheckoutAsync(c.Code, new CheckoutCartRequest(c.PaidCash, 0, 0, IdempotencyKey: item.Key));
+                await db.SetOrderStatusByCodeAsync(c.Code, "delivered");
+                break;
+            }
         }
     }
 
@@ -95,19 +131,41 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
     {
         if (item.Status != "done")
         {
-            if (item.Kind == "sale")
+            switch (item.Kind)
             {
-                var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
-                foreach (var line in d.Items)
-                    await db.AdjustStockAsync(line.VariantId, line.Quantity);
-                var total = d.Items.Sum(i => i.Quantity * i.UnitPrice);
-                if (d.CustomerId is { } customerId && total > d.PaidCash)
-                    await db.AdjustDebtAsync(customerId, -(total - d.PaidCash));
-            }
-            else
-            {
-                var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
-                await db.AdjustDebtAsync(r.CustomerId, r.Amount);
+                case "sale":
+                {
+                    var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
+                    foreach (var line in d.Items)
+                        await db.AdjustStockAsync(line.VariantId, line.Quantity);
+                    var total = d.Items.Sum(i => i.Quantity * i.UnitPrice);
+                    if (d.CustomerId is { } customerId && total > d.PaidCash)
+                        await db.AdjustDebtAsync(customerId, -(total - d.PaidCash));
+                    break;
+                }
+                case "repay":
+                {
+                    var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
+                    await db.AdjustDebtAsync(r.CustomerId, r.Amount);
+                    break;
+                }
+                case "cart":
+                {
+                    var o = JsonSerializer.Deserialize<OrderDraft>(item.PayloadJson)!;
+                    await db.DeleteOrderAsync(o.LocalId);
+                    break;
+                }
+                case "checkout":
+                {
+                    var c = JsonSerializer.Deserialize<CheckoutDraft>(item.PayloadJson)!;
+                    foreach (var line in c.Items)
+                        await db.AdjustStockAsync(line.VariantId, line.Quantity);
+                    var debt = c.Total - c.PaidCash;
+                    if (c.CustomerId is { } customerId && debt > 0)
+                        await db.AdjustDebtAsync(customerId, -debt);
+                    await db.SetOrderStatusByCodeAsync(c.Code, "synced");
+                    break;
+                }
             }
         }
         await db.DeleteOutboxAsync(item.Id);
@@ -169,6 +227,46 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             CreatedAt = DateTime.Now
         });
         await db.AdjustDebtAsync(draft.CustomerId, -draft.Amount);
+        _ = Task.Run(SyncAsync);
+    }
+
+    public async Task EnqueueOrderAsync(OrderDraft draft)
+    {
+        await db.SaveOrderAsync(new LocalOrder
+        {
+            LocalId = draft.LocalId,
+            CustomerId = draft.CustomerId,
+            CustomerName = draft.CustomerName ?? "",
+            ItemsJson = JsonSerializer.Serialize(draft.Items),
+            Total = draft.Items.Sum(i => i.Quantity * i.UnitPrice),
+            Status = "new",
+            CreatedAt = DateTime.Now
+        });
+        await db.EnqueueAsync(new OutboxItem
+        {
+            Kind = "cart",
+            Key = draft.LocalId,
+            PayloadJson = JsonSerializer.Serialize(draft),
+            CreatedAt = DateTime.Now
+        });
+        _ = Task.Run(SyncAsync);
+    }
+
+    public async Task EnqueueCheckoutAsync(CheckoutDraft draft)
+    {
+        await db.EnqueueAsync(new OutboxItem
+        {
+            Kind = "checkout",
+            Key = "co-" + draft.Code,
+            PayloadJson = JsonSerializer.Serialize(draft),
+            CreatedAt = DateTime.Now
+        });
+        foreach (var line in draft.Items)
+            await db.AdjustStockAsync(line.VariantId, -line.Quantity);
+        var debt = draft.Total - draft.PaidCash;
+        if (draft.CustomerId is { } customerId && debt > 0)
+            await db.AdjustDebtAsync(customerId, debt);
+        await db.SetOrderStatusByCodeAsync(draft.Code, "delivered");
         _ = Task.Run(SyncAsync);
     }
 

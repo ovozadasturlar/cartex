@@ -59,7 +59,14 @@ public partial class OutboxViewModel(AgentDb db, SyncService sync, SessionStore 
 
 public sealed record OutboxRow(OutboxItem Item)
 {
-    public string Title => Loc.Instance[Item.Kind == "sale" ? "kind_sale" : "kind_repay"];
+    public string Title => Loc.Instance[Item.Kind switch
+    {
+        "sale" => "kind_sale",
+        "repay" => "kind_repay",
+        "cart" => "kind_order",
+        "checkout" => "kind_delivery",
+        _ => "kind_sale"
+    }];
     public string SubLine => Item.CreatedAt.ToString("dd.MM HH:mm");
     public string StatusText => Item.Status switch
     {

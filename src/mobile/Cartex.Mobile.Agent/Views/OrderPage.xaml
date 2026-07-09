@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.OrderPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:data="clr-namespace:Cartex.Mobile.Agent.Data"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    x:DataType="vm:OrderViewModel"
+    Title="{svc:T new_order}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Border Style="{StaticResource InputWrap}">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding HasCustomer}" Value="True">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Entry Placeholder="{svc:T search_customer}" Text="{Binding CustomerSearch}" ClearButtonVisibility="WhileEditing" />
+            </Border>
+            <Border Style="{StaticResource Card}" Padding="6" IsVisible="{Binding HasCustomerResults}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding CustomerResults}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="data:LocalCustomer">
+                            <Grid Padding="10,8" ColumnDefinitions="*,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectCustomerCommand, Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding FullName}" FontSize="14" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Grid.Column="1" Text="{Binding Phone}" FontSize="12" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+            <Border Style="{StaticResource Card}" Padding="14,10" IsVisible="{Binding HasCustomer}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="{Binding SelectedCustomerName}" FontAttributes="Bold" FontSize="15" VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Button Grid.Column="1" Text="{svc:T change}" Style="{StaticResource BtnOutline}" HeightRequest="36" FontSize="12"
+                            Command="{Binding ClearCustomerCommand}" />
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource InputWrap}">
+                <Entry Placeholder="{svc:T search_product}" Text="{Binding ProductSearch}" ClearButtonVisibility="WhileEditing" />
+            </Border>
+            <Border Style="{StaticResource Card}" Padding="6" IsVisible="{Binding HasProductResults}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ProductResults}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="data:LocalVanStock">
+                            <Grid Padding="10,8" ColumnDefinitions="*,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding AddItemCommand, Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="{Binding ProductName}" FontSize="14"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label FontSize="12" TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{svc:T stock_label}" />
+                                                <Span Text="{Binding Quantity, StringFormat='{0:0.###} '}" />
+                                                <Span Text="{Binding UnitName}" />
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="{Binding SellingPrice, StringFormat='{0:N0}'}" FontAttributes="Bold"
+                                       VerticalOptions="Center" FontSize="14"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Lines}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OrderLine">
+                        <Border Style="{StaticResource Card}" Padding="14,10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{Binding PriceText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </VerticalStackLayout>
+                                <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                    <Button Text="−" FontSize="18" WidthRequest="40" HeightRequest="40" CornerRadius="10" Padding="0"
+                                            Style="{StaticResource BtnOutline}" BorderWidth="1" Command="{Binding DecrementCommand}" />
+                                    <Entry Text="{Binding Quantity}" Keyboard="Numeric" WidthRequest="56" HorizontalTextAlignment="Center" FontSize="15" />
+                                    <Button Text="+" FontSize="18" WidthRequest="40" HeightRequest="40" CornerRadius="10" Padding="0"
+                                            Style="{StaticResource BtnOutline}" BorderWidth="1" Command="{Binding IncrementCommand}" />
+                                    <Button Text="✕" FontSize="14" WidthRequest="36" HeightRequest="40" CornerRadius="10" Padding="0"
+                                            BackgroundColor="Transparent"
+                                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+                                            Command="{Binding RemoveLineCommand, Source={RelativeSource AncestorType={x:Type vm:OrderViewModel}}}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Border Style="{StaticResource Card}" IsVisible="{Binding HasLines}">
+                <Grid ColumnDefinitions="*,Auto" Padding="4,2">
+                    <Label Text="{svc:T total}" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="20" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                </Grid>
+            </Border>
+
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding Error}" Value="{x:Null}">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Label Text="{Binding Error}" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+            </Border>
+
+            <Button Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" IsVisible="{Binding HasLines}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

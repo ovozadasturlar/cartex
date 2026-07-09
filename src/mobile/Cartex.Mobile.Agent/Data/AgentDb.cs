@@ -15,6 +15,7 @@ public sealed class AgentDb
         await _db.CreateTableAsync<LocalVanStock>();
         await _db.CreateTableAsync<OutboxItem>();
         await _db.CreateTableAsync<MetaEntry>();
+        await _db.CreateTableAsync<LocalOrder>();
     }
 
     public async Task ReplaceCustomersAsync(IEnumerable<LocalCustomer> customers)
@@ -161,6 +162,50 @@ public sealed class AgentDb
             c.DeleteAll<LocalVanStock>();
             c.DeleteAll<MetaEntry>();
             c.DeleteAll<OutboxItem>();
+            c.DeleteAll<LocalOrder>();
         });
+    }
+
+    public async Task SaveOrderAsync(LocalOrder order)
+    {
+        await InitAsync();
+        await _db.InsertOrReplaceAsync(order);
+    }
+
+    public async Task<List<LocalOrder>> GetOrdersAsync()
+    {
+        await InitAsync();
+        return await _db.Table<LocalOrder>().OrderByDescending(o => o.CreatedAt).ToListAsync();
+    }
+
+    public async Task<LocalOrder?> GetOrderAsync(string localId)
+    {
+        await InitAsync();
+        return await _db.FindAsync<LocalOrder>(localId);
+    }
+
+    public async Task SetOrderCodeAsync(string localId, string code)
+    {
+        await InitAsync();
+        var row = await _db.FindAsync<LocalOrder>(localId);
+        if (row is null) return;
+        row.Code = code;
+        if (row.Status == "new") row.Status = "synced";
+        await _db.UpdateAsync(row);
+    }
+
+    public async Task SetOrderStatusByCodeAsync(string code, string status)
+    {
+        await InitAsync();
+        var row = await _db.Table<LocalOrder>().Where(o => o.Code == code).FirstOrDefaultAsync();
+        if (row is null) return;
+        row.Status = status;
+        await _db.UpdateAsync(row);
+    }
+
+    public async Task DeleteOrderAsync(string localId)
+    {
+        await InitAsync();
+        await _db.DeleteAsync<LocalOrder>(localId);
     }
 }

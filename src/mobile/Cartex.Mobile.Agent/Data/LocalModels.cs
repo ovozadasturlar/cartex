@@ -35,6 +35,18 @@ public class OutboxItem
     public DateTime CreatedAt { get; set; }
 }
 
+public class LocalOrder
+{
+    [PrimaryKey] public string LocalId { get; set; } = "";
+    public string? Code { get; set; }
+    public long? CustomerId { get; set; }
+    public string CustomerName { get; set; } = "";
+    public string ItemsJson { get; set; } = "[]";
+    public decimal Total { get; set; }
+    public string Status { get; set; } = "new";
+    public DateTime CreatedAt { get; set; }
+}
+
 public class MetaEntry
 {
     [PrimaryKey] public string Key { get; set; } = "";

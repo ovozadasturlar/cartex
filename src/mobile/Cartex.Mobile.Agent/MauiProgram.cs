@@ -48,6 +48,8 @@ public static class MauiProgram
         builder.Services.AddTransient<TransfersViewModel>();
         builder.Services.AddTransient<OutboxViewModel>();
         builder.Services.AddTransient<ScanViewModel>();
+        builder.Services.AddTransient<OrdersViewModel>();
+        builder.Services.AddTransient<OrderViewModel>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<CustomersPage>();
@@ -57,8 +59,12 @@ public static class MauiProgram
         builder.Services.AddTransient<TransfersPage>();
         builder.Services.AddTransient<OutboxPage>();
         builder.Services.AddTransient<ScanPage>();
+        builder.Services.AddTransient<OrdersPage>();
+        builder.Services.AddTransient<OrderPage>();
 
-        return builder.Build();
+        var app = builder.Build();
+        app.Services.GetRequiredService<SyncService>().StartConnectivityWatch();
+        return app;
     }
 
     private static T Resolve<T>() where T : notnull =>
