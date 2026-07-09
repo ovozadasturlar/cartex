@@ -4,6 +4,7 @@ using Cartex.Mobile.Agent.Services;
 using Cartex.Mobile.Agent.ViewModels;
 using Cartex.Mobile.Agent.Views;
 using Microsoft.Extensions.DependencyInjection;
+using ZXing.Net.Maui.Controls;
 
 namespace Cartex.Mobile.Agent;
 
@@ -14,6 +15,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseBarcodeReader()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -45,6 +47,7 @@ public static class MauiProgram
         builder.Services.AddTransient<RepayViewModel>();
         builder.Services.AddTransient<TransfersViewModel>();
         builder.Services.AddTransient<OutboxViewModel>();
+        builder.Services.AddTransient<ScanViewModel>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<CustomersPage>();
@@ -53,6 +56,7 @@ public static class MauiProgram
         builder.Services.AddTransient<RepayPage>();
         builder.Services.AddTransient<TransfersPage>();
         builder.Services.AddTransient<OutboxPage>();
+        builder.Services.AddTransient<ScanPage>();
 
         return builder.Build();
     }

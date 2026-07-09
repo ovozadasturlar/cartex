@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.ScanPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    x:DataType="vm:ScanViewModel"
+    Title="{svc:T qr_scanner}">
+    <Grid>
+        <zxing:CameraBarcodeReaderView
+            x:Name="Reader"
+            IsDetecting="{Binding IsDetecting}"
+            BarcodesDetected="OnBarcodesDetected" />
+        <Border VerticalOptions="Center" HorizontalOptions="Center"
+                WidthRequest="240" HeightRequest="240"
+                StrokeThickness="3" StrokeShape="RoundRectangle 24"
+                Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                BackgroundColor="Transparent" />
+        <Border VerticalOptions="End" Margin="24,0,24,32" Padding="14,10"
+                StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                BackgroundColor="#B3000000">
+            <Label Text="{Binding Status}"
+                   TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
+        </Border>
+    </Grid>
+</ContentPage>

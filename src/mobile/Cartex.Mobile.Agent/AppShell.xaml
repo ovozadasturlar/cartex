@@ -4,15 +4,16 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:Cartex.Mobile.Agent.Views"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     FlyoutBehavior="Disabled">
 
     <ShellContent Route="login" ContentTemplate="{DataTemplate views:LoginPage}" Shell.NavBarIsVisible="False" />
 
     <TabBar Route="main">
-        <ShellContent Route="home" Title="Asosiy" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Route="customers" Title="Mijozlar" Icon="tab_customers.png" ContentTemplate="{DataTemplate views:CustomersPage}" />
-        <ShellContent Route="transfers" Title="Yuk xati" Icon="tab_truck.png" ContentTemplate="{DataTemplate views:TransfersPage}" />
-        <ShellContent Route="outbox" Title="Navbat" Icon="tab_queue.png" ContentTemplate="{DataTemplate views:OutboxPage}" />
+        <ShellContent Route="home" Title="{svc:T tab_home}" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
+        <ShellContent Route="customers" Title="{svc:T customers}" Icon="tab_customers.png" ContentTemplate="{DataTemplate views:CustomersPage}" />
+        <ShellContent Route="transfers" Title="{svc:T tab_transfers}" Icon="tab_truck.png" ContentTemplate="{DataTemplate views:TransfersPage}" />
+        <ShellContent Route="outbox" Title="{svc:T tab_outbox}" Icon="tab_queue.png" ContentTemplate="{DataTemplate views:OutboxPage}" />
     </TabBar>
 
 </Shell>
