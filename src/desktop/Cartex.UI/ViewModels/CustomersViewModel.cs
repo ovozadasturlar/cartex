@@ -96,6 +96,10 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Customers.Count == 0;
     public bool HasSelection => SelectedCustomer is not null;
+    public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen;
+    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     public bool CanManage => _auth.HasPermission("customers.manage");
     public bool CanMessage => _auth.HasPermission("customers.message");
     public bool CanExport => _auth.HasPermission("reports.export");

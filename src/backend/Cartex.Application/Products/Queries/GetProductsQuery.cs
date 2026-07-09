@@ -49,12 +49,15 @@ public sealed class GetProductsQueryHandler(
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = $"%{request.Search.Trim()}%";
-            query = query.Where(p =>
-                EF.Functions.ILike(p.Name, term)
-                || (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
-                || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))
-                || p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))));
+            foreach (var token in request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var term = $"%{token}%";
+                query = query.Where(p =>
+                    EF.Functions.ILike(p.Name, term)
+                    || (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
+                    || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))
+                    || p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))));
+            }
             request.Search = null;
         }
 

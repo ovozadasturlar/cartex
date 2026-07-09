@@ -124,6 +124,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private StockOnHandDto? _detailProduct;
     [ObservableProperty] private string _detailBarcodes = string.Empty;
 
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || QuickProduct.IsOpen || Prepack.IsOpen;
+    partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockOnHandDto> Products { get; } = [];
     public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
@@ -209,6 +214,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         Branch = branch;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
+        QuickProduct.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuickProductViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
+        Prepack.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(PrepackViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
         _heldStore = heldStore;

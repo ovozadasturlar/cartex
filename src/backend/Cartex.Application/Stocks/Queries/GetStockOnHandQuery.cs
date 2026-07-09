@@ -64,8 +64,11 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
         }
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = $"%{request.Search.Trim()}%";
-            query = query.Where(o => EF.Functions.ILike(o.ProductName, term));
+            foreach (var token in request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var term = $"%{token}%";
+                query = query.Where(o => EF.Functions.ILike(o.ProductName, term));
+            }
         }
 
         var totals = await query

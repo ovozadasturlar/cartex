@@ -246,6 +246,12 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private Bitmap? _printPreview;
     private long _printVariantId;
 
+    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen;
+    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsVariantsOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsVariantEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)
     {

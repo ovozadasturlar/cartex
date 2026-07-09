@@ -8,7 +8,7 @@
              x:CompileBindings="False">
 
     <Panel>
-    <ScrollViewer>
+    <ScrollViewer Classes.blurred="{Binding IsReportOpen}">
         <StackPanel Margin="24" MaxWidth="720" HorizontalAlignment="Left" Spacing="16">
             <c:PageHeader Title="{Binding L[shift]}" />
 

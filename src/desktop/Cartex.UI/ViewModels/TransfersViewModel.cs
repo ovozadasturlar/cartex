@@ -39,6 +39,10 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private StockTransferDto? _selectedTransfer;
     [ObservableProperty] private bool _isDetailOpen;
 
+    public bool IsModalOpen => IsEditOpen || IsDetailOpen;
+    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     public PaginationState Paging { get; } = new();
     [ObservableProperty] private StockTransfersTotalsDto? _totals;
     public bool IsEmpty => Transfers.Count == 0;

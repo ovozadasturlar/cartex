@@ -8,7 +8,7 @@
              x:CompileBindings="False">
 
     <Panel>
-    <DockPanel Margin="24">
+    <DockPanel Margin="24" Classes.blurred="{Binding IsBonusOpen}">
         <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,*" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center"

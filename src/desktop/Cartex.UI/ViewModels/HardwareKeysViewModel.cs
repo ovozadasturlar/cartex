@@ -12,8 +12,10 @@ namespace Cartex.UI.ViewModels;
 public partial class HardwareKeysViewModel(
     IHardwareKeysApi api, IUsersApi usersApi, IDialogService dialog, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
 {
+    public sealed record KeyGroup(string Serial, IReadOnlyList<HardwareKeyDto> Items);
+
     public ObservableCollection<UserDto> Users { get; } = [];
-    public ObservableCollection<HardwareKeyDto> Keys { get; } = [];
+    public ObservableCollection<KeyGroup> KeyGroups { get; } = [];
 
     [ObservableProperty] private UserDto? _selectedUser;
     [ObservableProperty] private string? _driveInfo;
@@ -38,8 +40,9 @@ public partial class HardwareKeysViewModel(
     private async Task ReloadKeysAsync()
     {
         var keys = await api.GetAllAsync();
-        Keys.Clear();
-        foreach (var k in keys) Keys.Add(k);
+        KeyGroups.Clear();
+        foreach (var g in keys.GroupBy(k => k.Serial))
+            KeyGroups.Add(new KeyGroup(g.Key, [.. g]));
     }
 
     [RelayCommand]

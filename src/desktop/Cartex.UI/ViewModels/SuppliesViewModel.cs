@@ -149,6 +149,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isDetailOpen;
     [ObservableProperty] private SupplyDto? _selectedSupply;
 
+    public bool IsModalOpen => IsEditOpen || IsDetailOpen || IsPrintOpen || QuickProduct.IsOpen;
+
+    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     public bool IsEmpty => Supplies.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
@@ -170,6 +176,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _printer = printer;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
+        QuickProduct.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuickProductViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
         _export = export;

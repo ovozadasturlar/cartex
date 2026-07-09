@@ -15,14 +15,14 @@ public partial class PaginationState : ObservableObject
     private bool _suppress;
 
     [ObservableProperty] private int _page = 1;
-    [ObservableProperty] private int _pageSize = 50;
+    [ObservableProperty] private int _pageSize = 30;
     [ObservableProperty] private int _totalCount;
     [ObservableProperty] private int _totalPages = 1;
     [ObservableProperty] private string? _sortBy;
     [ObservableProperty] private bool _descending;
     [ObservableProperty] private SortOption? _selectedSort;
 
-    public IReadOnlyList<int> PageSizes { get; } = [25, 50, 100, 200];
+    public IReadOnlyList<int> PageSizes { get; } = [20, 30, 50, 80];
     public IReadOnlyList<SortOption> SortOptions { get; private set; } = [];
     public bool HasSort => SortOptions.Count > 0;
 

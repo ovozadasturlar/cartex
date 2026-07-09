@@ -31,6 +31,10 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _repayViaCard;
     [ObservableProperty] private SupplierDto? _repaySupplier;
 
+    public bool IsModalOpen => IsEditOpen || IsRepayOpen;
+    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     public bool IsEmpty => Suppliers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
 

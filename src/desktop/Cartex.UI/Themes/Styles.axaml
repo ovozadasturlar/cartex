@@ -26,6 +26,12 @@
         </ResourceDictionary>
     </Styles.Resources>
 
+    <Style Selector=":is(Control).blurred">
+        <Setter Property="Effect">
+            <BlurEffect Radius="18" />
+        </Setter>
+    </Style>
+
     <Style Selector="Button.brand">
         <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
         <Setter Property="Foreground" Value="White" />

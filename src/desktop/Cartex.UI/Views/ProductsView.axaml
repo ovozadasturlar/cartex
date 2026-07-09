@@ -23,7 +23,7 @@
     </UserControl.Styles>
 
     <Panel>
-        <DockPanel Margin="24">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
 
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[products]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="10">

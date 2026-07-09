@@ -8,7 +8,7 @@
              x:CompileBindings="False">
 
     <Panel>
-        <DockPanel Margin="24">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsEditOpen}">
 
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[users]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">

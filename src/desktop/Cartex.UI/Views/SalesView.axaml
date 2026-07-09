@@ -82,6 +82,7 @@
         </Grid.ColumnDefinitions>
 
         <GridSplitter Grid.Column="1" Width="6" Background="Transparent" ResizeDirection="Columns"
+                      Classes.blurred="{Binding IsModalOpen}"
                       ResizeBehavior="PreviousAndNext" Cursor="SizeWestEast" HorizontalAlignment="Center">
             <GridSplitter.Template>
                 <ControlTemplate>
@@ -94,7 +95,7 @@
             </GridSplitter.Template>
         </GridSplitter>
 
-        <DockPanel Grid.Column="0" Margin="16,16,8,16">
+        <DockPanel Grid.Column="0" Margin="16,16,8,16" Classes.blurred="{Binding IsModalOpen}">
 
             <Border DockPanel.Dock="Top" Background="{DynamicResource CardBg}" CornerRadius="10"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="6" Margin="0,0,0,12">
@@ -196,7 +197,8 @@
         </DockPanel>
 
         <Border Grid.Column="2" Background="{DynamicResource CardBg}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0"
+                Classes.blurred="{Binding IsModalOpen}">
             <DockPanel Margin="16">
 
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,12">

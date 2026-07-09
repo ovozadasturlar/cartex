@@ -31,11 +31,6 @@
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="16,12" />
         </Style>
-        <Style Selector="DockPanel.blurred">
-            <Setter Property="Effect">
-                <BlurEffect Radius="18" />
-            </Setter>
-        </Style>
     </UserControl.Styles>
 
     <Panel>

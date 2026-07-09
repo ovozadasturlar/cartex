@@ -34,6 +34,10 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private SaleDto? _returningSale;
     public ObservableCollection<ReturnLineItem> ReturnLines { get; } = [];
 
+    public bool IsModalOpen => IsReceiptOpen || IsReturnOpen;
+    partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsReturnOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
     public bool IsEmpty => Sales.Count == 0;
 
     public SalesHistoryViewModel(ISalesApi salesApi, IReceiptApi receiptApi, AuthService auth, IToastService toast, IBusyService busy, IExportService export)
