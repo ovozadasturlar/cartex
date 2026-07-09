@@ -118,8 +118,13 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _discountMinAmount;
     [ObservableProperty] private decimal _discountValue;
     [ObservableProperty] private int _discountPriority;
-    [ObservableProperty] private DateTimeOffset? _discountStartsOn;
-    [ObservableProperty] private DateTimeOffset? _discountEndsOn;
+    [ObservableProperty] private DateTime? _discountStartsOn;
+    [ObservableProperty] private DateTime? _discountEndsOn;
+
+    public bool IsModalOpen => IsRuleOpen || IsDiscountOpen;
+
+    partial void OnIsRuleOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsDiscountOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     [ObservableProperty] private LabeledValue? _exceptionScope;
     [ObservableProperty] private ProductDto? _exceptionProduct;
     [ObservableProperty] private CategoryDto? _exceptionCategory;
@@ -163,6 +168,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 BuildLists();
+                if (StatPeriodIndex < 0) StatPeriodIndex = 2;
+                OnPropertyChanged(nameof(StatPeriodIndex));
 
                 var products = await _productsApi.GetAllAsync();
                 Products.Clear();
@@ -401,8 +408,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         DiscountMinAmount = r.MinAmount;
         DiscountValue = r.Value;
         DiscountPriority = r.Priority;
-        DiscountStartsOn = r.StartsOn is { } s ? new DateTimeOffset(s.ToDateTime(TimeOnly.MinValue)) : null;
-        DiscountEndsOn = r.EndsOn is { } e ? new DateTimeOffset(e.ToDateTime(TimeOnly.MinValue)) : null;
+        DiscountStartsOn = r.StartsOn?.ToDateTime(TimeOnly.MinValue);
+        DiscountEndsOn = r.EndsOn?.ToDateTime(TimeOnly.MinValue);
         ExceptionScope = ExceptionScopes.FirstOrDefault();
         DiscountExceptions.Clear();
         foreach (var ex in r.Exceptions)
@@ -459,8 +466,8 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         };
         return new SaveDiscountRuleRequest(id, DiscountName.Trim(), DiscountEnabled, scope, targetId,
             DiscountCustomer?.Id, DiscountMinAmount, DiscountMethod?.Value ?? "Percent", DiscountValue, DiscountPriority,
-            DiscountStartsOn is { } s ? DateOnly.FromDateTime(s.Date) : null,
-            DiscountEndsOn is { } e ? DateOnly.FromDateTime(e.Date) : null,
+            DiscountStartsOn is { } s ? DateOnly.FromDateTime(s) : null,
+            DiscountEndsOn is { } e ? DateOnly.FromDateTime(e) : null,
             DiscountExceptions.Select(c => new DiscountExceptionInputDto(c.Scope, c.TargetId)).ToList());
     }
 

@@ -31,10 +31,15 @@
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="16,12" />
         </Style>
+        <Style Selector="DockPanel.blurred">
+            <Setter Property="Effect">
+                <BlurEffect Radius="18" />
+            </Setter>
+        </Style>
     </UserControl.Styles>
 
     <Panel>
-        <DockPanel Margin="24">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[loyalty]}" Margin="0,0,0,16" />
 
             <Grid ColumnDefinitions="220,*">
@@ -45,7 +50,7 @@
                                 Command="{Binding SelectSectionCommand}" CommandParameter="discounts" />
                         <Button Classes="subnav" Classes.active="{Binding IsBonusSection}" Content="{Binding L[bonus]}"
                                 Command="{Binding SelectSectionCommand}" CommandParameter="bonus" />
-                        <Button Classes="subnav" Classes.active="{Binding IsSettingsSection}" Content="{Binding L[app_settings]}"
+                        <Button Classes="subnav" Classes.active="{Binding IsSettingsSection}" Content="{Binding L[settings]}"
                                 Command="{Binding SelectSectionCommand}" CommandParameter="settings" />
                     </StackPanel>
                 </Border>
@@ -282,7 +287,7 @@
             </Grid>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsRuleOpen}" Background="#80000000">
+        <Border IsVisible="{Binding IsRuleOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -332,7 +337,7 @@
             </Border>
         </Border>
 
-        <Border IsVisible="{Binding IsDiscountOpen}" Background="#80000000">
+        <Border IsVisible="{Binding IsDiscountOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="680"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
@@ -434,13 +439,13 @@
                             <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Text="{Binding L[discount_starts]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <DatePicker SelectedDate="{Binding DiscountStartsOn}" HorizontalAlignment="Stretch"
-                                                DayFormat="dd" MonthFormat="MM" YearFormat="yyyy" />
+                                    <CalendarDatePicker SelectedDate="{Binding DiscountStartsOn}" HorizontalAlignment="Stretch"
+                                                        MinHeight="38" Watermark="—" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Text="{Binding L[discount_ends]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <DatePicker SelectedDate="{Binding DiscountEndsOn}" HorizontalAlignment="Stretch"
-                                                DayFormat="dd" MonthFormat="MM" YearFormat="yyyy" />
+                                    <CalendarDatePicker SelectedDate="{Binding DiscountEndsOn}" HorizontalAlignment="Stretch"
+                                                        MinHeight="38" Watermark="—" />
                                 </StackPanel>
                             </Grid>
 
