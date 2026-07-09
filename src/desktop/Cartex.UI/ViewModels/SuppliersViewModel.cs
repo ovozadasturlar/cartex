@@ -78,7 +78,22 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    partial void OnSearchTextChanged(string value) { Paging.Page = 1; _ = LoadAsync(); }
+    private CancellationTokenSource? _searchCts;
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchCts?.Cancel();
+        var cts = _searchCts = new CancellationTokenSource();
+        _ = DebouncedSearchAsync(cts.Token);
+    }
+
+    private async Task DebouncedSearchAsync(CancellationToken token)
+    {
+        try { await Task.Delay(300, token); } catch { return; }
+        if (token.IsCancellationRequested) return;
+        Paging.Page = 1;
+        await LoadAsync();
+    }
 
     [RelayCommand]
     private void OpenCreate()

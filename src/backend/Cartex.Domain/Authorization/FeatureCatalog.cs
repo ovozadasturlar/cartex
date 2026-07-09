@@ -20,7 +20,7 @@ public static class FeatureCatalog
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
     {
-        [Reports] = [AppPermissions.Reports.View],
+        [Reports] = [AppPermissions.Reports.View, AppPermissions.Reports.Export],
         [Loyalty] = [AppPermissions.Loyalty.View, AppPermissions.Loyalty.Manage],
         [StockTransfers] = [AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Manage],
         [Supplies] = [AppPermissions.Supplies.View, AppPermissions.Supplies.Manage],

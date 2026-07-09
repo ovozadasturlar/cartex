@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.UI.Models;
@@ -21,7 +22,10 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty] private bool _isLanguagePopupOpen;
 
     [ObservableProperty] private bool _keyDetected;
-    private DetectedDrive? _detectedDrive;
+    public ObservableCollection<KeyProfile> KeyProfiles { get; } = [];
+    public bool HasMultipleKeys => KeyProfiles.Count > 1;
+
+    public sealed record KeyProfile(string Username, string Serial, string Content);
 
     public AppTheme CurrentTheme
     {
@@ -65,19 +69,22 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task DetectKey()
     {
-        _detectedDrive = await Task.Run(HardwareKeyReader.ScanForKey);
-        KeyDetected = _detectedDrive is not null;
+        var keys = await Task.Run(HardwareKeyReader.ScanForKeys);
+        KeyProfiles.Clear();
+        foreach (var k in keys)
+            KeyProfiles.Add(new KeyProfile(k.Username ?? "—", k.Serial, k.Content));
+        KeyDetected = KeyProfiles.Count > 0;
+        OnPropertyChanged(nameof(HasMultipleKeys));
     }
 
     [RelayCommand]
-    private async Task LoginWithKeyAsync()
+    private async Task LoginWithKeyAsync(KeyProfile profile)
     {
-        if (_detectedDrive?.KeyContent is null) return;
         ErrorMessage = null;
         IsLoading = true;
         try
         {
-            await _authService.LoginWithKeyAsync(_detectedDrive.KeyContent, _detectedDrive.Serial);
+            await _authService.LoginWithKeyAsync(profile.Content, profile.Serial);
             var mainVm = ServiceLocator.Resolve<MainViewModel>();
             mainVm.Initialize();
             _navigationService.NavigateTo(mainVm);

@@ -1,26 +1,44 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace Cartex.UI.Services;
 
 public sealed record DetectedDrive(string Root, string Serial, string? KeyFile, string? KeyContent);
 
+public sealed record DetectedKey(string Root, string Serial, string File, string Content, string? Username);
+
 public static class HardwareKeyReader
 {
-    public static DetectedDrive? ScanForKey()
+    public static List<DetectedKey> ScanForKeys()
     {
+        var keys = new List<DetectedKey>();
         foreach (var drive in EnumerateRemovable())
         {
-            var keyFile = SafeFindKey(drive.Root);
-            if (keyFile is null) continue;
-            try
+            foreach (var file in SafeFindKeys(drive.Root))
             {
-                return drive with { KeyFile = keyFile, KeyContent = File.ReadAllText(keyFile).Trim() };
+                try
+                {
+                    var content = File.ReadAllText(file).Trim();
+                    keys.Add(new DetectedKey(drive.Root, drive.Serial, file, content, TryReadUsername(content)));
+                }
+                catch (IOException) { }
             }
-            catch (IOException) { }
         }
-        return null;
+        return keys;
+    }
+
+    public static int CountKeys(string root) => SafeFindKeys(root).Count();
+
+    private static string? TryReadUsername(string content)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(Convert.FromBase64String(content.Split('.')[0]));
+            return doc.RootElement.GetProperty("U").GetString();
+        }
+        catch { return null; }
     }
 
     public static DetectedDrive? ScanForBlankDrive()
@@ -43,11 +61,11 @@ public static class HardwareKeyReader
         }
     }
 
-    private static string? SafeFindKey(string root)
+    private static IEnumerable<string> SafeFindKeys(string root)
     {
-        try { return Directory.EnumerateFiles(root, "*.key").FirstOrDefault(); }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        try { return Directory.EnumerateFiles(root, "*.key").ToList(); }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
     }
 
     private static string? VolumeSerial(string root)

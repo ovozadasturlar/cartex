@@ -212,20 +212,26 @@ public static class QueryExtensions
         if (string.IsNullOrWhiteSpace(search)) return null;
 
         var stringProps = GetCachedProperties(typeof(T))
-            .Where(p => p.PropertyType == typeof(string) && !IsSensitive(p.Name));
-        Expression? expr = null;
-        var lowered = search.ToLower();
+            .Where(p => p.PropertyType == typeof(string) && !IsSensitive(p.Name))
+            .ToList();
 
-        foreach (var p in stringProps)
+        Expression? all = null;
+        foreach (var token in search.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var member = Expression.Property(param, p.Name);
-            var notNull = Expression.NotEqual(member, Expression.Constant(null, typeof(string)));
-            var lower = Expression.Call(member, nameof(string.ToLower), Type.EmptyTypes);
-            var contains = Expression.Call(lower, nameof(string.Contains), Type.EmptyTypes, Expression.Constant(lowered));
-            var and = Expression.AndAlso(notNull, contains);
-            expr = expr is null ? and : Expression.OrElse(expr, and);
+            Expression? any = null;
+            foreach (var p in stringProps)
+            {
+                var member = Expression.Property(param, p.Name);
+                var notNull = Expression.NotEqual(member, Expression.Constant(null, typeof(string)));
+                var lower = Expression.Call(member, nameof(string.ToLower), Type.EmptyTypes);
+                var contains = Expression.Call(lower, nameof(string.Contains), Type.EmptyTypes, Expression.Constant(token));
+                var and = Expression.AndAlso(notNull, contains);
+                any = any is null ? and : Expression.OrElse(any, and);
+            }
+            if (any is null) return null;
+            all = all is null ? any : Expression.AndAlso(all, any);
         }
 
-        return expr;
+        return all;
     }
 }

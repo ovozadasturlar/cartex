@@ -24,8 +24,11 @@ public sealed class LoginWithKeyCommandHandler(
         if (!user.IsActive)
             throw new ForbiddenException("User is deactivated.");
 
-        if (!await db.HardwareKeys.AnyAsync(k => k.UserId == user.Id && k.Serial == request.Serial && k.RevokedAt == null, cancellationToken))
-            throw new UnauthorizedAccessException("Invalid hardware key.");
+        var key = await db.HardwareKeys.FirstOrDefaultAsync(k => k.UserId == user.Id && k.Serial == request.Serial && k.RevokedAt == null, cancellationToken)
+            ?? throw new UnauthorizedAccessException("Invalid hardware key.");
+
+        if (!key.IsEnabled)
+            throw new ForbiddenException("Kalit o'chirilgan.");
 
         return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
     }

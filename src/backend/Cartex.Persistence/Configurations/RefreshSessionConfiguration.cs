@@ -10,6 +10,7 @@ public class HardwareKeyConfiguration : IEntityTypeConfiguration<HardwareKey>
     {
         builder.ToTable("hardware_keys");
         builder.Property(x => x.Serial).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.IsEnabled).HasDefaultValue(true);
         builder.HasIndex(x => new { x.UserId, x.Serial });
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }

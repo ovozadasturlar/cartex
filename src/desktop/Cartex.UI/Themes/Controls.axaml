@@ -58,32 +58,6 @@
         </Setter>
     </ControlTheme>
 
-    <ControlTheme x:Key="{x:Type c:ExportButton}" TargetType="c:ExportButton">
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Button Padding="12,8" Cursor="Hand">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <mi:MaterialIcon Kind="DownloadOutline" Width="16" Height="16" />
-                        <TextBlock Text="{TemplateBinding Text}" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <Button.Flyout>
-                        <MenuFlyout>
-                            <MenuItem Header="Excel"
-                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
-                                      CommandParameter="Excel" />
-                            <MenuItem Header="PDF"
-                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
-                                      CommandParameter="Pdf" />
-                            <MenuItem Header="CSV"
-                                      Command="{Binding Command, RelativeSource={RelativeSource AncestorType=c:ExportButton}}"
-                                      CommandParameter="Csv" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-            </ControlTemplate>
-        </Setter>
-    </ControlTheme>
-
     <ControlTheme x:Key="{x:Type c:Pager}" TargetType="c:Pager">
         <Setter Property="Template">
             <ControlTemplate>

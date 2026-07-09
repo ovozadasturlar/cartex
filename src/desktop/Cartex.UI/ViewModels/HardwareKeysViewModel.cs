@@ -60,10 +60,29 @@ public partial class HardwareKeysViewModel(
     }
 
     [RelayCommand]
+    private async Task ToggleKeyAsync(HardwareKeyDto? key)
+    {
+        if (key is null || key.RevokedAt is not null) return;
+        try
+        {
+            using (busy.Begin(L["loading"]))
+            {
+                await api.SetEnabledAsync(key.Id, new SetHardwareKeyEnabledRequest(!key.IsEnabled));
+                await ReloadKeysAsync();
+            }
+            toast.Success(L["success"]);
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private void DetectDrive()
     {
         _drive = HardwareKeyReader.ScanForBlankDrive();
-        DriveInfo = _drive is null ? L["no_drive_detected"] : $"{_drive.Root}  ·  {_drive.Serial}";
+        if (_drive is null) { DriveInfo = L["no_drive_detected"]; return; }
+        var keyCount = HardwareKeyReader.CountKeys(_drive.Root);
+        DriveInfo = $"{_drive.Root}  ·  {_drive.Serial}"
+            + (keyCount > 0 ? $"  ·  {string.Format(L["key_drive_has_keys"], keyCount)}" : "");
     }
 
     [RelayCommand]

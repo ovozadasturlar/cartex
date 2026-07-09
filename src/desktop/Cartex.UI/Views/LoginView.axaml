@@ -67,15 +67,29 @@
                         IsDefault="True"
                         IsEnabled="{Binding !IsLoading}" />
 
-                <Button Command="{Binding LoginWithKeyCommand}"
-                        IsVisible="{Binding KeyDetected}"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        MinHeight="44" IsEnabled="{Binding !IsLoading}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <mi:MaterialIcon Kind="Usb" Width="18" Height="18" />
-                        <TextBlock Text="{Binding L[login_with_key]}" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <StackPanel Spacing="8" IsVisible="{Binding KeyDetected}">
+                    <TextBlock Text="{Binding L[login_choose_profile]}" IsVisible="{Binding HasMultipleKeys}"
+                               Foreground="{DynamicResource TextSecondary}" FontSize="12.5" HorizontalAlignment="Center" />
+                    <ItemsControl ItemsSource="{Binding KeyProfiles}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding $parent[ItemsControl].DataContext.LoginWithKeyCommand}"
+                                        CommandParameter="{Binding}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        MinHeight="44" IsEnabled="{Binding !$parent[ItemsControl].DataContext.IsLoading}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="Usb" Width="18" Height="18" />
+                                        <TextBlock Text="{Binding $parent[ItemsControl].DataContext.L[login_with_key]}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Username}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
                 <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
 

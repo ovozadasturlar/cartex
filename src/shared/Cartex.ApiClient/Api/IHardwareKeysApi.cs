@@ -11,6 +11,9 @@ public interface IHardwareKeysApi
     [Post("/api/hardware-keys")]
     Task<HardwareKeyResult> GenerateAsync([Body] GenerateHardwareKeyRequest request);
 
+    [Put("/api/hardware-keys/{id}/enabled")]
+    Task SetEnabledAsync(long id, [Body] SetHardwareKeyEnabledRequest request);
+
     [Delete("/api/hardware-keys/{id}")]
     Task RevokeAsync(long id);
 }
