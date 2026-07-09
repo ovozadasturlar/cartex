@@ -7,7 +7,7 @@ namespace Cartex.Application.Ordering.Queries;
 
 public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName, string WarehouseName, int ItemCount, DateTime CreatedAt);
 
-public record GetCartsQuery(string? Status = null) : IRequest<IReadOnlyCollection<CartListDto>>;
+public record GetCartsQuery(string? Status = null, long? WarehouseId = null) : IRequest<IReadOnlyCollection<CartListDto>>;
 
 public sealed class GetCartsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCartsQuery, IReadOnlyCollection<CartListDto>>
 {
@@ -16,6 +16,8 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db) : IRequestHan
         var query = db.Carts.AsQueryable();
         if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<CartStatus>(request.Status, true, out var status))
             query = query.Where(c => c.Status == status);
+        if (request.WarehouseId is not null)
+            query = query.Where(c => c.WarehouseId == request.WarehouseId);
 
         return await query
             .OrderByDescending(c => c.CreatedAt)

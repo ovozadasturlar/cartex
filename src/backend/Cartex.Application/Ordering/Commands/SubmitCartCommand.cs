@@ -9,12 +9,23 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
-public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items) : ICommand<string>;
+public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null) : ICommand<string>;
 
 public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IRequestHandler<SubmitCartCommand, string>
 {
     public async Task<string> Handle(SubmitCartCommand request, CancellationToken cancellationToken)
     {
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var existing = await db.Carts
+                .Where(c => c.IdempotencyKey == idempotencyKey)
+                .Select(c => c.AggregateCode)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return existing;
+        }
+
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
@@ -23,7 +34,8 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IReques
             BranchId = warehouse.BranchId,
             WarehouseId = request.WarehouseId,
             CustomerId = request.CustomerId,
-            AggregateCode = Guid.NewGuid().ToString("N")
+            AggregateCode = Guid.NewGuid().ToString("N"),
+            IdempotencyKey = idempotencyKey
         };
 
         foreach (var item in request.Items)

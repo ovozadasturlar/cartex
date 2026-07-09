@@ -1,3 +1,3 @@
 namespace Cartex.Shared.Models.Ordering;
 
-public record CheckoutCartRequest(decimal PaidCash, decimal PaidCard, decimal PaidBonus);
+public record CheckoutCartRequest(decimal PaidCash, decimal PaidCard, decimal PaidBonus, string? IdempotencyKey = null);

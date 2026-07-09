@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CartDto = Cartex.Application.Ordering.Queries.CartDto;
 using CartListDto = Cartex.Application.Ordering.Queries.CartListDto;
+using CartLoadItemDto = Cartex.Application.Ordering.Queries.CartLoadItemDto;
 
 namespace Cartex.Api.Controllers;
 
@@ -19,9 +20,17 @@ public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]
     [HasPermission(AppPermissions.Sales.View)]
-    public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null)
+    public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null, [FromQuery] long? warehouseId = null)
     {
-        var result = await sender.Send(new GetCartsQuery(status));
+        var result = await sender.Send(new GetCartsQuery(status, warehouseId));
+        return Ok(result);
+    }
+
+    [HttpGet("load")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<ActionResult<IReadOnlyCollection<CartLoadItemDto>>> GetLoad([FromQuery] long? warehouseId = null, [FromQuery] string? status = null)
+    {
+        var result = await sender.Send(new GetCartLoadQuery(warehouseId, status));
         return Ok(result);
     }
 
@@ -55,7 +64,7 @@ public class OrderingController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Sales.Create)]
     public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
     {
-        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus));
+        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus, request.IdempotencyKey));
         return Ok(saleId);
     }
 }

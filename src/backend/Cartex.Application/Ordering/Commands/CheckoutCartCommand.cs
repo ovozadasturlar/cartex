@@ -7,12 +7,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus) : ICommand<long>;
+public record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus, string? IdempotencyKey = null) : ICommand<long>;
 
-public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender sender) : IRequestHandler<CheckoutCartCommand, long>
+public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser) : IRequestHandler<CheckoutCartCommand, long>
 {
     public async Task<long> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+            var existingSaleId = await db.Sales
+                .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
+                .Select(s => (long?)s.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingSaleId is not null)
+                return existingSaleId.Value;
+        }
+
         var cart = await db.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken)
@@ -27,7 +39,8 @@ public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender
             request.PaidCash,
             request.PaidCard,
             request.PaidBonus,
-            cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList()), cancellationToken);
+            cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList(),
+            IdempotencyKey: idempotencyKey), cancellationToken);
 
         cart.Status = CartStatus.CheckedOut;
         await db.SaveChangesAsync(cancellationToken);
