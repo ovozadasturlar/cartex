@@ -59,6 +59,7 @@
   "resend_receipt": "Resend receipt",
   "receipt_resent": "Receipt resent to the customer",
   "channel_feature_off": "This channel is disabled in Tariff and features — messages and receipts will not be sent",
+  "pos_view_mode": "Tile / list view",
   "connect": "Connect",
   "cash_returns": "Cash returns",
   "print_copies": "Receipt copies",

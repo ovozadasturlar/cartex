@@ -99,6 +99,12 @@ public sealed class SettingsService
         set { _data.SettingsSidebarCollapsed = value; Save(); }
     }
 
+    public bool PosListMode
+    {
+        get => _data.PosListMode;
+        set { _data.PosListMode = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -137,5 +143,6 @@ public sealed class SettingsService
         public bool OfflineCacheEnabled { get; set; }
         public long OfflineWarehouseId { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
+        public bool PosListMode { get; set; }
     }
 }

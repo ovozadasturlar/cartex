@@ -26,13 +26,30 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="5" />
             <Setter Property="Width" Value="162" />
-            <Setter Property="Height" Value="172" />
+            <Setter Property="Height" Value="208" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.pcard:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+
+        <Style Selector="Button.prow">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Margin" Value="5,2" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.prow:pointerover">
             <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
             <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
         </Style>
@@ -112,29 +129,37 @@
                 </TextBox>
             </Border>
 
-            <ScrollViewer DockPanel.Dock="Top" Margin="0,0,0,10"
-                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding NavCategories}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Classes="chip" Classes.active="{Binding IsSelected}" Margin="0,0,6,0"
-                                    Command="{Binding $parent[UserControl].DataContext.SelectCategoryCommand}"
-                                    CommandParameter="{Binding}"
-                                    Content="{Binding Name}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <ToggleButton DockPanel.Dock="Right" IsChecked="{Binding PosListMode}" Padding="9,7" Margin="8,0,0,0"
+                              VerticalAlignment="Center" ToolTip.Tip="{Binding L[pos_view_mode]}">
+                    <Panel>
+                        <mi:MaterialIcon Kind="FormatListBulletedSquare" Width="17" Height="17" IsVisible="{Binding !PosListMode}" />
+                        <mi:MaterialIcon Kind="ViewGridOutline" Width="17" Height="17" IsVisible="{Binding PosListMode}" />
+                    </Panel>
+                </ToggleButton>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding NavCategories}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="chip" Classes.active="{Binding IsSelected}" Margin="0,0,6,0"
+                                        Command="{Binding $parent[UserControl].DataContext.SelectCategoryCommand}"
+                                        CommandParameter="{Binding}"
+                                        Content="{Binding Name}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
 
             <ScrollViewer ScrollChanged="OnProductsScroll">
                 <Panel>
                     <StackPanel>
-                    <ItemsControl ItemsSource="{Binding Products}">
+                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel />
@@ -146,7 +171,7 @@
                                         Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
                                         CommandParameter="{Binding}"
                                         Holding="OnTileHolding">
-                                    <Grid RowDefinitions="84,*">
+                                    <Grid RowDefinitions="120,*">
                                         <Border Grid.Row="0" CornerRadius="12,12,0,0" ClipToBounds="True"
                                                 Background="{DynamicResource SidebarItemHover}">
                                             <Panel>
@@ -175,6 +200,33 @@
                                                 </Border>
                                             </Grid>
                                         </Grid>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding PosListMode}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="prow"
+                                        Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
+                                        CommandParameter="{Binding}"
+                                        Holding="OnTileHolding">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ProductName}" FontSize="13.5" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SellingPrice, StringFormat='{}{0:N0}'}"
+                                                   FontSize="14.5" FontWeight="Bold" VerticalAlignment="Center" Margin="12,0"
+                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        <Border Grid.Column="2" Background="{DynamicResource AppBg}" MinWidth="46"
+                                                CornerRadius="6" Padding="6,2" VerticalAlignment="Center"
+                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                            <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
+                                                       HorizontalAlignment="Center"
+                                                       Text="{Binding Quantity, StringFormat='{}{0:N0}'}" />
+                                        </Border>
                                     </Grid>
                                 </Button>
                             </DataTemplate>

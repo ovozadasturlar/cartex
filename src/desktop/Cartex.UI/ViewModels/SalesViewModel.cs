@@ -118,6 +118,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isCustomerPanelOpen;
     [ObservableProperty] private bool _isHeldPanelOpen;
     [ObservableProperty] private bool _isReceiptOpen;
+    [ObservableProperty] private bool _posListMode = SettingsService.Instance.PosListMode;
     [ObservableProperty] private ReceiptDto? _currentReceipt;
     [ObservableProperty] private bool _isProductDetailOpen;
     [ObservableProperty] private StockOnHandDto? _detailProduct;
@@ -127,6 +128,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
+    partial void OnPosListModeChanged(bool value) => SettingsService.Instance.PosListMode = value;
 
     public ObservableCollection<CartItem> CartItems { get; } = [];
     public ObservableCollection<StockOnHandDto> Products { get; } = [];
