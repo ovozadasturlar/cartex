@@ -41,6 +41,14 @@ public class CustomersController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:long}")]
+    [HasPermission(AppPermissions.Customers.Manage)]
+    public async Task<IActionResult> DeleteCustomer(long id)
+    {
+        await sender.Send(new DeleteCustomerCommand(id));
+        return NoContent();
+    }
+
     [HttpGet("{id:long}")]
     [HasPermission(AppPermissions.Customers.View)]
     public async Task<ActionResult<CustomerDto>> GetById(long id)

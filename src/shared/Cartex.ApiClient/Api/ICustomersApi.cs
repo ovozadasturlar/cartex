@@ -23,6 +23,9 @@ public interface ICustomersApi
     [Put("/api/customers/{id}")]
     Task UpdateAsync(long id, [Body] UpdateCustomerRequest request);
 
+    [Delete("/api/customers/{id}")]
+    Task DeleteAsync(long id);
+
     [Get("/api/customers/{id}/ledger")]
     Task<IApiResponse<List<CustomerLedgerEntryDto>>> GetLedgerAsync(long id, [Query] int page = 1, [Query] int pageSize = 50, CancellationToken cancellationToken = default);
 
