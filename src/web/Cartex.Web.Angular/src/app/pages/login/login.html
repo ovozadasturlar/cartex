@@ -14,6 +14,7 @@
             <mat-progress-bar mode="indeterminate" />
           }
         </div>
+        <mat-progress-bar class="qr-life" mode="determinate" [value]="qrProgress()" />
         <p class="qr-hint">{{ t('qr_login_hint') }}</p>
         <button matButton type="button" (click)="closeQr()">{{ t('back') }}</button>
       </div>

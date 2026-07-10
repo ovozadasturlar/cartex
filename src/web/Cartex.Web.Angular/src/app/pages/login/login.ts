@@ -41,7 +41,9 @@ export class Login implements OnDestroy {
   readonly qrAvailable = signal(false);
   readonly qrOpen = signal(false);
   readonly qrDataUrl = signal<string | null>(null);
+  readonly qrProgress = signal(100);
   private qrSession = 0;
+  private qrTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.auth.loginMethods().then(
@@ -80,6 +82,18 @@ export class Login implements OnDestroy {
     this.qrDataUrl.set(null);
   }
 
+  private startQrTimer(issuedAt: number, lifetime: number, session: number): void {
+    if (this.qrTimer) clearInterval(this.qrTimer);
+    this.qrProgress.set(100);
+    this.qrTimer = setInterval(() => {
+      if (session !== this.qrSession) {
+        clearInterval(this.qrTimer!);
+        return;
+      }
+      this.qrProgress.set(Math.max(0, 100 - ((Date.now() - issuedAt) / lifetime) * 100));
+    }, 200);
+  }
+
   private async runQr(session: number): Promise<void> {
     while (session === this.qrSession) {
       let start;
@@ -93,6 +107,7 @@ export class Login implements OnDestroy {
       this.qrDataUrl.set(await QRCode.toDataURL(`cartexqr:${start.code}`, { width: 232, margin: 1 }));
       const lifetime = Math.max(30, start.expiresInSeconds - 5) * 1000;
       const issuedAt = Date.now();
+      this.startQrTimer(issuedAt, lifetime, session);
       while (session === this.qrSession && Date.now() - issuedAt < lifetime) {
         await delay(2000);
         if (session !== this.qrSession) return;
