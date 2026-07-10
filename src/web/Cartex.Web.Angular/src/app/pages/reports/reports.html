@@ -1,14 +1,12 @@
 <div class="reports" *transloco="let t">
   <cx-page-header [title]="t('reports')" [subtitle]="t('reports_subtitle')">
-    <mat-button-toggle-group
-      hideSingleSelectionIndicator
-      [value]="days()"
-      (change)="setDays($event.value)"
-    >
-      @for (d of periods; track d) {
-        <mat-button-toggle [value]="d">{{ t('period_' + d + 'd') }}</mat-button-toggle>
+    <div class="seg">
+      @for (p of periods; track p.key) {
+        <button type="button" [class.active]="days() === p.days" (click)="setDays(p.days)">
+          {{ t('period_' + p.key) }}
+        </button>
       }
-    </mat-button-toggle-group>
+    </div>
   </cx-page-header>
 
   @if (loading()) {

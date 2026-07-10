@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
@@ -17,7 +16,6 @@ import { StatCard } from '../../shared/stat-card';
 @Component({
   selector: 'app-reports',
   imports: [
-    MatButtonToggleModule,
     MatProgressBarModule,
     MatTableModule,
     TranslocoModule,
@@ -38,8 +36,12 @@ export class Reports implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly money = new CxMoneyPipe();
 
-  readonly periods = [7, 30, 90];
-  readonly days = signal(30);
+  readonly periods = [
+    { key: 'day', days: 1 },
+    { key: 'week', days: 7 },
+    { key: 'month', days: 30 },
+  ];
+  readonly days = signal(7);
   readonly loading = signal(true);
   readonly report = signal<SalesReport | null>(null);
   readonly flowRows = signal<DailyCashFlow[]>([]);
