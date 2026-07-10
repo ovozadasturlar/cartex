@@ -23,6 +23,7 @@ public class SupplyConfiguration : IEntityTypeConfiguration<Supply>
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.HasIndex(x => x.BranchId);
+        builder.HasIndex(x => x.CreatedAt);
 
         builder.HasOne<Branch>()
             .WithMany()

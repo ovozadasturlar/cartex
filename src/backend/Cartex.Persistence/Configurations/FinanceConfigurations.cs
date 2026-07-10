@@ -40,6 +40,8 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.HasIndex(x => new { x.SupplierId, x.Type, x.Currency })
             .IsUnique()
             .HasFilter("\"supplier_id\" IS NOT NULL");
+
+        builder.HasIndex(x => x.CreatedAt);
     }
 }
 

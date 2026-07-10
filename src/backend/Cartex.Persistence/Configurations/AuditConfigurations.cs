@@ -9,6 +9,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
         builder.ToTable("audit_logs");
+        builder.HasIndex(x => x.CreatedAt);
         builder.Property(x => x.Action).HasMaxLength(15);
         builder.Property(x => x.TableName).HasMaxLength(40);
         builder.Property(x => x.OldData).HasColumnType("jsonb");

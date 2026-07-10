@@ -144,6 +144,7 @@ public class StockTransferConfiguration : IEntityTypeConfiguration<StockTransfer
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         builder.HasIndex(x => x.BranchId);
+        builder.HasIndex(x => x.CreatedAt);
 
         builder.HasOne<Branch>()
             .WithMany()
