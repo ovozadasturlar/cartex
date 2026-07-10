@@ -45,6 +45,23 @@ public partial class DashboardViewModel(
     public ObservableCollection<ISeries> CategorySeries { get; } = [];
     public ObservableCollection<CategoryLegendItem> CategoryLegend { get; } = [];
 
+    private static void DisposeSeriesPaints(IEnumerable<ISeries> series)
+    {
+        foreach (var s in series)
+        {
+            switch (s)
+            {
+                case LineSeries<decimal> line:
+                    (line.Stroke as IDisposable)?.Dispose();
+                    (line.Fill as IDisposable)?.Dispose();
+                    break;
+                case PieSeries<int> pie:
+                    (pie.Fill as IDisposable)?.Dispose();
+                    break;
+            }
+        }
+    }
+
     private static LineSeries<decimal> FogLine(decimal[] values, string name, string hex) =>
         new()
         {
@@ -103,6 +120,7 @@ public partial class DashboardViewModel(
             TotalProducts = (await totalsTask).Count;
             var categoryGroups = (await categoriesTask).Take(PieColors.Length).ToList();
 
+            DisposeSeriesPaints(CategorySeries);
             CategorySeries.Clear();
             CategoryLegend.Clear();
             for (var i = 0; i < categoryGroups.Count; i++)
@@ -163,6 +181,7 @@ public partial class DashboardViewModel(
             var report = await weekReportTask;
             var flow = await flowTask;
 
+            DisposeSeriesPaints(CashFlowSeries);
             CashFlowSeries.Clear();
             CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Sales)], L["sales"], "#2563EB"));
             CashFlowSeries.Add(FogLine([.. flow.Select(f => f.Income)], L["income"], "#166534"));

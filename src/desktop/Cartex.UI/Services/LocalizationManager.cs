@@ -19,7 +19,12 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
     public event Action LanguageChanged
     {
-        add => _weakHandlers.Add(new WeakReference<Action>(value));
+        add
+        {
+            if (_weakHandlers.Count > 256)
+                _weakHandlers.RemoveAll(w => !w.TryGetTarget(out _));
+            _weakHandlers.Add(new WeakReference<Action>(value));
+        }
         remove { }
     }
 

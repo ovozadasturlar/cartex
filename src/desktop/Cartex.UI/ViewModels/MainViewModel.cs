@@ -266,6 +266,9 @@ public partial class MainViewModel : ViewModelBase
             SelectedMenuItem = item;
     }
 
+    partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue) =>
+        (oldValue as IDisposable)?.Dispose();
+
     partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)
     {
         if (oldValue is not null) oldValue.IsActive = false;

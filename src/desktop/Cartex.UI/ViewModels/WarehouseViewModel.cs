@@ -12,7 +12,7 @@ using Cartex.UI.Views;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class WarehouseViewModel : ViewModelBase, ILoadable
+public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
 {
     private readonly IStocksApi _stocksApi;
     private readonly ICategoriesApi _categoriesApi;
@@ -64,6 +64,8 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable
         Branch.PropertyChanged += OnBranchChanged;
     }
 
+    public void Dispose() => Branch.PropertyChanged -= OnBranchChanged;
+
     [RelayCommand]
     private async Task Export(string format)
     {
@@ -93,18 +95,21 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
+                var categoriesTask = ServiceLocator.Resolve<ReferenceCache>()
+                    .GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
+                var expiringTask = _stocksApi.GetExpiringAsync(30);
+
                 _suppressReload = true;
-                var categories = await _categoriesApi.GetAllAsync();
+                var categories = await categoriesTask;
                 FilterCategories.Clear();
                 FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
                 foreach (var c in categories) FilterCategories.Add(c);
                 FilterCategory = FilterCategories[0];
                 _suppressReload = false;
 
-                await LoadOnHandAsync();
-                await LoadLowStockAsync();
+                await Task.WhenAll(LoadOnHandAsync(), LoadLowStockAsync());
 
-                var expiring = await _stocksApi.GetExpiringAsync(30);
+                var expiring = await expiringTask;
                 Expiring.Clear();
                 foreach (var e in expiring)
                     Expiring.Add(e);

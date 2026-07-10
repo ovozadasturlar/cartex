@@ -15,7 +15,7 @@ public partial class PaginationState : ObservableObject
     private bool _suppress;
 
     [ObservableProperty] private int _page = 1;
-    [ObservableProperty] private int _pageSize = 30;
+    [ObservableProperty] private int _pageSize = 20;
     [ObservableProperty] private int _totalCount;
     [ObservableProperty] private int _totalPages = 1;
     [ObservableProperty] private string? _sortBy;

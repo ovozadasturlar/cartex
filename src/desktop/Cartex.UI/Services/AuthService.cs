@@ -31,10 +31,14 @@ public sealed class AuthService
         {
             _token = value;
             UserInfo = value is not null ? ParseToken(value) : null;
+            _permissionSet = UserInfo is null
+                ? null
+                : new HashSet<string>(UserInfo.Permissions, StringComparer.OrdinalIgnoreCase);
         }
     }
 
     public UserInfo? UserInfo { get; private set; }
+    private HashSet<string>? _permissionSet;
     public bool IsAuthenticated => Token is not null && UserInfo is not null;
 
     public async Task<LoginResponse> LoginAsync(string username, string password, bool rememberMe)
@@ -152,9 +156,7 @@ public sealed class AuthService
     }
 
     public bool HasPermission(string permission) =>
-        UserInfo is not null &&
-        (UserInfo.Permissions.Contains("*") ||
-         UserInfo.Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase));
+        _permissionSet is not null && (_permissionSet.Contains("*") || _permissionSet.Contains(permission));
 
     public IReadOnlyList<string> Roles => UserInfo?.Roles ?? [];
 
