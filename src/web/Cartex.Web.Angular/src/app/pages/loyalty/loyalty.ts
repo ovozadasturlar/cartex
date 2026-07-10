@@ -18,6 +18,7 @@ import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
+import { Subnav } from '../../shared/subnav';
 import { StatCard } from '../../shared/stat-card';
 import { CashbackRuleDialog } from './cashback-rule-dialog';
 import { ConfirmDialog } from './confirm-dialog';
@@ -41,6 +42,7 @@ import { DiscountDialog } from './discount-dialog';
     CxMoneyPipe,
     EmptyState,
     PageHeader,
+    Subnav,
     StatCard,
   ],
   templateUrl: './loyalty.html',
@@ -56,6 +58,15 @@ export class Loyalty implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly section = signal('discounts');
+  readonly sectionKey = this.section;
+
+  sections(t: (key: string) => string): { key: string; label: string }[] {
+    return [
+      { key: 'discounts', label: t('discounts') },
+      { key: 'bonus', label: t('bonus') },
+      { key: 'settings', label: t('settings') },
+    ];
+  }
   readonly period = signal(30);
   readonly stats = signal<LoyaltyStats | null>(null);
   readonly discounts = signal<DiscountRule[]>([]);

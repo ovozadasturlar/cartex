@@ -2,7 +2,16 @@
   display: block;
 }
 
+.layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+
+  @media (max-width: 900px) { flex-direction: column; }
+}
+
 .cards {
+  flex: 1;
   max-width: 720px;
   display: flex;
   flex-direction: column;

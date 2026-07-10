@@ -13,6 +13,7 @@ import { Observable, lastValueFrom } from 'rxjs';
 import { Settings, SettingsApi, StorageSettings } from '../../core/api/settings.api';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
+import { Subnav, SubnavItem } from '../../shared/subnav';
 
 @Component({
   selector: 'app-integrations',
@@ -28,6 +29,7 @@ import { PageHeader } from '../../shared/page-header';
     MatSlideToggleModule,
     TranslocoModule,
     PageHeader,
+    Subnav,
   ],
   templateUrl: './integrations.html',
   styleUrl: './integrations.scss',
@@ -37,6 +39,17 @@ export class Integrations implements OnInit {
   private readonly notify = inject(NotifyService);
 
   readonly loading = signal(true);
+  readonly section = signal('telegram');
+
+  sections(t: (key: string) => string): SubnavItem[] {
+    return [
+      { key: 'telegram', label: 'Telegram' },
+      { key: 'email', label: 'Email (SMTP)' },
+      { key: 'sms', label: 'SMS' },
+      { key: 'receipt', label: t('receipt_delivery') },
+      { key: 'storage', label: t('storage_settings') },
+    ];
+  }
   readonly busy = signal(false);
   readonly smsProviders = ['eskiz', 'playmobile'];
   readonly receiptFormats = ['Auto', 'Link', 'Pdf', 'Text'];

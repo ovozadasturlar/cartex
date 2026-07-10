@@ -19,10 +19,9 @@
       </div>
     }
 
-    <mat-button-toggle-group class="sections" hideSingleSelectionIndicator [value]="section()" (change)="section.set($event.value)">
-      <mat-button-toggle value="discounts">{{ t('discounts') }}</mat-button-toggle>
-      <mat-button-toggle value="cashback">{{ t('cashback') }}</mat-button-toggle>
-    </mat-button-toggle-group>
+    <div class="layout">
+      <cx-subnav [items]="sections(t)" [(selected)]="sectionKey" />
+      <div class="content">
 
     @if (busy()) {
       <mat-progress-bar mode="indeterminate" />
@@ -32,13 +31,6 @@
       <p class="hint">{{ t('discounts_desc') }}</p>
       <div class="toolbar">
         @if (canManage) {
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="combine">
-            <mat-label>{{ t('discount_combine_mode') }}</mat-label>
-            <mat-select [(ngModel)]="progCombine" (selectionChange)="saveProgram(t('success'))">
-              <mat-option value="Priority">{{ t('discount_combine_priority') }}</mat-option>
-              <mat-option value="Stack">{{ t('discount_combine_stack') }}</mat-option>
-            </mat-select>
-          </mat-form-field>
           <span class="spacer"></span>
           <button matButton="filled" (click)="openDiscount(null)">
             <mat-icon>add</mat-icon>
@@ -117,28 +109,8 @@
           <cx-empty-state icon="percent" [message]="t('no_data')" />
         }
       </div>
-    } @else {
+    } @else if (section() === 'bonus') {
       <p class="hint">{{ t('cashback_desc') }}</p>
-      <div class="cx-card program">
-        <mat-slide-toggle [(ngModel)]="progEnabled" [disabled]="!canManage">{{ t('cashback') }}</mat-slide-toggle>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('cashback_percent') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="progPercent" [disabled]="!canManage" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('cashback_rounding') }}</mat-label>
-          <mat-select [(ngModel)]="progRounding" [disabled]="!canManage">
-            @for (r of roundings; track r) {
-              <mat-option [value]="r">{{ r }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        @if (canManage) {
-          <button matButton="filled" [disabled]="busy()" (click)="saveProgram(t('success'))">{{ t('save') }}</button>
-        }
-      </div>
-      <p class="hint">{{ t('cashback_hint') }}</p>
-
       <div class="toolbar">
         <h3>{{ t('cashback_rules') }}</h3>
         <span class="spacer"></span>
@@ -199,6 +171,44 @@
           <cx-empty-state icon="redeem" [message]="t('no_data')" />
         }
       </div>
+    } @else {
+      <div class="cx-card scard">
+        <h3>{{ t('discounts') }}</h3>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="combine">
+          <mat-label>{{ t('discount_combine_mode') }}</mat-label>
+          <mat-select [(ngModel)]="progCombine" [disabled]="!canManage">
+            <mat-option value="Priority">{{ t('discount_combine_priority') }}</mat-option>
+            <mat-option value="Stack">{{ t('discount_combine_stack') }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <p class="hint">{{ t('discount_combine_hint') }}</p>
+      </div>
+      <div class="cx-card scard">
+        <h3>{{ t('bonus') }}</h3>
+        <mat-slide-toggle [(ngModel)]="progEnabled" [disabled]="!canManage">{{ t('active') }}</mat-slide-toggle>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('cashback_percent') }}</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="progPercent" [disabled]="!canManage" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('cashback_rounding') }}</mat-label>
+            <mat-select [(ngModel)]="progRounding" [disabled]="!canManage">
+              @for (r of roundings; track r) {
+                <mat-option [value]="r">{{ r }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <p class="hint">{{ t('cashback_hint') }}</p>
+      </div>
+      @if (canManage) {
+        <div class="save-row">
+          <button matButton="filled" [disabled]="busy()" (click)="saveProgram(t('success'))">{{ t('save') }}</button>
+        </div>
+      }
     }
+      </div>
+    </div>
   }
 </ng-container>

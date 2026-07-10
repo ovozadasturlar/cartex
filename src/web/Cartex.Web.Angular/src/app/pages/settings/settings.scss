@@ -6,6 +6,17 @@
 
 .settings-nav {
   width: 224px;
+  transition: width 0.15s ease;
+
+  &.collapsed {
+    width: 56px;
+    padding: 14px 8px;
+
+    .nav-item {
+      justify-content: center;
+      padding: 8px 0;
+    }
+  }
   flex-shrink: 0;
   background: var(--cx-card);
   border: 1px solid var(--cx-border);
@@ -17,8 +28,31 @@
   h2 {
     font-size: 16px;
     font-weight: 700;
-    margin: 2px 12px 8px;
+    margin: 0;
   }
+}
+
+.nav-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 8px;
+}
+
+.burger {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  color: var(--cx-text-2);
+
+  &:hover { background: var(--cx-surface-2); }
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
 }
 
 .section-label {

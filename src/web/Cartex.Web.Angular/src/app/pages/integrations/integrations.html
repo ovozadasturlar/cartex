@@ -4,7 +4,10 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    <div class="cards">
+    <div class="layout">
+      <cx-subnav [items]="sections(t)" [(selected)]="section" />
+      <div class="cards">
+      @if (section() === 'telegram') {
       <div class="cx-card card">
         @if (busy()) {
           <mat-progress-bar mode="indeterminate" />
@@ -29,6 +32,8 @@
         </div>
       </div>
 
+      }
+      @if (section() === 'email') {
       <div class="cx-card card">
         <h3>Email (SMTP)</h3>
         <mat-slide-toggle [(ngModel)]="emailEnabled">{{ t('active') }}</mat-slide-toggle>
@@ -79,6 +84,8 @@
         </div>
       </div>
 
+      }
+      @if (section() === 'sms') {
       <div class="cx-card card">
         <h3>SMS</h3>
         <mat-slide-toggle [(ngModel)]="smsEnabled">{{ t('active') }}</mat-slide-toggle>
@@ -118,6 +125,8 @@
         </div>
       </div>
 
+      }
+      @if (section() === 'storage') {
       <div class="cx-card card">
         <h3>{{ t('storage_settings') }}</h3>
         <p class="hint">{{ t('storage_hint') }}</p>
@@ -160,6 +169,8 @@
         </div>
       </div>
 
+      }
+      @if (section() === 'receipt') {
       <div class="cx-card card">
         <h3>{{ t('receipt_delivery') }}</h3>
         <p class="hint">{{ t('receipt_channels_hint') }}</p>
@@ -198,6 +209,8 @@
             {{ t('save') }}
           </button>
         </div>
+      </div>
+      }
       </div>
     </div>
   }

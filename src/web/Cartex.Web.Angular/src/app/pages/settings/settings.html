@@ -1,12 +1,23 @@
 <div class="settings" *transloco="let t">
-  <aside class="settings-nav">
-    <h2>{{ t('settings') }}</h2>
+  <aside class="settings-nav" [class.collapsed]="collapsed()">
+    <div class="nav-head">
+      <button type="button" class="burger" (click)="toggle()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      @if (!collapsed()) {
+        <h2>{{ t('settings') }}</h2>
+      }
+    </div>
     @for (section of sections; track section.labelKey) {
-      <div class="section-label">{{ t(section.labelKey!) }}</div>
+      @if (!collapsed()) {
+        <div class="section-label">{{ t(section.labelKey!) }}</div>
+      }
       @for (item of section.items; track item.route) {
-        <a class="nav-item" [routerLink]="item.route" routerLinkActive="active">
+        <a class="nav-item" [routerLink]="item.route" routerLinkActive="active" [title]="collapsed() ? t(item.labelKey) : ''">
           <mat-icon>{{ item.icon }}</mat-icon>
-          <span>{{ t(item.labelKey) }}</span>
+          @if (!collapsed()) {
+            <span>{{ t(item.labelKey) }}</span>
+          }
         </a>
       }
     }
