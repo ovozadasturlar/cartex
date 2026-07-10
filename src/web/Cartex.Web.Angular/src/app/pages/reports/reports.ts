@@ -2,15 +2,15 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { ReportsApi } from '../../core/api.service';
 import { CxDatePipe, CxMoneyPipe, utcRange } from '../../core/format';
-import { CustomerSales, DebtAgingReport, SalesBreakdown, SalesReport } from '../../core/models';
+import { CustomerSales, DailyCashFlow, DebtAgingReport, SalesBreakdown, SalesReport } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { BarItem, BarList } from '../../shared/bar-list';
 import { EmptyState } from '../../shared/empty-state';
-import { ChartPoint, LineChart } from '../../shared/line-chart';
+import { ChartSeries, LineChart } from '../../shared/line-chart';
 import { PageHeader } from '../../shared/page-header';
 import { StatCard } from '../../shared/stat-card';
 
@@ -35,13 +35,28 @@ import { StatCard } from '../../shared/stat-card';
 export class Reports implements OnInit {
   private readonly api = inject(ReportsApi);
   private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
   private readonly money = new CxMoneyPipe();
 
   readonly periods = [7, 30, 90];
   readonly days = signal(30);
   readonly loading = signal(true);
   readonly report = signal<SalesReport | null>(null);
-  readonly cashFlow = signal<ChartPoint[]>([]);
+  readonly flowRows = signal<DailyCashFlow[]>([]);
+
+  readonly cashFlowLabels = computed(() =>
+    this.flowRows().map((d) => d.date.slice(8, 10) + '.' + d.date.slice(5, 7)),
+  );
+
+  readonly cashFlowSeries = computed<ChartSeries[]>(() => {
+    const rows = this.flowRows();
+    if (!rows.length) return [];
+    return [
+      { name: this.transloco.translate('sales'), color: '#2563eb', values: rows.map((d) => d.sales) },
+      { name: this.transloco.translate('income'), color: '#166534', values: rows.map((d) => d.income) },
+      { name: this.transloco.translate('expense'), color: '#dc2626', values: rows.map((d) => d.expense) },
+    ];
+  });
   readonly breakdown = signal<SalesBreakdown | null>(null);
   readonly topCustomers = signal<CustomerSales[]>([]);
   readonly debtAging = signal<DebtAgingReport | null>(null);
@@ -95,7 +110,7 @@ export class Reports implements OnInit {
         lastValueFrom(this.api.debtAging()),
       ]);
       this.report.set(report);
-      this.cashFlow.set(flow.map((d) => ({ label: d.date.slice(8, 10) + '.' + d.date.slice(5, 7), value: d.sales })));
+      this.flowRows.set(flow);
       this.breakdown.set(breakdown);
       this.topCustomers.set(top);
       this.debtAging.set(aging);
