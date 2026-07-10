@@ -9,7 +9,7 @@ namespace Cartex.Application.Warehouses.Queries;
 
 public record GetWarehousesQuery : FilteringRequest, IRequest<IReadOnlyCollection<WarehouseDto>>;
 
-public record WarehouseDto(long Id, string Name, long BranchId, string BranchName, bool IsOnline = false);
+public record WarehouseDto(long Id, string Name, long BranchId, string BranchName, bool IsOnline = false, long? AssignedUserId = null);
 
 public sealed class GetWarehousesQueryHandler(
     IApplicationDbContext db,
@@ -20,7 +20,7 @@ public sealed class GetWarehousesQueryHandler(
         return await db.Warehouses
             .Include(w => w.Branch)
             .ToPagedListAsync(request,
-                w => new WarehouseDto(w.Id, w.Name, w.BranchId, w.Branch.Name, w.IsOnline),
+                w => new WarehouseDto(w.Id, w.Name, w.BranchId, w.Branch.Name, w.IsOnline, w.AssignedUserId),
                 writer, cancellationToken);
     }
 }

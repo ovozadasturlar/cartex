@@ -58,7 +58,8 @@ public sealed class RepayCustomerDebtCommandHandler(
             .FirstOrDefaultAsync(cancellationToken);
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-        if (!request.ViaCard && shiftId is null && policy.ShiftPolicy != "Off")
+        if (!request.ViaCard && shiftId is null && policy.ShiftPolicy != "Off"
+            && !await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
         var branchAccount = await ledger.BranchAccountAsync(branchId, request.ViaCard ? AccountType.Card : AccountType.Cash, cancellationToken, payCurrency);

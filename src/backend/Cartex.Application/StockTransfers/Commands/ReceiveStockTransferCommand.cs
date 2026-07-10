@@ -1,6 +1,8 @@
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 
@@ -10,7 +12,7 @@ namespace Cartex.Application.StockTransfers.Commands;
 
 public record ReceiveStockTransferCommand(long Id) : ICommand<Unit>;
 
-public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db) : IRequestHandler<ReceiveStockTransferCommand, Unit>
+public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<ReceiveStockTransferCommand, Unit>
 {
     public async Task<Unit> Handle(ReceiveStockTransferCommand request, CancellationToken cancellationToken)
     {
@@ -23,6 +25,9 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db)
 
         var toWarehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == transfer.ToWarehouseId, cancellationToken)
             ?? throw new NotFoundException("Target warehouse not found.");
+
+        if (toWarehouse.AssignedUserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.StockTransfers.Manage))
+            throw new ForbiddenException("Bu yuk xatini qabul qilishga ruxsat yo'q.");
 
         transfer.Status = TransferStatus.Received;
 

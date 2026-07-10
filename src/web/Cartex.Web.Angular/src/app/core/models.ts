@@ -179,6 +179,7 @@ export interface Warehouse {
   branchId: number;
   branchName: string;
   isOnline: boolean;
+  assignedUserId: number | null;
 }
 
 export interface Receipt {

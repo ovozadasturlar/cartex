@@ -68,6 +68,10 @@ public sealed class CreateSaleCommandHandler(
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
+        if (warehouse.AssignedUserId != userId &&
+            await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
+            throw new BusinessRuleException("Sizga biriktirilgan ombor bor — savdo faqat o'sha ombordan qilinadi.");
+
         var prepackIds = request.Items.Where(i => i.PrepackId is not null).Select(i => i.PrepackId!.Value).ToList();
         Dictionary<long, Prepack> prepacks = [];
         if (prepackIds.Count > 0)

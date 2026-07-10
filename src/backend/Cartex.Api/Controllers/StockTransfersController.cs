@@ -39,7 +39,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/receive")]
-    [HasPermission(AppPermissions.StockTransfers.Manage)]
+    [HasPermission(AppPermissions.StockTransfers.View)]
     public async Task<IActionResult> ReceiveStockTransfer(long id)
     {
         await sender.Send(new ReceiveStockTransferCommand(id));
