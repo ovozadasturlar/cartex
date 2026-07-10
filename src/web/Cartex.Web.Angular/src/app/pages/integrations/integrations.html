@@ -32,6 +32,14 @@
       <div class="cx-card card">
         <h3>Email (SMTP)</h3>
         <mat-slide-toggle [(ngModel)]="emailEnabled">{{ t('active') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset">
+          <mat-label>{{ t('provider') }}</mat-label>
+          <mat-select [(ngModel)]="smtpPreset" (selectionChange)="onSmtpPreset()">
+            @for (p of smtpPresets; track p.name) {
+              <mat-option [value]="p">{{ p.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
         <div class="row2">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('smtp_host') }}</mat-label>

@@ -55,6 +55,24 @@ export class Integrations implements OnInit {
   emailFromAddress = '';
   emailFromName = '';
 
+  readonly smtpPresets = [
+    { name: 'Gmail', host: 'smtp.gmail.com', port: 587, ssl: true },
+    { name: 'Yandex', host: 'smtp.yandex.ru', port: 465, ssl: true },
+    { name: 'Mail.ru', host: 'smtp.mail.ru', port: 465, ssl: true },
+    { name: 'Outlook', host: 'smtp.office365.com', port: 587, ssl: true },
+    { name: 'Yahoo', host: 'smtp.mail.yahoo.com', port: 465, ssl: true },
+    { name: 'Boshqa', host: null, port: 587, ssl: true },
+  ];
+  smtpPreset: { name: string; host: string | null; port: number; ssl: boolean } | null = null;
+
+  onSmtpPreset(): void {
+    const p = this.smtpPreset;
+    if (!p) return;
+    if (p.host) this.emailHost = p.host;
+    this.emailPort = p.port;
+    this.emailUseSsl = p.ssl;
+  }
+
   smsEnabled = false;
   smsProvider = 'eskiz';
   smsLogin = '';
