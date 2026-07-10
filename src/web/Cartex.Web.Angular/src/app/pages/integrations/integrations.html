@@ -119,6 +119,48 @@
       </div>
 
       <div class="cx-card card">
+        <h3>{{ t('storage_settings') }}</h3>
+        <p class="hint">{{ t('storage_hint') }}</p>
+        <mat-slide-toggle [(ngModel)]="storageEnabled">{{ t('active') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset">
+          <mat-label>{{ t('provider') }}</mat-label>
+          <mat-select [(ngModel)]="storageProvider">
+            <mat-option value="local">{{ t('storage_local') }}</mat-option>
+            <mat-option value="minio">MinIO (S3)</mat-option>
+          </mat-select>
+        </mat-form-field>
+        @if (storageProvider === 'minio') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('endpoint') }}</mat-label>
+            <input matInput [(ngModel)]="storageEndpoint" placeholder="localhost:9000" />
+          </mat-form-field>
+          <div class="row2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('access_key') }}</mat-label>
+              <input matInput [(ngModel)]="storageAccessKey" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('secret_key') }}</mat-label>
+              <input matInput type="password" [(ngModel)]="storageSecretKey" [placeholder]="t('secret_keep_blank')" />
+            </mat-form-field>
+          </div>
+          <div class="row2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('bucket') }}</mat-label>
+              <input matInput [(ngModel)]="storageBucket" placeholder="cartex" />
+            </mat-form-field>
+            <mat-slide-toggle [(ngModel)]="storageUseSsl" class="row-toggle">SSL</mat-slide-toggle>
+          </div>
+        }
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="saveStorage(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="cx-card card">
         <h3>{{ t('receipt_delivery') }}</h3>
         <p class="hint">{{ t('receipt_channels_hint') }}</p>
         <div class="checks">

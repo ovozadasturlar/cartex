@@ -98,6 +98,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [ObservableProperty] private string? _publicBaseUrl;
     [ObservableProperty] private string _telegramFormat = "Auto";
     [ObservableProperty] private bool _storageEnabled;
+    [ObservableProperty] private int _storageProviderIndex;
     [ObservableProperty] private string? _storageEndpoint;
     [ObservableProperty] private string? _storageAccessKey;
     [ObservableProperty] private string? _storageSecretKey;
@@ -155,6 +156,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
 
                 var storage = await api.GetStorageAsync();
                 StorageEnabled = storage.Enabled;
+                StorageProviderIndex = storage.Provider == "minio" ? 1 : 0;
                 StorageEndpoint = storage.Endpoint;
                 StorageAccessKey = storage.AccessKey;
                 StorageBucket = storage.Bucket;
@@ -179,6 +181,10 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         EmailPort = value.Port;
         EmailUseSsl = value.Ssl;
     }
+
+    public bool StorageIsMinio => StorageProviderIndex == 1;
+
+    partial void OnStorageProviderIndexChanged(int value) => OnPropertyChanged(nameof(StorageIsMinio));
 
     partial void OnSmsProviderChanged(string value) =>
         SmsBaseUrl = value switch
@@ -296,7 +302,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         try
         {
             using (busy.Begin(L["loading"]))
-                await api.UpdateStorageAsync(new UpdateStorageSettingsRequest(StorageEnabled, StorageEndpoint, StorageAccessKey, StorageSecretKey, StorageBucket, StorageUseSsl));
+                await api.UpdateStorageAsync(new UpdateStorageSettingsRequest(StorageEnabled, StorageProviderIndex == 1 ? "minio" : "local", StorageEndpoint, StorageAccessKey, StorageSecretKey, StorageBucket, StorageUseSsl));
             toast.Success(L["success"]);
             await LoadAsync();
         }

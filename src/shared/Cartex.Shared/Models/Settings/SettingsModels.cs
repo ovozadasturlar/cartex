@@ -23,7 +23,7 @@ public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, dec
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
 public record UpdateLoginMethodsRequest(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
-public record StorageSettingsDto(bool Enabled, string? Endpoint, string? AccessKey, string? Bucket, bool UseSsl, bool HasSecretKey);
-public record UpdateStorageSettingsRequest(bool Enabled, string? Endpoint, string? AccessKey, string? SecretKey, string? Bucket, bool UseSsl);
+public record StorageSettingsDto(bool Enabled, string Provider, string? Endpoint, string? AccessKey, string? Bucket, bool UseSsl, bool HasSecretKey);
+public record UpdateStorageSettingsRequest(bool Enabled, string Provider, string? Endpoint, string? AccessKey, string? SecretKey, string? Bucket, bool UseSsl);
 public record CloudBridgeSettingsDto(bool Enabled, string? GatewayUrl, bool HasLicenseKey);
 public record UpdateCloudBridgeSettingsRequest(bool Enabled, string? GatewayUrl, string? LicenseKey);

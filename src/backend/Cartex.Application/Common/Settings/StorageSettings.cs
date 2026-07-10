@@ -3,6 +3,7 @@ namespace Cartex.Application.Common.Settings;
 public sealed class StorageSettings
 {
     public bool Enabled { get; set; }
+    public string Provider { get; set; } = "local";
     public string? Endpoint { get; set; }
     public string? AccessKey { get; set; }
     public string? SecretKey { get; set; }

@@ -252,29 +252,38 @@
                                 <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
                             </StackPanel>
                             <StackPanel Spacing="5">
-                                <TextBlock Text="{Binding L[endpoint]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <TextBox Text="{Binding StorageEndpoint}" MinHeight="38" PlaceholderText="localhost:9000" />
+                                <TextBlock Text="{Binding L[provider]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox SelectedIndex="{Binding StorageProviderIndex}" MinHeight="38" HorizontalAlignment="Stretch">
+                                    <ComboBoxItem Content="{Binding L[storage_local]}" />
+                                    <ComboBoxItem Content="MinIO (S3)" />
+                                </ComboBox>
                             </StackPanel>
-                            <Grid ColumnDefinitions="*,10,*">
+                            <StackPanel Spacing="14" IsVisible="{Binding StorageIsMinio}">
                                 <StackPanel Spacing="5">
-                                    <TextBlock Text="{Binding L[access_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <TextBox Text="{Binding StorageAccessKey}" MinHeight="38" />
+                                    <TextBlock Text="{Binding L[endpoint]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <TextBox Text="{Binding StorageEndpoint}" MinHeight="38" PlaceholderText="localhost:9000" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Text="{Binding L[secret_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <TextBox Text="{Binding StorageSecretKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
-                                </StackPanel>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,10,Auto">
-                                <StackPanel Spacing="5">
-                                    <TextBlock Text="{Binding L[bucket]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <TextBox Text="{Binding StorageBucket}" MinHeight="38" PlaceholderText="cartex" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Bottom">
-                                    <TextBlock Text="SSL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <ToggleSwitch IsChecked="{Binding StorageUseSsl}" />
-                                </StackPanel>
-                            </Grid>
+                                <Grid ColumnDefinitions="*,10,*">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="{Binding L[access_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                        <TextBox Text="{Binding StorageAccessKey}" MinHeight="38" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5">
+                                        <TextBlock Text="{Binding L[secret_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                        <TextBox Text="{Binding StorageSecretKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,10,Auto">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="{Binding L[bucket]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                        <TextBox Text="{Binding StorageBucket}" MinHeight="38" PlaceholderText="cartex" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Bottom">
+                                        <TextBlock Text="SSL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                        <ToggleSwitch IsChecked="{Binding StorageUseSsl}" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
                             <Button Classes="brand" Command="{Binding SaveStorageCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
                         </StackPanel>
                     </Border>

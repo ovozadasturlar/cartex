@@ -74,6 +74,16 @@ export interface ReceiptSettings {
   paperWidth: number;
 }
 
+export interface StorageSettings {
+  enabled: boolean;
+  provider: string;
+  endpoint: string | null;
+  accessKey: string | null;
+  bucket: string | null;
+  useSsl: boolean;
+  hasSecretKey: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LicenseApi {
   private readonly http = inject(HttpClient);
@@ -133,6 +143,22 @@ export class SettingsApi {
 
   updateNotification(body: NotificationSettings): Observable<void> {
     return this.http.put<void>('/api/settings/notification', body);
+  }
+
+  storage(): Observable<StorageSettings> {
+    return this.http.get<StorageSettings>('/api/settings/storage');
+  }
+
+  updateStorage(body: {
+    enabled: boolean;
+    provider: string;
+    endpoint: string | null;
+    accessKey: string | null;
+    secretKey: string | null;
+    bucket: string | null;
+    useSsl: boolean;
+  }): Observable<void> {
+    return this.http.put<void>('/api/settings/storage', body);
   }
 
   receipt(): Observable<ReceiptSettings> {

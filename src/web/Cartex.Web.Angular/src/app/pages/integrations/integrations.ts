@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslocoModule } from '@jsverse/transloco';
 import { Observable, lastValueFrom } from 'rxjs';
-import { Settings, SettingsApi } from '../../core/api/settings.api';
+import { Settings, SettingsApi, StorageSettings } from '../../core/api/settings.api';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
 
@@ -80,6 +80,15 @@ export class Integrations implements OnInit {
   smsSender = '';
   smsBaseUrl = '';
 
+  storageEnabled = false;
+  storageProvider = 'local';
+  storageEndpoint = '';
+  storageAccessKey = '';
+  storageSecretKey = '';
+  storageBucket = '';
+  storageUseSsl = false;
+  storageHasSecret = false;
+
   channelTelegram = false;
   channelSms = false;
   channelEmail = false;
@@ -91,6 +100,7 @@ export class Integrations implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       this.apply(await lastValueFrom(this.api.get()));
+      this.applyStorage(await lastValueFrom(this.api.storage()));
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -137,6 +147,40 @@ export class Integrations implements OnInit {
       }),
       message,
     );
+  }
+
+  async saveStorage(message: string): Promise<void> {
+    this.busy.set(true);
+    try {
+      await lastValueFrom(
+        this.api.updateStorage({
+          enabled: this.storageEnabled,
+          provider: this.storageProvider,
+          endpoint: this.storageEndpoint.trim() || null,
+          accessKey: this.storageAccessKey.trim() || null,
+          secretKey: this.storageSecretKey || null,
+          bucket: this.storageBucket.trim() || null,
+          useSsl: this.storageUseSsl,
+        }),
+      );
+      this.applyStorage(await lastValueFrom(this.api.storage()));
+      this.notify.success(message);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private applyStorage(s: StorageSettings): void {
+    this.storageEnabled = s.enabled;
+    this.storageProvider = s.provider || 'local';
+    this.storageEndpoint = s.endpoint ?? '';
+    this.storageAccessKey = s.accessKey ?? '';
+    this.storageSecretKey = '';
+    this.storageBucket = s.bucket ?? '';
+    this.storageUseSsl = s.useSsl;
+    this.storageHasSecret = s.hasSecretKey;
   }
 
   saveNotification(message: string): Promise<void> {
