@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Agents.Queries;
 
-public record AgentCustomerDto(long Id, string FullName, string? Phone, string? Address, decimal DebtBalance, decimal CreditLimit, List<CurrencyAmountDto> DebtBalances);
+public record AgentCustomerDto(long Id, string FullName, string? Phone, string? Address, decimal DebtBalance, decimal CreditLimit, List<CurrencyAmountDto> DebtBalances, double? Latitude, double? Longitude);
 
 public record AgentBootstrapDto(long? WarehouseId, string? WarehouseName, string BaseCurrency, DateTime ServerTime, List<AgentCustomerDto> Customers, IReadOnlyCollection<StockOnHandDto> VanStock);
 
@@ -39,7 +39,9 @@ public sealed class GetAgentBootstrapQueryHandler(IApplicationDbContext db, ICur
                     : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
                 c.CreditLimit,
                 c.Accounts.Where(a => a.Type == AccountType.Debt && a.Balance != 0)
-                    .Select(a => new CurrencyAmountDto(a.Currency, a.Balance)).ToList()))
+                    .Select(a => new CurrencyAmountDto(a.Currency, a.Balance)).ToList(),
+                c.Latitude,
+                c.Longitude))
             .ToListAsync(cancellationToken);
 
         var vanStock = warehouse is null

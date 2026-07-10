@@ -69,6 +69,8 @@ public class SalesPolicyTests(CartexApiFactory factory)
         var adminId = users!.First(u => u.Username == "admin").Id;
         try
         {
+            (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
+                new { name = warehouses![0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
             var blocked = await SellAsync(admin, warehouseId, variantId, 100_000m);
             Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
 

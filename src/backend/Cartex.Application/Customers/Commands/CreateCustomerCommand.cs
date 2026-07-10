@@ -9,7 +9,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AgentId = null) : ICommand<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AgentId = null, double? Latitude = null, double? Longitude = null) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
@@ -31,6 +31,8 @@ public sealed class CreateCustomerCommandHandler(
             CreditLimit = request.CreditLimit,
             NotificationsOptOut = request.NotificationsOptOut,
             PreferredLanguage = request.PreferredLanguage ?? "uz-latn",
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             AgentId = request.AgentId
         };
 

@@ -17,12 +17,15 @@ public sealed class RevokeSessionCommandHandler(IApplicationDbContext db, ICurre
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
         var canManageAll = currentUser.HasPermission(AppPermissions.Users.Manage);
         var now = DateTime.UtcNow;
-        var affected = await db.RefreshSessions
+        var target = await db.RefreshSessions
             .Where(s => s.Id == request.Id && (canManageAll || s.UserId == userId) && s.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
+            .Select(s => new { s.UserId, s.DeviceName })
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Session not found.");
 
-        if (affected == 0)
-            throw new NotFoundException("Session not found.");
+        await db.RefreshSessions
+            .Where(s => s.UserId == target.UserId && s.DeviceName == target.DeviceName && s.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
 
         return Unit.Value;
     }

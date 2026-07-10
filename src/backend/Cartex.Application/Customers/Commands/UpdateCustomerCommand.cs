@@ -6,7 +6,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AgentId = null) : ICommand<Unit>;
+public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AgentId = null, double? Latitude = null, double? Longitude = null) : ICommand<Unit>;
 
 public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateCustomerCommand, Unit>
 {
@@ -28,6 +28,11 @@ public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db) : IRe
             customer.PreferredLanguage = request.PreferredLanguage;
         if (request.AgentId is not null)
             customer.AgentId = request.AgentId == 0 ? null : request.AgentId;
+        if (request.Latitude is not null && request.Longitude is not null)
+        {
+            customer.Latitude = request.Latitude == 0 ? null : request.Latitude;
+            customer.Longitude = request.Latitude == 0 ? null : request.Longitude;
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

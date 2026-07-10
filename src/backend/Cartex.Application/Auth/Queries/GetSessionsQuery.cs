@@ -18,11 +18,17 @@ public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUs
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
         var all = request.All && currentUser.HasPermission(AppPermissions.Users.Manage);
         var now = DateTime.UtcNow;
-        return await db.RefreshSessions
+        var sessions = await db.RefreshSessions
             .Where(s => (all || s.UserId == userId) && s.RevokedAt == null && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastUsedAt)
-            .Select(s => new DeviceSessionDto(s.Id, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt,
-                all ? s.User.Username : null))
+            .Select(s => new { s.Id, s.UserId, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.User.Username })
             .ToListAsync(cancellationToken);
+
+        return sessions
+            .GroupBy(s => new { s.UserId, s.DeviceName })
+            .Select(g => g.First())
+            .Select(s => new DeviceSessionDto(s.Id, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, all ? s.Username : null))
+            .OrderByDescending(s => s.LastUsedAt)
+            .ToList();
     }
 }
