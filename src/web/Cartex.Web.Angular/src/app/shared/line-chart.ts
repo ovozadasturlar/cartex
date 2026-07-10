@@ -31,12 +31,13 @@ export interface ChartSeries {
         }
       </defs>
       @for (line of gridLines; track line) {
-        <line [attr.x1]="PAD" [attr.x2]="W - PAD" [attr.y1]="line" [attr.y2]="line" class="grid" />
+        <line [attr.x1]="PAD" [attr.x2]="W - PAD" [attr.y1]="line" [attr.y2]="line" class="grid"
+              vector-effect="non-scaling-stroke" />
       }
       @for (p of paths(); track $index) {
         <path [attr.d]="p.area" [attr.fill]="'url(#' + gid + $index + ')'" />
-        <path [attr.d]="p.line" fill="none" [attr.stroke]="p.color" stroke-width="2.2"
-              stroke-linejoin="round" stroke-linecap="round" />
+        <path [attr.d]="p.line" fill="none" [attr.stroke]="p.color" stroke-width="1.8"
+              stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
       }
     </svg>
     <div class="labels">
@@ -47,8 +48,8 @@ export interface ChartSeries {
   `,
   styles: `
     :host { display: block; }
-    .chart { width: 100%; display: block; }
-    .grid { stroke: var(--cx-border); stroke-width: 0.6; }
+    .chart { width: 100%; height: 200px; display: block; }
+    .grid { stroke: var(--cx-border); stroke-width: 1; }
     .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 8px; }
     .legend-item {
       display: inline-flex; align-items: center; gap: 6px;
