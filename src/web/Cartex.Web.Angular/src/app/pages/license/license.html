@@ -1,0 +1,58 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('license')" [subtitle]="t('license_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else if (status(); as s) {
+    <div class="stack">
+      <div class="cx-card card">
+        <div class="tariff-row">
+          <span class="tariff-name">{{ s.tariff }}</span>
+          <span class="cx-chip" [class.ok]="s.isActive" [class.bad]="!s.isActive">
+            {{ t(s.isActive ? 'active' : 'inactive') }}
+          </span>
+        </div>
+        <p class="hint">
+          {{ t('expires_at') }}: {{ s.expiresAt | cxDate: false }}
+        </p>
+        <div class="chips">
+          <span class="label">{{ t('enabled_features') }}</span>
+          @for (name of enabledNames(); track name) {
+            <span class="cx-chip ok">{{ name }}</span>
+          } @empty {
+            <span class="cx-chip">{{ t('no_data') }}</span>
+          }
+        </div>
+      </div>
+
+      @if (canManage && options(); as o) {
+        <div class="cx-card card">
+          @if (busy()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+          <div class="row2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('tariff') }}</mat-label>
+              <mat-select [(ngModel)]="tariff">
+                @for (tf of o.tariffs; track tf) {
+                  <mat-option [value]="tf">{{ tf }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('expires_at') }}</mat-label>
+              <input matInput type="date" [(ngModel)]="expires" />
+            </mat-form-field>
+          </div>
+          <p class="hint">{{ t('tariff_features_hint') }}</p>
+          <div class="actions">
+            <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+              <mat-icon>save</mat-icon>
+              {{ t('save') }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</ng-container>

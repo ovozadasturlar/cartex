@@ -1,0 +1,36 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('receipt_settings')" [subtitle]="t('receipt_settings_hint')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="cx-card form">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('receipt_header') }}</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="headerText" [disabled]="!canManage"
+                  [placeholder]="t('receipt_header_example')"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('receipt_footer') }}</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="footerText" [disabled]="!canManage"
+                  [placeholder]="t('receipt_footer_example')"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="width">
+        <mat-label>{{ t('receipt_width') }}</mat-label>
+        <input matInput type="number" min="24" max="64" [(ngModel)]="paperWidth" [disabled]="!canManage" />
+      </mat-form-field>
+      <p class="hint">{{ t('receipt_texts_hint') }}</p>
+      @if (canManage) {
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</ng-container>

@@ -79,6 +79,15 @@ export const SETTINGS_SECTIONS: NavSection[] = [
       { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'settings.manage' },
       { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.manage' },
       { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
+      { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'business.manage' },
+    ],
+  },
+  {
+    labelKey: 'settings_developer',
+    items: [
+      { labelKey: 'license', icon: 'workspace_premium', route: '/settings/license', permission: 'settings.manage' },
+      { labelKey: 'features', icon: 'toggle_on', route: '/settings/features', permission: 'features.manage' },
+      { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.manage' },
     ],
   },
 ];

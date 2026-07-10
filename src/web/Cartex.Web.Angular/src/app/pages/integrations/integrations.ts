@@ -1,0 +1,184 @@
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslocoModule } from '@jsverse/transloco';
+import { Observable, lastValueFrom } from 'rxjs';
+import { Settings, SettingsApi } from '../../core/api/settings.api';
+import { NotifyService } from '../../core/notify.service';
+import { PageHeader } from '../../shared/page-header';
+
+@Component({
+  selector: 'app-integrations',
+  imports: [
+    FormsModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatProgressBarModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    TranslocoModule,
+    PageHeader,
+  ],
+  templateUrl: './integrations.html',
+  styleUrl: './integrations.scss',
+})
+export class Integrations implements OnInit {
+  private readonly api = inject(SettingsApi);
+  private readonly notify = inject(NotifyService);
+
+  readonly loading = signal(true);
+  readonly busy = signal(false);
+  readonly smsProviders = ['eskiz', 'playmobile'];
+  readonly receiptFormats = ['Auto', 'Link', 'Pdf', 'Text'];
+
+  tgEnabled = false;
+  tgHasToken = false;
+  tgToken = '';
+  tgChatId = '';
+
+  emailEnabled = false;
+  emailHost = '';
+  emailPort = 465;
+  emailUseSsl = true;
+  emailUsername = '';
+  emailPassword = '';
+  emailFromAddress = '';
+  emailFromName = '';
+
+  smsEnabled = false;
+  smsProvider = 'eskiz';
+  smsLogin = '';
+  smsPassword = '';
+  smsSender = '';
+  smsBaseUrl = '';
+
+  channelTelegram = false;
+  channelSms = false;
+  channelEmail = false;
+  copyToAdmin = false;
+  publicBaseUrl = '';
+  telegramFormat = 'Auto';
+  emailFormat = 'Auto';
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.apply(await lastValueFrom(this.api.get()));
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  saveTelegram(message: string): Promise<void> {
+    return this.run(
+      this.api.updateTelegram({
+        enabled: this.tgEnabled,
+        chatId: this.tgChatId.trim() || null,
+        botToken: this.tgToken.trim() || null,
+      }),
+      message,
+    );
+  }
+
+  saveEmail(message: string): Promise<void> {
+    return this.run(
+      this.api.updateEmail({
+        enabled: this.emailEnabled,
+        host: this.emailHost.trim() || null,
+        port: this.emailPort,
+        useSsl: this.emailUseSsl,
+        username: this.emailUsername.trim() || null,
+        password: this.emailPassword || null,
+        fromAddress: this.emailFromAddress.trim() || null,
+        fromName: this.emailFromName.trim() || null,
+      }),
+      message,
+    );
+  }
+
+  saveSms(message: string): Promise<void> {
+    return this.run(
+      this.api.updateSms({
+        enabled: this.smsEnabled,
+        provider: this.smsProvider,
+        login: this.smsLogin.trim() || null,
+        password: this.smsPassword || null,
+        sender: this.smsSender.trim() || null,
+        baseUrl: this.smsBaseUrl.trim() || null,
+      }),
+      message,
+    );
+  }
+
+  saveNotification(message: string): Promise<void> {
+    const channels: string[] = [];
+    if (this.channelTelegram) channels.push('Telegram');
+    if (this.channelSms) channels.push('Sms');
+    if (this.channelEmail) channels.push('Email');
+    return this.run(
+      this.api.updateNotification({
+        channels,
+        copyToAdmin: this.copyToAdmin,
+        publicBaseUrl: this.publicBaseUrl.trim() || null,
+        telegramFormat: this.telegramFormat,
+        emailFormat: this.emailFormat,
+      }),
+      message,
+    );
+  }
+
+  private async run(request: Observable<void>, message: string): Promise<void> {
+    this.busy.set(true);
+    try {
+      await lastValueFrom(request);
+      this.apply(await lastValueFrom(this.api.get()));
+      this.notify.success(message);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private apply(s: Settings): void {
+    this.tgEnabled = s.telegram.enabled;
+    this.tgHasToken = s.telegram.hasBotToken;
+    this.tgToken = '';
+    this.tgChatId = s.telegram.chatId ?? '';
+
+    this.emailEnabled = s.email.enabled;
+    this.emailHost = s.email.host ?? '';
+    this.emailPort = s.email.port;
+    this.emailUseSsl = s.email.useSsl;
+    this.emailUsername = s.email.username ?? '';
+    this.emailPassword = '';
+    this.emailFromAddress = s.email.fromAddress ?? '';
+    this.emailFromName = s.email.fromName ?? '';
+
+    this.smsEnabled = s.sms.enabled;
+    this.smsProvider = s.sms.provider || 'eskiz';
+    this.smsLogin = s.sms.login ?? '';
+    this.smsPassword = '';
+    this.smsSender = s.sms.sender ?? '';
+    this.smsBaseUrl = s.sms.baseUrl ?? '';
+
+    this.channelTelegram = s.notification.channels.includes('Telegram');
+    this.channelSms = s.notification.channels.includes('Sms');
+    this.channelEmail = s.notification.channels.includes('Email');
+    this.copyToAdmin = s.notification.copyToAdmin;
+    this.publicBaseUrl = s.notification.publicBaseUrl ?? '';
+    this.telegramFormat = s.notification.telegramFormat || 'Auto';
+    this.emailFormat = s.notification.emailFormat || 'Auto';
+  }
+}

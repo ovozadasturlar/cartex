@@ -1,0 +1,154 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('integrations')" [subtitle]="t('integrations_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="cards">
+      <div class="cx-card card">
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <h3>Telegram</h3>
+        <mat-slide-toggle [(ngModel)]="tgEnabled">{{ t('active') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('bot_token') }}</mat-label>
+          <input matInput type="password" [(ngModel)]="tgToken"
+                 [placeholder]="tgHasToken ? t('secret_keep_blank') : '1234567890:AA...'" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('admin_chat_id') }}</mat-label>
+          <input matInput [(ngModel)]="tgChatId" />
+        </mat-form-field>
+        <p class="hint">{{ t('admin_chat_hint') }}</p>
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="saveTelegram(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="cx-card card">
+        <h3>Email (SMTP)</h3>
+        <mat-slide-toggle [(ngModel)]="emailEnabled">{{ t('active') }}</mat-slide-toggle>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('smtp_host') }}</mat-label>
+            <input matInput [(ngModel)]="emailHost" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('port') }}</mat-label>
+            <input matInput type="number" min="1" max="65535" [(ngModel)]="emailPort" />
+          </mat-form-field>
+        </div>
+        <mat-slide-toggle [(ngModel)]="emailUseSsl">SSL</mat-slide-toggle>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('username') }}</mat-label>
+            <input matInput [(ngModel)]="emailUsername" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('password') }}</mat-label>
+            <input matInput type="password" [(ngModel)]="emailPassword" [placeholder]="t('secret_keep_blank')" />
+          </mat-form-field>
+        </div>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('from_address') }}</mat-label>
+            <input matInput [(ngModel)]="emailFromAddress" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('from_name') }}</mat-label>
+            <input matInput [(ngModel)]="emailFromName" />
+          </mat-form-field>
+        </div>
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="saveEmail(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="cx-card card">
+        <h3>SMS</h3>
+        <mat-slide-toggle [(ngModel)]="smsEnabled">{{ t('active') }}</mat-slide-toggle>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('provider') }}</mat-label>
+            <mat-select [(ngModel)]="smsProvider">
+              @for (p of smsProviders; track p) {
+                <mat-option [value]="p">{{ p }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('sender') }}</mat-label>
+            <input matInput [(ngModel)]="smsSender" />
+          </mat-form-field>
+        </div>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('username') }}</mat-label>
+            <input matInput [(ngModel)]="smsLogin" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('password') }}</mat-label>
+            <input matInput type="password" [(ngModel)]="smsPassword" [placeholder]="t('secret_keep_blank')" />
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Base URL</mat-label>
+          <input matInput [(ngModel)]="smsBaseUrl" />
+        </mat-form-field>
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="saveSms(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="cx-card card">
+        <h3>{{ t('receipt_delivery') }}</h3>
+        <p class="hint">{{ t('receipt_channels_hint') }}</p>
+        <div class="checks">
+          <mat-checkbox [(ngModel)]="channelTelegram">Telegram</mat-checkbox>
+          <mat-checkbox [(ngModel)]="channelSms">SMS</mat-checkbox>
+          <mat-checkbox [(ngModel)]="channelEmail">Email</mat-checkbox>
+          <mat-checkbox [(ngModel)]="copyToAdmin">{{ t('copy_to_admin') }}</mat-checkbox>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('public_base_url') }}</mat-label>
+          <input matInput [(ngModel)]="publicBaseUrl" placeholder="https://shop.example.uz" />
+        </mat-form-field>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('telegram_receipt_format') }}</mat-label>
+            <mat-select [(ngModel)]="telegramFormat">
+              @for (f of receiptFormats; track f) {
+                <mat-option [value]="f">{{ f }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('email_receipt_format') }}</mat-label>
+            <mat-select [(ngModel)]="emailFormat">
+              @for (f of receiptFormats; track f) {
+                <mat-option [value]="f">{{ f }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <p class="hint">{{ t('receipt_format_hint') }}</p>
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="saveNotification(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</ng-container>

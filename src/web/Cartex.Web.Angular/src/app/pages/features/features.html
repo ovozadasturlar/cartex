@@ -1,0 +1,49 @@
+<div class="page" *transloco="let t">
+  <cx-page-header [title]="t('features')" [subtitle]="t('features_subtitle')" />
+
+  <div class="cx-table-card">
+    @if (loading() || busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (items().length) {
+      <table mat-table [dataSource]="items()">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+          <td mat-cell *matCellDef="let f" class="strong">{{ f.name }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef>{{ t('code') }}</th>
+          <td mat-cell *matCellDef="let f"><code>{{ f.code }}</code></td>
+        </ng-container>
+
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef>{{ t('description') }}</th>
+          <td mat-cell *matCellDef="let f" class="desc">{{ desc(f.code) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="tariff">
+          <th mat-header-cell *matHeaderCellDef>{{ t('tariff') }}</th>
+          <td mat-cell *matCellDef="let f">
+            @if (!inTariff(f.code)) {
+              <span class="cx-chip warn">{{ t('not_in_tariff') }}</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="enabled">
+          <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+          <td mat-cell *matCellDef="let f">
+            <mat-slide-toggle
+              [checked]="f.isEnabled"
+              [disabled]="!canManage || busy()"
+              (change)="toggle(f, $event.checked, t('success'))" />
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+  </div>
+</div>
