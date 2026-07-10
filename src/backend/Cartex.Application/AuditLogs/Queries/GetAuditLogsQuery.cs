@@ -24,7 +24,8 @@ public record AuditLogDto(
     long? RecordId,
     string? OldData,
     string? NewData,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Client);
 
 public sealed class GetAuditLogsQueryHandler(
     IApplicationDbContext db,
@@ -66,7 +67,8 @@ public sealed class GetAuditLogsQueryHandler(
                     a.RecordId,
                     a.OldData,
                     a.NewData,
-                    a.CreatedAt),
+                    a.CreatedAt,
+                    a.Client),
                 writer, cancellationToken);
     }
 }

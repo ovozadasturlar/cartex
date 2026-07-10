@@ -10,6 +10,7 @@ public sealed class AuditService(IApplicationDbContext db, ICurrentUser currentU
         db.AuditLogs.Add(new AuditLog
         {
             UserId = asUserId ?? currentUser.UserId,
+            Client = currentUser.Client,
             Action = action,
             TableName = table,
             RecordId = recordId,

@@ -5,7 +5,18 @@ namespace Cartex.Api.Services;
 
 public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
+    private static readonly HashSet<string> KnownClients = ["desktop", "web", "mobile", "tma", "mirror"];
+
     private System.Security.Claims.ClaimsPrincipal? User => accessor.HttpContext?.User;
+
+    public string? Client
+    {
+        get
+        {
+            var value = accessor.HttpContext?.Request.Headers["X-Client"].ToString();
+            return value is not null && KnownClients.Contains(value) ? value : null;
+        }
+    }
 
     public bool IsAuthenticated => (User?.Identity?.IsAuthenticated ?? false) && User?.FindFirst("userId") is not null;
 

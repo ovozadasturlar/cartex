@@ -34,7 +34,8 @@ public static class MauiProgram
             () => session.ServerUrl,
             () => session.AccessToken,
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
-            OnUnauthorized);
+            OnUnauthorized,
+            "mobile");
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<AgentDb>();

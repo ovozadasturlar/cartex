@@ -680,5 +680,15 @@
   "pay_old_debt": "Eski qarzdan to'lash",
   "err_debt_pay_failed": "Ta'minot saqlandi, lekin qarz to'lovi amalga oshmadi",
   "supply_void": "Bekor qilish",
-  "supply_void_confirm": "Bu ta'minot bekor qilinsinmi? Qoldiq va to'lovlar teskari qilinadi."
+  "supply_void_confirm": "Bu ta'minot bekor qilinsinmi? Qoldiq va to'lovlar teskari qilinadi.",
+  "client": "Interfeys",
+  "client_desktop": "Desktop",
+  "client_web": "Veb",
+  "client_mobile": "Mobil",
+  "client_tma": "Telegram",
+  "client_mirror": "Ko'zgu",
+  "license_subtitle": "Joriy tarif va litsenziya holati",
+  "features_subtitle": "Tizim imkoniyatlarini yoqish/o'chirish",
+  "integrations_subtitle": "Telegram, Email, SMS va chek yuborish kanallari",
+  "not_in_tariff": "Tarifda yo'q"
 }

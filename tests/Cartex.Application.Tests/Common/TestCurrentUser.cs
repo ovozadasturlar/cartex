@@ -10,6 +10,7 @@ public sealed class TestCurrentUser : ICurrentUser
     public long? DefaultBranchId { get; private set; }
     public IReadOnlyCollection<long> BranchIds { get; private set; } = [];
     public bool CanAccessAllBranches { get; private set; }
+    public string? Client => null;
     public HashSet<string> Granted { get; } = [];
 
     public bool HasPermission(string permission) => CanAccessAllBranches || Granted.Contains(permission);

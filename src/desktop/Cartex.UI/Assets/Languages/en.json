@@ -680,5 +680,15 @@
   "pay_old_debt": "Pay old debt",
   "err_debt_pay_failed": "Supply saved, but debt payment failed",
   "supply_void": "Void",
-  "supply_void_confirm": "Void this supply? Stock and payments will be reversed."
+  "supply_void_confirm": "Void this supply? Stock and payments will be reversed.",
+  "client": "Client",
+  "client_desktop": "Desktop",
+  "client_web": "Web",
+  "client_mobile": "Mobile",
+  "client_tma": "Telegram",
+  "client_mirror": "Mirror",
+  "license_subtitle": "Current plan and license status",
+  "features_subtitle": "Enable or disable system features",
+  "integrations_subtitle": "Telegram, Email, SMS and receipt delivery channels",
+  "not_in_tariff": "Not in plan"
 }

@@ -54,7 +54,7 @@ export class Audit implements OnInit {
   readonly busy = signal(false);
   readonly paged = signal<Paged<AuditLog> | null>(null);
   readonly options = signal<AuditOptions | null>(null);
-  readonly cols = ['date', 'user', 'action', 'table', 'record'];
+  readonly cols = ['date', 'user', 'client', 'action', 'table', 'record'];
   readonly tone = actionTone;
 
   from = isoDay(new Date(Date.now() - 29 * 86400000));

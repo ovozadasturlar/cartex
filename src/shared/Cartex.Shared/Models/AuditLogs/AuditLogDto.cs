@@ -8,4 +8,5 @@ public record AuditLogDto(
     long? RecordId,
     string? OldData,
     string? NewData,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Client);

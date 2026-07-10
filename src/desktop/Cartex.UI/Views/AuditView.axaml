@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.AuditView"
              x:CompileBindings="False">
@@ -49,6 +50,8 @@
                                             Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="*" Binding="{Binding UserName}"
                                             Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Client, Mode=OneWay, Converter={x:Static conv:ClientDisplayConverter.Instance}}"
+                                            Header="{Binding [client], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="Auto" Binding="{Binding Action}"
                                             Header="{Binding [action], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="*" Binding="{Binding TableName}"

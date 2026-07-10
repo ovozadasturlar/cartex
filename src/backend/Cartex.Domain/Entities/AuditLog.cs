@@ -12,5 +12,6 @@ public class AuditLog : BaseEntity
     public long? RecordId { get; set; }
     public string? OldData { get; set; }
     public string? NewData { get; set; }
+    public string? Client { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

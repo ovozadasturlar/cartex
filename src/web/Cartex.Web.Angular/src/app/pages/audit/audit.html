@@ -60,6 +60,11 @@
                 <td mat-cell *matCellDef="let a">{{ a.userName || t('system') }}</td>
               </ng-container>
 
+              <ng-container matColumnDef="client">
+                <th mat-header-cell *matHeaderCellDef>{{ t('client') }}</th>
+                <td mat-cell *matCellDef="let a">{{ a.client ? t('client_' + a.client) : '—' }}</td>
+              </ng-container>
+
               <ng-container matColumnDef="action">
                 <th mat-header-cell *matHeaderCellDef>{{ t('action') }}</th>
                 <td mat-cell *matCellDef="let a">

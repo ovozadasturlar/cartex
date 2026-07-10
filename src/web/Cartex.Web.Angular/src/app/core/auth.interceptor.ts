@@ -5,8 +5,10 @@ import { from, switchMap, catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith('/api') || req.url.startsWith('/api/auth/'))
-    return next(req);
+  if (!req.url.startsWith('/api')) return next(req);
+
+  req = req.clone({ setHeaders: { 'X-Client': 'web' } });
+  if (req.url.startsWith('/api/auth/')) return next(req);
 
   const auth = inject(AuthService);
   const router = inject(Router);

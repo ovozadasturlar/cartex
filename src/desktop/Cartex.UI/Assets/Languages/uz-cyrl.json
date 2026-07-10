@@ -680,5 +680,15 @@
   "pay_old_debt": "Эски қарздан тўлаш",
   "err_debt_pay_failed": "Таъминот сақланди, лекин қарз тўлови амалга ошмади",
   "supply_void": "Бекор қилиш",
-  "supply_void_confirm": "Бу таъминот бекор қилинсинми? Қолдиқ ва тўловлар тескари қилинади."
+  "supply_void_confirm": "Бу таъминот бекор қилинсинми? Қолдиқ ва тўловлар тескари қилинади.",
+  "client": "Интерфейс",
+  "client_desktop": "Десктоп",
+  "client_web": "Веб",
+  "client_mobile": "Мобил",
+  "client_tma": "Телеграм",
+  "client_mirror": "Кўзгу",
+  "license_subtitle": "Жорий тариф ва лицензия ҳолати",
+  "features_subtitle": "Тизим имкониятларини ёқиш/ўчириш",
+  "integrations_subtitle": "Telegram, Email, SMS ва чек юбориш каналлари",
+  "not_in_tariff": "Тарифда йўқ"
 }

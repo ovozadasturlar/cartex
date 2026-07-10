@@ -680,5 +680,15 @@
   "pay_old_debt": "Оплата старого долга",
   "err_debt_pay_failed": "Поставка сохранена, но оплата долга не прошла",
   "supply_void": "Аннулировать",
-  "supply_void_confirm": "Аннулировать эту поставку? Остатки и платежи будут отменены."
+  "supply_void_confirm": "Аннулировать эту поставку? Остатки и платежи будут отменены.",
+  "client": "Интерфейс",
+  "client_desktop": "Десктоп",
+  "client_web": "Веб",
+  "client_mobile": "Мобильный",
+  "client_tma": "Телеграм",
+  "client_mirror": "Зеркало",
+  "license_subtitle": "Текущий тариф и статус лицензии",
+  "features_subtitle": "Включение и отключение возможностей системы",
+  "integrations_subtitle": "Telegram, Email, SMS и каналы отправки чеков",
+  "not_in_tariff": "Нет в тарифе"
 }

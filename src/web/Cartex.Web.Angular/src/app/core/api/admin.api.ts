@@ -90,6 +90,7 @@ export interface AuditLog {
   oldData: string | null;
   newData: string | null;
   createdAt: string;
+  client: string | null;
 }
 
 export interface AuditOptions {
