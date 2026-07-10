@@ -17,10 +17,22 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db) : IR
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         var query = db.Customers.AsFilterable(request);
+        var count = await query.CountAsync(cancellationToken);
+        var sums = await query
+            .SelectMany(c => c.Accounts)
+            .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus)
+            .GroupBy(a => new { a.Type, a.Currency })
+            .Select(g => new { g.Key.Type, g.Key.Currency, Sum = g.Sum(a => a.Balance) })
+            .ToListAsync(cancellationToken);
+        var rates = (await db.ExchangeRates
+            .GroupBy(r => r.Code)
+            .Select(g => g.OrderByDescending(r => r.EffectiveAt).First())
+            .ToListAsync(cancellationToken))
+            .ToDictionary(r => r.Code, r => r.Rate);
         return new CustomerTotalsDto(
-            await query.CountAsync(cancellationToken),
-            await query.SumAsync(c => (decimal?)c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
-                    : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())), cancellationToken) ?? 0,
-            await query.SumAsync(c => (decimal?)c.Accounts.Where(a => a.Type == AccountType.Bonus).Sum(a => a.Balance), cancellationToken) ?? 0);
+            count,
+            sums.Where(s => s.Type == AccountType.Debt)
+                .Sum(s => s.Sum * (s.Currency == baseCode ? 1m : rates.GetValueOrDefault(s.Currency))),
+            sums.Where(s => s.Type == AccountType.Bonus).Sum(s => s.Sum));
     }
 }

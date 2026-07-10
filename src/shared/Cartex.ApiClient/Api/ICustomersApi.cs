@@ -24,7 +24,7 @@ public interface ICustomersApi
     Task UpdateAsync(long id, [Body] UpdateCustomerRequest request);
 
     [Get("/api/customers/{id}/ledger")]
-    Task<IApiResponse<List<CustomerLedgerEntryDto>>> GetLedgerAsync(long id, [Query] int page = 1, [Query] int pageSize = 50);
+    Task<IApiResponse<List<CustomerLedgerEntryDto>>> GetLedgerAsync(long id, [Query] int page = 1, [Query] int pageSize = 50, CancellationToken cancellationToken = default);
 
     [Post("/api/customers/{id}/repay-debt")]
     Task RepayDebtAsync(long id, [Body] RepayDebtRequest request);

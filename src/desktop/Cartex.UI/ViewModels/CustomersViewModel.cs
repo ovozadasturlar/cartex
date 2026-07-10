@@ -30,6 +30,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private CustomerDto? _selectedCustomer;
     [ObservableProperty] private CustomerTotalsDto? _totals;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isLedgerLoading;
 
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
@@ -116,7 +118,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         _export = export;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
-        LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId));
+        LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
     }
 
     [RelayCommand]
@@ -142,26 +144,25 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
+        IsLoading = true;
         try
         {
-            using (_busy.Begin(L["loading"]))
-            {
-                var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-                var pagedTask = _api.QueryAsync(QueryRequest.Create()
-                    .Page(Paging.Page, Paging.PageSize)
-                    .Sort(Paging.SortBy, Paging.Descending)
-                    .Search(search)
-                    .Build());
-                var totalsTask = _api.GetTotalsAsync(search);
-                var paged = (await pagedTask).ToPaged();
-                Customers.Clear();
-                foreach (var c in paged.Items) Customers.Add(c);
-                Paging.Apply(paged.Meta);
-                Totals = await totalsTask;
-                OnPropertyChanged(nameof(IsEmpty));
-            }
+            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var pagedTask = _api.QueryAsync(QueryRequest.Create()
+                .Page(Paging.Page, Paging.PageSize)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .Build());
+            var totalsTask = _api.GetTotalsAsync(search);
+            var paged = (await pagedTask).ToPaged();
+            Customers.Clear();
+            foreach (var c in paged.Items) Customers.Add(c);
+            Paging.Apply(paged.Meta);
+            Totals = await totalsTask;
+            OnPropertyChanged(nameof(IsEmpty));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { IsLoading = false; }
     }
 
     private CancellationTokenSource? _searchCts;
@@ -181,26 +182,46 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         await LoadAsync();
     }
 
+    private CancellationTokenSource? _ledgerCts;
+
+    private CancellationToken NewLedgerToken()
+    {
+        _ledgerCts?.Cancel();
+        _ledgerCts?.Dispose();
+        return (_ledgerCts = new CancellationTokenSource()).Token;
+    }
+
     partial void OnSelectedCustomerChanged(CustomerDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
         Ledger.Clear();
         _ledgerCustomerId = value?.Id ?? 0;
         LedgerPaging.Page = 1;
-        if (value is not null) _ = LoadLedgerAsync(value.Id);
+        if (value is null) { _ledgerCts?.Cancel(); return; }
+        _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
     }
 
-    private async Task LoadLedgerAsync(long id)
+    private async Task DebouncedLedgerAsync(long id, CancellationToken token)
     {
+        try { await Task.Delay(150, token); } catch { return; }
+        await LoadLedgerAsync(id, token);
+    }
+
+    private async Task LoadLedgerAsync(long id, CancellationToken token)
+    {
+        IsLedgerLoading = true;
         try
         {
-            var result = await _api.GetLedgerAsync(id, LedgerPaging.Page, LedgerPaging.PageSize);
+            var result = await _api.GetLedgerAsync(id, LedgerPaging.Page, LedgerPaging.PageSize, token);
+            if (id != _ledgerCustomerId) return;
             var paged = result.ToPaged();
             Ledger.Clear();
             foreach (var e in paged.Items) Ledger.Add(e);
             LedgerPaging.Apply(paged.Meta);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { if (!token.IsCancellationRequested) IsLedgerLoading = false; }
     }
 
     [RelayCommand]

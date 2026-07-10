@@ -60,20 +60,18 @@ public sealed class GetCustomerLedgerQueryHandler(
         var oldest = pageTx[^1];
         var prior = txQuery.Where(t => t.CreatedAt < oldest.CreatedAt
             || (t.CreatedAt == oldest.CreatedAt && t.Id < oldest.Id));
-        var priorIn = await prior
+        var priorSums = await prior
             .Where(t => t.ToAccountId != null && ids.Contains(t.ToAccountId.Value))
-            .GroupBy(t => t.ToAccountId!.Value)
-            .Select(g => new { Id = g.Key, Sum = g.Sum(t => t.Amount) })
-            .ToListAsync(cancellationToken);
-        var priorOut = await prior
-            .Where(t => t.FromAccountId != null && ids.Contains(t.FromAccountId.Value))
-            .GroupBy(t => t.FromAccountId!.Value)
-            .Select(g => new { Id = g.Key, Sum = g.Sum(t => t.Amount) })
+            .Select(t => new { Id = t.ToAccountId!.Value, Amount = t.Amount })
+            .Concat(prior
+                .Where(t => t.FromAccountId != null && ids.Contains(t.FromAccountId.Value))
+                .Select(t => new { Id = t.FromAccountId!.Value, Amount = -t.Amount }))
+            .GroupBy(x => x.Id)
+            .Select(g => new { Id = g.Key, Sum = g.Sum(x => x.Amount) })
             .ToListAsync(cancellationToken);
 
         var running = ids.ToDictionary(id => id, _ => 0m);
-        foreach (var x in priorIn) running[x.Id] += x.Sum;
-        foreach (var x in priorOut) running[x.Id] -= x.Sum;
+        foreach (var x in priorSums) running[x.Id] += x.Sum;
 
         pageTx.Reverse();
         var entries = BuildEntries(pageTx, typeById, running);

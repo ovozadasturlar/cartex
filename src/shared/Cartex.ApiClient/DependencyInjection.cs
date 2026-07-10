@@ -26,12 +26,12 @@ public static class DependencyInjection
         var baseUrl = baseUrlProvider();
 
         services.AddRefitClient<IAuthApi>(settings)
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .ConfigureHttpClient(c => Configure(c, baseUrl))
             .AddHttpMessageHandler<BaseAddressHandler>()
             .AddHttpMessageHandler<NoContentHandler>();
 
         services.AddRefitClient<IReceiptApi>(settings)
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .ConfigureHttpClient(c => Configure(c, baseUrl))
             .AddHttpMessageHandler<BaseAddressHandler>()
             .AddHttpMessageHandler<NoContentHandler>();
 
@@ -75,9 +75,15 @@ public static class DependencyInjection
         return services;
     }
 
+    private static void Configure(HttpClient client, string baseUrl)
+    {
+        client.BaseAddress = new Uri(baseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    }
+
     private static void RegisterAuthorized<T>(IServiceCollection services, RefitSettings settings, string baseUrl) where T : class =>
         services.AddRefitClient<T>(settings)
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseUrl))
+            .ConfigureHttpClient(c => Configure(c, baseUrl))
             .AddHttpMessageHandler<BaseAddressHandler>()
             .AddHttpMessageHandler<AuthTokenHandler>()
             .AddHttpMessageHandler<NoContentHandler>();

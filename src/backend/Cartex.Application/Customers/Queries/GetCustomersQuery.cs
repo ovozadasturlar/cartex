@@ -33,9 +33,8 @@ public sealed class GetCustomersQueryHandler(
                     c.Email,
                     c.CardBarcode,
                     c.DiscountPct,
-                    c.Accounts.Where(a => a.Type == AccountType.Bonus).Sum(a => a.Balance),
-                    c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
-                        : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
+                    0m,
+                    0m,
                     c.CreditLimit,
                     c.NotificationsOptOut,
                     c.TelegramChatId != null,
@@ -44,14 +43,28 @@ public sealed class GetCustomersQueryHandler(
 
         var ids = items.Select(i => i.Id).ToList();
         var balances = await db.Accounts
-            .Where(a => a.CustomerId != null && ids.Contains(a.CustomerId.Value) && a.Type == AccountType.Debt && a.Balance != 0)
-            .Select(a => new { a.CustomerId, a.Currency, a.Balance })
+            .Where(a => a.CustomerId != null && ids.Contains(a.CustomerId.Value)
+                && (a.Type == AccountType.Debt || a.Type == AccountType.Bonus) && a.Balance != 0)
+            .Select(a => new { a.CustomerId, a.Type, a.Currency, a.Balance })
             .ToListAsync(cancellationToken);
 
-        return items.Select(i => i with
+        var rates = (await db.ExchangeRates
+            .GroupBy(r => r.Code)
+            .Select(g => g.OrderByDescending(r => r.EffectiveAt).First())
+            .ToListAsync(cancellationToken))
+            .ToDictionary(r => r.Code, r => r.Rate);
+
+        return items.Select(i =>
         {
-            DebtBalances = balances.Where(b => b.CustomerId == i.Id)
-                .Select(b => new CurrencyAmountDto(b.Currency, b.Balance)).ToList()
+            var mine = balances.Where(b => b.CustomerId == i.Id).ToList();
+            return i with
+            {
+                CashbackBalance = mine.Where(b => b.Type == AccountType.Bonus).Sum(b => b.Balance),
+                DebtBalance = mine.Where(b => b.Type == AccountType.Debt)
+                    .Sum(b => b.Balance * (b.Currency == baseCode ? 1m : rates.GetValueOrDefault(b.Currency))),
+                DebtBalances = mine.Where(b => b.Type == AccountType.Debt)
+                    .Select(b => new CurrencyAmountDto(b.Currency, b.Balance)).ToList()
+            };
         }).ToList();
     }
 }

@@ -328,7 +328,7 @@
                     </TransitioningContentControl.PageTransition>
                 </TransitioningContentControl>
 
-                <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000">
+                <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000" IsHitTestVisible="False">
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
