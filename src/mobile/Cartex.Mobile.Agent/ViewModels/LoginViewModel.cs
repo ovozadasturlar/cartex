@@ -69,6 +69,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         catch
         {
             Error = Loc.Instance["err_no_connection"];
+            IsServerVisible = true;
         }
         finally
         {
