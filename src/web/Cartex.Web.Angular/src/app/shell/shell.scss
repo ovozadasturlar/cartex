@@ -10,6 +10,11 @@ mat-sidenav-content {
   width: 240px;
   border-right: 1px solid var(--cx-border);
   background: var(--cx-card);
+
+  ::ng-deep .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .side-brand {
@@ -20,7 +25,14 @@ mat-sidenav-content {
 }
 
 .side-nav {
+  flex: 1;
+  overflow-y: auto;
   padding-bottom: 16px;
+}
+
+.side-bottom {
+  border-top: 1px solid var(--cx-border);
+  padding: 6px 0 10px;
 }
 
 .side-section {

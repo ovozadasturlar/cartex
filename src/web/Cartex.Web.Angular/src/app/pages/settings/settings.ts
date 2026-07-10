@@ -1,0 +1,27 @@
+import { Component, inject } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslocoModule } from '@jsverse/transloco';
+import { AuthService } from '../../core/auth.service';
+import { NavSection, SETTINGS_SECTIONS } from '../../core/nav';
+
+@Component({
+  selector: 'app-settings',
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, TranslocoModule],
+  templateUrl: './settings.html',
+  styleUrl: './settings.scss',
+})
+export class Settings {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly sections: NavSection[] = SETTINGS_SECTIONS
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.permission || this.auth.hasPermission(i.permission)) }))
+    .filter((s) => s.items.length > 0);
+
+  constructor() {
+    if (this.router.url === '/settings' && this.sections.length) {
+      this.router.navigateByUrl(this.sections[0].items[0].route, { replaceUrl: true });
+    }
+  }
+}

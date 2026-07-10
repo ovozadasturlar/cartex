@@ -9,7 +9,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
-import { NAV_SECTIONS } from '../core/nav';
+import { NAV_SECTIONS, SETTINGS_SECTIONS } from '../core/nav';
 import { Logo } from '../shared/logo';
 
 const LANGS: Record<string, string> = {
@@ -50,6 +50,9 @@ export class Shell {
     ...s,
     items: s.items.filter((i) => i.permission === null || this.auth.hasPermission(i.permission)),
   })).filter((s) => s.items.length > 0);
+  readonly canOpenSettings = SETTINGS_SECTIONS.some((s) =>
+    s.items.some((i) => i.permission === null || this.auth.hasPermission(i.permission)),
+  );
   readonly languages = Object.entries(LANGS).map(([code, name]) => ({ code, name }));
 
   constructor() {

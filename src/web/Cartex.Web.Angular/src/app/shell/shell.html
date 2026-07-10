@@ -21,6 +21,14 @@
         }
       }
     </div>
+    @if (canOpenSettings) {
+      <div class="side-bottom">
+        <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="!isWide() && nav.close()">
+          <mat-icon>settings</mat-icon>
+          <span>{{ t('settings') }}</span>
+        </a>
+      </div>
+    }
   </mat-sidenav>
   <mat-sidenav-content>
     <div class="topbar">

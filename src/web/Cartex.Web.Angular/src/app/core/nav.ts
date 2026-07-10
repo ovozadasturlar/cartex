@@ -28,22 +28,12 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    labelKey: 'section_catalog',
-    items: [
-      { labelKey: 'products', icon: 'inventory_2', route: '/products', permission: 'products.view' },
-      { labelKey: 'categories', icon: 'category', route: '/categories', permission: 'categories.manage' },
-      { labelKey: 'units', icon: 'straighten', route: '/units', permission: 'products.manage' },
-      { labelKey: 'product_types', icon: 'style', route: '/product-types', permission: 'products.manage' },
-      { labelKey: 'manufacturers', icon: 'factory', route: '/manufacturers', permission: 'products.manage' },
-    ],
-  },
-  {
     labelKey: 'section_inventory',
     items: [
+      { labelKey: 'products', icon: 'inventory_2', route: '/products', permission: 'products.view' },
       { labelKey: 'inventory', icon: 'warehouse', route: '/warehouse', permission: 'stocks.view' },
       { labelKey: 'supplies', icon: 'local_shipping', route: '/supplies', permission: 'supplies.view' },
       { labelKey: 'transfers', icon: 'swap_horiz', route: '/transfers', permission: 'stock_transfers.view' },
-      { labelKey: 'suppliers', icon: 'contact_phone', route: '/suppliers', permission: 'suppliers.manage' },
     ],
   },
   {
@@ -51,21 +41,44 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { labelKey: 'accounts', icon: 'account_balance_wallet', route: '/accounts', permission: 'accounts.view' },
       { labelKey: 'transactions', icon: 'sync_alt', route: '/transactions', permission: 'transactions.view' },
-      { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/rates', permission: 'rates.manage' },
-      { labelKey: 'expense_categories', icon: 'payments', route: '/expense-categories', permission: 'settings.manage' },
       { labelKey: 'reports', icon: 'insights', route: '/reports', permission: 'reports.view' },
     ],
   },
+];
+
+export const SETTINGS_SECTIONS: NavSection[] = [
   {
-    labelKey: 'section_admin',
+    labelKey: 'section_catalog',
     items: [
-      { labelKey: 'users', icon: 'manage_accounts', route: '/users', permission: 'users.view' },
-      { labelKey: 'roles', icon: 'shield_person', route: '/roles', permission: 'roles.view' },
-      { labelKey: 'branch', icon: 'apartment', route: '/branches', permission: 'branches.manage' },
-      { labelKey: 'warehouse', icon: 'home_storage', route: '/warehouses', permission: 'warehouses.manage' },
-      { labelKey: 'loyalty', icon: 'loyalty', route: '/loyalty', permission: 'loyalty.view' },
-      { labelKey: 'business', icon: 'store', route: '/business', permission: 'business.manage' },
-      { labelKey: 'audit', icon: 'history', route: '/audit', permission: 'audit.view' },
+      { labelKey: 'categories', icon: 'category', route: '/settings/categories', permission: 'categories.manage' },
+      { labelKey: 'units', icon: 'straighten', route: '/settings/units', permission: 'products.manage' },
+      { labelKey: 'product_types', icon: 'style', route: '/settings/product-types', permission: 'products.manage' },
+      { labelKey: 'manufacturers', icon: 'factory', route: '/settings/manufacturers', permission: 'products.manage' },
+    ],
+  },
+  {
+    labelKey: 'settings_org',
+    items: [
+      { labelKey: 'business', icon: 'store', route: '/settings/business', permission: 'business.manage' },
+      { labelKey: 'branch', icon: 'apartment', route: '/settings/branches', permission: 'branches.manage' },
+      { labelKey: 'warehouse', icon: 'home_storage', route: '/settings/warehouses', permission: 'warehouses.manage' },
+      { labelKey: 'suppliers', icon: 'contact_phone', route: '/settings/suppliers', permission: 'suppliers.manage' },
+    ],
+  },
+  {
+    labelKey: 'settings_access',
+    items: [
+      { labelKey: 'users', icon: 'manage_accounts', route: '/settings/users', permission: 'users.view' },
+      { labelKey: 'roles', icon: 'shield_person', route: '/settings/roles', permission: 'roles.view' },
+    ],
+  },
+  {
+    labelKey: 'settings_system',
+    items: [
+      { labelKey: 'loyalty', icon: 'loyalty', route: '/settings/loyalty', permission: 'loyalty.view' },
+      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'settings.manage' },
+      { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.manage' },
+      { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
     ],
   },
 ];
