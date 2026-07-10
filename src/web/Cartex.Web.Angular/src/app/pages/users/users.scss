@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.search {
+  width: min(340px, 100%);
+  margin-bottom: 14px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 720px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.dlg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 4px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.dlg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 24px 8px;
+}

@@ -1,0 +1,91 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('audit')" [subtitle]="t('audit_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('from_date') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="from" (ngModelChange)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('to_date') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="to" (ngModelChange)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('action') }}</mat-label>
+        <mat-select [(ngModel)]="action" (ngModelChange)="onFilter()">
+          <mat-option value="">{{ t('all') }}</mat-option>
+          @for (a of options()?.actions ?? []; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('table_name') }}</mat-label>
+        <mat-select [(ngModel)]="table" (ngModelChange)="onFilter()">
+          <mat-option value="">{{ t('all') }}</mat-option>
+          @for (tb of options()?.tables ?? []; track tb) {
+            <mat-option [value]="tb">{{ tb }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('user') }}</mat-label>
+        <mat-select [(ngModel)]="user" (ngModelChange)="onFilter()">
+          <mat-option value="">{{ t('all') }}</mat-option>
+          @for (u of options()?.users ?? []; track u) {
+            <mat-option [value]="u">{{ u }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+                <td mat-cell *matCellDef="let a">{{ a.createdAt | cxDate }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="user">
+                <th mat-header-cell *matHeaderCellDef>{{ t('user') }}</th>
+                <td mat-cell *matCellDef="let a">{{ a.userName || t('system') }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="action">
+                <th mat-header-cell *matHeaderCellDef>{{ t('action') }}</th>
+                <td mat-cell *matCellDef="let a">
+                  <span [class]="'cx-chip ' + tone(a.action)">{{ a.action }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="table">
+                <th mat-header-cell *matHeaderCellDef>{{ t('table_name') }}</th>
+                <td mat-cell *matCellDef="let a">{{ a.tableName }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="record">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('record_id') }}</th>
+                <td mat-cell *matCellDef="let a" class="num">{{ a.recordId ?? '—' }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let a; columns: cols" class="clickable" (click)="open(a)"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else {
+          <cx-empty-state icon="history" [message]="t('no_data')" />
+        }
+      }
+    </div>
+  }
+</ng-container>
