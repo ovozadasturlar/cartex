@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth.service';
@@ -7,7 +8,7 @@ import { NavSection, SETTINGS_SECTIONS } from '../../core/nav';
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, TranslocoModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule, TranslocoModule],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })

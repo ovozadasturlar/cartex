@@ -1,15 +1,26 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('loyalty')" [subtitle]="t('loyalty_subtitle')">
-    <mat-button-toggle-group hideSingleSelectionIndicator [value]="period()" (change)="setPeriod($event.value)">
-      <mat-button-toggle [value]="1">{{ t('period_today') }}</mat-button-toggle>
-      <mat-button-toggle [value]="7">{{ t('period_7d') }}</mat-button-toggle>
-      <mat-button-toggle [value]="30">{{ t('period_30d') }}</mat-button-toggle>
-    </mat-button-toggle-group>
+    <div class="cx-seg">
+      @for (p of periods; track p.key) {
+        <button type="button" [class.active]="period() === p.days" (click)="setPeriod(p.days)">
+          {{ t('period_' + p.key) }}
+        </button>
+      }
+    </div>
   </cx-page-header>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
+    @if (stats(); as s) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('stat_discount_total')" [value]="s.discountTotal | cxMoney" icon="percent" tone="warning" />
+        <cx-stat-card [label]="t('stat_discount_sales')" [value]="s.discountedSales + ' / ' + s.salesCount" icon="receipt_long" />
+        <cx-stat-card [label]="t('stat_discount_share')" [value]="share(s)" icon="pie_chart" tone="info" />
+        <cx-stat-card [label]="t('stat_bonus_outstanding')" [value]="s.bonusOutstanding | cxMoney" icon="redeem" tone="success" />
+      </div>
+    }
+
     <div class="layout">
       <cx-subnav [items]="sections(t)" [(selected)]="sectionKey" />
       <div class="content">
@@ -19,13 +30,6 @@
     }
 
     @if (section() === 'discounts') {
-      @if (stats(); as s) {
-        <div class="cx-grid stats">
-          <cx-stat-card [label]="t('stat_discount_total')" [value]="s.discountTotal | cxMoney" icon="percent" tone="warning" />
-          <cx-stat-card [label]="t('stat_discount_sales')" [value]="s.discountedSales + ' / ' + s.salesCount" icon="receipt_long" />
-          <cx-stat-card [label]="t('stat_discount_share')" [value]="share(s)" icon="pie_chart" tone="info" />
-        </div>
-      }
       <p class="hint">{{ t('discounts_desc') }}</p>
       <div class="toolbar">
         @if (canManage) {
@@ -108,11 +112,6 @@
         }
       </div>
     } @else if (section() === 'bonus') {
-      @if (stats(); as s) {
-        <div class="cx-grid stats bonus-stats">
-          <cx-stat-card [label]="t('stat_bonus_outstanding')" [value]="s.bonusOutstanding | cxMoney" icon="redeem" tone="success" />
-        </div>
-      }
       <p class="hint">{{ t('cashback_desc') }}</p>
       <div class="toolbar">
         <h3>{{ t('cashback_rules') }}</h3>

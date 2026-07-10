@@ -1,6 +1,6 @@
 <div class="reports" *transloco="let t">
   <cx-page-header [title]="t('reports')" [subtitle]="t('reports_subtitle')">
-    <div class="seg">
+    <div class="cx-seg">
       @for (p of periods; track p.key) {
         <button type="button" [class.active]="days() === p.days" (click)="setDays(p.days)">
           {{ t('period_' + p.key) }}

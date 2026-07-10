@@ -47,14 +47,25 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void SelectSection(string key) => SectionKey = key;
 
-    [ObservableProperty] private int _statPeriodIndex = 2;
+    [ObservableProperty] private int _statPeriodIndex = 1;
     [ObservableProperty] private string _statDiscountTotal = "0";
     [ObservableProperty] private string _statDiscountSales = "0";
     [ObservableProperty] private string _statDiscountShare = "0%";
     [ObservableProperty] private string _statBonusOutstanding = "0";
-    public ObservableCollection<string> StatPeriods { get; } = [];
+    public bool IsPeriodDay => StatPeriodIndex == 0;
+    public bool IsPeriodWeek => StatPeriodIndex == 1;
+    public bool IsPeriodMonth => StatPeriodIndex == 2;
 
-    partial void OnStatPeriodIndexChanged(int value) => _ = LoadStatsAsync();
+    [RelayCommand]
+    private void SetStatPeriod(string index) => StatPeriodIndex = int.Parse(index);
+
+    partial void OnStatPeriodIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsPeriodDay));
+        OnPropertyChanged(nameof(IsPeriodWeek));
+        OnPropertyChanged(nameof(IsPeriodMonth));
+        _ = LoadStatsAsync();
+    }
 
     private async Task LoadStatsAsync()
     {
@@ -205,8 +216,6 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 BuildLists();
-                if (StatPeriodIndex < 0) StatPeriodIndex = 2;
-                OnPropertyChanged(nameof(StatPeriodIndex));
 
                 var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
                 var categoriesTask = _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
@@ -303,9 +312,6 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
         ExceptionScopes.Add(new LabeledValue("Manufacturer", L["manufacturer"]));
         CombineModes.Add(new LabeledValue("Priority", L["discount_combine_priority"]));
         CombineModes.Add(new LabeledValue("Stack", L["discount_combine_stack"]));
-        StatPeriods.Add(L["period_today"]);
-        StatPeriods.Add(L["period_7d"]);
-        StatPeriods.Add(L["period_30d"]);
     }
 
     partial void OnRuleScopeChanged(LabeledValue? value) => OnPropertyChanged(nameof(IsProductScope));

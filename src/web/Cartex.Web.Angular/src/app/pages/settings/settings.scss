@@ -23,8 +23,8 @@
   }
   flex-shrink: 0;
   background: var(--cx-card);
-  border: 1px solid var(--cx-border);
-  border-radius: 12px;
+  border: none;
+  border-right: 1px solid var(--cx-border);
   padding: 14px 10px;
   position: sticky;
   top: 0;
@@ -39,8 +39,14 @@
 .nav-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin: 0 4px 8px;
+
+  .collapsed & {
+    justify-content: center;
+    margin: 0 0 8px;
+  }
 }
 
 .burger {

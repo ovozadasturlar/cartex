@@ -24,6 +24,30 @@
             <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
             <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
         </Style>
+        <Style Selector="Border.segwrap">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="Button.seg">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="14,5" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.seg.active">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
         <Style Selector="Border.stat">
             <Setter Property="Background" Value="{DynamicResource CardBg}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -35,7 +59,53 @@
 
     <Panel>
         <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
-            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[loyalty]}" Margin="0,0,0,16" />
+            <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[loyalty]}" Margin="0,0,0,16">
+                <Border Classes="segwrap">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="seg" Classes.active="{Binding IsPeriodDay}" Content="{Binding L[period_day]}"
+                                    Command="{Binding SetStatPeriodCommand}" CommandParameter="0" />
+                            <Button Classes="seg" Classes.active="{Binding IsPeriodWeek}" Content="{Binding L[period_week]}"
+                                    Command="{Binding SetStatPeriodCommand}" CommandParameter="1" />
+                            <Button Classes="seg" Classes.active="{Binding IsPeriodMonth}" Content="{Binding L[period_month]}"
+                                    Command="{Binding SetStatPeriodCommand}" CommandParameter="2" />
+                        </StackPanel>
+                </Border>
+            </c:PageHeader>
+
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,12,*,12,*,12,*" Margin="0,0,0,16">
+                <Border Classes="stat">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding StatDiscountTotal}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                        <TextBlock Text="{Binding L[stat_discount_total]}" FontSize="11.5"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="stat">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding StatDiscountSales}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="{Binding L[stat_discount_sales]}" FontSize="11.5"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Classes="stat">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding StatDiscountShare}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="{Binding L[stat_discount_share]}" FontSize="11.5"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="6" Classes="stat">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding StatBonusOutstanding}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                        <TextBlock Text="{Binding L[stat_bonus_outstanding]}" FontSize="11.5"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <Grid ColumnDefinitions="220,*">
                 <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="8" Margin="0,0,16,0"
@@ -56,35 +126,6 @@
                         <StackPanel Spacing="14" IsVisible="{Binding IsDiscountSection}">
                             <TextBlock Text="{Binding L[discounts_desc]}" FontSize="12" TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextMuted}" MaxWidth="700" HorizontalAlignment="Left" />
-
-                            <Grid ColumnDefinitions="*,12,*,12,*,12,Auto">
-                                <Border Classes="stat">
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding StatDiscountTotal}" FontSize="20" FontWeight="Bold"
-                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
-                                        <TextBlock Text="{Binding L[stat_discount_total]}" FontSize="11.5"
-                                                   Foreground="{DynamicResource TextMuted}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="2" Classes="stat">
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding StatDiscountSales}" FontSize="20" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextPrimary}" />
-                                        <TextBlock Text="{Binding L[stat_discount_sales]}" FontSize="11.5"
-                                                   Foreground="{DynamicResource TextMuted}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="4" Classes="stat">
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding StatDiscountShare}" FontSize="20" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextPrimary}" />
-                                        <TextBlock Text="{Binding L[stat_discount_share]}" FontSize="11.5"
-                                                   Foreground="{DynamicResource TextMuted}" />
-                                    </StackPanel>
-                                </Border>
-                                <ComboBox Grid.Column="6" ItemsSource="{Binding StatPeriods}" SelectedIndex="{Binding StatPeriodIndex}"
-                                          MinWidth="140" VerticalAlignment="Top" MinHeight="38" />
-                            </Grid>
 
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -165,15 +206,6 @@
                         <StackPanel Spacing="14" IsVisible="{Binding IsBonusSection}">
                             <TextBlock Text="{Binding L[cashback_desc]}" FontSize="12" TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextMuted}" MaxWidth="700" HorizontalAlignment="Left" />
-
-                            <Border Classes="stat" HorizontalAlignment="Left" MinWidth="260">
-                                <StackPanel Spacing="2">
-                                    <TextBlock Text="{Binding StatBonusOutstanding}" FontSize="20" FontWeight="Bold"
-                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
-                                    <TextBlock Text="{Binding L[stat_bonus_outstanding]}" FontSize="11.5"
-                                               Foreground="{DynamicResource TextMuted}" />
-                                </StackPanel>
-                            </Border>
 
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">

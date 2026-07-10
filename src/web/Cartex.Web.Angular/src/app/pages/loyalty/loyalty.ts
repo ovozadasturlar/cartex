@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,7 +28,6 @@ import { DiscountDialog } from './discount-dialog';
   imports: [
     FormsModule,
     MatButtonModule,
-    MatButtonToggleModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -67,7 +65,12 @@ export class Loyalty implements OnInit {
       { key: 'settings', label: t('settings') },
     ];
   }
-  readonly period = signal(30);
+  readonly period = signal(7);
+  readonly periods = [
+    { key: 'day', days: 1 },
+    { key: 'week', days: 7 },
+    { key: 'month', days: 30 },
+  ];
   readonly stats = signal<LoyaltyStats | null>(null);
   readonly discounts = signal<DiscountRule[]>([]);
   readonly rules = signal<CashbackRule[]>([]);

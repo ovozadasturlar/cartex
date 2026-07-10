@@ -14,6 +14,9 @@
             class="nav-item"
             [routerLink]="item.route"
             routerLinkActive="active"
+            [matTooltip]="t(item.labelKey)"
+            matTooltipPosition="right"
+            [matTooltipDisabled]="!collapsed()"
             (click)="!isWide() && nav.close()"
           >
             <mat-icon>{{ item.icon }}</mat-icon>
@@ -24,7 +27,9 @@
     </div>
     @if (canOpenSettings) {
       <div class="side-bottom">
-        <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="!isWide() && nav.close()">
+        <a class="nav-item" routerLink="/settings" routerLinkActive="active"
+           [matTooltip]="t('settings')" matTooltipPosition="right" [matTooltipDisabled]="!collapsed()"
+           (click)="!isWide() && nav.close()">
           <mat-icon>settings</mat-icon>
           <span>{{ t('settings') }}</span>
         </a>
