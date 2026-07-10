@@ -1,0 +1,79 @@
+<div class="page" *transloco="let t">
+  <cx-page-header [title]="t('units')" [subtitle]="t('units_subtitle')">
+    @if (canManage) {
+      <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add') }}</button>
+    }
+  </cx-page-header>
+
+  <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput #q [placeholder]="t('search')" (input)="search.set(q.value.trim())" />
+  </mat-form-field>
+
+  <div class="cx-table-card">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (items().length) {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="items()">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+            <td mat-cell *matCellDef="let u" class="strong">
+              {{ u.name }}
+              @if (u.isSystem) {
+                <span class="cx-chip">{{ t('system') }}</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="shortName">
+            <th mat-header-cell *matHeaderCellDef>{{ t('short_name') }}</th>
+            <td mat-cell *matCellDef="let u">{{ u.shortName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dimension">
+            <th mat-header-cell *matHeaderCellDef>{{ t('dimension') }}</th>
+            <td mat-cell *matCellDef="let u">{{ u.dimension }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="factor">
+            <th mat-header-cell *matHeaderCellDef class="num">{{ t('factor') }}</th>
+            <td mat-cell *matCellDef="let u" class="num cx-money">{{ u.factor }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+            <td mat-cell *matCellDef="let u">
+              <span class="cx-chip" [class.ok]="u.isEnabled" [class.bad]="!u.isEnabled">{{ t('active') }}</span>
+              @if (u.isDefault) {
+                <span class="cx-chip ok">{{ t('default') }}</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="num"></th>
+            <td mat-cell *matCellDef="let u" class="num">
+              @if (canManage) {
+                <button mat-icon-button [title]="t('make_default')" [disabled]="u.isDefault"
+                        (click)="makeDefault(u, $event)">
+                  <mat-icon>{{ u.isDefault ? 'star' : 'star_outline' }}</mat-icon>
+                </button>
+                <button mat-icon-button [title]="t('active')" (click)="toggleEnabled(u, $event)">
+                  <mat-icon>{{ u.isEnabled ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"
+              [class.clickable]="canManage && !row.isSystem" (click)="openEdit(row)"></tr>
+        </table>
+      </div>
+    } @else if (!loading()) {
+      <cx-empty-state [icon]="'straighten'" [message]="t('no_data')" />
+    }
+  </div>
+</div>

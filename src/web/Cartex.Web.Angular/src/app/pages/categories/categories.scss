@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+.search {
+  width: min(340px, 100%);
+  margin-bottom: 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 560px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--cx-text-3);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.dlg-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 4px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.dlg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px 8px;
+}

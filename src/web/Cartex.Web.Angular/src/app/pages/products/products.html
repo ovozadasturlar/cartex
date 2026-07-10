@@ -1,5 +1,9 @@
 <div class="page" *transloco="let t">
-  <cx-page-header [title]="t('products')" [subtitle]="t('products_subtitle')" />
+  <cx-page-header [title]="t('products')" [subtitle]="t('products_subtitle')">
+    @if (canManage) {
+      <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add_product') }}</button>
+    }
+  </cx-page-header>
 
   <div class="cx-grid stats">
     <cx-stat-card [label]="t('products')" [value]="totals()?.count | cxMoney" [icon]="'inventory_2'" />
@@ -90,7 +94,7 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canManage" (click)="openEdit(row)"></tr>
         </table>
       </div>
     } @else if (!loading()) {
