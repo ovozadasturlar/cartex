@@ -21,7 +21,7 @@ public static class DatabaseSeeder
 
     public static readonly string[] AgentPermissions =
     [
-        AppPermissions.Products.View, AppPermissions.Sales.View, AppPermissions.Sales.Create,
+        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.Create,
         AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View,
         AppPermissions.Customers.Manage, AppPermissions.Stocks.View, AppPermissions.StockTransfers.View,
         AppPermissions.Branches.View, AppPermissions.Warehouses.View, AppPermissions.Devices.Manage
