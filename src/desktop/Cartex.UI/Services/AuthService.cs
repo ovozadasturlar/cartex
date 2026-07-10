@@ -114,7 +114,7 @@ public sealed class AuthService
             Apply(response, _persist);
             return _token;
         }
-        catch (Refit.ApiException ex) when ((int)ex.StatusCode is 400 or 401)
+        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
         {
             SessionInvalidated?.Invoke();
             return _token;
@@ -142,7 +142,7 @@ public sealed class AuthService
             var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
             Apply(response, _persist);
         }
-        catch (Refit.ApiException ex) when ((int)ex.StatusCode is 400 or 401)
+        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
         {
             SessionInvalidated?.Invoke();
         }

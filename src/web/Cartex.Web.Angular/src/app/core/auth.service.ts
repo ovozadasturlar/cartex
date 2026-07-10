@@ -139,7 +139,7 @@ export class AuthService {
       );
       this.apply(res, this.persist);
     } catch (e) {
-      if (e instanceof HttpErrorResponse && (e.status === 400 || e.status === 401)) {
+      if (e instanceof HttpErrorResponse && e.status === 401) {
         this.logout();
         this.router.navigate(['/login']);
         return null;
