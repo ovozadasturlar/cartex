@@ -18,6 +18,16 @@
     <div class="layout">
       <div class="catalog">
         <div class="toolbar">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
+            <mat-icon matPrefix class="scan-icon">barcode_scanner</mat-icon>
+            <input
+              matInput
+              #scan
+              autofocus
+              [placeholder]="t('scan_barcode')"
+              (input)="onSearch(scan.value)"
+              (keydown.enter)="onScanEnter(scan)" />
+          </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wh">
             <mat-icon matPrefix>warehouse</mat-icon>
             <mat-select [value]="warehouseId()" (valueChange)="onWarehouse($event)" [placeholder]="t('select_warehouse')">
@@ -37,16 +47,6 @@
               {{ t('shift_closed') }}
             </span>
           }
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
-            <mat-icon matPrefix>barcode_scanner</mat-icon>
-            <input
-              matInput
-              #scan
-              autofocus
-              [placeholder]="t('scan_barcode')"
-              (input)="onSearch(scan.value)"
-              (keydown.enter)="onScanEnter(scan)" />
-          </mat-form-field>
         </div>
 
         <div class="chips">
@@ -63,16 +63,20 @@
           <div class="tiles">
             @for (p of tiles(); track p.variantId) {
               <button class="tile" (click)="addTile(p)">
-                @if (p.imageUrl) {
-                  <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
-                } @else {
-                  <div class="ph"><mat-icon>inventory_2</mat-icon></div>
-                }
-                <span class="name">{{ p.productName }}</span>
-                <span class="meta">
-                  <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
-                  <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
-                </span>
+                <div class="thumb">
+                  @if (p.imageUrl) {
+                    <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                  } @else {
+                    <mat-icon>inventory_2</mat-icon>
+                  }
+                </div>
+                <div class="body">
+                  <span class="name">{{ p.productName }}</span>
+                  <span class="meta">
+                    <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
+                    <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
+                  </span>
+                </div>
               </button>
             }
           </div>
@@ -89,22 +93,31 @@
       <div class="cx-card cart">
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
+          <button class="clear-btn" [disabled]="!cart().length" (click)="clearCart()">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </div>
+
+        <div class="customer-box">
           @if (customer(); as c) {
-            <span class="cx-chip customer-chip">
-              <mat-icon>person</mat-icon>
-              <span class="cname">{{ c.fullName }} {{ c.lastName || '' }}</span>
-              @if (c.debtBalance > 0) {
-                <span class="cdebt cx-money">−{{ c.debtBalance | cxMoney }}</span>
-              }
-              @if (c.cashbackBalance > 0) {
-                <span class="cbonus cx-money">+{{ c.cashbackBalance | cxMoney }}</span>
-              }
+            <div class="picked">
+              <div class="who">
+                <span class="cname">{{ c.fullName }} {{ c.lastName || '' }}</span>
+                <span class="cmeta">
+                  <span class="cbonus cx-money">{{ c.cashbackBalance | cxMoney }} 🎁</span>
+                  @if (c.creditLimit > 0) {
+                    <span class="cdebt cx-money">{{ c.debtBalance | cxMoney }}</span>
+                    <span class="climit cx-money">{{ t('credit_remaining') }} {{ c.creditLimit - c.debtBalance | cxMoney }}</span>
+                  }
+                </span>
+              </div>
               <button class="unlink" (click)="detachCustomer()"><mat-icon>close</mat-icon></button>
-            </span>
+            </div>
           } @else {
-            <button matButton="outlined" (click)="attachCustomer()">
+            <button class="attach" (click)="attachCustomer()">
               <mat-icon>person_add</mat-icon>
-              {{ t('customer') }}
+              <span>{{ t('customer') }}</span>
+              <span class="opt">{{ t('optional') }}</span>
             </button>
           }
         </div>
@@ -121,8 +134,10 @@
                 <input type="number" min="0" [value]="line.qty" (change)="onQtyInput(line, $event)" />
                 <button (click)="changeQty(line, 1)"><mat-icon>add</mat-icon></button>
               </div>
-              <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
-              <button class="del" (click)="remove(line)"><mat-icon>delete</mat-icon></button>
+              <div class="line-end">
+                <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+                <button class="del" (click)="remove(line)"><mat-icon>close</mat-icon></button>
+              </div>
             </div>
           } @empty {
             <cx-empty-state icon="shopping_cart" [message]="t('no_items')" />
@@ -130,12 +145,74 @@
         </div>
 
         <div class="cart-foot">
-          <div class="total-row">
+          <div class="row">
+            <span>{{ t('subtotal') }}</span>
+            <span class="cx-money">{{ subTotal() | cxMoney }}</span>
+          </div>
+
+          <div class="discount-row">
+            <span>{{ t('discount') }}</span>
+            <div class="dinput pct">
+              <input type="number" min="0" max="100" [value]="discountPercent()" (change)="onDiscountPercent($event)" />
+              <span class="suffix">%</span>
+            </div>
+            <div class="dinput amt">
+              <input type="number" min="0" [value]="discount()" (change)="onDiscountAmount($event)" />
+              <span class="suffix">{{ t('currency_sum') }}</span>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row total-row">
             <span>{{ t('total') }}</span>
             <span class="cx-money">{{ total() | cxMoney }}</span>
           </div>
-          <button matButton="filled" class="pay-btn" [disabled]="!cart().length" (click)="pay()">
-            <mat-icon>point_of_sale</mat-icon>
+
+          <div class="pay-grid">
+            <label>
+              <span>{{ t('cash') }}</span>
+              <input type="number" min="0" [value]="cash()" (input)="cash.set(num($event))" />
+            </label>
+            <label>
+              <span>{{ t('card') }}</span>
+              <input type="number" min="0" [value]="card()" (input)="card.set(num($event))" />
+            </label>
+            <label>
+              <span>{{ t('bonus') }}</span>
+              <input type="number" min="0" [value]="bonus()" (input)="bonus.set(num($event))" />
+            </label>
+          </div>
+
+          <div class="exact-row">
+            <button class="exact" (click)="payExact()">
+              <mat-icon>payments</mat-icon>
+              {{ t('exact') }}
+            </button>
+            <div class="due">
+              @if (change() > 0) {
+                <span class="chg cx-money">{{ change() | cxMoney }}</span>
+              }
+              @if (debt() > 0) {
+                <span class="dbt cx-money">{{ debt() | cxMoney }}</span>
+              }
+            </div>
+          </div>
+
+          @if (debt() > 0 && !customer()) {
+            <div class="warn-box">
+              <mat-icon>warning_amber</mat-icon>
+              <span>{{ t('debt_customer_required') }}</span>
+            </div>
+          }
+          @if (overCreditLimit()) {
+            <div class="warn-box">
+              <mat-icon>warning_amber</mat-icon>
+              <span>{{ t('credit_limit_exceeded') }}</span>
+            </div>
+          }
+
+          <button matButton="filled" class="pay-btn" [disabled]="!canConfirm()" (click)="pay()">
             {{ t('complete_sale') }}
           </button>
         </div>

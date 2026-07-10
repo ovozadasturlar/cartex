@@ -8,14 +8,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { Category, CreateSaleResult, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
+import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { Customer } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
-import { CustomerPickerDialog, PaymentDialog, PosReceiptDialog } from './pos-dialogs';
+import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
 
 interface CartLine {
   variantId: number;
@@ -65,8 +65,36 @@ export class Pos implements OnInit {
   readonly cart = signal<CartLine[]>([]);
   readonly customer = signal<Customer | null>(null);
   readonly canOpenShift = this.auth.hasPermission('shifts.manage');
-  readonly total = computed(() => this.cart().reduce((sum, l) => sum + l.price * l.qty, 0));
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
+
+  readonly cash = signal(0);
+  readonly card = signal(0);
+  readonly bonus = signal(0);
+  readonly discountPercent = signal(0);
+  readonly paying = signal(false);
+  private readonly discountManual = signal(0);
+  private readonly discountByPercent = signal(true);
+
+  readonly subTotal = computed(() => this.cart().reduce((sum, l) => sum + l.price * l.qty, 0));
+  readonly discount = computed(() => {
+    const sub = this.subTotal();
+    const raw = this.discountByPercent() ? Math.round(sub * this.discountPercent()) / 100 : this.discountManual();
+    return Math.min(sub, Math.max(0, raw));
+  });
+  readonly total = computed(() => Math.max(0, this.subTotal() - this.discount()));
+  readonly paid = computed(() => this.cash() + this.card() + this.bonus());
+  readonly change = computed(() => Math.max(0, this.paid() - this.total()));
+  readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
+  readonly overCreditLimit = computed(() => {
+    const c = this.customer();
+    return !!c && c.creditLimit > 0 && c.debtBalance + this.debt() > c.creditLimit;
+  });
+  readonly canConfirm = computed(() => {
+    if (this.paying() || !this.cart().length) return false;
+    if (this.card() + this.bonus() > this.total()) return false;
+    if (this.bonus() > (this.customer()?.cashbackBalance ?? 0)) return false;
+    return this.debt() <= 0 || !!this.customer();
+  });
 
   private search = '';
   private page = 1;
@@ -79,6 +107,7 @@ export class Pos implements OnInit {
         lastValueFrom(this.api.currentShift()),
       ]);
       this.warehouses.set(warehouses);
+      this.categories.set(categories);
       this.shift.set(shift);
       const saved = Number(localStorage.getItem(WAREHOUSE_KEY));
       const current = warehouses.find((w) => w.id === saved) ?? warehouses[0];
@@ -148,6 +177,36 @@ export class Pos implements OnInit {
     this.cart.update((c) => c.filter((l) => l !== line));
   }
 
+  clearCart(): void {
+    this.cart.set([]);
+    this.resetPayments();
+  }
+
+  num(e: Event): number {
+    const v = Number((e.target as HTMLInputElement).value);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  onDiscountPercent(e: Event): void {
+    const v = Math.min(100, this.num(e));
+    this.discountPercent.set(v);
+    this.discountByPercent.set(true);
+  }
+
+  onDiscountAmount(e: Event): void {
+    const v = this.num(e);
+    this.discountManual.set(v);
+    this.discountByPercent.set(false);
+    const sub = this.subTotal();
+    this.discountPercent.set(sub > 0 ? Math.round((v / sub) * 10000) / 100 : 0);
+  }
+
+  payExact(): void {
+    this.cash.set(this.total());
+    this.card.set(0);
+    this.bonus.set(0);
+  }
+
   async attachCustomer(): Promise<void> {
     const picked: Customer | undefined = await lastValueFrom(
       this.dialog.open(CustomerPickerDialog, { autoFocus: 'input' }).afterClosed(),
@@ -167,40 +226,53 @@ export class Pos implements OnInit {
 
   async pay(): Promise<void> {
     const warehouseId = this.warehouseId();
-    if (!warehouseId || !this.cart().length) return;
-    const result: CreateSaleResult | undefined = await lastValueFrom(
-      this.dialog
-        .open(PaymentDialog, {
-          data: {
-            warehouseId,
-            customer: this.customer(),
-            total: this.total(),
-            items: this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty })),
-          },
-          width: '400px',
-          maxWidth: '94vw',
-          autoFocus: 'input',
-        })
-        .afterClosed(),
-    );
-    if (!result) return;
+    if (!warehouseId || !this.canConfirm()) return;
+    this.paying.set(true);
     try {
-      const receipt = await lastValueFrom(this.api.receipt(result.receiptToken));
-      await lastValueFrom(
-        this.dialog.open(PosReceiptDialog, { data: receipt, width: '420px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
-      );
+      const payload = {
+        warehouseId,
+        customerId: this.customer()?.id ?? null,
+        paidCash: this.cash(),
+        paidCard: this.card(),
+        paidBonus: this.bonus(),
+        items: this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty })),
+        discountAmount: this.discount(),
+        idempotencyKey: crypto.randomUUID(),
+        applyAutoDiscount: true,
+      };
+      const result = await lastValueFrom(this.api.createSale(payload));
+      try {
+        const receipt = await lastValueFrom(this.api.receipt(result.receiptToken));
+        await lastValueFrom(
+          this.dialog.open(PosReceiptDialog, { data: receipt, width: '420px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+        );
+      } catch (e) {
+        this.notify.error(e);
+      }
+      this.cart.set([]);
+      this.customer.set(null);
+      this.resetPayments();
+      this.reset();
+      this.focusScan();
     } catch (e) {
       this.notify.error(e);
+    } finally {
+      this.paying.set(false);
     }
-    this.cart.set([]);
-    this.customer.set(null);
-    this.reset();
-    this.focusScan();
   }
 
   async loadMore(): Promise<void> {
     this.page += 1;
     await this.loadTiles(true);
+  }
+
+  private resetPayments(): void {
+    this.cash.set(0);
+    this.card.set(0);
+    this.bonus.set(0);
+    this.discountPercent.set(0);
+    this.discountManual.set(0);
+    this.discountByPercent.set(true);
   }
 
   private addLookup(p: ProductLookup): void {
