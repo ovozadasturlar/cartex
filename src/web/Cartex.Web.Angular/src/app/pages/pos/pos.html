@@ -1,0 +1,145 @@
+<div class="pos" *transloco="let t">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (!shift()) {
+      <div class="shift-banner">
+        <mat-icon>schedule</mat-icon>
+        <span>{{ t('no_open_shift') }}</span>
+        @if (canOpenShift) {
+          <button matButton="filled" (click)="openShift()">
+            <mat-icon>play_arrow</mat-icon>
+            {{ t('open_shift') }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="layout">
+      <div class="catalog">
+        <div class="toolbar">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wh">
+            <mat-icon matPrefix>warehouse</mat-icon>
+            <mat-select [value]="warehouseId()" (valueChange)="onWarehouse($event)" [placeholder]="t('select_warehouse')">
+              @for (w of warehouses(); track w.id) {
+                <mat-option [value]="w.id">{{ w.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (shift(); as s) {
+            <span class="cx-chip ok shift-chip">
+              <mat-icon>schedule</mat-icon>
+              {{ t('shift_open') }} · {{ s.openedAt | cxDate }}
+            </span>
+          } @else {
+            <span class="cx-chip warn shift-chip">
+              <mat-icon>schedule</mat-icon>
+              {{ t('shift_closed') }}
+            </span>
+          }
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
+            <mat-icon matPrefix>barcode_scanner</mat-icon>
+            <input
+              matInput
+              #scan
+              autofocus
+              [placeholder]="t('scan_barcode')"
+              (input)="onSearch(scan.value)"
+              (keydown.enter)="onScanEnter(scan)" />
+          </mat-form-field>
+        </div>
+
+        <div class="chips">
+          <button class="chip" [class.active]="categoryId() === null" (click)="onCategory(null)">{{ t('all') }}</button>
+          @for (c of categories(); track c.id) {
+            <button class="chip" [class.active]="categoryId() === c.id" (click)="onCategory(c.id)">{{ c.name }}</button>
+          }
+        </div>
+
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (tiles().length) {
+          <div class="tiles">
+            @for (p of tiles(); track p.variantId) {
+              <button class="tile" (click)="addTile(p)">
+                @if (p.imageUrl) {
+                  <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                } @else {
+                  <div class="ph"><mat-icon>inventory_2</mat-icon></div>
+                }
+                <span class="name">{{ p.productName }}</span>
+                <span class="meta">
+                  <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
+                  <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
+                </span>
+              </button>
+            }
+          </div>
+          @if (hasMore()) {
+            <button matButton="outlined" style="display: block; margin: 14px auto 0" [disabled]="busy()" (click)="loadMore()">
+              {{ t('load_more') }}
+            </button>
+          }
+        } @else if (!busy()) {
+          <cx-empty-state icon="inventory_2" [message]="t('no_products')" />
+        }
+      </div>
+
+      <div class="cx-card cart">
+        <div class="cart-head">
+          <h2>{{ t('cart') }}</h2>
+          @if (customer(); as c) {
+            <span class="cx-chip customer-chip">
+              <mat-icon>person</mat-icon>
+              <span class="cname">{{ c.fullName }} {{ c.lastName || '' }}</span>
+              @if (c.debtBalance > 0) {
+                <span class="cdebt cx-money">−{{ c.debtBalance | cxMoney }}</span>
+              }
+              @if (c.cashbackBalance > 0) {
+                <span class="cbonus cx-money">+{{ c.cashbackBalance | cxMoney }}</span>
+              }
+              <button class="unlink" (click)="detachCustomer()"><mat-icon>close</mat-icon></button>
+            </span>
+          } @else {
+            <button matButton="outlined" (click)="attachCustomer()">
+              <mat-icon>person_add</mat-icon>
+              {{ t('customer') }}
+            </button>
+          }
+        </div>
+
+        <div class="lines">
+          @for (line of cart(); track line.variantId) {
+            <div class="line">
+              <div class="info">
+                <span class="name">{{ line.name }}</span>
+                <span class="price cx-money">{{ line.price | cxMoney }}</span>
+              </div>
+              <div class="qty-box">
+                <button (click)="changeQty(line, -1)"><mat-icon>remove</mat-icon></button>
+                <input type="number" min="0" [value]="line.qty" (change)="onQtyInput(line, $event)" />
+                <button (click)="changeQty(line, 1)"><mat-icon>add</mat-icon></button>
+              </div>
+              <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+              <button class="del" (click)="remove(line)"><mat-icon>delete</mat-icon></button>
+            </div>
+          } @empty {
+            <cx-empty-state icon="shopping_cart" [message]="t('no_items')" />
+          }
+        </div>
+
+        <div class="cart-foot">
+          <div class="total-row">
+            <span>{{ t('total') }}</span>
+            <span class="cx-money">{{ total() | cxMoney }}</span>
+          </div>
+          <button matButton="filled" class="pay-btn" [disabled]="!cart().length" (click)="pay()">
+            <mat-icon>point_of_sale</mat-icon>
+            {{ t('complete_sale') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

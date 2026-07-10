@@ -1,0 +1,108 @@
+<div *transloco="let t">
+  <cx-page-header [title]="t('shift')" [subtitle]="t('shift_subtitle')">
+    @if (canManage && !loading()) {
+      @if (shift()) {
+        <button matButton="outlined" (click)="close()">
+          <mat-icon>lock</mat-icon>
+          {{ t('close_shift') }}
+        </button>
+      } @else {
+        <button matButton="filled" (click)="open()">
+          <mat-icon>play_arrow</mat-icon>
+          {{ t('open_shift') }}
+        </button>
+      }
+    }
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (shift(); as s) {
+      <div class="cx-card current">
+        <div class="top">
+          <span class="cx-chip ok">{{ t('shift_open') }}</span>
+          <span class="opened">{{ t('opened_at') }}: {{ s.openedAt | cxDate }}</span>
+          @if (cashier()) {
+            <span class="opened">{{ t('cashier') }}: {{ cashier() }}</span>
+          }
+        </div>
+        <div class="facts">
+          <div class="fact">
+            <span class="lbl">{{ t('opening_float') }}</span>
+            <span class="val cx-money">{{ s.openingFloat | cxMoney }}</span>
+          </div>
+          <div class="fact">
+            <span class="lbl">{{ t('cash_sales') }}</span>
+            <span class="val cx-money">{{ s.cashSales | cxMoney }}</span>
+          </div>
+          <div class="fact">
+            <span class="lbl">{{ t('debt_pay_in') }}</span>
+            <span class="val cx-money">{{ s.debtPayIn | cxMoney }}</span>
+          </div>
+          <div class="fact">
+            <span class="lbl">{{ t('pay_in') }} / {{ t('pay_out') }}</span>
+            <span class="val cx-money">{{ s.payIn | cxMoney }} / −{{ s.payOut | cxMoney }}</span>
+          </div>
+          <div class="fact accent">
+            <span class="lbl">{{ t('expected_cash') }}</span>
+            <span class="val cx-money">{{ s.expectedCash | cxMoney }}</span>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="cx-card closed-card">
+        <span class="cx-chip">{{ t('shift_closed') }}</span>
+        <p>{{ t('no_open_shift') }}</p>
+      </div>
+    }
+
+    <h3 class="section">{{ t('shift_history') }}</h3>
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (history(); as h) {
+        @if (h.items.length) {
+          <div class="table-wrap">
+            <table mat-table [dataSource]="h.items">
+              <ng-container matColumnDef="cashier">
+                <th mat-header-cell *matHeaderCellDef>{{ t('cashier') }}</th>
+                <td mat-cell *matCellDef="let r">{{ r.userName }}</td>
+              </ng-container>
+              <ng-container matColumnDef="opened">
+                <th mat-header-cell *matHeaderCellDef>{{ t('opened_at') }}</th>
+                <td mat-cell *matCellDef="let r">{{ r.openedAt | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="closed">
+                <th mat-header-cell *matHeaderCellDef>{{ t('closed_at') }}</th>
+                <td mat-cell *matCellDef="let r">{{ r.closedAt | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="float">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('opening_float') }}</th>
+                <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.openingFloat | cxMoney }}</td>
+              </ng-container>
+              <ng-container matColumnDef="counted">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('counted_cash') }}</th>
+                <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.countedCash | cxMoney }}</td>
+              </ng-container>
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  <span class="cx-chip" [class.ok]="r.status === 'Open'">
+                    {{ t(r.status === 'Open' ? 'shift_open' : 'shift_closed') }}
+                  </span>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let r; columns: cols"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="h.meta" (changed)="onPage($event)" />
+        } @else {
+          <cx-empty-state icon="schedule" [message]="t('no_shifts')" />
+        }
+      }
+    </div>
+  }
+</div>
