@@ -25,9 +25,15 @@ public sealed class Loc : INotifyPropertyChanged
 
     private async Task LoadAsync(string code)
     {
-        using var stream = await FileSystem.OpenAppPackageFileAsync($"i18n/{code}.json");
-        _strings = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(stream) ?? [];
+        using var stream = await FileSystem.OpenAppPackageFileAsync($"i18n/{code}.json").ConfigureAwait(false);
+        _strings = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(stream).ConfigureAwait(false) ?? [];
         Language = code;
+        if (MainThread.IsMainThread) Raise();
+        else MainThread.BeginInvokeOnMainThread(Raise);
+    }
+
+    private void Raise()
+    {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
     }
