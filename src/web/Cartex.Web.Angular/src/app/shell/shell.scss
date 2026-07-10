@@ -8,6 +8,8 @@ mat-sidenav-content {
 
 .sidenav {
   width: 240px;
+  border-radius: 0;
+  --mat-sidenav-container-shape: 0;
   border-right: 1px solid var(--cx-border);
   background: var(--cx-card);
   transition: width 0.18s ease;

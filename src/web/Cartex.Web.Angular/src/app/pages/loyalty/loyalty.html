@@ -10,15 +10,6 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    @if (stats(); as s) {
-      <div class="cx-grid stats">
-        <cx-stat-card [label]="t('stat_discount_total')" [value]="s.discountTotal | cxMoney" icon="percent" tone="warning" />
-        <cx-stat-card [label]="t('stat_discount_sales')" [value]="s.discountedSales + ' / ' + s.salesCount" icon="receipt_long" />
-        <cx-stat-card [label]="t('stat_discount_share')" [value]="share(s)" icon="pie_chart" tone="info" />
-        <cx-stat-card [label]="t('stat_bonus_outstanding')" [value]="s.bonusOutstanding | cxMoney" icon="redeem" tone="success" />
-      </div>
-    }
-
     <div class="layout">
       <cx-subnav [items]="sections(t)" [(selected)]="sectionKey" />
       <div class="content">
@@ -28,6 +19,13 @@
     }
 
     @if (section() === 'discounts') {
+      @if (stats(); as s) {
+        <div class="cx-grid stats">
+          <cx-stat-card [label]="t('stat_discount_total')" [value]="s.discountTotal | cxMoney" icon="percent" tone="warning" />
+          <cx-stat-card [label]="t('stat_discount_sales')" [value]="s.discountedSales + ' / ' + s.salesCount" icon="receipt_long" />
+          <cx-stat-card [label]="t('stat_discount_share')" [value]="share(s)" icon="pie_chart" tone="info" />
+        </div>
+      }
       <p class="hint">{{ t('discounts_desc') }}</p>
       <div class="toolbar">
         @if (canManage) {
@@ -110,6 +108,11 @@
         }
       </div>
     } @else if (section() === 'bonus') {
+      @if (stats(); as s) {
+        <div class="cx-grid stats bonus-stats">
+          <cx-stat-card [label]="t('stat_bonus_outstanding')" [value]="s.bonusOutstanding | cxMoney" icon="redeem" tone="success" />
+        </div>
+      }
       <p class="hint">{{ t('cashback_desc') }}</p>
       <div class="toolbar">
         <h3>{{ t('cashback_rules') }}</h3>
