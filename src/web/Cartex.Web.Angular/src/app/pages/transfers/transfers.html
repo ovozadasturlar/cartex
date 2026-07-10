@@ -1,0 +1,80 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('transfers')" [subtitle]="t('transfers_subtitle')">
+    @if (canManage) {
+      <button matButton="filled" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('new_transfer') }}
+      </button>
+    }
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+                <td mat-cell *matCellDef="let x">{{ x.createdAt | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="product">
+                <th mat-header-cell *matHeaderCellDef>{{ t('product_name') }}</th>
+                <td mat-cell *matCellDef="let x" class="strong">{{ x.productName }}</td>
+              </ng-container>
+              <ng-container matColumnDef="qty">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('quantity') }}</th>
+                <td mat-cell *matCellDef="let x" class="num cx-money">{{ x.quantity | cxMoney }}</td>
+              </ng-container>
+              <ng-container matColumnDef="from">
+                <th mat-header-cell *matHeaderCellDef>{{ t('from_account') }}</th>
+                <td mat-cell *matCellDef="let x">{{ x.fromWarehouse }}</td>
+              </ng-container>
+              <ng-container matColumnDef="to">
+                <th mat-header-cell *matHeaderCellDef>{{ t('to_account') }}</th>
+                <td mat-cell *matCellDef="let x">{{ x.toWarehouse }}</td>
+              </ng-container>
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+                <td mat-cell *matCellDef="let x">
+                  <span
+                    class="cx-chip"
+                    [class.warn]="x.status === 'Sent'"
+                    [class.ok]="x.status === 'Received'"
+                    [class.bad]="x.status === 'Cancelled'">
+                    {{ t(statusKey(x.status)) }}
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="user">
+                <th mat-header-cell *matHeaderCellDef>{{ t('user') }}</th>
+                <td mat-cell *matCellDef="let x">{{ x.userName }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let x" class="num">
+                  @if (canManage && x.status === 'Sent') {
+                    <button matButton [disabled]="busy()" (click)="receive(x)">
+                      <mat-icon>call_received</mat-icon>
+                      {{ t('receive') }}
+                    </button>
+                  }
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let x; columns: cols"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else if (!busy()) {
+          <cx-empty-state icon="swap_horiz" [message]="t('no_data')" />
+        }
+      }
+    </div>
+  }
+</ng-container>

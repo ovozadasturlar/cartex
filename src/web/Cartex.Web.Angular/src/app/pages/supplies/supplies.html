@@ -1,0 +1,79 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('supplies')" [subtitle]="t('supplies_subtitle')">
+    @if (canManage) {
+      <button matButton="filled" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('new_supply') }}
+      </button>
+    }
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (totals(); as tt) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('count')" [value]="tt.count | cxMoney" icon="local_shipping" />
+        <cx-stat-card [label]="t('total')" [value]="tt.totalAmount | cxMoney" icon="payments" tone="info" />
+      </div>
+    }
+
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="date">
+        <mat-label>{{ t('date_from') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="fromDate" (change)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="date">
+        <mat-label>{{ t('date_to') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="toDate" (change)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="supplier">
+        <mat-select [value]="supplierId()" (valueChange)="onSupplier($event)" [placeholder]="t('all_suppliers')">
+          <mat-option [value]="null">{{ t('all_suppliers') }}</mat-option>
+          @for (s of suppliers(); track s.id) {
+            <mat-option [value]="s.id">{{ s.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('supply_date') }}</th>
+                <td mat-cell *matCellDef="let s">{{ s.supplyDate | cxDate: false }}</td>
+              </ng-container>
+              <ng-container matColumnDef="supplier">
+                <th mat-header-cell *matHeaderCellDef>{{ t('supplier') }}</th>
+                <td mat-cell *matCellDef="let s" class="strong">{{ s.supplierName }}</td>
+              </ng-container>
+              <ng-container matColumnDef="warehouse">
+                <th mat-header-cell *matHeaderCellDef>{{ t('warehouse') }}</th>
+                <td mat-cell *matCellDef="let s">{{ s.warehouseName }}</td>
+              </ng-container>
+              <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('total') }}</th>
+                <td mat-cell *matCellDef="let s" class="num cx-money">{{ s.totalAmount | cxMoney }}</td>
+              </ng-container>
+              <ng-container matColumnDef="user">
+                <th mat-header-cell *matHeaderCellDef>{{ t('user') }}</th>
+                <td mat-cell *matCellDef="let s">{{ s.userName }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let s; columns: cols" class="clickable" (dblclick)="openDetail(s)"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else if (!busy()) {
+          <cx-empty-state icon="local_shipping" [message]="t('no_data')" />
+        }
+      }
+    </div>
+  }
+</ng-container>

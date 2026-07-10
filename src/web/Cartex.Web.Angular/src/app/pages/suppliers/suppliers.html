@@ -1,0 +1,66 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('suppliers')" [subtitle]="t('suppliers_subtitle')">
+    <button matButton="filled" (click)="openEdit()">
+      <mat-icon>add</mat-icon>
+      {{ t('new_supplier') }}
+    </button>
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <mat-form-field class="search" appearance="outline" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [placeholder]="t('search')" [value]="search()" (input)="onSearch($any($event.target).value)" />
+    </mat-form-field>
+
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+                <td mat-cell *matCellDef="let s" class="strong">{{ s.name }}</td>
+              </ng-container>
+              <ng-container matColumnDef="phone">
+                <th mat-header-cell *matHeaderCellDef>{{ t('phone') }}</th>
+                <td mat-cell *matCellDef="let s">{{ s.phone || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="payable">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('payable') }}</th>
+                <td mat-cell *matCellDef="let s" class="num">
+                  @if (s.payable > 0) {
+                    <span class="cx-chip bad cx-money">{{ s.payable | cxMoney }}</span>
+                  } @else {
+                    <span class="muted cx-money">{{ s.payable | cxMoney }}</span>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let s" class="num actions">
+                  @if (s.payable > 0) {
+                    <button matButton (click)="openPayDebt(s)">
+                      <mat-icon>payments</mat-icon>
+                      {{ t('repay_debt') }}
+                    </button>
+                  }
+                  <button matIconButton (click)="openEdit(s)"><mat-icon>edit</mat-icon></button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let s; columns: cols"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else if (!busy()) {
+          <cx-empty-state icon="local_shipping" [message]="t('no_data')" />
+        }
+      }
+    </div>
+  }
+</ng-container>

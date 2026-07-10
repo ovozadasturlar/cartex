@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+.search {
+  width: min(340px, 100%);
+  margin-bottom: 14px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 620px;
+}
+
+.num {
+  text-align: right;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--cx-text-3);
+}
+
+.actions {
+  white-space: nowrap;
+}
