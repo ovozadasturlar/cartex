@@ -14,7 +14,7 @@
         <ShellContent Route="orders" Title="{svc:T orders}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:OrdersPage}" />
         <ShellContent Route="customers" Title="{svc:T customers}" Icon="tab_customers.png" ContentTemplate="{DataTemplate views:CustomersPage}" />
         <ShellContent Route="transfers" Title="{svc:T tab_transfers}" Icon="tab_truck.png" ContentTemplate="{DataTemplate views:TransfersPage}" />
-        <ShellContent Route="outbox" Title="{svc:T tab_outbox}" Icon="tab_queue.png" ContentTemplate="{DataTemplate views:OutboxPage}" />
+        <ShellContent Route="profile" Title="{svc:T profile}" Icon="tab_profile.png" ContentTemplate="{DataTemplate views:ProfilePage}" />
     </TabBar>
 
 </Shell>

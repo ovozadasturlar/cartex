@@ -10,11 +10,19 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     public string DeviceName { get; } = DeviceInfo.Current.Name is { Length: > 0 } name ? name : DeviceInfo.Current.Model;
 
+    public string FullName => Preferences.Get("user_fullname", "");
+    public string Role => Preferences.Get("user_role", "");
+
     public async Task LoginAsync(string username, string password)
     {
         var response = await authApi.LoginAsync(new LoginRequest(username, password, DeviceName));
+        Preferences.Set("user_fullname", response.FullName);
+        Preferences.Set("user_role", response.Role);
         await session.SaveAsync(response.Token, response.RefreshToken);
     }
+
+    public async Task ChangePasswordAsync(string current, string next) =>
+        await authApi.ChangePasswordAsync(new ChangePasswordRequest(current, next));
 
     public async Task<bool> TryRestoreAsync()
     {

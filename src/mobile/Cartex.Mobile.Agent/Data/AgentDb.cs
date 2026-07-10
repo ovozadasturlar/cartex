@@ -200,6 +200,7 @@ public sealed class AgentDb
         var row = await _db.Table<LocalOrder>().Where(o => o.Code == code).FirstOrDefaultAsync();
         if (row is null) return;
         row.Status = status;
+        if (status == "delivered") row.DeliveredAt ??= DateTime.Now;
         await _db.UpdateAsync(row);
     }
 

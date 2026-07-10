@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
 using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
@@ -9,12 +10,17 @@ namespace Cartex.Mobile.Agent.ViewModels;
 
 public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthService auth, IShiftsApi shiftsApi) : ObservableObject
 {
+    public ObservableCollection<VisitRow> Visits { get; } = [];
+
+    [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
     [ObservableProperty] private string _lastSync = "—";
     [ObservableProperty] private int _customerCount;
-    [ObservableProperty] private int _stockCount;
-    [ObservableProperty] private int _pendingCount;
+    [ObservableProperty] private int _pendingDeliveries;
+    [ObservableProperty] private int _yesterdayOrders;
+    [ObservableProperty] private int _yesterdayDelivered;
     [ObservableProperty] private int _errorCount;
+    [ObservableProperty] private bool _visitsEmpty;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isOffline;
     [ObservableProperty] private string? _error;
@@ -34,14 +40,26 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
 
     private async Task LoadLocalAsync()
     {
-        WarehouseName = await db.GetMetaAsync("warehouse_name") is { Length: > 0 } name ? name : Loc.Instance["warehouse_none"];
+        var name = auth.FullName;
+        Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);
+        WarehouseName = await db.GetMetaAsync("warehouse_name") is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
         LastSync = await db.GetMetaAsync("last_sync") ?? "—";
         CustomerCount = await db.CountAsync<LocalCustomer>();
-        StockCount = await db.CountAsync<LocalVanStock>();
-        PendingCount = await db.CountOutboxAsync("pending");
         ErrorCount = await db.CountOutboxAsync("error");
         IsOffline = sync.IsOffline;
         Error = sync.LastError;
+
+        var orders = await db.GetOrdersAsync();
+        var yesterday = DateTime.Today.AddDays(-1);
+        var pending = orders.Where(o => o.Status != "delivered").ToList();
+        PendingDeliveries = pending.Count;
+        YesterdayOrders = orders.Count(o => o.CreatedAt.Date == yesterday);
+        YesterdayDelivered = orders.Count(o => o.DeliveredAt?.Date == yesterday);
+
+        Visits.Clear();
+        foreach (var g in pending.GroupBy(o => o.CustomerName).OrderBy(g => g.Key))
+            Visits.Add(new VisitRow(g.Key, g.Count(), g.Sum(o => o.Total)));
+        VisitsEmpty = Visits.Count == 0;
     }
 
     [RelayCommand]
@@ -110,39 +128,20 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     }
 
     [RelayCommand]
-    private async Task ChooseLanguageAsync()
-    {
-        string[] names = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
-        string[] codes = ["uz-latn", "uz-cyrl", "ru", "en"];
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
-            Loc.Instance["language"], Loc.Instance["cancel"], null, names);
-        var index = Array.IndexOf(names, choice);
-        if (index < 0) return;
-        await Loc.Instance.SetLanguageAsync(codes[index]);
-        await LoadLocalAsync();
-        await LoadShiftAsync();
-    }
+    private Task NewOrderAsync() => Shell.Current.GoToAsync("order");
 
     [RelayCommand]
     private Task NewSaleAsync() => Shell.Current.GoToAsync("sale");
 
     [RelayCommand]
-    private Task OpenOutboxAsync() => Shell.Current.GoToAsync("//outbox");
+    private Task OpenOrdersAsync() => Shell.Current.GoToAsync("//orders");
 
     [RelayCommand]
-    private Task OpenScanAsync() => Shell.Current.GoToAsync("scan");
+    private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
+}
 
-    [RelayCommand]
-    private async Task LogoutAsync()
-    {
-        if (await db.CountOutboxAsync("pending") > 0)
-        {
-            await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["logout_blocked_title"],
-                Loc.Instance["logout_blocked_msg"], Loc.Instance["ok"]);
-            return;
-        }
-        await auth.LogoutAsync();
-        await db.ClearCacheAsync();
-        await Shell.Current.GoToAsync("//login");
-    }
+public sealed record VisitRow(string Name, int OrderCount, decimal Total)
+{
+    public string Initials => string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
+    public string SubLine => $"{OrderCount} {Loc.Instance["orders_short"]} • {Total:N0}";
 }

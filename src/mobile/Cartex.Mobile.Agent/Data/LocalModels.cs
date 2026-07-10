@@ -45,6 +45,7 @@ public class LocalOrder
     public decimal Total { get; set; }
     public string Status { get; set; } = "new";
     public DateTime CreatedAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
 }
 
 public class MetaEntry

@@ -11,6 +11,8 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <conv:NotEmptyConverter x:Key="NotEmpty" />
+            <conv:PositiveConverter x:Key="Positive" />
+            <conv:InvertConverter x:Key="Invert" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
