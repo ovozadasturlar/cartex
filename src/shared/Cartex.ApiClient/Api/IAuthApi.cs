@@ -28,4 +28,7 @@ public interface IAuthApi
 
     [Post("/api/auth/logout")]
     Task LogoutAsync([Body] LogoutRequest request);
+
+    [Post("/api/auth/change-password")]
+    Task ChangePasswordAsync([Body] ChangePasswordRequest request);
 }

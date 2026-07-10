@@ -64,6 +64,14 @@ public class AuthController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("sessions")]
     [HasPermission(AppPermissions.Devices.Manage)]
     public async Task<ActionResult<IReadOnlyList<DeviceSessionDto>>> Sessions([FromQuery] bool all = false) =>
