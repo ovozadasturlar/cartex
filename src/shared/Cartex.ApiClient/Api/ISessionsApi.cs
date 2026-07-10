@@ -10,4 +10,7 @@ public interface ISessionsApi
 
     [Delete("/api/auth/sessions/{id}")]
     Task RevokeSessionAsync(long id);
+
+    [Post("/api/auth/qr/approve")]
+    Task ApproveQrAsync([Body] ApproveQrLoginRequest request);
 }

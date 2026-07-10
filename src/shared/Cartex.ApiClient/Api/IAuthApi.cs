@@ -17,9 +17,6 @@ public interface IAuthApi
     [Post("/api/auth/qr/start")]
     Task<QrLoginStartResponse> StartQrAsync(CancellationToken cancellationToken = default);
 
-    [Post("/api/auth/qr/approve")]
-    Task ApproveQrAsync([Body] ApproveQrLoginRequest request);
-
     [Post("/api/auth/qr/poll")]
     Task<IApiResponse<LoginResponse>> PollQrAsync([Body] PollQrLoginRequest request, CancellationToken cancellationToken = default);
 

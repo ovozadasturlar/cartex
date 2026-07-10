@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ScanViewModel(IAuthApi authApi) : ObservableObject
+public partial class ScanViewModel(ISessionsApi sessionsApi) : ObservableObject
 {
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint"];
@@ -24,7 +24,7 @@ public partial class ScanViewModel(IAuthApi authApi) : ObservableObject
             try
             {
                 Status = Loc.Instance["approving"];
-                await authApi.ApproveQrAsync(new ApproveQrLoginRequest(code));
+                await sessionsApi.ApproveQrAsync(new ApproveQrLoginRequest(code));
                 Ui.Toast(Loc.Instance["qr_approved"]);
                 await MainThread.InvokeOnMainThreadAsync(() => Shell.Current.GoToAsync(".."));
                 return;
