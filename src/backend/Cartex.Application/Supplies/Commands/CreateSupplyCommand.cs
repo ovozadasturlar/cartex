@@ -13,7 +13,7 @@ using Cartex.Application.Products;
 
 namespace Cartex.Application.Supplies.Commands;
 
-public record CreateSupplyItemDto(long VariantId, decimal Quantity, decimal PurchasePrice, DateOnly? ExpiredAt, long? UnitId = null, decimal? SellingPrice = null);
+public record CreateSupplyItemDto(long VariantId, decimal Quantity, decimal PurchasePrice, DateOnly? ExpiredAt, long? UnitId = null, decimal? SellingPrice = null, decimal PackSize = 1);
 
 public record CreateSupplyCommand(
     long SupplierId,
@@ -81,7 +81,9 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             supply.Items.Add(new SupplyItem
             {
                 VariantId = item.VariantId,
+                UnitId = item.UnitId,
                 Quantity = resolved.Quantity,
+                PackSize = item.PackSize <= 0 ? 1 : item.PackSize,
                 PurchasePrice = resolved.Price
             });
 

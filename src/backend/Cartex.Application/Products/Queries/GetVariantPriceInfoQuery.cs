@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Products.Queries;
 
-public record VariantPriceInfoDto(decimal? LastPurchasePrice, decimal? SellingPrice);
+public record VariantPriceInfoDto(decimal? LastPurchasePrice, decimal? SellingPrice, long? LastUnitId = null, decimal? LastPackSize = null);
 
 public record GetVariantPriceInfoQuery(long VariantId, long WarehouseId) : IRequest<VariantPriceInfoDto>;
 
@@ -24,6 +24,12 @@ public sealed class GetVariantPriceInfoQueryHandler(IApplicationDbContext db) : 
             .Select(p => (decimal?)p.SellingPrice)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new VariantPriceInfoDto(lastPurchase, selling);
+        var lastLine = await db.SupplyItems
+            .Where(i => i.VariantId == request.VariantId && !i.Supply.IsDeleted)
+            .OrderByDescending(i => i.Id)
+            .Select(i => new { i.UnitId, i.PackSize })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new VariantPriceInfoDto(lastPurchase, selling, lastLine?.UnitId, lastLine?.PackSize);
     }
 }

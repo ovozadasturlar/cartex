@@ -47,7 +47,13 @@ public class SupplyItemConfiguration : IEntityTypeConfiguration<SupplyItem>
     {
         builder.ToTable("supply_items");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
+        builder.Property(x => x.PackSize).HasPrecision(12, 3).HasDefaultValue(1m);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
+
+        builder.HasOne(x => x.Unit)
+            .WithMany()
+            .HasForeignKey(x => x.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Supply)
             .WithMany(s => s.Items)

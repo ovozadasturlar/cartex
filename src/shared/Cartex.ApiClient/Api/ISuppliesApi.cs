@@ -14,6 +14,12 @@ public interface ISuppliesApi
     [Get("/api/supplies/totals")]
     Task<SuppliesTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] long? supplierId = null);
 
+    [Get("/api/supplies/{id}")]
+    Task<SupplyDetailDto> GetByIdAsync(long id);
+
     [Post("/api/supplies")]
     Task<long> CreateAsync([Body] CreateSupplyRequest request);
+
+    [Delete("/api/supplies/{id}")]
+    Task DeleteAsync(long id);
 }

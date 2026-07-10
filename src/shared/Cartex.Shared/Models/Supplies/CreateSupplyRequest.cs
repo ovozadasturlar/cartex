@@ -1,6 +1,6 @@
 namespace Cartex.Shared.Models.Supplies;
 
-public record CreateSupplyItemRequest(long VariantId, decimal Quantity, decimal PurchasePrice, DateOnly? ExpiredAt, long? UnitId = null, decimal? SellingPrice = null);
+public record CreateSupplyItemRequest(long VariantId, decimal Quantity, decimal PurchasePrice, DateOnly? ExpiredAt, long? UnitId = null, decimal? SellingPrice = null, decimal PackSize = 1);
 
 public record CreateSupplyRequest(
     long SupplierId,

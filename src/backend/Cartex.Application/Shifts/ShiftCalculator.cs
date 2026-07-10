@@ -30,7 +30,8 @@ public static class ShiftCalculator
             var sales = txns.Where(t => t.OperationType == OperationType.Sale && t.ToAccountId == accountId).Sum(t => t.Amount);
             var returns = txns.Where(t => t.OperationType == OperationType.Sale && t.FromAccountId == accountId).Sum(t => t.Amount);
             var debtIn = txns.Where(t => t.OperationType == OperationType.DebtPay && t.ToAccountId == accountId).Sum(t => t.Amount);
-            var supplyOut = txns.Where(t => (t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay) && t.FromAccountId == accountId).Sum(t => t.Amount);
+            var supplyOut = txns.Where(t => (t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay) && t.FromAccountId == accountId).Sum(t => t.Amount)
+                - txns.Where(t => t.OperationType == OperationType.SupplyPay && t.ToAccountId == accountId).Sum(t => t.Amount);
             var changeOut = txns.Where(t => t.OperationType == OperationType.Change && t.FromAccountId == accountId).Sum(t => t.Amount);
             return (sales, returns, debtIn, supplyOut, changeOut);
         }
