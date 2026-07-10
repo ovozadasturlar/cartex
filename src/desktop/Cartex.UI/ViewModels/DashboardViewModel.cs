@@ -6,7 +6,6 @@ using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Reports;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Transactions;
-using Cartex.UI.Controls;
 using Cartex.UI.Services;
 using Avalonia.Media;
 using LiveChartsCore;
@@ -26,7 +25,6 @@ public partial class DashboardViewModel(
     BranchContextService branch,
     IToastService toast) : ViewModelBase, ILoadable
 {
-    private const double ChartHeight = 150;
     private static readonly string[] PieColors = ["#166534", "#059669", "#0EA5E9", "#F59E0B", "#DC2626", "#8B5CF6"];
 
     [ObservableProperty] private string _welcomeMessage = "";
@@ -44,7 +42,8 @@ public partial class DashboardViewModel(
     public ObservableCollection<ISeries> CashFlowSeries { get; } = [];
     [ObservableProperty] private Axis[] _cashFlowXAxes = [new Axis()];
     [ObservableProperty] private Axis[] _cashFlowYAxes = [new Axis { MinLimit = 0 }];
-    public ObservableCollection<ChartColumn> CategoryBars { get; } = [];
+    public ObservableCollection<ISeries> CategorySeries { get; } = [];
+    public ObservableCollection<CategoryLegendItem> CategoryLegend { get; } = [];
 
     private static LineSeries<decimal> FogLine(decimal[] values, string name, string hex) =>
         new()
@@ -104,20 +103,27 @@ public partial class DashboardViewModel(
             TotalProducts = (await totalsTask).Count;
             var categoryGroups = (await categoriesTask).Take(PieColors.Length).ToList();
 
-            CategoryBars.Clear();
-            var maxCount = categoryGroups.Count > 0 ? categoryGroups.Max(g => g.Count) : 0;
+            CategorySeries.Clear();
+            CategoryLegend.Clear();
             for (var i = 0; i < categoryGroups.Count; i++)
             {
-                var brush = new SolidColorBrush(Color.Parse(PieColors[i % PieColors.Length]));
-                var height = maxCount > 0 ? categoryGroups[i].Count / (double)maxCount * ChartHeight : 0;
-                CategoryBars.Add(new ChartColumn(categoryGroups[i].Name ?? "—", categoryGroups[i].Count.ToString(),
-                    [new ChartBar(height, brush)]));
+                var hex = PieColors[i % PieColors.Length];
+                var name = categoryGroups[i].Name ?? "—";
+                CategorySeries.Add(new PieSeries<int>
+                {
+                    Values = [categoryGroups[i].Count],
+                    Name = name,
+                    Fill = new SolidColorPaint(SKColor.Parse(hex))
+                });
+                CategoryLegend.Add(new CategoryLegendItem($"{name} ({categoryGroups[i].Count})",
+                    new SolidColorBrush(Color.Parse(hex))));
             }
         }
         catch
         {
             TotalProducts = 0;
-            CategoryBars.Clear();
+            CategorySeries.Clear();
+            CategoryLegend.Clear();
         }
 
         try
@@ -199,5 +205,7 @@ public partial class DashboardViewModel(
     private void GoToProducts() => navigationService.RequestMenuNavigation("products");
 
     [RelayCommand]
-    private void GoToCustomers() => navigationService.RequestMenuNavigation("settings");
+    private void GoToCustomers() => navigationService.RequestMenuNavigation("customers");
 }
+
+public sealed record CategoryLegendItem(string Display, IBrush Brush);
