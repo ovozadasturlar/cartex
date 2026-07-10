@@ -2,54 +2,62 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: var(--mat-sys-surface-container);
+  background: var(--cx-app-bg);
   padding: 16px;
 }
 
 .login-card {
-  width: 100%;
-  max-width: 380px;
-  padding: 32px 28px;
+  width: 430px;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--cx-card);
+  border: 1px solid var(--cx-border);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 13.3%);
+  padding: 38px 40px;
 }
 
 .brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
+  gap: 6px;
+  margin-bottom: 18px;
 
   h1 {
     margin: 0;
-    font: var(--mat-sys-headline-small);
+    font-size: 28px;
+    font-weight: 700;
   }
-}
 
-.brand-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font-size: 26px;
-  font-weight: 700;
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--cx-text-2);
+  }
 }
 
 form {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 18px;
+
+  mat-form-field {
+    --mat-form-field-container-height: 44px;
+    --mat-form-field-container-vertical-padding: 10px;
+    --mat-form-field-container-text-size: 15px;
+  }
 
   button {
-    margin-top: 12px;
-    height: 44px;
+    --mat-button-filled-container-height: 46px;
+    --mat-button-filled-label-text-size: 16px;
+
+    min-height: 46px;
   }
 }
 
 .error {
-  color: var(--mat-sys-error);
-  font: var(--mat-sys-body-small);
-  margin: 4px 0 0;
+  margin: 0;
+  font-size: 13px;
+  color: var(--cx-danger);
 }

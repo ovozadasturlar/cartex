@@ -2,8 +2,12 @@
   height: 100vh;
 }
 
+mat-sidenav-content {
+  background: var(--cx-app-bg);
+}
+
 .sidenav {
-  width: 248px;
+  width: 240px;
   border-right: 1px solid var(--cx-border);
   background: var(--cx-card);
 }
@@ -11,41 +15,111 @@
 .side-brand {
   display: flex;
   align-items: center;
-  padding: 20px 18px 14px;
+  margin: 18px 16px 14px;
   color: var(--cx-text-1);
 }
 
 .side-nav {
-  padding: 0 10px 16px;
+  padding-bottom: 16px;
 }
 
 .side-section {
-  padding: 14px 14px 4px;
+  margin: 6px 0 4px 22px;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--cx-text-3);
 }
 
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--cx-text-1);
+  font-size: 13.5px;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--cx-text-2);
+  }
+
+  &:hover {
+    background: var(--cx-surface-2);
+  }
+
+  &.active {
+    background: var(--cx-brand-soft);
+
+    mat-icon {
+      color: var(--cx-brand);
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--cx-brand);
+    }
+  }
+}
+
 .topbar {
-  border-bottom: 1px solid var(--cx-border);
-  background: var(--cx-card);
+  display: flex;
+  align-items: center;
   gap: 4px;
+  padding: 10px 14px;
+  background: var(--cx-card);
+  border-bottom: 1px solid var(--cx-border);
+
+  .mat-mdc-icon-button {
+    --mat-icon-button-state-layer-size: 38px;
+  }
 }
 
 .spacer {
   flex: 1;
 }
 
-.content {
-  padding: 24px;
-  max-width: 1440px;
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-text-1);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--cx-surface-2);
+  }
 }
 
-a.active {
-  --mat-list-list-item-label-text-color: var(--cx-brand-ink);
-  --mat-list-list-item-leading-icon-color: var(--cx-brand-ink);
-  background: var(--cx-brand-soft);
-  border-radius: 12px;
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--cx-brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.content {
+  padding: 24px;
 }

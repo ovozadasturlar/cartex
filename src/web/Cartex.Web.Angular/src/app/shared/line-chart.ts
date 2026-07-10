@@ -11,7 +11,7 @@ export interface ChartPoint {
     <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" preserveAspectRatio="none" class="chart">
       <defs>
         <linearGradient [id]="gid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--cx-brand)" stop-opacity="0.28" />
+          <stop offset="0%" stop-color="var(--cx-brand)" stop-opacity="0.15" />
           <stop offset="100%" stop-color="var(--cx-brand)" stop-opacity="0" />
         </linearGradient>
       </defs>
@@ -23,7 +23,7 @@ export interface ChartPoint {
         <path [attr.d]="linePath()" class="line" />
       }
       @for (p of dots(); track p.i) {
-        <circle [attr.cx]="p.x" [attr.cy]="p.y" r="2.6" class="dot">
+        <circle [attr.cx]="p.x" [attr.cy]="p.y" r="2.2" class="dot">
           <title>{{ points()[p.i].label }}: {{ points()[p.i].value }}</title>
         </circle>
       }
@@ -38,7 +38,7 @@ export interface ChartPoint {
     :host { display: block; }
     .chart { width: 100%; display: block; }
     .grid { stroke: var(--cx-border); stroke-width: 0.6; }
-    .line { fill: none; stroke: var(--cx-brand); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+    .line { fill: none; stroke: var(--cx-brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
     .dot { fill: var(--cx-brand); }
     .labels { display: flex; justify-content: space-between; color: var(--cx-text-3); font-size: 11.5px; margin-top: 6px; }
   `,

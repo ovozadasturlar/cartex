@@ -1,26 +1,29 @@
 <mat-sidenav-container class="shell" *transloco="let t">
   <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav">
     <div class="side-brand">
-      <cx-logo [size]="30" [wordmark]="true" />
+      <cx-logo [size]="34" [wordmark]="true" />
     </div>
     <div class="side-nav">
       @for (section of navSections; track section.labelKey) {
         @if (section.labelKey) {
           <div class="side-section">{{ t(section.labelKey) }}</div>
         }
-        <mat-nav-list>
-          @for (item of section.items; track item.route) {
-            <a mat-list-item [routerLink]="item.route" routerLinkActive="active" (click)="!isWide() && nav.close()">
-              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-              <span matListItemTitle>{{ t(item.labelKey) }}</span>
-            </a>
-          }
-        </mat-nav-list>
+        @for (item of section.items; track item.route) {
+          <a
+            class="nav-item"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            (click)="!isWide() && nav.close()"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ t(item.labelKey) }}</span>
+          </a>
+        }
       }
     </div>
   </mat-sidenav>
   <mat-sidenav-content>
-    <mat-toolbar class="topbar">
+    <div class="topbar">
       @if (!isWide()) {
         <button matIconButton (click)="nav.toggle()"><mat-icon>menu</mat-icon></button>
       }
@@ -36,9 +39,9 @@
           </button>
         }
       </mat-menu>
-      <button matButton [matMenuTriggerFor]="userMenu">
-        <mat-icon>account_circle</mat-icon>
-        {{ user()?.fullName }}
+      <button class="user-btn" [matMenuTriggerFor]="userMenu">
+        <span class="user-avatar">{{ user()?.fullName?.charAt(0) }}</span>
+        <span>{{ user()?.fullName }}</span>
       </button>
       <mat-menu #userMenu="matMenu">
         <button mat-menu-item (click)="logout()">
@@ -46,7 +49,7 @@
           {{ t('logout') }}
         </button>
       </mat-menu>
-    </mat-toolbar>
+    </div>
     <main class="content">
       <router-outlet />
     </main>

@@ -27,8 +27,8 @@ export interface BarItem {
     .top { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; margin-bottom: 5px; }
     .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .val { color: var(--cx-text-2); flex-shrink: 0; font-weight: 600; }
-    .track { height: 7px; border-radius: 4px; background: var(--cx-surface-2); overflow: hidden; }
-    .fill { height: 100%; border-radius: 4px; background: var(--cx-brand); }
+    .track { height: 6px; border-radius: 3px; background: var(--cx-surface-2); overflow: hidden; }
+    .fill { height: 100%; border-radius: 3px; background: var(--cx-brand); }
     .none { color: var(--cx-text-3); text-align: center; padding: 16px 0; margin: 0; }
   `,
 })

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule } from '@jsverse/transloco';
@@ -16,6 +17,7 @@ import { StatCard } from '../../shared/stat-card';
 @Component({
   selector: 'app-reports',
   imports: [
+    MatButtonToggleModule,
     MatProgressBarModule,
     MatTableModule,
     TranslocoModule,

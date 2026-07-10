@@ -1,12 +1,14 @@
 <div class="reports" *transloco="let t">
   <cx-page-header [title]="t('reports')" [subtitle]="t('reports_subtitle')">
-    <div class="seg">
+    <mat-button-toggle-group
+      hideSingleSelectionIndicator
+      [value]="days()"
+      (change)="setDays($event.value)"
+    >
       @for (d of periods; track d) {
-        <button type="button" [class.active]="days() === d" (click)="setDays(d)">
-          {{ t('period_' + d + 'd') }}
-        </button>
+        <mat-button-toggle [value]="d">{{ t('period_' + d + 'd') }}</mat-button-toggle>
       }
-    </div>
+    </mat-button-toggle-group>
   </cx-page-header>
 
   @if (loading()) {
@@ -16,7 +18,7 @@
   <div class="cx-grid stats">
     <cx-stat-card [label]="t('revenue')" [value]="report()?.revenue | cxMoney" [icon]="'payments'" />
     <cx-stat-card [label]="t('profit')" [value]="report()?.profit | cxMoney" [icon]="'trending_up'" [tone]="'success'" />
-    <cx-stat-card [label]="t('sales_count')" [value]="report()?.salesCount | cxMoney" [icon]="'receipt_long'" />
+    <cx-stat-card [label]="t('sales_count')" [value]="report()?.salesCount | cxMoney" [icon]="'receipt_long'" [tone]="'info'" />
     <cx-stat-card [label]="t('average_sale')" [value]="report()?.averageSale | cxMoney" [icon]="'functions'" />
     <cx-stat-card [label]="t('max_sale')" [value]="report()?.maxSale | cxMoney" [icon]="'emoji_events'" />
   </div>

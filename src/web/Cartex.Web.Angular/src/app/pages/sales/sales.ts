@@ -248,7 +248,7 @@ export class Sales implements OnInit {
         color: var(--cx-text-1);
       }
 
-      &.debt .cx-money { color: var(--cx-danger); font-weight: 600; }
+      &.debt .cx-money { color: var(--cx-danger); }
     }
 
     .footer { margin: 10px 0 0; font-size: 12px; color: var(--cx-text-3); }

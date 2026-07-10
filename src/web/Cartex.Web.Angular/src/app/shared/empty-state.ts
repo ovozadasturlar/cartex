@@ -6,17 +6,21 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [MatIconModule],
   template: `
     <div class="empty">
-      <mat-icon>{{ icon() }}</mat-icon>
+      <div class="circle"><mat-icon>{{ icon() }}</mat-icon></div>
       <p>{{ message() }}</p>
     </div>
   `,
   styles: `
     .empty {
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-      padding: 48px 16px; color: var(--cx-text-3);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      padding: 40px 16px;
     }
-    mat-icon { font-size: 40px; width: 40px; height: 40px; }
-    p { margin: 0; font-size: 14px; }
+    .circle {
+      width: 72px; height: 72px; border-radius: 50%; background: var(--cx-surface-2);
+      display: grid; place-items: center;
+    }
+    mat-icon { font-size: 34px; width: 34px; height: 34px; color: var(--cx-text-3); }
+    p { margin: 0; font-size: 13px; color: var(--cx-text-2); }
   `,
 })
 export class EmptyState {

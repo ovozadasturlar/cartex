@@ -19,21 +19,20 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: `
-    .stat { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; }
+    .stat { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px; }
     .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .label { color: var(--cx-text-2); font-size: 13px; }
-    .value { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+    .value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--cx-text-1); }
     .hint { color: var(--cx-text-3); font-size: 12px; }
     .badge {
-      width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
-      background: var(--cx-brand-soft); color: var(--cx-brand);
+      width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+      background: var(--cx-brand); color: #fff;
     }
-    .tone-success .value, .tone-success .badge { color: var(--cx-success); }
-    .tone-success .badge { background: var(--cx-success-soft); }
-    .tone-danger .value, .tone-danger .badge { color: var(--cx-danger); }
-    .tone-danger .badge { background: var(--cx-danger-soft); }
-    .tone-warning .value, .tone-warning .badge { color: var(--cx-warning); }
-    .tone-warning .badge { background: var(--cx-warning-soft); }
+    .badge mat-icon { font-size: 24px; width: 24px; height: 24px; }
+    .tone-success .badge { background: var(--cx-success); }
+    .tone-danger .badge { background: var(--cx-danger); }
+    .tone-warning .badge { background: var(--cx-warning); }
+    .tone-info .badge { background: var(--cx-info); }
   `,
 })
 export class StatCard {
@@ -41,5 +40,5 @@ export class StatCard {
   readonly value = input.required<string>();
   readonly hint = input<string>();
   readonly icon = input<string>();
-  readonly tone = input<'default' | 'success' | 'danger' | 'warning'>('default');
+  readonly tone = input<'default' | 'success' | 'danger' | 'warning' | 'info'>('default');
 }
