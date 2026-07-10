@@ -76,6 +76,17 @@ public sealed class ImageUrlConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+public sealed class ThumbImageUrlConverter : IValueConverter
+{
+    public static readonly ThumbImageUrlConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        ImageUrl.Thumb(ImageUrl.Absolute(value as string));
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class StringNotEmptyConverter : IValueConverter
 {
     public static readonly StringNotEmptyConverter Instance = new();

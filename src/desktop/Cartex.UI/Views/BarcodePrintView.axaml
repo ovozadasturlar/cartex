@@ -70,7 +70,7 @@
                                 <Panel>
                                     <mi:MaterialIcon Kind="ImageOutline" Width="36" Height="36"
                                                      Foreground="{DynamicResource TextMuted}" />
-                                    <Image il:ImageLoader.Source="{Binding SelectedProduct.ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}"
+                                    <Image il:ImageLoader.Source="{Binding SelectedProduct.ImageUrl, Converter={x:Static conv:ThumbImageUrlConverter.Instance}}"
                                            Stretch="UniformToFill" />
                                 </Panel>
                             </Border>

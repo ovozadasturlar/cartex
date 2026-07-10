@@ -233,7 +233,7 @@
                                                 <mi:MaterialIcon Kind="PackageVariantClosed" Width="30" Height="30"
                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                  Foreground="{DynamicResource TextMuted}" />
-                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
+                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ThumbImageUrlConverter.Instance}}" Stretch="UniformToFill" />
                                             </Panel>
                                         </Border>
 

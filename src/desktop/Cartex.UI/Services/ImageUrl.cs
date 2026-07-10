@@ -6,4 +6,7 @@ public static class ImageUrl
         !string.IsNullOrEmpty(url) && url.StartsWith('/')
             ? SettingsService.Instance.ApiBaseUrl.TrimEnd('/') + url
             : url;
+
+    public static string? Thumb(string? url) =>
+        string.IsNullOrEmpty(url) ? url : url + "&thumb=true";
 }
