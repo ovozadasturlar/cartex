@@ -672,5 +672,8 @@
   "cloud_bridge_hint": "Tashqi push-bildirishnoma va masofaviy monitoring uchun bulut relay. Hozircha o'chiq — servis keyinroq yoqiladi.",
   "coming_soon": "Tez orada",
   "gateway_url": "Gateway manzili",
-  "license_key": "Litsenziya kaliti"
+  "license_key": "Litsenziya kaliti",
+  "barcode_single": "Dona",
+  "barcode_pack_fmt": "Pachka × {0}",
+  "no_barcode_hint": "Bu mahsulotda barkod yo'q — kirim paytida yoki mahsulot tahririda qo'shiladi"
 }

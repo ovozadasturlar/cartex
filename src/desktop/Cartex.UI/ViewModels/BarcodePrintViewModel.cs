@@ -10,6 +10,14 @@ using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
 
+public partial class BarcodeChoice(string code, decimal packQty, string display) : ObservableObject
+{
+    public string Code { get; } = code;
+    public decimal PackQty { get; } = packQty;
+    public string Display { get; } = display;
+    [ObservableProperty] private bool _isSelected;
+}
+
 public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 {
     private readonly IProductsApi _productsApi;
@@ -17,10 +25,9 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
     private readonly IToastService _toast;
-    private readonly IBusyService _busy;
 
     public ObservableCollection<ProductDto> Products { get; } = [];
-    public ObservableCollection<string> BarcodeOptions { get; } = [];
+    public ObservableCollection<BarcodeChoice> BarcodeOptions { get; } = [];
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private ProductDto? _selectedProduct;
@@ -30,16 +37,16 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 
     public bool HasCode => !string.IsNullOrWhiteSpace(CurrentCode);
     public bool HasSelection => SelectedProduct is not null;
+    public bool HasBarcodes => BarcodeOptions.Count > 0;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
 
-    public BarcodePrintViewModel(IProductsApi productsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast, IBusyService busy)
+    public BarcodePrintViewModel(IProductsApi productsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast)
     {
         _productsApi = productsApi;
         _barcodesApi = barcodesApi;
         _labels = labels;
         _printer = printer;
         _toast = toast;
-        _busy = busy;
     }
 
     public Task LoadAsync()
@@ -78,18 +85,50 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 
     partial void OnSelectedProductChanged(ProductDto? value)
     {
-        BarcodeOptions.Clear();
-        foreach (var code in value?.Barcodes ?? []) BarcodeOptions.Add(code);
-        CurrentCode = BarcodeOptions.FirstOrDefault();
-        OnPropertyChanged(nameof(HasCode));
         OnPropertyChanged(nameof(HasSelection));
+        _ = LoadBarcodesAsync(value);
+    }
+
+    private async Task LoadBarcodesAsync(ProductDto? product)
+    {
+        BarcodeOptions.Clear();
+        CurrentCode = null;
+        OnPropertyChanged(nameof(HasBarcodes));
+        if (product is null) return;
+        try
+        {
+            var barcodes = await _barcodesApi.GetByVariantAsync(product.DefaultVariantId);
+            if (!ReferenceEquals(SelectedProduct, product)) return;
+            foreach (var b in barcodes)
+                BarcodeOptions.Add(new BarcodeChoice(b.Code, b.PackQty,
+                    b.PackQty <= 1 ? L["barcode_single"] : string.Format(L["barcode_pack_fmt"], b.PackQty.ToString("0.##"))));
+            if (BarcodeOptions.Count > 0) SelectBarcode(BarcodeOptions[0]);
+            OnPropertyChanged(nameof(HasBarcodes));
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void SelectBarcode(BarcodeChoice choice)
+    {
+        foreach (var b in BarcodeOptions) b.IsSelected = ReferenceEquals(b, choice);
+        CurrentCode = choice.Code;
     }
 
     partial void OnCurrentCodeChanged(string? value)
     {
         OnPropertyChanged(nameof(HasCode));
+        PrintCommand.NotifyCanExecuteChanged();
         UpdatePreview();
     }
+
+    partial void OnQuantityChanged(int value)
+    {
+        if (value < 1) Quantity = 1;
+    }
+
+    [RelayCommand] private void Increment() => Quantity++;
+    [RelayCommand] private void Decrement() { if (Quantity > 1) Quantity--; }
 
     private void UpdatePreview()
     {
@@ -103,32 +142,13 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         catch { Preview = null; }
     }
 
-    [RelayCommand]
-    private async Task GenerateAsync()
+    [RelayCommand(CanExecute = nameof(HasCode))]
+    private void Print()
     {
-        if (SelectedProduct is null) { _toast.Warning(L["error"]); return; }
+        if (SelectedProduct is null || string.IsNullOrWhiteSpace(CurrentCode) || Quantity < 1) { _toast.Warning(L["error"]); return; }
         try
         {
-            string code;
-            using (_busy.Begin(L["loading"]))
-                code = await _barcodesApi.GenerateAsync(SelectedProduct.DefaultVariantId);
-            BarcodeOptions.Add(code);
-            CurrentCode = code;
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [RelayCommand]
-    private async Task PrintAsync()
-    {
-        if (SelectedProduct is null || Quantity < 1) { _toast.Warning(L["error"]); return; }
-        try
-        {
-            if (string.IsNullOrWhiteSpace(CurrentCode))
-                CurrentCode = await _barcodesApi.GenerateAsync(SelectedProduct.DefaultVariantId);
-
-            _labels.PrintLabels(CurrentCode!, SelectedProduct.Name, Quantity, null);
+            _labels.PrintLabels(CurrentCode, SelectedProduct.Name, Quantity, null);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

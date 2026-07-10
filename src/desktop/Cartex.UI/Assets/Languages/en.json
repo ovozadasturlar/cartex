@@ -672,5 +672,8 @@
   "cloud_bridge_hint": "Cloud relay for push notifications and remote monitoring. Currently off — the service is enabled later.",
   "coming_soon": "Coming soon",
   "gateway_url": "Gateway URL",
-  "license_key": "License key"
+  "license_key": "License key",
+  "barcode_single": "Single",
+  "barcode_pack_fmt": "Pack × {0}",
+  "no_barcode_hint": "This product has no barcode — add one during intake or in product editing"
 }
