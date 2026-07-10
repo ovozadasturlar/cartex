@@ -17,7 +17,10 @@
     <Project Path="src/mobile/Cartex.Mobile.Agent/Cartex.Mobile.Agent.csproj" />
   </Folder>
   <Folder Name="/src/web/">
-    <Project Path="src/web/Cartex.Web.Angular/Cartex.Web.Angular.esproj" />
+    <Project Path="src/web/Cartex.Web.Angular/Cartex.Web.Angular.esproj">
+      <Build />
+      <Deploy />
+    </Project>
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
