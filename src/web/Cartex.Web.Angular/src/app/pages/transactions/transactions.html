@@ -1,0 +1,97 @@
+<div *transloco="let t">
+  <cx-page-header [title]="t('transactions')" [subtitle]="t('transactions_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (totals(); as tt) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('total_transactions')" [value]="tt.count | cxMoney" icon="swap_horiz" />
+        <cx-stat-card [label]="t('amount')" [value]="tt.totalAmount | cxMoney" icon="payments" tone="info" />
+      </div>
+    }
+
+    <div class="filters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('date_from') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="dateFrom" (change)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('date_to') }}</mat-label>
+        <input matInput type="date" [(ngModel)]="dateTo" (change)="onFilter()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('operation_type') }}</mat-label>
+        <mat-select [(ngModel)]="operationType" (selectionChange)="onFilter()">
+          <mat-option value="">{{ t('all') }}</mat-option>
+          @for (op of operationTypes; track op) {
+            <mat-option [value]="op">{{ t('op_' + op.toLowerCase()) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="cx-table-card">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged(); as pg) {
+        @if (pg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="pg.items">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+                <td mat-cell *matCellDef="let tx">{{ tx.createdAt | cxDate }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>{{ t('operation_type') }}</th>
+                <td mat-cell *matCellDef="let tx">
+                  <span
+                    class="cx-chip"
+                    [class.ok]="direction(tx) === 'in'"
+                    [class.bad]="direction(tx) === 'out'">
+                    {{ t('op_' + tx.operationType.toLowerCase()) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="amount">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('amount') }}</th>
+                <td mat-cell *matCellDef="let tx" class="num cx-money" [class.up]="direction(tx) === 'in'" [class.down]="direction(tx) === 'out'">
+                  @switch (direction(tx)) {
+                    @case ('in') { +{{ tx.amount | cxMoney }} }
+                    @case ('out') { −{{ tx.amount | cxMoney }} }
+                    @default { {{ tx.amount | cxMoney }} }
+                  }
+                  {{ tx.currency }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="from">
+                <th mat-header-cell *matHeaderCellDef>{{ t('from_account') }}</th>
+                <td mat-cell *matCellDef="let tx">{{ tx.fromAccountName || '—' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="to">
+                <th mat-header-cell *matHeaderCellDef>{{ t('to_account') }}</th>
+                <td mat-cell *matCellDef="let tx">{{ tx.toAccountName || '—' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="user">
+                <th mat-header-cell *matHeaderCellDef>{{ t('user') }}</th>
+                <td mat-cell *matCellDef="let tx">{{ tx.userName }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columns"></tr>
+              <tr mat-row *matRowDef="let tx; columns: columns"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />
+        } @else {
+          <cx-empty-state icon="swap_horiz" [message]="t('no_data')" />
+        }
+      }
+    </div>
+  }
+</div>

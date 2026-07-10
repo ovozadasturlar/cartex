@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.stats {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+
+  mat-form-field {
+    width: min(200px, 100%);
+  }
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 820px;
+}
+
+.num {
+  text-align: right;
+}
+
+.up {
+  color: var(--cx-success);
+}
+
+.down {
+  color: var(--cx-danger);
+}

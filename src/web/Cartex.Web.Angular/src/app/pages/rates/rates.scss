@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.page {
+  max-width: 720px;
+}
+
+.hint-off {
+  background: var(--cx-danger-soft);
+  color: var(--cx-danger);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.form {
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.base {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  color: var(--cx-text-2);
+
+  strong {
+    color: var(--cx-brand);
+  }
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+
+  .code {
+    width: 130px;
+  }
+
+  .value {
+    flex: 1;
+    min-width: 160px;
+  }
+}
+
+.cx-table-card {
+  margin-bottom: 16px;
+}
+
+.tbl-title {
+  margin: 0;
+  padding: 14px 16px 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+table {
+  width: 100%;
+}
+
+.num {
+  text-align: right;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+tr.selected td {
+  background: var(--cx-surface-2);
+}

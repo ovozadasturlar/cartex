@@ -1,0 +1,90 @@
+<div class="page" *transloco="let t">
+  <cx-page-header [title]="t('exchange_rates')" [subtitle]="t('rates_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (featureOff()) {
+      <div class="hint-off">{{ t('multicurrency_off_hint') }}</div>
+    }
+
+    <div class="cx-card form">
+      <div class="base">
+        <span>{{ t('base_currency') }}</span>
+        <strong>{{ baseCurrency() }}</strong>
+      </div>
+      <div class="row">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="code">
+          <mat-label>{{ t('currency') }}</mat-label>
+          <mat-select [(ngModel)]="newCode">
+            @for (c of codes(); track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="value">
+          <mat-label>{{ t('rate') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="newRate" />
+        </mat-form-field>
+        <button matButton="filled" [disabled]="saving() || !newCode || !newRate" (click)="save()">
+          {{ t('save') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="cx-table-card">
+      @if (rates().length) {
+        <table mat-table [dataSource]="rates()">
+          <ng-container matColumnDef="currency">
+            <th mat-header-cell *matHeaderCellDef>{{ t('currency') }}</th>
+            <td mat-cell *matCellDef="let r" class="strong">{{ r.code }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="rate">
+            <th mat-header-cell *matHeaderCellDef class="num">{{ t('rate') }}</th>
+            <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.rate | cxMoney }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+            <td mat-cell *matCellDef="let r">{{ r.effectiveAt | cxDate }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let r; columns: columns"
+            class="clickable"
+            [class.selected]="selected()?.code === r.code"
+            (click)="select(r)"></tr>
+        </table>
+      } @else {
+        <cx-empty-state icon="currency_exchange" [message]="t('no_data')" />
+      }
+    </div>
+
+    @if (selected(); as sel) {
+      <div class="cx-table-card">
+        <h2 class="tbl-title">{{ t('rate_history') }} — {{ sel.code }}</h2>
+        @if (history().length) {
+          <table mat-table [dataSource]="history()">
+            <ng-container matColumnDef="rate">
+              <th mat-header-cell *matHeaderCellDef>{{ t('rate') }}</th>
+              <td mat-cell *matCellDef="let r" class="cx-money">{{ r.rate | cxMoney }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+              <td mat-cell *matCellDef="let r">{{ r.effectiveAt | cxDate }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="historyColumns"></tr>
+            <tr mat-row *matRowDef="let r; columns: historyColumns"></tr>
+          </table>
+        } @else {
+          <cx-empty-state icon="history" [message]="t('no_data')" />
+        }
+      </div>
+    }
+  }
+</div>
