@@ -4,55 +4,136 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    <div class="cx-card form">
-      @if (busy()) {
-        <mat-progress-bar mode="indeterminate" />
-      }
-      <div class="row2">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('business_name') }}</mat-label>
-          <input matInput [(ngModel)]="name" [disabled]="!canManage" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('legal_name') }}</mat-label>
-          <input matInput [(ngModel)]="legalName" [disabled]="!canManage" />
-        </mat-form-field>
-      </div>
-      <div class="row2">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('phone') }}</mat-label>
-          <input matInput [(ngModel)]="phone" [disabled]="!canManage" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('address') }}</mat-label>
-          <input matInput [(ngModel)]="address" [disabled]="!canManage" />
-        </mat-form-field>
-      </div>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
-        <mat-label>{{ t('base_currency') }}</mat-label>
-        <input matInput [ngModel]="currency" readonly />
-        <mat-icon matSuffix>lock</mat-icon>
-      </mat-form-field>
-      <p class="hint">{{ t('base_currency_locked_hint') }}</p>
-
-      <div class="feature-row">
-        <mat-slide-toggle
-          [checked]="multicurrency()"
-          [disabled]="!canFeatures || busy()"
-          (change)="toggleMulticurrency($event.checked, t('success'))">
-          {{ t('multicurrency') }}
-        </mat-slide-toggle>
-        <p class="hint">{{ t('multicurrency_hint') }}</p>
-      </div>
-
-      @if (canManage) {
-        <div class="actions">
-          <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
-            <mat-icon>save</mat-icon>
-            {{ t('save') }}
-          </button>
+    <div class="stack">
+      <div class="cx-card form">
+        @if (busy() || uploading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <div class="logo-row">
+          <div class="logo-box">
+            @if (logoPreview()) {
+              <img [src]="logoPreview()" [alt]="t('logo')" (error)="logoPreview.set(null)" />
+            } @else {
+              <mat-icon>domain</mat-icon>
+            }
+          </div>
+          <div class="logo-meta">
+            <span class="label">{{ t('logo') }}</span>
+            <button matButton="outlined" [disabled]="!canManage || uploading()" (click)="logoFile.click()">
+              <mat-icon>image</mat-icon>
+              {{ t('choose_image') }}
+            </button>
+            <input #logoFile type="file" accept="image/*" hidden (change)="onLogoFile(logoFile)" />
+          </div>
         </div>
-      }
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('business_name') }}</mat-label>
+            <input matInput [(ngModel)]="name" [disabled]="!canManage" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('legal_name') }}</mat-label>
+            <input matInput [(ngModel)]="legalName" [disabled]="!canManage" />
+          </mat-form-field>
+        </div>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('phone') }}</mat-label>
+            <input matInput [(ngModel)]="phone" [disabled]="!canManage" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('address') }}</mat-label>
+            <input matInput [(ngModel)]="address" [disabled]="!canManage" />
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
+          <mat-label>{{ t('base_currency') }}</mat-label>
+          <input matInput [ngModel]="currency" readonly />
+          <mat-icon matSuffix>lock</mat-icon>
+        </mat-form-field>
+        <p class="hint">{{ t('base_currency_locked_hint') }}</p>
+
+        <div class="feature-row">
+          <mat-slide-toggle
+            [checked]="multicurrency()"
+            [disabled]="!canFeatures || busy()"
+            (change)="toggleMulticurrency($event.checked, t('success'))">
+            {{ t('multicurrency') }}
+          </mat-slide-toggle>
+          <p class="hint">{{ t('multicurrency_hint') }}</p>
+        </div>
+
+        @if (canManage) {
+          <div class="actions">
+            <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+              <mat-icon>save</mat-icon>
+              {{ t('save') }}
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="cx-card form">
+        <h3>{{ t('sales_policy') }}</h3>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('shift_policy') }}</mat-label>
+            <mat-select [(ngModel)]="shiftPolicy" [disabled]="!canManage">
+              @for (p of shiftPolicies; track p) {
+                <mat-option [value]="p">{{ t('shift_policy_' + p.toLowerCase()) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('max_discount') }}</mat-label>
+            <input matInput type="number" min="0" max="100" [(ngModel)]="maxDiscountPercent" [disabled]="!canManage" />
+          </mat-form-field>
+        </div>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('default_min_stock') }}</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="defaultMinStock" [disabled]="!canManage" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('stale_rate_days') }}</mat-label>
+            <input matInput type="number" min="1" max="30" [(ngModel)]="staleRateDays" [disabled]="!canManage" />
+          </mat-form-field>
+        </div>
+        <p class="hint">{{ t('sales_policy_hint') }}</p>
+        @if (canManage) {
+          <div class="actions">
+            <button matButton="filled" [disabled]="busy()" (click)="savePolicy(t('success'))">
+              <mat-icon>save</mat-icon>
+              {{ t('save') }}
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="cx-card form">
+        <h3>{{ t('login_methods') }}</h3>
+        <mat-slide-toggle [(ngModel)]="keyEnabled" [disabled]="!canManage">
+          {{ t('login_with_key') }}
+        </mat-slide-toggle>
+        <mat-slide-toggle [(ngModel)]="qrEnabled" [disabled]="!canManage">
+          {{ t('login_with_qr') }}
+        </mat-slide-toggle>
+        @if (qrEnabled) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
+            <mat-label>{{ t('qr_refresh_seconds') }}</mat-label>
+            <input matInput type="number" min="30" max="600" [(ngModel)]="qrRefreshSeconds" [disabled]="!canManage" />
+          </mat-form-field>
+        }
+        <p class="hint">{{ t('login_methods_hint') }}</p>
+        @if (canManage) {
+          <div class="actions">
+            <button matButton="filled" [disabled]="busy()" (click)="saveLoginMethods(t('success'))">
+              <mat-icon>save</mat-icon>
+              {{ t('save') }}
+            </button>
+          </div>
+        }
+      </div>
     </div>
   }
 </ng-container>

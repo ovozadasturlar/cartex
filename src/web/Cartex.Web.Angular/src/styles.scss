@@ -191,6 +191,15 @@ body.dark {
   }
 }
 
+.mat-mdc-button {
+  --mat-button-text-label-text-color: var(--cx-brand);
+}
+
+mat-progress-bar {
+  --mat-progress-bar-active-indicator-color: var(--cx-brand);
+  --mat-progress-bar-track-color: var(--cx-brand-soft);
+}
+
 .mat-mdc-outlined-button {
   --mat-button-outlined-container-shape: 6px;
   --mat-button-outlined-outline-color: var(--cx-border);

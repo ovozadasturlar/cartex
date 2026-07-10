@@ -7,13 +7,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
+import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Unit, UnitsApi } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
-import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -24,9 +24,9 @@ import { PageHeader } from '../../shared/page-header';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
-    MatTableModule,
+    MatSlideToggleModule,
+    MatTooltipModule,
     TranslocoModule,
-    EmptyState,
     PageHeader,
   ],
   templateUrl: './units.html',
@@ -41,28 +41,30 @@ export class Units implements OnInit {
   readonly loading = signal(true);
   readonly all = signal<Unit[]>([]);
   readonly search = signal('');
-  readonly items = computed(() => {
+  readonly dimensions = ['Count', 'Weight', 'Volume', 'Length'];
+  readonly groups = computed(() => {
     const q = this.search().toLowerCase();
-    return q ? this.all().filter((u) => u.name.toLowerCase().includes(q)) : this.all();
+    const filtered = q ? this.all().filter((u) => u.name.toLowerCase().includes(q)) : this.all();
+    return this.dimensions
+      .map((d) => ({ dimension: d, units: filtered.filter((u) => u.dimension === d) }))
+      .filter((g) => g.units.length > 0 || !q);
   });
-  readonly columns = ['name', 'shortName', 'dimension', 'factor', 'status', 'actions'];
 
   ngOnInit(): void {
     this.load();
   }
 
-  openCreate(): void {
-    this.openDialog(null);
+  openCreate(dimension?: string): void {
+    this.openDialog(null, dimension);
   }
 
   openEdit(unit: Unit): void {
     if (this.canManage && !unit.isSystem) this.openDialog(unit);
   }
 
-  async toggleEnabled(unit: Unit, event: Event): Promise<void> {
-    event.stopPropagation();
+  async toggleEnabled(unit: Unit, event: MatSlideToggleChange): Promise<void> {
     try {
-      await lastValueFrom(this.api.setState(unit.id, !unit.isEnabled, unit.isDefault));
+      await lastValueFrom(this.api.setState(unit.id, event.checked, unit.isDefault));
       await this.load();
     } catch (e) {
       this.notify.error(e);
@@ -80,9 +82,9 @@ export class Units implements OnInit {
     }
   }
 
-  private openDialog(unit: Unit | null): void {
+  private openDialog(unit: Unit | null, dimension?: string): void {
     this.dialog
-      .open(UnitDialog, { data: unit, width: '440px', maxWidth: '94vw', autoFocus: false })
+      .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) this.load();
@@ -133,7 +135,7 @@ export class Units implements OnInit {
           <mat-label>{{ t('dimension') }}</mat-label>
           <mat-select [(ngModel)]="dimension">
             @for (d of dimensions; track d) {
-              <mat-option [value]="d">{{ d }}</mat-option>
+              <mat-option [value]="d">{{ t('dimension_' + d.toLowerCase()) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -157,13 +159,14 @@ export class UnitDialog {
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject<MatDialogRef<UnitDialog>>(MatDialogRef);
 
-  readonly unit = inject<Unit | null>(MAT_DIALOG_DATA);
+  private readonly data = inject<{ unit: Unit | null; dimension: string | null }>(MAT_DIALOG_DATA);
+  readonly unit = this.data.unit;
   readonly busy = signal(false);
   readonly dimensions = ['Count', 'Weight', 'Volume', 'Length'];
 
   name = this.unit?.name ?? '';
   shortName = this.unit?.shortName ?? '';
-  dimension = this.unit?.dimension ?? 'Count';
+  dimension = this.unit?.dimension ?? this.data.dimension ?? 'Count';
   factor = this.unit?.factor ?? 1;
 
   async save(): Promise<void> {

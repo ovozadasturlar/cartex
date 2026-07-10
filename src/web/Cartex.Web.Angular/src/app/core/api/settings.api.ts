@@ -68,6 +68,19 @@ export interface ReceiptSettings {
   paperWidth: number;
 }
 
+export interface SalesPolicy {
+  shiftPolicy: string;
+  maxDiscountPercent: number;
+  defaultMinStock: number;
+  staleRateDays: number;
+}
+
+export interface LoginMethods {
+  qrEnabled: boolean;
+  qrRefreshSeconds: number;
+  keyEnabled: boolean;
+}
+
 export interface StorageSettings {
   enabled: boolean;
   provider: string;
@@ -149,6 +162,22 @@ export class SettingsApi {
     useSsl: boolean;
   }): Observable<void> {
     return this.http.put<void>('/api/settings/storage', body);
+  }
+
+  salesPolicy(): Observable<SalesPolicy> {
+    return this.http.get<SalesPolicy>('/api/settings/sales-policy');
+  }
+
+  updateSalesPolicy(body: SalesPolicy): Observable<void> {
+    return this.http.put<void>('/api/settings/sales-policy', body);
+  }
+
+  loginMethods(): Observable<LoginMethods> {
+    return this.http.get<LoginMethods>('/api/settings/login-methods');
+  }
+
+  updateLoginMethods(body: LoginMethods): Observable<void> {
+    return this.http.put<void>('/api/settings/login-methods', body);
   }
 
   receipt(): Observable<ReceiptSettings> {
