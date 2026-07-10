@@ -1,0 +1,58 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('business')" [subtitle]="t('business_subtitle')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="cx-card form">
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <div class="row2">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('business_name') }}</mat-label>
+          <input matInput [(ngModel)]="name" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('legal_name') }}</mat-label>
+          <input matInput [(ngModel)]="legalName" [disabled]="!canManage" />
+        </mat-form-field>
+      </div>
+      <div class="row2">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('phone') }}</mat-label>
+          <input matInput [(ngModel)]="phone" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('address') }}</mat-label>
+          <input matInput [(ngModel)]="address" [disabled]="!canManage" />
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
+        <mat-label>{{ t('base_currency') }}</mat-label>
+        <input matInput [ngModel]="currency" readonly />
+        <mat-icon matSuffix>lock</mat-icon>
+      </mat-form-field>
+      <p class="hint">{{ t('base_currency_locked_hint') }}</p>
+
+      <div class="feature-row">
+        <mat-slide-toggle
+          [checked]="multicurrency()"
+          [disabled]="!canFeatures || busy()"
+          (change)="toggleMulticurrency($event.checked, t('success'))">
+          {{ t('multicurrency') }}
+        </mat-slide-toggle>
+        <p class="hint">{{ t('multicurrency_hint') }}</p>
+      </div>
+
+      @if (canManage) {
+        <div class="actions">
+          <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+            <mat-icon>save</mat-icon>
+            {{ t('save') }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</ng-container>

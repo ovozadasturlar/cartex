@@ -1,0 +1,204 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('loyalty')" [subtitle]="t('loyalty_subtitle')">
+    <mat-button-toggle-group hideSingleSelectionIndicator [value]="period()" (change)="setPeriod($event.value)">
+      <mat-button-toggle [value]="1">{{ t('period_today') }}</mat-button-toggle>
+      <mat-button-toggle [value]="7">{{ t('period_7d') }}</mat-button-toggle>
+      <mat-button-toggle [value]="30">{{ t('period_30d') }}</mat-button-toggle>
+    </mat-button-toggle-group>
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (stats(); as s) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('stat_discount_total')" [value]="s.discountTotal | cxMoney" icon="percent" tone="warning" />
+        <cx-stat-card [label]="t('stat_discount_sales')" [value]="s.discountedSales + ' / ' + s.salesCount" icon="receipt_long" />
+        <cx-stat-card [label]="t('stat_discount_share')" [value]="share(s)" icon="pie_chart" tone="info" />
+        <cx-stat-card [label]="t('stat_bonus_outstanding')" [value]="s.bonusOutstanding | cxMoney" icon="redeem" tone="success" />
+      </div>
+    }
+
+    <mat-button-toggle-group class="sections" hideSingleSelectionIndicator [value]="section()" (change)="section.set($event.value)">
+      <mat-button-toggle value="discounts">{{ t('discounts') }}</mat-button-toggle>
+      <mat-button-toggle value="cashback">{{ t('cashback') }}</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    @if (section() === 'discounts') {
+      <p class="hint">{{ t('discounts_desc') }}</p>
+      <div class="toolbar">
+        @if (canManage) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="combine">
+            <mat-label>{{ t('discount_combine_mode') }}</mat-label>
+            <mat-select [(ngModel)]="progCombine" (selectionChange)="saveProgram(t('success'))">
+              <mat-option value="Priority">{{ t('discount_combine_priority') }}</mat-option>
+              <mat-option value="Stack">{{ t('discount_combine_stack') }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <span class="spacer"></span>
+          <button matButton="filled" (click)="openDiscount(null)">
+            <mat-icon>add</mat-icon>
+            {{ t('add') }}
+          </button>
+        }
+      </div>
+      <div class="cx-table-card">
+        @if (discounts().length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="discounts()">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
+                <td mat-cell *matCellDef="let r" class="strong">{{ r.name }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="scope">
+                <th mat-header-cell *matHeaderCellDef>{{ t('scope') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  {{ r.scope === 'All' ? t('discount_scope_all') : r.targetName }}
+                  @if (r.customerName) {
+                    <span class="muted">· {{ r.customerName }}</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="value">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('value') }}</th>
+                <td mat-cell *matCellDef="let r" class="num cx-money">
+                  {{ r.method === 'Percent' ? r.value + '%' : (r.value | cxMoney) }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="condition">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('discount_min_amount') }}</th>
+                <td mat-cell *matCellDef="let r" class="num">
+                  @if (r.minAmount > 0) {
+                    <span class="cx-money">≥ {{ r.minAmount | cxMoney }}</span>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="period">
+                <th mat-header-cell *matHeaderCellDef>{{ t('discount_period') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  @if (r.startsOn || r.endsOn) {
+                    {{ r.startsOn | cxDate: false }} – {{ r.endsOn | cxDate: false }}
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  <span class="cx-chip" [class]="'cx-chip ' + statusClass(r)">{{ t('discount_status_' + discountStatus(r)) }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let r" class="actions">
+                  <button matIconButton (click)="openDiscount(r)"><mat-icon>edit</mat-icon></button>
+                  <button matIconButton (click)="deleteDiscount(r, t('success'))"><mat-icon>delete</mat-icon></button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="discountCols"></tr>
+              <tr mat-row *matRowDef="let r; columns: discountCols"></tr>
+            </table>
+          </div>
+        } @else {
+          <cx-empty-state icon="percent" [message]="t('no_data')" />
+        }
+      </div>
+    } @else {
+      <p class="hint">{{ t('cashback_desc') }}</p>
+      <div class="cx-card program">
+        <mat-slide-toggle [(ngModel)]="progEnabled" [disabled]="!canManage">{{ t('cashback') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('cashback_percent') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="progPercent" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('cashback_rounding') }}</mat-label>
+          <mat-select [(ngModel)]="progRounding" [disabled]="!canManage">
+            @for (r of roundings; track r) {
+              <mat-option [value]="r">{{ r }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (canManage) {
+          <button matButton="filled" [disabled]="busy()" (click)="saveProgram(t('success'))">{{ t('save') }}</button>
+        }
+      </div>
+      <p class="hint">{{ t('cashback_hint') }}</p>
+
+      <div class="toolbar">
+        <h3>{{ t('cashback_rules') }}</h3>
+        <span class="spacer"></span>
+        @if (canManage) {
+          <button matButton="filled" (click)="openRule(null)">
+            <mat-icon>add</mat-icon>
+            {{ t('add_rule') }}
+          </button>
+        }
+      </div>
+      <div class="cx-table-card">
+        @if (rules().length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="rules()">
+              <ng-container matColumnDef="scope">
+                <th mat-header-cell *matHeaderCellDef>{{ t('scope') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  <span class="cx-chip">{{ t(r.scope === 'Product' ? 'product' : 'category') }}</span>
+                  <span class="strong tname">{{ r.targetName }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="method">
+                <th mat-header-cell *matHeaderCellDef>{{ t('method') }}</th>
+                <td mat-cell *matCellDef="let r">
+                  {{ t(r.method === 'Percent' ? 'cashback_method_percent' : 'cashback_method_fixed') }}
+                  @if (r.excludeFromTotalPercent) {
+                    <span class="cx-chip warn">{{ t('exclude_from_total') }}</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="value">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('value') }}</th>
+                <td mat-cell *matCellDef="let r" class="num cx-money">
+                  {{ r.method === 'Percent' ? r.value + '%' : (r.value | cxMoney) }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="priority">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('priority') }}</th>
+                <td mat-cell *matCellDef="let r" class="num">{{ r.priority }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let r" class="actions">
+                  <button matIconButton (click)="openRule(r)"><mat-icon>edit</mat-icon></button>
+                  <button matIconButton (click)="deleteRule(r, t('success'))"><mat-icon>delete</mat-icon></button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="ruleCols"></tr>
+              <tr mat-row *matRowDef="let r; columns: ruleCols"></tr>
+            </table>
+          </div>
+        } @else {
+          <cx-empty-state icon="redeem" [message]="t('no_data')" />
+        }
+      </div>
+    }
+  }
+</ng-container>

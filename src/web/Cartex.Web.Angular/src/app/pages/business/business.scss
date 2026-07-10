@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.form {
+  max-width: 720px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.currency {
+  width: min(260px, 100%);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--cx-text-3);
+}
+
+.feature-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--cx-border);
+  border-radius: 8px;
+  background: var(--cx-surface-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
