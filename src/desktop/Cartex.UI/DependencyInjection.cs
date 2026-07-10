@@ -40,7 +40,9 @@ public static class DependencyInjection
         services.AddSingleton<ReferenceCache>(sp =>
         {
             var cache = new ReferenceCache();
-            sp.GetRequiredService<AuthService>().LoggedOut += cache.Clear;
+            var auth = sp.GetRequiredService<AuthService>();
+            auth.LoggedOut += cache.Clear;
+            auth.SessionInvalidated += OnUnauthorized;
             return cache;
         });
 

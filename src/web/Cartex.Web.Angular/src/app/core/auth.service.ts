@@ -1,4 +1,5 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -64,6 +65,7 @@ function isExpiringSoon(token: string): boolean {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly user = signal<UserInfo | null>(null);
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
@@ -136,10 +138,24 @@ export class AuthService {
         this.http.post<LoginResponse>('/api/auth/refresh', { refreshToken: this.refreshToken, deviceName: 'Web' }),
       );
       this.apply(res, this.persist);
-    } catch {
-      /* keep current token; 401 handled by interceptor */
+    } catch (e) {
+      if (e instanceof HttpErrorResponse && (e.status === 400 || e.status === 401)) {
+        this.logout();
+        this.router.navigate(['/login']);
+        return null;
+      }
     }
     return this.accessToken;
+  }
+
+  async validateSession(): Promise<void> {
+    if (!this.refreshToken) return;
+    this.refreshing ??= this.doRefresh();
+    try {
+      await this.refreshing;
+    } finally {
+      this.refreshing = null;
+    }
   }
 
   private apply(res: LoginResponse, persist: boolean): void {

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth.guard';
+import { authGuard, landingGuard } from './core/auth.guard';
 import { Login } from './pages/login/login';
 import { Shell } from './shell/shell';
 
@@ -10,7 +10,7 @@ export const routes: Routes = [
     component: Shell,
     canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: '', pathMatch: 'full', canActivate: [landingGuard], children: [] },
       { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
       { path: 'pos', loadComponent: () => import('./pages/pos/pos').then((m) => m.Pos) },
       { path: 'shift', loadComponent: () => import('./pages/shift/shift').then((m) => m.Shift) },

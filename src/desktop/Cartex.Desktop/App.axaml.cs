@@ -51,6 +51,8 @@ public partial class App : Application
                 var mainVm = provider.GetRequiredService<MainViewModel>();
                 mainVm.Initialize();
                 nav.NavigateTo(mainVm);
+                provider.GetRequiredService<ReferenceCache>();
+                _ = provider.GetRequiredService<AuthService>().ValidateSessionAsync();
             }
             else
             {
