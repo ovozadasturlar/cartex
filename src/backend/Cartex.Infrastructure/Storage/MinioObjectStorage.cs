@@ -8,7 +8,7 @@ namespace Cartex.Infrastructure.Storage;
 
 public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtector protector) : IObjectStorage
 {
-    public async Task<string> UploadAsync(Stream content, long length, string contentType, string extension, CancellationToken cancellationToken = default)
+    public async Task<string> UploadAsync(Stream content, long length, string contentType, string extension, CancellationToken cancellationToken = default, string? key = null)
     {
         var (client, s) = await CreateAsync(cancellationToken);
 
@@ -16,7 +16,7 @@ public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtect
         if (!exists)
             await client.MakeBucketAsync(new MakeBucketArgs().WithBucket(s.Bucket), cancellationToken);
 
-        var key = $"{Guid.NewGuid():N}{extension}";
+        key ??= $"{Guid.NewGuid():N}{extension}";
         await client.PutObjectAsync(new PutObjectArgs()
             .WithBucket(s.Bucket)
             .WithObject(key)
@@ -81,6 +81,27 @@ public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtect
         catch (Minio.Exceptions.MinioException)
         {
             return null;
+        }
+    }
+
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        IMinioClient client;
+        StorageSettings s;
+        try { (client, s) = await CreateAsync(cancellationToken); }
+        catch (BusinessRuleException) { return; }
+
+        try
+        {
+            await client.RemoveObjectAsync(new RemoveObjectArgs()
+                .WithBucket(s.Bucket)
+                .WithObject(key), cancellationToken);
+        }
+        catch (Minio.Exceptions.MinioException)
+        {
         }
     }
 

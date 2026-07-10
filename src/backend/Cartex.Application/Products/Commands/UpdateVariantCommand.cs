@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -10,7 +11,7 @@ namespace Cartex.Application.Products.Commands;
 
 public record UpdateVariantCommand(long Id, string? Name, string? Code, string? Attributes, string? ImageKey, List<BarcodeInput>? Barcodes) : ICommand<Unit>;
 
-public sealed class UpdateVariantCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateVariantCommand, Unit>
+public sealed class UpdateVariantCommandHandler(IApplicationDbContext db, IObjectStorage storage) : IRequestHandler<UpdateVariantCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateVariantCommand request, CancellationToken cancellationToken)
     {
@@ -26,6 +27,7 @@ public sealed class UpdateVariantCommandHandler(IApplicationDbContext db) : IReq
             AttributeSchema.Validate(schema, request.Attributes);
         }
 
+        var oldImageKey = variant.ImageKey;
         variant.Name = request.Name;
         variant.Code = request.Code;
         variant.Attributes = request.Attributes;
@@ -56,6 +58,17 @@ public sealed class UpdateVariantCommandHandler(IApplicationDbContext db) : IReq
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (oldImageKey is not null && oldImageKey != request.ImageKey)
+        {
+            try
+            {
+                await storage.DeleteAsync(oldImageKey, cancellationToken);
+                await storage.DeleteAsync($"t_{oldImageKey}", cancellationToken);
+            }
+            catch { }
+        }
+
         return Unit.Value;
     }
 }

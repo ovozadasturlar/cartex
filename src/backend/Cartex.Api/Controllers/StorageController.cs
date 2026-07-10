@@ -10,7 +10,7 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class StorageController(IObjectStorage storage) : ControllerBase
+public class StorageController(IObjectStorage storage, IImageProcessor processor) : ControllerBase
 {
     private const long MaxFileSize = 5 * 1024 * 1024;
 
@@ -30,8 +30,24 @@ public class StorageController(IObjectStorage storage) : ControllerBase
         if (!AllowedContentTypes.Contains(file.ContentType))
             throw new BusinessRuleException("Faqat rasm fayllariga ruxsat (png, jpeg, webp, gif).");
 
+        var ct = HttpContext.RequestAborted;
         await using var stream = file.OpenReadStream();
-        var key = await storage.UploadAsync(stream, file.Length, file.ContentType, Path.GetExtension(file.FileName), HttpContext.RequestAborted);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, ct);
+        buffer.Position = 0;
+
+        var processed = processor.Process(buffer);
+        if (processed is null)
+        {
+            buffer.Position = 0;
+            var originalKey = await storage.UploadAsync(buffer, buffer.Length, file.ContentType, Path.GetExtension(file.FileName), ct);
+            return Ok(new { key = originalKey });
+        }
+
+        using var display = new MemoryStream(processed.Display);
+        var key = await storage.UploadAsync(display, processed.Display.Length, processed.ContentType, processed.Extension, ct);
+        using var thumb = new MemoryStream(processed.Thumb);
+        await storage.UploadAsync(thumb, processed.Thumb.Length, processed.ContentType, processed.Extension, ct, $"t_{key}");
         return Ok(new { key });
     }
 
@@ -45,9 +61,10 @@ public class StorageController(IObjectStorage storage) : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("content")]
-    public async Task<IActionResult> GetContent([FromQuery] string key)
+    public async Task<IActionResult> GetContent([FromQuery] string key, [FromQuery] bool thumb = false)
     {
-        var result = await storage.DownloadAsync(key, HttpContext.RequestAborted);
+        var result = thumb ? await storage.DownloadAsync($"t_{key}", HttpContext.RequestAborted) : null;
+        result ??= await storage.DownloadAsync(key, HttpContext.RequestAborted);
         if (result is null)
             return NotFound();
         Response.Headers.CacheControl = "public,max-age=86400,immutable";

@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProductCatalogProvider, OpenFoodFactsProvider>();
         services.AddScoped<IObjectStorage, Storage.MinioObjectStorage>();
+        services.AddSingleton<IImageProcessor, Storage.SkiaImageProcessor>();
         services.AddSingleton<IPushGateway, Push.NullPushGateway>();
         services.AddHostedService<OutboxProcessor>();
         services.AddHostedService<DebtReminderScheduler>();

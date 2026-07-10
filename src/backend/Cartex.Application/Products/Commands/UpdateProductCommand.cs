@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -23,7 +24,7 @@ public record UpdateProductCommand(
     string? PriceCurrency = null,
     long? ManufacturerId = null) : ICommand<Unit>;
 
-public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<UpdateProductCommand, Unit>
+public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, IObjectStorage storage) : IRequestHandler<UpdateProductCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
@@ -47,6 +48,7 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurre
             AttributeSchema.Validate(schema, request.Attributes);
         }
 
+        var oldImageKey = product.ImageKey;
         product.Name = request.Name;
         product.CategoryId = request.CategoryId;
         product.UnitId = request.UnitId;
@@ -71,6 +73,16 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurre
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        if (oldImageKey is not null && oldImageKey != request.ImageKey)
+        {
+            try
+            {
+                await storage.DeleteAsync(oldImageKey, cancellationToken);
+                await storage.DeleteAsync($"t_{oldImageKey}", cancellationToken);
+            }
+            catch { }
+        }
 
         return Unit.Value;
     }
