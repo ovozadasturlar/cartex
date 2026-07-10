@@ -6,7 +6,7 @@ namespace Cartex.Application.Products.Queries;
 
 public record GetProductLookupQuery : IRequest<IReadOnlyCollection<ProductOptionDto>>;
 
-public record ProductOptionDto(long Id, long DefaultVariantId, string Name, string? Dimension);
+public record ProductOptionDto(long Id, long DefaultVariantId, string Name, string? Dimension, long? UnitId = null, string? UnitShortName = null);
 
 public sealed class GetProductLookupQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetProductLookupQuery, IReadOnlyCollection<ProductOptionDto>>
@@ -18,6 +18,8 @@ public sealed class GetProductLookupQueryHandler(IApplicationDbContext db)
                 p.Id,
                 p.Variants.Where(v => v.IsDefault).Select(v => v.Id).FirstOrDefault(),
                 p.Name,
-                p.Unit.Dimension.ToString()))
+                p.Unit.Dimension.ToString(),
+                p.Unit.Id,
+                p.Unit.ShortName))
             .ToListAsync(cancellationToken);
 }

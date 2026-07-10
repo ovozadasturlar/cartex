@@ -675,5 +675,10 @@
   "license_key": "Litsenziya kaliti",
   "barcode_single": "Dona",
   "barcode_pack_fmt": "Pachka × {0}",
-  "no_barcode_hint": "Bu mahsulotda barkod yo'q — kirim paytida yoki mahsulot tahririda qo'shiladi"
+  "no_barcode_hint": "Bu mahsulotda barkod yo'q — kirim paytida yoki mahsulot tahririda qo'shiladi",
+  "supplier_debt_fmt": "Joriy qarz: {0:N0}",
+  "pay_old_debt": "Eski qarzdan to'lash",
+  "err_debt_pay_failed": "Ta'minot saqlandi, lekin qarz to'lovi amalga oshmadi",
+  "supply_void": "Bekor qilish",
+  "supply_void_confirm": "Bu ta'minot bekor qilinsinmi? Qoldiq va to'lovlar teskari qilinadi."
 }

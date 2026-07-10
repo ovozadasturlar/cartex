@@ -7,6 +7,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
+using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Units;
 using Cartex.UI.Models;
@@ -22,6 +23,7 @@ public class SupplyLine
     public decimal Quantity { get; init; }
     public long? UnitId { get; init; }
     public string UnitName { get; init; } = "";
+    public decimal PackSize { get; init; } = 1;
     public decimal PurchasePrice { get; init; }
     public decimal? SellingPrice { get; init; }
     public DateOnly? ExpiredAt { get; init; }
@@ -43,6 +45,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
 
     public QuickProductViewModel QuickProduct { get; }
 
@@ -54,6 +57,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private readonly List<UnitDto> _allUnits = [];
     private readonly Dictionary<long, string> _variantDimensions = [];
+    private readonly Dictionary<long, (long Id, string ShortName)> _variantStockUnits = [];
+    private readonly Dictionary<long, decimal> _supplierPayables = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -95,6 +100,24 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     partial void OnPaidCashChanged(decimal value) => OnPropertyChanged(nameof(RemainsDebt));
     partial void OnPaidCardChanged(decimal value) => OnPropertyChanged(nameof(RemainsDebt));
 
+    [ObservableProperty] private decimal _supplierPayable;
+    [ObservableProperty] private decimal _payOldDebt;
+
+    public bool HasSupplierDebt => SupplierPayable > 0;
+    public string SupplierDebtText => string.Format(L["supplier_debt_fmt"], SupplierPayable);
+
+    partial void OnSupplierPayableChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(HasSupplierDebt));
+        OnPropertyChanged(nameof(SupplierDebtText));
+    }
+
+    partial void OnSelectedSupplierChanged(IdOption? value)
+    {
+        SupplierPayable = value?.Id is { } id && _supplierPayables.TryGetValue(id, out var p) ? p : 0;
+        PayOldDebt = 0;
+    }
+
     [ObservableProperty] private IdOption? _lineProduct;
     [ObservableProperty] private UnitDto? _lineUnit;
     [ObservableProperty] private string _lineBarcode = "";
@@ -117,11 +140,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private void RebuildUnitOptions(IdOption? product)
     {
-        var dimension = product?.Id is { } id && _variantDimensions.TryGetValue(id, out var d) ? d : null;
         UnitOptions.Clear();
-        if (dimension is null or "Count") { LineUnit = null; return; }
-        foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled)) UnitOptions.Add(u);
-        LineUnit = null;
+        if (product?.Id is not { } id) { LineUnit = null; return; }
+        var dimension = _variantDimensions.TryGetValue(id, out var d) ? d : null;
+        UnitDto? stocking = null;
+        if (_variantStockUnits.TryGetValue(id, out var s))
+        {
+            stocking = _allUnits.FirstOrDefault(u => u.Id == s.Id)
+                ?? new UnitDto(s.Id, s.ShortName, s.ShortName, dimension ?? "Count", 1, false);
+            UnitOptions.Add(stocking);
+        }
+        if (dimension is not (null or "Count"))
+            foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled && u.Id != stocking?.Id))
+                UnitOptions.Add(u);
+        LineUnit = stocking;
     }
 
     private async Task FillPricesAsync(IdOption? product)
@@ -130,12 +162,18 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         if (IsMulticurrency && SupplyCurrency != _baseCurrency) return;
         var priceSnapshot = LinePrice;
         var sellingSnapshot = LineSellingPrice;
+        var unitSnapshot = LineUnit;
+        var packSnapshot = LinePackSize;
         try
         {
             var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
             if (LineProduct?.Id != variantId) return;
             if (LinePrice == priceSnapshot) LinePrice = info.LastPurchasePrice ?? 0;
             if (LineSellingPrice == sellingSnapshot) LineSellingPrice = info.SellingPrice ?? 0;
+            if (LineUnit == unitSnapshot && info.LastUnitId is { } lastUnit)
+                LineUnit = UnitOptions.FirstOrDefault(u => u.Id == lastUnit) ?? LineUnit;
+            if (LinePackSize == packSnapshot && packSnapshot == 1 && info.LastPackSize is { } lastPack && lastPack > 1)
+                LinePackSize = lastPack;
         }
         catch { }
     }
@@ -148,7 +186,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _filterSupplier;
 
     [ObservableProperty] private bool _isDetailOpen;
-    [ObservableProperty] private SupplyDto? _selectedSupply;
+    [ObservableProperty] private SupplyDetailDto? _detail;
+    public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
+    public bool CanVoid => _auth.HasPermission("supplies.manage");
 
     public bool IsModalOpen => IsEditOpen || IsDetailOpen || IsPrintOpen || QuickProduct.IsOpen;
 
@@ -162,8 +202,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
-        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
+        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, IDialogService dialog)
     {
+        _dialog = dialog;
         _cache = cache;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
@@ -233,15 +274,38 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenDetail(SupplyDto supply)
+    private async Task OpenDetail(SupplyDto supply)
     {
         if (supply is null) return;
-        SelectedSupply = supply;
-        IsDetailOpen = true;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                Detail = await _api.GetByIdAsync(supply.Id);
+            DetailItems.Clear();
+            foreach (var i in Detail.Items) DetailItems.Add(i);
+            IsDetailOpen = true;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void CloseDetail() => IsDetailOpen = false;
+
+    [RelayCommand]
+    private async Task VoidSupplyAsync()
+    {
+        if (Detail is null) return;
+        if (!await _dialog.ConfirmDangerAsync(L["supply_void_confirm"], L["supply_void"])) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _api.DeleteAsync(Detail.Id);
+            IsDetailOpen = false;
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [ObservableProperty] private bool _isPrintOpen;
     [ObservableProperty] private string _printProductName = string.Empty;
@@ -259,7 +323,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         IsPrintOpen = true;
         try
         {
-            PrintCode = await _barcodesApi.GenerateAsync(line.VariantId);
+            var existing = await _barcodesApi.GetByVariantAsync(line.VariantId);
+            PrintCode = existing.OrderBy(b => b.PackQty).FirstOrDefault()?.Code
+                ?? await _barcodesApi.GenerateAsync(line.VariantId);
             using var stream = new MemoryStream(_labels.RenderPng(PrintCode));
             PrintPreview = new Bitmap(stream);
         }
@@ -284,7 +350,11 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private async void OnQuickProductCreated(long variantId, string name)
     {
-        if (QuickProduct.SelectedUnit?.Dimension is { } dim) _variantDimensions[variantId] = dim;
+        if (QuickProduct.SelectedUnit is { } su)
+        {
+            _variantDimensions[variantId] = su.Dimension;
+            _variantStockUnits[variantId] = (su.Id, su.ShortName);
+        }
         var option = new IdOption(variantId, name);
         ProductOptions.Add(option);
         LineProduct = option;
@@ -316,7 +386,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
                 var suppliers = await suppliersTask;
                 SupplierOptions.Clear();
-                foreach (var s in suppliers) SupplierOptions.Add(new IdOption(s.Id, s.Name));
+                _supplierPayables.Clear();
+                foreach (var s in suppliers)
+                {
+                    SupplierOptions.Add(new IdOption(s.Id, s.Name));
+                    _supplierPayables[s.Id] = s.Payable;
+                }
+                SupplierPayable = SelectedSupplier?.Id is { } sid && _supplierPayables.TryGetValue(sid, out var payable) ? payable : 0;
 
                 var warehouses = await warehousesTask;
                 WarehouseOptions.Clear();
@@ -325,10 +401,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 var products = await productsTask;
                 ProductOptions.Clear();
                 _variantDimensions.Clear();
+                _variantStockUnits.Clear();
                 foreach (var p in products)
                 {
                     ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
                     if (p.Dimension is { } dim) _variantDimensions[p.DefaultVariantId] = dim;
+                    if (p.UnitId is { } unitId) _variantStockUnits[p.DefaultVariantId] = (unitId, p.UnitShortName ?? "");
                 }
 
                 var units = await unitsTask;
@@ -350,6 +428,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         SupplyDate = DateTime.Now;
         PaidCash = 0;
         PaidCard = 0;
+        PayOldDebt = 0;
         _ = EnsureCurrenciesAsync();
         SupplyCurrency = _baseCurrency;
         Items.Clear();
@@ -405,13 +484,15 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         if (LineProduct?.Id is null || LineQuantity <= 0 || LinePrice < 0) { _toast.Error(L["error"]); return; }
         var packSize = LinePackSize <= 0 ? 1 : LinePackSize;
+        var stockingId = _variantStockUnits.TryGetValue(LineProduct.Id.Value, out var stocking) ? stocking.Id : (long?)null;
         Items.Add(new SupplyLine
         {
             VariantId = LineProduct.Id.Value,
             ProductName = LineProduct.Name,
             Quantity = LineQuantity * packSize,
-            UnitId = LineUnit?.Id,
+            UnitId = LineUnit?.Id is { } unitId && unitId != stockingId ? unitId : null,
             UnitName = LineUnit?.ShortName ?? "",
+            PackSize = packSize,
             PurchasePrice = LinePrice,
             SellingPrice = LineSellingPrice > 0 ? LineSellingPrice : null,
             ExpiredAt = LineExpiry is { } e ? DateOnly.FromDateTime(e.Date) : null
@@ -442,12 +523,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 SelectedSupplier.Id.Value,
                 SelectedWarehouse.Id.Value,
                 DateOnly.FromDateTime(SupplyDate.Date),
-                [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt, i.UnitId, i.SellingPrice))],
+                [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt, i.UnitId, i.SellingPrice, i.PackSize))],
                 PaidCash,
                 PaidCard,
                 IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null);
             using (_busy.Begin(L["loading"]))
                 await _api.CreateAsync(request);
+            if (PayOldDebt > 0)
+            {
+                try { await _suppliersApi.PayDebtAsync(SelectedSupplier.Id.Value, new PaySupplierDebtRequest(PayOldDebt, false)); }
+                catch { _toast.Error(L["err_debt_pay_failed"]); }
+            }
             IsEditOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();

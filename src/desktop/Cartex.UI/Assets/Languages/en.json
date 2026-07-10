@@ -675,5 +675,10 @@
   "license_key": "License key",
   "barcode_single": "Single",
   "barcode_pack_fmt": "Pack × {0}",
-  "no_barcode_hint": "This product has no barcode — add one during intake or in product editing"
+  "no_barcode_hint": "This product has no barcode — add one during intake or in product editing",
+  "supplier_debt_fmt": "Current debt: {0:N0}",
+  "pay_old_debt": "Pay old debt",
+  "err_debt_pay_failed": "Supply saved, but debt payment failed",
+  "supply_void": "Void",
+  "supply_void_confirm": "Void this supply? Stock and payments will be reversed."
 }
