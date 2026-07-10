@@ -8,9 +8,19 @@
     x:DataType="vm:CustomersViewModel"
     Title="{svc:T customers_title}">
     <Grid RowDefinitions="Auto,*" Padding="16,8,16,0" RowSpacing="10">
-        <Border Style="{StaticResource InputWrap}">
-            <Entry Placeholder="{svc:T search_customer}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
-        </Border>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Border Style="{StaticResource InputWrap}">
+                <Entry Placeholder="{svc:T search_customer}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
+            </Border>
+            <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 14" WidthRequest="48"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding AddCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="+" FontSize="26" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+            </Border>
+        </Grid>
         <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Customers}">
                 <CollectionView.ItemTemplate>

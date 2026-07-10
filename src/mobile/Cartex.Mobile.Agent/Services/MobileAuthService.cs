@@ -13,6 +13,23 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
     public string FullName => Preferences.Get("user_fullname", "");
     public string Role => Preferences.Get("user_role", "");
 
+    public long? UserId
+    {
+        get
+        {
+            try
+            {
+                var value = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken)
+                    .Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
+                return long.TryParse(value, out var id) ? id : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
     public async Task LoginAsync(string username, string password)
     {
         var response = await authApi.LoginAsync(new LoginRequest(username, password, DeviceName));

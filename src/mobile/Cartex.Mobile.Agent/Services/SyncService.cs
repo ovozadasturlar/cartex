@@ -181,6 +181,8 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             FullName = c.FullName,
             Phone = c.Phone,
             Address = c.Address,
+            Latitude = c.Latitude,
+            Longitude = c.Longitude,
             DebtBalance = c.DebtBalance,
             CreditLimit = c.CreditLimit,
             DebtBalancesJson = JsonSerializer.Serialize(c.DebtBalances)

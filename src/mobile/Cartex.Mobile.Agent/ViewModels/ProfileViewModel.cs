@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session, IBiometricAuth biometric) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -13,6 +13,9 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _outboxBadge = "";
     [ObservableProperty] private string _footer = "";
+    [ObservableProperty] private string _pinStatus = "";
+    [ObservableProperty] private bool _bioEnabled;
+    [ObservableProperty] private bool _bioAllowed;
     [ObservableProperty] private bool _hasOutbox;
     [ObservableProperty] private bool _isBusy;
 
@@ -31,6 +34,48 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
         HasOutbox = pending + errors > 0;
         OutboxBadge = errors > 0 ? $"{pending + errors}!" : pending.ToString();
         Footer = $"Cartex Agent {AppInfo.Current.VersionString} • {session.ServerUrl}";
+        PinStatus = Loc.Instance[AppLock.PinEnabled ? "enabled" : "disabled"];
+        BioAllowed = AppLock.PinEnabled && biometric.IsAvailable;
+        _suppressBio = true;
+        BioEnabled = AppLock.BiometricEnabled;
+        _suppressBio = false;
+    }
+
+    private bool _suppressBio;
+
+    partial void OnBioEnabledChanged(bool value)
+    {
+        if (_suppressBio) return;
+        if (value && (!AppLock.PinEnabled || !biometric.IsAvailable))
+        {
+            _suppressBio = true;
+            BioEnabled = false;
+            _suppressBio = false;
+            Ui.Toast(Loc.Instance["biometric_unavailable"]);
+            return;
+        }
+        AppLock.SetBiometric(value);
+    }
+
+    [RelayCommand]
+    private async Task TogglePinAsync()
+    {
+        var page = Shell.Current.CurrentPage;
+        if (!AppLock.PinEnabled)
+        {
+            await Shell.Current.GoToAsync("pin?setup=1");
+            return;
+        }
+        var disable = Loc.Instance["pin_disable"];
+        var change = Loc.Instance["pin_change"];
+        var choice = await page.DisplayActionSheet(Loc.Instance["pin_code"], Loc.Instance["cancel"], null, change, disable);
+        if (choice == change)
+            await Shell.Current.GoToAsync("pin?setup=1");
+        else if (choice == disable)
+        {
+            AppLock.Disable();
+            await AppearAsync();
+        }
     }
 
     [RelayCommand]
@@ -81,6 +126,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
         }
         if (!await page.DisplayAlert(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
             return;
+        AppLock.Disable();
         await auth.LogoutAsync();
         await db.ClearCacheAsync();
         await Shell.Current.GoToAsync("//login");

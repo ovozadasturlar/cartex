@@ -33,6 +33,9 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         FullName = c.FullName;
         Phone = c.Phone;
         Address = c.Address;
+        HasLocation = c is { Latitude: not null, Longitude: not null };
+        _latitude = c.Latitude;
+        _longitude = c.Longitude;
         HasDebt = c.DebtBalance > 0;
         DebtText = HasDebt ? BuildDebtText(c, currency) : Loc.Instance["no_debt"];
         LimitText = c.CreditLimit > 0 ? string.Format(Loc.Instance["limit_fmt"], c.CreditLimit, currency) : null;
@@ -49,6 +52,17 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         }
         catch { }
         return $"{c.DebtBalance:N0} {currency}";
+    }
+
+    [ObservableProperty] private bool _hasLocation;
+    private double? _latitude;
+    private double? _longitude;
+
+    [RelayCommand]
+    private async Task OpenMapAsync()
+    {
+        if (_latitude is not { } lat || _longitude is not { } lng) return;
+        await Launcher.OpenAsync(new Uri($"geo:0,0?q={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}({Uri.EscapeDataString(FullName ?? "")})"));
     }
 
     [RelayCommand]

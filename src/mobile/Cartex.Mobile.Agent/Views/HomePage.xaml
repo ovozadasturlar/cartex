@@ -101,9 +101,10 @@
             </Grid>
 
             <Button Text="{svc:T new_order}" Style="{StaticResource BtnPrimary}" Command="{Binding NewOrderCommand}" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                <Button Text="{svc:T new_sale}" Style="{StaticResource BtnOutline}" Command="{Binding NewSaleCommand}" />
-                <Button Grid.Column="1" Text="{svc:T orders}" Style="{StaticResource BtnOutline}" Command="{Binding OpenOrdersCommand}" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                <Button Text="{svc:T new_sale}" Style="{StaticResource BtnOutline}" FontSize="13.5" Command="{Binding NewSaleCommand}" />
+                <Button Grid.Column="1" Text="{svc:T orders}" Style="{StaticResource BtnOutline}" FontSize="13.5" Command="{Binding OpenOrdersCommand}" />
+                <Button Grid.Column="2" Text="{svc:T products}" Style="{StaticResource BtnOutline}" FontSize="13.5" Command="{Binding OpenStockCommand}" />
             </Grid>
 
             <Label Text="{svc:T visit_today}" FontAttributes="Bold" FontSize="16" Margin="0,4,0,-4"

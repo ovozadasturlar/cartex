@@ -37,6 +37,8 @@
                     <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
             </Border>
+            <Button Style="{StaticResource BtnOutline}" Command="{Binding OpenMapCommand}" IsVisible="{Binding HasLocation}"
+                    Text="{svc:T open_in_map}" />
             <Button Text="{svc:T sale_action}" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" />
             <Button Text="{svc:T repay_title}" Style="{StaticResource BtnOutline}" Command="{Binding RepayCommand}" />
         </VerticalStackLayout>

@@ -32,7 +32,10 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
 
     public async Task InitializeAsync()
     {
-        if (await auth.TryRestoreAsync())
+        if (!await auth.TryRestoreAsync()) return;
+        if (AppLock.PinEnabled)
+            await Shell.Current.GoToAsync("pin");
+        else
             await Shell.Current.GoToAsync("//home");
     }
 

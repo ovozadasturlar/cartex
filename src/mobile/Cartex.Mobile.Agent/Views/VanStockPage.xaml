@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.VanStockPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    x:DataType="vm:VanStockViewModel"
+    Title="{svc:T products}">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16,8,16,0" RowSpacing="10">
+        <Border Style="{StaticResource InputWrap}">
+            <Entry Placeholder="{svc:T search_product}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
+        </Border>
+        <Label Grid.Row="1" Text="{Binding TotalText}" Style="{StaticResource MutedLabel}" FontSize="12" Margin="4,0,0,0" />
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Items}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StockRow">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,10" Padding="14,12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="15"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{Binding PriceText}" Style="{StaticResource MutedLabel}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="{Binding QtyText}" VerticalOptions="Center" FontSize="14" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsOut}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label Text="{svc:T no_products}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,40,0,0" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

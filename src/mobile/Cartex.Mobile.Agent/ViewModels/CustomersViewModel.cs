@@ -17,6 +17,9 @@ public partial class CustomersViewModel(AgentDb db, SyncService sync) : Observab
 
     partial void OnSearchChanged(string value) => _ = LoadAsync();
 
+    [RelayCommand]
+    private Task AddAsync() => Shell.Current.GoToAsync("customer-new");
+
     public async Task AppearAsync()
     {
         _currency = await db.GetMetaAsync("base_currency") ?? "";

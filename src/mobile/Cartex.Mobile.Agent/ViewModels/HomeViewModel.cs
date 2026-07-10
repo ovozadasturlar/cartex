@@ -81,6 +81,9 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
 
     [RelayCommand]
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
+
+    [RelayCommand]
+    private Task OpenStockAsync() => Shell.Current.GoToAsync("vanstock");
 }
 
 public sealed record VisitRow(string Name, int OrderCount, decimal Total)

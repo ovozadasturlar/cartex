@@ -13,6 +13,7 @@
             <conv:NotEmptyConverter x:Key="NotEmpty" />
             <conv:PositiveConverter x:Key="Positive" />
             <conv:InvertConverter x:Key="Invert" />
+            <conv:DotFillConverter x:Key="DotFill" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
