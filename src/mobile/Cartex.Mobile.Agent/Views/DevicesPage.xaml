@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.DevicesPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    x:DataType="vm:DevicesViewModel"
+    Title="{svc:T devices}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20,18,20,24" Spacing="14">
+            <Border Style="{StaticResource Card}" Padding="18,20">
+                <VerticalStackLayout Spacing="12">
+                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 30" WidthRequest="60" HeightRequest="60"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
+                            HorizontalOptions="Center">
+                        <Label Text="📷" FontSize="26" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+                    <Label Text="{svc:T link_device_hint}" Style="{StaticResource MutedLabel}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="{svc:T link_device}" Style="{StaticResource BtnPrimary}" Command="{Binding OpenScanCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                    IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
+                <Label Text="{Binding Error}" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+            </Border>
+
+            <Label Text="{svc:T linked_devices}" Style="{StaticResource MutedLabel}" FontSize="12.5" Margin="6,4,0,-6" />
+            <Border Style="{StaticResource Card}" Padding="6,2">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Devices}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DeviceRow">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,11">
+                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                    <Label Text="{Binding Initial}" FontSize="15" FontAttributes="Bold"
+                                           HorizontalOptions="Center" VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="{Binding Name}" FontSize="14.5" FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="7,2" IsVisible="{Binding IsCurrent}"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                            <Label Text="{svc:T this_device}" FontSize="10.5" FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding SubLine}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2" Text="{svc:T device_revoke}" IsVisible="{Binding CanRevoke}"
+                                        BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
+                                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                        Command="{Binding RevokeCommand, Source={RelativeSource AncestorType={x:Type vm:DevicesViewModel}}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+            <Label Text="{svc:T no_devices}" Style="{StaticResource MutedLabel}" IsVisible="{Binding IsEmpty}"
+                   HorizontalOptions="Center" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

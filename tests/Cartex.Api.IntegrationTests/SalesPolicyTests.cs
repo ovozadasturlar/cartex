@@ -8,6 +8,7 @@ namespace Cartex.Api.IntegrationTests;
 public class SalesPolicyTests(CartexApiFactory factory)
 {
     private sealed record IdName(long Id, string Name);
+    private sealed record UserRow(long Id, string Username);
     private sealed record Product(long Id, long DefaultVariantId, string Name);
 
     private static Task<HttpResponseMessage> SetPolicyAsync(HttpClient client, string shiftPolicy, decimal maxDiscount) =>
@@ -54,6 +55,33 @@ public class SalesPolicyTests(CartexApiFactory factory)
         finally
         {
             (await SetPolicyAsync(admin, "CashOnly", 0)).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
+    public async Task Own_van_warehouse_cash_sale_needs_no_shift()
+    {
+        var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
+        await AuthHelper.EnsureNoOpenShiftAsync(admin);
+        var (warehouseId, variantId) = await LookupAsync(admin);
+        var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses");
+        var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users");
+        var adminId = users!.First(u => u.Username == "admin").Id;
+        try
+        {
+            var blocked = await SellAsync(admin, warehouseId, variantId, 100_000m);
+            Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+
+            (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
+                new { name = warehouses![0].Name, isOnline = false, assignedUserId = adminId })).EnsureSuccessStatusCode();
+
+            var response = await SellAsync(admin, warehouseId, variantId, 100_000m);
+            response.EnsureSuccessStatusCode();
+        }
+        finally
+        {
+            (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
+                new { name = warehouses![0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
         }
     }
 

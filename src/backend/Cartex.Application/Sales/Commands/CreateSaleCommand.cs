@@ -195,7 +195,7 @@ public sealed class CreateSaleCommandHandler(
         if (changeAmount > 0 && paidCard + paidBonus > totalAmount)
             throw new BusinessRuleException("Qaytim faqat naqd to'lovdan beriladi.");
 
-        var requiresShift = policy.ShiftPolicy switch
+        var requiresShift = warehouse.AssignedUserId != userId && policy.ShiftPolicy switch
         {
             "AllSales" => true,
             "Off" => false,

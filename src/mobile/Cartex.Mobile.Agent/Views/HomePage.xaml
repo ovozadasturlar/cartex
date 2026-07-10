@@ -106,24 +106,6 @@
                 <Button Grid.Column="1" Text="{svc:T orders}" Style="{StaticResource BtnOutline}" Command="{Binding OpenOrdersCommand}" />
             </Grid>
 
-            <Border Style="{StaticResource Card}">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
-                        <Label Text="{svc:T shift}" FontAttributes="Bold" FontSize="15"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                        <Label Text="{Binding ShiftText}" Style="{StaticResource MutedLabel}" />
-                    </VerticalStackLayout>
-                    <Button Grid.Column="1" Style="{StaticResource BtnOutline}" HeightRequest="42" FontSize="13"
-                            Command="{Binding ToggleShiftCommand}" Text="{svc:T shift_open_btn}">
-                        <Button.Triggers>
-                            <DataTrigger TargetType="Button" Binding="{Binding ShiftOpen}" Value="True">
-                                <Setter Property="Text" Value="{svc:T shift_close_btn}" />
-                            </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
-                </Grid>
-            </Border>
-
             <Label Text="{svc:T visit_today}" FontAttributes="Bold" FontSize="16" Margin="0,4,0,-4"
                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
             <Label Text="{svc:T no_visits}" Style="{StaticResource MutedLabel}" IsVisible="{Binding VisitsEmpty}" />

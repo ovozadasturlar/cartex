@@ -31,13 +31,13 @@
                 <VerticalStackLayout>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">
                         <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding OpenScanCommand}" />
+                            <TapGestureRecognizer Command="{Binding OpenDevicesCommand}" />
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Label Text="📷" FontSize="17" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Label Text="📱" FontSize="17" HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
-                        <Label Grid.Column="1" Text="{svc:T qr_scanner}" FontSize="15" VerticalOptions="Center"
+                        <Label Grid.Column="1" Text="{svc:T devices}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         <Label Grid.Column="2" Text="›" FontSize="22" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
@@ -121,6 +121,8 @@
                     FontSize="15" FontAttributes="Bold"
                     BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                     TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+            <Label Text="{Binding Footer}" Style="{StaticResource MutedLabel}" FontSize="11.5"
+                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

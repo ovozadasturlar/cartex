@@ -5,13 +5,14 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
     [ObservableProperty] private string _subtitle = "";
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _outboxBadge = "";
+    [ObservableProperty] private string _footer = "";
     [ObservableProperty] private bool _hasOutbox;
     [ObservableProperty] private bool _isBusy;
 
@@ -29,10 +30,11 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
         var errors = await db.CountOutboxAsync("error");
         HasOutbox = pending + errors > 0;
         OutboxBadge = errors > 0 ? $"{pending + errors}!" : pending.ToString();
+        Footer = $"Cartex Agent {AppInfo.Current.VersionString} • {session.ServerUrl}";
     }
 
     [RelayCommand]
-    private Task OpenScanAsync() => Shell.Current.GoToAsync("scan");
+    private Task OpenDevicesAsync() => Shell.Current.GoToAsync("devices");
 
     [RelayCommand]
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
