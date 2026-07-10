@@ -8,21 +8,23 @@
     x:DataType="vm:LoginViewModel"
     Shell.NavBarIsVisible="False">
     <Grid>
-        <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Start" Margin="0,14,0,0" Spacing="2">
-            <Button Text="O'z" Command="{Binding SetLanguageCommand}" CommandParameter="uz-latn"
-                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
-                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-            <Button Text="Ўз" Command="{Binding SetLanguageCommand}" CommandParameter="uz-cyrl"
-                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
-                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-            <Button Text="Ру" Command="{Binding SetLanguageCommand}" CommandParameter="ru"
-                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
-                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-            <Button Text="En" Command="{Binding SetLanguageCommand}" CommandParameter="en"
-                    BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
-                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-        </HorizontalStackLayout>
-        <ScrollView>
+        <VerticalStackLayout VerticalOptions="Center" Spacing="16" IsVisible="{Binding IsChecking}">
+            <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
+                   WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
+            <ActivityIndicator IsRunning="{Binding IsChecking}"
+                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </VerticalStackLayout>
+        <Border HorizontalOptions="End" VerticalOptions="Start" Margin="0,14,20,0"
+                StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="14,7"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ChooseLanguageCommand}" />
+            </Border.GestureRecognizers>
+            <Label Text="{Binding LanguageShort}" FontSize="13" FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        </Border>
+        <ScrollView IsVisible="{Binding IsChecking, Converter={StaticResource Invert}}">
             <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
                 <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
                        WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
@@ -41,9 +43,14 @@
                     <Border Style="{StaticResource InputWrap}">
                         <Entry Placeholder="{svc:T login_username}" Text="{Binding Username}" ReturnType="Next" />
                     </Border>
-                    <Border Style="{StaticResource InputWrap}">
-                        <Entry Placeholder="{svc:T login_password}" Text="{Binding Password}" IsPassword="True"
-                               ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
+                    <Border Style="{StaticResource InputWrap}" Padding="14,2,6,2">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                            <Entry Placeholder="{svc:T login_password}" Text="{Binding Password}" IsPassword="{Binding HidePassword}"
+                                   ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
+                            <Button Grid.Column="1" Text="{Binding EyeGlyph}" BackgroundColor="Transparent" FontSize="17"
+                                    Padding="8,0" WidthRequest="42" Command="{Binding ToggleEyeCommand}"
+                                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        </Grid>
                     </Border>
                     <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
                             StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"

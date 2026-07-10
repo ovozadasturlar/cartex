@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cartex.ApiClient.Api;
 using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Common;
@@ -7,15 +8,18 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAttributable
+public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, SyncService sync) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _fullName = "";
+    [ObservableProperty] private string _initials = "";
     [ObservableProperty] private string? _phone;
     [ObservableProperty] private string? _address;
     [ObservableProperty] private string _debtText = "";
-    [ObservableProperty] private string? _limitText;
+    [ObservableProperty] private string _limitText = "—";
+    [ObservableProperty] private string _ordersCount = "0";
     [ObservableProperty] private string _staleText = "";
     [ObservableProperty] private bool _hasDebt;
+    [ObservableProperty] private bool _isBusy;
 
     private long _customerId;
 
@@ -31,6 +35,7 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         if (c is null) return;
         var currency = await db.GetMetaAsync("base_currency") ?? "";
         FullName = c.FullName;
+        Initials = string.Concat(c.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
         Phone = c.Phone;
         Address = c.Address;
         HasLocation = c is { Latitude: not null, Longitude: not null };
@@ -38,7 +43,8 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         _longitude = c.Longitude;
         HasDebt = c.DebtBalance > 0;
         DebtText = HasDebt ? BuildDebtText(c, currency) : Loc.Instance["no_debt"];
-        LimitText = c.CreditLimit > 0 ? string.Format(Loc.Instance["limit_fmt"], c.CreditLimit, currency) : null;
+        LimitText = c.CreditLimit > 0 ? $"{c.CreditLimit:N0} {currency}" : "—";
+        OrdersCount = (await db.GetOrdersAsync()).Count(o => o.CustomerId == _customerId).ToString();
         StaleText = string.Format(Loc.Instance["status_fmt"], await db.GetMetaAsync("last_sync") ?? "—");
     }
 
@@ -79,5 +85,31 @@ public partial class CustomerViewModel(AgentDb db) : ObservableObject, IQueryAtt
         if (Phone is { Length: > 0 } phone && PhoneDialer.Default.IsSupported)
             PhoneDialer.Default.Open(phone);
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task DeleteAsync()
+    {
+        if (IsBusy) return;
+        var page = Shell.Current.CurrentPage;
+        if (!await page.DisplayAlert(Loc.Instance["delete_customer"], Loc.Instance["delete_customer_confirm"],
+                Loc.Instance["delete_customer"], Loc.Instance["cancel"]))
+            return;
+        IsBusy = true;
+        try
+        {
+            await customersApi.DeleteAsync(_customerId);
+            await sync.SyncAsync();
+            Ui.Toast(Loc.Instance["customer_deleted"]);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is Refit.ApiException api ? SyncService.DescribeError(api) : Loc.Instance["err_no_connection"]);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

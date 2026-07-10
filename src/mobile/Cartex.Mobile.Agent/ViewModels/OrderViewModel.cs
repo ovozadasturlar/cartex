@@ -50,6 +50,9 @@ public partial class OrderViewModel(AgentDb db, SyncService sync) : ObservableOb
     }
 
     [RelayCommand]
+    private Task AddCustomerAsync() => Shell.Current.GoToAsync("customer-new");
+
+    [RelayCommand]
     private void SelectCustomer(LocalCustomer customer)
     {
         _customerId = customer.Id;

@@ -39,8 +39,8 @@
                     BackgroundColor="{Binding Filled, Converter={StaticResource DotFill}, ConverterParameter=4}" />
         </HorizontalStackLayout>
 
-        <Grid Grid.Row="3" RowDefinitions="72,72,72,72" ColumnDefinitions="*,*,*" RowSpacing="10" ColumnSpacing="10"
-              MaximumWidthRequest="300" HorizontalOptions="Center" VerticalOptions="End">
+        <Grid Grid.Row="3" RowDefinitions="76,76,76,76" ColumnDefinitions="*,*,*" RowSpacing="12" ColumnSpacing="12"
+              HorizontalOptions="Fill" VerticalOptions="End">
             <Button Text="1" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="1" />
             <Button Grid.Column="1" Text="2" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="2" />
             <Button Grid.Column="2" Text="3" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="3" />

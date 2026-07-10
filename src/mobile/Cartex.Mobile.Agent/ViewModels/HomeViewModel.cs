@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,6 +10,7 @@ namespace Cartex.Mobile.Agent.ViewModels;
 public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthService auth) : ObservableObject
 {
     public ObservableCollection<VisitRow> Visits { get; } = [];
+    public ObservableCollection<DayBar> WeekBars { get; } = [];
 
     [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
@@ -18,6 +20,8 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     [ObservableProperty] private int _yesterdayOrders;
     [ObservableProperty] private int _yesterdayDelivered;
     [ObservableProperty] private int _errorCount;
+    [ObservableProperty] private string _week7Total = "0";
+    [ObservableProperty] private string _vanValue = "0";
     [ObservableProperty] private bool _visitsEmpty;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
@@ -48,6 +52,20 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
         PendingDeliveries = pending.Count;
         YesterdayOrders = orders.Count(o => o.CreatedAt.Date == yesterday);
         YesterdayDelivered = orders.Count(o => o.DeliveredAt?.Date == yesterday);
+
+        var stock = await db.GetVanStockAsync();
+        VanValue = stock.Sum(s => s.Quantity * s.SellingPrice).ToString("N0");
+
+        var days = Enumerable.Range(0, 7).Select(i => DateTime.Today.AddDays(i - 6)).ToList();
+        var sums = days.Select(d => orders.Where(o => o.CreatedAt.Date == d).Sum(o => o.Total)).ToList();
+        var max = sums.Max();
+        Week7Total = sums.Sum().ToString("N0");
+        WeekBars.Clear();
+        for (var i = 0; i < 7; i++)
+            WeekBars.Add(new DayBar(
+                days[i].ToString("ddd", CultureInfo.CurrentUICulture)[..1].ToUpperInvariant(),
+                max == 0 ? 6 : 6 + (double)(sums[i] / max) * 66,
+                max > 0 && sums[i] == max));
 
         Visits.Clear();
         foreach (var g in pending.GroupBy(o => o.CustomerName).OrderBy(g => g.Key))
@@ -93,6 +111,8 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     [RelayCommand]
     private Task OpenStockAsync() => Shell.Current.GoToAsync("vanstock");
 }
+
+public sealed record DayBar(string Day, double Height, bool IsMax);
 
 public sealed record VisitRow(string Name, int OrderCount, decimal Total)
 {

@@ -26,6 +26,10 @@
     <Color x:Key="InkDark">#F3F4F6</Color>
     <Color x:Key="Muted">#6B7280</Color>
     <Color x:Key="MutedDark">#9CA3AF</Color>
+    <Color x:Key="Info">#0EA5E9</Color>
+    <Color x:Key="InfoDark">#38BDF8</Color>
+    <Color x:Key="InfoBg">#E0F2FE</Color>
+    <Color x:Key="InfoBgDark">#0C2A3A</Color>
     <Color x:Key="Danger">#DC2626</Color>
     <Color x:Key="DangerDark">#F87171</Color>
     <Color x:Key="DangerBg">#FEE2E2</Color>
@@ -49,6 +53,10 @@
     <SolidColorBrush x:Key="SecondaryDarkTextBrush" Color="{StaticResource SecondaryDarkText}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource Info}"/>
+    <SolidColorBrush x:Key="InfoDarkBrush" Color="{StaticResource InfoDark}"/>
+    <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource Warn}"/>
+    <SolidColorBrush x:Key="WarnDarkBrush" Color="{StaticResource WarnDark}"/>
     <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
     <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
 

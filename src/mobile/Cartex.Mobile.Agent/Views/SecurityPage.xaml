@@ -42,6 +42,24 @@
                         <Switch Grid.Column="2" IsToggled="{Binding BioEnabled}" VerticalOptions="Center"
                                 OnColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                     </Grid>
+                    <BoxView HeightRequest="1" Margin="58,0,10,0" IsVisible="{Binding PinOn}"
+                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12" Padding="10,12" IsVisible="{Binding PinOn}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ChooseLockAfterCommand}" />
+                        </Grid.GestureRecognizers>
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                            <Path Data="{StaticResource IcSync}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
+                                  HorizontalOptions="Center" VerticalOptions="Center"
+                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                        </Border>
+                        <Label Grid.Column="1" Text="{svc:T lock_after}" FontSize="15" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Label Grid.Column="2" Text="{Binding LockAfterName}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        <Label Grid.Column="3" Text="›" FontSize="22" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                    </Grid>
                     <BoxView HeightRequest="1" Margin="58,0,10,0"
                              Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">

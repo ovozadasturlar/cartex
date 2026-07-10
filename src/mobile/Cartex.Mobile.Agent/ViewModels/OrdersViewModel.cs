@@ -15,8 +15,10 @@ public partial class OrdersViewModel(AgentDb db, SyncService sync) : ObservableO
 
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _showLoad;
-    [ObservableProperty] private bool _ordersEmpty;
-    [ObservableProperty] private bool _loadEmpty;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private int _deliveredCount;
+    [ObservableProperty] private int _pendingCount;
+    [ObservableProperty] private string _loadKindsText = "";
 
     private string _currency = "";
 
@@ -30,7 +32,9 @@ public partial class OrdersViewModel(AgentDb db, SyncService sync) : ObservableO
         Orders.Clear();
         foreach (var o in orders)
             Orders.Add(new OrderRow(o, _currency));
-        OrdersEmpty = Orders.Count == 0;
+        TotalCount = orders.Count;
+        DeliveredCount = orders.Count(o => o.Status == "delivered");
+        PendingCount = TotalCount - DeliveredCount;
 
         var agg = new Dictionary<long, LoadRow>();
         foreach (var o in orders.Where(o => o.Status != "delivered"))
@@ -47,7 +51,7 @@ public partial class OrdersViewModel(AgentDb db, SyncService sync) : ObservableO
         Load.Clear();
         foreach (var r in agg.Values.OrderBy(r => r.Name))
             Load.Add(r);
-        LoadEmpty = Load.Count == 0;
+        LoadKindsText = $"{Load.Count} {Loc.Instance["load_kinds"]}";
     }
 
     [RelayCommand]

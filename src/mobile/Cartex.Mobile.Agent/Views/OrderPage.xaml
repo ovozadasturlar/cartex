@@ -11,14 +11,24 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
 
-            <Border Style="{StaticResource InputWrap}">
-                <Border.Triggers>
-                    <DataTrigger TargetType="Border" Binding="{Binding HasCustomer}" Value="True">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Grid.Triggers>
+                    <DataTrigger TargetType="Grid" Binding="{Binding HasCustomer}" Value="True">
                         <Setter Property="IsVisible" Value="False" />
                     </DataTrigger>
-                </Border.Triggers>
-                <Entry Placeholder="{svc:T search_customer}" Text="{Binding CustomerSearch}" ClearButtonVisibility="WhileEditing" />
-            </Border>
+                </Grid.Triggers>
+                <Border Style="{StaticResource InputWrap}">
+                    <Entry Placeholder="{svc:T search_customer}" Text="{Binding CustomerSearch}" ClearButtonVisibility="WhileEditing" />
+                </Border>
+                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 14" WidthRequest="48"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding AddCustomerCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="+" FontSize="26" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+                </Border>
+            </Grid>
             <Border Style="{StaticResource Card}" Padding="6" IsVisible="{Binding HasCustomerResults}">
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding CustomerResults}">
                     <BindableLayout.ItemTemplate>

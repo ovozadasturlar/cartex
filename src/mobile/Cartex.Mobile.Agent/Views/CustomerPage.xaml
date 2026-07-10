@@ -8,39 +8,75 @@
     x:DataType="vm:CustomerViewModel"
     Title="{svc:T customer_title}">
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="14">
-            <Label Text="{Binding FullName}" Style="{StaticResource H1}" />
-            <Label Text="{Binding StaleText}" Style="{StaticResource MutedLabel}" Margin="0,-10,0,0" />
-            <Border Style="{StaticResource Card}">
-                <VerticalStackLayout Spacing="6">
-                    <Label Text="{svc:T debt}" Style="{StaticResource MutedLabel}" />
-                    <Label Text="{Binding DebtText}" FontSize="24" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding HasDebt}" Value="True">
-                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
-                    <Label Text="{Binding LimitText}" Style="{StaticResource MutedLabel}"
-                           IsVisible="{Binding LimitText, Converter={StaticResource NotEmpty}}" />
-                </VerticalStackLayout>
+        <VerticalStackLayout Padding="20,24,20,24" Spacing="14">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 44" WidthRequest="88" HeightRequest="88"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
+                    HorizontalOptions="Center">
+                <Label Text="{Binding Initials}" FontSize="32" FontAttributes="Bold"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
             </Border>
-            <Border Style="{StaticResource Card}">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="{Binding Phone}" FontSize="15"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding CallCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" />
-                </VerticalStackLayout>
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{Binding FullName}" Style="{StaticResource H1}" FontSize="23"
+                       HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                <Label Text="{Binding Phone}" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                       IsVisible="{Binding Phone, Converter={StaticResource NotEmpty}}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding CallCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Text="{Binding Address}" Style="{StaticResource MutedLabel}" FontSize="14"
+                       HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                       IsVisible="{Binding Address, Converter={StaticResource NotEmpty}}" />
+            </VerticalStackLayout>
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="16,8" HorizontalOptions="Center"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
+                    IsVisible="{Binding HasLocation}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenMapCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{svc:T open_in_map}" FontSize="13.5" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
             </Border>
-            <Button Style="{StaticResource BtnOutline}" Command="{Binding OpenMapCommand}" IsVisible="{Binding HasLocation}"
-                    Text="{svc:T open_in_map}" />
-            <Button Text="{svc:T sale_action}" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" />
+            <Border Style="{StaticResource Card}" Padding="8,16">
+                <Grid ColumnDefinitions="*,1,*,1,*">
+                    <VerticalStackLayout Spacing="4" Padding="6,0">
+                        <Label Text="{svc:T debt}" Style="{StaticResource MutedLabel}" FontSize="12" HorizontalOptions="Center" />
+                        <Label Text="{Binding DebtText}" FontSize="15" FontAttributes="Bold"
+                               HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding HasDebt}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </VerticalStackLayout>
+                    <BoxView Grid.Column="1" WidthRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+                    <VerticalStackLayout Grid.Column="2" Spacing="4" Padding="6,0">
+                        <Label Text="{svc:T credit_limit}" Style="{StaticResource MutedLabel}" FontSize="12" HorizontalOptions="Center" />
+                        <Label Text="{Binding LimitText}" FontSize="15" FontAttributes="Bold"
+                               HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    </VerticalStackLayout>
+                    <BoxView Grid.Column="3" WidthRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+                    <VerticalStackLayout Grid.Column="4" Spacing="4" Padding="6,0">
+                        <Label Text="{svc:T orders}" Style="{StaticResource MutedLabel}" FontSize="12" HorizontalOptions="Center" />
+                        <Label Text="{Binding OrdersCount}" FontSize="15" FontAttributes="Bold" HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+            <Label Text="{Binding StaleText}" Style="{StaticResource MutedLabel}" FontSize="12" HorizontalOptions="Center" />
+            <Button Text="{svc:T sale_action}" Style="{StaticResource BtnPrimary}" Command="{Binding SaleCommand}" Margin="0,6,0,0" />
             <Button Text="{svc:T repay_title}" Style="{StaticResource BtnOutline}" Command="{Binding RepayCommand}" />
+            <Button Text="{svc:T delete_customer}" Style="{StaticResource BtnOutline}" Command="{Binding DeleteCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" Margin="0,18,0,0"
+                    TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                    BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

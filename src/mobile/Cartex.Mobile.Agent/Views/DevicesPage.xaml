@@ -9,14 +9,10 @@
     Title="{svc:T devices}">
     <ScrollView>
         <VerticalStackLayout Padding="20,18,20,24" Spacing="14">
-            <Border Style="{StaticResource Card}" Padding="18,20">
-                <VerticalStackLayout Spacing="12">
-                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 30" WidthRequest="60" HeightRequest="60"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
-                            HorizontalOptions="Center">
-                        <Label Text="📷" FontSize="26" HorizontalOptions="Center" VerticalOptions="Center" />
-                    </Border>
-                    <Label Text="{svc:T link_device_hint}" Style="{StaticResource MutedLabel}"
+            <Border Style="{StaticResource Card}" Padding="18,24">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="💻" FontSize="52" HorizontalOptions="Center" />
+                    <Label Text="{svc:T link_device_hint}" Style="{StaticResource MutedLabel}" FontSize="13.5"
                            HorizontalTextAlignment="Center" />
                     <Button Text="{svc:T link_device}" Style="{StaticResource BtnPrimary}" Command="{Binding OpenScanCommand}" />
                 </VerticalStackLayout>
@@ -29,31 +25,56 @@
                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             </Border>
 
-            <Label Text="{svc:T linked_devices}" Style="{StaticResource MutedLabel}" FontSize="12.5" Margin="6,4,0,-6" />
-            <Border Style="{StaticResource Card}" Padding="6,2">
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Devices}">
+            <Label Text="{svc:T this_device}" Style="{StaticResource MutedLabel}" FontSize="12.5" Margin="6,4,0,-6"
+                   IsVisible="{Binding Current, Converter={StaticResource NotEmpty}}" />
+            <Border Style="{StaticResource Card}" Padding="6,2" IsVisible="{Binding Current, Converter={StaticResource NotEmpty}}">
+                <VerticalStackLayout>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="10,12">
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 20" WidthRequest="40" HeightRequest="40"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                            <Path Data="{StaticResource IcDevices}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
+                                  HorizontalOptions="Center" VerticalOptions="Center" Fill="White" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding Current.Name}" FontSize="14.5" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding Current.SubLine}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <BoxView HeightRequest="1" Margin="62,0,10,0"
+                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                             IsVisible="{Binding HasOthers}" />
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="10,13" IsVisible="{Binding HasOthers}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding TerminateOthersCommand}" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="✋" FontSize="19" WidthRequest="40" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{svc:T terminate_all}" FontSize="15" FontAttributes="Bold" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+            <Label Text="{svc:T terminate_all_hint}" Style="{StaticResource MutedLabel}" FontSize="11.5" Margin="6,-6,6,0"
+                   IsVisible="{Binding HasOthers}" />
+
+            <Label Text="{svc:T active_sessions}" Style="{StaticResource MutedLabel}" FontSize="12.5" Margin="6,4,0,-6"
+                   IsVisible="{Binding HasOthers}" />
+            <Border Style="{StaticResource Card}" Padding="6,2" IsVisible="{Binding HasOthers}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Others}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:DeviceRow">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,11">
-                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
-                                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                    <Label Text="{Binding Initial}" FontSize="15" FontAttributes="Bold"
-                                           HorizontalOptions="Center" VerticalOptions="Center"
-                                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
+                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 20" WidthRequest="40" HeightRequest="40"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource Info}}">
+                                    <Path Data="{StaticResource IcDevices}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
+                                          HorizontalOptions="Center" VerticalOptions="Center" Fill="White" />
                                 </Border>
                                 <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                    <HorizontalStackLayout Spacing="8">
-                                        <Label Text="{Binding Name}" FontSize="14.5" FontAttributes="Bold" LineBreakMode="TailTruncation"
-                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="7,2" IsVisible="{Binding IsCurrent}"
-                                                BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                            <Label Text="{svc:T this_device}" FontSize="10.5" FontAttributes="Bold"
-                                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
-                                        </Border>
-                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding Name}" FontSize="14.5" FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                     <Label Text="{Binding SubLine}" Style="{StaticResource MutedLabel}" FontSize="12" />
                                 </VerticalStackLayout>
-                                <Button Grid.Column="2" Text="{svc:T device_revoke}" IsVisible="{Binding CanRevoke}"
+                                <Button Grid.Column="2" Text="{svc:T device_revoke}"
                                         BackgroundColor="Transparent" FontSize="13" Padding="10,0" HeightRequest="34"
                                         TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                                         Command="{Binding RevokeCommand, Source={RelativeSource AncestorType={x:Type vm:DevicesViewModel}}}"
@@ -63,8 +84,6 @@
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
             </Border>
-            <Label Text="{svc:T no_devices}" Style="{StaticResource MutedLabel}" IsVisible="{Binding IsEmpty}"
-                   HorizontalOptions="Center" />
 
             <ActivityIndicator IsRunning="{Binding IsBusy}"
                                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />

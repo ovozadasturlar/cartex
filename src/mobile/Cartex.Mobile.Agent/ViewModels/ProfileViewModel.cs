@@ -91,7 +91,9 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
         await Loc.Instance.SetLanguageAsync(LangCodes[index]);
-        await AppearAsync();
+        var window = Application.Current!.Windows[0];
+        window.Page = new AppShell();
+        await Shell.Current.GoToAsync("//profile");
     }
 
     [RelayCommand]

@@ -16,6 +16,12 @@ public static class AppLock
 
     public static void SetBiometric(bool enabled) => Preferences.Set("bio_enabled", enabled);
 
+    public static int LockAfterSeconds
+    {
+        get => Preferences.Get("lock_after", 0);
+        set => Preferences.Set("lock_after", value);
+    }
+
     public static void Disable()
     {
         Preferences.Set("pin_enabled", false);

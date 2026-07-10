@@ -10,7 +10,10 @@ namespace Cartex.Mobile.Agent.ViewModels;
 public partial class DevicesViewModel(ISessionsApi sessionsApi, MobileAuthService auth) : ObservableObject
 {
     public ObservableCollection<DeviceRow> Devices { get; } = [];
+    public ObservableCollection<DeviceRow> Others { get; } = [];
 
+    [ObservableProperty] private DeviceRow? _current;
+    [ObservableProperty] private bool _hasOthers;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isEmpty;
     [ObservableProperty] private string? _error;
@@ -23,8 +26,13 @@ public partial class DevicesViewModel(ISessionsApi sessionsApi, MobileAuthServic
         {
             var sessions = await sessionsApi.GetSessionsAsync();
             Devices.Clear();
+            Others.Clear();
             foreach (var s in sessions.OrderByDescending(s => s.LastUsedAt))
                 Devices.Add(new DeviceRow(s, s.DeviceName == auth.DeviceName));
+            Current = Devices.FirstOrDefault(d => d.IsCurrent);
+            foreach (var d in Devices.Where(d => !d.IsCurrent))
+                Others.Add(d);
+            HasOthers = Others.Count > 0;
             IsEmpty = Devices.Count == 0;
         }
         catch (Exception ex)
@@ -38,7 +46,31 @@ public partial class DevicesViewModel(ISessionsApi sessionsApi, MobileAuthServic
     }
 
     [RelayCommand]
-    private Task OpenScanAsync() => Shell.Current.GoToAsync("scan");
+    private async Task OpenScanAsync()
+    {
+        var status = await Permissions.RequestAsync<Permissions.Camera>();
+        if (status != PermissionStatus.Granted)
+        {
+            Ui.Toast(Loc.Instance["camera_permission"]);
+            return;
+        }
+        await Shell.Current.GoToAsync("scan");
+    }
+
+    [RelayCommand]
+    private async Task TerminateOthersAsync()
+    {
+        var page = Shell.Current.CurrentPage;
+        if (!await page.DisplayAlert(Loc.Instance["terminate_all"], Loc.Instance["terminate_all_confirm"],
+                Loc.Instance["terminate_all"], Loc.Instance["cancel"]))
+            return;
+        foreach (var row in Devices.Where(d => !d.IsCurrent).ToList())
+        {
+            try { await sessionsApi.RevokeSessionAsync(row.Session.Id); } catch { }
+        }
+        Ui.Toast(Loc.Instance["device_revoked"]);
+        await AppearAsync();
+    }
 
     [RelayCommand]
     private async Task RevokeAsync(DeviceRow row)

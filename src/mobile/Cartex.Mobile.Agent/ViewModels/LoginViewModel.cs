@@ -13,7 +13,15 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [ObservableProperty] private string _password = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isServerVisible;
+    [ObservableProperty] private bool _isChecking = true;
+    [ObservableProperty] private bool _hidePassword = true;
+    [ObservableProperty] private string _eyeGlyph = "👁";
+    [ObservableProperty] private string _languageShort = "";
     [ObservableProperty] private string? _error;
+
+    private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
+    private static readonly string[] LangShorts = ["O'z", "Ўз", "Ру", "En"];
+    private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
 
     public string ServerText => $"{Loc.Instance["server"]}: {ServerUrl}";
 
@@ -23,20 +31,45 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     private void ToggleServer() => IsServerVisible = !IsServerVisible;
 
     [RelayCommand]
+    private void ToggleEye()
+    {
+        HidePassword = !HidePassword;
+        EyeGlyph = HidePassword ? "👁" : "🙈";
+    }
+
+    [RelayCommand]
+    private async Task ChooseLanguageAsync()
+    {
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+            Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
+        var index = Array.IndexOf(LangNames, choice);
+        if (index < 0) return;
+        await SetLanguageAsync(LangCodes[index]);
+    }
+
     private async Task SetLanguageAsync(string code)
     {
         await Loc.Instance.SetLanguageAsync(code);
         Error = null;
+        LanguageShort = LangShorts[Math.Max(0, Array.IndexOf(LangCodes, code))];
         OnPropertyChanged(nameof(ServerText));
     }
 
     public async Task InitializeAsync()
     {
-        if (!await auth.TryRestoreAsync()) return;
-        if (AppLock.PinEnabled)
-            await Shell.Current.GoToAsync("pin");
-        else
-            await Shell.Current.GoToAsync("//home");
+        LanguageShort = LangShorts[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
+        try
+        {
+            if (!await auth.TryRestoreAsync()) return;
+            if (AppLock.PinEnabled)
+                await Shell.Current.GoToAsync("pin");
+            else
+                await Shell.Current.GoToAsync("//home");
+        }
+        finally
+        {
+            IsChecking = false;
+        }
     }
 
     [RelayCommand]

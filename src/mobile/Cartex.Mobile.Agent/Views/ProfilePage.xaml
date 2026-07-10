@@ -144,13 +144,13 @@
                 </VerticalStackLayout>
             </Border>
 
-            <Button Text="{svc:T logout}" Command="{Binding LogoutCommand}" Margin="0,8,0,0"
+            <Label Text="{Binding Footer}" Style="{StaticResource MutedLabel}" FontSize="11.5" Margin="0,6,0,0"
+                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+            <Button Text="{svc:T logout}" Command="{Binding LogoutCommand}"
                     BackgroundColor="Transparent" BorderWidth="1.4" CornerRadius="14" HeightRequest="48"
                     FontSize="15" FontAttributes="Bold"
                     BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                     TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-            <Label Text="{Binding Footer}" Style="{StaticResource MutedLabel}" FontSize="11.5"
-                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
