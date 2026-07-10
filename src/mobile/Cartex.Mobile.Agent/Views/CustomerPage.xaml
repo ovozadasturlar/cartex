@@ -22,13 +22,8 @@
                             </DataTrigger>
                         </Label.Triggers>
                     </Label>
-                    <Label Text="{Binding LimitText}" Style="{StaticResource MutedLabel}">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding LimitText}" Value="{x:Null}">
-                                <Setter Property="IsVisible" Value="False" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
+                    <Label Text="{Binding LimitText}" Style="{StaticResource MutedLabel}"
+                           IsVisible="{Binding LimitText, Converter={StaticResource NotEmpty}}" />
                 </VerticalStackLayout>
             </Border>
             <Border Style="{StaticResource Card}">

@@ -94,32 +94,19 @@
                         <Button Text="{svc:T on_credit}" Style="{StaticResource BtnOutline}" HeightRequest="40" FontSize="13" Command="{Binding FullDebtCommand}" />
                     </HorizontalStackLayout>
                     <Label Text="{Binding DebtInfo}" FontSize="14" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding DebtInfo}" Value="{x:Null}">
-                                <Setter Property="IsVisible" Value="False" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
+                           IsVisible="{Binding DebtInfo, Converter={StaticResource NotEmpty}}"
+                           TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
                 </VerticalStackLayout>
             </Border>
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
-                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
-                <Border.Triggers>
-                    <DataTrigger TargetType="Border" Binding="{Binding CreditWarning}" Value="{x:Null}">
-                        <Setter Property="IsVisible" Value="False" />
-                    </DataTrigger>
-                </Border.Triggers>
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                    IsVisible="{Binding CreditWarning, Converter={StaticResource NotEmpty}}">
                 <Label Text="{Binding CreditWarning}" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
             </Border>
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
-                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
-                <Border.Triggers>
-                    <DataTrigger TargetType="Border" Binding="{Binding Error}" Value="{x:Null}">
-                        <Setter Property="IsVisible" Value="False" />
-                    </DataTrigger>
-                </Border.Triggers>
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                    IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
                 <Label Text="{Binding Error}" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             </Border>

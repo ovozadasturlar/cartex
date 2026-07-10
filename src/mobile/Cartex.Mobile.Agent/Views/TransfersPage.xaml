@@ -9,12 +9,8 @@
     Title="{svc:T transfers_title}">
     <Grid RowDefinitions="Auto,Auto,*" Padding="16,8,16,0" RowSpacing="10">
         <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
-                StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
-            <Border.Triggers>
-                <DataTrigger TargetType="Border" Binding="{Binding Error}" Value="{x:Null}">
-                    <Setter Property="IsVisible" Value="False" />
-                </DataTrigger>
-            </Border.Triggers>
+                StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
             <Label Text="{Binding Error}" FontSize="13"
                    TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
         </Border>

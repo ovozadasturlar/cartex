@@ -2,6 +2,7 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:Cartex.Mobile.Agent"
+             xmlns:conv="clr-namespace:Cartex.Mobile.Agent.Converters"
              x:Class="Cartex.Mobile.Agent.App">
     <Application.Resources>
         <ResourceDictionary>
@@ -9,6 +10,7 @@
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <conv:NotEmptyConverter x:Key="NotEmpty" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

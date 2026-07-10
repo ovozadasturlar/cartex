@@ -40,12 +40,8 @@
                                ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
                     </Border>
                     <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
-                            StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10">
-                        <Border.Triggers>
-                            <DataTrigger TargetType="Border" Binding="{Binding Error}" Value="{x:Null}">
-                                <Setter Property="IsVisible" Value="False" />
-                            </DataTrigger>
-                        </Border.Triggers>
+                            StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                            IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
                         <Label Text="{Binding Error}" FontSize="13"
                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
                     </Border>
