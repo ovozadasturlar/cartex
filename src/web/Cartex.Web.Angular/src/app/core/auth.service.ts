@@ -9,6 +9,16 @@ interface LoginResponse {
   role: string;
 }
 
+export interface QrStartResponse {
+  code: string;
+  expiresInSeconds: number;
+}
+
+export interface LoginMethods {
+  qrEnabled: boolean;
+  keyEnabled: boolean;
+}
+
 export interface UserInfo {
   userId: number;
   username: string;
@@ -72,6 +82,23 @@ export class AuthService {
       this.http.post<LoginResponse>('/api/auth/login', { username, password, deviceName: 'Web' }),
     );
     this.apply(res, rememberMe);
+  }
+
+  loginMethods(): Promise<LoginMethods> {
+    return firstValueFrom(this.http.get<LoginMethods>('/api/auth/login-methods'));
+  }
+
+  startQr(): Promise<QrStartResponse> {
+    return firstValueFrom(this.http.post<QrStartResponse>('/api/auth/qr/start', {}));
+  }
+
+  async pollQr(code: string): Promise<boolean> {
+    const res = await firstValueFrom(
+      this.http.post<LoginResponse | null>('/api/auth/qr/poll', { code, deviceName: 'Web' }),
+    );
+    if (!res) return false;
+    this.apply(res, false);
+    return true;
   }
 
   async ensureFreshToken(): Promise<string | null> {

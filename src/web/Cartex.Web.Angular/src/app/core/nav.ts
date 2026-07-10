@@ -85,8 +85,7 @@ export const SETTINGS_SECTIONS: NavSection[] = [
   {
     labelKey: 'settings_developer',
     items: [
-      { labelKey: 'license', icon: 'workspace_premium', route: '/settings/license', permission: 'settings.manage' },
-      { labelKey: 'features', icon: 'toggle_on', route: '/settings/features', permission: 'features.manage' },
+      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'settings.manage' },
       { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.manage' },
     ],
   },

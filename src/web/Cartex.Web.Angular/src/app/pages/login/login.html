@@ -5,23 +5,40 @@
       <h1>Cartex POS</h1>
       <p>{{ t('login') }}</p>
     </div>
-    <form (ngSubmit)="submit()">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>{{ t('username') }}</mat-label>
-        <input matInput name="username" [(ngModel)]="username" autocomplete="username" autofocus />
-      </mat-form-field>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>{{ t('password') }}</mat-label>
-        <input matInput name="password" type="password" [(ngModel)]="password" autocomplete="current-password" />
-      </mat-form-field>
-      <mat-checkbox name="rememberMe" [(ngModel)]="rememberMe">{{ t('remember_me') }}</mat-checkbox>
-      @if (error(); as key) {
-        <p class="error">{{ t(key) }}</p>
-      }
-      <button matButton="filled" type="submit" [disabled]="busy()">{{ t('login') }}</button>
-      @if (busy()) {
-        <mat-progress-bar mode="indeterminate" />
-      }
-    </form>
+    @if (qrOpen()) {
+      <div class="qr-panel">
+        <div class="qr-frame">
+          @if (qrDataUrl(); as src) {
+            <img [src]="src" alt="QR" />
+          } @else {
+            <mat-progress-bar mode="indeterminate" />
+          }
+        </div>
+        <p class="qr-hint">{{ t('qr_login_hint') }}</p>
+        <button matButton type="button" (click)="closeQr()">{{ t('back') }}</button>
+      </div>
+    } @else {
+      <form (ngSubmit)="submit()">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('username') }}</mat-label>
+          <input matInput name="username" [(ngModel)]="username" autocomplete="username" autofocus />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('password') }}</mat-label>
+          <input matInput name="password" type="password" [(ngModel)]="password" autocomplete="current-password" />
+        </mat-form-field>
+        <mat-checkbox name="rememberMe" [(ngModel)]="rememberMe">{{ t('remember_me') }}</mat-checkbox>
+        @if (error(); as key) {
+          <p class="error">{{ t(key) }}</p>
+        }
+        <button matButton="filled" type="submit" [disabled]="busy()">{{ t('login') }}</button>
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (qrAvailable()) {
+          <button matButton type="button" (click)="openQr()">{{ t('qr_login') }}</button>
+        }
+      </form>
+    }
   </div>
 </div>

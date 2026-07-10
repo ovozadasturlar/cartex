@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -7,8 +7,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
+import QRCode from 'qrcode';
 import { AuthService } from '../../core/auth.service';
 import { Logo } from '../../shared/logo';
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 @Component({
   selector: 'app-login',
@@ -25,7 +28,7 @@ import { Logo } from '../../shared/logo';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login {
+export class Login implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -34,6 +37,22 @@ export class Login {
   rememberMe = false;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly qrAvailable = signal(false);
+  readonly qrOpen = signal(false);
+  readonly qrDataUrl = signal<string | null>(null);
+  private qrSession = 0;
+
+  constructor() {
+    this.auth.loginMethods().then(
+      (m) => this.qrAvailable.set(m.qrEnabled),
+      () => {},
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.qrSession++;
+  }
 
   async submit(): Promise<void> {
     if (!this.username.trim() || !this.password || this.busy()) return;
@@ -46,6 +65,46 @@ export class Login {
       this.error.set('login_failed');
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  openQr(): void {
+    this.error.set(null);
+    this.qrOpen.set(true);
+    this.runQr(++this.qrSession);
+  }
+
+  closeQr(): void {
+    this.qrSession++;
+    this.qrOpen.set(false);
+    this.qrDataUrl.set(null);
+  }
+
+  private async runQr(session: number): Promise<void> {
+    while (session === this.qrSession) {
+      let start;
+      try {
+        start = await this.auth.startQr();
+      } catch {
+        await delay(3000);
+        continue;
+      }
+      if (session !== this.qrSession) return;
+      this.qrDataUrl.set(await QRCode.toDataURL(`cartexqr:${start.code}`, { width: 232, margin: 1 }));
+      const lifetime = Math.max(30, start.expiresInSeconds - 5) * 1000;
+      const issuedAt = Date.now();
+      while (session === this.qrSession && Date.now() - issuedAt < lifetime) {
+        await delay(2000);
+        if (session !== this.qrSession) return;
+        try {
+          if (await this.auth.pollQr(start.code)) {
+            if (session !== this.qrSession) return;
+            this.closeQr();
+            this.router.navigate(['/']);
+            return;
+          }
+        } catch {}
+      }
     }
   }
 }

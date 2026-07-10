@@ -489,6 +489,8 @@
   "provider": "Provider",
   "public_base_url": "Public base URL",
   "purchase_price": "Purchase Price",
+  "qr_login": "Sign in with QR code",
+  "qr_login_hint": "Scan the QR code with the app on your phone",
   "qr_refresh_hint": "The QR code on the login screen refreshes automatically at this interval (30-600 s)",
   "qr_refresh_seconds": "QR code refresh interval (seconds)",
   "qr_scan_hint": "Scan the QR code in the Cartex mobile app — this computer will log in automatically",

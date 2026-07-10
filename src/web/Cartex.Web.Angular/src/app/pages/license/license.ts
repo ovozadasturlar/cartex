@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,14 +6,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslocoModule } from '@jsverse/transloco';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { FeaturesApi } from '../../core/api/misc.api';
 import { LicenseApi, LicenseOptions, LicenseStatus } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
+
+interface FeatureRow {
+  code: string;
+  name: string;
+  impact: string;
+  isEnabled: boolean;
+}
 
 @Component({
   selector: 'app-license',
@@ -25,8 +32,8 @@ import { PageHeader } from '../../shared/page-header';
     MatInputModule,
     MatProgressBarModule,
     MatSelectModule,
+    MatSlideToggleModule,
     TranslocoModule,
-    CxDatePipe,
     PageHeader,
   ],
   templateUrl: './license.html',
@@ -34,21 +41,16 @@ import { PageHeader } from '../../shared/page-header';
 })
 export class License implements OnInit {
   private readonly api = inject(LicenseApi);
-  private readonly features = inject(FeaturesApi);
+  private readonly featuresApi = inject(FeaturesApi);
   private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
 
-  readonly canManage = inject(AuthService).hasPermission('settings.manage');
   readonly canFeatures = inject(AuthService).hasPermission('features.manage');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly status = signal<LicenseStatus | null>(null);
+  readonly rows = signal<FeatureRow[]>([]);
   readonly options = signal<LicenseOptions | null>(null);
-  readonly enabledNames = computed(() => {
-    const s = this.status();
-    const o = this.options();
-    if (!s || !o) return [];
-    return s.enabledFeatures.map((c) => o.features.find((f) => f.code === c)?.name ?? c);
-  });
 
   tariff = '';
   expires = '';
@@ -63,6 +65,17 @@ export class License implements OnInit {
       this.status.set(status);
       this.tariff = options.tariffs.includes(status.tariff) ? status.tariff : (options.tariffs[0] ?? '');
       this.expires = status.expiresAt?.slice(0, 10) ?? '';
+      const enabled = status.enabledFeatures.length
+        ? status.enabledFeatures
+        : options.features.filter((f) => f.includedTariffs.includes(status.tariff)).map((f) => f.code);
+      this.rows.set(
+        options.features.map((f) => ({
+          code: f.code,
+          name: f.name,
+          impact: f.permissions.length ? f.permissions.join(', ') : this.desc(f.code),
+          isEnabled: enabled.includes(f.code),
+        })),
+      );
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -70,12 +83,26 @@ export class License implements OnInit {
     }
   }
 
-  async save(message: string): Promise<void> {
+  onTariffChange(value: string): void {
     const options = this.options();
-    if (!options || !this.tariff) return;
+    if (!options) return;
+    this.rows.update((all) =>
+      all.map((r) => ({
+        ...r,
+        isEnabled: options.features.find((f) => f.code === r.code)?.includedTariffs.includes(value) ?? false,
+      })),
+    );
+  }
+
+  toggle(code: string, value: boolean): void {
+    this.rows.update((all) => all.map((r) => (r.code === code ? { ...r, isEnabled: value } : r)));
+  }
+
+  async save(message: string): Promise<void> {
+    if (!this.tariff) return;
     this.busy.set(true);
     try {
-      const codes = options.features.filter((f) => f.includedTariffs.includes(this.tariff)).map((f) => f.code);
+      const codes = this.rows().filter((r) => r.isEnabled).map((r) => r.code);
       await lastValueFrom(
         this.api.update({
           tariff: this.tariff,
@@ -84,8 +111,8 @@ export class License implements OnInit {
         }),
       );
       if (this.canFeatures) {
-        for (const f of options.features) {
-          await lastValueFrom(this.features.set(f.code, codes.includes(f.code)));
+        for (const r of this.rows()) {
+          await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
         }
       }
       this.status.set(await lastValueFrom(this.api.get()));
@@ -95,5 +122,11 @@ export class License implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private desc(code: string): string {
+    const key = `feature_effect_${code}`;
+    const value = this.transloco.translate(key);
+    return value === key ? '' : value;
   }
 }

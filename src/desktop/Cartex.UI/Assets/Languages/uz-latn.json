@@ -489,6 +489,8 @@
   "provider": "Provayder",
   "public_base_url": "Ommaviy bazaviy URL",
   "purchase_price": "Sotib olish narxi",
+  "qr_login": "QR kod bilan kirish",
+  "qr_login_hint": "Telefondagi ilova orqali QR kodni skanerlang",
   "qr_refresh_hint": "Login oynasidagi QR kod shu vaqtda avtomatik yangilanadi (30-600 soniya)",
   "qr_refresh_seconds": "QR kod yangilanish vaqti (soniya)",
   "qr_scan_hint": "Cartex mobil ilovasida QR kodni skanerlang — kompyuter avtomatik kiradi",

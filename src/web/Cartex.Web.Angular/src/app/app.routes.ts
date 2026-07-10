@@ -43,7 +43,7 @@ export const routes: Routes = [
           { path: 'rates', loadComponent: () => import('./pages/rates/rates').then((m) => m.Rates) },
           { path: 'audit', loadComponent: () => import('./pages/audit/audit').then((m) => m.Audit) },
           { path: 'license', loadComponent: () => import('./pages/license/license').then((m) => m.License) },
-          { path: 'features', loadComponent: () => import('./pages/features/features').then((m) => m.Features) },
+          { path: 'features', redirectTo: 'license' },
           { path: 'integrations', loadComponent: () => import('./pages/integrations/integrations').then((m) => m.Integrations) },
           { path: 'receipt-settings', loadComponent: () => import('./pages/receipt-settings/receipt-settings').then((m) => m.ReceiptSettings) },
         ],

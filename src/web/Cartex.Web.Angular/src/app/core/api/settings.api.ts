@@ -21,12 +21,6 @@ export interface LicenseOptions {
   features: LicenseFeature[];
 }
 
-export interface Feature {
-  code: string;
-  name: string;
-  isEnabled: boolean;
-}
-
 export interface TelegramSettings {
   enabled: boolean;
   chatId: string | null;
@@ -104,10 +98,6 @@ export class LicenseApi {
 @Injectable({ providedIn: 'root' })
 export class SettingsApi {
   private readonly http = inject(HttpClient);
-
-  allFeatures(): Observable<Feature[]> {
-    return this.http.get<Feature[]>('/api/features');
-  }
 
   get(): Observable<Settings> {
     return this.http.get<Settings>('/api/settings');
