@@ -18,9 +18,9 @@ html {
 }
 
 body {
-  --cx-brand: #166534;
-  --cx-brand-ink: #15803d;
-  --cx-brand-soft: rgb(22 101 52 / 8.2%);
+  --cx-brand: #255d3a;
+  --cx-brand-ink: #2e7448;
+  --cx-brand-soft: rgb(37 93 58 / 8.2%);
   --cx-app-bg: #f5f5f0;
   --cx-card: #ffffff;
   --cx-surface-2: #f1f5f9;
@@ -40,7 +40,25 @@ body {
   --cx-shadow-pop: 0 8px 24px rgb(0 0 0 / 13.3%);
   --cx-shadow-modal: 0 18px 50px rgb(0 0 0 / 20%);
 
+  --mat-form-field-outlined-focus-outline-color: var(--cx-brand);
+  --mat-form-field-outlined-focus-label-text-color: var(--cx-brand);
+  --mat-form-field-outlined-caret-color: var(--cx-brand);
+  --mat-checkbox-selected-icon-color: var(--cx-brand);
+  --mat-checkbox-selected-focus-icon-color: var(--cx-brand);
+  --mat-checkbox-selected-hover-icon-color: var(--cx-brand);
+  --mat-checkbox-selected-pressed-icon-color: var(--cx-brand);
+  --mat-checkbox-selected-checkmark-color: #fff;
+  --mat-slide-toggle-selected-track-color: var(--cx-brand);
+  --mat-slide-toggle-selected-focus-track-color: var(--cx-brand);
+  --mat-slide-toggle-selected-hover-track-color: var(--cx-brand);
+  --mat-slide-toggle-selected-pressed-track-color: var(--cx-brand);
+  --mat-slide-toggle-selected-handle-color: #fff;
+  --mat-slide-toggle-selected-focus-handle-color: #fff;
+  --mat-slide-toggle-selected-hover-handle-color: #fff;
+  --mat-slide-toggle-selected-pressed-handle-color: #fff;
+
   color-scheme: light;
+  accent-color: var(--cx-brand);
   background-color: var(--cx-app-bg);
   color: var(--cx-text-1);
   font-family: 'Segoe UI', system-ui, Roboto, sans-serif;
@@ -49,10 +67,17 @@ body {
   height: 100%;
 }
 
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--cx-brand);
+  outline-offset: -1px;
+}
+
 body.dark {
-  --cx-brand: #15803d;
-  --cx-brand-ink: #16a34a;
-  --cx-brand-soft: rgb(22 101 52 / 12.5%);
+  --cx-brand: #2e7448;
+  --cx-brand-ink: #398a57;
+  --cx-brand-soft: rgb(46 116 72 / 12.5%);
   --cx-app-bg: #111318;
   --cx-card: #1a1d24;
   --cx-surface-2: #2d3139;
@@ -223,6 +248,11 @@ mat-form-field {
   --mat-dialog-container-shape: 14px;
   --mat-dialog-container-color: var(--cx-card);
   --mat-dialog-container-elevation-shadow: var(--cx-shadow-modal);
+
+  .mdc-dialog__surface {
+    background: var(--cx-card);
+    box-shadow: var(--cx-shadow-modal);
+  }
 }
 
 .mat-mdc-menu-panel {
@@ -231,4 +261,8 @@ mat-form-field {
 
 .cdk-overlay-backdrop.cdk-overlay-dark-backdrop {
   background: rgb(0 0 0 / 18.8%);
+}
+
+body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell {
+  filter: blur(12px);
 }

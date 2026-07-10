@@ -11,10 +11,10 @@ const X_PATH =
     <span class="cx-logo" [style.height.px]="size()">
       <svg [attr.width]="width()" [attr.height]="size()" viewBox="0 0 751 529">
         <path [attr.d]="cPath" fill="currentColor" />
-        <path [attr.d]="xPath" fill="#255D3A" />
+        <path [attr.d]="xPath" fill="#255D3A" stroke="#255D3A" stroke-width="9" stroke-linejoin="round" />
       </svg>
       @if (wordmark()) {
-        <span class="cx-logo-text" [style.font-size.px]="size() * 0.56">CARTEX</span>
+        <span class="cx-logo-text" [style.font-size.px]="size() * 0.64">CARTEX</span>
       }
     </span>
   `,

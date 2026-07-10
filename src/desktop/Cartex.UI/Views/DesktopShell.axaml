@@ -87,7 +87,7 @@
                            Width="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            Height="{Binding IsSidebarCollapsed, Converter={x:Static conv:SidebarWidthConverter.LogoSize}}"
                            VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="CARTEX" FontSize="19" FontWeight="Bold"
+                    <TextBlock Grid.Column="1" Text="CARTEX" FontSize="22" FontWeight="Bold"
                                Margin="10,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource BrandPrimaryBrush}"
                                IsVisible="{Binding !IsSidebarCollapsed}" />

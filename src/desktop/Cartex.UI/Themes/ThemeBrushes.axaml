@@ -2,13 +2,13 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="SemiColorPrimary" Color="#15803D" />
-            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#16A34A" />
-            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#166534" />
-            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#14532D" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#2022C55E" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#3022C55E" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#4022C55E" />
+            <SolidColorBrush x:Key="SemiColorPrimary" Color="#2E7448" />
+            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#398A57" />
+            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#255D3A" />
+            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#1B4229" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#20398A57" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#30398A57" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#40398A57" />
             <SolidColorBrush x:Key="AppBg" Color="#111318" />
             <SolidColorBrush x:Key="SidebarBg" Color="#1A1D24" />
             <SolidColorBrush x:Key="CardBg" Color="#1A1D24" />
@@ -20,20 +20,20 @@
             <SolidColorBrush x:Key="InputBg" Color="#111318" />
             <SolidColorBrush x:Key="InputBorder" Color="#2D3139" />
             <SolidColorBrush x:Key="SidebarItemHover" Color="#2D3139" />
-            <SolidColorBrush x:Key="SidebarItemActive" Color="#20166534" />
+            <SolidColorBrush x:Key="SidebarItemActive" Color="#20255D3A" />
             <SolidColorBrush x:Key="SuccessBg" Color="#20059669" />
             <SolidColorBrush x:Key="DangerBg" Color="#20DC2626" />
             <SolidColorBrush x:Key="WarningBg" Color="#20F59E0B" />
             <SolidColorBrush x:Key="InfoBg" Color="#200EA5E9" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="SemiColorPrimary" Color="#166534" />
-            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#15803D" />
-            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#14532D" />
-            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#BBF7D0" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#F0FDF4" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#DCFCE7" />
-            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#BBF7D0" />
+            <SolidColorBrush x:Key="SemiColorPrimary" Color="#255D3A" />
+            <SolidColorBrush x:Key="SemiColorPrimaryPointerover" Color="#2E7448" />
+            <SolidColorBrush x:Key="SemiColorPrimaryActive" Color="#1B4229" />
+            <SolidColorBrush x:Key="SemiColorPrimaryDisabled" Color="#BFD8C9" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLight" Color="#EDF5F0" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightPointerover" Color="#DEEDE4" />
+            <SolidColorBrush x:Key="SemiColorPrimaryLightActive" Color="#BFD8C9" />
             <SolidColorBrush x:Key="AppBg" Color="#F5F5F0" />
             <SolidColorBrush x:Key="SidebarBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="CardBg" Color="#FFFFFF" />
@@ -45,7 +45,7 @@
             <SolidColorBrush x:Key="InputBg" Color="#FFFFFF" />
             <SolidColorBrush x:Key="InputBorder" Color="#CBD5E1" />
             <SolidColorBrush x:Key="SidebarItemHover" Color="#F1F5F9" />
-            <SolidColorBrush x:Key="SidebarItemActive" Color="#15166534" />
+            <SolidColorBrush x:Key="SidebarItemActive" Color="#15255D3A" />
             <SolidColorBrush x:Key="SuccessBg" Color="#15059669" />
             <SolidColorBrush x:Key="DangerBg" Color="#15DC2626" />
             <SolidColorBrush x:Key="WarningBg" Color="#15F59E0B" />

@@ -12,7 +12,7 @@
       --text: var(--tg-theme-text-color, #0f172a);
       --muted: var(--tg-theme-hint-color, #7c8698);
       --link: var(--tg-theme-link-color, #16a34a);
-      --brand: #16a34a;
+      --brand: #2e7448;
       --danger: #dc2626;
       --border: color-mix(in srgb, var(--text) 12%, transparent);
     }
@@ -92,12 +92,12 @@
     async function authenticate() {
       if (!tg || !tg.initData) throw new Error('no-init');
       const r = await fetch('/api/store/auth/telegram', { method:'POST',
-        headers:{'Content-Type':'application/json'}, body: JSON.stringify({ initData: tg.initData }) });
+        headers:{'Content-Type':'application/json','X-Client':'tma'}, body: JSON.stringify({ initData: tg.initData }) });
       if (!r.ok) throw new Error('auth-' + r.status);
       const d = await r.json(); token = d.token; fullName = d.fullName || '';
     }
     async function api(path, opts) {
-      opts = opts || {}; opts.headers = Object.assign({ Authorization:'Bearer ' + token }, opts.headers || {});
+      opts = opts || {}; opts.headers = Object.assign({ Authorization:'Bearer ' + token, 'X-Client':'tma' }, opts.headers || {});
       let r = await fetch(path, opts);
       if (r.status === 401) { await authenticate(); opts.headers.Authorization = 'Bearer ' + token; r = await fetch(path, opts); }
       return r;
@@ -146,7 +146,7 @@
 
     const LOGO = '<svg viewBox="0 0 751 529">'
       + '<path d="M245 24L267 24L299 28L316 32L351 45L389 68L407 83L427 104L426 107L367 172L355 158L333 138L317 128L293 118L275 114L246 113L210 121L183 135L170 145L153 162L137 185L128 204L122 223L118 249L118 271L123 301L132 325L144 346L155 360L179 382L201 395L232 405L246 407L282 405L300 400L325 388L344 374L366 350L429 413L423 422L401 443L365 468L342 479L317 488L271 496L224 494L184 484L145 466L129 456L107 438L89 420L74 401L64 386L50 359L37 321L30 280L31 232L41 185L62 138L87 103L120 71L158 47L193 33L213 28Z" fill="currentColor"/>'
-      + '<path d="M602 51L718 52L717 56L681 102L555 260L556 265L709 455L718 467L717 470L596 469L495 338L492 338L488 342L458 380L448 391L446 391L384 329L384 325L388 319L433 263L428 253L385 199L384 196L388 189L443 128L446 128L449 131L488 180L494 185Z" fill="#255D3A"/></svg>';
+      + '<path d="M602 51L718 52L717 56L681 102L555 260L556 265L709 455L718 467L717 470L596 469L495 338L492 338L488 342L458 380L448 391L446 391L384 329L384 325L388 319L433 263L428 253L385 199L384 196L388 189L443 128L446 128L449 131L488 180L494 185Z" fill="#255D3A" stroke="#255D3A" stroke-width="9" stroke-linejoin="round"/></svg>';
 
     async function boot() {
       if (tg) { tg.ready(); tg.expand(); }

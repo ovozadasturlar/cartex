@@ -1,9 +1,9 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Color x:Key="BrandPrimary">#166534</Color>
-    <Color x:Key="BrandPrimaryHover">#15803D</Color>
-    <Color x:Key="BrandLight">#DCFCE7</Color>
+    <Color x:Key="BrandPrimary">#255D3A</Color>
+    <Color x:Key="BrandPrimaryHover">#2E7448</Color>
+    <Color x:Key="BrandLight">#DEEDE4</Color>
     <Color x:Key="Success">#059669</Color>
     <Color x:Key="SuccessHover">#047857</Color>
     <Color x:Key="Danger">#DC2626</Color>
