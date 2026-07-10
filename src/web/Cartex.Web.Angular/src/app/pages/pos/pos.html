@@ -138,7 +138,7 @@
 
         <div class="lines">
           @for (line of cart(); track line.variantId) {
-            <div class="line">
+            <div class="line" [class.over]="isOver(line)">
               <div class="info">
                 <span class="name">{{ line.name }}</span>
                 <span class="price cx-money">{{ line.price | cxMoney }}</span>
@@ -215,11 +215,11 @@
             </div>
           </div>
 
-          @if (debt() > 0 && !customer()) {
-            <div class="warn-box">
-              <mat-icon>warning_amber</mat-icon>
-              <span>{{ t('debt_customer_required') }}</span>
-            </div>
+          @if (debt() > 0) {
+            <label class="due-date">
+              <span>{{ t('debt_due_date') }}</span>
+              <input type="date" [min]="minDueDate" [value]="dueDate()" (change)="onDueDate($event)" />
+            </label>
           }
           @if (overCreditLimit()) {
             <div class="warn-box">
@@ -228,7 +228,7 @@
             </div>
           }
 
-          <button matButton="filled" class="pay-btn" [disabled]="!canConfirm()" (click)="pay()">
+          <button matButton="filled" class="pay-btn" [disabled]="paying()" (click)="pay()">
             {{ t('complete_sale') }}
           </button>
         </div>

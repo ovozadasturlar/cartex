@@ -7,11 +7,21 @@ export class NotifyService {
   private readonly snack = inject(MatSnackBar);
 
   success(message: string): void {
-    this.snack.open(message, undefined, { duration: 2500 });
+    this.snack.open(message, undefined, {
+      duration: 2500,
+      horizontalPosition: 'right',
+      verticalPosition: 'top',
+      panelClass: 'cx-toast-ok',
+    });
   }
 
   error(err: unknown): void {
-    this.snack.open(describe(err), 'OK', { duration: 5000 });
+    this.snack.open(describe(err), 'OK', {
+      duration: 5000,
+      horizontalPosition: 'right',
+      verticalPosition: 'top',
+      panelClass: 'cx-toast-err',
+    });
   }
 }
 

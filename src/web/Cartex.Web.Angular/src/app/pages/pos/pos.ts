@@ -5,25 +5,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { Customer } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
-
-interface CartLine {
-  variantId: number;
-  name: string;
-  unitName: string;
-  price: number;
-  qty: number;
-}
+import { CartLine, PosCartState } from './pos-state';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
@@ -50,6 +43,8 @@ export class Pos implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
   private readonly wh = inject(WarehouseContextService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly state = inject(PosCartState);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -62,23 +57,25 @@ export class Pos implements OnInit {
   readonly tiles = signal<StockOnHand[]>([]);
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
-  readonly cart = signal<CartLine[]>([]);
-  readonly customer = signal<Customer | null>(null);
   readonly canOpenShift = this.auth.hasPermission('shifts.manage');
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
 
-  readonly cash = signal(0);
-  readonly card = signal(0);
-  readonly bonus = signal(0);
-  readonly discountPercent = signal(0);
+  readonly cart = this.state.cart;
+  readonly customer = this.state.customer;
+  readonly cash = this.state.cash;
+  readonly card = this.state.card;
+  readonly bonus = this.state.bonus;
+  readonly discountPercent = this.state.discountPercent;
+  readonly dueDate = this.state.dueDate;
   readonly paying = signal(false);
-  private readonly discountManual = signal(0);
-  private readonly discountByPercent = signal(true);
+  readonly minDueDate = isoDay(new Date());
 
   readonly subTotal = computed(() => this.cart().reduce((sum, l) => sum + l.price * l.qty, 0));
   readonly discount = computed(() => {
     const sub = this.subTotal();
-    const raw = this.discountByPercent() ? Math.round(sub * this.discountPercent()) / 100 : this.discountManual();
+    const raw = this.state.discountByPercent()
+      ? Math.round(sub * this.discountPercent()) / 100
+      : this.state.discountManual();
     return Math.min(sub, Math.max(0, raw));
   });
   readonly total = computed(() => Math.max(0, this.subTotal() - this.discount()));
@@ -88,12 +85,6 @@ export class Pos implements OnInit {
   readonly overCreditLimit = computed(() => {
     const c = this.customer();
     return !!c && c.creditLimit > 0 && c.debtBalance + this.debt() > c.creditLimit;
-  });
-  readonly canConfirm = computed(() => {
-    if (this.paying() || !this.cart().length) return false;
-    if (this.card() + this.bonus() > this.total()) return false;
-    if (this.bonus() > (this.customer()?.cashbackBalance ?? 0)) return false;
-    return this.debt() <= 0 || !!this.customer();
   });
 
   private search = '';
@@ -158,7 +149,18 @@ export class Pos implements OnInit {
   }
 
   addTile(t: StockOnHand): void {
-    this.addLine({ variantId: t.variantId, name: t.productName, unitName: t.unitName, price: t.sellingPrice, qty: 1 });
+    this.addLine({
+      variantId: t.variantId,
+      name: t.productName,
+      unitName: t.unitName,
+      price: t.sellingPrice,
+      qty: 1,
+      available: t.quantity,
+    });
+  }
+
+  isOver(line: CartLine): boolean {
+    return line.qty > line.available;
   }
 
   changeQty(line: CartLine, delta: number): void {
@@ -175,8 +177,7 @@ export class Pos implements OnInit {
   }
 
   clearCart(): void {
-    this.cart.set([]);
-    this.resetPayments();
+    this.state.clearAll();
   }
 
   num(e: Event): number {
@@ -187,15 +188,19 @@ export class Pos implements OnInit {
   onDiscountPercent(e: Event): void {
     const v = Math.min(100, this.num(e));
     this.discountPercent.set(v);
-    this.discountByPercent.set(true);
+    this.state.discountByPercent.set(true);
   }
 
   onDiscountAmount(e: Event): void {
     const v = this.num(e);
-    this.discountManual.set(v);
-    this.discountByPercent.set(false);
+    this.state.discountManual.set(v);
+    this.state.discountByPercent.set(false);
     const sub = this.subTotal();
     this.discountPercent.set(sub > 0 ? Math.round((v / sub) * 10000) / 100 : 0);
+  }
+
+  onDueDate(e: Event): void {
+    this.dueDate.set((e.target as HTMLInputElement).value);
   }
 
   payExact(): void {
@@ -223,7 +228,20 @@ export class Pos implements OnInit {
 
   async pay(): Promise<void> {
     const warehouseId = this.warehouseId();
-    if (!warehouseId || !this.canConfirm()) return;
+    const t = (k: string) => this.transloco.translate(k);
+    if (this.paying() || !warehouseId || !this.cart().length) return;
+    if (this.card() + this.bonus() > this.total()) {
+      this.notify.error(t('paid_exceeds_total'));
+      return;
+    }
+    if (this.bonus() > (this.customer()?.cashbackBalance ?? 0)) {
+      this.notify.error(t('bonus_exceeds_balance'));
+      return;
+    }
+    if (this.debt() > 0 && !this.customer()) {
+      this.notify.error(t('debt_customer_required'));
+      return;
+    }
     this.paying.set(true);
     try {
       const payload = {
@@ -234,6 +252,7 @@ export class Pos implements OnInit {
         paidBonus: this.bonus(),
         items: this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty })),
         discountAmount: this.discount(),
+        debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
         idempotencyKey: crypto.randomUUID(),
         applyAutoDiscount: true,
       };
@@ -246,9 +265,7 @@ export class Pos implements OnInit {
       } catch (e) {
         this.notify.error(e);
       }
-      this.cart.set([]);
-      this.customer.set(null);
-      this.resetPayments();
+      this.state.clearAll();
       this.reset();
       this.focusScan();
     } catch (e) {
@@ -263,18 +280,16 @@ export class Pos implements OnInit {
     await this.loadTiles(true);
   }
 
-  private resetPayments(): void {
-    this.cash.set(0);
-    this.card.set(0);
-    this.bonus.set(0);
-    this.discountPercent.set(0);
-    this.discountManual.set(0);
-    this.discountByPercent.set(true);
-  }
-
   private addLookup(p: ProductLookup): void {
     const qty = p.packQty > 1 ? p.packQty : 1;
-    this.addLine({ variantId: p.variantId, name: p.productName, unitName: p.unitName, price: p.sellingPrice, qty });
+    this.addLine({
+      variantId: p.variantId,
+      name: p.productName,
+      unitName: p.unitName,
+      price: p.sellingPrice,
+      qty,
+      available: p.onHand,
+    });
   }
 
   private addLine(line: CartLine): void {

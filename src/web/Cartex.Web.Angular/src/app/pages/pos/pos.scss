@@ -331,8 +331,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  padding: 8px 6px;
   border-bottom: 1px solid var(--cx-border);
+  border-radius: 6px;
+
+  &.over {
+    background: var(--cx-danger-soft);
+    box-shadow: inset 2px 0 0 var(--cx-danger);
+
+    .qty-box input { color: var(--cx-danger); }
+  }
 
   .info {
     flex: 1;
@@ -519,4 +527,34 @@
   color: var(--cx-danger);
 }
 
-.pay-btn { width: 100%; --mat-button-filled-container-height: 50px; font-size: 15px; }
+.due-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  span { font-size: 12px; color: var(--cx-text-2); }
+
+  input {
+    width: 150px;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--cx-input-border);
+    border-radius: 6px;
+    background: var(--cx-card);
+    color: var(--cx-text-1);
+    font: inherit;
+    font-size: 13px;
+  }
+}
+
+.pay-btn {
+  width: 100%;
+  --mat-button-filled-container-height: 50px;
+  font-size: 15px;
+
+  &:disabled {
+    --mat-button-filled-disabled-container-color: var(--cx-brand);
+    --mat-button-filled-disabled-label-text-color: rgb(255 255 255 / 70%);
+  }
+}
