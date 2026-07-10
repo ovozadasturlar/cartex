@@ -167,5 +167,10 @@
   "pin_change": "PIN кодни ўзгартириш",
   "biometric": "Биометрика",
   "biometric_title": "Бармоқ изи билан кириш",
-  "biometric_unavailable": "Аввал PIN кодни ёқинг ёки қурилмада биометрика йўқ"
+  "biometric_unavailable": "Аввал PIN кодни ёқинг ёки қурилмада биометрика йўқ",
+  "theme": "Мавзу",
+  "theme_system": "Тизим",
+  "theme_light": "Ёруғ",
+  "theme_dark": "Тунги",
+  "security_hint": "Иловага киришни PIN код ва бармоқ изи билан ҳимояланг"
 }

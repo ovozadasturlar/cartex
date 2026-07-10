@@ -20,6 +20,7 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     [ObservableProperty] private int _errorCount;
     [ObservableProperty] private bool _visitsEmpty;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isOffline;
     [ObservableProperty] private string? _error;
 
@@ -68,6 +69,13 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        await SyncAsync();
+        IsRefreshing = false;
     }
 
     [RelayCommand]

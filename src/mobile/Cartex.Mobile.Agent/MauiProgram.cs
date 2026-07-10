@@ -57,6 +57,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CustomerCreateViewModel>();
         builder.Services.AddTransient<VanStockViewModel>();
         builder.Services.AddTransient<PinViewModel>();
+        builder.Services.AddTransient<SecurityViewModel>();
         builder.Services.AddSingleton<IBiometricAuth, Platforms.Android.BiometricAuth>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
@@ -72,6 +73,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CustomerCreatePage>();
         builder.Services.AddTransient<VanStockPage>();
         builder.Services.AddTransient<PinPage>();
+        builder.Services.AddTransient<SecurityPage>();
         builder.Services.AddTransient<ScanPage>();
         builder.Services.AddTransient<OrdersPage>();
         builder.Services.AddTransient<OrderPage>();

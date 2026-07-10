@@ -15,7 +15,7 @@
                     HorizontalOptions="Center">
                 <Path Data="{StaticResource IcLock}" Aspect="Uniform" WidthRequest="26" HeightRequest="26"
                       HorizontalOptions="Center" VerticalOptions="Center"
-                      Fill="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
+                      Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
             </Border>
             <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center"
                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -56,7 +56,7 @@
                 </Border.GestureRecognizers>
                 <Path Data="{StaticResource IcFingerprint}" Aspect="Uniform" WidthRequest="30" HeightRequest="30"
                       HorizontalOptions="Center" VerticalOptions="Center"
-                      Fill="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                      Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource PrimaryDarkBrush}}" />
             </Border>
             <Button Grid.Row="3" Grid.Column="1" Text="0" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="0" />
             <Button Grid.Row="3" Grid.Column="2" Text="⌫" Style="{StaticResource PinKey}" FontSize="22"

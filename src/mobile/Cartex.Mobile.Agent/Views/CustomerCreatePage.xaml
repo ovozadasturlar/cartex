@@ -28,7 +28,7 @@
                             BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
                         <Path Data="{StaticResource IcPin}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
                               HorizontalOptions="Center" VerticalOptions="Center"
-                              Fill="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource SecondaryDarkText}}" />
+                              Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
                     </Border>
                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                         <Label Text="{svc:T customer_location}" FontSize="14.5" FontAttributes="Bold"

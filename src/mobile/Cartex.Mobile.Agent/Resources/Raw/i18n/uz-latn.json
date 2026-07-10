@@ -167,5 +167,10 @@
   "pin_disable": "PIN kodni o'chirish",
   "biometric": "Biometrika",
   "biometric_title": "Barmoq izi bilan kirish",
-  "biometric_unavailable": "Avval PIN kodni yoqing yoki qurilmada biometrika yo'q"
+  "biometric_unavailable": "Avval PIN kodni yoqing yoki qurilmada biometrika yo'q",
+  "theme": "Mavzu",
+  "theme_system": "Tizim",
+  "theme_light": "Yorug'",
+  "theme_dark": "Tungi",
+  "security_hint": "Ilovaga kirishni PIN kod va barmoq izi bilan himoyalang"
 }

@@ -167,5 +167,10 @@
   "pin_change": "Change PIN",
   "biometric": "Biometrics",
   "biometric_title": "Sign in with fingerprint",
-  "biometric_unavailable": "Enable PIN first or biometrics unavailable"
+  "biometric_unavailable": "Enable PIN first or biometrics unavailable",
+  "theme": "Theme",
+  "theme_system": "System",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "security_hint": "Protect app access with a PIN and fingerprint"
 }

@@ -167,5 +167,10 @@
   "pin_change": "Сменить PIN-код",
   "biometric": "Биометрия",
   "biometric_title": "Вход по отпечатку",
-  "biometric_unavailable": "Сначала включите PIN-код или биометрия недоступна"
+  "biometric_unavailable": "Сначала включите PIN-код или биометрия недоступна",
+  "theme": "Тема",
+  "theme_system": "Системная",
+  "theme_light": "Светлая",
+  "theme_dark": "Тёмная",
+  "security_hint": "Защитите вход в приложение PIN-кодом и отпечатком"
 }

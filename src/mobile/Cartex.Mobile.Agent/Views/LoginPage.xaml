@@ -24,12 +24,18 @@
         </HorizontalStackLayout>
         <ScrollView>
             <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
-                <Border BackgroundColor="{StaticResource Primary}" StrokeThickness="0" StrokeShape="RoundRectangle 22"
-                        WidthRequest="72" HeightRequest="72" HorizontalOptions="Center">
-                    <Label Text="C" FontSize="34" FontAttributes="Bold" TextColor="White"
-                           HorizontalOptions="Center" VerticalOptions="Center" />
-                </Border>
-                <Label Text="Cartex Agent" Style="{StaticResource H1}" HorizontalOptions="Center" Margin="0,16,0,2" />
+                <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
+                       WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
+                <Label HorizontalOptions="Center" Margin="0,16,0,2">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="CARTEX" FontSize="24" FontAttributes="Bold"
+                                  TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Span Text=" Agent" FontSize="24"
+                                  TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
                 <Label Text="{svc:T login_subtitle}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,0,0,32" />
                 <VerticalStackLayout Spacing="12">
                     <Border Style="{StaticResource InputWrap}">

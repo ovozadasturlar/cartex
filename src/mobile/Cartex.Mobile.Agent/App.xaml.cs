@@ -8,6 +8,7 @@ public partial class App : Application
 	{
 		Loc.Instance.InitAsync().GetAwaiter().GetResult();
 		InitializeComponent();
+		ViewModels.ProfileViewModel.ApplyTheme();
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)

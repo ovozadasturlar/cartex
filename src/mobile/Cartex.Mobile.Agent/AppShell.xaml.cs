@@ -18,5 +18,6 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("customer-new", typeof(CustomerCreatePage));
         Routing.RegisterRoute("vanstock", typeof(VanStockPage));
         Routing.RegisterRoute("pin", typeof(PinPage));
+        Routing.RegisterRoute("security", typeof(SecurityPage));
     }
 }

@@ -39,6 +39,21 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
             Longitude = location.Longitude;
             LocationText = $"{location.Latitude:0.#####}, {location.Longitude:0.#####}";
             HasLocation = true;
+
+            if (string.IsNullOrWhiteSpace(Address))
+            {
+                try
+                {
+                    var place = (await Geocoding.GetPlacemarksAsync(location.Latitude, location.Longitude)).FirstOrDefault();
+                    if (place is not null)
+                    {
+                        var parts = new[] { place.Thoroughfare, place.SubThoroughfare, place.SubLocality, place.Locality }
+                            .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct();
+                        Address = string.Join(", ", parts);
+                    }
+                }
+                catch { }
+            }
         }
         catch
         {

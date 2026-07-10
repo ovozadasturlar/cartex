@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session, IBiometricAuth biometric) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -13,9 +13,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _outboxBadge = "";
     [ObservableProperty] private string _footer = "";
-    [ObservableProperty] private string _pinStatus = "";
-    [ObservableProperty] private bool _bioEnabled;
-    [ObservableProperty] private bool _bioAllowed;
+    [ObservableProperty] private string _themeName = "";
     [ObservableProperty] private bool _hasOutbox;
     [ObservableProperty] private bool _isBusy;
 
@@ -34,48 +32,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
         HasOutbox = pending + errors > 0;
         OutboxBadge = errors > 0 ? $"{pending + errors}!" : pending.ToString();
         Footer = $"Cartex Agent {AppInfo.Current.VersionString} • {session.ServerUrl}";
-        PinStatus = Loc.Instance[AppLock.PinEnabled ? "enabled" : "disabled"];
-        BioAllowed = AppLock.PinEnabled && biometric.IsAvailable;
-        _suppressBio = true;
-        BioEnabled = AppLock.BiometricEnabled;
-        _suppressBio = false;
-    }
-
-    private bool _suppressBio;
-
-    partial void OnBioEnabledChanged(bool value)
-    {
-        if (_suppressBio) return;
-        if (value && (!AppLock.PinEnabled || !biometric.IsAvailable))
-        {
-            _suppressBio = true;
-            BioEnabled = false;
-            _suppressBio = false;
-            Ui.Toast(Loc.Instance["biometric_unavailable"]);
-            return;
-        }
-        AppLock.SetBiometric(value);
-    }
-
-    [RelayCommand]
-    private async Task TogglePinAsync()
-    {
-        var page = Shell.Current.CurrentPage;
-        if (!AppLock.PinEnabled)
-        {
-            await Shell.Current.GoToAsync("pin?setup=1");
-            return;
-        }
-        var disable = Loc.Instance["pin_disable"];
-        var change = Loc.Instance["pin_change"];
-        var choice = await page.DisplayActionSheet(Loc.Instance["pin_code"], Loc.Instance["cancel"], null, change, disable);
-        if (choice == change)
-            await Shell.Current.GoToAsync("pin?setup=1");
-        else if (choice == disable)
-        {
-            AppLock.Disable();
-            await AppearAsync();
-        }
+        ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
     }
 
     [RelayCommand]
@@ -85,7 +42,29 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
 
     [RelayCommand]
-    private Task ChangePasswordAsync() => Shell.Current.GoToAsync("change-password");
+    private Task OpenSecurityAsync() => Shell.Current.GoToAsync("security");
+
+    [RelayCommand]
+    private async Task ChooseThemeAsync()
+    {
+        string[] keys = ["system", "light", "dark"];
+        var names = keys.Select(k => Loc.Instance["theme_" + k]).ToArray();
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+            Loc.Instance["theme"], Loc.Instance["cancel"], null, names);
+        var index = Array.IndexOf(names, choice);
+        if (index < 0) return;
+        Preferences.Set("app_theme", keys[index]);
+        ApplyTheme();
+        await AppearAsync();
+    }
+
+    public static void ApplyTheme() =>
+        Application.Current!.UserAppTheme = Preferences.Get("app_theme", "system") switch
+        {
+            "light" => AppTheme.Light,
+            "dark" => AppTheme.Dark,
+            _ => AppTheme.Unspecified
+        };
 
     [RelayCommand]
     private async Task SyncAsync()

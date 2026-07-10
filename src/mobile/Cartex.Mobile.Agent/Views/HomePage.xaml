@@ -7,33 +7,23 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
     x:DataType="vm:HomeViewModel"
     Shell.NavBarIsVisible="False">
-    <ScrollView>
-        <VerticalStackLayout Padding="20,18,20,24" Spacing="14">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <VerticalStackLayout Spacing="3">
-                    <Label Text="{Binding Greeting}" FontSize="23" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                    <Label Style="{StaticResource MutedLabel}" FontSize="12.5" LineBreakMode="TailTruncation">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="{Binding WarehouseName}" />
-                                <Span Text="  •  " />
-                                <Span Text="{Binding LastSync}" />
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
-                </VerticalStackLayout>
-                <Border Grid.Column="1" StrokeThickness="1" StrokeShape="RoundRectangle 14"
-                        Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
-                        WidthRequest="44" HeightRequest="44" VerticalOptions="Start">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding SyncCommand}" />
-                    </Border.GestureRecognizers>
-                    <Label Text="⟳" FontSize="21" HorizontalOptions="Center" VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                </Border>
-            </Grid>
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}"
+                 RefreshColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,18,20,24" Spacing="14">
+            <VerticalStackLayout Spacing="3">
+                <Label Text="{Binding Greeting}" FontSize="23" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Label Style="{StaticResource MutedLabel}" FontSize="12.5" LineBreakMode="TailTruncation">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{Binding WarehouseName}" />
+                            <Span Text="  •  " />
+                            <Span Text="{Binding LastSync}" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+            </VerticalStackLayout>
 
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
                     StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
@@ -140,5 +130,6 @@
             <ActivityIndicator IsRunning="{Binding IsBusy}"
                                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </RefreshView>
 </ContentPage>

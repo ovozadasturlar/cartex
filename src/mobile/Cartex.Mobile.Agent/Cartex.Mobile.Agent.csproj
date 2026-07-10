@@ -11,14 +11,14 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ApplicationTitle>Cartex Agent</ApplicationTitle>
 		<ApplicationId>uz.cartex.agent</ApplicationId>
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#166534" />
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#166534" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#255D3A" BaseSize="180,180" />
 		<MauiFont Include="Resources\Fonts\*" />
 		<MauiImage Include="Resources\Images\*" />
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
