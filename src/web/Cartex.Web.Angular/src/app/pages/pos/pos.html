@@ -28,14 +28,9 @@
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
           </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wh">
-            <mat-icon matPrefix>warehouse</mat-icon>
-            <mat-select [value]="warehouseId()" (valueChange)="onWarehouse($event)" [placeholder]="t('select_warehouse')">
-              @for (w of warehouses(); track w.id) {
-                <mat-option [value]="w.id">{{ w.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <button class="view-toggle" (click)="toggleView()">
+            <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
+          </button>
           @if (shift(); as s) {
             <span class="cx-chip ok shift-chip">
               <mat-icon>schedule</mat-icon>
@@ -60,26 +55,45 @@
           <mat-progress-bar mode="indeterminate" />
         }
         @if (tiles().length) {
-          <div class="tiles">
-            @for (p of tiles(); track p.variantId) {
-              <button class="tile" (click)="addTile(p)">
-                <div class="thumb">
-                  @if (p.imageUrl) {
-                    <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
-                  } @else {
-                    <mat-icon>inventory_2</mat-icon>
-                  }
-                </div>
-                <div class="body">
+          @if (viewMode() === 'grid') {
+            <div class="tiles">
+              @for (p of tiles(); track p.variantId) {
+                <button class="tile" (click)="addTile(p)">
+                  <div class="thumb">
+                    @if (p.imageUrl) {
+                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                    } @else {
+                      <mat-icon>inventory_2</mat-icon>
+                    }
+                  </div>
+                  <div class="body">
+                    <span class="name">{{ p.productName }}</span>
+                    <span class="meta">
+                      <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
+                      <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
+                    </span>
+                  </div>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="rows">
+              @for (p of tiles(); track p.variantId) {
+                <button class="prow" (click)="addTile(p)">
+                  <div class="thumb">
+                    @if (p.imageUrl) {
+                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                    } @else {
+                      <mat-icon>inventory_2</mat-icon>
+                    }
+                  </div>
                   <span class="name">{{ p.productName }}</span>
-                  <span class="meta">
-                    <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
-                    <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
-                  </span>
-                </div>
-              </button>
-            }
-          </div>
+                  <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
+                  <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
+                </button>
+              }
+            </div>
+          }
           @if (hasMore()) {
             <button matButton="outlined" style="display: block; margin: 14px auto 0" [disabled]="busy()" (click)="loadMore()">
               {{ t('load_more') }}
@@ -152,13 +166,15 @@
 
           <div class="discount-row">
             <span>{{ t('discount') }}</span>
-            <div class="dinput pct">
-              <input type="number" min="0" max="100" [value]="discountPercent()" (change)="onDiscountPercent($event)" />
-              <span class="suffix">%</span>
-            </div>
-            <div class="dinput amt">
-              <input type="number" min="0" [value]="discount()" (change)="onDiscountAmount($event)" />
-              <span class="suffix">{{ t('currency_sum') }}</span>
+            <div class="dinputs">
+              <div class="dinput">
+                <input type="number" min="0" max="100" [value]="discountPercent()" (change)="onDiscountPercent($event)" />
+                <span class="suffix">%</span>
+              </div>
+              <div class="dinput">
+                <input type="number" min="0" [value]="discount()" (change)="onDiscountAmount($event)" />
+                <span class="suffix">{{ t('currency_sum') }}</span>
+              </div>
             </div>
           </div>
 

@@ -1,7 +1,8 @@
-<mat-sidenav-container class="shell" *transloco="let t">
-  <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav">
+<mat-sidenav-container class="shell" autosize *transloco="let t">
+  <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav"
+               [class.collapsed]="collapsed() && isWide()">
     <div class="side-brand">
-      <cx-logo [size]="34" [wordmark]="true" />
+      <cx-logo [size]="collapsed() && isWide() ? 28 : 34" [wordmark]="!(collapsed() && isWide())" />
     </div>
     <div class="side-nav">
       @for (section of navSections; track section.labelKey) {
@@ -32,10 +33,15 @@
   </mat-sidenav>
   <mat-sidenav-content>
     <div class="topbar">
-      @if (!isWide()) {
-        <button matIconButton (click)="nav.toggle()"><mat-icon>menu</mat-icon></button>
-      }
+      <button matIconButton (click)="toggleSidebar(nav)"><mat-icon>menu</mat-icon></button>
       <span class="spacer"></span>
+      @if (canPickWarehouse && wh.warehouses().length) {
+        <select class="wh-select" (change)="onWarehouse($event)">
+          @for (w of wh.warehouses(); track w.id) {
+            <option [value]="w.id" [selected]="w.id === wh.selectedWarehouseId()">{{ w.name }}</option>
+          }
+        </select>
+      }
       <button matIconButton (click)="toggleTheme()">
         <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>

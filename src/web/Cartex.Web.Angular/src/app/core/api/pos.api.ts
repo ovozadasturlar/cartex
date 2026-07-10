@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { Customer, Receipt, Warehouse } from '../models';
+import { Customer, Receipt } from '../models';
 import { ListQuery, Paged, listParams, toPaged } from '../paging';
 
 export interface Category {
@@ -91,10 +91,6 @@ export interface ShiftHistory {
 export class PosApi {
   private readonly http = inject(HttpClient);
 
-  warehouses(): Observable<Warehouse[]> {
-    return this.http.get<Warehouse[]>('/api/warehouses', { params: { Page: 0, PageSize: 0 } });
-  }
-
   categories(): Observable<Category[]> {
     return this.http.get<Category[]>('/api/categories');
   }
@@ -118,6 +114,19 @@ export class PosApi {
 
   customer(id: number): Observable<Customer> {
     return this.http.get<Customer>(`/api/customers/${id}`);
+  }
+
+  createCustomer(body: {
+    fullName: string;
+    lastName: string | null;
+    phone: string;
+    email: string | null;
+    address: string | null;
+    cardBarcode: string | null;
+    discountPct: number;
+    creditLimit: number;
+  }): Observable<number> {
+    return this.http.post<number>('/api/customers', body);
   }
 
   createSale(payload: CreateSalePayload): Observable<CreateSaleResult> {

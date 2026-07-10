@@ -10,10 +10,34 @@ mat-sidenav-content {
   width: 240px;
   border-right: 1px solid var(--cx-border);
   background: var(--cx-card);
+  transition: width 0.18s ease;
 
   ::ng-deep .mat-drawer-inner-container {
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  &.collapsed {
+    width: 64px;
+
+    .side-brand {
+      justify-content: center;
+      margin: 18px 8px 14px;
+    }
+
+    .side-section {
+      display: none;
+    }
+
+    .nav-item {
+      justify-content: center;
+      padding: 9px 0;
+
+      span {
+        display: none;
+      }
+    }
   }
 }
 
@@ -100,6 +124,26 @@ mat-sidenav-content {
 
 .spacer {
   flex: 1;
+}
+
+.wh-select {
+  min-width: 150px;
+  max-width: 220px;
+  height: 34px;
+  margin-right: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--cx-border);
+  border-radius: 8px;
+  background: var(--cx-card);
+  color: var(--cx-text-1);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--cx-brand);
+  }
 }
 
 .user-btn {

@@ -10,6 +10,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { NAV_SECTIONS, SETTINGS_SECTIONS } from '../core/nav';
+import { WarehouseContextService } from '../core/warehouse-context.service';
 import { Logo } from '../shared/logo';
 
 const LANGS: Record<string, string> = {
@@ -39,12 +40,14 @@ export class Shell {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  readonly wh = inject(WarehouseContextService);
 
   readonly isWide = toSignal(
     inject(BreakpointObserver).observe('(min-width: 1280px)').pipe(map((r) => r.matches)),
     { initialValue: window.innerWidth >= 1280 },
   );
   readonly isDark = signal(localStorage.getItem('cartex.theme') === 'dark');
+  readonly collapsed = signal(localStorage.getItem('cartex.sidenav') === 'collapsed');
   readonly user = this.auth.currentUser;
   readonly navSections = NAV_SECTIONS.map((s) => ({
     ...s,
@@ -54,9 +57,24 @@ export class Shell {
     s.items.some((i) => i.permission === null || this.auth.hasPermission(i.permission)),
   );
   readonly languages = Object.entries(LANGS).map(([code, name]) => ({ code, name }));
+  readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
 
   constructor() {
     document.body.classList.toggle('dark', this.isDark());
+    if (this.canPickWarehouse) this.wh.load();
+  }
+
+  onWarehouse(e: Event): void {
+    this.wh.select(Number((e.target as HTMLSelectElement).value));
+  }
+
+  toggleSidebar(nav: { toggle(): void }): void {
+    if (!this.isWide()) {
+      nav.toggle();
+      return;
+    }
+    this.collapsed.update((v) => !v);
+    localStorage.setItem('cartex.sidenav', this.collapsed() ? 'collapsed' : 'open');
   }
 
   get activeLang(): string {

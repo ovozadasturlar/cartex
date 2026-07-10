@@ -1,11 +1,10 @@
-import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
 import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
@@ -13,6 +12,7 @@ import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { Customer } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
@@ -25,7 +25,7 @@ interface CartLine {
   qty: number;
 }
 
-const WAREHOUSE_KEY = 'cartex.pos.warehouseId';
+const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
 
 @Component({
@@ -36,7 +36,6 @@ const PAGE_SIZE = 40;
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
-    MatSelectModule,
     TranslocoModule,
     CxDatePipe,
     CxMoneyPipe,
@@ -50,13 +49,14 @@ export class Pos implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly wh = inject(WarehouseContextService);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
   readonly busy = signal(false);
-  readonly warehouses = signal<{ id: number; name: string }[]>([]);
-  readonly warehouseId = signal<number | null>(null);
+  readonly warehouseId = this.wh.selectedWarehouseId;
+  readonly viewMode = signal<'grid' | 'list'>(localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid');
   readonly categories = signal<Category[]>([]);
   readonly categoryId = signal<number | null>(null);
   readonly tiles = signal<StockOnHand[]>([]);
@@ -99,22 +99,20 @@ export class Pos implements OnInit {
   private search = '';
   private page = 1;
 
+  constructor() {
+    effect(() => {
+      if (this.wh.selectedWarehouseId()) untracked(() => this.reset());
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     try {
-      const [warehouses, categories, shift] = await Promise.all([
-        lastValueFrom(this.api.warehouses()),
+      const [categories, shift] = await Promise.all([
         lastValueFrom(this.api.categories()),
         lastValueFrom(this.api.currentShift()),
       ]);
-      this.warehouses.set(warehouses);
       this.categories.set(categories);
       this.shift.set(shift);
-      const saved = Number(localStorage.getItem(WAREHOUSE_KEY));
-      const current = warehouses.find((w) => w.id === saved) ?? warehouses[0];
-      if (current) {
-        this.warehouseId.set(current.id);
-        await this.loadTiles();
-      }
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -122,10 +120,9 @@ export class Pos implements OnInit {
     }
   }
 
-  onWarehouse(id: number): void {
-    this.warehouseId.set(id);
-    localStorage.setItem(WAREHOUSE_KEY, String(id));
-    this.reset();
+  toggleView(): void {
+    this.viewMode.update((m) => (m === 'grid' ? 'list' : 'grid'));
+    localStorage.setItem(VIEW_KEY, this.viewMode());
   }
 
   onCategory(id: number | null): void {
