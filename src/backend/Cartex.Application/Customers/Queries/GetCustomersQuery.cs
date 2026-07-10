@@ -4,6 +4,8 @@ using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Common;
+using Cartex.Domain.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Queries;
@@ -17,12 +19,17 @@ public record CustomerDto(long Id, string FullName, string? LastName, string? Ad
 
 public sealed class GetCustomersQueryHandler(
     IApplicationDbContext db,
+    ICurrentUser currentUser,
     IPagingMetadataWriter writer) : IRequestHandler<GetCustomersQuery, IReadOnlyCollection<CustomerDto>>
 {
     public async Task<IReadOnlyCollection<CustomerDto>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        var items = await db.Customers
+        var customers = db.Customers.AsQueryable();
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
+            customers = customers.Where(c => c.AgentId == currentUser.UserId);
+
+        var items = await customers
             .ToPagedListAsync(request,
                 c => new CustomerDto(
                     c.Id,

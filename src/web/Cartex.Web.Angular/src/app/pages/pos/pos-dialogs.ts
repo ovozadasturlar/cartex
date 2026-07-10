@@ -100,7 +100,7 @@ import { EmptyState } from '../../shared/empty-state';
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('card_barcode') }}</mat-label>
-              <mat-icon matPrefix class="scan">barcode_scanner</mat-icon>
+              <mat-icon matPrefix class="scan">qr_code_scanner</mat-icon>
               <input matInput [(ngModel)]="nCard" [placeholder]="t('scan_barcode')" />
             </mat-form-field>
           </div>

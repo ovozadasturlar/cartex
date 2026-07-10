@@ -3,6 +3,8 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Common;
+using Cartex.Domain.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Sales.Queries;
@@ -37,6 +39,7 @@ public record SaleDto(
 
 public sealed class GetSalesQueryHandler(
     IApplicationDbContext db,
+    ICurrentUser currentUser,
     IPagingMetadataWriter writer) : IRequestHandler<GetSalesQuery, IReadOnlyCollection<SaleDto>>
 {
     public async Task<IReadOnlyCollection<SaleDto>> Handle(GetSalesQuery request, CancellationToken cancellationToken)
@@ -45,6 +48,9 @@ public sealed class GetSalesQueryHandler(
             .Include(s => s.Customer)
             .Include(s => s.User)
             .AsQueryable();
+
+        if (!currentUser.HasPermission(AppPermissions.Sales.ViewAll))
+            query = query.Where(s => s.UserId == currentUser.UserId);
 
         if (request.FromDate is { } fromDate)
             query = query.Where(s => s.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));

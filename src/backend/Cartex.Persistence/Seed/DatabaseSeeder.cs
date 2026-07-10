@@ -12,9 +12,9 @@ public static class DatabaseSeeder
 
     public static readonly string[] SellerPermissions =
     [
-        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View,
+        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
         AppPermissions.Sales.Create, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
-        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View,
+        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Devices.Manage
     ];

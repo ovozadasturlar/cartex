@@ -1,19 +1,24 @@
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerByIdQuery(long Id) : IRequest<CustomerDto?>;
 
-public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCustomerByIdQuery, CustomerDto?>
+public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCustomerByIdQuery, CustomerDto?>
 {
     public async Task<CustomerDto?> Handle(GetCustomerByIdQuery request, CancellationToken cancellationToken)
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        return await db.Customers
-            .Where(c => c.Id == request.Id)
+        var customers = db.Customers.Where(c => c.Id == request.Id);
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
+            customers = customers.Where(c => c.AgentId == currentUser.UserId);
+
+        return await customers
             .Select(c => new CustomerDto(
                 c.Id,
                 c.FullName,

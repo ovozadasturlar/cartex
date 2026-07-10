@@ -1,5 +1,6 @@
 using Cartex.Application.Common;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Authorization;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Application.Common.Finance;
@@ -33,7 +34,7 @@ public sealed class CreateCustomerCommandHandler(
             PreferredLanguage = request.PreferredLanguage ?? "uz-latn",
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            AgentId = request.AgentId
+            AgentId = currentUser.HasPermission(AppPermissions.Customers.ViewAll) ? request.AgentId : currentUser.UserId
         };
 
         db.Customers.Add(customer);

@@ -67,6 +67,7 @@ public static class AppPermissions
     public static class Sales
     {
         public const string View = "sales.view";
+        public const string ViewAll = "sales.viewAll";
         public const string Create = "sales.create";
         public const string Return = "sales.return";
         public const string Discount = "sales.discount";
@@ -96,6 +97,7 @@ public static class AppPermissions
     public static class Customers
     {
         public const string View = "customers.view";
+        public const string ViewAll = "customers.viewAll";
         public const string Manage = "customers.manage";
         public const string Message = "customers.message";
     }
@@ -183,6 +185,7 @@ public static class AppPermissions
         [StockTransfers.View] = "View transfers",
         [StockTransfers.Manage] = "Create/manage transfers",
         [Sales.View] = "View sales",
+        [Sales.ViewAll] = "View all sales (not only own)",
         [Sales.Create] = "Create sales (POS)",
         [Sales.Return] = "Return sales",
         [Sales.Discount] = "Apply discount on sale",
@@ -196,6 +199,7 @@ public static class AppPermissions
         [Supplies.View] = "View supplies",
         [Supplies.Manage] = "Create/edit supplies",
         [Customers.View] = "View customers",
+        [Customers.ViewAll] = "View all customers (not only own)",
         [Customers.Manage] = "Create/edit customers",
         [Customers.Message] = "Send messages to customers",
         [Suppliers.View] = "View suppliers",

@@ -1,5 +1,7 @@
 using Cartex.Application.Common;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -8,12 +10,15 @@ namespace Cartex.Application.Customers.Commands;
 
 public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AgentId = null, double? Latitude = null, double? Longitude = null) : ICommand<Unit>;
 
-public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateCustomerCommand, Unit>
+public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCustomerCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Customer not found.");
+
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) && customer.AgentId != currentUser.UserId)
+            throw new NotFoundException("Customer not found.");
 
         customer.FullName = request.FullName;
         customer.LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim();

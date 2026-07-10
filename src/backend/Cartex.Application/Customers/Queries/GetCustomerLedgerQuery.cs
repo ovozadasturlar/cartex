@@ -3,6 +3,8 @@ using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Queries;
@@ -13,10 +15,15 @@ public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string
 
 public sealed class GetCustomerLedgerQueryHandler(
     IApplicationDbContext db,
+    ICurrentUser currentUser,
     IPagingMetadataWriter writer) : IRequestHandler<GetCustomerLedgerQuery, IReadOnlyCollection<CustomerLedgerEntryDto>>
 {
     public async Task<IReadOnlyCollection<CustomerLedgerEntryDto>> Handle(GetCustomerLedgerQuery request, CancellationToken cancellationToken)
     {
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) &&
+            !await db.Customers.AnyAsync(c => c.Id == request.CustomerId && c.AgentId == currentUser.UserId, cancellationToken))
+            return [];
+
         var accounts = await db.Accounts
             .Where(a => a.CustomerId == request.CustomerId)
             .Select(a => new { a.Id, a.Type })
