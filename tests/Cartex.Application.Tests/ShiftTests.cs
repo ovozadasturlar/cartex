@@ -17,7 +17,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private async Task<(long branch1, long warehouse1, long businessId, long adminId, long variantId)> SetupAsync()
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
@@ -32,10 +32,10 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task ZReport_sums_float_sales_payins_payouts_and_difference()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         ZReportDto report;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new OpenShiftCommand(100000));
@@ -60,10 +60,10 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Close_with_counted_below_expected_reports_negative_difference()
     {
         var (branch1, warehouse1, businessId, adminId, _) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         ZReportDto report;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             var shiftId = await sender.Send(new OpenShiftCommand(100000));
@@ -78,9 +78,9 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Opening_second_shift_throws()
     {
         var (branch1, _, businessId, adminId, _) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await sender.Send(new OpenShiftCommand(0));
         await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new OpenShiftCommand(0)));

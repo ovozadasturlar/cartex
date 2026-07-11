@@ -16,7 +16,7 @@ public class SupplyPriceFlowTests(DatabaseFixture fixture) : DatabaseTest(fixtur
 {
     private async Task<(long branch1, long warehouse1, long businessId, long adminId, long unitId, long supplierId)> SetupAsync()
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
@@ -35,13 +35,13 @@ public class SupplyPriceFlowTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     public async Task Supply_sets_selling_price_and_sale_uses_it()
     {
         var (branch1, warehouse1, businessId, adminId, unitId, supplierId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         const decimal sellingPrice = 12000m;
         long variantId;
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -53,7 +53,7 @@ public class SupplyPriceFlowTests(DatabaseFixture fixture) : DatabaseTest(fixtur
                 [new CreateSupplyItemDto(variantId, 10, 8000m, null, SellingPrice: sellingPrice)]));
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var price = await db.ProductPrices.SingleAsync(p => p.VariantId == variantId);
@@ -62,14 +62,14 @@ public class SupplyPriceFlowTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         }
 
         long saleId;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, sellingPrice, 0, 0,
                 [new CreateSaleItemDto(variantId, 1)]))).SaleId;
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var unitPrice = await db.SaleItems.Where(i => i.SaleId == saleId).Select(i => i.UnitPrice).SingleAsync();

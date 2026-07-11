@@ -134,7 +134,7 @@ public class CatalogTests(CartexApiFactory factory)
         var client = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var units = await client.GetFromJsonAsync<List<UnitRow>>("/api/units");
         var dona = units!.First(u => u.ShortName == "dona").Id;
-        var kg = units.First(u => u.ShortName == "kg").Id;
+        var kg = units!.First(u => u.ShortName == "kg").Id;
 
         var create = await client.PostAsJsonAsync("/api/products", new
         {

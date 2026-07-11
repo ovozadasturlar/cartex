@@ -7,9 +7,7 @@ namespace Cartex.Api.IntegrationTests;
 
 public sealed class CartexApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .Build();
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
     public async ValueTask InitializeAsync()
     {

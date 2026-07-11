@@ -14,7 +14,7 @@ public class BarcodeGenerationTests(DatabaseFixture fixture) : DatabaseTest(fixt
     [Fact]
     public async Task Generate_WithoutPrefixConfig_FallsBackToCtx()
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var variantId = (await db.ProductVariants.OrderBy(v => v.Id).FirstAsync()).Id;

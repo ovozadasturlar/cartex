@@ -18,7 +18,7 @@ public class AssignableRolesTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     public async Task Role_with_assignable_list_can_only_assign_listed_roles()
     {
         long businessId, developerId, branch1, managerUserId, sellerRoleId, adminRoleId;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             businessId = (await db.Businesses.FirstAsync()).Id;
@@ -28,9 +28,9 @@ public class AssignableRolesTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             adminRoleId = (await db.Roles.FirstAsync(r => r.Name == "admin")).Id;
         }
 
-        fixture.CurrentUser.AsAdmin(developerId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(developerId, businessId, branch1);
         long managerRoleId;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             managerRoleId = await sender.Send(new CreateRoleCommand("manager", null, null, 50, null, ["seller"]));
@@ -48,8 +48,8 @@ public class AssignableRolesTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             managerUserId = manager.Id;
         }
 
-        fixture.CurrentUser.AsCashier(managerUserId, businessId, branch1);
-        using var check = fixture.CreateScope();
+        Fixture.CurrentUser.AsCashier(managerUserId, businessId, branch1);
+        using var check = Fixture.CreateScope();
         var access = check.ServiceProvider.GetRequiredService<IAccessControlService>();
 
         await access.EnsureCanAssignRolesAsync([sellerRoleId], CancellationToken.None);

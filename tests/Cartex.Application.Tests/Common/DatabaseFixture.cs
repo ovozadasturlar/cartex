@@ -14,9 +14,7 @@ namespace Cartex.Application.Tests.Common;
 
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
     private ServiceProvider _services = null!;
     private Respawner _respawner = null!;

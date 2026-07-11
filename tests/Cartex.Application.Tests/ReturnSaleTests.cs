@@ -15,7 +15,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private async Task<(long branch1, long warehouse1, long businessId, long adminId, long variantId)> SetupAsync()
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
@@ -30,12 +30,12 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Return_restores_stock_reverses_cash_and_marks_returned()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         decimal stockBefore, cashBefore;
         long saleId;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             stockBefore = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
@@ -45,7 +45,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 20000, 0, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var lines = await db.SaleItems.Where(i => i.SaleId == saleId)
@@ -54,7 +54,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             await sender.Send(new ReturnSaleCommand(saleId, lines));
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var stockAfter = await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouse1).SumAsync(s => s.Quantity);
@@ -71,12 +71,12 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Return_twice_throws()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         long saleId;
         List<ReturnLineDto> lines;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 10000, 0, 0, [new CreateSaleItemDto(variantId, 1)]))).SaleId;
@@ -86,7 +86,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             await sender.Send(new ReturnSaleCommand(saleId, lines));
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new ReturnSaleCommand(saleId, lines)));

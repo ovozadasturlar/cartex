@@ -4,7 +4,9 @@ namespace Cartex.Application.Tests.Common;
 
 public abstract class DatabaseTest(DatabaseFixture fixture) : IAsyncLifetime
 {
-    public ValueTask InitializeAsync() => fixture.ResetAsync();
+    protected DatabaseFixture Fixture { get; } = fixture;
+
+    public ValueTask InitializeAsync() => Fixture.ResetAsync();
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

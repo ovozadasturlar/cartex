@@ -11,7 +11,7 @@ public static class PagedResponseExtensions
     public static PagedResult<T> ToPaged<T>(this IApiResponse<List<T>> response)
     {
         var items = response.Content ?? [];
-        if (response.Headers.TryGetValues("X-Paging", out var values))
+        if (response.Headers is { } headers && headers.TryGetValues("X-Paging", out var values))
         {
             var meta = JsonSerializer.Deserialize<PagedListMetadata>(values.First(), Options);
             if (meta is not null) return new PagedResult<T>(items, meta);

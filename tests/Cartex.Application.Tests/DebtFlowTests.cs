@@ -16,7 +16,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private async Task<(long branch1, long warehouse1, long businessId, long adminId, long variantId)> SetupAsync()
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
@@ -29,28 +29,28 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
     private async Task<long> CreateCustomerAsync(decimal creditLimit = 10_000_000m)
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         return await sender.Send(new CreateCustomerCommand("Qarzdor Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: creditLimit));
     }
 
     private async Task CreditSaleAsync(long warehouse, long variantId, long customerId, decimal qty)
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await sender.Send(new CreateSaleCommand(warehouse, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, qty)]));
     }
 
     private async Task<decimal> DebtBalanceAsync(long customerId)
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return (await db.Accounts.FirstAsync(a => a.CustomerId == customerId && a.Type == AccountType.Debt)).Balance;
     }
 
     private async Task<decimal> BranchBalanceAsync(long branch, AccountType type)
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var account = await db.Accounts.FirstOrDefaultAsync(a => a.BranchId == branch && a.Type == type);
         return account?.Balance ?? 0m;
@@ -60,13 +60,13 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Credit_sale_increases_customer_debt_by_total()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
         await CreditSaleAsync(warehouse1, variantId, customerId, 3);
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var sale = await db.Sales.FirstAsync(s => s.CustomerId == customerId);
         var debt = (await db.Accounts.FirstAsync(a => a.CustomerId == customerId && a.Type == AccountType.Debt)).Balance;
@@ -79,8 +79,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Repay_reduces_debt_and_increases_cash()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
         await CreditSaleAsync(warehouse1, variantId, customerId, 2);
@@ -88,7 +88,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var debt = await DebtBalanceAsync(customerId);
         var cashBefore = await BranchBalanceAsync(branch1, AccountType.Cash);
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new RepayCustomerDebtCommand(customerId, debt, false));
@@ -102,8 +102,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Repay_via_card_hits_card_account_not_cash()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
         await CreditSaleAsync(warehouse1, variantId, customerId, 2);
@@ -112,7 +112,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var cashBefore = await BranchBalanceAsync(branch1, AccountType.Cash);
         var cardBefore = await BranchBalanceAsync(branch1, AccountType.Card);
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new RepayCustomerDebtCommand(customerId, debt, true));
@@ -127,14 +127,14 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Repay_more_than_debt_throws_and_keeps_balance()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
         await CreditSaleAsync(warehouse1, variantId, customerId, 2);
         var debt = await DebtBalanceAsync(customerId);
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await Assert.ThrowsAsync<BusinessRuleException>(() =>
@@ -148,10 +148,10 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Opening_balance_posts_customer_debt()
     {
         var (branch1, _, businessId, adminId, _) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         long debtorId, creditorId;
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             debtorId = await sender.Send(new CreateCustomerCommand("Eski Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, OpeningBalance: 50_000m));
@@ -166,18 +166,18 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     public async Task Give_bonus_increases_bonus_balance()
     {
         var (branch1, _, businessId, adminId, _) = await SetupAsync();
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
-        await TestShift.OpenAsync(fixture);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new GiveCustomerBonusCommand(customerId, 5000m, "sovg'a"));
         }
 
-        using var check = fixture.CreateScope();
+        using var check = Fixture.CreateScope();
         var db = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var bonus = (await db.Accounts.FirstAsync(a => a.CustomerId == customerId && a.Type == AccountType.Bonus)).Balance;
         Assert.Equal(5000m, bonus);

@@ -16,7 +16,7 @@ public class BranchIsolationTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     {
         long branch1, branch2, businessId, cashierId, adminId, wh1, wh2;
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
@@ -28,8 +28,8 @@ public class BranchIsolationTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             wh2 = (await db.Warehouses.FirstAsync(w => w.BranchId == branch2)).Id;
         }
 
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1, branch2);
-        using (var scope = fixture.CreateScope())
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1, branch2);
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             db.Sales.Add(new Sale { BranchId = branch1, WarehouseId = wh1, UserId = adminId, Status = SaleStatus.Completed, ReceiptToken = Guid.NewGuid().ToString("N") });
@@ -37,8 +37,8 @@ public class BranchIsolationTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             await db.SaveChangesAsync();
         }
 
-        fixture.CurrentUser.AsCashier(cashierId, businessId, branch1);
-        using (var scope = fixture.CreateScope())
+        Fixture.CurrentUser.AsCashier(cashierId, businessId, branch1);
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var branchIds = await db.Sales.Select(s => s.BranchId).Distinct().ToListAsync();
@@ -47,8 +47,8 @@ public class BranchIsolationTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             Assert.DoesNotContain(branch2, branchIds);
         }
 
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1, branch2);
-        using (var scope = fixture.CreateScope())
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1, branch2);
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var branchIds = await db.Sales.Select(s => s.BranchId).Distinct().ToListAsync();

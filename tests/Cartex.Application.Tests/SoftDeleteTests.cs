@@ -15,7 +15,7 @@ public class SoftDeleteTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         long categoryId;
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var category = new Category { Name = "TestCat-SoftDelete" };
@@ -27,7 +27,7 @@ public class SoftDeleteTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             await db.SaveChangesAsync();
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             Assert.Null(await db.Categories.FirstOrDefaultAsync(c => c.Id == categoryId));
@@ -40,7 +40,7 @@ public class SoftDeleteTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             await db.SaveChangesAsync();
         }
 
-        using (var scope = fixture.CreateScope())
+        using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             Assert.NotNull(await db.Categories.FirstOrDefaultAsync(c => c.Id == categoryId));

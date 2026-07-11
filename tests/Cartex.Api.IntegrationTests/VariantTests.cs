@@ -67,7 +67,7 @@ public class VariantTests(CartexApiFactory factory)
         Assert.Contains(updated.Barcodes, b => b.Code == "7000000000002");
         Assert.DoesNotContain(updated.Barcodes, b => b.Code == "7000000000001");
 
-        var defaultId = afterUpdate.Single(v => v.IsDefault).Id;
+        var defaultId = afterUpdate!.Single(v => v.IsDefault).Id;
         var deleteDefault = await client.DeleteAsync($"/api/products/variants/{defaultId}");
         Assert.False(deleteDefault.IsSuccessStatusCode);
 

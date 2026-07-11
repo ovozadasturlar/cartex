@@ -16,7 +16,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private async Task<long> SeedDebtorAsync(bool optOut = false, DateOnly? dueDate = null)
     {
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
@@ -24,7 +24,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
-        fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var customerId = await sender.Send(new CreateCustomerCommand("Eslatma Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m,
@@ -41,7 +41,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         var customerId = await SeedDebtorAsync();
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var outboxBefore = await db.NotificationOutbox.CountAsync();
@@ -59,7 +59,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         var customerId = await SeedDebtorAsync();
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(repeatDays: 7), DateTime.UtcNow, CancellationToken.None);
@@ -74,7 +74,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         await SeedDebtorAsync(optOut: true);
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));
@@ -99,7 +99,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         await SeedDebtorAsync(dueDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)));
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         Assert.Equal(1, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(minDays: 30), DateTime.UtcNow, CancellationToken.None));
@@ -112,7 +112,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         await SeedDebtorAsync(dueDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10)));
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));
@@ -123,7 +123,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         await SeedDebtorAsync(dueDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5)));
 
-        using var scope = fixture.CreateScope();
+        using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         Assert.Equal(1, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(minDays: 30), DateTime.UtcNow, CancellationToken.None));
