@@ -3,6 +3,9 @@
 }
 
 mat-sidenav-content {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   background: var(--cx-app-bg);
 }
 
@@ -112,6 +115,7 @@ mat-sidenav-content {
 }
 
 .topbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -179,5 +183,8 @@ mat-sidenav-content {
 }
 
 .content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 24px;
 }
