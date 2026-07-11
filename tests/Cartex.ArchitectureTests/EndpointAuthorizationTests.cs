@@ -22,6 +22,7 @@ public class EndpointAuthorizationTests
         "ReceiptController.GetReceiptPdf",
         "StoreAuthController.RequestOtp",
         "StoreAuthController.Verify",
+        "StoreAuthController.Telegram",
         "StoreAuthController.Refresh",
         "StoreAuthController.Logout",
     ];
@@ -29,12 +30,15 @@ public class EndpointAuthorizationTests
     private static readonly HashSet<string> AuthenticatedOnlyWhitelist =
     [
         "AuthController.ApproveQrLogin",
+        "AuthController.ChangePassword",
         "BusinessController.Get",
+        "RatesController.GetCurrencies",
         "ExpenseCategoriesController.GetExpenseCategories",
         "FeaturesController.GetEnabled",
         "SettingsController.GetReceipt",
         "SettingsController.GetSalesPolicy",
         "StoreController.Me",
+        "StoreController.SetLanguage",
         "StoreController.Info",
         "StoreController.Catalog",
         "StoreController.SubmitCart",
