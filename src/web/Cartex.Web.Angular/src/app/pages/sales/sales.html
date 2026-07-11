@@ -99,6 +99,17 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let row" class="actions">
+                @if (returnable(row)) {
+                  <button matIconButton class="ret" [title]="t('return')" (click)="openReturn(row, $event)">
+                    <mat-icon>undo</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
             <tr mat-row *matRowDef="let row; columns: columns" class="clickable" (click)="openReceipt(row)"></tr>
           </table>

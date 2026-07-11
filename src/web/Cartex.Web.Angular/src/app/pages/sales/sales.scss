@@ -47,3 +47,12 @@ td.num {
     height: 15px;
   }
 }
+
+.actions {
+  width: 48px;
+  text-align: right;
+
+  .ret {
+    color: var(--cx-danger);
+  }
+}

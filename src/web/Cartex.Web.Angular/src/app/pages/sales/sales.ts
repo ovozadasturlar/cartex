@@ -1,14 +1,17 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { SalesApi } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, utcRange } from '../../core/format';
 import { Receipt, Sale, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
@@ -50,6 +53,7 @@ export class Sales implements OnInit {
   private readonly dialog = inject(MatDialog);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
+  readonly canReturn = inject(AuthService).hasPermission('sales.return');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SalesTotals | null>(null);
@@ -57,7 +61,10 @@ export class Sales implements OnInit {
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly columns = ['date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status'];
+  readonly columns = [
+    'date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status',
+    ...(this.canReturn ? ['actions'] : []),
+  ];
 
   async ngOnInit(): Promise<void> {
     const { from, to } = utcRange(30);
@@ -87,6 +94,18 @@ export class Sales implements OnInit {
 
   statusKey(status: string): string {
     return statusKeys[status] ?? status;
+  }
+
+  returnable(row: Sale): boolean {
+    return row.status === 'Completed' || row.status === 'PartialReturn';
+  }
+
+  async openReturn(row: Sale, event: Event): Promise<void> {
+    event.stopPropagation();
+    const done = await lastValueFrom(
+      this.dialog.open(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+    );
+    if (done) this.load();
   }
 
   async openReceipt(row: Sale): Promise<void> {
@@ -273,6 +292,143 @@ export class ReceiptDialog {
       this.notify.error(e);
     } finally {
       this.resending.set(false);
+    }
+  }
+}
+
+interface ReturnLine {
+  saleItemId: number;
+  productName: string;
+  remaining: number;
+  quantity: number;
+  restock: boolean;
+  reason: string;
+}
+
+@Component({
+  selector: 'app-return-dialog',
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoModule],
+  template: `
+    <div class="dlg" *transloco="let t">
+      <div class="head">
+        <h2>{{ t('return') }}</h2>
+        <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
+      </div>
+      <mat-dialog-content>
+        @for (line of lines; track line.saleItemId) {
+          <div class="line">
+            <div class="top">
+              <span class="name">{{ line.productName }}</span>
+              <span class="rem">{{ t('remaining') }}: {{ line.remaining }}</span>
+            </div>
+            <div class="ctrl">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qty">
+                <mat-label>{{ t('quantity') }}</mat-label>
+                <input matInput type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantity" />
+              </mat-form-field>
+              <mat-checkbox [(ngModel)]="line.restock">{{ t('restock') }}</mat-checkbox>
+            </div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+              <mat-label>{{ t('reason') }}</mat-label>
+              <input matInput [(ngModel)]="line.reason" />
+            </mat-form-field>
+          </div>
+        }
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+        <button matButton="filled" class="danger-btn" [disabled]="busy()" (click)="confirm()">
+          {{ t('confirm') }}
+        </button>
+      </mat-dialog-actions>
+    </div>
+  `,
+  styles: `
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 16px 4px 24px;
+
+      h2 { margin: 0; font-size: 18px; font-weight: 700; }
+    }
+
+    .line {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 0;
+
+      & + .line { border-top: 1px solid var(--cx-border); }
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+
+      .name { font-weight: 600; font-size: 14px; }
+      .rem { font-size: 12.5px; color: var(--cx-text-3); }
+    }
+
+    .ctrl {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+
+      .qty { width: 140px; }
+    }
+
+    .full { width: 100%; }
+
+    .danger-btn {
+      --mat-button-filled-container-color: var(--cx-danger);
+      --mat-button-filled-label-text-color: #fff;
+    }
+  `,
+})
+export class ReturnDialog {
+  private readonly api = inject(SalesApi);
+  private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly ref = inject(MatDialogRef<ReturnDialog>);
+  private readonly sale = inject<Sale>(MAT_DIALOG_DATA);
+
+  readonly busy = signal(false);
+  readonly lines: ReturnLine[] = this.sale.items
+    .filter((i) => i.quantity - i.returnedQuantity > 0)
+    .map((i) => ({
+      saleItemId: i.saleItemId,
+      productName: i.productName,
+      remaining: i.quantity - i.returnedQuantity,
+      quantity: i.quantity - i.returnedQuantity,
+      restock: true,
+      reason: '',
+    }));
+
+  async confirm(): Promise<void> {
+    const lines = this.lines
+      .filter((l) => l.quantity > 0)
+      .map((l) => ({
+        saleItemId: l.saleItemId,
+        quantity: Math.min(l.quantity, l.remaining),
+        restock: l.restock,
+        reason: l.reason.trim() || null,
+      }));
+    if (!lines.length) {
+      this.notify.error(this.transloco.translate('return_select_qty'));
+      return;
+    }
+    this.busy.set(true);
+    try {
+      await lastValueFrom(this.api.returnSale(this.sale.id, lines));
+      this.notify.success(this.transloco.translate('success'));
+      this.ref.close(true);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
     }
   }
 }

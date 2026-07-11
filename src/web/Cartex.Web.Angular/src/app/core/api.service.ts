@@ -32,6 +32,10 @@ export class SalesApi {
   resendReceipt(id: number): Observable<void> {
     return this.http.post<void>(`/api/sales/${id}/resend-receipt`, {});
   }
+
+  returnSale(id: number, lines: { saleItemId: number; quantity: number; restock: boolean; reason: string | null }[]): Observable<void> {
+    return this.http.post<void>(`/api/sales/${id}/return`, { saleId: id, lines });
+  }
 }
 
 @Injectable({ providedIn: 'root' })
