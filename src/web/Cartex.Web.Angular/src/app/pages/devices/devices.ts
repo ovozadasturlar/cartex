@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 import { CxDatePipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
@@ -16,6 +17,13 @@ interface DeviceSession {
   createdAt: string;
   lastUsedAt: string;
   client: string | null;
+  username: string | null;
+}
+
+interface UserGroup {
+  username: string;
+  initials: string;
+  sessions: DeviceSession[];
 }
 
 const CLIENT_APPS: Record<string, string> = {
@@ -54,22 +62,22 @@ const CLIENT_APPS: Record<string, string> = {
               <span class="meta">{{ t('last_active') }}{{ me.lastUsedAt | cxDate }}</span>
             </div>
           </div>
-          @if (others().length) {
+          @if (myOthers().length) {
             <button class="term-row" (click)="terminateOthers(t)">
               <mat-icon>back_hand</mat-icon>
               {{ t('terminate_all') }}
             </button>
           }
         </div>
-        @if (others().length) {
+        @if (myOthers().length) {
           <p class="hint">{{ t('terminate_all_hint') }}</p>
         }
       }
 
-      @if (others().length) {
+      @if (myOthers().length) {
         <p class="sec">{{ t('active_sessions') }}</p>
         <div class="cx-card card">
-          @for (s of others(); track s.id) {
+          @for (s of myOthers(); track s.id) {
             <div class="row">
               <div class="dico" [class.phone]="isPhone(s)"><mat-icon>{{ icon(s) }}</mat-icon></div>
               <div class="info">
@@ -81,7 +89,31 @@ const CLIENT_APPS: Record<string, string> = {
             </div>
           }
         </div>
-      } @else if (!loading() && !current()) {
+      }
+
+      @if (groups().length) {
+        <p class="sec">{{ t('all_user_sessions') }}</p>
+        @for (g of groups(); track g.username) {
+          <div class="cx-card card group">
+            <div class="ghead">
+              <span class="avatar">{{ g.initials }}</span>
+              <span class="uname">{{ g.username }}</span>
+              <span class="count">{{ g.sessions.length }} {{ t('devices_count') }}</span>
+            </div>
+            @for (s of g.sessions; track s.id) {
+              <div class="row">
+                <div class="dico" [class.phone]="isPhone(s)"><mat-icon>{{ icon(s) }}</mat-icon></div>
+                <div class="info">
+                  <span class="name">{{ s.deviceName || t('device_unknown') }}</span>
+                  <span class="meta">{{ app(s) }}</span>
+                  <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
+                </div>
+                <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+              </div>
+            }
+          </div>
+        }
+      } @else if (!loading() && !current() && !myOthers().length) {
         <cx-empty-state icon="devices" [message]="t('no_data')" />
       }
     </ng-container>
@@ -95,6 +127,35 @@ const CLIENT_APPS: Record<string, string> = {
       color: var(--cx-brand);
     }
     .card { max-width: 640px; padding: 8px 10px; }
+    .group { margin-bottom: 12px; }
+    .ghead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px 8px;
+      border-bottom: 1px solid var(--cx-border);
+    }
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--cx-brand);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .uname { font-weight: 600; font-size: 14px; }
+    .count {
+      margin-left: auto;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--cx-text-3);
+      background: var(--cx-surface-2);
+      border-radius: 8px;
+      padding: 2px 8px;
+    }
     .row {
       display: flex;
       align-items: center;
@@ -145,18 +206,41 @@ export class Devices implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
 
+  readonly canViewAll = this.auth.hasPermission('users.manage');
   readonly loading = signal(true);
   readonly sessions = signal<DeviceSession[]>([]);
-  readonly current = computed(() => this.sessions().find((s) => this.isCurrent(s)) ?? null);
-  readonly others = computed(() => this.sessions().filter((s) => !this.isCurrent(s)));
+
+  private readonly myUsername = computed(() => this.auth.currentUser()?.username ?? '');
+  private readonly mine = computed(() =>
+    this.canViewAll ? this.sessions().filter((s) => s.username === this.myUsername()) : this.sessions(),
+  );
+  readonly current = computed(() => this.mine().find((s) => this.isCurrent(s)) ?? null);
+  readonly myOthers = computed(() => this.mine().filter((s) => !this.isCurrent(s)));
+  readonly groups = computed<UserGroup[]>(() => {
+    if (!this.canViewAll) return [];
+    const map = new Map<string, DeviceSession[]>();
+    for (const s of this.sessions()) {
+      if (s.username === this.myUsername()) continue;
+      const key = s.username ?? '?';
+      map.set(key, [...(map.get(key) ?? []), s]);
+    }
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([username, sessions]) => ({
+        username,
+        initials: username.slice(0, 2).toUpperCase(),
+        sessions,
+      }));
+  });
 
   ngOnInit(): void {
     this.load();
   }
 
   isCurrent(s: DeviceSession): boolean {
-    return (s.client ?? '') === 'web';
+    return (s.client ?? '') === 'web' && (!this.canViewAll || s.username === this.myUsername());
   }
 
   isPhone(s: DeviceSession): boolean {
@@ -190,7 +274,7 @@ export class Devices implements OnInit {
 
   async terminateOthers(t: (key: string) => string): Promise<void> {
     if (!confirm(t('terminate_all_confirm'))) return;
-    for (const s of this.others()) {
+    for (const s of this.myOthers()) {
       try {
         await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${s.id}`));
       } catch {}
@@ -202,7 +286,10 @@ export class Devices implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.sessions.set(await lastValueFrom(this.http.get<DeviceSession[]>('/api/auth/sessions')));
+      const params = this.canViewAll ? { all: 'true' } : undefined;
+      this.sessions.set(
+        await lastValueFrom(this.http.get<DeviceSession[]>('/api/auth/sessions', { params })),
+      );
     } catch (e) {
       this.notify.error(e);
     } finally {
