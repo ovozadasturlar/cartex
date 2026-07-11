@@ -19,7 +19,7 @@
       <div class="catalog">
         <div class="toolbar">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
-            <mat-icon matPrefix class="scan-icon">qr_code_scanner</mat-icon>
+            <mat-icon matPrefix class="scan-icon" svgIcon="cx-barcode"></mat-icon>
             <input
               matInput
               #scan
@@ -28,9 +28,6 @@
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
           </mat-form-field>
-          <button class="view-toggle" (click)="toggleView()">
-            <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
-          </button>
           @if (shift(); as s) {
             <span class="cx-chip ok shift-chip">
               <mat-icon>schedule</mat-icon>
@@ -42,6 +39,9 @@
               {{ t('shift_closed') }}
             </span>
           }
+          <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
+            <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
+          </button>
         </div>
 
         <div class="chips">
@@ -107,6 +107,20 @@
       <div class="cx-card cart">
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
+          @if (state.held().length) {
+            <button class="held-btn" [matMenuTriggerFor]="heldMenu">
+              <mat-icon>pause_circle</mat-icon>
+              {{ t('held_sales') }} · {{ state.held().length }}
+            </button>
+            <mat-menu #heldMenu="matMenu">
+              @for (h of state.held(); track h.heldAt; let i = $index) {
+                <button mat-menu-item (click)="resumeHeld(i)">
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>{{ h.customer?.fullName || t('cash_customer') }} · {{ h.total | cxMoney }}</span>
+                </button>
+              }
+            </mat-menu>
+          }
           <button class="clear-btn" [disabled]="!cart().length" (click)="clearCart()">
             <mat-icon>delete_outline</mat-icon>
           </button>
@@ -228,9 +242,15 @@
             </div>
           }
 
+          <div class="pay-row">
+          <button matButton="outlined" class="hold-btn" [disabled]="!cart().length || paying()"
+                  [matTooltip]="t('hold_sale')" (click)="holdSale()">
+            <mat-icon>pause</mat-icon>
+          </button>
           <button matButton="filled" class="pay-btn" [disabled]="paying()" (click)="pay()">
             {{ t('complete_sale') }}
           </button>
+          </div>
         </div>
       </div>
     </div>

@@ -2,9 +2,12 @@ import { Component, ElementRef, OnInit, computed, effect, inject, signal, untrac
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
+import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
@@ -28,7 +31,9 @@ const PAGE_SIZE = 40;
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatMenuModule,
     MatProgressBarModule,
+    MatTooltipModule,
     TranslocoModule,
     CxDatePipe,
     CxMoneyPipe,
@@ -44,7 +49,7 @@ export class Pos implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly wh = inject(WarehouseContextService);
   private readonly transloco = inject(TranslocoService);
-  private readonly state = inject(PosCartState);
+  readonly state = inject(PosCartState);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -90,7 +95,24 @@ export class Pos implements OnInit {
   private search = '';
   private page = 1;
 
+  holdSale(): void {
+    this.state.hold();
+    this.notify.success(this.transloco.translate('sale_held'));
+  }
+
+  resumeHeld(index: number): void {
+    if (this.cart().length) {
+      this.notify.error(this.transloco.translate('cart_not_empty'));
+      return;
+    }
+    this.state.resume(index);
+  }
+
   constructor() {
+    const registry = inject(MatIconRegistry);
+    registry.addSvgIconLiteral('cx-barcode', inject(DomSanitizer).bypassSecurityTrustHtml(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M2 5h2v14H2V5m3 0h1v14H5V5m2 0h2v14H7V5m3 0h1v14h-1V5m3 0h2v14h-2V5m3 0h1v14h-1V5m2 0h3v14h-3V5Z"/></svg>`,
+    ));
     effect(() => {
       if (this.wh.selectedWarehouseId()) untracked(() => this.reset());
     });

@@ -28,6 +28,8 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings),
         children: [
+          { path: 'security', loadComponent: () => import('./pages/security/security').then((m) => m.Security) },
+          { path: 'devices', loadComponent: () => import('./pages/devices/devices').then((m) => m.Devices) },
           { path: 'categories', loadComponent: () => import('./pages/categories/categories').then((m) => m.Categories) },
           { path: 'units', loadComponent: () => import('./pages/units/units').then((m) => m.Units) },
           { path: 'product-types', loadComponent: () => import('./pages/product-types/product-types').then((m) => m.ProductTypes) },

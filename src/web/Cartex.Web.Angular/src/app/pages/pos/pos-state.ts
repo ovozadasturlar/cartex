@@ -10,6 +10,13 @@ export interface CartLine {
   available: number;
 }
 
+export interface HeldSale {
+  cart: CartLine[];
+  customer: Customer | null;
+  total: number;
+  heldAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PosCartState {
   readonly cart = signal<CartLine[]>([]);
@@ -21,6 +28,27 @@ export class PosCartState {
   readonly discountManual = signal(0);
   readonly discountByPercent = signal(true);
   readonly dueDate = signal('');
+  readonly held = signal<HeldSale[]>(JSON.parse(localStorage.getItem('cartex.heldSales') ?? '[]'));
+
+  hold(): void {
+    if (!this.cart().length) return;
+    const total = this.cart().reduce((sum, l) => sum + l.price * l.qty, 0);
+    this.held.update((list) => [
+      ...list,
+      { cart: this.cart(), customer: this.customer(), total, heldAt: new Date().toISOString() },
+    ]);
+    localStorage.setItem('cartex.heldSales', JSON.stringify(this.held()));
+    this.clearAll();
+  }
+
+  resume(index: number): void {
+    const item = this.held()[index];
+    if (!item || this.cart().length) return;
+    this.cart.set(item.cart);
+    this.customer.set(item.customer);
+    this.held.update((list) => list.filter((_, i) => i !== index));
+    localStorage.setItem('cartex.heldSales', JSON.stringify(this.held()));
+  }
 
   resetPayments(): void {
     this.cash.set(0);

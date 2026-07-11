@@ -89,4 +89,11 @@ export const SETTINGS_SECTIONS: NavSection[] = [
       { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.manage' },
     ],
   },
+  {
+    labelKey: 'section_account',
+    items: [
+      { labelKey: 'security', icon: 'lock', route: '/settings/security', permission: null },
+      { labelKey: 'devices', icon: 'devices', route: '/settings/devices', permission: 'devices.manage' },
+    ],
+  },
 ];

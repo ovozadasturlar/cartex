@@ -558,3 +558,34 @@
     --mat-button-filled-disabled-label-text-color: rgb(255 255 255 / 70%);
   }
 }
+
+.pay-row {
+  display: flex;
+  gap: 8px;
+
+  .hold-btn {
+    --mat-button-outlined-container-height: 50px;
+    min-width: 54px;
+    padding: 0;
+  }
+
+  .pay-btn { flex: 1; }
+}
+
+.held-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 10px;
+  border: 1px solid var(--cx-warning);
+  border-radius: 8px;
+  background: var(--cx-warning-soft);
+  color: var(--cx-warning);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
