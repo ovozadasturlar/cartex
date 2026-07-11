@@ -74,8 +74,8 @@ export class CustomerProfile implements OnInit {
     return c ? (c.lastName ? `${c.fullName} ${c.lastName}` : c.fullName) : '';
   });
   readonly initials = computed(() => {
-    const c = this.customer();
-    return c ? (c.fullName.charAt(0) + (c.lastName?.charAt(0) ?? '')).toUpperCase() : '';
+    const words = this.title().split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map((w) => w.charAt(0)).join('').toUpperCase();
   });
   readonly debtText = computed(() => {
     const c = this.customer();

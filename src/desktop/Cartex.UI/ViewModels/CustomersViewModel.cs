@@ -6,6 +6,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Sales;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
@@ -15,6 +16,7 @@ namespace Cartex.UI.ViewModels;
 public partial class CustomersViewModel : ViewModelBase, ILoadable
 {
     private readonly ICustomersApi _api;
+    private readonly ISalesApi _salesApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
@@ -23,8 +25,10 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<CustomerDto> Customers { get; } = [];
     public ObservableCollection<CustomerLedgerEntryDto> Ledger { get; } = [];
+    public ObservableCollection<SaleDto> Sales { get; } = [];
     public PaginationState Paging { get; } = new();
     public PaginationState LedgerPaging { get; } = new();
+    public PaginationState SalesPaging { get; } = new();
     private long _ledgerCustomerId;
 
     [ObservableProperty] private string _searchText = "";
@@ -32,6 +36,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private CustomerTotalsDto? _totals;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLedgerLoading;
+    [ObservableProperty] private bool _isSalesLoading;
+    [ObservableProperty] private bool _isSalesTab;
 
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
@@ -106,12 +112,20 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool CanManage => _auth.HasPermission("customers.manage");
     public bool CanMessage => _auth.HasPermission("customers.message");
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanViewSales => _auth.HasPermission("sales.view");
 
-    public CustomersViewModel(ICustomersApi api, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi)
+    public string SelectedInitials => string.Concat(
+        $"{SelectedCustomer?.FullName} {SelectedCustomer?.LastName}"
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(w => char.ToUpperInvariant(w[0])));
+
+    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _api = api;
+        _salesApi = salesApi;
         _toast = toast;
         _busy = busy;
         _auth = auth;
@@ -119,6 +133,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
         LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
+        SalesPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadSalesAsync(_ledgerCustomerId));
     }
 
     [RelayCommand]
@@ -194,11 +209,43 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     partial void OnSelectedCustomerChanged(CustomerDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedInitials));
         Ledger.Clear();
+        Sales.Clear();
         _ledgerCustomerId = value?.Id ?? 0;
         LedgerPaging.Page = 1;
+        SalesPaging.Page = 1;
         if (value is null) { _ledgerCts?.Cancel(); return; }
         _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
+        if (IsSalesTab) _ = LoadSalesAsync(value.Id);
+    }
+
+    partial void OnIsSalesTabChanged(bool value)
+    {
+        if (value && _ledgerCustomerId != 0 && Sales.Count == 0) _ = LoadSalesAsync(_ledgerCustomerId);
+    }
+
+    [RelayCommand]
+    private void SetTab(string tab) => IsSalesTab = tab == "sales";
+
+    private async Task LoadSalesAsync(long id)
+    {
+        IsSalesLoading = true;
+        try
+        {
+            var result = await _salesApi.QueryAsync(QueryRequest.Create()
+                .Page(SalesPaging.Page, SalesPaging.PageSize)
+                .Sort("CreatedAt", true)
+                .With("customerId", id)
+                .Build());
+            if (id != _ledgerCustomerId) return;
+            var paged = result.ToPaged();
+            Sales.Clear();
+            foreach (var s in paged.Items) Sales.Add(s);
+            SalesPaging.Apply(paged.Meta);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { IsSalesLoading = false; }
     }
 
     private async Task DebouncedLedgerAsync(long id, CancellationToken token)
