@@ -55,6 +55,8 @@ export class BusinessSettings implements OnInit {
   legalName = '';
   currency = '';
   phone = '';
+  telegram = '';
+  website = '';
   address = '';
   private logoImageKey: string | null = null;
 
@@ -120,6 +122,8 @@ export class BusinessSettings implements OnInit {
           legalName: this.legalName.trim() || null,
           currency: this.currency,
           phone: this.phone.trim() || null,
+          telegram: this.telegram.trim() || null,
+          website: this.website.trim() || null,
           address: this.address.trim() || null,
           logoImageKey: this.logoImageKey,
         }),
@@ -190,6 +194,8 @@ export class BusinessSettings implements OnInit {
     this.legalName = b.legalName ?? '';
     this.currency = b.currency;
     this.phone = b.phone ?? '';
+    this.telegram = b.telegram ?? '';
+    this.website = b.website ?? '';
     this.address = b.address ?? '';
     this.logoImageKey = b.logoImageKey;
     if (b.logoImageKey) this.logoPreview.set(`/api/storage/content?key=${encodeURIComponent(b.logoImageKey)}`);

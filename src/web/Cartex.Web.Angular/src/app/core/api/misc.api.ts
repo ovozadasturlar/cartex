@@ -110,6 +110,8 @@ export interface Business {
   address: string | null;
   logoImageKey: string | null;
   multicurrency: boolean;
+  telegram: string | null;
+  website: string | null;
 }
 
 export interface ProductOption {
@@ -204,7 +206,7 @@ export class BusinessApi {
     return this.http.get<Business>('/api/business');
   }
 
-  update(body: { name: string; legalName: string | null; currency: string; phone: string | null; address: string | null; logoImageKey: string | null }): Observable<void> {
+  update(body: { name: string; legalName: string | null; currency: string; phone: string | null; address: string | null; logoImageKey: string | null; telegram: string | null; website: string | null }): Observable<void> {
     return this.http.put<void>('/api/business', body);
   }
 }

@@ -44,12 +44,21 @@
           </button>
         </div>
 
-        <div class="chips">
-          <button class="chip" [class.active]="categoryId() === null" (click)="onCategory(null)">{{ t('all') }}</button>
-          @for (c of categories(); track c.id) {
-            <button class="chip" [class.active]="categoryId() === c.id" (click)="onCategory(c.id)">{{ c.name }}</button>
-          }
-        </div>
+        @for (row of categoryRows(); track row.parent; let first = $first) {
+          <div class="chip-strip">
+            <button class="strip-arrow" (click)="scrollChips(strip, -1)"><mat-icon>chevron_left</mat-icon></button>
+            <div class="chips" #strip>
+              @if (first) {
+                <button class="chip" [class.active]="categoryId() === null" (click)="onCategory(null)">{{ t('all') }}</button>
+              }
+              @for (c of row.items; track c.id) {
+                <button class="chip" [class.active]="categoryId() === c.id || categoryPath().includes(c.id)"
+                        (click)="onCategory(c.id)">{{ c.name }}</button>
+              }
+            </div>
+            <button class="strip-arrow" (click)="scrollChips(strip, 1)"><mat-icon>chevron_right</mat-icon></button>
+          </div>
+        }
 
         @if (busy()) {
           <mat-progress-bar mode="indeterminate" />

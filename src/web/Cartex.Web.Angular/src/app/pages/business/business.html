@@ -46,6 +46,16 @@
             <input matInput [(ngModel)]="address" [disabled]="!canManage" />
           </mat-form-field>
         </div>
+        <div class="row2">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('telegram_address') }}</mat-label>
+            <input matInput [(ngModel)]="telegram" placeholder="@cartex_uz" [disabled]="!canManage" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('website') }}</mat-label>
+            <input matInput [(ngModel)]="website" placeholder="cartex.uz" [disabled]="!canManage" />
+          </mat-form-field>
+        </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
           <mat-label>{{ t('base_currency') }}</mat-label>
           <input matInput [ngModel]="currency" readonly />

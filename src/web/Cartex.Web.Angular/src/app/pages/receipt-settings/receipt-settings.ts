@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { SettingsApi } from '../../core/api/settings.api';
@@ -21,6 +22,7 @@ import { PageHeader } from '../../shared/page-header';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSelectModule,
     TranslocoModule,
     PageHeader,
   ],
@@ -38,6 +40,8 @@ export class ReceiptSettings implements OnInit {
   headerText = '';
   footerText = '';
   paperWidth = 32;
+  paperFormat = 'Thermal';
+  readonly paperFormats = ['Thermal', 'A5', 'A4'];
 
   async ngOnInit(): Promise<void> {
     try {
@@ -45,6 +49,7 @@ export class ReceiptSettings implements OnInit {
       this.headerText = s.headerText ?? '';
       this.footerText = s.footerText ?? '';
       this.paperWidth = s.paperWidth;
+      this.paperFormat = s.paperFormat || 'Thermal';
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -60,6 +65,7 @@ export class ReceiptSettings implements OnInit {
           headerText: this.headerText.trim() || null,
           footerText: this.footerText.trim() || null,
           paperWidth: this.paperWidth,
+          paperFormat: this.paperFormat,
         }),
       );
       this.notify.success(message);

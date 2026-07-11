@@ -59,6 +59,19 @@ export class Pos implements OnInit {
   readonly viewMode = signal<'grid' | 'list'>(localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid');
   readonly categories = signal<Category[]>([]);
   readonly categoryId = signal<number | null>(null);
+  readonly categoryPath = signal<number[]>([]);
+  readonly categoryRows = computed(() => {
+    const all = this.categories();
+    const rows: { parent: number | null; items: Category[] }[] = [
+      { parent: null, items: all.filter((c) => c.parentId === null) },
+    ];
+    for (const id of this.categoryPath()) {
+      const children = all.filter((c) => c.parentId === id);
+      if (!children.length) break;
+      rows.push({ parent: id, items: children });
+    }
+    return rows;
+  });
   readonly tiles = signal<StockOnHand[]>([]);
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
@@ -108,6 +121,10 @@ export class Pos implements OnInit {
     this.state.resume(index);
   }
 
+  scrollChips(row: HTMLElement, dir: number): void {
+    row.scrollBy({ left: dir * 240, behavior: 'smooth' });
+  }
+
   constructor() {
     const registry = inject(MatIconRegistry);
     registry.addSvgIconLiteral('cx-barcode', inject(DomSanitizer).bypassSecurityTrustHtml(
@@ -139,6 +156,18 @@ export class Pos implements OnInit {
   }
 
   onCategory(id: number | null): void {
+    if (id === null) {
+      this.categoryPath.set([]);
+    } else {
+      const all = this.categories();
+      const path: number[] = [];
+      let cur: number | null | undefined = id;
+      while (cur != null) {
+        path.unshift(cur);
+        cur = all.find((c) => c.id === cur)?.parentId;
+      }
+      this.categoryPath.set(path);
+    }
     this.categoryId.set(id);
     this.reset();
   }

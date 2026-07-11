@@ -7,6 +7,7 @@ import { ListQuery, Paged, listParams, toPaged } from '../paging';
 export interface Category {
   id: number;
   name: string;
+  parentId: number | null;
 }
 
 export interface StockOnHand {

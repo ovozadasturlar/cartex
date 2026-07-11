@@ -66,6 +66,7 @@ export interface ReceiptSettings {
   headerText: string | null;
   footerText: string | null;
   paperWidth: number;
+  paperFormat: string;
 }
 
 export interface SalesPolicy {

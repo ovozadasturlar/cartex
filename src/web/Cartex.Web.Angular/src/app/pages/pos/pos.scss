@@ -75,11 +75,41 @@
   mat-icon { font-size: 15px; width: 15px; height: 15px; }
 }
 
+.chip-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
 .chips {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+
+  .chip { flex-shrink: 0; }
+}
+
+.strip-arrow {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--cx-border);
+  border-radius: 50%;
+  background: var(--cx-card);
+  color: var(--cx-text-2);
+  cursor: pointer;
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+
+  &:hover { color: var(--cx-brand); }
 }
 
 .chip {
