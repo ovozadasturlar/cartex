@@ -88,6 +88,44 @@ public class SalesPolicyTests(CartexApiFactory factory)
     }
 
     [Fact]
+    public async Task Own_van_warehouse_cash_repay_needs_no_shift()
+    {
+        var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
+        await AuthHelper.EnsureNoOpenShiftAsync(admin);
+        var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses");
+        var warehouseId = warehouses![0].Id;
+        var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users");
+        var adminId = users!.First(u => u.Username == "admin").Id;
+
+        var create = await admin.PostAsJsonAsync("/api/customers", new
+        {
+            fullName = "Van Repay Test",
+            phone = "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999),
+            cardBarcode = (string?)null,
+            discountPct = 0m,
+            openingBalance = 40_000m
+        });
+        create.EnsureSuccessStatusCode();
+        var customerId = await create.Content.ReadFromJsonAsync<long>();
+
+        try
+        {
+            var blocked = await admin.PostAsJsonAsync($"/api/customers/{customerId}/repay-debt", new { amount = 10_000m, viaCard = false });
+            Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+
+            (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
+                new { name = warehouses[0].Name, isOnline = false, assignedUserId = adminId })).EnsureSuccessStatusCode();
+
+            (await admin.PostAsJsonAsync($"/api/customers/{customerId}/repay-debt", new { amount = 10_000m, viaCard = false })).EnsureSuccessStatusCode();
+        }
+        finally
+        {
+            (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
+                new { name = warehouses[0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Shift_policy_off_allows_cash_sale_without_shift()
     {
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
