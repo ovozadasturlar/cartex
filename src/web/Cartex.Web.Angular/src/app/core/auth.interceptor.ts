@@ -8,7 +8,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith('/api')) return next(req);
 
   req = req.clone({ setHeaders: { 'X-Client': 'web' } });
-  if (req.url.startsWith('/api/auth/')) return next(req);
+  const anonymous = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout', '/api/auth/qr/'];
+  if (anonymous.some((p) => req.url.startsWith(p))) return next(req);
 
   const auth = inject(AuthService);
   const router = inject(Router);
