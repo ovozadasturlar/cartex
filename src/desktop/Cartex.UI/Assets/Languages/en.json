@@ -586,6 +586,8 @@
   "revenue": "Revenue",
   "revenue_trend": "Revenue Trend",
   "revoke": "Revoke",
+  "revoke_selected": "Terminate selected",
+  "revoke_selected_confirm": "Terminate sessions of the selected devices?",
   "revoked": "Revoked",
   "role": "Role",
   "roles": "Roles",

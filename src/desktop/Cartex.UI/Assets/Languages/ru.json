@@ -586,6 +586,8 @@
   "revenue": "Выручка",
   "revenue_trend": "Динамика выручки",
   "revoke": "Отключить",
+  "revoke_selected": "Завершить выбранные",
+  "revoke_selected_confirm": "Завершить сеансы выбранных устройств?",
   "revoked": "Отозван",
   "role": "Роль",
   "roles": "Роли",

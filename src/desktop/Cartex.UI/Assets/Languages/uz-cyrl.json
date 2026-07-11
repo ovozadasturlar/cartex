@@ -586,6 +586,8 @@
   "revenue": "Даромад",
   "revenue_trend": "Даромад динамикаси",
   "revoke": "Чиқариш",
+  "revoke_selected": "Танланганларни узиш",
+  "revoke_selected_confirm": "Танланган қурилмалар сеанси узилсинми?",
   "revoked": "Бекор қилинган",
   "role": "Рол",
   "roles": "Роллар",

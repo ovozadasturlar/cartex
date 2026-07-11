@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
@@ -37,6 +38,7 @@ const CLIENT_APPS: Record<string, string> = {
   selector: 'app-devices',
   imports: [
     MatButtonModule,
+    MatCheckboxModule,
     MatIconModule,
     MatProgressBarModule,
     TranslocoModule,
@@ -98,17 +100,31 @@ const CLIENT_APPS: Record<string, string> = {
             <div class="ghead">
               <span class="avatar">{{ g.initials }}</span>
               <span class="uname">{{ g.username }}</span>
-              <span class="count">{{ g.sessions.length }} {{ t('devices_count') }}</span>
+              @if (editGroup() === g.username) {
+                <button matButton class="danger sel-btn" [disabled]="!selected().size" (click)="revokeSelected(t)">
+                  {{ t('revoke_selected') }}@if (selected().size) { ({{ selected().size }}) }
+                </button>
+              } @else {
+                <span class="count">{{ g.sessions.length }} {{ t('devices_count') }}</span>
+              }
+              <button matIconButton class="pencil" (click)="toggleEdit(g.username)">
+                <mat-icon>{{ editGroup() === g.username ? 'close' : 'edit' }}</mat-icon>
+              </button>
             </div>
             @for (s of g.sessions; track s.id) {
-              <div class="row">
+              <div class="row" [class.pick]="editGroup() === g.username" (click)="editGroup() === g.username && toggleSel(s.id)">
+                @if (editGroup() === g.username) {
+                  <mat-checkbox [checked]="selected().has(s.id)" (click)="$event.stopPropagation()" (change)="toggleSel(s.id)" />
+                }
                 <div class="dico" [class.phone]="isPhone(s)"><mat-icon>{{ icon(s) }}</mat-icon></div>
                 <div class="info">
                   <span class="name">{{ s.deviceName || t('device_unknown') }}</span>
                   <span class="meta">{{ app(s) }}</span>
                   <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
                 </div>
-                <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+                @if (editGroup() !== g.username) {
+                  <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+                }
               </div>
             }
           </div>
@@ -156,6 +172,9 @@ const CLIENT_APPS: Record<string, string> = {
       border-radius: 8px;
       padding: 2px 8px;
     }
+    .sel-btn { margin-left: auto; }
+    .pencil { color: var(--cx-text-3); }
+    .row.pick { cursor: pointer; }
     .row {
       display: flex;
       align-items: center;
@@ -211,6 +230,8 @@ export class Devices implements OnInit {
   readonly canViewAll = this.auth.hasPermission('users.manage');
   readonly loading = signal(true);
   readonly sessions = signal<DeviceSession[]>([]);
+  readonly editGroup = signal<string | null>(null);
+  readonly selected = signal<Set<number>>(new Set());
 
   private readonly myUsername = computed(() => this.auth.currentUser()?.username ?? '');
   private readonly mine = computed(() =>
@@ -270,6 +291,31 @@ export class Devices implements OnInit {
     } catch (e) {
       this.notify.error(e);
     }
+  }
+
+  toggleEdit(username: string): void {
+    this.editGroup.set(this.editGroup() === username ? null : username);
+    this.selected.set(new Set());
+  }
+
+  toggleSel(id: number): void {
+    const s = new Set(this.selected());
+    if (s.has(id)) s.delete(id);
+    else s.add(id);
+    this.selected.set(s);
+  }
+
+  async revokeSelected(t: (key: string) => string): Promise<void> {
+    if (!confirm(t('revoke_selected_confirm'))) return;
+    for (const id of this.selected()) {
+      try {
+        await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${id}`));
+      } catch {}
+    }
+    this.notify.success(this.transloco.translate('device_revoked'));
+    this.editGroup.set(null);
+    this.selected.set(new Set());
+    await this.load();
   }
 
   async terminateOthers(t: (key: string) => string): Promise<void> {
