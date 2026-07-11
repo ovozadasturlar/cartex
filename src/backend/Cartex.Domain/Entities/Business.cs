@@ -9,6 +9,8 @@ public class Business : AuditableEntity
     public string Currency { get; set; } = "UZS";
     public string? Phone { get; set; }
     public string? Address { get; set; }
+    public string? Telegram { get; set; }
+    public string? Website { get; set; }
     public string? LogoImageKey { get; set; }
 
     public ICollection<Branch> Branches { get; set; } = [];

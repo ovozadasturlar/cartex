@@ -114,6 +114,7 @@ using (var scope = app.Services.CreateScope())
     await DatabaseSeeder.SyncPermissionsAsync(db);
     await DatabaseSeeder.SyncUnitsAsync(db);
     await DatabaseSeeder.SyncFeaturesAsync(db);
+    await DatabaseSeeder.SyncCurrenciesAsync(db);
     await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
     await DatabaseSeeder.EnsureAdminPasswordAsync(db, hasher.Verify, hasher.Hash, adminPassword);
 

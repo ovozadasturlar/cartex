@@ -110,6 +110,12 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                                 left.Item().Text(receipt.BranchAddress).FontSize(8).FontColor(muted);
                             if (!string.IsNullOrWhiteSpace(receipt.BranchPhone))
                                 left.Item().Text(receipt.BranchPhone).FontSize(8).FontColor(muted);
+                            else if (!string.IsNullOrWhiteSpace(receipt.BusinessPhone))
+                                left.Item().Text(receipt.BusinessPhone).FontSize(8).FontColor(muted);
+                            if (!string.IsNullOrWhiteSpace(receipt.BusinessTelegram))
+                                left.Item().Text(receipt.BusinessTelegram).FontSize(8).FontColor(muted);
+                            if (!string.IsNullOrWhiteSpace(receipt.BusinessWebsite))
+                                left.Item().Text(receipt.BusinessWebsite).FontSize(8).FontColor(muted);
                         });
                         row.ConstantItem(a4 ? 180 : 150).Column(right =>
                         {

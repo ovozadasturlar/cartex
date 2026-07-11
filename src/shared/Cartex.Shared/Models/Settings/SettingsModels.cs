@@ -17,8 +17,8 @@ public record UpdateReminderSettingsRequest(bool Enabled, int MinDaysOverdue, in
 public record TelegramTestRequest(string? BotToken);
 public record TelegramTestResult(bool Ok, string? BotUsername);
 public record SendTestMessageRequest(string Channel, string? Recipient);
-public record ReceiptSettingsDto(string? HeaderText, string? FooterText, int PaperWidth);
-public record UpdateReceiptSettingsRequest(string? HeaderText, string? FooterText, int PaperWidth);
+public record ReceiptSettingsDto(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal");
+public record UpdateReceiptSettingsRequest(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal");
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);

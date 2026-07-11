@@ -9,6 +9,7 @@ public class RefreshSession : BaseEntity
 
     public string TokenHash { get; set; } = null!;
     public string? DeviceName { get; set; }
+    public string? Client { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime FamilyCreatedAt { get; set; }

@@ -4,4 +4,4 @@ public record RefreshRequest(string RefreshToken, string? DeviceName = null);
 
 public record LogoutRequest(string RefreshToken);
 
-public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username = null);
+public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username = null, string? Client = null);

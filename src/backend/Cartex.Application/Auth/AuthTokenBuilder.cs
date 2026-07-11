@@ -1,3 +1,4 @@
+using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Auth.Services;
@@ -12,7 +13,8 @@ public sealed class AuthTokenBuilder(
     IApplicationDbContext db,
     IJwtTokenGenerator jwtTokenGenerator,
     ILicenseService licenseService,
-    IAuditService audit)
+    IAuditService audit,
+    ICurrentUser currentUser)
 {
     private const int RefreshLifetimeDays = 30;
     private const int AbsoluteLifetimeDays = 90;
@@ -99,6 +101,7 @@ public sealed class AuthTokenBuilder(
             UserId = userId,
             TokenHash = hash,
             DeviceName = string.IsNullOrWhiteSpace(deviceName) ? null : deviceName.Trim(),
+            Client = currentUser.Client,
             CreatedAt = now,
             FamilyCreatedAt = familyCreatedAt,
             LastUsedAt = now,

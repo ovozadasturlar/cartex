@@ -56,6 +56,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public string[] ReceiptModes { get; } = ["thermal", "a5", "a4"];
     public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
     public int[] BusinessPaperWidths { get; } = [32, 42, 48];
+    public string[] SendFormats { get; } = ["Thermal", "A5", "A4"];
+    [ObservableProperty] private string _sendFormat = "Thermal";
 
     partial void OnSelectedLabelPresetChanged(string? value)
     {
@@ -104,6 +106,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             HeaderText = cfg.HeaderText ?? string.Empty;
             FooterText = cfg.FooterText ?? string.Empty;
             BusinessPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
+            SendFormat = SendFormats.Contains(cfg.PaperFormat) ? cfg.PaperFormat : "Thermal";
         }
         catch { }
     }
@@ -128,7 +131,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(
                 string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
                 string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-                BusinessPaperWidth));
+                BusinessPaperWidth,
+                SendFormat));
         }
         catch (Exception ex)
         {

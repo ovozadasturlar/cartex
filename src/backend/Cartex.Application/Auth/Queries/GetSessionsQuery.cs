@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Auth.Queries;
 
-public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username = null);
+public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username = null, string? Client = null);
 
 public record GetSessionsQuery(bool All = false) : IRequest<IReadOnlyList<DeviceSessionDto>>;
 
@@ -21,13 +21,13 @@ public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUs
         var sessions = await db.RefreshSessions
             .Where(s => (all || s.UserId == userId) && s.RevokedAt == null && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastUsedAt)
-            .Select(s => new { s.Id, s.UserId, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.User.Username })
+            .Select(s => new { s.Id, s.UserId, s.DeviceName, s.Client, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.User.Username })
             .ToListAsync(cancellationToken);
 
         return sessions
             .GroupBy(s => new { s.UserId, s.DeviceName })
             .Select(g => g.First())
-            .Select(s => new DeviceSessionDto(s.Id, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, all ? s.Username : null))
+            .Select(s => new DeviceSessionDto(s.Id, s.DeviceName, s.CreatedAt, s.LastUsedAt, s.ExpiresAt, all ? s.Username : null, s.Client))
             .OrderByDescending(s => s.LastUsedAt)
             .ToList();
     }

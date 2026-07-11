@@ -30,7 +30,11 @@ public record ReceiptDto(
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
     string? CustomerName = null,
-    string? Language = null);
+    string? Language = null,
+    string? BusinessPhone = null,
+    string? BusinessTelegram = null,
+    string? BusinessWebsite = null,
+    string? LogoImageKey = null);
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
@@ -61,7 +65,11 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount)).ToList(),
                 sale.Id,
                 sale.Customer != null ? sale.Customer.FullName : null,
-                sale.Customer != null ? sale.Customer.PreferredLanguage : null))
+                sale.Customer != null ? sale.Customer.PreferredLanguage : null,
+                business.Phone,
+                business.Telegram,
+                business.Website,
+                business.LogoImageKey))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

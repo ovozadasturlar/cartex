@@ -5,7 +5,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Business.Commands;
 
-public record UpdateBusinessCommand(string Name, string? LegalName, string Currency, string? Phone = null, string? Address = null, string? LogoImageKey = null) : ICommand<Unit>;
+public record UpdateBusinessCommand(string Name, string? LegalName, string Currency, string? Phone = null, string? Address = null, string? LogoImageKey = null, string? Telegram = null, string? Website = null) : ICommand<Unit>;
 
 public sealed class UpdateBusinessCommandHandler(IApplicationDbContext db)
     : IRequestHandler<UpdateBusinessCommand, Unit>
@@ -21,6 +21,8 @@ public sealed class UpdateBusinessCommandHandler(IApplicationDbContext db)
         business.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
         business.Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim();
         business.LogoImageKey = string.IsNullOrWhiteSpace(request.LogoImageKey) ? null : request.LogoImageKey.Trim();
+        business.Telegram = string.IsNullOrWhiteSpace(request.Telegram) ? null : request.Telegram.Trim();
+        business.Website = string.IsNullOrWhiteSpace(request.Website) ? null : request.Website.Trim();
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

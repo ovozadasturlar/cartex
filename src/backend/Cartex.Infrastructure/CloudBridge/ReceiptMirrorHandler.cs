@@ -24,7 +24,12 @@ public sealed class ReceiptMirrorHandler(ISender sender, IReceiptPdfRenderer pdf
         var s = await sender.Send(new GetReceiptSettingsQuery(), cancellationToken);
         var opts = new ReceiptSettings { HeaderText = s.HeaderText, FooterText = s.FooterText, PaperWidth = s.PaperWidth };
         var html = ReceiptHtmlRenderer.Render(receipt, opts);
-        var pdf = pdfRenderer.RenderDocument(receipt, opts);
+        var pdf = opts?.PaperFormat switch
+        {
+            "A4" => pdfRenderer.RenderDocument(receipt, opts, a4: true),
+            "Thermal" => pdfRenderer.Render(receipt, opts),
+            _ => pdfRenderer.RenderDocument(receipt, opts)
+        };
         await bridge.PushReceiptAsync(cfg, notification.DomainEvent.ReceiptToken, html, pdf, cancellationToken);
     }
 }

@@ -62,7 +62,12 @@ public sealed class NotificationService(
             return;
 
         var receiptCfg = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
-        var pdf = pdfRenderer.Render(receipt, receiptCfg);
+        var pdf = receiptCfg?.PaperFormat switch
+        {
+            "A4" => pdfRenderer.RenderDocument(receipt, receiptCfg, a4: true),
+            "A5" => pdfRenderer.RenderDocument(receipt, receiptCfg),
+            _ => pdfRenderer.Render(receipt, receiptCfg)
+        };
         var fileName = $"chek-{token[..8]}.pdf";
         var caption = $"{T("thanks")} ({total})";
 

@@ -58,6 +58,17 @@
                         <TextBox Text="{Binding Address}" MinHeight="40" />
                     </StackPanel>
 
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[telegram_address]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding Telegram}" MinHeight="40" Watermark="@cartex_uz" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="6">
+                            <TextBlock Text="{Binding L[website]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding Website}" MinHeight="40" Watermark="cartex.uz" />
+                        </StackPanel>
+                    </Grid>
+
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="16"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="12">

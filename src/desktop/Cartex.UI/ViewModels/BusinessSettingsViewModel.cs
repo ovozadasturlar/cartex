@@ -26,6 +26,8 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _legalName = string.Empty;
     [ObservableProperty] private string _currency = "UZS";
     [ObservableProperty] private string _phone = string.Empty;
+    [ObservableProperty] private string _telegram = string.Empty;
+    [ObservableProperty] private string _website = string.Empty;
     [ObservableProperty] private string _address = string.Empty;
     [ObservableProperty] private string? _logoImageKey;
     [ObservableProperty] private Bitmap? _logoPreview;
@@ -88,6 +90,8 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             Currency = b.Currency;
             Phone = b.Phone ?? string.Empty;
             Address = b.Address ?? string.Empty;
+            Telegram = b.Telegram ?? string.Empty;
+            Website = b.Website ?? string.Empty;
             LogoImageKey = b.LogoImageKey;
             LogoPreview = await LoadBitmapAsync(b.LogoImageKey);
         }
@@ -138,7 +142,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     Currency.Trim(),
                     string.IsNullOrWhiteSpace(Phone) ? null : Phone.Trim(),
                     string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
-                    LogoImageKey));
+                    LogoImageKey,
+                    string.IsNullOrWhiteSpace(Telegram) ? null : Telegram.Trim(),
+                    string.IsNullOrWhiteSpace(Website) ? null : Website.Trim()));
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));

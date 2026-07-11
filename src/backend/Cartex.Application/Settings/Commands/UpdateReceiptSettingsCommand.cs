@@ -6,7 +6,7 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateReceiptSettingsCommand(string? HeaderText, string? FooterText, int PaperWidth) : ICommand<Unit>;
+public record UpdateReceiptSettingsCommand(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal") : ICommand<Unit>;
 
 public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateReceiptSettingsCommand, Unit>
@@ -17,7 +17,8 @@ public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService setting
         {
             HeaderText = string.IsNullOrWhiteSpace(request.HeaderText) ? null : request.HeaderText.Trim(),
             FooterText = string.IsNullOrWhiteSpace(request.FooterText) ? null : request.FooterText.Trim(),
-            PaperWidth = request.PaperWidth
+            PaperWidth = request.PaperWidth,
+            PaperFormat = request.PaperFormat
         };
         audit.Add("settings", "settings", null, new { section = "receipt" });
         await settings.SetAsync(SettingKeys.Receipt, cfg, cancellationToken);
@@ -30,6 +31,7 @@ public sealed class UpdateReceiptSettingsCommandValidator : AbstractValidator<Up
     public UpdateReceiptSettingsCommandValidator()
     {
         RuleFor(x => x.PaperWidth).Must(w => w is 32 or 42 or 48);
+        RuleFor(x => x.PaperFormat).Must(f => f is "Thermal" or "A5" or "A4");
         RuleFor(x => x.HeaderText).MaximumLength(200);
         RuleFor(x => x.FooterText).MaximumLength(200);
     }

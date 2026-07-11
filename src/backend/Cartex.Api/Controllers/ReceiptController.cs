@@ -39,8 +39,8 @@ public class ReceiptController(ISender sender) : ControllerBase
             return NotFound();
 
         var receiptSettings = await sender.Send(new Cartex.Application.Settings.Queries.GetReceiptSettingsQuery());
-        var opts = new ReceiptSettings { HeaderText = receiptSettings.HeaderText, FooterText = receiptSettings.FooterText, PaperWidth = receiptSettings.PaperWidth };
-        var pdf = size?.ToLowerInvariant() switch
+        var opts = new ReceiptSettings { HeaderText = receiptSettings.HeaderText, FooterText = receiptSettings.FooterText, PaperWidth = receiptSettings.PaperWidth, PaperFormat = receiptSettings.PaperFormat };
+        var pdf = (size ?? receiptSettings.PaperFormat).ToLowerInvariant() switch
         {
             "a4" => pdfRenderer.RenderDocument(receipt, opts, a4: true),
             "a5" => pdfRenderer.RenderDocument(receipt, opts),
