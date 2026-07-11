@@ -11,16 +11,23 @@ import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { CustomersApi } from '../../core/api.service';
+import { CustomersApi, SalesApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
-import { Customer, LedgerEntry } from '../../core/models';
+import { Customer, LedgerEntry, Sale } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
+import { ReceiptDialog } from '../sales/sales';
+
+const statusKeys: Record<string, string> = {
+  Completed: 'status_completed',
+  Returned: 'status_returned',
+  PartialReturn: 'status_partial_return',
+};
 
 @Component({
   selector: 'app-customer-profile',
@@ -41,6 +48,8 @@ import { ConfirmDialog } from '../loyalty/confirm-dialog';
 })
 export class CustomerProfile implements OnInit {
   private readonly api = inject(CustomersApi);
+  private readonly salesApi = inject(SalesApi);
+  private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
@@ -48,12 +57,17 @@ export class CustomerProfile implements OnInit {
   private readonly money = new CxMoneyPipe();
   private readonly id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
-  readonly canManage = inject(AuthService).hasPermission('customers.manage');
+  readonly canManage = this.auth.hasPermission('customers.manage');
+  readonly canViewSales = this.auth.hasPermission('sales.view');
   readonly loading = signal(true);
   readonly customer = signal<Customer | null>(null);
   readonly ledgerLoading = signal(true);
   readonly ledger = signal<Paged<LedgerEntry> | null>(null);
   readonly cols = ['date', 'op', 'account', 'change', 'after'];
+  readonly tab = signal<'ledger' | 'sales'>('ledger');
+  readonly salesLoading = signal(false);
+  readonly sales = signal<Paged<Sale> | null>(null);
+  readonly saleCols = ['date', 'user', 'total', 'debt', 'status'];
 
   readonly title = computed(() => {
     const c = this.customer();
@@ -73,6 +87,8 @@ export class CustomerProfile implements OnInit {
 
   private page = 1;
   private pageSize = 20;
+  private salesPage = 1;
+  private salesPageSize = 20;
 
   ngOnInit(): void {
     this.load();
@@ -87,6 +103,35 @@ export class CustomerProfile implements OnInit {
     this.page = e.page;
     this.pageSize = e.pageSize;
     this.loadLedger();
+  }
+
+  onSalesPage(e: { page: number; pageSize: number }): void {
+    this.salesPage = e.page;
+    this.salesPageSize = e.pageSize;
+    this.loadSales();
+  }
+
+  setTab(tab: 'ledger' | 'sales'): void {
+    this.tab.set(tab);
+    if (tab === 'sales' && !this.sales()) this.loadSales();
+  }
+
+  statusKey(status: string): string {
+    return statusKeys[status] ?? status;
+  }
+
+  async openReceipt(row: Sale): Promise<void> {
+    try {
+      const receipt = await lastValueFrom(this.salesApi.receipt(row.receiptToken));
+      this.dialog.open(ReceiptDialog, {
+        data: { receipt, saleId: row.id },
+        width: '420px',
+        maxWidth: '94vw',
+        autoFocus: false,
+      });
+    } catch (e) {
+      this.notify.error(e);
+    }
   }
 
   async edit(): Promise<void> {
@@ -130,6 +175,27 @@ export class CustomerProfile implements OnInit {
       this.back();
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private async loadSales(): Promise<void> {
+    this.salesLoading.set(true);
+    try {
+      this.sales.set(
+        await lastValueFrom(
+          this.salesApi.list({
+            page: this.salesPage,
+            pageSize: this.salesPageSize,
+            customerId: this.id,
+            sortBy: 'CreatedAt',
+            descending: true,
+          }),
+        ),
+      );
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.salesLoading.set(false);
     }
   }
 

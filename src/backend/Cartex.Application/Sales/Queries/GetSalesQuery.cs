@@ -14,6 +14,7 @@ public record GetSalesQuery : FilteringRequest, IRequest<IReadOnlyCollection<Sal
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
     public long? WarehouseId { get; set; }
+    public long? CustomerId { get; set; }
 }
 
 public record SaleLineDto(
@@ -58,6 +59,8 @@ public sealed class GetSalesQueryHandler(
             query = query.Where(s => s.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
         if (request.WarehouseId is { } warehouseId)
             query = query.Where(s => s.WarehouseId == warehouseId);
+        if (request.CustomerId is { } customerId)
+            query = query.Where(s => s.CustomerId == customerId);
 
         return await query
             .ToPagedListAsync(request,
