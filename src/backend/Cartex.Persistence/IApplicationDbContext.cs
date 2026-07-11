@@ -46,6 +46,7 @@ public interface IApplicationDbContext
     DbSet<StockAdjustment> StockAdjustments { get; }
     DbSet<ExpenseCategory> ExpenseCategories { get; }
     DbSet<ExchangeRate> ExchangeRates { get; }
+    DbSet<Currency> Currencies { get; }
     DbSet<SalePayment> SalePayments { get; }
     DbSet<ShiftCash> ShiftCashes { get; }
     DbSet<DebtReminderLog> DebtReminderLogs { get; }

@@ -1,69 +1,235 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.RatesView"
              x:CompileBindings="False">
 
-    <ScrollViewer>
-        <StackPanel Margin="24" MaxWidth="720" HorizontalAlignment="Left" Spacing="16">
-            <c:PageHeader Title="{Binding L[exchange_rates]}" />
+    <UserControl.Styles>
+        <Style Selector="Border.stat">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16,12" />
+        </Style>
+        <Style Selector="Border.tag">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="7,2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.tag > TextBlock">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        </Style>
+        <Style Selector="Border.tag.brand">
+            <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.tag.brand > TextBlock">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.statval">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="TextBlock.mut">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        </Style>
+        <Style Selector="TextBlock.stale">
+            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+        </Style>
+    </UserControl.Styles>
 
-            <Border Background="{DynamicResource DangerBg}" CornerRadius="10" Padding="12,10"
-                    IsVisible="{Binding IsFeatureOff}">
-                <TextBlock Text="{Binding L[multicurrency_off_hint]}" FontSize="12.5" TextWrapping="Wrap"
-                           Foreground="{DynamicResource DangerBrush}" />
-            </Border>
+    <Panel>
+        <ScrollViewer Classes.blurred="{Binding IsAddOpen}">
+            <StackPanel Margin="24" MaxWidth="860" HorizontalAlignment="Left" Spacing="16">
+                <c:PageHeader Title="{Binding L[exchange_rates]}">
+                    <Button Classes="brand" Command="{Binding OpenAddCommand}" IsVisible="{Binding CanManageCurrencies}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            <TextBlock Text="{Binding L[currency_add]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </c:PageHeader>
 
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <StackPanel Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding L[base_currency]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding BaseCurrency}" FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
+                <Border Background="{DynamicResource DangerBg}" CornerRadius="10" Padding="12,10"
+                        IsVisible="{Binding IsFeatureOff}">
+                    <TextBlock Text="{Binding L[multicurrency_off_hint]}" FontSize="12.5" TextWrapping="Wrap"
+                               Foreground="{DynamicResource DangerBrush}" />
+                </Border>
+
+                <Grid ColumnDefinitions="*,12,*,12,*">
+                    <Border Classes="stat">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding BaseCurrency}" FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
+                            <TextBlock Text="{Binding L[base_currency]}" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="stat">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding ActiveCount}" FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[currency_active_count]}" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Classes="stat">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding StaleCount}" FontSize="20" FontWeight="Bold"
+                                       Classes="statval" Classes.stale="{Binding HasStale}" />
+                            <TextBlock Text="{Binding L[currency_stale_count]}" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <ItemsControl ItemsSource="{Binding Currencies}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="16,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                    <Grid ColumnDefinitions="56,12,*,12,Auto,8,Auto,Auto,Auto,Auto">
+                                        <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="8"
+                                                Height="36" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Code}" FontWeight="Bold" FontSize="12.5"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                        </Border>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="3">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                                <Border Classes="tag" IsVisible="{Binding IsBase}">
+                                                    <TextBlock Text="{Binding $parent[UserControl].DataContext.L[currency_base]}" />
+                                                </Border>
+                                                <Border Classes="tag" IsVisible="{Binding IsSystem}">
+                                                    <TextBlock Text="{Binding $parent[UserControl].DataContext.L[system]}" />
+                                                </Border>
+                                                <Border Classes="tag brand" IsVisible="{Binding IsDefault}">
+                                                    <TextBlock Text="{Binding $parent[UserControl].DataContext.L[currency_default]}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsBase}">
+                                                <TextBlock Text="{Binding Rate, StringFormat='{}{0:N2}'}" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextSecondary}" IsVisible="{Binding HasRate}" />
+                                                <TextBlock Text="{Binding RateAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" FontSize="11.5"
+                                                           VerticalAlignment="Center" Classes="mut"
+                                                           Classes.stale="{Binding IsStale}" IsVisible="{Binding HasRate}" />
+                                                <TextBlock Text="{Binding $parent[UserControl].DataContext.L[currency_no_rate]}" FontSize="11.5"
+                                                           Classes="mut" Classes.stale="{Binding IsStale}"
+                                                           IsVisible="{Binding !HasRate}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <Panel Grid.Column="4" IsVisible="{Binding $parent[UserControl].DataContext.CanManageRates}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsBase}">
+                                                <NumericUpDown Value="{Binding NewRate}" Minimum="0" FormatString="N2" Width="130"
+                                                               ShowButtonSpinner="False" MinHeight="34"
+                                                               IsEnabled="{Binding IsEnabled}" />
+                                                <Button Classes="brand" Padding="10,0" MinHeight="34" VerticalAlignment="Stretch"
+                                                        Command="{Binding $parent[UserControl].DataContext.SaveRateCommand}"
+                                                        CommandParameter="{Binding}" IsEnabled="{Binding IsEnabled}"
+                                                        ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[save]}">
+                                                    <mi:MaterialIcon Kind="Check" Width="16" Height="16" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Panel>
+
+                                        <Panel Grid.Column="6">
+                                            <Button Classes="icon" IsVisible="{Binding !IsBase}"
+                                                    Command="{Binding $parent[UserControl].DataContext.ShowHistoryCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[rate_history]}">
+                                                <mi:MaterialIcon Kind="History" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                        </Panel>
+
+                                        <Panel Grid.Column="7" IsVisible="{Binding $parent[UserControl].DataContext.CanManageCurrencies}">
+                                            <Button Classes="icon" IsEnabled="{Binding IsEnabled}"
+                                                    Command="{Binding $parent[UserControl].DataContext.MakeDefaultCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[make_default]}">
+                                                <Panel>
+                                                    <mi:MaterialIcon Kind="Star" Width="16" Height="16" IsVisible="{Binding IsDefault}"
+                                                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                    <mi:MaterialIcon Kind="StarOutline" Width="16" Height="16" IsVisible="{Binding !IsDefault}"
+                                                                     Foreground="{DynamicResource TextMuted}" />
+                                                </Panel>
+                                            </Button>
+                                        </Panel>
+
+                                        <Panel Grid.Column="8" IsVisible="{Binding $parent[UserControl].DataContext.CanManageCurrencies}">
+                                            <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}" Margin="8,0,0,0"
+                                                          IsEnabled="{Binding !IsBase}"
+                                                          Command="{Binding $parent[UserControl].DataContext.ToggleEnabledCommand}"
+                                                          CommandParameter="{Binding}" />
+                                        </Panel>
+
+                                        <Panel Grid.Column="9" IsVisible="{Binding $parent[UserControl].DataContext.CanManageCurrencies}">
+                                            <Button Classes="icon" Margin="4,0,0,0" IsVisible="{Binding IsCustom}"
+                                                    Command="{Binding $parent[UserControl].DataContext.DeleteCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[delete]}">
+                                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Panel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        IsVisible="{Binding History.Count}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="16,12,16,4">
+                            <TextBlock Text="{Binding L[rate_history]}" Classes="subtitle" />
+                            <TextBlock Text="{Binding HistoryCode}" Classes="subtitle"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
+                        </StackPanel>
+                        <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="260">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="*" Binding="{Binding Rate, StringFormat='{}{0:N2}'}"
+                                                    Header="{Binding [rate], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="Auto" Binding="{Binding EffectiveAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                    Header="{Binding [date], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border IsVisible="{Binding IsAddOpen}" Background="#30000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Margin="24" Spacing="14">
+                    <TextBlock Text="{Binding L[currency_add]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[code]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding NewCode}" MinHeight="38" MaxLength="5" />
                     </StackPanel>
-                    <Grid ColumnDefinitions="Auto,8,*,8,Auto">
-                        <ComboBox MinWidth="110" ItemsSource="{Binding Codes}" SelectedItem="{Binding NewCode}" />
-                        <NumericUpDown Grid.Column="2" Value="{Binding NewRate}" Minimum="0" FormatString="N2"
-                                       ShowButtonSpinner="False" MinHeight="38" />
-                        <Button Grid.Column="4" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
-                                Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                    </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding NewName}" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+                        <Button Classes="outline" Command="{Binding CancelAddCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding AddCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
-
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <DataGrid ItemsSource="{Binding Rates}" SelectedItem="{Binding SelectedRate}"
-                          AutoGenerateColumns="False" IsReadOnly="True"
-                          GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="240">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Width="Auto" Binding="{Binding Code}"
-                                            Header="{Binding [currency], Source={x:Static svc:LocalizationManager.Instance}}" />
-                        <DataGridTextColumn Width="*" Binding="{Binding Rate, StringFormat='{}{0:N2}'}"
-                                            Header="{Binding [rate], Source={x:Static svc:LocalizationManager.Instance}}" />
-                        <DataGridTextColumn Width="Auto" Binding="{Binding EffectiveAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
-                                            Header="{Binding [date], Source={x:Static svc:LocalizationManager.Instance}}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
-
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    IsVisible="{Binding History.Count}">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[rate_history]}" Classes="subtitle" Margin="16,12,16,4" />
-                    <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True"
-                              GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="260">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Width="*" Binding="{Binding Rate, StringFormat='{}{0:N2}'}"
-                                                Header="{Binding [rate], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="Auto" Binding="{Binding EffectiveAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
-                                                Header="{Binding [date], Source={x:Static svc:LocalizationManager.Instance}}" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </DockPanel>
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+        </Border>
+    </Panel>
 </UserControl>

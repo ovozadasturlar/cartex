@@ -120,6 +120,17 @@ public class ExchangeRateConfiguration : IEntityTypeConfiguration<ExchangeRate>
     }
 }
 
+public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
+{
+    public void Configure(EntityTypeBuilder<Currency> builder)
+    {
+        builder.ToTable("currencies");
+        builder.Property(x => x.Code).HasMaxLength(3).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(40);
+        builder.HasIndex(x => x.Code).IsUnique();
+    }
+}
+
 public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
 {
     public void Configure(EntityTypeBuilder<Shift> builder)

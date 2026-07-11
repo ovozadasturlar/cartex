@@ -12,7 +12,7 @@ public static class DatabaseSeeder
 
     public static readonly string[] SellerPermissions =
     [
-        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
+        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View,
         AppPermissions.Sales.Create, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
         AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
@@ -105,6 +105,20 @@ public static class DatabaseSeeder
         await GrantAsync(AppRoles.Admin, AdminGrant, AdminGrant);
         await GrantAsync(AppRoles.Seller, SellerPermissions);
         await GrantAsync(AppRoles.Agent, AgentPermissions);
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SyncCurrenciesAsync(ApplicationDbContext context)
+    {
+        var business = await context.Businesses.FirstOrDefaultAsync();
+        if (business is null)
+            return;
+
+        var existing = await context.Currencies.Select(c => c.Code).ToListAsync();
+        (string Code, string Name)[] system = [(business.Currency, ""), ("USD", "AQSH dollari"), ("EUR", "Yevro"), ("RUB", "Rossiya rubli")];
+        foreach (var (code, name) in system)
+            if (!existing.Contains(code))
+                context.Currencies.Add(new Currency { Code = code, Name = name, IsSystem = true, IsDefault = code == "USD" });
         await context.SaveChangesAsync();
     }
 

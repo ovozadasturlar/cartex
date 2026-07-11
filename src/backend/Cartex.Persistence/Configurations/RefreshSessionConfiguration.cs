@@ -24,6 +24,7 @@ public class RefreshSessionConfiguration : IEntityTypeConfiguration<RefreshSessi
         builder.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
         builder.HasIndex(x => x.TokenHash).IsUnique();
         builder.HasIndex(x => x.UserId);
+        builder.Property(x => x.Client).HasMaxLength(20);
         builder.Property(x => x.DeviceName).HasMaxLength(200);
         builder.Property(x => x.ReplacedByHash).HasMaxLength(128);
         builder.Property(x => x.FamilyCreatedAt).HasDefaultValueSql("now()");

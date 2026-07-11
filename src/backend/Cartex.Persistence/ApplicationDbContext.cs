@@ -59,6 +59,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<ExchangeRate> ExchangeRates => Set<ExchangeRate>();
+    public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<SalePayment> SalePayments => Set<SalePayment>();
     public DbSet<ShiftCash> ShiftCashes => Set<ShiftCash>();
     public DbSet<DebtReminderLog> DebtReminderLogs => Set<DebtReminderLog>();

@@ -10,6 +10,7 @@ using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
+using Cartex.Shared.Models.Rates;
 using Avalonia.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -25,24 +26,37 @@ public partial class PaymentRow : ObservableObject
 {
     private readonly Action _changed;
     private readonly Func<string, decimal> _rateOf;
+    private readonly string _baseCurrency;
 
     [ObservableProperty] private PayMethodOption? _method;
     [ObservableProperty] private string _currency;
     [ObservableProperty] private decimal _amount;
 
-    public PaymentRow(string currency, PayMethodOption method, Action changed, Func<string, decimal> rateOf)
+    public PaymentRow(string currency, PayMethodOption method, Action changed, Func<string, decimal> rateOf, string baseCurrency)
     {
         _currency = currency;
         _method = method;
         _changed = changed;
         _rateOf = rateOf;
+        _baseCurrency = baseCurrency;
     }
 
     public decimal AmountBase => Math.Round(Amount * _rateOf(Currency), 2);
+    public bool ShowBase => Currency != _baseCurrency;
 
     partial void OnMethodChanged(PayMethodOption? value) => _changed();
-    partial void OnCurrencyChanged(string value) { OnPropertyChanged(nameof(AmountBase)); _changed(); }
+    partial void OnCurrencyChanged(string value) { OnPropertyChanged(nameof(AmountBase)); OnPropertyChanged(nameof(ShowBase)); _changed(); }
     partial void OnAmountChanged(decimal value) { OnPropertyChanged(nameof(AmountBase)); _changed(); }
+}
+
+public partial class QuickRateItem(CurrencyDto currency, bool isStale) : ObservableObject
+{
+    public string Code { get; } = currency.Code;
+    public string Name { get; } = currency.Name;
+    public decimal? CurrentRate { get; } = currency.Rate;
+    public DateTime? RateAt { get; } = currency.RateAt;
+    public bool IsStale { get; } = isStale;
+    [ObservableProperty] private decimal _newRate = currency.Rate ?? 0;
 }
 
 public partial class CartItem : ObservableObject
@@ -124,7 +138,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private StockOnHandDto? _detailProduct;
     [ObservableProperty] private string _detailBarcodes = string.Empty;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || QuickProduct.IsOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || QuickProduct.IsOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -162,11 +176,27 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private string? _activeCartCode;
     private readonly Dictionary<string, decimal> _rates = [];
     private string _baseCurrency = "UZS";
+    private string _defaultCurrency = "UZS";
+    private List<CurrencyDto> _foreignCurrencies = [];
 
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private bool _hasStaleRate;
+    [ObservableProperty] private bool _isQuickRatesOpen;
     [ObservableProperty] private string? _selectedDebtCurrency;
     [ObservableProperty] private DateTimeOffset? _debtDueDate;
+
+    public ObservableCollection<QuickRateItem> QuickRates { get; } = [];
+    public bool CanManageRates => _auth.HasPermission("rates.manage");
+    public bool ShowStaleFix => HasStaleRate && CanManageRates;
+    public bool ShowStaleHint => HasStaleRate && !CanManageRates;
+
+    partial void OnHasStaleRateChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowStaleFix));
+        OnPropertyChanged(nameof(ShowStaleHint));
+    }
+
+    partial void OnIsQuickRatesOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public ObservableCollection<PaymentRow> PaymentRows { get; } = [];
     public ObservableCollection<string> Currencies { get; } = [];
@@ -252,6 +282,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private void HandleEscape()
     {
+        if (IsQuickRatesOpen) { IsQuickRatesOpen = false; return; }
         if (IsReceiptOpen) { IsReceiptOpen = false; return; }
         if (IsProductDetailOpen) { IsProductDetailOpen = false; return; }
         if (IsCustomerPanelOpen) { IsCustomerPanelOpen = false; return; }
@@ -358,15 +389,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             IsMulticurrency = business.Multicurrency;
             if (!IsMulticurrency) return;
 
-            var rates = await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync);
+            var currencies = await _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
+            _foreignCurrencies = currencies.Where(c => !c.IsBase).OrderBy(c => c.Code).ToList();
+            _defaultCurrency = currencies.FirstOrDefault(c => c.IsDefault)?.Code ?? _baseCurrency;
             _rates.Clear();
-            foreach (var r in rates) _rates[r.Code] = r.Rate;
+            foreach (var c in _foreignCurrencies.Where(c => c.Rate is > 0)) _rates[c.Code] = c.Rate!.Value;
             await policyTask;
-            HasStaleRate = rates.Any(r => r.EffectiveAt < DateTime.UtcNow.AddDays(-_staleRateDays));
+            var limit = DateTime.UtcNow.AddDays(-_staleRateDays);
+            HasStaleRate = _foreignCurrencies.Any(c => c.RateAt is null || c.RateAt < limit);
 
             Currencies.Clear();
             Currencies.Add(_baseCurrency);
-            foreach (var r in rates.OrderBy(r => r.Code)) Currencies.Add(r.Code);
+            foreach (var c in _foreignCurrencies) Currencies.Add(c.Code);
 
             PayMethods.Clear();
             PayMethods.Add(new PayMethodOption("cash", L["cash"]));
@@ -383,13 +417,45 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void AddPayment()
     {
-        var row = new PaymentRow(_baseCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"]), NotifyTotals, RateOf);
+        var row = new PaymentRow(_defaultCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"]), NotifyTotals, RateOf, _baseCurrency);
         row.PropertyChanged += (_, _) => NotifyTotals();
         PaymentRows.Add(row);
     }
 
     [RelayCommand]
     private void RemovePayment(PaymentRow row) => PaymentRows.Remove(row);
+
+    [RelayCommand]
+    private void OpenQuickRates()
+    {
+        if (!CanManageRates) return;
+        QuickRates.Clear();
+        var limit = DateTime.UtcNow.AddDays(-_staleRateDays);
+        foreach (var c in _foreignCurrencies)
+            QuickRates.Add(new QuickRateItem(c, c.RateAt is null || c.RateAt < limit));
+        IsQuickRatesOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseQuickRates() => IsQuickRatesOpen = false;
+
+    [RelayCommand]
+    private async Task SaveQuickRatesAsync()
+    {
+        var changed = QuickRates.Where(q => q.NewRate > 0 && q.NewRate != q.CurrentRate).ToList();
+        if (changed.Count == 0) { IsQuickRatesOpen = false; return; }
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                foreach (var q in changed)
+                    await _ratesApi.SetAsync(new SetRateRequest(q.Code, q.NewRate));
+            _cache.Invalidate(CacheKeys.Rates);
+            IsQuickRatesOpen = false;
+            _toast.Success(L["success"]);
+            await LoadMulticurrencyAsync(Task.CompletedTask);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     private async Task LoadCategoriesAsync()
     {
@@ -863,6 +929,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             PaymentRows.Clear();
             AddPayment();
+            PaymentRows[0].Currency = _baseCurrency;
             PaymentRows[0].Amount = TotalAmount;
             return;
         }

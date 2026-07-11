@@ -43,5 +43,9 @@ public sealed class CurrencyService(IApplicationDbContext db, IFeatureStateProvi
             return;
         if (!await IsMulticurrencyAsync(cancellationToken))
             throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+
+        var normalized = code.Trim().ToUpperInvariant();
+        if (!await db.Currencies.AnyAsync(c => c.Code == normalized && c.IsEnabled, cancellationToken))
+            throw new BusinessRuleException($"Valyuta faol emas: {normalized}");
     }
 }

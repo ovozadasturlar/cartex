@@ -45,12 +45,21 @@ export interface RatesBusiness {
   multicurrency: boolean;
 }
 
+export interface Currency {
+  code: string;
+  name: string;
+  isSystem: boolean;
+  isEnabled: boolean;
+  isDefault: boolean;
+  isBase: boolean;
+  rate: number | null;
+  rateAt: string | null;
+}
+
 export interface ExpenseCategory {
   id: number;
   name: string;
 }
-
-export const CURRENCY_CODES = ['UZS', 'USD', 'EUR', 'RUB', 'KZT', 'TRY', 'CNY'];
 
 @Injectable({ providedIn: 'root' })
 export class AccountsApi {
@@ -100,6 +109,22 @@ export class RatesApi {
 
   set(code: string, rate: number): Observable<number> {
     return this.http.post<number>('/api/rates', { code, rate });
+  }
+
+  currencies(): Observable<Currency[]> {
+    return this.http.get<Currency[]>('/api/rates/currencies');
+  }
+
+  createCurrency(code: string, name: string): Observable<void> {
+    return this.http.post<void>('/api/rates/currencies', { code, name });
+  }
+
+  updateCurrency(code: string, isEnabled: boolean, isDefault: boolean): Observable<void> {
+    return this.http.put<void>(`/api/rates/currencies/${code}`, { code, isEnabled, isDefault });
+  }
+
+  deleteCurrency(code: string): Observable<void> {
+    return this.http.delete<void>(`/api/rates/currencies/${code}`);
   }
 
   business(): Observable<RatesBusiness> {

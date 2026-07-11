@@ -67,6 +67,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         using var scope = _services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await DatabaseSeeder.SeedAsync(db, p => p);
+        await DatabaseSeeder.SyncCurrenciesAsync(db);
     }
 
     public IServiceScope CreateScope() => _services.CreateScope();

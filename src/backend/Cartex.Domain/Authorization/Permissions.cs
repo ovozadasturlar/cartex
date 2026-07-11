@@ -77,6 +77,11 @@ public static class AppPermissions
         public const string Prepack = "sales.prepack";
     }
 
+    public static class Currencies
+    {
+        public const string Manage = "currencies.manage";
+    }
+
     public static class Devices
     {
         public const string Manage = "devices.manage";
@@ -193,6 +198,7 @@ public static class AppPermissions
         [Sales.PriceOverride] = "Override item price during sale",
         [Sales.CashOut] = "Cash withdrawal/expense from register",
         [Sales.Prepack] = "Create/cancel prepack labels (weighed packs)",
+        [Currencies.Manage] = "Manage currency list (add, enable, disable)",
         [Devices.Manage] = "View and revoke connected devices",
         [Shifts.Manage] = "Open/close cash shift",
         [Shifts.View] = "View shift history",

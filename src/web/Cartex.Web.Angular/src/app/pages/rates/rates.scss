@@ -3,7 +3,7 @@
 }
 
 .page {
-  max-width: 720px;
+  max-width: 860px;
 }
 
 .hint-off {
@@ -15,37 +15,85 @@
   margin-bottom: 14px;
 }
 
-.form {
-  padding: 18px;
+.list {
+  padding: 6px 16px;
   margin-bottom: 16px;
-}
-
-.base {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-  font-size: 13.5px;
-  color: var(--cx-text-2);
-
-  strong {
-    color: var(--cx-brand);
-  }
 }
 
 .row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
 
-  .code {
-    width: 130px;
+  & + .row {
+    border-top: 1px solid var(--cx-border);
   }
 
-  .value {
+  &.off .info,
+  &.off .rate {
+    opacity: 0.5;
+  }
+
+  &.selected {
+    background: var(--cx-surface-2);
+  }
+
+  .info {
     flex: 1;
-    min-width: 160px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    .strong {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
   }
+
+  .rate {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 110px;
+  }
+
+  .meta {
+    font-size: 12px;
+    color: var(--cx-text-3);
+  }
+
+  .rate-edit {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+
+    mat-form-field {
+      width: 120px;
+    }
+
+    mat-icon {
+      color: var(--cx-success);
+    }
+  }
+
+  mat-icon {
+    color: var(--cx-text-3);
+  }
+
+  button:not([disabled]):not(.del) mat-icon:hover {
+    color: var(--cx-warning);
+  }
+
+  .del:not([disabled]) mat-icon:hover {
+    color: var(--cx-danger);
+  }
+}
+
+.clickable {
+  cursor: pointer;
 }
 
 .cx-table-card {
@@ -63,14 +111,24 @@ table {
   width: 100%;
 }
 
-.num {
-  text-align: right;
+.dlg-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 4px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
 }
 
-.strong {
-  font-weight: 600;
-}
-
-tr.selected td {
-  background: var(--cx-surface-2);
+.dlg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px 8px;
 }
