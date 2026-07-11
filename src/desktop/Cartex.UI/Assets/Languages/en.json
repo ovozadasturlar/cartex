@@ -665,7 +665,7 @@
   "supply_date": "Supply Date",
   "supply_detail": "Supply details",
   "supply_pay_out": "Supply payments (cash)",
-  "supply_void": "Void",
+  "supply_void": "Void supply",
   "supply_void_confirm": "Void this supply? Stock and payments will be reversed.",
   "system": "System",
   "system_quantity": "System quantity",

@@ -336,3 +336,15 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
   --mat-tooltip-container-shape: 7px;
   --mat-tooltip-supporting-text-size: 12.5px;
 }
+
+[mat-dialog-actions] .mat-mdc-button:not(.cx-back-btn) {
+  --mat-button-text-label-text-color: var(--cx-text-2);
+}
+
+.cx-back-btn {
+  --mat-button-text-label-text-color: var(--cx-text-1);
+
+  background: var(--cx-surface-2) !important;
+  border: 1px solid var(--cx-border);
+  border-radius: 6px;
+}

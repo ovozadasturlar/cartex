@@ -665,7 +665,7 @@
   "supply_date": "Ta'minot sanasi",
   "supply_detail": "Ta'minot tafsilotlari",
   "supply_pay_out": "Ta'minot to'lovlari (naqd)",
-  "supply_void": "Bekor qilish",
+  "supply_void": "Kirimni bekor qilish",
   "supply_void_confirm": "Bu ta'minot bekor qilinsinmi? Qoldiq va to'lovlar teskari qilinadi.",
   "system": "Tizim",
   "system_quantity": "Tizim qoldig'i",

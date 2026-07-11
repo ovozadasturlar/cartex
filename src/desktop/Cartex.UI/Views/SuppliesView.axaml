@@ -311,8 +311,8 @@
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Button Classes="danger" Command="{Binding VoidSupplyCommand}" Content="{Binding L[supply_void]}"
                                     IsVisible="{Binding CanVoid}" />
-                            <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
-                                    Command="{Binding CloseDetailCommand}" Content="{Binding L[cancel]}" />
+                            <Button Grid.Column="2" MinWidth="120" HorizontalContentAlignment="Center"
+                                    Command="{Binding CloseDetailCommand}" Content="{Binding L[back]}" />
                         </Grid>
                     </StackPanel>
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" MinHeight="120"

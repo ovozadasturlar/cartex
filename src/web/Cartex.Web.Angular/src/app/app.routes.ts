@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'customers', loadComponent: () => import('./pages/customers/customers').then((m) => m.Customers) },
       { path: 'products', loadComponent: () => import('./pages/products/products').then((m) => m.Products) },
       { path: 'warehouse', loadComponent: () => import('./pages/warehouse/warehouse').then((m) => m.Warehouse) },
+      { path: 'supplies/new', loadComponent: () => import('./pages/supplies/supply-create').then((m) => m.SupplyCreate) },
       { path: 'supplies', loadComponent: () => import('./pages/supplies/supplies').then((m) => m.Supplies) },
       { path: 'transfers', loadComponent: () => import('./pages/transfers/transfers').then((m) => m.Transfers) },
       { path: 'accounts', loadComponent: () => import('./pages/accounts/accounts').then((m) => m.Accounts) },
