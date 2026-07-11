@@ -1,0 +1,98 @@
+<ng-container *transloco="let t">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else if (customer(); as c) {
+    <div class="cx-card profile-head">
+      <button matIconButton class="back" (click)="back()"><mat-icon>arrow_back</mat-icon></button>
+      <div class="avatar">{{ initials() }}</div>
+      <div class="who">
+        <div class="name-row">
+          <h1>{{ title() }}</h1>
+          @if (c.debtBalance > 0) {
+            <span class="cx-chip bad">{{ t('debt') }}</span>
+          }
+          @if (c.discountPct > 0) {
+            <span class="cx-chip ok">{{ c.discountPct }}%</span>
+          }
+        </div>
+        <div class="contact">
+          @if (c.phone) {
+            <a class="line" [href]="'tel:' + c.phone">
+              <mat-icon>call</mat-icon>{{ c.phone }}
+              @if (c.hasTelegram) {
+                <mat-icon class="tg" [title]="t('telegram')">send</mat-icon>
+              }
+            </a>
+          }
+          @if (c.address) {
+            <span class="line"><mat-icon>place</mat-icon>{{ c.address }}</span>
+          }
+          @if (c.cardBarcode) {
+            <span class="line"><mat-icon>badge</mat-icon>{{ c.cardBarcode }}</span>
+          }
+        </div>
+      </div>
+      @if (canManage) {
+        <div class="actions">
+          <button matButton="filled" (click)="repay()">
+            <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
+          </button>
+          <button matButton="outlined" (click)="edit()">
+            <mat-icon>edit</mat-icon>{{ t('edit') }}
+          </button>
+          <button matIconButton class="del" [title]="t('delete')" (click)="remove()">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="cx-grid stats">
+      <cx-stat-card [label]="t('debt')" [value]="debtText()" icon="money_off" [tone]="c.debtBalance > 0 ? 'danger' : 'default'" />
+      <cx-stat-card [label]="t('bonus')" [value]="c.cashbackBalance | cxMoney" icon="redeem" tone="success" />
+      <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit | cxMoney" icon="credit_score" />
+    </div>
+
+    <h3>{{ t('ledger_history') }}</h3>
+    <div class="cx-table-card">
+      @if (ledgerLoading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (ledger(); as lg) {
+        @if (lg.items.length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="lg.items">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.date | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="op">
+                <th mat-header-cell *matHeaderCellDef>{{ t('operation') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.operationType }}</td>
+              </ng-container>
+              <ng-container matColumnDef="account">
+                <th mat-header-cell *matHeaderCellDef>{{ t('account') }}</th>
+                <td mat-cell *matCellDef="let e"><span class="cx-chip">{{ e.accountType }}</span></td>
+              </ng-container>
+              <ng-container matColumnDef="change">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('change') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money" [class.up]="e.change > 0" [class.down]="e.change < 0">
+                  {{ e.change > 0 ? '+' : '' }}{{ e.change | cxMoney }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="after">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('balance_after') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">{{ e.balanceAfter | cxMoney }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let e; columns: cols"></tr>
+            </table>
+          </div>
+          <cx-paging-bar [meta]="lg.meta" (changed)="onPage($event)" />
+        } @else if (!ledgerLoading()) {
+          <cx-empty-state icon="receipt_long" [message]="t('no_ledger')" />
+        }
+      }
+    </div>
+  }
+</ng-container>

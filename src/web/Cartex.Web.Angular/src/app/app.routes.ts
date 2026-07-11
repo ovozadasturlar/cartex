@@ -17,6 +17,7 @@ export const routes: Routes = [
       { path: 'sales', loadComponent: () => import('./pages/sales/sales').then((m) => m.Sales) },
       { path: 'orders', loadComponent: () => import('./pages/orders/orders').then((m) => m.Orders) },
       { path: 'customers', loadComponent: () => import('./pages/customers/customers').then((m) => m.Customers) },
+      { path: 'customers/:id', loadComponent: () => import('./pages/customers/customer-profile').then((m) => m.CustomerProfile) },
       { path: 'products', loadComponent: () => import('./pages/products/products').then((m) => m.Products) },
       { path: 'warehouse', loadComponent: () => import('./pages/warehouse/warehouse').then((m) => m.Warehouse) },
       { path: 'supplies/new', loadComponent: () => import('./pages/supplies/supply-create').then((m) => m.SupplyCreate) },

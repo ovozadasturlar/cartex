@@ -74,6 +74,32 @@ export class CustomersApi {
       .get<LedgerEntry[]>(`/api/customers/${id}/ledger`, { params: { page, pageSize }, observe: 'response' })
       .pipe(map(toPaged));
   }
+
+  getById(id: number): Observable<Customer> {
+    return this.http.get<Customer>(`/api/customers/${id}`);
+  }
+
+  update(id: number, body: {
+    fullName: string;
+    lastName: string | null;
+    phone: string;
+    email: string | null;
+    address: string | null;
+    cardBarcode: string | null;
+    discountPct: number;
+    creditLimit: number;
+    notificationsOptOut: boolean;
+  }): Observable<void> {
+    return this.http.put<void>(`/api/customers/${id}`, body);
+  }
+
+  remove(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/customers/${id}`);
+  }
+
+  repayDebt(id: number, amount: number, viaCard: boolean): Observable<void> {
+    return this.http.post<void>(`/api/customers/${id}/repay-debt`, { amount, viaCard });
+  }
 }
 
 @Injectable({ providedIn: 'root' })

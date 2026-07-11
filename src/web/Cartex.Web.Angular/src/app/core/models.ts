@@ -59,8 +59,10 @@ export interface Customer {
   lastName: string | null;
   address: string | null;
   phone: string | null;
+  email: string | null;
   cardBarcode: string | null;
   discountPct: number;
+  notificationsOptOut: boolean;
   cashbackBalance: number;
   debtBalance: number;
   creditLimit: number;

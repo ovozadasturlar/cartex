@@ -216,6 +216,8 @@ export class CustomerPickerDialog implements OnInit {
         phone: this.nPhone.trim(),
         address: this.nAddress.trim() || null,
         cardBarcode: this.nCard.trim() || null,
+        email: this.nEmail.trim() || null,
+        notificationsOptOut: false,
         discountPct: this.nDiscount || 0,
         cashbackBalance: 0,
         debtBalance: 0,
