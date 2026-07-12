@@ -315,21 +315,34 @@
                 Classes.blurred="{Binding IsModalOpen}">
             <DockPanel Margin="16">
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,12">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
                     <TextBlock Text="{Binding L[cart]}" Classes="h2" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding ToggleQueuePanelCommand}" ToolTip.Tip="{Binding L[queue]}"
+                            IsVisible="{Binding CanSeeQueue}">
+                        <Panel>
+                            <mi:MaterialIcon Kind="BellOutline" Width="18" Height="18" />
+                            <Border Background="{DynamicResource DangerBrush}" CornerRadius="8" Height="16" MinWidth="16"
+                                    Padding="4,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-8,-10,0" IsVisible="{Binding QueueCount}">
+                                <TextBlock Text="{Binding QueueCount}" FontSize="10" FontWeight="Bold" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Panel>
+                    </Button>
+                    <Button Grid.Column="2" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding OpenPrepackCommand}" ToolTip.Tip="{Binding L[prepack_title]}"
                             IsVisible="{Binding CanPrepack}">
                         <mi:MaterialIcon Kind="ScaleBalance" Width="18" Height="18" />
                     </Button>
-                    <Button Grid.Column="2" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                    <Button Grid.Column="3" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding ToggleHeldPanelCommand}" ToolTip.Tip="{Binding L[held_sales]}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <mi:MaterialIcon Kind="PauseCircleOutline" Width="18" Height="18" />
                             <TextBlock Text="{Binding HeldSales.Count}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="3" Classes="paybtn" Padding="8,6"
+                    <Button Grid.Column="4" Classes="paybtn" Padding="8,6"
                             Command="{Binding ClearCartCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"
@@ -766,6 +779,56 @@
                 </Panel>
             </Border>
         </Border>
+
+        <Popup IsOpen="{Binding IsQueuePanelOpen, Mode=TwoWay}" Placement="Center" IsLightDismissEnabled="True">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="460" MaxHeight="520"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16"
+                    BoxShadow="0 12 40 0 #33000000">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[queue]}" Classes="h3" Margin="0,0,0,10" />
+                    <ScrollViewer>
+                        <Panel>
+                            <ItemsControl ItemsSource="{Binding QueueCarts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,3" Padding="12,10" CornerRadius="8"
+                                                Background="{DynamicResource AppBg}">
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimary}" />
+                                                    <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                                                               Foreground="{DynamicResource TextMuted}" />
+                                                    <TextBlock Text="{Binding CustomerName}" FontSize="12" IsVisible="{Binding HasCustomer}"
+                                                               Foreground="{DynamicResource TextSecondary}" />
+                                                    <TextBlock Text="{Binding Note}" FontSize="12" FontStyle="Italic" IsVisible="{Binding HasNote}"
+                                                               TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Classes="brand" Padding="12,6" Margin="8,0,6,0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding $parent[ItemsControl].DataContext.OpenQueueCartCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <mi:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                                </Button>
+                                                <Button Grid.Column="2" Classes="paybtn" Padding="8,6" VerticalAlignment="Center"
+                                                        Command="{Binding $parent[ItemsControl].DataContext.CancelQueueCartCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <mi:MaterialIcon Kind="Close" Width="14" Height="14"
+                                                                     Foreground="{DynamicResource DangerBrush}" />
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding L[no_data]}" Foreground="{DynamicResource TextMuted}"
+                                       HorizontalAlignment="Center" Margin="0,20"
+                                       IsVisible="{Binding !QueueCarts.Count}" />
+                        </Panel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Popup>
 
         <Popup IsOpen="{Binding IsHeldPanelOpen, Mode=TwoWay}" Placement="Center" IsLightDismissEnabled="True">
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="380" MaxHeight="460"

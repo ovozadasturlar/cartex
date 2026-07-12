@@ -751,5 +751,6 @@
   "website": "Website",
   "welcome": "Welcome",
   "z_report": "Z-report",
-  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer"
+  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer",
+  "queue": "Queue"
 }

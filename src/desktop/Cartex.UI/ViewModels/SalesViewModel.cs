@@ -20,6 +20,16 @@ namespace Cartex.UI.ViewModels;
 
 public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt);
 
+public record QueueRow(Cartex.Shared.Models.Ordering.CartListDto Cart)
+{
+    public string Title => Cart.CreatedByName ?? "";
+    public string Subtitle => $"{Cart.CreatedAt.ToLocalTime():HH:mm} · {Cart.ItemCount} · {Cart.EstimatedTotal:N0}";
+    public string? Note => Cart.Note;
+    public bool HasNote => !string.IsNullOrWhiteSpace(Cart.Note);
+    public string? CustomerName => Cart.CustomerName;
+    public bool HasCustomer => !string.IsNullOrWhiteSpace(Cart.CustomerName);
+}
+
 public record PayMethodOption(string Key, string Label);
 
 public partial class PaymentRow : ObservableObject
@@ -131,6 +141,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private bool _discountByPercent;
     [ObservableProperty] private bool _isCustomerPanelOpen;
     [ObservableProperty] private bool _isHeldPanelOpen;
+    [ObservableProperty] private bool _isQueuePanelOpen;
+    [ObservableProperty] private int _queueCount;
+    [ObservableProperty] private bool _canSeeQueue;
     [ObservableProperty] private bool _isReceiptOpen;
     [ObservableProperty] private bool _posListMode = SettingsService.Instance.PosListMode;
     [ObservableProperty] private ReceiptDto? _currentReceipt;
@@ -149,6 +162,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<StockOnHandDto> Products { get; } = [];
     public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
     public ObservableCollection<HeldSale> HeldSales { get; } = [];
+    public ObservableCollection<QueueRow> QueueCarts { get; } = [];
     public ObservableCollection<CategoryChip> NavCategories { get; } = [];
     public ObservableCollection<CategoryChip> SubCategories { get; } = [];
     [ObservableProperty] private bool _hasSubCategories;
@@ -327,7 +341,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             LoadMulticurrencyAsync(policyTask),
             LoadCategoriesAsync(),
             LoadProductsAsync(),
-            LoadPrepackAccessAsync());
+            LoadPrepackAccessAsync(),
+            LoadQueueAccessAsync());
 
         if (_handoff.PendingCartCode is { } pending)
         {
@@ -1118,6 +1133,67 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void ToggleHeldPanel() => IsHeldPanelOpen = !IsHeldPanelOpen;
+
+    [RelayCommand]
+    private async Task ToggleQueuePanelAsync()
+    {
+        IsQueuePanelOpen = !IsQueuePanelOpen;
+        if (IsQueuePanelOpen) await LoadQueueAsync();
+    }
+
+    private async Task LoadQueueAsync()
+    {
+        if (!CanSeeQueue) return;
+        try
+        {
+            var carts = await _orderingApi.GetAllAsync("Open");
+            QueueCarts.Clear();
+            foreach (var cart in carts) QueueCarts.Add(new QueueRow(cart));
+            QueueCount = QueueCarts.Count;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task OpenQueueCartAsync(QueueRow row)
+    {
+        IsQueuePanelOpen = false;
+        if (await TryLoadCartAsync(row.Cart.AggregateCode))
+            await LoadQueueAsync();
+    }
+
+    [RelayCommand]
+    private async Task CancelQueueCartAsync(QueueRow row)
+    {
+        try
+        {
+            await _orderingApi.UpdateStatusAsync(row.Cart.AggregateCode, new Cartex.Shared.Models.Ordering.UpdateCartStatusRequest("Cancelled"));
+            await LoadQueueAsync();
+        }
+        catch { _toast.Warning(L["error"]); }
+    }
+
+    private async Task LoadQueueAccessAsync()
+    {
+        if (!_auth.HasPermission("sales.view")) return;
+        try
+        {
+            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
+            CanSeeQueue = enabled.Contains("store") || enabled.Contains("ordering");
+        }
+        catch { return; }
+        if (!CanSeeQueue) return;
+        await LoadQueueAsync();
+        _queueTimer = new System.Threading.Timer(_ =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                if (IsQueuePanelOpen) return;
+                try { QueueCount = (await _orderingApi.GetAllAsync("Open")).Count; }
+                catch { }
+            }), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+    }
+
+    private System.Threading.Timer? _queueTimer;
 
     [RelayCommand]
     private async Task CompleteSaleAsync()

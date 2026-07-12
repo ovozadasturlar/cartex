@@ -751,5 +751,6 @@
   "website": "Veb-sayt",
   "welcome": "Xush kelibsiz",
   "z_report": "Z-hisobot",
-  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi"
+  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi",
+  "queue": "Navbat"
 }
