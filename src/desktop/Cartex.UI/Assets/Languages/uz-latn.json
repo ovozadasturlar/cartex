@@ -451,6 +451,7 @@
   "perm_sales.create": "Savdo qilish (kassa)",
   "perm_sales.discount": "Savdoda chegirma berish",
   "perm_sales.discountOverride": "Chegirma chegarasidan oshib o'tish",
+  "perm_sales.pick": "Navbat uchun savat yig'ish (do'kon xodimi)",
   "perm_sales.prepack": "Qadoqlash yorliqlarini yaratish/bekor qilish",
   "perm_sales.priceOverride": "Savdoda narxni o'zgartirish",
   "perm_sales.return": "Savdoni qaytarish",
@@ -533,6 +534,7 @@
   "qr_refresh_seconds": "QR kod yangilanish vaqti (soniya)",
   "qr_scan_hint": "Cartex mobil ilovasida QR kodni skanerlang — kompyuter avtomatik kiradi",
   "quantity": "Miqdor",
+  "queue": "Navbat",
   "quick_actions": "Tezkor amallar",
   "quick_rates_title": "Kurslarni yangilash",
   "rate": "Kurs",
@@ -751,6 +753,5 @@
   "website": "Veb-sayt",
   "welcome": "Xush kelibsiz",
   "z_report": "Z-hisobot",
-  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi",
-  "queue": "Navbat"
+  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi"
 }

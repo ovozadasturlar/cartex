@@ -451,6 +451,7 @@
   "perm_sales.create": "Савдо қилиш (касса)",
   "perm_sales.discount": "Савдода чегирма бериш",
   "perm_sales.discountOverride": "Чегирма чегарасидан ошиб ўтиш",
+  "perm_sales.pick": "Навбат учун сават йиғиш (дўкон ходими)",
   "perm_sales.prepack": "Қадоқлаш ёрлиқларини яратиш/бекор қилиш",
   "perm_sales.priceOverride": "Савдода нархни ўзгартириш",
   "perm_sales.return": "Савдони қайтариш",
@@ -533,6 +534,7 @@
   "qr_refresh_seconds": "QR код янгиланиш вақти (сония)",
   "qr_scan_hint": "Cartex мобил иловасида QR кодни сканерланг — компьютер автоматик киради",
   "quantity": "Миқдор",
+  "queue": "Навбат",
   "quick_actions": "Тезкор амаллар",
   "quick_rates_title": "Курсларни янгилаш",
   "rate": "Курс",
@@ -751,6 +753,5 @@
   "website": "Веб-сайт",
   "welcome": "Хуш келибсиз",
   "z_report": "Z-ҳисобот",
-  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади",
-  "queue": "Навбат"
+  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади"
 }

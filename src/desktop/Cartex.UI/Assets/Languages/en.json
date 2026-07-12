@@ -451,6 +451,7 @@
   "perm_sales.create": "Create sales (POS)",
   "perm_sales.discount": "Apply discount on sale",
   "perm_sales.discountOverride": "Exceed the business discount limit",
+  "perm_sales.pick": "Pick carts into the queue (store staff)",
   "perm_sales.prepack": "Create/cancel prepack labels",
   "perm_sales.priceOverride": "Override item price during sale",
   "perm_sales.return": "Return sales",
@@ -533,6 +534,7 @@
   "qr_refresh_seconds": "QR code refresh interval (seconds)",
   "qr_scan_hint": "Scan the QR code in the Cartex mobile app — this computer will log in automatically",
   "quantity": "Quantity",
+  "queue": "Queue",
   "quick_actions": "Quick Actions",
   "quick_rates_title": "Update rates",
   "rate": "Rate",
@@ -751,6 +753,5 @@
   "website": "Website",
   "welcome": "Welcome",
   "z_report": "Z-report",
-  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer",
-  "queue": "Queue"
+  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer"
 }
