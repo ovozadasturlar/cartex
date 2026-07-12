@@ -45,6 +45,8 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
         {
             (await developer.PutAsJsonAsync("/api/features/ordering", new { code = "ordering", isEnabled = false }))
                 .EnsureSuccessStatusCode();
+            (await developer.PutAsJsonAsync("/api/features/store", new { code = "store", isEnabled = false }))
+                .EnsureSuccessStatusCode();
 
             var adminResp = await admin.GetAsync("/api/ordering/carts/none");
             Assert.Equal(HttpStatusCode.Forbidden, adminResp.StatusCode);
@@ -55,6 +57,8 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
         finally
         {
             (await developer.PutAsJsonAsync("/api/features/ordering", new { code = "ordering", isEnabled = true }))
+                .EnsureSuccessStatusCode();
+            (await developer.PutAsJsonAsync("/api/features/store", new { code = "store", isEnabled = true }))
                 .EnsureSuccessStatusCode();
         }
     }

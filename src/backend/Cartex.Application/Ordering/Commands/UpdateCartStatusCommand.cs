@@ -1,5 +1,6 @@
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
@@ -10,7 +11,7 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record UpdateCartStatusCommand(string Code, CartStatus Status) : ICommand<Unit>;
 
-public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateCartStatusCommand, Unit>
+public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCartStatusCommand, Unit>
 {
     private static readonly Dictionary<CartStatus, CartStatus[]> Allowed = new()
     {
@@ -23,6 +24,10 @@ public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db) : I
     {
         var cart = await db.Carts.FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken)
             ?? throw new NotFoundException("Cart not found.");
+
+        if (!currentUser.HasPermission(AppPermissions.Sales.Create) &&
+            (request.Status != CartStatus.Cancelled || cart.CreatedBy != currentUser.UserId || cart.Status != CartStatus.Open))
+            throw new ForbiddenException("Faqat o'zingiz yig'gan ochiq savatni bekor qila olasiz.");
 
         if (!Allowed.TryGetValue(cart.Status, out var next) || !next.Contains(request.Status))
             throw new BusinessRuleException("Bu holatga o'tish mumkin emas.");

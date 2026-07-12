@@ -13,6 +13,7 @@ public static class FeatureCatalog
     public const string Ordering = "ordering";
     public const string Prepack = "prepack";
     public const string Agents = "agents";
+    public const string Store = "store";
     public const string OfflineCache = "offline_cache";
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
@@ -28,6 +29,7 @@ public static class FeatureCatalog
         [Ordering] = [],
         [Prepack] = [AppPermissions.Sales.Prepack],
         [Agents] = [],
+        [Store] = [AppPermissions.Sales.Pick],
         [OfflineCache] = [],
     };
 
@@ -44,12 +46,13 @@ public static class FeatureCatalog
         [Ordering] = "Onlayn buyurtma",
         [Prepack] = "Qadoqlash (tarozi)",
         [Agents] = "Agentlar (dala savdosi)",
+        [Store] = "Do'kon xodimi ilovasi",
         [OfflineCache] = "Oflayn kassa (bitta qurilma)",
     };
 
     public static readonly IReadOnlyList<string> AllCodes = [.. Names.Keys];
 
-    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string> { Ordering, Multicurrency, Agents, OfflineCache };
+    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string> { Ordering, Multicurrency, Agents, Store, OfflineCache };
 
     public static IReadOnlySet<string> PermissionsFor(IEnumerable<string> codes) =>
         codes.SelectMany(c => Map.TryGetValue(c, out var p) ? p : []).ToHashSet();

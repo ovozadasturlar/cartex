@@ -9,7 +9,7 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
-public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null) : ICommand<string>;
+public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null, string? Note = null) : ICommand<string>;
 
 public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IRequestHandler<SubmitCartCommand, string>
 {
@@ -35,7 +35,8 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IReques
             WarehouseId = request.WarehouseId,
             CustomerId = request.CustomerId,
             AggregateCode = Guid.NewGuid().ToString("N"),
-            IdempotencyKey = idempotencyKey
+            IdempotencyKey = idempotencyKey,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim()
         };
 
         foreach (var item in request.Items)

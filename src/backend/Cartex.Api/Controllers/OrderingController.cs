@@ -15,11 +15,11 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/ordering")]
 [Authorize]
-[RequiresFeature(FeatureCatalog.Ordering)]
+[RequiresFeature(FeatureCatalog.Ordering, FeatureCatalog.Store)]
 public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]
-    [HasPermission(AppPermissions.Sales.View)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.View)]
     public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null, [FromQuery] long? warehouseId = null)
     {
         var result = await sender.Send(new GetCartsQuery(status, warehouseId));
@@ -35,7 +35,7 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpPut("carts/{code}/status")]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
     public async Task<IActionResult> UpdateStatus(string code, UpdateCartStatusRequest request)
     {
         if (!Enum.TryParse<Cartex.Domain.Enums.CartStatus>(request.Status, true, out var status))
@@ -45,7 +45,7 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpPost("carts")]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
     public async Task<ActionResult<string>> Submit(SubmitCartCommand command)
     {
         var code = await sender.Send(command);
@@ -53,7 +53,7 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpGet("carts/{code}")]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
     public async Task<ActionResult<CartDto>> GetByCode(string code)
     {
         var cart = await sender.Send(new GetCartByCodeQuery(code));

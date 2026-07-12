@@ -9,9 +9,10 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
     {
         var permissions = context.User.Claims
             .Where(c => c.Type == "permission")
-            .Select(c => c.Value);
+            .Select(c => c.Value)
+            .ToHashSet();
 
-        if (permissions.Contains(requirement.Permission) || permissions.Contains(AppPermissions.Wildcard))
+        if (permissions.Contains(AppPermissions.Wildcard) || requirement.Permission.Split('|').Any(permissions.Contains))
             context.Succeed(requirement);
 
         return Task.CompletedTask;

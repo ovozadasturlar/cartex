@@ -47,7 +47,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("by-barcode")]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
     public async Task<ActionResult<ProductLookupDto>> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)
     {
         var result = await sender.Send(new GetProductByBarcodeQuery(code, warehouseId));

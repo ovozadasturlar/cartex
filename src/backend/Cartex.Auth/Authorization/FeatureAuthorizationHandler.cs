@@ -14,7 +14,11 @@ public class FeatureAuthorizationHandler(IFeatureStateProvider features) : Autho
             return;
         }
 
-        if (await features.IsEnabledAsync(requirement.Feature))
-            context.Succeed(requirement);
+        foreach (var feature in requirement.Feature.Split('|'))
+            if (await features.IsEnabledAsync(feature))
+            {
+                context.Succeed(requirement);
+                return;
+            }
     }
 }

@@ -69,6 +69,7 @@ public static class AppPermissions
         public const string View = "sales.view";
         public const string ViewAll = "sales.viewAll";
         public const string Create = "sales.create";
+        public const string Pick = "sales.pick";
         public const string Return = "sales.return";
         public const string Discount = "sales.discount";
         public const string PriceOverride = "sales.priceOverride";
@@ -192,6 +193,7 @@ public static class AppPermissions
         [Sales.View] = "View sales",
         [Sales.ViewAll] = "View all sales (not only own)",
         [Sales.Create] = "Create sales (POS)",
+        [Sales.Pick] = "Collect carts into the queue (picker)",
         [Sales.Return] = "Return sales",
         [Sales.Discount] = "Apply discount on sale",
         [Sales.DiscountOverride] = "Exceed the business discount limit",
