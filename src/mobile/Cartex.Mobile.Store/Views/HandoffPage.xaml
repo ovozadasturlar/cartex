@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.HandoffPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:HandoffViewModel"
+    Title="{svc:T handoff_title}">
+    <ScrollView>
+        <VerticalStackLayout Padding="24,20" Spacing="16">
+            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 24" Padding="18"
+                    HorizontalOptions="Center">
+                <Image Source="{Binding QrSource}" WidthRequest="240" HeightRequest="240" />
+            </Border>
+            <Entry Text="{Binding Code}" IsReadOnly="True" FontSize="13" HorizontalTextAlignment="Center"
+                   CharacterSpacing="1.5"
+                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="16,6" HorizontalOptions="Center"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource InfoBg}, Dark={StaticResource InfoBgDark}}">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="Confirmed">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="CheckedOut">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="Cancelled">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Label Text="{Binding StatusText}" FontSize="13" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource InfoDark}}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Confirmed">
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
+                        </DataTrigger>
+                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="CheckedOut">
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </DataTrigger>
+                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Cancelled">
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+            </Border>
+            <VerticalStackLayout Spacing="2" HorizontalOptions="Center"
+                                 IsVisible="{Binding TotalText, Converter={StaticResource NotEmpty}}">
+                <Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
+                <Label Text="{Binding TotalText}" Style="{StaticResource StatValue}" FontSize="26" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+            <Label Text="{svc:T handoff_hint}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center"
+                   IsVisible="{Binding IsOpen}" />
+            <VerticalStackLayout Spacing="6" IsVisible="{Binding IsSold}">
+                <Label Text="{StaticResource IcCheck}" Style="{StaticResource Icon}" FontSize="72" />
+                <Label Text="{svc:T handoff_sold}" FontSize="17" FontAttributes="Bold" HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+            </VerticalStackLayout>
+            <Button Text="{svc:T cancel_cart}" Style="{StaticResource BtnOutline}" IsVisible="{Binding IsOpen}"
+                    TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                    BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                    Command="{Binding CancelCartCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

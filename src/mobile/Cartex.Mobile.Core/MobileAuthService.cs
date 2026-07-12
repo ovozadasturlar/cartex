@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Auth;
 
-namespace Cartex.Mobile.Agent.Services;
+namespace Cartex.Mobile.Core;
 
 public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 {
@@ -13,20 +13,20 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
     public string FullName => Preferences.Get("user_fullname", "");
     public string Role => Preferences.Get("user_role", "");
 
-    public long? UserId
+    public long? UserId => ClaimId("userId");
+    public long? DefaultBranchId => ClaimId("defaultBranchId");
+
+    private long? ClaimId(string type)
     {
-        get
+        try
         {
-            try
-            {
-                var value = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken)
-                    .Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
-                return long.TryParse(value, out var id) ? id : null;
-            }
-            catch
-            {
-                return null;
-            }
+            var value = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken)
+                .Claims.FirstOrDefault(c => c.Type == type)?.Value;
+            return long.TryParse(value, out var id) ? id : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -47,6 +47,32 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         return session.AccessToken is not null && !string.IsNullOrEmpty(session.RefreshToken);
     }
 
+    public event Action? SessionInvalidated;
+
+    public async Task ValidateSessionAsync()
+    {
+        var refresh = session.RefreshToken;
+        if (string.IsNullOrEmpty(refresh)) return;
+        await _refreshLock.WaitAsync();
+        try
+        {
+            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            await session.SaveAsync(response.Token, response.RefreshToken);
+        }
+        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
+        {
+            session.Clear();
+            SessionInvalidated?.Invoke();
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
     public async Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken)
     {
         var token = session.AccessToken;
@@ -64,6 +90,12 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
             var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
             await session.SaveAsync(response.Token, response.RefreshToken);
             return response.Token;
+        }
+        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
+        {
+            session.Clear();
+            SessionInvalidated?.Invoke();
+            return null;
         }
         catch
         {

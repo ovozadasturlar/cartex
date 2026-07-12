@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.PinPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:PinViewModel"
+    Shell.PresentationMode="ModalNotAnimated"
+    Shell.NavBarIsVisible="False"
+    Shell.TabBarIsVisible="False">
+    <Grid RowDefinitions="*,Auto,*,Auto" Padding="32,48,32,40">
+        <VerticalStackLayout VerticalOptions="End" Spacing="14">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 22" WidthRequest="64" HeightRequest="64"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
+                    HorizontalOptions="Center">
+                <Label Text="{StaticResource IcLock}" Style="{StaticResource Icon}" FontSize="30" />
+            </Border>
+            <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            <Label Text="{Binding Error}" FontSize="13" HorizontalOptions="Center"
+                   IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}"
+                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+        </VerticalStackLayout>
+
+        <HorizontalStackLayout Grid.Row="1" Spacing="18" HorizontalOptions="Center" Margin="0,28">
+            <Border StrokeThickness="1.4" StrokeShape="RoundRectangle 8" WidthRequest="16" HeightRequest="16"
+                    Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    BackgroundColor="{Binding Filled, Converter={StaticResource DotFill}, ConverterParameter=1}" />
+            <Border StrokeThickness="1.4" StrokeShape="RoundRectangle 8" WidthRequest="16" HeightRequest="16"
+                    Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    BackgroundColor="{Binding Filled, Converter={StaticResource DotFill}, ConverterParameter=2}" />
+            <Border StrokeThickness="1.4" StrokeShape="RoundRectangle 8" WidthRequest="16" HeightRequest="16"
+                    Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    BackgroundColor="{Binding Filled, Converter={StaticResource DotFill}, ConverterParameter=3}" />
+            <Border StrokeThickness="1.4" StrokeShape="RoundRectangle 8" WidthRequest="16" HeightRequest="16"
+                    Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    BackgroundColor="{Binding Filled, Converter={StaticResource DotFill}, ConverterParameter=4}" />
+        </HorizontalStackLayout>
+
+        <Grid Grid.Row="3" RowDefinitions="76,76,76,76" ColumnDefinitions="*,*,*" RowSpacing="12" ColumnSpacing="12"
+              HorizontalOptions="Fill" VerticalOptions="End">
+            <Button Text="1" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="1" />
+            <Button Grid.Column="1" Text="2" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="2" />
+            <Button Grid.Column="2" Text="3" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="3" />
+            <Button Grid.Row="1" Text="4" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="4" />
+            <Button Grid.Row="1" Grid.Column="1" Text="5" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="5" />
+            <Button Grid.Row="1" Grid.Column="2" Text="6" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="6" />
+            <Button Grid.Row="2" Text="7" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="7" />
+            <Button Grid.Row="2" Grid.Column="1" Text="8" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="8" />
+            <Button Grid.Row="2" Grid.Column="2" Text="9" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="9" />
+            <Button Grid.Row="3" Text="{StaticResource IcFingerprint}" FontFamily="MDI" FontSize="32"
+                    BackgroundColor="Transparent" BorderWidth="0" Padding="0" IsVisible="{Binding ShowBiometric}"
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    Command="{Binding BiometricCommand}" />
+            <Button Grid.Row="3" Grid.Column="1" Text="0" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="0" />
+            <Button Grid.Row="3" Grid.Column="2" Text="⌫" Style="{StaticResource PinKey}" FontSize="22"
+                    Command="{Binding BackspaceCommand}" />
+        </Grid>
+    </Grid>
+</ContentPage>

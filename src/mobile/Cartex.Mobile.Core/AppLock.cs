@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cartex.Mobile.Agent.Services;
+namespace Cartex.Mobile.Core;
 
 public static class AppLock
 {

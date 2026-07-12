@@ -14,7 +14,9 @@
     <Project Path="src/desktop/Cartex.Desktop/Cartex.Desktop.csproj" />
   </Folder>
   <Folder Name="/src/mobile/">
+    <Project Path="src/mobile/Cartex.Mobile.Core/Cartex.Mobile.Core.csproj" />
     <Project Path="src/mobile/Cartex.Mobile.Agent/Cartex.Mobile.Agent.csproj" />
+    <Project Path="src/mobile/Cartex.Mobile.Store/Cartex.Mobile.Store.csproj" />
   </Folder>
   <Folder Name="/src/web/">
     <Project Path="src/web/Cartex.Web.Angular/Cartex.Web.Angular.esproj">

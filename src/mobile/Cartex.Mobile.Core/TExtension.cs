@@ -1,6 +1,6 @@
 using Microsoft.Maui.Controls.Xaml;
 
-namespace Cartex.Mobile.Agent.Services;
+namespace Cartex.Mobile.Core;
 
 [ContentProperty(nameof(Key))]
 public sealed class TExtension : IMarkupExtension<BindingBase>

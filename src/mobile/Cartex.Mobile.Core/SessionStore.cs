@@ -1,4 +1,4 @@
-namespace Cartex.Mobile.Agent.Services;
+namespace Cartex.Mobile.Core;
 
 public sealed class SessionStore
 {

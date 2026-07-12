@@ -1,9 +1,8 @@
 using AndroidX.Biometric;
 using AndroidX.Core.Content;
 using AndroidX.Fragment.App;
-using Cartex.Mobile.Agent.Services;
 
-namespace Cartex.Mobile.Agent.Platforms.Android;
+namespace Cartex.Mobile.Core;
 
 public sealed class BiometricAuth : IBiometricAuth
 {
@@ -21,13 +20,20 @@ public sealed class BiometricAuth : IBiometricAuth
                 tcs.TrySetResult(false);
                 return;
             }
-            var prompt = new BiometricPrompt(activity, ContextCompat.GetMainExecutor(activity), new Callback(tcs));
-            var info = new BiometricPrompt.PromptInfo.Builder()
-                .SetTitle(title)
-                .SetAllowedAuthenticators(BiometricManager.Authenticators.BiometricWeak)
-                .SetNegativeButtonText(Loc.Instance["cancel"])
-                .Build();
-            prompt.Authenticate(info);
+            try
+            {
+                var prompt = new BiometricPrompt(activity, ContextCompat.GetMainExecutor(activity), new Callback(tcs));
+                var info = new BiometricPrompt.PromptInfo.Builder()
+                    .SetTitle(title)
+                    .SetAllowedAuthenticators(BiometricManager.Authenticators.BiometricWeak)
+                    .SetNegativeButtonText(Loc.Instance["cancel"])
+                    .Build();
+                prompt.Authenticate(info);
+            }
+            catch
+            {
+                tcs.TrySetResult(false);
+            }
         });
         return tcs.Task;
     }

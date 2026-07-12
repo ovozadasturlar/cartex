@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:LoginViewModel"
+    Shell.NavBarIsVisible="False">
+    <Grid>
+        <VerticalStackLayout VerticalOptions="Center" Spacing="16" IsVisible="{Binding IsChecking}">
+            <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
+                   WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
+            <ActivityIndicator IsRunning="{Binding IsChecking}"
+                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </VerticalStackLayout>
+        <Border HorizontalOptions="End" VerticalOptions="Start" Margin="0,14,20,0"
+                StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="14,7"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ChooseLanguageCommand}" />
+            </Border.GestureRecognizers>
+            <Label Text="{Binding LanguageShort}" FontSize="13" FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        </Border>
+        <ScrollView IsVisible="{Binding IsChecking, Converter={StaticResource Invert}}">
+            <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
+                <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
+                       WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
+                <Label HorizontalOptions="Center" Margin="0,16,0,2">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="CARTEX" FontSize="24" FontAttributes="Bold"
+                                  TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Span Text=" Do'kon" FontSize="24"
+                                  TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+                <Label Text="{svc:T login_subtitle}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,0,0,32" />
+                <VerticalStackLayout Spacing="12">
+                    <Border Style="{StaticResource InputWrap}">
+                        <Entry Placeholder="{svc:T login_username}" Text="{Binding Username}" ReturnType="Next" />
+                    </Border>
+                    <Border Style="{StaticResource InputWrap}" Padding="14,2,6,2">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                            <Entry Placeholder="{svc:T login_password}" Text="{Binding Password}" IsPassword="{Binding HidePassword}"
+                                   ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
+                            <Button Grid.Column="1" Text="{Binding EyeGlyph}" BackgroundColor="Transparent" FontFamily="MDI" FontSize="20"
+                                    Padding="8,0" WidthRequest="42" Command="{Binding ToggleEyeCommand}"
+                                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        </Grid>
+                    </Border>
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                            IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
+                        <Label Text="{Binding Error}" FontSize="13"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </Border>
+                    <Button Text="{svc:T login_button}" Style="{StaticResource BtnPrimary}" Command="{Binding LoginCommand}" Margin="0,6,0,0" />
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout VerticalOptions="End" Padding="28,0,28,20" Spacing="10">
+            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding IsServerVisible}">
+                <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+            </Border>
+            <Label Text="{Binding ServerText}" Style="{StaticResource MutedLabel}"
+                   FontSize="12" HorizontalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleServerCommand}" />
+                </Label.GestureRecognizers>
+            </Label>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

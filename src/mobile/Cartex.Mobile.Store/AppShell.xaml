@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Cartex.Mobile.Store.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Cartex.Mobile.Store.Views"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    FlyoutBehavior="Disabled">
+
+    <ShellContent Route="login" ContentTemplate="{DataTemplate views:LoginPage}" Shell.NavBarIsVisible="False" />
+
+    <TabBar Route="main">
+        <ShellContent Route="home" Title="{svc:T tab_home}" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
+        <ShellContent Route="queue" Title="{svc:T queue}" Icon="tab_queue.png" ContentTemplate="{DataTemplate views:QueuePage}" />
+        <ShellContent Route="scan" Title="{svc:T scan}" Icon="tab_scan.png" ContentTemplate="{DataTemplate views:ScanPage}" />
+        <ShellContent Route="sales" Title="{svc:T sales}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:SalesPage}" />
+        <ShellContent Route="profile" Title="{svc:T profile}" Icon="tab_profile.png" ContentTemplate="{DataTemplate views:ProfilePage}" />
+    </TabBar>
+
+</Shell>
