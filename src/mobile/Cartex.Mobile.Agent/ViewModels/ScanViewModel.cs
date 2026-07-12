@@ -2,6 +2,7 @@ using Cartex.ApiClient.Api;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Auth;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 

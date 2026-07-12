@@ -3,8 +3,9 @@ using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Mobile.Agent.ViewModels;
 using Cartex.Mobile.Agent.Views;
+using BarcodeScanning;
 using Microsoft.Extensions.DependencyInjection;
-using ZXing.Net.Maui.Controls;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent;
 
@@ -15,11 +16,12 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
-            .UseBarcodeReader()
+            .UseBarcodeScanning()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("materialdesignicons.ttf", "MDI");
             });
 
 #if ANDROID
@@ -58,7 +60,8 @@ public static class MauiProgram
         builder.Services.AddTransient<VanStockViewModel>();
         builder.Services.AddTransient<PinViewModel>();
         builder.Services.AddTransient<SecurityViewModel>();
-        builder.Services.AddSingleton<IBiometricAuth, Platforms.Android.BiometricAuth>();
+        builder.Services.AddTransient<DaySummaryViewModel>();
+        builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<CustomersPage>();
@@ -71,6 +74,10 @@ public static class MauiProgram
         builder.Services.AddTransient<ChangePasswordPage>();
         builder.Services.AddTransient<DevicesPage>();
         builder.Services.AddTransient<CustomerCreatePage>();
+        builder.Services.AddTransient<MapPickerPage>();
+        builder.Services.AddTransient<CustomersMapPage>();
+        builder.Services.AddTransient<RoutePage>();
+        builder.Services.AddTransient<DaySummaryPage>();
         builder.Services.AddTransient<VanStockPage>();
         builder.Services.AddTransient<PinPage>();
         builder.Services.AddTransient<SecurityPage>();
@@ -79,7 +86,9 @@ public static class MauiProgram
         builder.Services.AddTransient<OrderPage>();
 
         var app = builder.Build();
-        app.Services.GetRequiredService<SyncService>().StartConnectivityWatch();
+        var syncService = app.Services.GetRequiredService<SyncService>();
+        syncService.StartConnectivityWatch();
+        syncService.StartAutoSync();
         return app;
     }
 

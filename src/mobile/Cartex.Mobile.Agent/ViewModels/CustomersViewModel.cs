@@ -3,6 +3,7 @@ using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -19,6 +20,9 @@ public partial class CustomersViewModel(AgentDb db, SyncService sync) : Observab
 
     [RelayCommand]
     private Task AddAsync() => Shell.Current.GoToAsync("customer-new");
+
+    [RelayCommand]
+    private Task OpenMapAsync() => Shell.Current.GoToAsync("customers-map");
 
     public async Task AppearAsync()
     {
@@ -49,6 +53,7 @@ public partial class CustomersViewModel(AgentDb db, SyncService sync) : Observab
 
 public sealed record CustomerRow(LocalCustomer Customer, string Currency)
 {
+    public string Initials => string.Concat(Customer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
     public string DebtText => Customer.DebtBalance > 0 ? $"{Customer.DebtBalance:N0} {Currency}" : Loc.Instance["no_debt"];
     public bool HasDebt => Customer.DebtBalance > 0;
 }

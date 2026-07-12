@@ -3,6 +3,7 @@ using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -15,7 +16,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [ObservableProperty] private bool _isServerVisible;
     [ObservableProperty] private bool _isChecking = true;
     [ObservableProperty] private bool _hidePassword = true;
-    [ObservableProperty] private string _eyeGlyph = "👁";
+    [ObservableProperty] private string _eyeGlyph = "\U000F0208";
     [ObservableProperty] private string _languageShort = "";
     [ObservableProperty] private string? _error;
 
@@ -34,7 +35,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     private void ToggleEye()
     {
         HidePassword = !HidePassword;
-        EyeGlyph = HidePassword ? "👁" : "🙈";
+        EyeGlyph = HidePassword ? "\U000F0208" : "\U000F0209";
     }
 
     [RelayCommand]
@@ -58,18 +59,34 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     public async Task InitializeAsync()
     {
         LanguageShort = LangShorts[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
+        var restored = false;
         try
         {
-            if (!await auth.TryRestoreAsync()) return;
-            if (AppLock.PinEnabled)
-                await Shell.Current.GoToAsync("pin");
-            else
-                await Shell.Current.GoToAsync("//home");
+            restored = await auth.TryRestoreAsync();
         }
         finally
         {
-            IsChecking = false;
+            if (!restored) IsChecking = false;
         }
+        if (!restored) return;
+        await Shell.Current.GoToAsync("//home", false);
+        _ = auth.ValidateSessionAsync();
+        if (AppLock.PinEnabled)
+            await Shell.Current.GoToAsync("pin", false);
+    }
+
+    private static async Task OfferPinSetupAsync()
+    {
+        if (AppLock.PinEnabled) return;
+        await Task.Delay(600);
+        try
+        {
+            if (Shell.Current?.CurrentPage is not { } page) return;
+            if (await page.DisplayAlert(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
+                    Loc.Instance["pin_offer_yes"], Loc.Instance["later"]))
+                await Shell.Current.GoToAsync("pin?setup=1");
+        }
+        catch { }
     }
 
     [RelayCommand]
@@ -94,6 +111,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             await auth.LoginAsync(Username.Trim(), Password);
             Password = "";
             await Shell.Current.GoToAsync("//home");
+            _ = OfferPinSetupAsync();
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {

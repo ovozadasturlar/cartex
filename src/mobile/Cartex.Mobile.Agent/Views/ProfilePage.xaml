@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:ProfileViewModel"
     Shell.NavBarIsVisible="False">
     <ScrollView>
@@ -35,9 +35,7 @@
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcDevices}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcDevices}" Style="{StaticResource Icon}" />
                         </Border>
                         <Label Grid.Column="1" Text="{svc:T devices}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -52,9 +50,7 @@
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcOutbox}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcOutbox}" Style="{StaticResource Icon}" />
                         </Border>
                         <Label Grid.Column="1" Text="{svc:T outbox_title}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -66,23 +62,6 @@
                         </Border>
                         <Label Grid.Column="3" Text="›" FontSize="22" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                    </Grid>
-                    <BoxView HeightRequest="1" Margin="58,0,10,0"
-                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding SyncCommand}" />
-                        </Grid.GestureRecognizers>
-                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcSync}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
-                        </Border>
-                        <Label Grid.Column="1" Text="{svc:T sync}" FontSize="15" VerticalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                        <ActivityIndicator Grid.Column="2" IsRunning="{Binding IsBusy}" WidthRequest="20" HeightRequest="20"
-                                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>
@@ -96,9 +75,7 @@
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcGlobe}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcGlobe}" Style="{StaticResource Icon}" />
                         </Border>
                         <Label Grid.Column="1" Text="{svc:T language}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -114,9 +91,7 @@
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcMoon}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcMoon}" Style="{StaticResource Icon}" />
                         </Border>
                         <Label Grid.Column="1" Text="{svc:T theme}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -132,9 +107,7 @@
                         </Grid.GestureRecognizers>
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcShield}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcShield}" Style="{StaticResource Icon}" />
                         </Border>
                         <Label Grid.Column="1" Text="{svc:T security}" FontSize="15" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />

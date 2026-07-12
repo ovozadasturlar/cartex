@@ -1,6 +1,7 @@
 using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -12,20 +13,25 @@ public partial class PinViewModel(IBiometricAuth biometric) : ObservableObject, 
     [ObservableProperty] private bool _showBiometric;
 
     private bool _setup;
+    private bool _prompted;
     private string _entry = "";
     private string? _firstEntry;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         _setup = query.TryGetValue("setup", out var v) && v?.ToString() == "1";
-        Title = Loc.Instance[_setup ? "pin_set_title" : "pin_enter_title"];
-        ShowBiometric = !_setup && AppLock.BiometricEnabled && biometric.IsAvailable;
     }
 
     public async Task AppearAsync()
     {
-        if (ShowBiometric)
+        Title = Loc.Instance[_setup ? _firstEntry is null ? "pin_set_title" : "pin_repeat_title" : "pin_enter_title"];
+        ShowBiometric = !_setup && AppLock.BiometricEnabled && biometric.IsAvailable;
+        if (ShowBiometric && !_prompted)
+        {
+            _prompted = true;
+            await Task.Delay(400);
             await BiometricCommand.ExecuteAsync(null);
+        }
     }
 
     [RelayCommand]
@@ -91,8 +97,5 @@ public partial class PinViewModel(IBiometricAuth biometric) : ObservableObject, 
         Error = Loc.Instance["pin_wrong"];
     }
 
-    private static async Task UnlockAsync()
-    {
-        await Shell.Current.GoToAsync("//home");
-    }
+    private static Task UnlockAsync() => Shell.Current.GoToAsync("..");
 }

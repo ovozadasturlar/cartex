@@ -2,10 +2,11 @@ using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncService sync, SessionStore session) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -15,7 +16,6 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
     [ObservableProperty] private string _footer = "";
     [ObservableProperty] private string _themeName = "";
     [ObservableProperty] private bool _hasOutbox;
-    [ObservableProperty] private bool _isBusy;
 
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
     private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
@@ -65,23 +65,6 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SyncSe
             "dark" => AppTheme.Dark,
             _ => AppTheme.Unspecified
         };
-
-    [RelayCommand]
-    private async Task SyncAsync()
-    {
-        if (IsBusy) return;
-        IsBusy = true;
-        try
-        {
-            await sync.SyncAsync();
-            await AppearAsync();
-            Ui.Toast(Loc.Instance[sync.IsOffline ? "offline_banner" : "sync_done"]);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
 
     [RelayCommand]
     private async Task ChooseLanguageAsync()

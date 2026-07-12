@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:LoginViewModel"
     Shell.NavBarIsVisible="False">
     <Grid>
@@ -47,7 +47,7 @@
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                             <Entry Placeholder="{svc:T login_password}" Text="{Binding Password}" IsPassword="{Binding HidePassword}"
                                    ReturnType="Go" ReturnCommand="{Binding LoginCommand}" />
-                            <Button Grid.Column="1" Text="{Binding EyeGlyph}" BackgroundColor="Transparent" FontSize="17"
+                            <Button Grid.Column="1" Text="{Binding EyeGlyph}" BackgroundColor="Transparent" FontFamily="MDI" FontSize="20"
                                     Padding="8,0" WidthRequest="42" Command="{Binding ToggleEyeCommand}"
                                     TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
                         </Grid>

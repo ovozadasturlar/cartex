@@ -4,6 +4,7 @@ using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -109,7 +110,13 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
 
     [RelayCommand]
-    private Task OpenStockAsync() => Shell.Current.GoToAsync("vanstock");
+    private Task OpenStockAsync() => Shell.Current.GoToAsync("//vanstock");
+
+    [RelayCommand]
+    private Task OpenDaySummaryAsync() => Shell.Current.GoToAsync("day-summary");
+
+    [RelayCommand]
+    private Task OpenRouteAsync() => Shell.Current.GoToAsync("visit-route");
 }
 
 public sealed record DayBar(string Day, double Height, bool IsMax);

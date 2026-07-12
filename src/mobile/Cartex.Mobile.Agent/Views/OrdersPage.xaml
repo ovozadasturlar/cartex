@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:OrdersViewModel"
     Title="{svc:T orders}">
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="16,12,16,0">
@@ -107,18 +107,15 @@
                                         </DataTrigger>
                                     </Border.Triggers>
                                     <Grid>
-                                        <Path Data="{StaticResource IcBox}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
-                                              HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding CanDeliver}"
-                                              Fill="{AppThemeBinding Light={StaticResource InfoBrush}, Dark={StaticResource InfoDarkBrush}}">
-                                            <Path.Triggers>
-                                                <DataTrigger TargetType="Path" Binding="{Binding Order.Status}" Value="synced">
-                                                    <Setter Property="Fill" Value="{AppThemeBinding Light={StaticResource WarnBrush}, Dark={StaticResource WarnDarkBrush}}" />
+                                        <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" IsVisible="{Binding CanDeliver}"
+                                               TextColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource InfoDark}}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding Order.Status}" Value="synced">
+                                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
                                                 </DataTrigger>
-                                            </Path.Triggers>
-                                        </Path>
-                                        <Path Data="{StaticResource IcCheck}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
-                                              HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsDelivered}"
-                                              Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                                            </Label.Triggers>
+                                        </Label>
+                                        <Label Text="{StaticResource IcCheck}" Style="{StaticResource Icon}" IsVisible="{Binding IsDelivered}" />
                                     </Grid>
                                 </Border>
                                 <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
@@ -164,9 +161,7 @@
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 32" WidthRequest="64" HeightRequest="64"
                                 HorizontalOptions="Center"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcBox}" Aspect="Uniform" WidthRequest="26" HeightRequest="26"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" FontSize="30" />
                         </Border>
                         <Label Text="{svc:T no_orders}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
                     </VerticalStackLayout>
@@ -198,9 +193,7 @@
                                 <Border StrokeThickness="0" StrokeShape="RoundRectangle 16" WidthRequest="32" HeightRequest="32"
                                         VerticalOptions="Center"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                    <Path Data="{StaticResource IcBox}" Aspect="Uniform" WidthRequest="15" HeightRequest="15"
-                                          HorizontalOptions="Center" VerticalOptions="Center"
-                                          Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                                    <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" />
                                 </Border>
                                 <Label Grid.Column="1" Text="{Binding Name}" FontSize="14" VerticalOptions="Center" LineBreakMode="TailTruncation"
                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -215,9 +208,7 @@
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 32" WidthRequest="64" HeightRequest="64"
                                 HorizontalOptions="Center"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcTruck}" Aspect="Uniform" WidthRequest="26" HeightRequest="26"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcTruck}" Style="{StaticResource Icon}" FontSize="30" />
                         </Border>
                         <Label Text="{svc:T load_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
                     </VerticalStackLayout>

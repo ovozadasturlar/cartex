@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:HomeViewModel"
     Shell.NavBarIsVisible="False">
     <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}"
@@ -70,9 +70,7 @@
                         </VerticalStackLayout>
                         <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcPeople}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcPeople}" Style="{StaticResource Icon}" />
                         </Border>
                     </Grid>
                 </Border>
@@ -84,9 +82,7 @@
                         </VerticalStackLayout>
                         <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcTruck}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcTruck}" Style="{StaticResource Icon}" />
                         </Border>
                     </Grid>
                 </Border>
@@ -99,9 +95,7 @@
                         </VerticalStackLayout>
                         <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcOutbox}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcOutbox}" Style="{StaticResource Icon}" />
                         </Border>
                     </Grid>
                 </Border>
@@ -114,9 +108,7 @@
                         </VerticalStackLayout>
                         <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                            <Path Data="{StaticResource IcCheck}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                                  HorizontalOptions="Center" VerticalOptions="Center"
-                                  Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                            <Label Text="{StaticResource IcCheck}" Style="{StaticResource Icon}" />
                         </Border>
                     </Grid>
                 </Border>
@@ -129,9 +121,7 @@
                     </Grid.GestureRecognizers>
                     <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
                             BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                        <Path Data="{StaticResource IcBox}" Aspect="Uniform" WidthRequest="17" HeightRequest="17"
-                              HorizontalOptions="Center" VerticalOptions="Center"
-                              Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                        <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" />
                     </Border>
                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                         <Label Text="{Binding VanValue}" Style="{StaticResource StatValue}" FontSize="21" />
@@ -174,15 +164,39 @@
                 </VerticalStackLayout>
             </Border>
 
-            <Label Text="{svc:T visit_today}" FontAttributes="Bold" FontSize="16" Margin="0,4,0,-4"
-                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            <Border Style="{StaticResource Card}" Padding="14">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenDaySummaryCommand}" />
+                    </Grid.GestureRecognizers>
+                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                        <Label Text="{StaticResource IcCash}" Style="{StaticResource Icon}" />
+                    </Border>
+                    <Label Grid.Column="1" Text="{svc:T day_summary}" FontSize="15" FontAttributes="Bold" VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Label Grid.Column="2" Text="{StaticResource IcChevron}" Style="{StaticResource Icon}" FontSize="18"
+                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                </Grid>
+            </Border>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,-4">
+                <Label Text="{svc:T visit_today}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="34" HeightRequest="34"
+                        IsVisible="{Binding VisitsEmpty, Converter={StaticResource Invert}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenRouteCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{StaticResource IcRoute}" Style="{StaticResource Icon}" FontSize="18" />
+                </Border>
+            </Grid>
             <Border Style="{StaticResource Card}" IsVisible="{Binding VisitsEmpty}">
                 <VerticalStackLayout Spacing="10" Padding="0,10" HorizontalOptions="Center">
                     <Border StrokeThickness="0" StrokeShape="RoundRectangle 14" WidthRequest="48" HeightRequest="48" HorizontalOptions="Center"
                             BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                        <Path Data="{StaticResource IcPin}" Aspect="Uniform" WidthRequest="22" HeightRequest="22"
-                              HorizontalOptions="Center" VerticalOptions="Center"
-                              Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                        <Label Text="{StaticResource IcPin}" Style="{StaticResource Icon}" FontSize="26" />
                     </Border>
                     <Label Text="{svc:T no_visits}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>

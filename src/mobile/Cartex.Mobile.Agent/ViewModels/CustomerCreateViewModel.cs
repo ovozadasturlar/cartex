@@ -3,6 +3,7 @@ using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Customers;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -35,25 +36,8 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
                 Error = Loc.Instance["location_failed"];
                 return;
             }
-            Latitude = location.Latitude;
-            Longitude = location.Longitude;
-            LocationText = $"{location.Latitude:0.#####}, {location.Longitude:0.#####}";
-            HasLocation = true;
-
-            if (string.IsNullOrWhiteSpace(Address))
-            {
-                try
-                {
-                    var place = (await Geocoding.GetPlacemarksAsync(location.Latitude, location.Longitude)).FirstOrDefault();
-                    if (place is not null)
-                    {
-                        var parts = new[] { place.Thoroughfare, place.SubThoroughfare, place.SubLocality, place.Locality }
-                            .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct();
-                        Address = string.Join(", ", parts);
-                    }
-                }
-                catch { }
-            }
+            SetLocation(location.Latitude, location.Longitude);
+            await FillAddressAsync(location.Latitude, location.Longitude);
         }
         catch
         {
@@ -62,6 +46,58 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
         finally
         {
             Locating = false;
+        }
+    }
+
+    [RelayCommand]
+    private Task PickOnMapAsync()
+    {
+        var query = new Dictionary<string, object> { ["picked"] = (Action<double, double>)OnMapPicked };
+        if (HasLocation && Latitude is double lat && Longitude is double lng)
+        {
+            query["lat"] = lat;
+            query["lng"] = lng;
+        }
+        return Shell.Current.GoToAsync("map-picker", query);
+    }
+
+    private void OnMapPicked(double lat, double lng)
+    {
+        SetLocation(lat, lng);
+        _ = FillAddressAsync(lat, lng);
+    }
+
+    private void SetLocation(double lat, double lng)
+    {
+        Latitude = lat;
+        Longitude = lng;
+        LocationText = $"{lat:0.#####}, {lng:0.#####}";
+        HasLocation = true;
+    }
+
+    private async Task FillAddressAsync(double lat, double lng)
+    {
+        if (!string.IsNullOrWhiteSpace(Address)) return;
+        var address = await GetAddressAsync(lat, lng);
+        if (!string.IsNullOrWhiteSpace(address) && string.IsNullOrWhiteSpace(Address))
+            Address = address;
+    }
+
+    private static async Task<string?> GetAddressAsync(double lat, double lng)
+    {
+        try
+        {
+            if (!Android.Locations.Geocoder.IsPresent) return null;
+            var geo = new Android.Locations.Geocoder(Platform.AppContext, Java.Util.Locale.ForLanguageTag("uz"));
+            var place = (await geo.GetFromLocationAsync(lat, lng, 1))?.FirstOrDefault();
+            if (place is null) return null;
+            var parts = new[] { place.Thoroughfare, place.SubThoroughfare, place.SubLocality, place.Locality }
+                .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct();
+            return UzText.ToLatin(string.Join(", ", parts));
+        }
+        catch
+        {
+            return null;
         }
     }
 

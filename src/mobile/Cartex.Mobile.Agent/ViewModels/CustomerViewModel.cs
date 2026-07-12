@@ -1,10 +1,13 @@
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using Cartex.ApiClient.Api;
 using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Customers;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
@@ -20,8 +23,17 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
     [ObservableProperty] private string _staleText = "";
     [ObservableProperty] private bool _hasDebt;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _hasLocation;
+    [ObservableProperty] private bool _historyVisible;
+    [ObservableProperty] private bool _historyLoading;
+    [ObservableProperty] private bool _historyEmpty;
+
+    public ObservableCollection<LedgerRow> History { get; } = [];
 
     private long _customerId;
+    private double? _latitude;
+    private double? _longitude;
+    private bool _historyBusy;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -46,6 +58,38 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
         LimitText = c.CreditLimit > 0 ? $"{c.CreditLimit:N0} {currency}" : "—";
         OrdersCount = (await db.GetOrdersAsync()).Count(o => o.CustomerId == _customerId).ToString();
         StaleText = string.Format(Loc.Instance["status_fmt"], await db.GetMetaAsync("last_sync") ?? "—");
+        _ = LoadHistoryAsync();
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        if (_historyBusy) return;
+        _historyBusy = true;
+        HistoryVisible = true;
+        HistoryLoading = true;
+        HistoryEmpty = false;
+        try
+        {
+            var res = await customersApi.GetLedgerAsync(_customerId, 1, 10);
+            if (!res.IsSuccessStatusCode || res.Content is null)
+            {
+                HistoryVisible = false;
+                return;
+            }
+            History.Clear();
+            foreach (var e in res.Content)
+                History.Add(new LedgerRow(e));
+            HistoryEmpty = History.Count == 0;
+        }
+        catch
+        {
+            HistoryVisible = false;
+        }
+        finally
+        {
+            HistoryLoading = false;
+            _historyBusy = false;
+        }
     }
 
     private static string BuildDebtText(LocalCustomer c, string currency)
@@ -60,15 +104,24 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
         return $"{c.DebtBalance:N0} {currency}";
     }
 
-    [ObservableProperty] private bool _hasLocation;
-    private double? _latitude;
-    private double? _longitude;
+    private string? CoordText() =>
+        _latitude is { } lat && _longitude is { } lng
+            ? $"{lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+            : null;
 
     [RelayCommand]
     private async Task OpenMapAsync()
     {
-        if (_latitude is not { } lat || _longitude is not { } lng) return;
-        await Launcher.OpenAsync(new Uri($"geo:0,0?q={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}({Uri.EscapeDataString(FullName ?? "")})"));
+        if (CoordText() is not { } q) return;
+        await Launcher.OpenAsync(new Uri($"geo:0,0?q={q}({Uri.EscapeDataString(FullName)})"));
+    }
+
+    [RelayCommand]
+    private async Task RouteAsync()
+    {
+        if (CoordText() is not { } q) return;
+        if (!await Launcher.TryOpenAsync($"google.navigation:q={q}"))
+            await Launcher.OpenAsync(new Uri($"geo:0,0?q={q}({Uri.EscapeDataString(FullName)})"));
     }
 
     [RelayCommand]
@@ -112,4 +165,20 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
             IsBusy = false;
         }
     }
+}
+
+public sealed record LedgerRow(CustomerLedgerEntryDto Entry)
+{
+    public string Name => Loc.Instance[Entry.OperationType switch
+    {
+        "Sale" => "op_sale",
+        "DebtCharge" => "op_debtcharge",
+        "DebtPay" => "op_debtpay",
+        "Cashback" => "op_cashback",
+        "BonusSpend" => "op_bonusspend",
+        _ => "op_other"
+    }];
+    public string DateText => Entry.Date.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    public string AmountText => Entry.Change > 0 ? $"+{Entry.Change:N0}" : Entry.Change.ToString("N0");
+    public bool IsIn => Entry.OperationType is "DebtPay" or "Cashback";
 }

@@ -4,8 +4,9 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:PinViewModel"
+    Shell.PresentationMode="ModalNotAnimated"
     Shell.NavBarIsVisible="False"
     Shell.TabBarIsVisible="False">
     <Grid RowDefinitions="*,Auto,*,Auto" Padding="32,48,32,40">
@@ -13,9 +14,7 @@
             <Border StrokeThickness="0" StrokeShape="RoundRectangle 22" WidthRequest="64" HeightRequest="64"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
                     HorizontalOptions="Center">
-                <Path Data="{StaticResource IcLock}" Aspect="Uniform" WidthRequest="26" HeightRequest="26"
-                      HorizontalOptions="Center" VerticalOptions="Center"
-                      Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource SecondaryDarkTextBrush}}" />
+                <Label Text="{StaticResource IcLock}" Style="{StaticResource Icon}" FontSize="30" />
             </Border>
             <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center"
                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -50,14 +49,10 @@
             <Button Grid.Row="2" Text="7" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="7" />
             <Button Grid.Row="2" Grid.Column="1" Text="8" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="8" />
             <Button Grid.Row="2" Grid.Column="2" Text="9" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="9" />
-            <Border Grid.Row="3" StrokeThickness="0" BackgroundColor="Transparent" IsVisible="{Binding ShowBiometric}">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding BiometricCommand}" />
-                </Border.GestureRecognizers>
-                <Path Data="{StaticResource IcFingerprint}" Aspect="Uniform" WidthRequest="30" HeightRequest="30"
-                      HorizontalOptions="Center" VerticalOptions="Center"
-                      Fill="{AppThemeBinding Light={StaticResource PrimaryBrush}, Dark={StaticResource PrimaryDarkBrush}}" />
-            </Border>
+            <Button Grid.Row="3" Text="{StaticResource IcFingerprint}" FontFamily="MDI" FontSize="32"
+                    BackgroundColor="Transparent" BorderWidth="0" Padding="0" IsVisible="{Binding ShowBiometric}"
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                    Command="{Binding BiometricCommand}" />
             <Button Grid.Row="3" Grid.Column="1" Text="0" Style="{StaticResource PinKey}" Command="{Binding DigitCommand}" CommandParameter="0" />
             <Button Grid.Row="3" Grid.Column="2" Text="⌫" Style="{StaticResource PinKey}" FontSize="22"
                     Command="{Binding BackspaceCommand}" />

@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
-    xmlns:svc="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:DevicesViewModel"
     Title="{svc:T devices}">
     <ScrollView>
@@ -32,8 +32,7 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="10,12">
                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 20" WidthRequest="40" HeightRequest="40"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
-                            <Path Data="{StaticResource IcDevices}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
-                                  HorizontalOptions="Center" VerticalOptions="Center" Fill="White" />
+                            <Label Text="{StaticResource IcDevices}" Style="{StaticResource Icon}" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding Current.Name}" FontSize="14.5" FontAttributes="Bold"
@@ -66,8 +65,7 @@
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,11">
                                 <Border StrokeThickness="0" StrokeShape="RoundRectangle 20" WidthRequest="40" HeightRequest="40"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource Info}}">
-                                    <Path Data="{StaticResource IcDevices}" Aspect="Uniform" WidthRequest="18" HeightRequest="18"
-                                          HorizontalOptions="Center" VerticalOptions="Center" Fill="White" />
+                                    <Label Text="{StaticResource IcDevices}" Style="{StaticResource Icon}" />
                                 </Border>
                                 <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                     <Label Text="{Binding Name}" FontSize="14.5" FontAttributes="Bold" LineBreakMode="TailTruncation"

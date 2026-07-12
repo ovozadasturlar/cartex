@@ -1,4 +1,6 @@
+using Cartex.Mobile.Agent.Services;
 using SQLite;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.Data;
 
@@ -78,13 +80,17 @@ public sealed class AgentDb
     public async Task<List<LocalCustomer>> SearchCustomersAsync(string? query)
     {
         await InitAsync();
-        var q = _db.Table<LocalCustomer>();
-        if (!string.IsNullOrWhiteSpace(query))
+        var all = await _db.Table<LocalCustomer>().OrderBy(c => c.FullName).ToListAsync();
+        if (string.IsNullOrWhiteSpace(query)) return all;
+        var tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(UzText.Fold).Where(t => t.Length > 0).ToList();
+        if (tokens.Count == 0) return all;
+        return all.Where(c =>
         {
-            var term = query.Trim().ToLowerInvariant();
-            q = q.Where(c => c.FullName.ToLower().Contains(term) || (c.Phone != null && c.Phone.Contains(term)));
-        }
-        return await q.OrderBy(c => c.FullName).ToListAsync();
+            var fields = new[] { UzText.Fold(c.FullName), UzText.Fold(c.Address ?? ""), UzText.Fold(c.Phone ?? "") };
+            var digits = string.Concat((c.Phone ?? "").Where(char.IsDigit));
+            return tokens.All(t => fields.Any(f => f.Contains(t)) || (t.All(char.IsDigit) && digits.Contains(t)));
+        }).ToList();
     }
 
     public async Task<List<LocalVanStock>> SearchVanStockAsync(string? query)

@@ -7,10 +7,11 @@ using Cartex.Shared.Models.Ordering;
 using Cartex.Shared.Models.Sales;
 using Microsoft.Maui.Networking;
 using Refit;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.Services;
 
-public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustomersApi customersApi, IOrderingApi orderingApi, AgentDb db)
+public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustomersApi customersApi, IOrderingApi orderingApi, AgentDb db, SessionStore session)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -20,6 +21,7 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
     public string? LastError { get; private set; }
 
     private bool _watching;
+    private bool _autoSync;
 
     public void StartConnectivityWatch()
     {
@@ -32,8 +34,21 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         };
     }
 
+    public void StartAutoSync()
+    {
+        if (_autoSync) return;
+        _autoSync = true;
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(10));
+            while (await timer.WaitForNextTickAsync())
+                await SyncAsync();
+        });
+    }
+
     public async Task<bool> SyncAsync()
     {
+        if (string.IsNullOrEmpty(session.AccessToken)) return !IsOffline;
         if (!await _lock.WaitAsync(0)) return !IsOffline;
         try
         {
@@ -59,8 +74,14 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         finally
         {
             _lock.Release();
-            StateChanged?.Invoke();
+            RaiseState();
         }
+    }
+
+    private void RaiseState()
+    {
+        if (MainThread.IsMainThread) StateChanged?.Invoke();
+        else MainThread.BeginInvokeOnMainThread(() => StateChanged?.Invoke());
     }
 
     private async Task<bool> PushOutboxAsync()
@@ -169,7 +190,7 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             }
         }
         await db.DeleteOutboxAsync(item.Id);
-        StateChanged?.Invoke();
+        RaiseState();
     }
 
     private async Task PullAsync()

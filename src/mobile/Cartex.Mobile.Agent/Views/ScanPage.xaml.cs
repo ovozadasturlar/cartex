@@ -1,6 +1,6 @@
-using Cartex.Mobile.Agent.Services;
+using BarcodeScanning;
 using Cartex.Mobile.Agent.ViewModels;
-using ZXing.Net.Maui;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.Views;
 
@@ -12,28 +12,29 @@ public partial class ScanPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _vm = vm;
-        Reader.Options = new BarcodeReaderOptions
-        {
-            Formats = BarcodeFormat.QrCode,
-            AutoRotate = true,
-            TryHarder = true
-        };
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        var status = await Permissions.RequestAsync<Permissions.Camera>();
-        if (status != PermissionStatus.Granted)
+        if (!await Methods.AskForRequiredPermissionAsync())
         {
             await DisplayAlert(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
             await Shell.Current.GoToAsync("..");
+            return;
         }
+        Reader.CameraEnabled = true;
     }
 
-    private void OnBarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
+    protected override void OnDisappearing()
     {
-        var value = e.Results.FirstOrDefault()?.Value;
+        Reader.CameraEnabled = false;
+        base.OnDisappearing();
+    }
+
+    private void OnDetectionFinished(object? sender, OnDetectionFinishedEventArg e)
+    {
+        var value = e.BarcodeResults.FirstOrDefault()?.RawValue;
         if (string.IsNullOrEmpty(value)) return;
         MainThread.BeginInvokeOnMainThread(() => _ = _vm.HandleAsync(value));
     }

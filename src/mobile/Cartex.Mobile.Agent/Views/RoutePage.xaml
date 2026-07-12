@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.RoutePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Cartex.Mobile.Agent.Views"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    Title="{svc:T route_title}">
+    <Grid RowDefinitions="*,Auto">
+        <WebView x:Name="Web" />
+        <Label x:Name="Empty" Text="{svc:T route_empty}" Style="{StaticResource MutedLabel}" FontSize="14"
+               IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" Margin="32,0"
+               HorizontalTextAlignment="Center" />
+        <Border x:Name="ListCard" Grid.Row="1" Style="{StaticResource Card}" Margin="12,0,12,12" Padding="14,10" IsVisible="False">
+            <VerticalStackLayout Spacing="2">
+                <Label x:Name="SkippedNote" Style="{StaticResource MutedLabel}" FontSize="11.5" IsVisible="False" Margin="0,0,0,4" />
+                <ScrollView MaximumHeightRequest="250">
+                    <VerticalStackLayout x:Name="StopsHost">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="views:RouteStop">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="2,7">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnStopTapped" />
+                                    </Grid.GestureRecognizers>
+                                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 14" WidthRequest="28" HeightRequest="28"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                                        <Label Text="{Binding Index}" FontSize="13" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Text="{Binding SubText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="2" Text="{Binding DistText}" FontSize="12.5" FontAttributes="Bold" VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>
