@@ -513,6 +513,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
     public bool HasItems => Items.Count > 0;
 
+    // Pastki paneldagi jamilar: xarid summasi (EditTotal), kutilayotgan sotuv tushumi va
+    // ular orasidagi farq — foyda. Sotish narxi ko'rsatilmagan qatorlar tushumga qo'shilmaydi.
+    public decimal EditSellingTotal => Items.Sum(i => i.StockingQuantity * (i.SellingPrice ?? 0));
+    public decimal EditProfit => Items.Where(i => i.SellingPrice is not null)
+        .Sum(i => i.StockingQuantity * (i.SellingPrice!.Value - i.PricePerStockingUnitValue));
+
     private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         foreach (var line in e.OldItems?.OfType<SupplyLine>() ?? []) line.PropertyChanged -= OnLineChanged;
@@ -522,12 +528,15 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private void OnLineChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SupplyLine.LineTotal)) RaiseTotals();
+        if (e.PropertyName is nameof(SupplyLine.LineTotal) or nameof(SupplyLine.Margin)
+            or nameof(SupplyLine.StockingQuantity)) RaiseTotals();
     }
 
     private void RaiseTotals()
     {
         OnPropertyChanged(nameof(EditTotal));
+        OnPropertyChanged(nameof(EditSellingTotal));
+        OnPropertyChanged(nameof(EditProfit));
         OnPropertyChanged(nameof(HasItems));
     }
 
