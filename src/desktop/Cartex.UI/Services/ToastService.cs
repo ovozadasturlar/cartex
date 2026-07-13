@@ -24,7 +24,8 @@ public sealed class ToastService : IToastService
 
     private void Show(string message, string? title, NotificationType type)
     {
-        if (_manager is null) return;
+        // Bo'sh xabar — ko'rsatiladigan narsa yo'q (masalan, bekor qilingan so'rov).
+        if (_manager is null || string.IsNullOrWhiteSpace(message)) return;
         Dispatcher.UIThread.Post(() => _manager.Show(new Notification(title, message, type)));
     }
 }

@@ -132,7 +132,7 @@
                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <TextBlock Text="{TemplateBinding Title}" FontSize="16" FontWeight="SemiBold"
-                               TextAlignment="Center" HorizontalAlignment="Center"
+                               TextAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextPrimary}" />
                     <TextBlock Text="{TemplateBinding Message}" FontSize="13" TextAlignment="Center"
                                TextWrapping="Wrap" HorizontalAlignment="Center"

@@ -49,7 +49,16 @@ public class SupplyItemConfiguration : IEntityTypeConfiguration<SupplyItem>
         builder.ToTable("supply_items");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.PackSize).HasPrecision(12, 3).HasDefaultValue(1m);
-        builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
+        // Narx saqlash birligiga o'girilgani uchun juda kichik bo'lishi mumkin (mas. tonna narxi -> so'm/g).
+        builder.Property(x => x.PurchasePrice).HasPrecision(18, 4);
+        builder.Property(x => x.EntryQuantity).HasPrecision(12, 3);
+        builder.Property(x => x.EntryPrice).HasPrecision(18, 4);
+        builder.Property(x => x.PriceBasis).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasOne(x => x.Pack)
+            .WithMany()
+            .HasForeignKey(x => x.PackId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(x => x.Unit)
             .WithMany()

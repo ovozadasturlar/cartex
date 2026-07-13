@@ -39,8 +39,16 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _autoPrintReceipt;
     [ObservableProperty] private bool _autoPrintZReport;
     [ObservableProperty] private decimal _receiptCopies = 1;
-    [ObservableProperty] private decimal _labelWidthMm = 58;
-    [ObservableProperty] private decimal _labelHeightMm = 40;
+    [ObservableProperty] private decimal _labelWidthMm = 40;
+    [ObservableProperty] private decimal _labelHeightMm = 30;
+    [ObservableProperty] private decimal _labelGapMm = 4;
+    [ObservableProperty] private string _labelMode = "tspl";
+    [ObservableProperty] private decimal _labelShiftXMm;
+    [ObservableProperty] private decimal _labelShiftYMm;
+    [ObservableProperty] private int _labelDpi = 203;
+    [ObservableProperty] private int _labelRotation = 180;
+    [ObservableProperty] private decimal _labelDensity = 8;
+    [ObservableProperty] private decimal _labelSpeed = 4;
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
     [ObservableProperty] private string _receiptPaperWidth = "default";
@@ -52,7 +60,10 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     partial void OnReceiptModeChanged(string value) => OnPropertyChanged(nameof(IsThermal));
 
-    public string[] LabelPresets { get; } = ["58×40", "40×58", "58×60", "40×30", "custom"];
+    public string[] LabelPresets { get; } = ["40×30", "58×40", "40×58", "58×60", "custom"];
+    public string[] LabelModes { get; } = ["tspl", "pdf"];
+    public int[] LabelDpis { get; } = [203, 300];
+    public int[] LabelRotations { get; } = [0, 180];
     public string[] ReceiptModes { get; } = ["thermal", "a5", "a4"];
     public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
     public int[] BusinessPaperWidths { get; } = [32, 42, 48];
@@ -78,6 +89,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public async Task LoadAsync()
     {
         var s = _printer.GetSettings();
+
+        // Ro'yxat avval to'ldiriladi: ItemsSource keyin o'zgarsa, ComboBox ro'yxatda topolmagan tanlovni
+        // tozalab, sozlamadagi printer nomini null qilib yuboradi.
+        var printers = await Task.Run(_printer.GetInstalledPrinters);
+        Printers.Clear();
+        foreach (var p in printers) Printers.Add(p);
+
         ReceiptPrinter = s.ReceiptPrinter;
         ZReportPrinter = s.ZReportPrinter;
         BarcodePrinter = s.BarcodePrinter;
@@ -87,18 +105,18 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
         ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
         ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
-        var (width, height) = LabelSize.Resolve(s.LabelWidthMm, s.LabelHeightMm);
-        LabelWidthMm = (decimal)width;
-        LabelHeightMm = (decimal)height;
-        SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{width:0}×{height:0}") ?? "custom";
-
-        var printers = await Task.Run(_printer.GetInstalledPrinters);
-        Printers.Clear();
-        foreach (var p in printers) Printers.Add(p);
-        OnPropertyChanged(nameof(ReceiptPrinter));
-        OnPropertyChanged(nameof(ZReportPrinter));
-        OnPropertyChanged(nameof(BarcodePrinter));
-        OnPropertyChanged(nameof(DocumentPrinter));
+        var label = LabelSize.Resolve(s);
+        LabelWidthMm = (decimal)label.WidthMm;
+        LabelHeightMm = (decimal)label.HeightMm;
+        LabelGapMm = (decimal)label.GapMm;
+        LabelShiftXMm = (decimal)label.ShiftXMm;
+        LabelShiftYMm = (decimal)label.ShiftYMm;
+        LabelDpi = label.Dpi;
+        LabelRotation = label.Rotation;
+        LabelDensity = label.Density;
+        LabelSpeed = label.Speed;
+        LabelMode = s.LabelMode == "pdf" ? "pdf" : "tspl";
+        SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
 
         try
         {
@@ -125,7 +143,15 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ReceiptMode,
             int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
             (int)Math.Clamp(ReceiptCopies, 1, 5),
-            AutoPrintZReport));
+            AutoPrintZReport,
+            LabelMode,
+            (double)LabelGapMm,
+            LabelDpi,
+            (double)LabelShiftXMm,
+            (double)LabelShiftYMm,
+            LabelRotation,
+            (int)LabelDensity,
+            (int)LabelSpeed));
         try
         {
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(
@@ -165,5 +191,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
         _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
         _toast.Info(L["success"]);
+    }
+
+    [RelayCommand]
+    private void CalibrateLabel()
+    {
+        if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
+        _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
+        _toast.Info(L["label_calibrate_started"]);
     }
 }

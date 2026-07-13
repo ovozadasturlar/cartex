@@ -210,7 +210,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="6">
                             <TextBlock Text="{Binding L[min_stock]}" Classes="caption" />
-                            <NumericUpDown Value="{Binding EditMinStock}" Minimum="0" FormatString="N0"
+                            <NumericUpDown Value="{Binding EditMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                            ShowButtonSpinner="False" MinHeight="40" />
                         </StackPanel>
                     </Grid>
@@ -218,7 +218,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
                         <Grid ColumnDefinitions="*,8,Auto">
-                            <NumericUpDown Value="{Binding EditSellingPrice}" Minimum="0" Increment="1000" FormatString="N2"
+                            <NumericUpDown Value="{Binding EditSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N2"
                                            ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
                             <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
                                       MinHeight="40" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
@@ -261,7 +261,7 @@
                                     <KeyBinding Gesture="Enter" Command="{Binding AddEditBarcodeCommand}" />
                                 </TextBox.KeyBindings>
                             </TextBox>
-                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty}" Minimum="1" Increment="1"
+                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1"
                                            FormatString="0.###" MinHeight="40" Width="120"
                                            ToolTip.Tip="{Binding L[pack_size_hint]}" />
                             <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0"
@@ -270,6 +270,52 @@
                             </Button>
                             <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
                                     Command="{Binding GenerateEditBarcodeCommand}" Content="{Binding L[generate_barcode]}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Qadoqlar: kirimda "Qop 50 kg", rastada "1 kg paket". Hajm saqlash birligida. -->
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
+                        <TextBlock Text="{Binding L[packs]}" Classes="caption" />
+                        <ItemsControl ItemsSource="{Binding EditPacks}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="7" Padding="10,5" Margin="0,0,0,5"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       Text="{Binding Size, StringFormat='{}× {0:0.###}'}" />
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}" Text="{Binding Kind}" />
+                                            <Button Grid.Column="3" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.EditPackCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Grid.Column="4" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeletePackCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto" >
+                            <TextBox Grid.Column="0" Text="{Binding PackName, Mode=TwoWay}" MinHeight="40"
+                                     PlaceholderText="{Binding L[name]}" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding PackSize, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="0" Increment="1" FormatString="0.###" MinHeight="40" Width="110"
+                                           ToolTip.Tip="{Binding PackSizeHint}" />
+                            <ComboBox Grid.Column="4" ItemsSource="{Binding PackKinds}" SelectedItem="{Binding PackKind}"
+                                      MinHeight="40" Width="120" ToolTip.Tip="{Binding L[pack_kind]}" />
+                            <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding SavePackCommand}" Content="{Binding L[add_pack]}" />
                         </Grid>
                     </StackPanel>
 
@@ -285,7 +331,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="6">
                             <TextBlock Text="{Binding L[vat_rate]}" Classes="caption" />
-                            <NumericUpDown Value="{Binding EditVatRate}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
+                            <NumericUpDown Value="{Binding EditVatRate, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
                         </StackPanel>
                     </Grid>
 
@@ -297,7 +343,7 @@
                                     <StackPanel Spacing="4" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Display}" Classes="caption" />
                                         <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
-                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" MinHeight="38" IsVisible="{Binding IsNumber}" />
                                         <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
                                                   HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
                                         <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
@@ -422,7 +468,7 @@
                                         <StackPanel Spacing="4" Margin="0,0,0,8">
                                             <TextBlock Text="{Binding Display}" Classes="caption" />
                                             <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
-                                            <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                            <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" MinHeight="38" IsVisible="{Binding IsNumber}" />
                                             <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
                                             <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
@@ -470,7 +516,7 @@
                     </Border>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding PrintQuantity}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
+                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
                         <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"

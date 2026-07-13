@@ -9,14 +9,35 @@ using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.UI.Services;
 
-public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false);
+public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false, string? LabelMode = null, double LabelGapMm = 0, int LabelDpi = 0, double LabelShiftXMm = 0, double LabelShiftYMm = 0, int LabelRotation = -1, int LabelDensity = 0, int LabelSpeed = 0);
 
 public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
+
+// Yorliq chop etishning barcha parametrlari — sozlamalardan olinadi, kodda qotib qolmaydi.
+public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed);
 
 public static class LabelSize
 {
     public static (double Width, double Height) Resolve(double width, double height) =>
-        (width is < 20 or > 120 ? 58 : width, height is < 20 or > 120 ? 40 : height);
+        (width is < 20 or > 120 ? 40 : width, height is < 20 or > 120 ? 30 : height);
+
+    // GAP 0 — printer uchun "uzluksiz qog'oz" degani: yorliqlar orasidagi bo'shliqni sezmay, chop etish asta siljib ketadi.
+    public static double ResolveGap(double gap) => gap is < 1 or > 20 ? 4 : gap;
+
+    public static LabelOptions Resolve(PrinterSettings s)
+    {
+        var (width, height) = Resolve(s.LabelWidthMm, s.LabelHeightMm);
+        return new LabelOptions(
+            width,
+            height,
+            ResolveGap(s.LabelGapMm),
+            s.LabelDpi is 203 or 300 ? s.LabelDpi : 203,
+            Math.Clamp(s.LabelShiftXMm, -10, 10),
+            Math.Clamp(s.LabelShiftYMm, -10, 10),
+            s.LabelRotation is 0 or 180 ? s.LabelRotation : 180,
+            s.LabelDensity is >= 1 and <= 15 ? s.LabelDensity : 8,
+            s.LabelSpeed is >= 1 and <= 6 ? s.LabelSpeed : 4);
+    }
 }
 
 public interface IPrinterService
@@ -30,6 +51,7 @@ public interface IPrinterService
     void PrintReceipt(ReceiptDto receipt);
     void PrintZReport(ZReportDto report);
     void PrintRaw(string? printerName, string text);
+    void PrintRawBytes(string? printerName, byte[] data);
     void PrintDocument(string filePath, string? printerName);
 }
 
@@ -125,7 +147,17 @@ public sealed class PrinterService : IPrinterService
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName)) return;
         Task.Run(() =>
         {
-            try { RawPrinter.SendString(printerName, text); }
+            try { RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt"); }
+            catch { }
+        });
+    }
+
+    public void PrintRawBytes(string? printerName, byte[] data)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || data.Length == 0) return;
+        Task.Run(() =>
+        {
+            try { RawPrinter.Send(printerName, data, "Cartex Label"); }
             catch { }
         });
     }
@@ -227,10 +259,9 @@ internal static class RawPrinter
     [DllImport("winspool.drv", SetLastError = true)]
     private static extern bool WritePrinter(IntPtr hPrinter, IntPtr buf, int count, out int written);
 
-    public static void SendString(string printerName, string text)
+    public static void Send(string printerName, byte[] bytes, string docName)
     {
         if (!OperatingSystem.IsWindows()) return;
-        var bytes = Encoding.UTF8.GetBytes(text);
         var unmanaged = Marshal.AllocCoTaskMem(bytes.Length);
         try
         {
@@ -238,7 +269,7 @@ internal static class RawPrinter
             if (!OpenPrinter(printerName, out var hPrinter, IntPtr.Zero)) return;
             try
             {
-                var di = new DOCINFO { DocName = "Cartex Receipt", DataType = "RAW" };
+                var di = new DOCINFO { DocName = docName, DataType = "RAW" };
                 if (!StartDocPrinter(hPrinter, 1, ref di)) return;
                 try
                 {

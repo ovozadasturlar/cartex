@@ -299,11 +299,11 @@
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Grid.Column="0" Spacing="5">
                             <TextBlock Text="{Binding L[discount_pct]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding EditDiscountPct}" Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
+                            <NumericUpDown Value="{Binding EditDiscountPct, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="0.##" />
+                            <NumericUpDown Value="{Binding EditCreditLimit, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="100000" FormatString="0.##" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Spacing="5">
@@ -315,7 +315,7 @@
                     <StackPanel Spacing="5" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">
-                            <NumericUpDown Value="{Binding EditOpeningBalance}" Minimum="0" Increment="10000" FormatString="0.##" />
+                            <NumericUpDown Value="{Binding EditOpeningBalance, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="10000" FormatString="0.##" />
                             <ComboBox Grid.Column="2" ItemsSource="{Binding OpeningKinds}" SelectedIndex="{Binding EditOpeningKindIndex}"
                                       MinHeight="36" MinWidth="130" />
                             <ComboBox Grid.Column="3" ItemsSource="{Binding PayCurrencies}" SelectedItem="{Binding EditOpeningCurrency}"
@@ -376,7 +376,7 @@
                     </Grid>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <NumericUpDown Value="{Binding RepayAmount}" Minimum="0" Increment="1000" FormatString="0.##" />
+                        <NumericUpDown Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <ToggleSwitch IsChecked="{Binding RepayViaCard}" />

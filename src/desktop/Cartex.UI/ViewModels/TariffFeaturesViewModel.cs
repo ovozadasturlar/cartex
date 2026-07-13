@@ -84,7 +84,9 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                 foreach (var f in Features)
                     await featuresApi.SetAsync(f.Code, new SetFeatureRequest(f.IsEnabled));
             }
-            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features);
+            // Imkoniyatlar biznes ma'lumotiga ham ta'sir qiladi (masalan Multicurrency) — sahifalar uni
+            // keshdan o'qiydi. Kesh tozalanmasa yangi holat faqat qayta kirgandan keyin ko'rinadi.
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features, CacheKeys.Business, CacheKeys.Rates, CacheKeys.SalesPolicy);
             toast.Success(L["success"]);
             await LoadAsync();
         }

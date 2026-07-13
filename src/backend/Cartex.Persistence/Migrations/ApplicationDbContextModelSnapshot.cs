@@ -203,6 +203,10 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
+                    b.Property<long?>("PackId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pack_id");
+
                     b.Property<decimal>("PackQty")
                         .HasPrecision(12, 3)
                         .HasColumnType("numeric(12,3)")
@@ -227,6 +231,9 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_barcodes_code")
                         .HasFilter("\"is_deleted\" = false");
+
+                    b.HasIndex("PackId")
+                        .HasDatabaseName("ix_barcodes_pack_id");
 
                     b.HasIndex("VariantId")
                         .HasDatabaseName("ix_barcodes_variant_id");
@@ -1756,6 +1763,78 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductPack", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CreatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("name");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Size")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("size");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("UpdatedBy")
+                        .HasColumnType("bigint")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_packs");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_product_packs_product_id");
+
+                    b.HasIndex("ProductId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_packs_product_id_name")
+                        .HasFilter("\"is_deleted\" = false");
+
+                    b.ToTable("product_packs", (string)null);
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.ProductPrice", b =>
                 {
                     b.Property<long>("Id")
@@ -2640,8 +2719,8 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("is_deleted");
 
                     b.Property<decimal>("PurchasePrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
                         .HasColumnName("purchase_price");
 
                     b.Property<decimal>("Quantity")
@@ -3011,6 +3090,20 @@ namespace Cartex.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal>("EntryPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("entry_price");
+
+                    b.Property<decimal>("EntryQuantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("entry_quantity");
+
+                    b.Property<long?>("PackId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pack_id");
+
                     b.Property<decimal>("PackSize")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(12, 3)
@@ -3018,9 +3111,15 @@ namespace Cartex.Persistence.Migrations
                         .HasDefaultValue(1m)
                         .HasColumnName("pack_size");
 
+                    b.Property<string>("PriceBasis")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("price_basis");
+
                     b.Property<decimal>("PurchasePrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
                         .HasColumnName("purchase_price");
 
                     b.Property<decimal>("Quantity")
@@ -3042,6 +3141,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_supply_items");
+
+                    b.HasIndex("PackId")
+                        .HasDatabaseName("ix_supply_items_pack_id");
 
                     b.HasIndex("SupplyId")
                         .HasDatabaseName("ix_supply_items_supply_id");
@@ -3465,12 +3567,20 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Barcode", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.ProductPack", "Pack")
+                        .WithMany()
+                        .HasForeignKey("PackId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_barcodes_product_packs_pack_id");
+
                     b.HasOne("Cartex.Domain.Entities.ProductVariant", "Variant")
                         .WithMany("Barcodes")
                         .HasForeignKey("VariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_barcodes_product_variants_variant_id");
+
+                    b.Navigation("Pack");
 
                     b.Navigation("Variant");
                 });
@@ -3694,6 +3804,18 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("ProductType");
 
                     b.Navigation("Unit");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.ProductPack", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Product", "Product")
+                        .WithMany("Packs")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_packs_products_product_id");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.ProductPrice", b =>
@@ -4008,6 +4130,12 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.SupplyItem", b =>
                 {
+                    b.HasOne("Cartex.Domain.Entities.ProductPack", "Pack")
+                        .WithMany()
+                        .HasForeignKey("PackId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_supply_items_product_packs_pack_id");
+
                     b.HasOne("Cartex.Domain.Entities.Supply", "Supply")
                         .WithMany("Items")
                         .HasForeignKey("SupplyId")
@@ -4027,6 +4155,8 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_supply_items_product_variants_variant_id");
+
+                    b.Navigation("Pack");
 
                     b.Navigation("Supply");
 
@@ -4214,6 +4344,8 @@ namespace Cartex.Persistence.Migrations
 
             modelBuilder.Entity("Cartex.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("Packs");
+
                     b.Navigation("Variants");
                 });
 

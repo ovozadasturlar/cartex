@@ -25,4 +25,5 @@ public class Product : SoftDeleteEntity
     public string? ImageKey { get; set; }
 
     public ICollection<ProductVariant> Variants { get; set; } = [];
+    public ICollection<ProductPack> Packs { get; set; } = [];
 }

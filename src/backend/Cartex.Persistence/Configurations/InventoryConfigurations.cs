@@ -54,7 +54,7 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
     {
         builder.ToTable("stocks");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
-        builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
+        builder.Property(x => x.PurchasePrice).HasPrecision(18, 4);
         builder.HasIndex(x => x.BranchId);
         builder.HasIndex(x => new { x.WarehouseId, x.VariantId });
 

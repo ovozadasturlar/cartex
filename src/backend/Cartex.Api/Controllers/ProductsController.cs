@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Application.ProductPacks.Commands;
+using Cartex.Application.ProductPacks.Queries;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Products.Queries;
 using Cartex.Auth.Authorization;
@@ -123,6 +125,38 @@ public class ProductsController(ISender sender) : ControllerBase
     public async Task<IActionResult> DeleteVariant(long id)
     {
         await sender.Send(new DeleteVariantCommand(id));
+        return NoContent();
+    }
+
+    [HttpGet("{productId:long}/packs")]
+    [HasPermission(AppPermissions.Products.View)]
+    public async Task<ActionResult<IReadOnlyCollection<ProductPackDto>>> GetPacks(long productId)
+    {
+        var result = await sender.Send(new GetProductPacksQuery(productId));
+        return Ok(result);
+    }
+
+    [HttpPost("{productId:long}/packs")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<ActionResult<long>> CreatePack(long productId, CreateProductPackCommand command)
+    {
+        var id = await sender.Send(command with { ProductId = productId });
+        return Ok(id);
+    }
+
+    [HttpPut("packs/{id:long}")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> UpdatePack(long id, UpdateProductPackCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
+    }
+
+    [HttpDelete("packs/{id:long}")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> DeletePack(long id)
+    {
+        await sender.Send(new DeleteProductPackCommand(id));
         return NoContent();
     }
 }

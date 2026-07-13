@@ -19,7 +19,7 @@
                     <TextBlock Text="{Binding L[no_open_shift]}" Foreground="{DynamicResource TextSecondary}" />
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding L[opening_float]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding OpeningFloat}" Minimum="0" FormatString="N0"
+                        <NumericUpDown Value="{Binding OpeningFloat, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                        ShowButtonSpinner="False" MinHeight="40" />
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding CurrencyRows}" IsVisible="{Binding IsMulticurrency}">
@@ -28,7 +28,7 @@
                                 <Grid ColumnDefinitions="60,8,*" Margin="0,0,0,6">
                                     <TextBlock Text="{Binding Currency}" VerticalAlignment="Center" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextSecondary}" />
-                                    <NumericUpDown Grid.Column="2" Value="{Binding Opening}" Minimum="0" FormatString="N2"
+                                    <NumericUpDown Grid.Column="2" Value="{Binding Opening, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N2"
                                                    ShowButtonSpinner="False" MinHeight="36" />
                                 </Grid>
                             </DataTemplate>
@@ -94,7 +94,7 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             <Grid ColumnDefinitions="*,8,Auto,8,Auto">
-                                <NumericUpDown Grid.Column="0" Value="{Binding MovementAmount}" Minimum="0" FormatString="N0"
+                                <NumericUpDown Grid.Column="0" Value="{Binding MovementAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                                ShowButtonSpinner="False" MinHeight="40" />
                                 <Button Grid.Column="2" Classes="outline" Command="{Binding PayInCommand}" Content="{Binding L[pay_in]}" />
                                 <Button Grid.Column="4" Classes="outline" Command="{Binding PayOutCommand}" Content="{Binding L[pay_out]}" />
@@ -117,7 +117,7 @@
                             </ItemsControl>
                             <TextBlock Text="{Binding L[counted_cash]}" Classes="caption" />
                             <Grid ColumnDefinitions="*,8,Auto">
-                                <NumericUpDown Grid.Column="0" Value="{Binding CountedCash}" Minimum="0" FormatString="N0"
+                                <NumericUpDown Grid.Column="0" Value="{Binding CountedCash, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                                ShowButtonSpinner="False" MinHeight="40" />
                                 <Button Grid.Column="2" Classes="brand" MinWidth="140" HorizontalContentAlignment="Center"
                                         Command="{Binding CloseShiftCommand}" Content="{Binding L[close_shift]}" />
@@ -128,7 +128,7 @@
                                         <Grid ColumnDefinitions="60,8,*" Margin="0,0,0,4">
                                             <TextBlock Text="{Binding Currency}" VerticalAlignment="Center" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource TextSecondary}" />
-                                            <NumericUpDown Grid.Column="2" Value="{Binding Counted}" Minimum="0" FormatString="N2"
+                                            <NumericUpDown Grid.Column="2" Value="{Binding Counted, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N2"
                                                            ShowButtonSpinner="False" MinHeight="36" />
                                         </Grid>
                                     </DataTemplate>
