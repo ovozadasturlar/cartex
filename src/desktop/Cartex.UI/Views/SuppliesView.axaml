@@ -177,13 +177,18 @@
                             <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding ShortName}" /></DataTemplate></ComboBox.ItemTemplate>
                         </ComboBox>
                         <NumericUpDown Grid.Column="4" MinWidth="100" Value="{Binding LinePrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##"
-                                       ShowButtonSpinner="False" ToolTip.Tip="{Binding L[purchase_price]}" />
+                                       ShowButtonSpinner="False" ToolTip.Tip="{Binding LinePriceLabel}"
+                                       PlaceholderText="{Binding LinePriceLabel}" />
                         <NumericUpDown Grid.Column="5" MinWidth="100" Value="{Binding LineSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding L[selling_price]}" />
                         <CalendarDatePicker Grid.Column="6" MinWidth="145" SelectedDate="{Binding LineExpiry}" ToolTip.Tip="{Binding L[expired_at]}" />
                         <Button Grid.Column="7" Classes="outline" Command="{Binding AddLineCommand}" MinHeight="34" Padding="14,0"
                                 Content="{Binding L[add]}" />
                     </Grid>
+
+                    <!-- Boshqa birlikda kiritilsa, zaxiraga qanday tushishi darhol ko'rinadi -->
+                    <TextBlock Text="{Binding LinePreview}" IsVisible="{Binding HasLinePreview}"
+                               FontSize="12" Foreground="{DynamicResource BrandPrimaryBrush}" Margin="4,0,0,0" />
                 </StackPanel>
             </Border>
 
@@ -222,6 +227,18 @@
                                                 Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" IsReadOnly="True" Binding="{Binding UnitName}"
                                                 Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <!-- Boshqa birlikda kiritilgan qator zaxiraga qanday tushishini ko'rsatadi -->
+                            <DataGridTemplateColumn Width="130" IsReadOnly="True"
+                                                    Header="{Binding [to_stock], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="8,0">
+                                            <TextBlock Text="{Binding StockingQuantity, StringFormat='{}{0:0.###}'}" />
+                                            <TextBlock Text="{Binding StockingUnitName}" Foreground="{DynamicResource TextSecondary}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="140" Binding="{Binding PurchasePrice, StringFormat='{}{0:N0}'}"
                                                 Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="140" Binding="{Binding SellingPrice, StringFormat='{}{0:N0}'}"

@@ -19,12 +19,17 @@ using Cartex.UI.ViewModels.Common;
 namespace Cartex.UI.ViewModels;
 
 // Miqdor va narxlar jadvalning o'zida tahrirlanadi, shuning uchun qator o'zgaruvchan.
+// Miqdor va sotib olish narxi kiritish birligida (mas. tonna), zaxira va sotish narxi esa
+// saqlash birligida (mas. kg) — shuning uchun qator ikkalasini ham ko'rsatadi.
 public partial class SupplyLine : ObservableObject
 {
     public long VariantId { get; init; }
     public string ProductName { get; init; } = "";
     public long? UnitId { get; init; }
     public string UnitName { get; init; } = "";
+    public string StockingUnitName { get; init; } = "";
+    public decimal EntryFactor { get; init; } = 1;
+    public decimal StockingFactor { get; init; } = 1;
     public decimal PackSize { get; init; } = 1;
     public DateOnly? ExpiredAt { get; set; }
 
@@ -32,14 +37,25 @@ public partial class SupplyLine : ObservableObject
     [ObservableProperty] private decimal _purchasePrice;
     [ObservableProperty] private decimal? _sellingPrice;
 
-    public decimal LineTotal => Quantity * PurchasePrice;
-    public decimal? Margin => SellingPrice is { } sp ? sp - PurchasePrice : null;
+    private decimal Ratio => StockingFactor == 0 ? 1 : EntryFactor / StockingFactor;
 
-    partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+    public decimal StockingQuantity => Quantity * Ratio;
+    public decimal PricePerStockingUnit => Ratio == 0 ? PurchasePrice : PurchasePrice / Ratio;
+    public bool IsConverted => UnitId is not null && Ratio != 1;
+
+    public decimal LineTotal => Quantity * PurchasePrice;
+    public decimal? Margin => SellingPrice is { } sp ? sp - PricePerStockingUnit : null;
+
+    partial void OnQuantityChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(StockingQuantity));
+    }
 
     partial void OnPurchasePriceChanged(decimal value)
     {
         OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(PricePerStockingUnit));
         OnPropertyChanged(nameof(Margin));
     }
 
@@ -89,6 +105,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly Dictionary<long, string> _variantDimensions = [];
     private readonly Dictionary<long, (long Id, string ShortName)> _variantStockUnits = [];
     private readonly Dictionary<long, decimal> _supplierPayables = [];
+    private readonly Dictionary<long, decimal> _lastPurchasePrices = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -333,20 +350,55 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
     [ObservableProperty] private string _lineBarcode = "";
     [ObservableProperty] private decimal _lineQuantity = 1;
-    [ObservableProperty] private decimal _linePackSize = 1;
     [ObservableProperty] private decimal _linePrice;
     [ObservableProperty] private decimal _lineSellingPrice;
     [ObservableProperty] private DateTime? _lineExpiry;
 
-    public decimal LineMargin => LineSellingPrice - LinePrice;
+    // Kiritish birligi saqlash birligiga nisbatan: 1 t = 1000 kg bo'lsa Ratio = 1000.
+    private decimal LineRatio => LineStockingUnit is { Factor: > 0 } stocking && LineUnit is { } entry
+        ? entry.Factor / stocking.Factor
+        : 1;
 
-    partial void OnLinePriceChanged(decimal value) => OnPropertyChanged(nameof(LineMargin));
-    partial void OnLineSellingPriceChanged(decimal value) => OnPropertyChanged(nameof(LineMargin));
+    private UnitDto? LineStockingUnit =>
+        LineProduct?.Id is { } id && _variantStockUnits.TryGetValue(id, out var s)
+            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
+            : null;
+
+    public string LineStockingUnitName => LineStockingUnit?.ShortName ?? LineUnit?.ShortName ?? "";
+    public string LinePriceLabel => $"{L["purchase_price"]} / {(LineUnit?.ShortName ?? LineStockingUnitName)}";
+
+    // Sotib olish narxi kiritish birligida, sotish narxi esa doim saqlash birligida — marja
+    // ikkalasini bir birlikka keltirgandan keyin hisoblanadi.
+    public decimal LinePricePerStockingUnit => LineRatio == 0 ? LinePrice : LinePrice / LineRatio;
+    public decimal LineMargin => LineSellingPrice - LinePricePerStockingUnit;
+
+    // Kiritilgan qiymat zaxiraga qanday tushishini qatorning ostida ko'rsatamiz — noto'g'ri
+    // birlik yoki narx darhol ko'zga tashlanadi.
+    public bool HasLinePreview => LineProduct is not null && LineRatio != 1 && LineQuantity > 0;
+    public string LinePreview => HasLinePreview
+        ? $"= {LineQuantity * LineRatio:0.###} {LineStockingUnitName} · {LinePricePerStockingUnit:N0} / {LineStockingUnitName}"
+        : "";
+
+    private void RaiseLinePreview()
+    {
+        OnPropertyChanged(nameof(LinePricePerStockingUnit));
+        OnPropertyChanged(nameof(LineMargin));
+        OnPropertyChanged(nameof(HasLinePreview));
+        OnPropertyChanged(nameof(LinePreview));
+        OnPropertyChanged(nameof(LinePriceLabel));
+        OnPropertyChanged(nameof(LineStockingUnitName));
+    }
+
+    partial void OnLinePriceChanged(decimal value) => RaiseLinePreview();
+    partial void OnLineSellingPriceChanged(decimal value) => RaiseLinePreview();
+    partial void OnLineQuantityChanged(decimal value) => RaiseLinePreview();
+    partial void OnLineUnitChanged(UnitDto? value) => RaiseLinePreview();
 
     partial void OnLineProductChanged(IdOption? value)
     {
         if (value is not null && LineProductText != value.Name) LineProductText = value.Name;
         RebuildUnitOptions(value);
+        RaiseLinePreview();
         _ = FillPricesAsync(value);
     }
 
@@ -375,17 +427,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var priceSnapshot = LinePrice;
         var sellingSnapshot = LineSellingPrice;
         var unitSnapshot = LineUnit;
-        var packSnapshot = LinePackSize;
         try
         {
             var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
             if (LineProduct?.Id != variantId) return;
-            if (LinePrice == priceSnapshot) LinePrice = info.LastPurchasePrice ?? 0;
-            if (LineSellingPrice == sellingSnapshot) LineSellingPrice = info.SellingPrice ?? 0;
+            if (info.LastPurchasePrice is { } lastPrice) _lastPurchasePrices[variantId] = lastPrice;
+
+            // Avval birlik: oxirgi kirim qaysi birlikda bo'lgan bo'lsa, o'sha tanlanadi.
             if (LineUnit == unitSnapshot && info.LastUnitId is { } lastUnit)
                 LineUnit = UnitOptions.FirstOrDefault(u => u.Id == lastUnit) ?? LineUnit;
-            if (LinePackSize == packSnapshot && packSnapshot == 1 && info.LastPackSize is { } lastPack && lastPack > 1)
-                LinePackSize = lastPack;
+
+            // Bazadagi narx saqlash birligida — tanlangan kiritish birligiga qaytariladi.
+            if (LinePrice == priceSnapshot)
+                LinePrice = (info.LastPurchasePrice ?? 0) * LineRatio;
+            if (LineSellingPrice == sellingSnapshot) LineSellingPrice = info.SellingPrice ?? 0;
+            RaiseLinePreview();
         }
         catch { }
     }
@@ -673,7 +729,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         LineUnit = null;
         LineBarcode = "";
         LineQuantity = 1;
-        LinePackSize = 1;
         LinePrice = 0;
         LineSellingPrice = 0;
         LineExpiry = null;
@@ -722,7 +777,11 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        var stockUnit = _variantStockUnits.TryGetValue(variantId, out var stocking) ? stocking.ShortName : "";
+        var stockingUnit = _variantStockUnits.TryGetValue(variantId, out var s)
+            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
+            : null;
+        var entryUnit = unitId is { } uid ? _allUnits.FirstOrDefault(u => u.Id == uid) : stockingUnit;
+
         var line = new SupplyLine
         {
             VariantId = variantId,
@@ -730,7 +789,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             Quantity = quantity,
             PackSize = packSize,
             UnitId = unitId,
-            UnitName = unitName ?? stockUnit,
+            UnitName = unitName ?? stockingUnit?.ShortName ?? "",
+            StockingUnitName = stockingUnit?.ShortName ?? "",
+            EntryFactor = entryUnit?.Factor ?? 1,
+            StockingFactor = stockingUnit?.Factor ?? 1,
             PurchasePrice = purchasePrice ?? 0,
             SellingPrice = sellingPrice,
             ExpiredAt = expiredAt
@@ -754,16 +816,32 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         if (LineProduct?.Id is not { } variantId || LineQuantity <= 0 || LinePrice < 0) { _toast.Error(L["error"]); return; }
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+        if (!await ConfirmPriceAsync(variantId)) return;
 
-        var packSize = LinePackSize <= 0 ? 1 : LinePackSize;
         var stockingId = _variantStockUnits.TryGetValue(variantId, out var stocking) ? stocking.Id : (long?)null;
         var unitId = LineUnit?.Id is { } id && id != stockingId ? id : (long?)null;
 
-        await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity * packSize, packSize, warehouseId,
+        await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity, 1, warehouseId,
             unitId, LineUnit?.ShortName, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
             LineExpiry is { } e ? DateOnly.FromDateTime(e.Date) : null);
 
         ResetLine();
+    }
+
+    // Narx oxirgi kirimdan o'nlab barobar farq qilsa — deyarli har doim birlik yoki maxraj adashgan
+    // (mas. "1 qop uchun" narx grammga yozilgan). Yozishdan oldin so'raymiz.
+    private async Task<bool> ConfirmPriceAsync(long variantId)
+    {
+        if (!_lastPurchasePrices.TryGetValue(variantId, out var last) || last <= 0) return true;
+        var entered = LinePricePerStockingUnit;
+        if (entered <= 0) return true;
+
+        var ratio = entered / last;
+        if (ratio < 10 && ratio > 0.1m) return true;
+
+        var unit = LineStockingUnitName;
+        var message = $"{L["price_outlier_confirm"]}\n{entered:N0} / {unit} ({L["previous"]}: {last:N0} / {unit})";
+        return await _dialog.ConfirmAsync(message, L["purchase_price"]);
     }
 
     [RelayCommand]

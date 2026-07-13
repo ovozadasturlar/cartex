@@ -50,6 +50,9 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             ? []
             : await db.Units.Where(u => lineUnitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
 
+        // Kirim miqdori va sotib olish narxi kiritish birligida keladi va saqlash birligiga o'giriladi.
+        // Sotish narxi esa hech qachon o'girilmaydi: do'kon tonna bilan sotmaydi, u doim saqlash
+        // birligida (mas. so'm/kg) belgilanadi.
         (decimal Quantity, decimal Price, decimal? SellingPrice) Resolve(CreateSupplyItemDto item)
         {
             if (item.UnitId is { } uid && lineUnits.TryGetValue(uid, out var from))
@@ -57,7 +60,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 var stocking = stockingUnits[item.VariantId];
                 return (UnitConversion.ToBase(item.Quantity, from, stocking),
                         UnitConversion.PricePerBase(item.PurchasePrice, from, stocking),
-                        item.SellingPrice is { } sp ? UnitConversion.PricePerBase(sp, from, stocking) : null);
+                        item.SellingPrice);
             }
             return (item.Quantity, item.PurchasePrice, item.SellingPrice);
         }
@@ -94,7 +97,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 WarehouseId = request.WarehouseId,
                 Supply = supply,
                 Quantity = resolved.Quantity,
-                PurchasePrice = Math.Round(resolved.Price * supplyRate, 2),
+                PurchasePrice = Math.Round(resolved.Price * supplyRate, 4),
                 ExpiredAt = item.ExpiredAt
             });
 
@@ -162,5 +165,12 @@ public sealed class CreateSupplyCommandValidator : AbstractValidator<CreateSuppl
         RuleFor(x => x.Items).NotEmpty();
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
+
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.Quantity).GreaterThan(0);
+            item.RuleFor(i => i.PurchasePrice).GreaterThanOrEqualTo(0);
+            item.RuleFor(i => i.SellingPrice).GreaterThan(0).When(i => i.SellingPrice is not null);
+        });
     }
 }
