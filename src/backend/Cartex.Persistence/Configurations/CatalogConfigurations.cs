@@ -109,5 +109,29 @@ public class BarcodeConfiguration : IEntityTypeConfiguration<Barcode>
             .WithMany(v => v.Barcodes)
             .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Pack)
+            .WithMany()
+            .HasForeignKey(x => x.PackId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class ProductPackConfiguration : IEntityTypeConfiguration<ProductPack>
+{
+    public void Configure(EntityTypeBuilder<ProductPack> builder)
+    {
+        builder.ToTable("product_packs");
+        builder.Property(x => x.Name).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Size).HasPrecision(12, 3);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasIndex(x => x.ProductId);
+        builder.HasIndex(x => new { x.ProductId, x.Name }).IsUnique().HasFilter("\"is_deleted\" = false");
+
+        builder.HasOne(x => x.Product)
+            .WithMany(p => p.Packs)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

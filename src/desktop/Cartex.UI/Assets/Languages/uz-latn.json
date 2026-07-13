@@ -786,5 +786,14 @@
   "website": "Veb-sayt",
   "welcome": "Xush kelibsiz",
   "z_report": "Z-hisobot",
-  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi"
+  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi",
+  "unit_or_pack": "Birlik yoki qadoq",
+  "price_per_stocking_unit": "Narx saqlash birligi uchun",
+  "packs": "Qadoqlar",
+  "pack_kind": "Qadoq turi",
+  "pack_purchase": "Kirim",
+  "pack_sale": "Sotuv",
+  "pack_both": "Ikkalasi",
+  "pack_default": "Birlamchi",
+  "add_pack": "Qadoq qo'shish"
 }

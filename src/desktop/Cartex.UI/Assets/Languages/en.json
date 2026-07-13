@@ -786,5 +786,14 @@
   "website": "Website",
   "welcome": "Welcome",
   "z_report": "Z-report",
-  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer"
+  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer",
+  "unit_or_pack": "Unit or pack",
+  "price_per_stocking_unit": "Price per stocking unit",
+  "packs": "Packs",
+  "pack_kind": "Pack type",
+  "pack_purchase": "Purchase",
+  "pack_sale": "Sale",
+  "pack_both": "Both",
+  "pack_default": "Default",
+  "add_pack": "Add pack"
 }

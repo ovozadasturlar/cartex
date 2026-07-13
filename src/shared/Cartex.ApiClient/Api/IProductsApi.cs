@@ -46,4 +46,16 @@ public interface IProductsApi
 
     [Delete("/api/products/variants/{id}")]
     Task DeleteVariantAsync(long id);
+
+    [Get("/api/products/{productId}/packs")]
+    Task<List<ProductPackDto>> GetPacksAsync(long productId);
+
+    [Post("/api/products/{productId}/packs")]
+    Task<long> CreatePackAsync(long productId, [Body] SaveProductPackRequest request);
+
+    [Put("/api/products/packs/{id}")]
+    Task UpdatePackAsync(long id, [Body] SaveProductPackRequest request);
+
+    [Delete("/api/products/packs/{id}")]
+    Task DeletePackAsync(long id);
 }

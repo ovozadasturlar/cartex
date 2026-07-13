@@ -273,6 +273,52 @@
                         </Grid>
                     </StackPanel>
 
+                    <!-- Qadoqlar: kirimda "Qop 50 kg", rastada "1 kg paket". Hajm saqlash birligida. -->
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
+                        <TextBlock Text="{Binding L[packs]}" Classes="caption" />
+                        <ItemsControl ItemsSource="{Binding EditPacks}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="7" Padding="10,5" Margin="0,0,0,5"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       Text="{Binding Size, StringFormat='{}× {0:0.###}'}" />
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}" Text="{Binding Kind}" />
+                                            <Button Grid.Column="3" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.EditPackCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Grid.Column="4" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeletePackCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto" >
+                            <TextBox Grid.Column="0" Text="{Binding PackName, Mode=TwoWay}" MinHeight="40"
+                                     PlaceholderText="{Binding L[name]}" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding PackSize, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="0" Increment="1" FormatString="0.###" MinHeight="40" Width="110"
+                                           ToolTip.Tip="{Binding PackSizeHint}" />
+                            <ComboBox Grid.Column="4" ItemsSource="{Binding PackKinds}" SelectedItem="{Binding PackKind}"
+                                      MinHeight="40" Width="120" ToolTip.Tip="{Binding L[pack_kind]}" />
+                            <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding SavePackCommand}" Content="{Binding L[add_pack]}" />
+                        </Grid>
+                    </StackPanel>
+
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding L[sku_code]}" Classes="caption" />
                         <TextBox Text="{Binding EditCode, Mode=TwoWay}" MinHeight="40" PlaceholderText="P-001" />

@@ -9,6 +9,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
+using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Units;
@@ -25,26 +26,27 @@ public partial class SupplyLine : ObservableObject
 {
     public long VariantId { get; init; }
     public string ProductName { get; init; } = "";
+
+    // Qator kiritilgan ko'rinishda saqlanadi: birlik (t) yoki qadoq (Qop 50 kg), narx esa
+    // o'sha kiritish birligi uchun yoki saqlash birligi uchun.
     public long? UnitId { get; init; }
+    public long? PackId { get; init; }
     public string UnitName { get; init; } = "";
     public string StockingUnitName { get; init; } = "";
-    public decimal EntryFactor { get; init; } = 1;
-    public decimal StockingFactor { get; init; } = 1;
-    public decimal PackSize { get; init; } = 1;
+    public decimal Ratio { get; init; } = 1;
+    public bool PricePerStockingUnit { get; init; }
     public DateOnly? ExpiredAt { get; set; }
 
     [ObservableProperty] private decimal _quantity = 1;
     [ObservableProperty] private decimal _purchasePrice;
     [ObservableProperty] private decimal? _sellingPrice;
 
-    private decimal Ratio => StockingFactor == 0 ? 1 : EntryFactor / StockingFactor;
-
     public decimal StockingQuantity => Quantity * Ratio;
-    public decimal PricePerStockingUnit => Ratio == 0 ? PurchasePrice : PurchasePrice / Ratio;
-    public bool IsConverted => UnitId is not null && Ratio != 1;
+    public decimal PricePerStockingUnitValue =>
+        PricePerStockingUnit || Ratio == 0 ? PurchasePrice : PurchasePrice / Ratio;
 
-    public decimal LineTotal => Quantity * PurchasePrice;
-    public decimal? Margin => SellingPrice is { } sp ? sp - PricePerStockingUnit : null;
+    public decimal LineTotal => Quantity * (PricePerStockingUnit ? PurchasePrice * Ratio : PurchasePrice);
+    public decimal? Margin => SellingPrice is { } sp ? sp - PricePerStockingUnitValue : null;
 
     partial void OnQuantityChanged(decimal value)
     {
@@ -55,7 +57,7 @@ public partial class SupplyLine : ObservableObject
     partial void OnPurchasePriceChanged(decimal value)
     {
         OnPropertyChanged(nameof(LineTotal));
-        OnPropertyChanged(nameof(PricePerStockingUnit));
+        OnPropertyChanged(nameof(PricePerStockingUnitValue));
         OnPropertyChanged(nameof(Margin));
     }
 
@@ -76,6 +78,16 @@ public partial class SupplyPaymentLine : ObservableObject
 
 // To'lov usuli ro'yxati uchun element: Key serverga, Text foydalanuvchiga.
 public sealed record PayMode(string Key, string Text);
+
+/// <summary>
+/// Kirim qatoridagi yagona tanlov: mahsulotning saqlash birligi, o'sha o'lchovdagi boshqa birlik
+/// (g, t) yoki mahsulotning kirim qadog'i ("Qop 50 kg"). Ratio — bitta tanlov necha saqlash
+/// birligiga teng: kg->1, t->1000, Qop->50. Server ham xuddi shu natijani mustaqil hisoblaydi.
+/// </summary>
+public sealed record SupplyEntryOption(string Display, string ShortName, long? UnitId, long? PackId, decimal Ratio)
+{
+    public bool IsPack => PackId is not null;
+}
 
 public partial class SuppliesViewModel : ViewModelBase, ILoadable
 {
@@ -99,13 +111,15 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<IdOption> SupplierOptions { get; } = [];
     public ObservableCollection<IdOption> WarehouseOptions { get; } = [];
     public ObservableCollection<IdOption> ProductOptions { get; } = [];
-    public ObservableCollection<UnitDto> UnitOptions { get; } = [];
+    public ObservableCollection<SupplyEntryOption> EntryOptions { get; } = [];
 
     private readonly List<UnitDto> _allUnits = [];
     private readonly Dictionary<long, string> _variantDimensions = [];
     private readonly Dictionary<long, (long Id, string ShortName)> _variantStockUnits = [];
     private readonly Dictionary<long, decimal> _supplierPayables = [];
     private readonly Dictionary<long, decimal> _lastPurchasePrices = [];
+    // Kirimda ishlatiladigan qadoqlar (Purchase/Both), variant bo'yicha.
+    private readonly Dictionary<long, List<ProductPackDto>> _variantPacks = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -321,7 +335,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private IdOption? _lineProduct;
     [ObservableProperty] private string _lineProductText = "";
-    [ObservableProperty] private UnitDto? _lineUnit;
+    [ObservableProperty] private SupplyEntryOption? _lineEntry;
 
     // Mahsulot maydoniga fokusni qaytarish (matn tanlangan holda) — ko'rinish shu hodisaga ulanadi.
     public event Action? FocusProductRequested;
@@ -354,22 +368,28 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _lineSellingPrice;
     [ObservableProperty] private DateTime? _lineExpiry;
 
-    // Kiritish birligi saqlash birligiga nisbatan: 1 t = 1000 kg bo'lsa Ratio = 1000.
-    private decimal LineRatio => LineStockingUnit is { Factor: > 0 } stocking && LineUnit is { } entry
-        ? entry.Factor / stocking.Factor
-        : 1;
+    // Narx kiritilgan birlik/qadoq uchunmi ("1 qop = 600 000") yoki saqlash birligi uchunmi
+    // ("1 kg = 12 000") — do'konlar ikkala usulda kelishadi, shuning uchun tanlanadi.
+    [ObservableProperty] private bool _pricePerStockingUnit;
+
+    // Kiritish tanlovi saqlash birligiga nisbatan: 1 t = 1000 kg, 1 qop = 50 kg.
+    private decimal LineRatio => LineEntry?.Ratio is { } r && r > 0 ? r : 1;
 
     private UnitDto? LineStockingUnit =>
         LineProduct?.Id is { } id && _variantStockUnits.TryGetValue(id, out var s)
             ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
             : null;
 
-    public string LineStockingUnitName => LineStockingUnit?.ShortName ?? LineUnit?.ShortName ?? "";
-    public string LinePriceLabel => $"{L["purchase_price"]} / {(LineUnit?.ShortName ?? LineStockingUnitName)}";
+    public string LineStockingUnitName => LineStockingUnit?.ShortName ?? LineEntry?.ShortName ?? "";
+    private string LinePriceUnitName => PricePerStockingUnit ? LineStockingUnitName : LineEntry?.ShortName ?? LineStockingUnitName;
+    public string LinePriceLabel => $"{L["purchase_price"]} / {LinePriceUnitName}";
 
-    // Sotib olish narxi kiritish birligida, sotish narxi esa doim saqlash birligida — marja
-    // ikkalasini bir birlikka keltirgandan keyin hisoblanadi.
-    public decimal LinePricePerStockingUnit => LineRatio == 0 ? LinePrice : LinePrice / LineRatio;
+    // Narx bazasi tanlovi faqat qadoq yoki boshqa birlik tanlanganda ma'noga ega.
+    public bool CanChoosePriceBasis => LineRatio != 1;
+
+    // Sotib olish narxi kiritish birligida bo'lishi mumkin, sotish narxi esa doim saqlash
+    // birligida — marja ikkalasini bir birlikka keltirgandan keyin hisoblanadi.
+    public decimal LinePricePerStockingUnit => PricePerStockingUnit || LineRatio == 0 ? LinePrice : LinePrice / LineRatio;
     public decimal LineMargin => LineSellingPrice - LinePricePerStockingUnit;
 
     // Kiritilgan qiymat zaxiraga qanday tushishini qatorning ostida ko'rsatamiz — noto'g'ri
@@ -387,37 +407,49 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(LinePreview));
         OnPropertyChanged(nameof(LinePriceLabel));
         OnPropertyChanged(nameof(LineStockingUnitName));
+        OnPropertyChanged(nameof(CanChoosePriceBasis));
     }
 
     partial void OnLinePriceChanged(decimal value) => RaiseLinePreview();
     partial void OnLineSellingPriceChanged(decimal value) => RaiseLinePreview();
     partial void OnLineQuantityChanged(decimal value) => RaiseLinePreview();
-    partial void OnLineUnitChanged(UnitDto? value) => RaiseLinePreview();
+    partial void OnPricePerStockingUnitChanged(bool value) => RaiseLinePreview();
+    partial void OnLineEntryChanged(SupplyEntryOption? value) => RaiseLinePreview();
 
     partial void OnLineProductChanged(IdOption? value)
     {
         if (value is not null && LineProductText != value.Name) LineProductText = value.Name;
-        RebuildUnitOptions(value);
+        RebuildEntryOptions(value);
         RaiseLinePreview();
         _ = FillPricesAsync(value);
     }
 
-    private void RebuildUnitOptions(IdOption? product)
+    // Tanlov ro'yxati: saqlash birligi, o'sha o'lchovdagi boshqa birliklar va mahsulotning kirim qadoqlari.
+    private void RebuildEntryOptions(IdOption? product)
     {
-        UnitOptions.Clear();
-        if (product?.Id is not { } id) { LineUnit = null; return; }
+        EntryOptions.Clear();
+        if (product?.Id is not { } id) { LineEntry = null; return; }
+
         var dimension = _variantDimensions.TryGetValue(id, out var d) ? d : null;
         UnitDto? stocking = null;
         if (_variantStockUnits.TryGetValue(id, out var s))
         {
             stocking = _allUnits.FirstOrDefault(u => u.Id == s.Id)
                 ?? new UnitDto(s.Id, s.ShortName, s.ShortName, dimension ?? "Count", 1, false);
-            UnitOptions.Add(stocking);
+            EntryOptions.Add(new SupplyEntryOption(stocking.ShortName, stocking.ShortName, stocking.Id, null, 1));
         }
-        if (dimension is not (null or "Count"))
-            foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled && u.Id != stocking?.Id))
-                UnitOptions.Add(u);
-        LineUnit = stocking;
+
+        if (dimension is not (null or "Count") && stocking is { Factor: > 0 })
+            foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled && u.Id != stocking.Id))
+                EntryOptions.Add(new SupplyEntryOption(u.ShortName, u.ShortName, u.Id, null, u.Factor / stocking.Factor));
+
+        var stockingName = stocking?.ShortName ?? "";
+        if (_variantPacks.TryGetValue(id, out var packs))
+            foreach (var pack in packs)
+                EntryOptions.Add(new SupplyEntryOption(
+                    $"{pack.Name} ({pack.Size:0.###} {stockingName})", pack.Name, null, pack.Id, pack.Size));
+
+        LineEntry = EntryOptions.FirstOrDefault();
     }
 
     private async Task FillPricesAsync(IdOption? product)
@@ -426,20 +458,31 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         if (IsMulticurrency && SupplyCurrency != _baseCurrency) return;
         var priceSnapshot = LinePrice;
         var sellingSnapshot = LineSellingPrice;
-        var unitSnapshot = LineUnit;
+        var entrySnapshot = LineEntry;
         try
         {
             var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
             if (LineProduct?.Id != variantId) return;
             if (info.LastPurchasePrice is { } lastPrice) _lastPurchasePrices[variantId] = lastPrice;
 
-            // Avval birlik: oxirgi kirim qaysi birlikda bo'lgan bo'lsa, o'sha tanlanadi.
-            if (LineUnit == unitSnapshot && info.LastUnitId is { } lastUnit)
-                LineUnit = UnitOptions.FirstOrDefault(u => u.Id == lastUnit) ?? LineUnit;
+            // Qator oxirgi kirim qanday kiritilgan bo'lsa shunday ochiladi: o'sha qadoq/birlik va narx bazasi.
+            if (LineEntry == entrySnapshot)
+            {
+                var restored = info.LastPackId is { } packId
+                    ? EntryOptions.FirstOrDefault(o => o.PackId == packId)
+                    : info.LastUnitId is { } unitId
+                        ? EntryOptions.FirstOrDefault(o => o.UnitId == unitId)
+                        : EntryOptions.FirstOrDefault(o => o.PackId is null && o.Ratio == 1);
+                LineEntry = restored ?? LineEntry;
+            }
+
+            PricePerStockingUnit = info.LastPriceBasis == "PerStockingUnit";
 
             // Bazadagi narx saqlash birligida — tanlangan kiritish birligiga qaytariladi.
             if (LinePrice == priceSnapshot)
-                LinePrice = (info.LastPurchasePrice ?? 0) * LineRatio;
+                LinePrice = PricePerStockingUnit
+                    ? info.LastPurchasePrice ?? 0
+                    : (info.LastPurchasePrice ?? 0) * LineRatio;
             if (LineSellingPrice == sellingSnapshot) LineSellingPrice = info.SellingPrice ?? 0;
             RaiseLinePreview();
         }
@@ -691,17 +734,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 ProductOptions.Clear();
                 _variantDimensions.Clear();
                 _variantStockUnits.Clear();
+                _variantPacks.Clear();
                 foreach (var p in products)
                 {
                     ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
                     if (p.Dimension is { } dim) _variantDimensions[p.DefaultVariantId] = dim;
                     if (p.UnitId is { } unitId) _variantStockUnits[p.DefaultVariantId] = (unitId, p.UnitShortName ?? "");
+                    if (p.Packs is { Count: > 0 } packs)
+                        _variantPacks[p.DefaultVariantId] = [.. packs.Where(pk => pk.Kind is "Purchase" or "Both")];
                 }
 
                 var units = await unitsTask;
                 _allUnits.Clear();
                 _allUnits.AddRange(units);
-                RebuildUnitOptions(LineProduct);
+                RebuildEntryOptions(LineProduct);
 
                 await LoadSuppliesAsync();
             }
@@ -726,7 +772,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         LineProduct = null;
         LineProductText = "";
-        LineUnit = null;
+        LineEntry = null;
+        PricePerStockingUnit = false;
         LineBarcode = "";
         LineQuantity = 1;
         LinePrice = 0;
@@ -752,8 +799,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             if (!ProductOptions.Any(o => o.Id == found.VariantId))
                 ProductOptions.Add(new IdOption(found.VariantId, found.ProductName));
 
-            var packSize = found.PackQty > 1 ? found.PackQty : 1;
-            await AddOrMergeAsync(found.VariantId, found.ProductName, packSize, packSize, warehouseId);
+            // Skanerlangan qadoq-barkod (mas. 12 dona quti) bir skanerlashda shuncha birlik qo'shadi.
+            var scanned = found.PackQty > 1 ? found.PackQty : 1;
+            await AddOrMergeAsync(found.VariantId, found.ProductName, scanned, warehouseId, entry: null);
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -763,11 +811,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Bir xil mahsulot va qadoq bo'lsa yangi qator ochilmaydi — mavjud qatorning miqdori oshadi.
-    private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, decimal packSize, long warehouseId,
-        long? unitId = null, string? unitName = null, decimal? purchasePrice = null, decimal? sellingPrice = null, DateOnly? expiredAt = null)
+    // Bir xil mahsulot, bir xil kiritish tanlovi va narx bazasi bo'lsa yangi qator ochilmaydi —
+    // mavjud qatorning miqdori oshadi (skanerni ketma-ket bosish shunday ishlaydi).
+    private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, long warehouseId,
+        SupplyEntryOption? entry, bool pricePerStockingUnit = false,
+        decimal? purchasePrice = null, decimal? sellingPrice = null, DateOnly? expiredAt = null)
     {
-        if (Items.FirstOrDefault(i => i.VariantId == variantId && i.PackSize == packSize && i.UnitId == unitId) is { } existing)
+        var unitId = entry?.UnitId;
+        var packId = entry?.PackId;
+
+        if (Items.FirstOrDefault(i => i.VariantId == variantId && i.UnitId == unitId && i.PackId == packId
+                                      && i.PricePerStockingUnit == pricePerStockingUnit) is { } existing)
         {
             existing.Quantity += quantity;
             if (purchasePrice is { } price) existing.PurchasePrice = price;
@@ -780,19 +834,18 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var stockingUnit = _variantStockUnits.TryGetValue(variantId, out var s)
             ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
             : null;
-        var entryUnit = unitId is { } uid ? _allUnits.FirstOrDefault(u => u.Id == uid) : stockingUnit;
 
         var line = new SupplyLine
         {
             VariantId = variantId,
             ProductName = productName,
             Quantity = quantity,
-            PackSize = packSize,
             UnitId = unitId,
-            UnitName = unitName ?? stockingUnit?.ShortName ?? "",
+            PackId = packId,
+            UnitName = entry?.ShortName ?? stockingUnit?.ShortName ?? "",
             StockingUnitName = stockingUnit?.ShortName ?? "",
-            EntryFactor = entryUnit?.Factor ?? 1,
-            StockingFactor = stockingUnit?.Factor ?? 1,
+            Ratio = entry?.Ratio is { } r && r > 0 ? r : 1,
+            PricePerStockingUnit = pricePerStockingUnit,
             PurchasePrice = purchasePrice ?? 0,
             SellingPrice = sellingPrice,
             ExpiredAt = expiredAt
@@ -818,11 +871,11 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
         if (!await ConfirmPriceAsync(variantId)) return;
 
-        var stockingId = _variantStockUnits.TryGetValue(variantId, out var stocking) ? stocking.Id : (long?)null;
-        var unitId = LineUnit?.Id is { } id && id != stockingId ? id : (long?)null;
+        // Saqlash birligining o'zi tanlangan bo'lsa serverga birlik yuborilmaydi (u allaqachon shu birlikda).
+        var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;
 
-        await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity, 1, warehouseId,
-            unitId, LineUnit?.ShortName, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
+        await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity, warehouseId,
+            entry, PricePerStockingUnit, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
             LineExpiry is { } e ? DateOnly.FromDateTime(e.Date) : null);
 
         ResetLine();
@@ -865,7 +918,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 supplierId,
                 SelectedWarehouse.Id.Value,
                 DateOnly.FromDateTime(SupplyDate.Date),
-                [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt, i.UnitId, i.SellingPrice, i.PackSize))],
+                // Serverga foydalanuvchi kiritgan ko'rinish yuboriladi; saqlash birligiga o'girishni server bajaradi.
+                [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt,
+                    i.UnitId, i.SellingPrice, i.PackId, i.PricePerStockingUnit ? "PerStockingUnit" : "PerEntry"))],
                 0,
                 0,
                 supplyCurrency);

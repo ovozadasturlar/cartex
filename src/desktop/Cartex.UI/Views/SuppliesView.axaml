@@ -172,9 +172,10 @@
                         </AutoCompleteBox>
                         <NumericUpDown Grid.Column="2" MinWidth="70" Value="{Binding LineQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1" FormatString="0.###"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding L[quantity]}" />
-                        <ComboBox Grid.Column="3" MinWidth="80" ItemsSource="{Binding UnitOptions}" SelectedItem="{Binding LineUnit}"
-                                  HorizontalAlignment="Stretch" PlaceholderText="{Binding L[unit]}" ToolTip.Tip="{Binding L[unit]}">
-                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding ShortName}" /></DataTemplate></ComboBox.ItemTemplate>
+                        <!-- Bitta tanlov: birlik (kg, g, t) yoki kirim qadog'i (Qop 50 kg) -->
+                        <ComboBox Grid.Column="3" MinWidth="80" ItemsSource="{Binding EntryOptions}" SelectedItem="{Binding LineEntry}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="{Binding L[unit]}" ToolTip.Tip="{Binding L[unit_or_pack]}">
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" /></DataTemplate></ComboBox.ItemTemplate>
                         </ComboBox>
                         <NumericUpDown Grid.Column="4" MinWidth="100" Value="{Binding LinePrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding LinePriceLabel}"
@@ -186,9 +187,13 @@
                                 Content="{Binding L[add]}" />
                     </Grid>
 
-                    <!-- Boshqa birlikda kiritilsa, zaxiraga qanday tushishi darhol ko'rinadi -->
-                    <TextBlock Text="{Binding LinePreview}" IsVisible="{Binding HasLinePreview}"
-                               FontSize="12" Foreground="{DynamicResource BrandPrimaryBrush}" Margin="4,0,0,0" />
+                    <!-- Qadoq yoki boshqa birlik tanlansa: narx nimaga tegishli va zaxiraga nima tushadi -->
+                    <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding CanChoosePriceBasis}" Margin="4,0,0,0">
+                        <CheckBox IsChecked="{Binding PricePerStockingUnit}" MinHeight="0"
+                                  Content="{Binding L[price_per_stocking_unit]}" FontSize="12" />
+                        <TextBlock Text="{Binding LinePreview}" IsVisible="{Binding HasLinePreview}" VerticalAlignment="Center"
+                                   FontSize="12" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

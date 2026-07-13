@@ -19,6 +19,7 @@ public interface IApplicationDbContext
     DbSet<Product> Products { get; }
     DbSet<ProductVariant> ProductVariants { get; }
     DbSet<Barcode> Barcodes { get; }
+    DbSet<ProductPack> ProductPacks { get; }
     DbSet<Warehouse> Warehouses { get; }
     DbSet<Stock> Stocks { get; }
     DbSet<ProductPrice> ProductPrices { get; }

@@ -1,8 +1,10 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.ProductPacks.Commands;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,6 +102,90 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
             var price = await db.ProductPrices.SingleAsync(p => p.VariantId == variantId);
             Assert.Equal(15_000m, price.SellingPrice);
         }
+    }
+
+    // Qopda kirim: "10 qop × 600 000 so'm" — 500 kg va 12 000 so'm/kg bo'lib tushadi.
+    [Fact]
+    public async Task Pack_entry_matches_a_plain_weight_entry()
+    {
+        var (warehouseId, supplierId, kgUnitId, _) = await SetupAsync();
+        var variantId = await CreateKgProductAsync(kgUnitId, "Shakar (qop kirim)");
+
+        long packId;
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var productId = (await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync());
+
+            packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, "Purchase", true));
+
+            await sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 10m, 600_000m, null, PackId: packId)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var stock = await db.Stocks.SingleAsync(s => s.VariantId == variantId);
+            Assert.Equal(500m, stock.Quantity);
+            Assert.Equal(12_000m, stock.PurchasePrice);
+
+            // Kirim ko'rinishi ham saqlanadi: "10 qop, 600 000 so'm/qop".
+            var line = await db.SupplyItems.SingleAsync(i => i.VariantId == variantId);
+            Assert.Equal(10m, line.EntryQuantity);
+            Assert.Equal(600_000m, line.EntryPrice);
+            Assert.Equal(50m, line.PackSize);
+            Assert.Equal(packId, line.PackId);
+        }
+    }
+
+    // Qop bilan kirim, lekin narx kilogramm bo'yicha kelishilgan bo'lsa ham natija bir xil.
+    [Fact]
+    public async Task Pack_entry_with_price_per_stocking_unit()
+    {
+        var (warehouseId, supplierId, kgUnitId, _) = await SetupAsync();
+        var variantId = await CreateKgProductAsync(kgUnitId, "Sement (qop, kg narxi)");
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var productId = await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync();
+            var packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, "Purchase", false));
+
+            await sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 10m, 12_000m, null, PackId: packId, PriceBasis: SupplyPriceBasis.PerStockingUnit)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var stock = await db.Stocks.SingleAsync(s => s.VariantId == variantId);
+            Assert.Equal(500m, stock.Quantity);
+            Assert.Equal(12_000m, stock.PurchasePrice);
+
+            var total = await db.Supplies.OrderByDescending(s => s.Id).Select(s => s.TotalAmount).FirstAsync();
+            Assert.Equal(6_000_000m, total);
+        }
+    }
+
+    // Sotuv qadog'i (rastadagi paket) kirimda ishlatilmaydi.
+    [Fact]
+    public async Task Sale_only_pack_is_rejected_in_a_supply()
+    {
+        var (warehouseId, supplierId, kgUnitId, _) = await SetupAsync();
+        var variantId = await CreateKgProductAsync(kgUnitId, "Shakar (sotuv qadog'i)");
+
+        using var scope = Fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var productId = await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync();
+        var packId = await sender.Send(new CreateProductPackCommand(productId, "1 kg paket", 1m, "Sale", false));
+
+        await Assert.ThrowsAsync<Cartex.Domain.Common.Exceptions.BusinessRuleException>(() =>
+            sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 5m, 5_000m, null, PackId: packId)])));
     }
 
     // Boshqa o'lchov (dona <-> kg) qabul qilinmasligi kerak.

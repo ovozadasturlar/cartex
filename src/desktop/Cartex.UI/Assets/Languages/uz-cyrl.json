@@ -786,5 +786,14 @@
   "website": "Веб-сайт",
   "welcome": "Хуш келибсиз",
   "z_report": "Z-ҳисобот",
-  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади"
+  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади",
+  "unit_or_pack": "Бирлик ёки қадоқ",
+  "price_per_stocking_unit": "Нарх сақлаш бирлиги учун",
+  "packs": "Қадоқлар",
+  "pack_kind": "Қадоқ тури",
+  "pack_purchase": "Кирим",
+  "pack_sale": "Сотув",
+  "pack_both": "Иккаласи",
+  "pack_default": "Бирламчи",
+  "add_pack": "Қадоқ қўшиш"
 }
