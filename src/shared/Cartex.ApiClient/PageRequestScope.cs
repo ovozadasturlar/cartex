@@ -20,6 +20,9 @@ public sealed class PageRequestScope
 
     public bool IsPageScoped => PageScoped.Value;
 
+    /// <summary>Joriy oqim sahifa yuklashi ichidami — UI shunga qarab bloklovchi emas, yengil indikator ko'rsatadi.</summary>
+    public static bool IsPageLoad => PageScoped.Value;
+
     /// <summary>Sahifa yuklanishini boshlaydi: shu oqimdagi GET so'rovlari sahifa umriga bog'lanadi.</summary>
     public IDisposable BeginPageRequest()
     {
