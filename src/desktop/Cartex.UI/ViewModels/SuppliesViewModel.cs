@@ -755,16 +755,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    // Tugallanmagan ta'minot qoralama sifatida saqlanadi: sahifadan chiqib qaytilsa yoki
+    // "Qo'shish" qayta bosilsa, kiritilgan qatorlar joyida turadi. Yangi hujjat "Tozalash" dan keyin boshlanadi.
     [RelayCommand]
     private void OpenCreate()
     {
-        SelectedSupplier = SupplierOptions.FirstOrDefault();
-        SelectedWarehouse = WarehouseOptions.FirstOrDefault();
-        SupplyDate = DateTime.Now;
-        _ = EnsureCurrenciesAsync();
-        SupplyCurrency = _baseCurrency;
-        Items.Clear();
-        ResetLine();
+        if (Items.Count == 0)
+        {
+            SelectedSupplier ??= SupplierOptions.FirstOrDefault();
+            SelectedWarehouse ??= WarehouseOptions.FirstOrDefault();
+            SupplyDate = DateTime.Now;
+            _ = EnsureCurrenciesAsync();
+            SupplyCurrency ??= _baseCurrency;
+            ResetLine();
+        }
+
         IsEditOpen = true;
     }
 
@@ -926,6 +931,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 supplyCurrency);
             using (_busy.Begin(L["loading"]))
                 await _api.CreateAsync(request);
+
+            // Saqlangach qoralama tugaydi — keyingi safar bo'sh hujjat ochiladi.
+            Items.Clear();
+            ResetLine();
             IsEditOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();

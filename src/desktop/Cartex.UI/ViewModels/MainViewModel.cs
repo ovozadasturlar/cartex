@@ -266,8 +266,12 @@ public partial class MainViewModel : ViewModelBase
             SelectedMenuItem = item;
     }
 
-    partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue) =>
+    partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
+    {
+        // Sahifa almashdi — eski sahifa uchun ketayotgan o'qish so'rovlari endi keraksiz.
+        ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         (oldValue as IDisposable)?.Dispose();
+    }
 
     partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)
     {
@@ -278,8 +282,7 @@ public partial class MainViewModel : ViewModelBase
         newValue.IsActive = true;
         CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
         CurrentPageTitle = newValue.Title;
-        if (CurrentPage is ILoadable loadable)
-            _ = loadable.LoadAsync();
+        StartPageLoad(CurrentPage);
     }
 
     [RelayCommand]
@@ -290,7 +293,14 @@ public partial class MainViewModel : ViewModelBase
         IsSettingsActive = true;
         CurrentPage = ServiceLocator.Resolve<SettingsHubViewModel>();
         CurrentPageTitle = L["settings"];
-        if (CurrentPage is ILoadable loadable)
+        StartPageLoad(CurrentPage);
+    }
+
+    /// <summary>Sahifa yuklashini sahifa umriga bog'lab boshlaydi — keyingi navigatsiyada bekor qilinadi.</summary>
+    internal static void StartPageLoad(object? page)
+    {
+        if (page is not ILoadable loadable) return;
+        using (ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().BeginPageRequest())
             _ = loadable.LoadAsync();
     }
 

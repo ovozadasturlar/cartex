@@ -77,7 +77,8 @@ public static class DependencyInjection
         services.AddTransient<AccountsViewModel>();
         services.AddTransient<TransactionsViewModel>();
         services.AddTransient<LoyaltyViewModel>();
-        services.AddTransient<SuppliesViewModel>();
+        // Kirim sahifasi: boshlangan ta'minot boshqa sahifaga o'tib qaytilganda ham saqlanib qoladi.
+        services.AddSingleton<SuppliesViewModel>();
         services.AddTransient<TransfersViewModel>();
         services.AddTransient<PermissionsMatrixViewModel>();
         services.AddTransient<AuditViewModel>();

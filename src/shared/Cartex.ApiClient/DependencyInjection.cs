@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, onUnauthorized));
         services.AddTransient<NoContentHandler>();
         services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
+        services.AddSingleton<PageRequestScope>();
+        services.AddTransient<PageRequestScopeHandler>();
 
         var baseUrl = baseUrlProvider();
 
@@ -86,6 +88,7 @@ public static class DependencyInjection
         services.AddRefitClient<T>(settings)
             .ConfigureHttpClient(c => Configure(c, baseUrl, clientName))
             .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<PageRequestScopeHandler>()
             .AddHttpMessageHandler<AuthTokenHandler>()
             .AddHttpMessageHandler<NoContentHandler>();
 }
