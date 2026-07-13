@@ -141,10 +141,55 @@
                                     <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
                                 </Grid>
                             </StackPanel>
+                            <Grid ColumnDefinitions="*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_mode]}" />
+                                    <ComboBox ItemsSource="{Binding LabelModes}" SelectedItem="{Binding LabelMode}" HorizontalAlignment="Stretch" MinHeight="34" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
+                                    <NumericUpDown Value="{Binding LabelGapMm}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+
+                            <Grid ColumnDefinitions="*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
+                                    <NumericUpDown Value="{Binding LabelShiftXMm}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
+                                    <NumericUpDown Value="{Binding LabelShiftYMm}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+
+                            <Grid ColumnDefinitions="*,12,*,12,*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_rotation]}" />
+                                    <ComboBox ItemsSource="{Binding LabelRotations}" SelectedItem="{Binding LabelRotation}" HorizontalAlignment="Stretch" MinHeight="34" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_dpi]}" />
+                                    <ComboBox ItemsSource="{Binding LabelDpis}" SelectedItem="{Binding LabelDpi}" HorizontalAlignment="Stretch" MinHeight="34" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="4" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" />
+                                    <NumericUpDown Value="{Binding LabelDensity}" Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="6" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" />
+                                    <NumericUpDown Value="{Binding LabelSpeed}" Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="{Binding L[label_calibrate_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
                                         Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
                                 <Button Classes="outline" Command="{Binding TestLabelPrintCommand}" Content="{Binding L[printer_test]}" />
+                                <Button Classes="outline" Command="{Binding CalibrateLabelCommand}" Content="{Binding L[label_calibrate]}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

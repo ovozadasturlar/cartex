@@ -28,7 +28,21 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
     {
         if (string.IsNullOrWhiteSpace(code) || quantity < 1) return;
 
-        var (width, height) = LabelSize.Resolve(printer.GetSettings().LabelWidthMm, printer.GetSettings().LabelHeightMm);
+        var settings = printer.GetSettings();
+        var options = LabelSize.Resolve(settings);
+        var (width, height) = (options.WidthMm, options.HeightMm);
+        var target = printerName ?? printer.BarcodePrinter;
+
+        if (!string.Equals(settings.LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            Task.Run(() =>
+            {
+                try { printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options)); }
+                catch { }
+            });
+            return;
+        }
+
         Task.Run(() =>
         {
             try
@@ -55,7 +69,7 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
 
                 var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
                 document.GeneratePdf(path);
-                printer.PrintDocument(path, printerName ?? printer.BarcodePrinter);
+                printer.PrintDocument(path, target);
             }
             catch { }
         });
