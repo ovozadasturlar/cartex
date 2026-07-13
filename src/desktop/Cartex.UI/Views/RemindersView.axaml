@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.RemindersView"
              x:CompileBindings="False">
@@ -17,19 +18,19 @@
                     </Grid>
                     <Grid ColumnDefinitions="*,140">
                         <TextBlock Text="{Binding L[reminder_min_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding MinDaysOverdue}" Minimum="0" Maximum="365" FormatString="0" MinHeight="36" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinDaysOverdue, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="365" FormatString="0" MinHeight="36" />
                     </Grid>
                     <Grid ColumnDefinitions="*,140">
                         <TextBlock Text="{Binding L[reminder_repeat_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding RepeatEveryDays}" Minimum="1" Maximum="365" FormatString="0" MinHeight="36" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding RepeatEveryDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="365" FormatString="0" MinHeight="36" />
                     </Grid>
                     <Grid ColumnDefinitions="*,140">
                         <TextBlock Text="{Binding L[reminder_min_balance]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding MinBalance}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinBalance, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
                     </Grid>
                     <Grid ColumnDefinitions="*,140">
                         <TextBlock Text="{Binding L[reminder_send_hour]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding SendHourLocal}" Minimum="0" Maximum="23" FormatString="0" MinHeight="36" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding SendHourLocal, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="23" FormatString="0" MinHeight="36" />
                     </Grid>
                     <StackPanel Spacing="8">
                         <TextBlock Text="{Binding L[channels]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />

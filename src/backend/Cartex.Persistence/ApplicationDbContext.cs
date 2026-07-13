@@ -32,6 +32,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<Barcode> Barcodes => Set<Barcode>();
+    public DbSet<ProductPack> ProductPacks => Set<ProductPack>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.IntegrationsView"
              x:CompileBindings="False">
@@ -112,7 +113,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <StackPanel Spacing="5">
                                     <TextBlock Text="{Binding L[port]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding EmailPort}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" MinWidth="120" />
+                                    <NumericUpDown Value="{Binding EmailPort, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" MinWidth="120" />
                                 </StackPanel>
                                 <StackPanel Spacing="5" VerticalAlignment="Bottom">
                                     <TextBlock Text="SSL" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />

@@ -4,7 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Products.Queries;
 
-public record VariantPriceInfoDto(decimal? LastPurchasePrice, decimal? SellingPrice, long? LastUnitId = null, decimal? LastPackSize = null);
+// LastPurchasePrice saqlash birligida; LastEntry* — oxirgi kirim aynan qanday kiritilgani.
+public record VariantPriceInfoDto(
+    decimal? LastPurchasePrice,
+    decimal? SellingPrice,
+    long? LastUnitId = null,
+    decimal? LastPackSize = null,
+    long? LastPackId = null,
+    decimal? LastEntryPrice = null,
+    string? LastPriceBasis = null);
 
 public record GetVariantPriceInfoQuery(long VariantId, long WarehouseId) : IRequest<VariantPriceInfoDto>;
 
@@ -27,9 +35,10 @@ public sealed class GetVariantPriceInfoQueryHandler(IApplicationDbContext db) : 
         var lastLine = await db.SupplyItems
             .Where(i => i.VariantId == request.VariantId && !i.Supply.IsDeleted)
             .OrderByDescending(i => i.Id)
-            .Select(i => new { i.UnitId, i.PackSize })
+            .Select(i => new { i.UnitId, i.PackSize, i.PackId, i.EntryPrice, i.PriceBasis })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new VariantPriceInfoDto(lastPurchase, selling, lastLine?.UnitId, lastLine?.PackSize);
+        return new VariantPriceInfoDto(lastPurchase, selling, lastLine?.UnitId, lastLine?.PackSize,
+            lastLine?.PackId, lastLine?.EntryPrice, lastLine?.PriceBasis.ToString());
     }
 }

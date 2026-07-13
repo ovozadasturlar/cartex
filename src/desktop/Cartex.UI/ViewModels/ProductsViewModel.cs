@@ -240,6 +240,96 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    // Qadoqlar: kirimda "Qop 50 kg", rastada "1 kg paket". Hajm mahsulotning saqlash birligida.
+    public ObservableCollection<ProductPackDto> EditPacks { get; } = [];
+    public ObservableCollection<string> PackKinds { get; } = ["Purchase", "Sale", "Both"];
+
+    [ObservableProperty] private string _packName = string.Empty;
+    [ObservableProperty] private decimal _packSize = 1;
+    [ObservableProperty] private string _packKind = "Purchase";
+    [ObservableProperty] private bool _packIsDefault;
+    private long? _editingPackId;
+
+    public string PackSizeHint => EditUnit is { } unit ? $"{L["pack_size"]} ({unit.ShortName})" : L["pack_size"];
+
+    private async Task LoadEditPacksAsync()
+    {
+        EditPacks.Clear();
+        if (_editId == 0) return;
+        try
+        {
+            foreach (var pack in await _productsApi.GetPacksAsync(_editId)) EditPacks.Add(pack);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task SavePackAsync()
+    {
+        var name = PackName.Trim();
+        if (_editId == 0 || name.Length == 0 || PackSize <= 0) { _toast.Warning(L["err_fill_all"]); return; }
+
+        try
+        {
+            var request = new SaveProductPackRequest(name, PackSize, PackKind, PackIsDefault);
+            if (_editingPackId is { } id)
+                await _productsApi.UpdatePackAsync(id, request);
+            else
+                await _productsApi.CreatePackAsync(_editId, request);
+
+            ResetPackForm();
+            await LoadEditPacksAsync();
+            _cache.Invalidate(CacheKeys.ProductLookup);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void EditPack(ProductPackDto pack)
+    {
+        _editingPackId = pack.Id;
+        PackName = pack.Name;
+        PackSize = pack.Size;
+        PackKind = pack.Kind;
+        PackIsDefault = pack.IsDefault;
+    }
+
+    [RelayCommand]
+    private async Task DeletePackAsync(ProductPackDto pack)
+    {
+        try
+        {
+            await _productsApi.DeletePackAsync(pack.Id);
+            if (_editingPackId == pack.Id) ResetPackForm();
+            await LoadEditPacksAsync();
+            _cache.Invalidate(CacheKeys.ProductLookup);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    // Sotuv qadog'iga barkod: skanerlanganda savatga shu hajmdagi miqdor tushadi.
+    [RelayCommand]
+    private async Task GeneratePackBarcodeAsync(ProductPackDto pack)
+    {
+        if (_editDefaultVariantId == 0) return;
+        try
+        {
+            await _barcodesApi.GenerateAsync(_editDefaultVariantId, pack.Size);
+            await LoadEditBarcodesAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private void ResetPackForm()
+    {
+        _editingPackId = null;
+        PackName = string.Empty;
+        PackSize = 1;
+        PackKind = "Purchase";
+        PackIsDefault = false;
+    }
+
     [ObservableProperty] private bool _isPrintOpen;
     [ObservableProperty] private string _printProductName = string.Empty;
     [ObservableProperty] private string? _printCode;
@@ -495,6 +585,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditBarcodeList.Clear();
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
+        EditPacks.Clear();
+        ResetPackForm();
         IsEditOpen = true;
     }
 
@@ -528,7 +620,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editDefaultVariantId = product.DefaultVariantId;
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
+        ResetPackForm();
         _ = LoadEditBarcodesAsync();
+        _ = LoadEditPacksAsync();
         IsEditOpen = true;
     }
 

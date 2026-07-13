@@ -7,8 +7,14 @@ namespace Cartex.UI.Services;
 
 public static class ApiErrors
 {
+    /// <summary>Sahifa almashganda bekor qilingan so'rov — bu xatolik emas, foydalanuvchiga ko'rsatilmaydi.</summary>
+    public static bool IsCancelled(Exception ex) =>
+        ex is OperationCanceledException || ex.InnerException is OperationCanceledException;
+
     public static string Describe(Exception ex)
     {
+        if (IsCancelled(ex)) return string.Empty;
+
         if (ex is ApiException api && !string.IsNullOrEmpty(api.Content))
         {
             try

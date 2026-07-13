@@ -329,6 +329,10 @@
                     </TransitioningContentControl.PageTransition>
                 </TransitioningContentControl>
 
+                <ProgressBar IsVisible="{Binding Busy.IsPageBusy}" IsIndeterminate="True"
+                             VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="3"
+                             MinWidth="0" CornerRadius="0" IsHitTestVisible="False" />
+
                 <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000" IsHitTestVisible="False">
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
                             HorizontalAlignment="Center" VerticalAlignment="Center"

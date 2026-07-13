@@ -71,7 +71,6 @@ export class SupplyCreate implements OnInit {
   supplyDate = isoDay(new Date());
   productText = '';
   unitId: number | null = null;
-  packSize = 1;
   quantity = 1;
   price = 0;
   sellingPrice = 0;
@@ -137,7 +136,6 @@ export class SupplyCreate implements OnInit {
     this.product.set(p);
     this.productText = p.name;
     this.rebuildUnits(p);
-    this.packSize = 1;
     const warehouseId = this.warehouseId();
     if (!warehouseId) return;
     try {
@@ -151,7 +149,6 @@ export class SupplyCreate implements OnInit {
     this.price = info.lastPurchasePrice ?? 0;
     this.sellingPrice = info.sellingPrice ?? 0;
     if (info.lastUnitId && this.unitOptions().some((u) => u.id === info.lastUnitId)) this.unitId = info.lastUnitId;
-    if (this.packSize === 1 && info.lastPackSize && info.lastPackSize > 1) this.packSize = info.lastPackSize;
   }
 
   private rebuildUnits(p: ProductOption): void {
@@ -168,17 +165,16 @@ export class SupplyCreate implements OnInit {
   addLine(): void {
     const p = this.product();
     if (!p || this.quantity <= 0 || this.price < 0) return;
-    const packSize = this.packSize > 0 ? this.packSize : 1;
     const unit = this.unitOptions().find((u) => u.id === this.unitId);
     this.items.update((items) => [
       ...items,
       {
         variantId: p.defaultVariantId,
         productName: p.name,
-        quantity: this.quantity * packSize,
+        quantity: this.quantity,
         unitId: this.unitId && this.unitId !== p.unitId ? this.unitId : null,
         unitName: unit?.shortName ?? p.unitShortName ?? '',
-        packSize,
+        packSize: 1,
         purchasePrice: this.price,
         sellingPrice: this.sellingPrice > 0 ? this.sellingPrice : null,
         expiredAt: this.expiry || null,
@@ -197,7 +193,6 @@ export class SupplyCreate implements OnInit {
     this.productFilter.set('');
     this.unitOptions.set([]);
     this.unitId = null;
-    this.packSize = 1;
     this.quantity = 1;
     this.price = 0;
     this.sellingPrice = 0;

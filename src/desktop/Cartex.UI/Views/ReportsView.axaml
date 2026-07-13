@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
@@ -381,7 +382,7 @@
                     <TextBlock Text="{Binding BonusCustomer.CustomerName}" Foreground="{DynamicResource TextSecondary}" />
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <NumericUpDown Value="{Binding BonusAmount}" Minimum="0" Increment="1000" FormatString="0.##" />
+                        <NumericUpDown Value="{Binding BonusAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##" />
                     </StackPanel>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[note]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />

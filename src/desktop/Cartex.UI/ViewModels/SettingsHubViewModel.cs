@@ -69,9 +69,10 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is null) return;
         newValue.IsActive = true;
+        // Bo'lim almashdi — oldingi bo'lim uchun ketayotgan o'qish so'rovlari bekor qilinadi.
+        ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         CurrentSection = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
-        if (CurrentSection is ILoadable loadable)
-            _ = loadable.LoadAsync();
+        MainViewModel.StartPageLoad(CurrentSection);
     }
 
     private void RefreshTitles()

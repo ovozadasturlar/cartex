@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\backend\Cartex.Domain\Cartex.Domain.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Application\Cartex.Application.csproj" />
+    <ProjectReference Include="..\..\src\shared\Cartex.ApiClient\Cartex.ApiClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>
