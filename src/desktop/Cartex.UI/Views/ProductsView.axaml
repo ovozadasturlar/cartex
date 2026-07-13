@@ -210,7 +210,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="6">
                             <TextBlock Text="{Binding L[min_stock]}" Classes="caption" />
-                            <NumericUpDown Value="{Binding EditMinStock}" Minimum="0" FormatString="N0"
+                            <NumericUpDown Value="{Binding EditMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                            ShowButtonSpinner="False" MinHeight="40" />
                         </StackPanel>
                     </Grid>
@@ -218,7 +218,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
                         <Grid ColumnDefinitions="*,8,Auto">
-                            <NumericUpDown Value="{Binding EditSellingPrice}" Minimum="0" Increment="1000" FormatString="N2"
+                            <NumericUpDown Value="{Binding EditSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N2"
                                            ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
                             <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
                                       MinHeight="40" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
@@ -261,7 +261,7 @@
                                     <KeyBinding Gesture="Enter" Command="{Binding AddEditBarcodeCommand}" />
                                 </TextBox.KeyBindings>
                             </TextBox>
-                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty}" Minimum="1" Increment="1"
+                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1"
                                            FormatString="0.###" MinHeight="40" Width="120"
                                            ToolTip.Tip="{Binding L[pack_size_hint]}" />
                             <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0"
@@ -285,7 +285,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="6">
                             <TextBlock Text="{Binding L[vat_rate]}" Classes="caption" />
-                            <NumericUpDown Value="{Binding EditVatRate}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
+                            <NumericUpDown Value="{Binding EditVatRate, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
                         </StackPanel>
                     </Grid>
 
@@ -297,7 +297,7 @@
                                     <StackPanel Spacing="4" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Display}" Classes="caption" />
                                         <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
-                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" MinHeight="38" IsVisible="{Binding IsNumber}" />
                                         <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
                                                   HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
                                         <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
@@ -422,7 +422,7 @@
                                         <StackPanel Spacing="4" Margin="0,0,0,8">
                                             <TextBlock Text="{Binding Display}" Classes="caption" />
                                             <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
-                                            <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                            <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" MinHeight="38" IsVisible="{Binding IsNumber}" />
                                             <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
                                             <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
@@ -470,7 +470,7 @@
                     </Border>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding PrintQuantity}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
+                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
                         <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"

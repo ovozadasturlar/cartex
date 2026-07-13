@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.BusinessSettingsView"
@@ -81,15 +82,15 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Text="{Binding L[max_discount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding MaxDiscountPercent}" Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
+                                    <NumericUpDown Value="{Binding MaxDiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
                                 </StackPanel>
                                 <StackPanel Grid.Row="2" Spacing="5">
                                     <TextBlock Text="{Binding L[default_min_stock]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding DefaultMinStock}" Minimum="0" Increment="1" FormatString="0.##" />
+                                    <NumericUpDown Value="{Binding DefaultMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1" FormatString="0.##" />
                                 </StackPanel>
                                 <StackPanel Grid.Row="2" Grid.Column="2" Spacing="5">
                                     <TextBlock Text="{Binding L[stale_rate_days]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding StaleRateDays}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
+                                    <NumericUpDown Value="{Binding StaleRateDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding L[sales_policy_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
@@ -111,7 +112,7 @@
                             </Grid>
                             <StackPanel Spacing="5" MaxWidth="260" HorizontalAlignment="Left" IsVisible="{Binding QrLoginEnabled}">
                                 <TextBlock Text="{Binding L[qr_refresh_seconds]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <NumericUpDown Value="{Binding QrRefreshSeconds}" Minimum="30" Maximum="600" Increment="10" FormatString="0" />
+                                <NumericUpDown Value="{Binding QrRefreshSeconds, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="30" Maximum="600" Increment="10" FormatString="0" />
                             </StackPanel>
                             <TextBlock Text="{Binding L[login_methods_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>

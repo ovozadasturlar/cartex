@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
@@ -127,7 +128,7 @@
 
                                         <Panel Grid.Column="4" IsVisible="{Binding $parent[UserControl].DataContext.CanManageRates}">
                                             <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsBase}">
-                                                <NumericUpDown Value="{Binding NewRate}" Minimum="0" FormatString="N2" Width="130"
+                                                <NumericUpDown Value="{Binding NewRate, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N2" Width="130"
                                                                ShowButtonSpinner="False" MinHeight="34"
                                                                IsEnabled="{Binding IsEnabled}" />
                                                 <Button Classes="brand" Padding="10,0" MinHeight="34" VerticalAlignment="Stretch"

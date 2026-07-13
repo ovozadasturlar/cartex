@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:svc="using:Cartex.UI.Services"
@@ -298,7 +299,7 @@
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Spacing="5">
                                             <TextBlock Text="{Binding L[cashback_percent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                            <NumericUpDown Value="{Binding TotalPercent}" Minimum="0" Maximum="100" Increment="0.5"
+                                            <NumericUpDown Value="{Binding TotalPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" Increment="0.5"
                                                            FormatString="0.##" MinWidth="240" />
                                         </StackPanel>
                                     </Grid>
@@ -348,11 +349,11 @@
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Grid.Column="0" Spacing="5">
                             <TextBlock Text="{Binding L[value]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding RuleValue}" Minimum="0" FormatString="0.##" MinHeight="38" />
+                            <NumericUpDown Value="{Binding RuleValue, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <TextBlock Text="{Binding L[priority]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding RulePriority}" Minimum="0" FormatString="0" MinHeight="38" />
+                            <NumericUpDown Value="{Binding RulePriority, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0" MinHeight="38" />
                         </StackPanel>
                     </Grid>
                     <CheckBox IsChecked="{Binding RuleExcludeFromTotal}" Content="{Binding L[exclude_from_total]}" />
@@ -471,17 +472,17 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Text="{Binding L[value]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding DiscountValue}" Minimum="0" FormatString="0.##" MinHeight="38" ShowButtonSpinner="False" />
+                                    <NumericUpDown Value="{Binding DiscountValue, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" ShowButtonSpinner="False" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="4" Spacing="5">
                                     <TextBlock Text="{Binding L[priority]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <NumericUpDown Value="{Binding DiscountPriority}" Minimum="0" FormatString="0" MinHeight="38" ShowButtonSpinner="False" />
+                                    <NumericUpDown Value="{Binding DiscountPriority, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0" MinHeight="38" ShowButtonSpinner="False" />
                                 </StackPanel>
                             </Grid>
 
                             <StackPanel Spacing="5" HorizontalAlignment="Left" MinWidth="240">
                                 <TextBlock Text="{Binding L[discount_min_amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <NumericUpDown Value="{Binding DiscountMinAmount}" Minimum="0" FormatString="N0" MinHeight="38" ShowButtonSpinner="False" />
+                                <NumericUpDown Value="{Binding DiscountMinAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0" MinHeight="38" ShowButtonSpinner="False" />
                             </StackPanel>
 
                             <Grid ColumnDefinitions="*,12,*">

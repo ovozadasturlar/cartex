@@ -66,14 +66,13 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> RepayDebtCurrencies { get; } = [];
     public ObservableCollection<string> PayCurrencies { get; } = [];
     private string _baseCurrency = "UZS";
-    private bool _currenciesLoaded;
 
     private IBusinessApi _businessApi = null!;
     private IRatesApi _ratesApi = null!;
 
+    // Sahifaga har kirilganda qayta o'qiladi — ko'p valyuta imkoniyati yoqilsa/o'chirilsa darhol qo'llanadi.
     private async Task EnsureCurrenciesAsync()
     {
-        if (_currenciesLoaded) return;
         try
         {
             var business = await _businessApi.GetAsync();
@@ -84,7 +83,6 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             if (IsMulticurrency)
                 foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
                     PayCurrencies.Add(r.Code);
-            _currenciesLoaded = true;
         }
         catch { }
     }

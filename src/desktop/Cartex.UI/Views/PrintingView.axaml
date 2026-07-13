@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.PrintingView"
@@ -76,7 +77,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="5">
                                         <TextBlock Classes="fieldlabel" Text="{Binding L[print_copies]}" />
-                                        <NumericUpDown Value="{Binding ReceiptCopies}" Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
+                                        <NumericUpDown Value="{Binding ReceiptCopies, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="{Binding L[receipt_width_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
@@ -137,8 +138,8 @@
                                 <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
                                 <Grid ColumnDefinitions="*,8,90,8,90">
                                     <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" HorizontalAlignment="Stretch" />
-                                    <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
-                                    <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                                    <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
                                 </Grid>
                             </StackPanel>
                             <Grid ColumnDefinitions="*,12,*">
@@ -148,7 +149,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
-                                    <NumericUpDown Value="{Binding LabelGapMm}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34" />
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
@@ -156,11 +157,11 @@
                             <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftXMm}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftYMm}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
@@ -176,11 +177,11 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="4" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" />
-                                    <NumericUpDown Value="{Binding LabelDensity}" Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelDensity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="6" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" />
-                                    <NumericUpDown Value="{Binding LabelSpeed}" Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelSpeed, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
                                 </StackPanel>
                             </Grid>
 

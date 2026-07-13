@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,20 +18,48 @@ using Cartex.UI.ViewModels.Common;
 
 namespace Cartex.UI.ViewModels;
 
-public class SupplyLine
+// Miqdor va narxlar jadvalning o'zida tahrirlanadi, shuning uchun qator o'zgaruvchan.
+public partial class SupplyLine : ObservableObject
 {
     public long VariantId { get; init; }
     public string ProductName { get; init; } = "";
-    public decimal Quantity { get; init; }
     public long? UnitId { get; init; }
     public string UnitName { get; init; } = "";
     public decimal PackSize { get; init; } = 1;
-    public decimal PurchasePrice { get; init; }
-    public decimal? SellingPrice { get; init; }
-    public DateOnly? ExpiredAt { get; init; }
+    public DateOnly? ExpiredAt { get; set; }
+
+    [ObservableProperty] private decimal _quantity = 1;
+    [ObservableProperty] private decimal _purchasePrice;
+    [ObservableProperty] private decimal? _sellingPrice;
+
     public decimal LineTotal => Quantity * PurchasePrice;
     public decimal? Margin => SellingPrice is { } sp ? sp - PurchasePrice : null;
+
+    partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+
+    partial void OnPurchasePriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(Margin));
+    }
+
+    partial void OnSellingPriceChanged(decimal? value) => OnPropertyChanged(nameof(Margin));
 }
+
+// Bitta ta'minotga biriktiriladigan alohida to'lov: o'z summasi, usuli va valyutasi bilan.
+public partial class SupplyPaymentLine : ObservableObject
+{
+    [ObservableProperty] private decimal _amount;
+    [ObservableProperty] private string _mode = "cash";
+    [ObservableProperty] private string _currency = "";
+
+    public string ModeText => LocalizationManager.Instance[Mode == "card" ? "card" : "cash"];
+
+    partial void OnModeChanged(string value) => OnPropertyChanged(nameof(ModeText));
+}
+
+// To'lov usuli ro'yxati uchun element: Key serverga, Text foydalanuvchiga.
+public sealed record PayMode(string Key, string Text);
 
 public partial class SuppliesViewModel : ViewModelBase, ILoadable
 {
@@ -72,36 +102,193 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<string> Currencies { get; } = [];
     private string _baseCurrency = "UZS";
-    private bool _currenciesLoaded;
     private IBusinessApi _businessApi = null!;
     private IRatesApi _ratesApi = null!;
     private ReferenceCache _cache = null!;
 
+    // Har sahifaga kirilganda qayta o'qiladi: imkoniyat (ko'p valyuta) sozlamalardan o'chirilsa,
+    // qayta kirmasdan darhol qo'llanishi kerak. Kesh o'zi ortiqcha so'rovlardan saqlaydi.
     private async Task EnsureCurrenciesAsync()
     {
-        if (_currenciesLoaded) return;
         try
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
+            var selected = SupplyCurrency;
             Currencies.Clear();
             Currencies.Add(_baseCurrency);
             if (IsMulticurrency)
                 foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
                     Currencies.Add(r.Code);
-            _currenciesLoaded = true;
+            SupplyCurrency = selected is not null && Currencies.Contains(selected) ? selected : _baseCurrency;
         }
         catch { }
     }
 
-    public decimal RemainsDebt => Math.Max(0, EditTotal - PaidCash - PaidCard);
+    // To'lov ta'minot saqlangandan keyin alohida modalda kiritiladi. Bitta ta'minot uchun bir nechta
+    // to'lov qatori bo'lishi mumkin: har biri o'z usuli (naqd/karta) va valyutasida.
+    [ObservableProperty] private bool _isPaymentOpen;
+    [ObservableProperty] private decimal _paymentSupplyTotal;
 
-    partial void OnPaidCashChanged(decimal value) => OnPropertyChanged(nameof(RemainsDebt));
-    partial void OnPaidCardChanged(decimal value) => OnPropertyChanged(nameof(RemainsDebt));
+    public ObservableCollection<SupplyPaymentLine> PaymentLines { get; } = [];
+
+    [ObservableProperty] private decimal _paymentAmount;
+    [ObservableProperty] private string _paymentMode = "cash";
+    [ObservableProperty] private string? _paymentCurrency;
+    [ObservableProperty] private bool _isEditingPayment;
+
+    // To'lov usuli ro'yxatdan tanlanadi; ro'yxat modal ochilganda joriy tilda quriladi.
+    public ObservableCollection<PayMode> PaymentModes { get; } = [];
+    [ObservableProperty] private PayMode? _selectedPaymentMode;
+
+    partial void OnSelectedPaymentModeChanged(PayMode? value)
+    {
+        if (value is not null) PaymentMode = value.Key;
+    }
+
+    private void BuildPaymentModes()
+    {
+        PaymentModes.Clear();
+        PaymentModes.Add(new PayMode("cash", L["cash"]));
+        PaymentModes.Add(new PayMode("card", L["card"]));
+        SelectedPaymentMode = PaymentModes[0];
+    }
+
+    private long _paymentSupplierId;
+    private string? _paymentDebtCurrency;
+    private SupplyPaymentLine? _editingPayment;
+    private readonly Dictionary<string, decimal> _rates = [];
+
+    // Har bir qator o'z valyutasida; qoldiqni ko'rsatish uchun hammasi ta'minot valyutasiga o'giriladi.
+    private decimal ToSupplyCurrency(decimal amount, string? currency)
+    {
+        var supplyRate = RateOf(_paymentDebtCurrency);
+        return supplyRate == 0 ? amount : amount * RateOf(currency) / supplyRate;
+    }
+
+    private decimal RateOf(string? currency) =>
+        currency is null || currency == _baseCurrency ? 1 : _rates.TryGetValue(currency, out var r) && r > 0 ? r : 1;
+
+    // Teskarisi: ta'minot valyutasidagi summani formadagi tanlangan valyutaga o'girish.
+    private decimal FromSupplyCurrency(decimal amount, string? currency)
+    {
+        var rate = RateOf(currency);
+        return rate == 0 ? amount : amount * RateOf(_paymentDebtCurrency) / rate;
+    }
+
+    public decimal PaymentPaidTotal => PaymentLines.Sum(p => ToSupplyCurrency(p.Amount, p.Currency));
+    public decimal PaymentRemains => Math.Max(0, PaymentSupplyTotal - PaymentPaidTotal);
+    public bool HasPaymentLines => PaymentLines.Count > 0;
+
+    private void RaisePaymentTotals()
+    {
+        OnPropertyChanged(nameof(PaymentPaidTotal));
+        OnPropertyChanged(nameof(PaymentRemains));
+        OnPropertyChanged(nameof(HasPaymentLines));
+    }
+
+    [RelayCommand]
+    private void PayFull() => PaymentAmount = FromSupplyCurrency(PaymentRemains, PaymentCurrency);
+
+    // Valyuta almashsa, formadagi summa yangi valyutada qoldiqqa moslanadi.
+    partial void OnPaymentCurrencyChanged(string? value)
+    {
+        if (IsPaymentOpen && !IsEditingPayment)
+            PaymentAmount = FromSupplyCurrency(PaymentRemains, value);
+    }
+
+    // Formadagi ma'lumot ro'yxatga qator sifatida qo'shiladi (yoki tahrirlanayotgan qator yangilanadi).
+    [RelayCommand]
+    private void AddPaymentLine()
+    {
+        if (PaymentAmount <= 0) { _toast.Warning(L["err_amount_positive"]); return; }
+
+        if (IsEditingPayment && _editingPayment is not null)
+        {
+            _editingPayment.Amount = PaymentAmount;
+            _editingPayment.Mode = PaymentMode;
+            _editingPayment.Currency = PaymentCurrency ?? _baseCurrency;
+            _editingPayment = null;
+            IsEditingPayment = false;
+        }
+        else
+            PaymentLines.Add(new SupplyPaymentLine
+            {
+                Amount = PaymentAmount,
+                Mode = PaymentMode,
+                Currency = PaymentCurrency ?? _baseCurrency
+            });
+
+        RaisePaymentTotals();
+        PaymentAmount = PaymentRemains > 0 ? FromSupplyCurrency(PaymentRemains, PaymentCurrency) : 0;
+    }
+
+    [RelayCommand]
+    private void EditPaymentLine(SupplyPaymentLine line)
+    {
+        _editingPayment = line;
+        IsEditingPayment = true;
+        PaymentAmount = line.Amount;
+        SelectedPaymentMode = PaymentModes.FirstOrDefault(m => m.Key == line.Mode) ?? SelectedPaymentMode;
+        PaymentCurrency = line.Currency;
+    }
+
+    [RelayCommand]
+    private void RemovePaymentLine(SupplyPaymentLine line)
+    {
+        PaymentLines.Remove(line);
+        if (ReferenceEquals(_editingPayment, line)) { _editingPayment = null; IsEditingPayment = false; }
+        RaisePaymentTotals();
+    }
+
+    [RelayCommand]
+    private void CancelPayment()
+    {
+        IsPaymentOpen = false;
+        PaymentLines.Clear();
+    }
+
+    [RelayCommand]
+    private async Task ConfirmPaymentAsync()
+    {
+        if (PaymentLines.Count == 0) { _toast.Warning(L["err_no_payment_lines"]); return; }
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                foreach (var line in PaymentLines)
+                    await _suppliersApi.PayDebtAsync(_paymentSupplierId,
+                        new PaySupplierDebtRequest(line.Amount, line.Mode == "card", _paymentDebtCurrency, line.Currency));
+
+            IsPaymentOpen = false;
+            PaymentLines.Clear();
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task EnsureRatesAsync()
+    {
+        try
+        {
+            _rates.Clear();
+            foreach (var rate in await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync))
+                _rates[rate.Code] = rate.Rate;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task ClearAllAsync()
+    {
+        if (Items.Count > 0 && !await _dialog.ConfirmAsync(L["clear_confirm"], L["clear"])) return;
+        Items.Clear();
+        ResetLine();
+    }
 
     [ObservableProperty] private decimal _supplierPayable;
-    [ObservableProperty] private decimal _payOldDebt;
 
     public bool HasSupplierDebt => SupplierPayable > 0;
     public string SupplierDebtText => string.Format(L["supplier_debt_fmt"], SupplierPayable);
@@ -112,14 +299,38 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(SupplierDebtText));
     }
 
-    partial void OnSelectedSupplierChanged(IdOption? value)
-    {
+    partial void OnSelectedSupplierChanged(IdOption? value) =>
         SupplierPayable = value?.Id is { } id && _supplierPayables.TryGetValue(id, out var p) ? p : 0;
-        PayOldDebt = 0;
-    }
 
     [ObservableProperty] private IdOption? _lineProduct;
+    [ObservableProperty] private string _lineProductText = "";
     [ObservableProperty] private UnitDto? _lineUnit;
+
+    // Mahsulot maydoniga fokusni qaytarish (matn tanlangan holda) — ko'rinish shu hodisaga ulanadi.
+    public event Action? FocusProductRequested;
+
+    // Nom kiritilib Enter bosilganda: bazada bor bo'lsa tanlanadi, yo'q bo'lsa yangi mahsulot yaratish so'raladi.
+    [RelayCommand]
+    private async Task CommitProductAsync()
+    {
+        var name = LineProductText.Trim();
+        if (name.Length == 0) return;
+
+        if (ProductOptions.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match)
+        {
+            LineProduct = match;
+            return;
+        }
+
+        if (await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
+        {
+            await QuickProduct.OpenCommand.ExecuteAsync(null);
+            QuickProduct.Name = name;
+            return;
+        }
+
+        FocusProductRequested?.Invoke();
+    }
     [ObservableProperty] private string _lineBarcode = "";
     [ObservableProperty] private decimal _lineQuantity = 1;
     [ObservableProperty] private decimal _linePackSize = 1;
@@ -134,6 +345,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     partial void OnLineProductChanged(IdOption? value)
     {
+        if (value is not null && LineProductText != value.Name) LineProductText = value.Name;
         RebuildUnitOptions(value);
         _ = FillPricesAsync(value);
     }
@@ -190,15 +402,35 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
     public bool CanVoid => _auth.HasPermission("supplies.manage");
 
-    public bool IsModalOpen => IsEditOpen || IsDetailOpen || IsPrintOpen || QuickProduct.IsOpen;
+    // Tahrirlash endi modal emas, sahifaning o'zi — shuning uchun IsModalOpen ga kirmaydi.
+    public bool IsModalOpen => IsDetailOpen || IsPrintOpen || IsPaymentOpen || QuickProduct.IsOpen;
 
-    partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsPaymentOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsEmpty => Supplies.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
+    public bool HasItems => Items.Count > 0;
+
+    private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var line in e.OldItems?.OfType<SupplyLine>() ?? []) line.PropertyChanged -= OnLineChanged;
+        foreach (var line in e.NewItems?.OfType<SupplyLine>() ?? []) line.PropertyChanged += OnLineChanged;
+        RaiseTotals();
+    }
+
+    private void OnLineChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SupplyLine.LineTotal)) RaiseTotals();
+    }
+
+    private void RaiseTotals()
+    {
+        OnPropertyChanged(nameof(EditTotal));
+        OnPropertyChanged(nameof(HasItems));
+    }
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
@@ -223,6 +455,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _export = export;
         _auth = auth;
+        Items.CollectionChanged += OnItemsChanged;
         Paging.Attach(LoadSuppliesAsync);
     }
 
@@ -426,21 +659,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         SelectedSupplier = SupplierOptions.FirstOrDefault();
         SelectedWarehouse = WarehouseOptions.FirstOrDefault();
         SupplyDate = DateTime.Now;
-        PaidCash = 0;
-        PaidCard = 0;
-        PayOldDebt = 0;
         _ = EnsureCurrenciesAsync();
         SupplyCurrency = _baseCurrency;
         Items.Clear();
         ResetLine();
-        OnPropertyChanged(nameof(EditTotal));
-        OnPropertyChanged(nameof(RemainsDebt));
         IsEditOpen = true;
     }
 
     private void ResetLine()
     {
-        LineProduct = ProductOptions.FirstOrDefault();
+        LineProduct = null;
+        LineProductText = "";
         LineUnit = null;
         LineBarcode = "";
         LineQuantity = 1;
@@ -450,65 +679,95 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         LineExpiry = null;
     }
 
-    [RelayCommand]
+    // AllowConcurrentExecutions: aks holda skaner ketma-ket ikki kod yuborsa, ikkinchisi tashlab yuboriladi.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ScanLineAsync()
     {
         var code = LineBarcode.Trim();
         if (string.IsNullOrEmpty(code)) return;
-        if (SelectedWarehouse?.Id is null) { _toast.Warning(L["select_warehouse"]); return; }
+
+        // Maydon so'rovdan oldin tozalanadi, aks holda keyingi kod eskisining ustiga yopishadi.
+        LineBarcode = "";
+        if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+
         try
         {
-            var found = await _productsApi.GetByBarcodeAsync(code, SelectedWarehouse.Id.Value);
+            var found = await _productsApi.GetByBarcodeAsync(code, warehouseId);
             _variantDimensions[found.VariantId] = found.Dimension;
-            var option = ProductOptions.FirstOrDefault(o => o.Id == found.VariantId) ?? new IdOption(found.VariantId, found.ProductName);
-            if (!ProductOptions.Contains(option)) ProductOptions.Add(option);
-            LineProduct = option;
-            if (found.PackQty > 1)
-            {
-                LinePackSize = found.PackQty;
-                _toast.Info($"{found.ProductName} ×{found.PackQty:0.###}");
-            }
-            LineBarcode = "";
+            if (!ProductOptions.Any(o => o.Id == found.VariantId))
+                ProductOptions.Add(new IdOption(found.VariantId, found.ProductName));
+
+            var packSize = found.PackQty > 1 ? found.PackQty : 1;
+            await AddOrMergeAsync(found.VariantId, found.ProductName, packSize, packSize, warehouseId);
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            LineBarcode = "";
             await QuickProduct.OpenCommand.ExecuteAsync(null);
             QuickProduct.Barcode = code;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    [RelayCommand]
-    private void AddLine()
+    // Bir xil mahsulot va qadoq bo'lsa yangi qator ochilmaydi — mavjud qatorning miqdori oshadi.
+    private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, decimal packSize, long warehouseId,
+        long? unitId = null, string? unitName = null, decimal? purchasePrice = null, decimal? sellingPrice = null, DateOnly? expiredAt = null)
     {
-        if (LineProduct?.Id is null || LineQuantity <= 0 || LinePrice < 0) { _toast.Error(L["error"]); return; }
-        var packSize = LinePackSize <= 0 ? 1 : LinePackSize;
-        var stockingId = _variantStockUnits.TryGetValue(LineProduct.Id.Value, out var stocking) ? stocking.Id : (long?)null;
-        Items.Add(new SupplyLine
+        if (Items.FirstOrDefault(i => i.VariantId == variantId && i.PackSize == packSize && i.UnitId == unitId) is { } existing)
         {
-            VariantId = LineProduct.Id.Value,
-            ProductName = LineProduct.Name,
-            Quantity = LineQuantity * packSize,
-            UnitId = LineUnit?.Id is { } unitId && unitId != stockingId ? unitId : null,
-            UnitName = LineUnit?.ShortName ?? "",
+            existing.Quantity += quantity;
+            if (purchasePrice is { } price) existing.PurchasePrice = price;
+            if (sellingPrice is { } selling) existing.SellingPrice = selling;
+            if (expiredAt is not null) existing.ExpiredAt = expiredAt;
+            _toast.Info($"{productName} ×{existing.Quantity:0.###}");
+            return;
+        }
+
+        var stockUnit = _variantStockUnits.TryGetValue(variantId, out var stocking) ? stocking.ShortName : "";
+        var line = new SupplyLine
+        {
+            VariantId = variantId,
+            ProductName = productName,
+            Quantity = quantity,
             PackSize = packSize,
-            PurchasePrice = LinePrice,
-            SellingPrice = LineSellingPrice > 0 ? LineSellingPrice : null,
-            ExpiredAt = LineExpiry is { } e ? DateOnly.FromDateTime(e.Date) : null
-        });
-        ResetLine();
-        OnPropertyChanged(nameof(EditTotal));
-        OnPropertyChanged(nameof(RemainsDebt));
+            UnitId = unitId,
+            UnitName = unitName ?? stockUnit,
+            PurchasePrice = purchasePrice ?? 0,
+            SellingPrice = sellingPrice,
+            ExpiredAt = expiredAt
+        };
+        Items.Add(line);
+
+        if (purchasePrice is not null) return;
+
+        // Narxlar oxirgi ta'minotdan to'ldiriladi; foydalanuvchi jadvalda o'zgartira oladi.
+        try
+        {
+            var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
+            if (line.PurchasePrice == 0) line.PurchasePrice = info.LastPurchasePrice ?? 0;
+            if (line.SellingPrice is null or 0) line.SellingPrice = info.SellingPrice;
+        }
+        catch { }
     }
 
     [RelayCommand]
-    private void RemoveLine(SupplyLine line)
+    private async Task AddLineAsync()
     {
-        Items.Remove(line);
-        OnPropertyChanged(nameof(EditTotal));
-        OnPropertyChanged(nameof(RemainsDebt));
+        if (LineProduct?.Id is not { } variantId || LineQuantity <= 0 || LinePrice < 0) { _toast.Error(L["error"]); return; }
+        if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+
+        var packSize = LinePackSize <= 0 ? 1 : LinePackSize;
+        var stockingId = _variantStockUnits.TryGetValue(variantId, out var stocking) ? stocking.Id : (long?)null;
+        var unitId = LineUnit?.Id is { } id && id != stockingId ? id : (long?)null;
+
+        await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity * packSize, packSize, warehouseId,
+            unitId, LineUnit?.ShortName, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
+            LineExpiry is { } e ? DateOnly.FromDateTime(e.Date) : null);
+
+        ResetLine();
     }
+
+    [RelayCommand]
+    private void RemoveLine(SupplyLine line) => Items.Remove(line);
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
@@ -516,28 +775,44 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (SelectedSupplier?.Id is null || SelectedWarehouse?.Id is null || Items.Count == 0) { _toast.Error(L["error"]); return; }
+        if (SelectedSupplier?.Id is not { } supplierId || SelectedWarehouse?.Id is null || Items.Count == 0) { _toast.Error(L["error"]); return; }
+
+        var supplyCurrency = IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null;
+        var total = EditTotal;
+
         try
         {
+            // Ta'minot to'lovsiz saqlanadi — to'lov keyin, alohida modalda kiritiladi.
             var request = new CreateSupplyRequest(
-                SelectedSupplier.Id.Value,
+                supplierId,
                 SelectedWarehouse.Id.Value,
                 DateOnly.FromDateTime(SupplyDate.Date),
                 [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt, i.UnitId, i.SellingPrice, i.PackSize))],
-                PaidCash,
-                PaidCard,
-                IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null);
+                0,
+                0,
+                supplyCurrency);
             using (_busy.Begin(L["loading"]))
                 await _api.CreateAsync(request);
-            if (PayOldDebt > 0)
-            {
-                try { await _suppliersApi.PayDebtAsync(SelectedSupplier.Id.Value, new PaySupplierDebtRequest(PayOldDebt, false)); }
-                catch { _toast.Error(L["err_debt_pay_failed"]); }
-            }
             IsEditOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();
         }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        if (!await _dialog.ConfirmAsync(L["supply_pay_confirm"], L["payment"])) return;
+
+        await EnsureRatesAsync();
+
+        _paymentSupplierId = supplierId;
+        _paymentDebtCurrency = supplyCurrency;
+        _editingPayment = null;
+        IsEditingPayment = false;
+        PaymentLines.Clear();
+        PaymentSupplyTotal = total;
+        PaymentAmount = total;
+        BuildPaymentModes();
+        PaymentCurrency = SupplyCurrency ?? _baseCurrency;
+        RaisePaymentTotals();
+        IsPaymentOpen = true;
     }
 }

@@ -704,7 +704,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private Task LoadMoreProducts() => LoadProductsPageAsync(reset: false);
 
-    [RelayCommand]
+    // AllowConcurrentExecutions: aks holda birinchi skaner tugamaguncha buyruq CanExecute=false bo'lib,
+    // bir mahsulotni ketma-ket skaner qilganda ikkinchi Enter jimgina tashlab yuboriladi.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ScanAsync()
     {
         var code = SearchText.Trim();
@@ -717,13 +719,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
+        // Maydon so'rovlardan oldin tozalanadi: skaner keyingi kodni darhol yuborsa,
+        // u eskisining ustiga yopishib qolmasin.
+        SearchText = string.Empty;
+        var visibleProducts = Products.ToList();
+
         if (code.Length == 32 && code.All(char.IsAsciiHexDigit))
         {
             if (await TryLoadCartAsync(code))
-            {
-                SearchText = "";
                 return;
-            }
         }
 
         var scanned = _scannedCodeParser.Parse(code);
@@ -737,13 +741,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     ? w
                     : cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
                 AddToCart(cachedProduct.VariantId, cachedProduct.ProductName, cachedProduct.SellingPrice, qty, cachedProduct.Quantity);
-                SearchText = string.Empty;
                 return;
             }
             if (await Offline.GetCustomerByCardAsync(code) is { } cachedCustomer)
             {
                 SelectedCustomer = ToCustomerDto(cachedCustomer);
-                SearchText = string.Empty;
                 _toast.Success(cachedCustomer.FullName);
                 return;
             }
@@ -758,7 +760,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 ? weight
                 : product.PackQty > 1 ? product.PackQty : 1;
             AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand);
-            SearchText = string.Empty;
             return;
         }
         catch (ApiException)
@@ -771,13 +772,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             {
                 var prepack = await _prepacksApi.GetByCodeAsync(code, warehouseId.Value);
                 AddPrepackToCart(prepack);
-                SearchText = string.Empty;
                 return;
             }
             catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 _toast.Error(ApiErrors.Describe(ex));
-                SearchText = string.Empty;
                 return;
             }
             catch (ApiException)
@@ -791,7 +790,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             if (customer is not null)
             {
                 SelectedCustomer = customer;
-                SearchText = string.Empty;
                 _toast.Success(customer.FullName);
                 return;
             }
@@ -800,15 +798,14 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
         }
 
-        if (Products.Count > 0)
+        // Maydon tozalangani uchun Products ro'yxati qayta yuklanishi mumkin — skaner boshidagi nusxadan olamiz.
+        if (visibleProducts.Count > 0)
         {
-            var first = Products[0];
+            var first = visibleProducts[0];
             AddToCart(first.VariantId, first.ProductName, first.SellingPrice, available: first.Quantity);
-            SearchText = string.Empty;
             return;
         }
 
-        SearchText = string.Empty;
         await QuickProduct.OpenCommand.ExecuteAsync(null);
         QuickProduct.Barcode = code;
     }

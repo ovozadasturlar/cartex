@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.PrepackView"
              x:CompileBindings="False">
@@ -31,17 +32,17 @@
                 <Grid ColumnDefinitions="*,10,*,10,*">
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[prepack_qty]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding Quantity}" Minimum="0.001" Increment="0.5" FormatString="0.###"
+                        <NumericUpDown Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0.001" Increment="0.5" FormatString="0.###"
                                        ShowButtonSpinner="False" MinHeight="40" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="5">
                         <TextBlock Text="{Binding L[prepack_count]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding Count}" Minimum="1" Maximum="100" Increment="1" FormatString="0"
+                        <NumericUpDown Value="{Binding Count, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="100" Increment="1" FormatString="0"
                                        ShowButtonSpinner="False" MinHeight="40" />
                     </StackPanel>
                     <StackPanel Grid.Column="4" Spacing="5">
                         <TextBlock Text="{Binding L[prepack_expiry]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding ExpiresHours}" Minimum="1" Increment="1" FormatString="0"
+                        <NumericUpDown Value="{Binding ExpiresHours, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0"
                                        ShowButtonSpinner="False" MinHeight="40" Watermark="{Binding L[prepack_expiry_hint]}" />
                     </StackPanel>
                 </Grid>
