@@ -1,11 +1,14 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Microsoft.Extensions.Configuration;
 
 namespace Cartex.Infrastructure.Storage;
 
-public sealed class LocalObjectStorage(ISettingsService settings) : IObjectStorage
+public sealed class LocalObjectStorage(ISettingsService settings, IConfiguration configuration) : IObjectStorage
 {
-    private static readonly string Root = Path.Combine(AppContext.BaseDirectory, "storage");
+    private readonly string _root = configuration["Storage:LocalPath"] is { Length: > 0 } path
+        ? Path.GetFullPath(path)
+        : Path.Combine(AppContext.BaseDirectory, "storage");
 
     private static readonly Dictionary<string, string> ContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,7 +21,7 @@ public sealed class LocalObjectStorage(ISettingsService settings) : IObjectStora
 
     public Task<string> UploadAsync(Stream content, long length, string contentType, string extension, CancellationToken cancellationToken = default, string? key = null)
     {
-        Directory.CreateDirectory(Root);
+        Directory.CreateDirectory(_root);
         key ??= $"{Guid.NewGuid():N}{extension}";
         var path = PathFor(key) ?? throw new ArgumentException("Invalid storage key.", nameof(key));
         using var file = File.Create(path);
@@ -74,9 +77,10 @@ public sealed class LocalObjectStorage(ISettingsService settings) : IObjectStora
 
     private static string ContentUrl(string key) => $"/api/storage/content?key={Uri.EscapeDataString(key)}";
 
-    private static string? PathFor(string key)
+    private string? PathFor(string key)
     {
-        var path = Path.GetFullPath(Path.Combine(Root, key));
-        return path.StartsWith(Root, StringComparison.OrdinalIgnoreCase) ? path : null;
+        var root = _root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var path = Path.GetFullPath(Path.Combine(root, key));
+        return path.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? path : null;
     }
 }

@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+**/.vs/
+**/.idea/
+.git/
+.github/
+deploy/agent-data/
+deploy/data/
+**/*.user
+**/*.env
+**/appsettings.Production.json
+src/web/Cartex.Web.Angular/public/i18n/

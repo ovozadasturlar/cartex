@@ -20,7 +20,7 @@ builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/cartex-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14));
+    .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "cartex-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14));
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -115,6 +115,7 @@ using (var scope = app.Services.CreateScope())
     await DatabaseSeeder.SyncUnitsAsync(db);
     await DatabaseSeeder.SyncFeaturesAsync(db);
     await DatabaseSeeder.SyncCurrenciesAsync(db);
+    await DatabaseSeeder.SyncStorageDefaultAsync(db);
     await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
     await DatabaseSeeder.EnsureAdminPasswordAsync(db, hasher.Verify, hasher.Hash, adminPassword);
 
@@ -126,6 +127,14 @@ if (trustProxyHeaders)
     app.UseForwardedHeaders();
 
 app.UseResponseCompression();
+
+var hasWebUi = File.Exists(Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html"));
+if (hasWebUi)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.UseSerilogRequestLogging(options => options.GetLevel = (ctx, _, ex) =>
     ex is not null || ctx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
     : ctx.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
@@ -155,6 +164,12 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+
+if (hasWebUi)
+{
+    app.Map("/api/{**path}", () => Results.NotFound()).AllowAnonymous();
+    app.MapFallbackToFile("index.html").AllowAnonymous();
+}
 
 app.Run();
 

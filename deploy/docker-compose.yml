@@ -27,9 +27,40 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Database=cartex;Username=cartex;Password=${DB_PASSWORD}
       Jwt__Key: ${JWT_KEY:?JWT_KEY .env faylida majburiy (64+ belgi)}
       Seed__DeveloperPassword: ${DEVELOPER_PASSWORD:?DEVELOPER_PASSWORD .env faylida majburiy}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?ADMIN_PASSWORD .env faylida majburiy}
       Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
+      Storage__LocalPath: /data/storage
+      DataProtection__KeysPath: /data/keys
+    volumes:
+      - cartex-storage:/data/storage
+      - cartex-keys:/data/keys
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5015/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     ports:
       - "5015:5015"
+
+  minio:
+    image: minio/minio:latest
+    profiles: ["minio"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-cartex}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-}
+    volumes:
+      - cartex-minio:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
 
   caddy:
     image: caddy:2-alpine
@@ -37,9 +68,7 @@ services:
     restart: unless-stopped
     depends_on:
       - api
-    environment:
-      DOMAIN: ${DOMAIN:?DOMAIN .env faylida majburiy (tls profili uchun)}
-    command: caddy reverse-proxy --from ${DOMAIN} --to api:5015
+    command: caddy reverse-proxy --from ${DOMAIN:-} --to api:5015
     ports:
       - "80:80"
       - "443:443"
@@ -48,4 +77,7 @@ services:
 
 volumes:
   cartex-db:
+  cartex-storage:
+  cartex-keys:
+  cartex-minio:
   caddy-data:

@@ -122,6 +122,15 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
     }
 
+    public static async Task SyncStorageDefaultAsync(ApplicationDbContext context)
+    {
+        if (await context.BusinessSettings.AnyAsync(s => s.Key == "storage"))
+            return;
+
+        context.BusinessSettings.Add(new BusinessSetting { Key = "storage", Value = """{"Enabled":true,"Provider":"local"}""" });
+        await context.SaveChangesAsync();
+    }
+
     public static async Task SyncFeaturesAsync(ApplicationDbContext context)
     {
         if (!await context.Roles.AnyAsync())
