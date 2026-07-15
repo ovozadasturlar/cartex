@@ -1,21 +1,62 @@
-MIT License
+Cartex — Proprietary Software License
 
-Copyright (c) 2026 fraganoos
+Copyright (c) 2026 Ovoza Dasturlar. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and its source code (the "Software") are the confidential and
+proprietary property of the copyright holder. The Software is licensed, not
+sold.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. NO LICENSE GRANTED BY THIS FILE
+   No right or license to use, copy, modify, distribute, or otherwise exploit
+   the Software is granted by this file or by access to this repository. Any
+   use of the Software requires a separate written agreement with the copyright
+   holder.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. RESTRICTIONS
+   Except as expressly permitted by such a written agreement, you may not:
+   (a) copy, reproduce, publish or disclose the Software or its source code;
+   (b) modify, adapt, translate or create derivative works;
+   (c) distribute, sell, rent, lease, sublicense or otherwise transfer it;
+   (d) reverse engineer, decompile or disassemble any part of it, except to the
+       extent this restriction is prohibited by applicable law;
+   (e) remove or alter any copyright, trademark or other proprietary notice.
+
+3. CONFIDENTIALITY
+   The source code is a trade secret. Anyone granted access to it must keep it
+   confidential and must not disclose it to any third party.
+
+4. LICENSED USE
+   Customers who receive the Software under a written agreement are granted a
+   non-exclusive, non-transferable, revocable right to run the compiled
+   Software for their own internal business operations only, for the term and
+   on the conditions set out in that agreement. All other rights are reserved.
+
+5. THIRD-PARTY COMPONENTS
+   The Software includes third-party open-source components, each of which
+   remains subject to its own license. Those licenses apply only to those
+   components and grant no rights in the Software as a whole.
+
+6. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE
+   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT
+   OR OTHERWISE, ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+Contact: ovozadasturlar@gmail.com
+
+---
+
+Qisqacha (ma'lumot uchun; yuridik kuchga ega matn — yuqoridagi inglizchasi):
+
+Cartex — mulkiy (proprietary) dastur, manba kodi maxfiy. Bu fayl hech kimga
+dasturdan foydalanish, nusxalash, o'zgartirish yoki tarqatish huquqini
+BERMAYDI. Foydalanish faqat mualliflik huquqi egasi bilan tuzilgan alohida
+yozma shartnoma asosida mumkin. Mijoz shartnoma bo'yicha faqat kompilyatsiya
+qilingan dasturni o'z biznesi ichida ishlatish huquqini oladi. Tarkibidagi
+uchinchi tomon ochiq kodli komponentlari o'z litsenziyalari ostida qoladi.
+Kafolat yo'q; javobgarlik qonun ruxsat etgan darajada cheklanadi.
+Nomuvofiqlik bo'lsa inglizcha matn ustun.
