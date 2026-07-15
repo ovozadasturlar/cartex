@@ -1143,7 +1143,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!CanSeeQueue) return;
         try
         {
-            var carts = await _orderingApi.GetAllAsync("Open");
+            var carts = await _orderingApi.GetAllAsync("Open", kind: "Queue");
             QueueCarts.Clear();
             foreach (var cart in carts) QueueCarts.Add(new QueueRow(cart));
             QueueCount = QueueCarts.Count;
@@ -1185,7 +1185,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
             {
                 if (IsQueuePanelOpen) return;
-                try { QueueCount = (await _orderingApi.GetAllAsync("Open")).Count; }
+                try { QueueCount = (await _orderingApi.GetAllAsync("Open", kind: "Queue")).Count; }
                 catch { }
             }), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
     }

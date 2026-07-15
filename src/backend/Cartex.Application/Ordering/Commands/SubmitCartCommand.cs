@@ -1,5 +1,6 @@
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Cartex.Application.Common.Messaging;
@@ -9,9 +10,9 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
-public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null, string? Note = null) : ICommand<string>;
+public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null, string? Note = null, CartKind? Kind = null) : ICommand<string>;
 
-public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IRequestHandler<SubmitCartCommand, string>
+public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<SubmitCartCommand, string>
 {
     public async Task<string> Handle(SubmitCartCommand request, CancellationToken cancellationToken)
     {
@@ -36,7 +37,8 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IReques
             CustomerId = request.CustomerId,
             AggregateCode = Guid.NewGuid().ToString("N"),
             IdempotencyKey = idempotencyKey,
-            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim()
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            Kind = request.Kind ?? await ResolveKindAsync(cancellationToken)
         };
 
         foreach (var item in request.Items)
@@ -46,6 +48,16 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db) : IReques
         await db.SaveChangesAsync(cancellationToken);
 
         return cart.AggregateCode;
+    }
+
+    private async Task<CartKind> ResolveKindAsync(CancellationToken cancellationToken)
+    {
+        var destination = await db.Users
+            .Where(u => u.Id == currentUser.UserId)
+            .Select(u => u.CartDestination
+                ?? u.UserRoles.OrderByDescending(ur => ur.Role.Priority).Select(ur => ur.Role.CartDestination).FirstOrDefault())
+            .FirstOrDefaultAsync(cancellationToken);
+        return string.Equals(destination, "order", StringComparison.OrdinalIgnoreCase) ? CartKind.Order : CartKind.Queue;
     }
 }
 

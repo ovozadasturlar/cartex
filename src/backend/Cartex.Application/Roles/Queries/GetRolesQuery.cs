@@ -10,7 +10,7 @@ namespace Cartex.Application.Roles.Queries;
 
 public record GetRolesQuery : FilteringRequest, IRequest<IReadOnlyCollection<RoleDto>>;
 
-public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles);
+public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles, string? CartDestination);
 
 public sealed class GetRolesQueryHandler(
     IApplicationDbContext db,
@@ -44,7 +44,8 @@ public sealed class GetRolesQueryHandler(
                         .Select(rp => rp.Permission.Name)
                         .ToList(),
                     r.GrantablePermissions,
-                    r.AssignableRoles),
+                    r.AssignableRoles,
+                    r.CartDestination),
                 writer, cancellationToken);
     }
 }

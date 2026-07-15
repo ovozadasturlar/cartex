@@ -32,6 +32,20 @@ public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICu
         if (!Allowed.TryGetValue(cart.Status, out var next) || !next.Contains(request.Status))
             throw new BusinessRuleException("Bu holatga o'tish mumkin emas.");
 
+        if (request.Status == CartStatus.Confirmed)
+        {
+            var now = DateTime.UtcNow;
+            var claimed = await db.Carts
+                .Where(c => c.Id == cart.Id && c.Status == CartStatus.Open)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.Status, CartStatus.Confirmed)
+                    .SetProperty(c => c.UpdatedAt, now)
+                    .SetProperty(c => c.UpdatedBy, currentUser.UserId), cancellationToken);
+            if (claimed == 0)
+                throw new BusinessRuleException("Savat allaqachon olingan.");
+            return Unit.Value;
+        }
+
         cart.Status = request.Status;
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

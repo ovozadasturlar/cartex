@@ -9,7 +9,7 @@ namespace Cartex.Application.Ordering.Queries;
 
 public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName, string WarehouseName, int ItemCount, DateTime CreatedAt, string? CreatedByName, string? Note, decimal EstimatedTotal);
 
-public record GetCartsQuery(string? Status = null, long? WarehouseId = null) : IRequest<IReadOnlyCollection<CartListDto>>;
+public record GetCartsQuery(string? Status = null, long? WarehouseId = null, string? Kind = null) : IRequest<IReadOnlyCollection<CartListDto>>;
 
 public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCartsQuery, IReadOnlyCollection<CartListDto>>
 {
@@ -18,6 +18,8 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
         var query = db.Carts.AsQueryable();
         if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<CartStatus>(request.Status, true, out var status))
             query = query.Where(c => c.Status == status);
+        if (!string.IsNullOrEmpty(request.Kind) && Enum.TryParse<CartKind>(request.Kind, true, out var kind))
+            query = query.Where(c => c.Kind == kind);
         if (request.WarehouseId is not null)
             query = query.Where(c => c.WarehouseId == request.WarehouseId);
         if (!currentUser.HasPermission(AppPermissions.Sales.View) && !currentUser.HasPermission(AppPermissions.Sales.ViewAll))

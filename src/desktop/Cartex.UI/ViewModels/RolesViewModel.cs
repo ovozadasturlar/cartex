@@ -27,6 +27,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<RoleDto> Roles { get; } = [];
     public ObservableCollection<StartPageOption> StartPages { get; } = [];
+    public ObservableCollection<StartPageOption> CartDestinations { get; } = [];
     public ObservableCollection<PermissionGroup> PermissionGroups { get; } = [];
     public ObservableCollection<PermissionGroup> GrantablePermissionGroups { get; } = [];
     public ObservableCollection<PermissionItem> AssignableRoleItems { get; } = [];
@@ -63,6 +64,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editDescription = "";
     [ObservableProperty] private int _editPriority;
     [ObservableProperty] private StartPageOption? _selectedStartPage;
+    [ObservableProperty] private StartPageOption? _selectedCartDestination;
     [ObservableProperty] private string? _searchText;
 
     public bool IsEmpty => Roles.Count == 0;
@@ -90,6 +92,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
                 _all = (await _rolesApi.GetAllAsync()).ToList();
                 ApplyFilter();
                 BuildStartPages();
+                BuildCartDestinations();
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -129,6 +132,14 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         StartPages.Add(new StartPageOption(null, L["none"]));
         foreach (var p in NavRegistry.SidebarPages)
             StartPages.Add(new StartPageOption(p.Key, L[p.Key]));
+    }
+
+    private void BuildCartDestinations()
+    {
+        CartDestinations.Clear();
+        CartDestinations.Add(new StartPageOption(null, "—"));
+        CartDestinations.Add(new StartPageOption("queue", L["dest_queue"]));
+        CartDestinations.Add(new StartPageOption("order", L["dest_order"]));
     }
 
     private void BuildPermissionGroups(ObservableCollection<PermissionGroup> target, IReadOnlyCollection<string> selected, bool cascade)
@@ -196,6 +207,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         EditDescription = "";
         EditPriority = 0;
         SelectedStartPage = StartPages.FirstOrDefault();
+        SelectedCartDestination = CartDestinations.FirstOrDefault();
         BuildPermissionGroups(PermissionGroups, [], true);
         BuildPermissionGroups(GrantablePermissionGroups, [], false);
         BuildAssignableRoles([]);
@@ -213,6 +225,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         EditDescription = role.Description ?? "";
         EditPriority = role.Priority;
         SelectedStartPage = StartPages.FirstOrDefault(s => s.Key == role.StartPage) ?? StartPages.FirstOrDefault();
+        SelectedCartDestination = CartDestinations.FirstOrDefault(s => s.Key == role.CartDestination) ?? CartDestinations.FirstOrDefault();
         BuildPermissionGroups(PermissionGroups, role.Permissions, true);
         NormalizeDependencies();
         BuildPermissionGroups(GrantablePermissionGroups, role.GrantablePermissions, false);
@@ -232,6 +245,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
 
         var permissionIds = PermissionGroups.SelectMany(g => g.Items).Where(i => i.IsSelected).Select(i => i.Id).ToList();
         var startPage = SelectedStartPage?.Key;
+        var cartDestination = SelectedCartDestination?.Key;
         var description = string.IsNullOrWhiteSpace(EditDescription) ? null : EditDescription.Trim();
         var grantable = ShowGrantableTab
             ? GrantablePermissionGroups.SelectMany(g => g.Items).Where(i => i.IsSelected).Select(i => i.Name).ToList()
@@ -246,11 +260,11 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
             {
                 long id;
                 if (IsNew)
-                    id = await _rolesApi.CreateAsync(new CreateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles));
+                    id = await _rolesApi.CreateAsync(new CreateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles, CartDestination: cartDestination));
                 else
                 {
                     id = _editId;
-                    await _rolesApi.UpdateAsync(id, new UpdateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles));
+                    await _rolesApi.UpdateAsync(id, new UpdateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles, CartDestination: cartDestination));
                 }
                 await _rolesApi.AssignPermissionsAsync(id, new AssignPermissionsRequest(permissionIds));
             }

@@ -9,7 +9,7 @@ namespace Cartex.Application.Users.Commands;
 
 public record CreateUserCommand(
     string FullName, string Username, string Password, List<long> RoleIds,
-    long? DefaultBranchId, List<long> BranchIds, string? StartPage) : ICommand<long>;
+    long? DefaultBranchId, List<long> BranchIds, string? StartPage, string? CartDestination = null) : ICommand<long>;
 
 public sealed class CreateUserCommandHandler(
     IApplicationDbContext db,
@@ -28,6 +28,7 @@ public sealed class CreateUserCommandHandler(
             PasswordHash = passwordHasher.Hash(request.Password),
             DefaultBranchId = request.DefaultBranchId,
             StartPage = request.StartPage,
+            CartDestination = request.CartDestination,
             UserRoles = [.. request.RoleIds.Distinct().Select(id => new UserRole { RoleId = id })],
             UserBranches = [.. request.BranchIds.Distinct().Select(id => new UserBranch { BranchId = id })]
         };
@@ -50,5 +51,6 @@ public sealed class CreateUserCommandValidator : AbstractValidator<CreateUserCom
         RuleFor(x => x.Username).NotEmpty().MinimumLength(3).MaximumLength(50);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
         RuleFor(x => x.RoleIds).NotEmpty();
+        RuleFor(x => x.CartDestination).Must(v => v is null or "queue" or "order");
     }
 }

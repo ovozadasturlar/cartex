@@ -22,7 +22,7 @@ public partial class OrdersViewModel(IOrderingApi api, PosHandoffService handoff
         {
             using (busy.Begin(L["loading"]))
             {
-                var carts = await api.GetAllAsync(StatusFilter);
+                var carts = await api.GetAllAsync(StatusFilter, kind: "Order");
                 Carts.Clear();
                 foreach (var cart in carts) Carts.Add(cart);
                 OnPropertyChanged(nameof(IsEmpty));

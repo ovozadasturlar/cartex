@@ -115,6 +115,17 @@
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[cart_destination]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox ItemsSource="{Binding CartDestinations}" SelectedItem="{Binding SelectedCartDestination}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[priority]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                 <NumericUpDown Value="{Binding EditPriority, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="1000" Increment="10"
                                                FormatString="0" HorizontalAlignment="Stretch" />

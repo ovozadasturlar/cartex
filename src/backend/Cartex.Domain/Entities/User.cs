@@ -12,6 +12,7 @@ public class User : SoftDeleteEntity
     public Branch? DefaultBranch { get; set; }
 
     public string? StartPage { get; set; }
+    public string? CartDestination { get; set; }
 
     public bool IsActive { get; set; } = true;
 

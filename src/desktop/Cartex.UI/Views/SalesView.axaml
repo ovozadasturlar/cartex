@@ -321,7 +321,7 @@
                             Command="{Binding ToggleQueuePanelCommand}" ToolTip.Tip="{Binding L[queue]}"
                             IsVisible="{Binding CanSeeQueue}">
                         <Panel>
-                            <mi:MaterialIcon Kind="BellOutline" Width="18" Height="18" />
+                            <mi:MaterialIcon Kind="Menu" Width="18" Height="18" />
                             <Border Background="{DynamicResource DangerBrush}" CornerRadius="8" Height="16" MinWidth="16"
                                     Padding="4,0" HorizontalAlignment="Right" VerticalAlignment="Top"
                                     Margin="0,-8,-10,0" IsVisible="{Binding QueueCount}">

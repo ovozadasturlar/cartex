@@ -127,6 +127,15 @@
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
                             </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[cart_destination]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox ItemsSource="{Binding CartDestinations}" SelectedItem="{Binding SelectedCartDestination}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding !IsNew}">
                                 <ToggleSwitch IsChecked="{Binding EditIsActive}" />
                                 <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center"

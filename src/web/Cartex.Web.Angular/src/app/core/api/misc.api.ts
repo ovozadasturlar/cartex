@@ -136,8 +136,10 @@ export interface CustomerOption {
 export class OrderingApi {
   private readonly http = inject(HttpClient);
 
-  list(status?: string): Observable<CartListItem[]> {
-    return this.http.get<CartListItem[]>('/api/ordering/carts', { params: status ? { status } : {} });
+  list(status?: string, kind?: string): Observable<CartListItem[]> {
+    return this.http.get<CartListItem[]>('/api/ordering/carts', {
+      params: { ...(status ? { status } : {}), ...(kind ? { kind } : {}) },
+    });
   }
 
   byCode(code: string): Observable<Cart> {

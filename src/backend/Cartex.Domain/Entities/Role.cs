@@ -7,6 +7,7 @@ public class Role : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string? StartPage { get; set; }
+    public string? CartDestination { get; set; }
     public int Priority { get; set; }
     public int Level { get; set; }
     public bool IsSystem { get; set; }

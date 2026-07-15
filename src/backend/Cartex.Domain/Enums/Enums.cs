@@ -123,6 +123,12 @@ public enum SmsStatus
     Undelivered
 }
 
+public enum CartKind
+{
+    Queue,
+    Order
+}
+
 public enum CartStatus
 {
     Open,

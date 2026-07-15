@@ -97,7 +97,7 @@ export class Orders implements OnInit {
   private async load(): Promise<void> {
     this.busy.set(true);
     try {
-      this.carts.set(await lastValueFrom(this.api.list(this.status() || undefined)));
+      this.carts.set(await lastValueFrom(this.api.list(this.status() || undefined, 'Order')));
     } catch (e) {
       this.notify.error(e);
     } finally {

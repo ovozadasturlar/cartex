@@ -6,7 +6,7 @@ using Cartex.Application.Common.Security;
 
 namespace Cartex.Application.Roles.Commands;
 
-public record UpdateRoleCommand(long Id, string Name, string? Description, string? StartPage, int Priority, List<string>? GrantablePermissions = null, List<string>? AssignableRoles = null) : ICommand<Unit>;
+public record UpdateRoleCommand(long Id, string Name, string? Description, string? StartPage, int Priority, List<string>? GrantablePermissions = null, List<string>? AssignableRoles = null, string? CartDestination = null) : ICommand<Unit>;
 
 public sealed class UpdateRoleCommandHandler(IApplicationDbContext db, IAccessControlService accessControl) : IRequestHandler<UpdateRoleCommand, Unit>
 {
@@ -19,6 +19,7 @@ public sealed class UpdateRoleCommandHandler(IApplicationDbContext db, IAccessCo
 
         role.Description = request.Description;
         role.StartPage = request.StartPage;
+        role.CartDestination = request.CartDestination;
         role.Priority = request.Priority;
 
         if (request.AssignableRoles is not null)
@@ -48,5 +49,6 @@ public sealed class UpdateRoleCommandValidator : AbstractValidator<UpdateRoleCom
     public UpdateRoleCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(30);
+        RuleFor(x => x.CartDestination).Must(v => v is null or "queue" or "order");
     }
 }
