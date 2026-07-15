@@ -18,6 +18,7 @@ import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
 import { ProductDialog } from './product-dialog';
+import { ProductImportDialog } from './product-import-dialog';
 
 @Component({
   selector: 'app-products',
@@ -82,6 +83,15 @@ export class Products implements OnInit, OnDestroy {
 
   openCreate(): void {
     this.openDialog(null);
+  }
+
+  openImport(): void {
+    this.dialog
+      .open(ProductImportDialog, { width: '1000px', maxWidth: '96vw', autoFocus: false })
+      .afterClosed()
+      .subscribe((imported) => {
+        if (imported) this.load();
+      });
   }
 
   openEdit(product: CatalogProduct): void {

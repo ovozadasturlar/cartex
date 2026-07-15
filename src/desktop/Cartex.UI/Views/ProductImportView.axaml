@@ -1,0 +1,211 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
+             x:Class="Cartex.UI.Views.ProductImportView"
+             x:CompileBindings="False">
+
+    <UserControl.Styles>
+        <Style Selector="Border.segwrap">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="3" />
+        </Style>
+        <Style Selector="Button.seg">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.seg.active">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="1000" MaxHeight="700"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                BoxShadow="0 18 50 0 #33000000" Padding="24">
+            <DockPanel>
+
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                    <StackPanel Grid.Column="0" Spacing="3">
+                        <TextBlock Text="{Binding L[import_excel]}" Classes="h2" />
+                        <TextBlock Text="{Binding L[import_hint]}" Classes="caption" TextWrapping="Wrap" MaxWidth="640" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="outline" VerticalAlignment="Top"
+                            Command="{Binding DownloadTemplateCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="Download" Width="16" Height="16" />
+                            <TextBlock Text="{Binding L[import_template]}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" Margin="0,16,0,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center"
+                                IsVisible="{Binding HasPreview}">
+                        <TextBlock Foreground="#16A34A">
+                            <Run Text="{Binding L[import_new]}" /><Run Text=":" /><Run Text="{Binding CreateCount}" />
+                        </TextBlock>
+                        <TextBlock Foreground="#2563EB">
+                            <Run Text="{Binding L[import_existing]}" /><Run Text=":" /><Run Text="{Binding ExistingCount}" />
+                        </TextBlock>
+                        <TextBlock Foreground="#DC2626" IsVisible="{Binding HasErrors}">
+                            <Run Text="{Binding L[import_errors]}" /><Run Text=":" /><Run Text="{Binding ErrorCount}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding CancelCommand}" Content="{Binding L[cancel]}" />
+                    <Button Grid.Column="2" Classes="brand" MinWidth="140" HorizontalContentAlignment="Center"
+                            IsEnabled="{Binding HasPreview}"
+                            Command="{Binding ImportCommand}" Content="{Binding L[import]}" />
+                </Grid>
+
+                <ScrollViewer>
+                    <StackPanel Spacing="14">
+
+                        <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Grid ColumnDefinitions="Auto,14,*">
+                                <Button Grid.Column="0" Classes="outline" Command="{Binding PickFileCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="FileExcel" Width="18" Height="18" />
+                                        <TextBlock Text="{Binding L[import_pick_file]}" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           Text="{Binding FileName}" Foreground="{DynamicResource TextSecondary}" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Spacing="8" IsVisible="{Binding HasPreview}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding L[import_mapping]}" Classes="caption"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="outline" Padding="10,4"
+                                        Command="{Binding RemapCommand}" Content="{Binding L[import_remap]}" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Columns}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="4" Margin="0,0,10,10" Width="168">
+                                            <TextBlock Text="{Binding Header}" Classes="caption"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <ComboBox ItemsSource="{Binding $parent[ItemsControl].DataContext.Fields}"
+                                                      SelectedItem="{Binding Field, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch" PlaceholderText="—" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                IsVisible="{Binding HasPreview}">
+                            <StackPanel Spacing="12">
+                                <Border Classes="segwrap" HorizontalAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="2">
+                                        <Button Classes="seg" Classes.active="{Binding IsCatalog}"
+                                                Command="{Binding SetModeCommand}" CommandParameter="None"
+                                                Content="{Binding L[import_mode_catalog]}" />
+                                        <Button Classes="seg" Classes.active="{Binding IsSupply}"
+                                                Command="{Binding SetModeCommand}" CommandParameter="Supply"
+                                                Content="{Binding L[import_mode_supply]}" />
+                                        <Button Classes="seg" Classes.active="{Binding IsOpening}"
+                                                Command="{Binding SetModeCommand}" CommandParameter="Opening"
+                                                Content="{Binding L[import_mode_opening]}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,12,*" IsVisible="{Binding NeedsWarehouse}">
+                                    <StackPanel Grid.Column="0" Spacing="6">
+                                        <c:FieldLabel Text="{Binding L[warehouse]}" Required="True" />
+                                        <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding SelectedWarehouse}"
+                                                  HorizontalAlignment="Stretch" PlaceholderText="—">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="6" IsVisible="{Binding IsSupply}">
+                                        <c:FieldLabel Text="{Binding L[supplier]}" Required="True" />
+                                        <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}"
+                                                  HorizontalAlignment="Stretch" PlaceholderText="—">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="{Binding L[import_opening_hint]}" Classes="caption" TextWrapping="Wrap"
+                                           IsVisible="{Binding IsOpening}" />
+
+                                <StackPanel Orientation="Horizontal" Spacing="20">
+                                    <CheckBox IsChecked="{Binding UpdatePrices}" Content="{Binding L[import_update_prices]}" />
+                                    <CheckBox IsChecked="{Binding CreateMissingCategories}" Content="{Binding L[import_create_categories]}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False"
+                                  GridLinesVisibility="Horizontal" CanUserSortColumns="False"
+                                  MinHeight="200" MaxHeight="280" IsVisible="{Binding HasPreview}">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="44">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      IsEnabled="{Binding !HasError}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Binding="{Binding Number, Mode=OneWay}" IsReadOnly="True" Width="52"
+                                                    Header="{Binding [row], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" IsReadOnly="True" Width="*"
+                                                    Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Binding="{Binding Barcode, Mode=OneWay}" IsReadOnly="True" Width="140"
+                                                    Header="{Binding [barcode], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Binding="{Binding Quantity, Mode=OneWay}" IsReadOnly="True" Width="80"
+                                                    Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Binding="{Binding PurchasePrice, Mode=OneWay}" IsReadOnly="True" Width="100"
+                                                    Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Binding="{Binding SellingPrice, Mode=OneWay}" IsReadOnly="True" Width="100"
+                                                    Header="{Binding [selling_price], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTemplateColumn Width="2*"
+                                                        Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Message}" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" Margin="8,0"
+                                                       Foreground="{Binding Action, Converter={x:Static conv:ImportStatusBrushConverter.Instance}}"
+                                                       ToolTip.Tip="{Binding Message}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Border>
+</UserControl>

@@ -116,13 +116,22 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
     public bool IsEmpty => Products.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanImport => _auth.HasPermission("products.manage");
+
+    public ProductImportViewModel Import { get; }
 
     public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IPrinterService printer, IFilePickerService filePicker, IToastService toast, IBusyService busy, IExportService export, AuthService auth,
-        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache)
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import)
     {
         _cache = cache;
+        Import = import;
+        Import.Imported += () => _ = LoadAsync();
+        Import.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ProductImportViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen));
+        };
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
@@ -176,13 +185,14 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public IReadOnlyList<PageShortcut> Shortcuts => _pageShortcuts ??=
     [
-        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), WorksInText: true),
+        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), () => !Import.IsOpen, WorksInText: true),
         new(Key.F2, KeyModifiers.None, "shortcut_save", () => SaveCommand.Execute(null), () => IsEditOpen, WorksInText: true),
         new(Key.Escape, KeyModifiers.None, "shortcut_close", HandleEscape, WorksInText: true),
     ];
 
     private void HandleEscape()
     {
+        if (Import.IsOpen) { Import.IsOpen = false; return; }
         if (IsPrintOpen) { IsPrintOpen = false; return; }
         if (IsVariantsOpen) { IsVariantsOpen = false; return; }
         if (IsEditOpen) IsEditOpen = false;
@@ -337,7 +347,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private Bitmap? _printPreview;
     private long _printVariantId;
 
-    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen;
+    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || Import.IsOpen;
     partial void OnIsEditOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(IsModalOpen));

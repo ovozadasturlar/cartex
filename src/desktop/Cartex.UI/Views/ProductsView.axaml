@@ -5,6 +5,7 @@
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:il="using:AsyncImageLoader"
+             xmlns:views="using:Cartex.UI.Views"
              x:Class="Cartex.UI.Views.ProductsView"
              c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
@@ -27,6 +28,12 @@
 
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[products]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Classes="outline" Command="{Binding Import.OpenCommand}" IsVisible="{Binding CanImport}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <mi:MaterialIcon Kind="FileExcel" Width="18" Height="18" />
+                            <TextBlock Text="{Binding L[import_excel]}" />
+                        </StackPanel>
+                    </Button>
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
                     <Button Classes="brand" Command="{Binding OpenCreateCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -532,5 +539,7 @@
                 </StackPanel>
             </Border>
         </Border>
+
+        <views:ProductImportView DataContext="{Binding Import}" />
     </Panel>
 </UserControl>

@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<ISmsProvider, PlayMobileSmsProvider>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProductCatalogProvider, OpenFoodFactsProvider>();
+        services.AddSingleton<ISpreadsheetService, Import.ClosedXmlSpreadsheetService>();
         services.AddScoped<Storage.LocalObjectStorage>();
         services.AddScoped<Storage.MinioObjectStorage>();
         services.AddScoped<IObjectStorage, Storage.RoutedObjectStorage>();

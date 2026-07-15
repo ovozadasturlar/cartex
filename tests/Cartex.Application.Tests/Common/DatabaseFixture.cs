@@ -31,6 +31,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddScoped<IFeatureStateProvider, TestFeatureStates>();
         services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();
         _services = services.BuildServiceProvider();

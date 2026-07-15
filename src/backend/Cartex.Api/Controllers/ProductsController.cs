@@ -2,9 +2,11 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.ProductPacks.Commands;
 using Cartex.Application.ProductPacks.Queries;
 using Cartex.Application.Products.Commands;
+using Cartex.Application.Products.Import;
 using Cartex.Application.Products.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Common.Exceptions;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -94,6 +96,38 @@ public class ProductsController(ISender sender) : ControllerBase
     {
         await sender.Send(command);
         return NoContent();
+    }
+
+    [HttpGet("import/template")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> ImportTemplate()
+    {
+        var content = await sender.Send(new GetImportTemplateQuery());
+        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "cartex-import.xlsx");
+    }
+
+    [HttpPost("import/preview")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<ProductImportPreviewDto>> ImportPreview(IFormFile? file, [FromQuery] string? mapping = null)
+    {
+        if (file is null || file.Length == 0)
+            throw new BusinessRuleException("Fayl tanlanmagan.");
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException("Faqat .xlsx fayl qabul qilinadi.");
+
+        await using var content = file.OpenReadStream();
+        var result = await sender.Send(new PreviewProductImportQuery(content, mapping));
+        return Ok(result);
+    }
+
+    [HttpPost("import")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<ImportResultDto>> Import(ImportProductsCommand command)
+    {
+        var result = await sender.Send(command);
+        return Ok(result);
     }
 
     [HttpGet("{productId:long}/variants")]

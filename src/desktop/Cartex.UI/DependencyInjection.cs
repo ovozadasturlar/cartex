@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddSingleton<SettingsHubViewModel>();
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<ProductsViewModel>();
+        services.AddTransient<ProductImportViewModel>();
         services.AddTransient<QuickProductViewModel>();
         services.AddTransient<PrepackViewModel>();
         services.AddSingleton<SalesViewModel>();
