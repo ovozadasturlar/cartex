@@ -44,22 +44,34 @@ public sealed class GetSalesReportQueryHandler(IApplicationDbContext db) : IRequ
             itemsQuery = itemsQuery.Where(i => i.Sale.WarehouseId == wid);
         var items = await itemsQuery
             .Select(i => new { i.SaleId, ProductId = i.Variant.ProductId, ProductName = i.Variant.Product.Name, i.Quantity, i.ReturnedQuantity, i.UnitPrice, i.PurchasePrice })
+            .GroupBy(x => new { x.SaleId, x.ProductId, x.ProductName })
+            .Select(g => new
+            {
+                g.Key.SaleId,
+                g.Key.ProductId,
+                g.Key.ProductName,
+                Quantity = g.Sum(x => x.Quantity - x.ReturnedQuantity),
+                Gross = g.Sum(x => x.Quantity * x.UnitPrice),
+                NetGross = g.Sum(x => (x.Quantity - x.ReturnedQuantity) * x.UnitPrice),
+                NetCost = g.Sum(x => (x.Quantity - x.ReturnedQuantity) * x.PurchasePrice)
+            })
             .ToListAsync(cancellationToken);
 
-        var grossBySale = items.GroupBy(i => i.SaleId).ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity * x.UnitPrice));
+        var grossBySale = items.GroupBy(i => i.SaleId).ToDictionary(g => g.Key, g => g.Sum(x => x.Gross));
         var rateBySale = sales.ToDictionary(s => s.Id, s => SalesReportMath.DiscountRate(grossBySale.GetValueOrDefault(s.Id), s.DiscountAmount));
 
         var lines = items.Select(i =>
         {
             var rate = rateBySale[i.SaleId];
+            var revenue = i.NetGross * (1 - rate);
             return new
             {
                 i.SaleId,
                 i.ProductId,
                 i.ProductName,
-                Quantity = i.Quantity - i.ReturnedQuantity,
-                Revenue = SalesReportMath.NetRevenue(i.Quantity, i.ReturnedQuantity, i.UnitPrice, rate),
-                Profit = SalesReportMath.Profit(i.Quantity, i.ReturnedQuantity, i.UnitPrice, i.PurchasePrice, rate)
+                i.Quantity,
+                Revenue = revenue,
+                Profit = revenue - i.NetCost
             };
         }).ToList();
 

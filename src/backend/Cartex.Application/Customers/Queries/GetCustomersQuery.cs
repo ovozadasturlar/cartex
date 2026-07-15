@@ -1,10 +1,11 @@
 using Cartex.Application.Common.Extensions;
+using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,40 +21,43 @@ public record CustomerDto(long Id, string FullName, string? LastName, string? Ad
 public sealed class GetCustomersQueryHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    ICurrencyService currency,
     IPagingMetadataWriter writer) : IRequestHandler<GetCustomersQuery, IReadOnlyCollection<CustomerDto>>
 {
     public async Task<IReadOnlyCollection<CustomerDto>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
-        var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        var customers = db.Customers.AsQueryable();
+        var baseCode = await currency.BaseAsync(cancellationToken);
+        var customers = db.Customers.AsSingleQuery();
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
             customers = customers.Where(c => c.AgentId == currentUser.UserId);
 
         var items = await customers
             .ToPagedListAsync(request,
-                c => new CustomerDto(
-                    c.Id,
-                    c.FullName,
-                    c.LastName,
-                    c.Address,
-                    c.Phone,
-                    c.Email,
-                    c.CardBarcode,
-                    c.DiscountPct,
-                    0m,
-                    0m,
-                    c.CreditLimit,
-                    c.NotificationsOptOut,
-                    c.TelegramChatId != null,
-                    c.PreferredLanguage),
+                c => new
+                {
+                    Dto = new CustomerDto(
+                        c.Id,
+                        c.FullName,
+                        c.LastName,
+                        c.Address,
+                        c.Phone,
+                        c.Email,
+                        c.CardBarcode,
+                        c.DiscountPct,
+                        db.Accounts
+                            .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Bonus && a.Balance != 0)
+                            .Sum(a => a.Balance),
+                        0m,
+                        c.CreditLimit,
+                        c.NotificationsOptOut,
+                        c.TelegramChatId != null,
+                        c.PreferredLanguage),
+                    Debts = db.Accounts
+                        .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Debt && a.Balance != 0)
+                        .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))
+                        .ToList()
+                },
                 writer, cancellationToken);
-
-        var ids = items.Select(i => i.Id).ToList();
-        var balances = await db.Accounts
-            .Where(a => a.CustomerId != null && ids.Contains(a.CustomerId.Value)
-                && (a.Type == AccountType.Debt || a.Type == AccountType.Bonus) && a.Balance != 0)
-            .Select(a => new { a.CustomerId, a.Type, a.Currency, a.Balance })
-            .ToListAsync(cancellationToken);
 
         var rates = (await db.ExchangeRates
             .GroupBy(r => r.Code)
@@ -61,17 +65,10 @@ public sealed class GetCustomersQueryHandler(
             .ToListAsync(cancellationToken))
             .ToDictionary(r => r.Code, r => r.Rate);
 
-        return items.Select(i =>
+        return items.Select(x => x.Dto with
         {
-            var mine = balances.Where(b => b.CustomerId == i.Id).ToList();
-            return i with
-            {
-                CashbackBalance = mine.Where(b => b.Type == AccountType.Bonus).Sum(b => b.Balance),
-                DebtBalance = mine.Where(b => b.Type == AccountType.Debt)
-                    .Sum(b => b.Balance * (b.Currency == baseCode ? 1m : rates.GetValueOrDefault(b.Currency))),
-                DebtBalances = mine.Where(b => b.Type == AccountType.Debt)
-                    .Select(b => new CurrencyAmountDto(b.Currency, b.Balance)).ToList()
-            };
+            DebtBalance = x.Debts.Sum(d => d.Amount * (d.Currency == baseCode ? 1m : rates.GetValueOrDefault(d.Currency))),
+            DebtBalances = x.Debts
         }).ToList();
     }
 }

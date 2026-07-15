@@ -61,31 +61,55 @@ public sealed class GetProductsQueryHandler(
             request.Search = null;
         }
 
-        var list = await query
+        var rows = await query
             .ToPagedListAsync(request,
-                p => new ProductDto(
+                p => new
+                {
                     p.Id,
-                    p.Variants.Where(v => v.IsDefault).Select(v => v.Id).FirstOrDefault(),
+                    Variant = p.Variants.Where(v => v.IsDefault).Select(v => new { v.Id, v.Code }).FirstOrDefault(),
                     p.Name,
-                    p.Category != null ? p.Category.Name : null,
-                    p.Unit.Name,
+                    CategoryName = p.Category != null ? p.Category.Name : null,
+                    UnitName = p.Unit.Name,
                     p.MinStock,
-                    p.Variants.SelectMany(v => v.Barcodes).Select(b => b.Code).ToList(),
+                    Barcodes = p.Variants.SelectMany(v => v.Barcodes).Select(b => b.Code).ToList(),
                     p.ProductTypeId,
-                    p.ProductType != null ? p.ProductType.Name : null,
-                    p.TracksExpiryOverride ?? (p.ProductType != null && p.ProductType.TracksExpiry),
+                    ProductTypeName = p.ProductType != null ? p.ProductType.Name : null,
+                    TracksExpiry = p.TracksExpiryOverride ?? (p.ProductType != null && p.ProductType.TracksExpiry),
                     p.Attributes,
                     p.ImageKey,
-                    p.Variants.Where(v => v.IsDefault).Select(v => v.Code).FirstOrDefault(),
                     p.IkpuCode,
                     p.VatRate,
-                    p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => (decimal?)pr.SellingPrice).FirstOrDefault(),
-                    p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
-                    null,
-                    p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => pr.Currency).FirstOrDefault(),
-                    p.Unit.Dimension.ToString(),
-                    p.ManufacturerId),
+                    Price = p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => new { pr.SellingPrice, pr.Currency }).FirstOrDefault(),
+                    OnHand = p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
+                    Dimension = p.Unit.Dimension.ToString(),
+                    p.ManufacturerId
+                },
                 writer, cancellationToken);
+
+        var list = rows
+            .Select(r => new ProductDto(
+                r.Id,
+                r.Variant != null ? r.Variant.Id : 0,
+                r.Name,
+                r.CategoryName,
+                r.UnitName,
+                r.MinStock,
+                r.Barcodes,
+                r.ProductTypeId,
+                r.ProductTypeName,
+                r.TracksExpiry,
+                r.Attributes,
+                r.ImageKey,
+                r.Variant?.Code,
+                r.IkpuCode,
+                r.VatRate,
+                r.Price?.SellingPrice,
+                r.OnHand,
+                null,
+                r.Price?.Currency,
+                r.Dimension,
+                r.ManufacturerId))
+            .ToList();
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();
         if (keys.Count == 0)

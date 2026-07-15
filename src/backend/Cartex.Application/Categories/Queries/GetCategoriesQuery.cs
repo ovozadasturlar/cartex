@@ -17,6 +17,11 @@ public sealed class GetCategoriesQueryHandler(
 {
     public async Task<IReadOnlyCollection<CategoryDto>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         return await db.Categories
             .Include(c => c.Parent)
             .ToPagedListAsync(request,

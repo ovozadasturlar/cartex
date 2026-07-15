@@ -18,6 +18,11 @@ public sealed class GetAccountsQueryHandler(
 {
     public async Task<IReadOnlyCollection<AccountDto>> Handle(GetAccountsQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         var query = db.Accounts.AsQueryable();
         if (!currentUser.CanAccessAllBranches)
             query = query.Where(a => a.BranchId == null || currentUser.BranchIds.Contains(a.BranchId.Value));

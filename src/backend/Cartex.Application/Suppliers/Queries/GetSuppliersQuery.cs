@@ -18,6 +18,11 @@ public sealed class GetSuppliersQueryHandler(
 {
     public async Task<IReadOnlyCollection<SupplierDto>> Handle(GetSuppliersQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         return await db.Suppliers
             .ToPagedListAsync(request,

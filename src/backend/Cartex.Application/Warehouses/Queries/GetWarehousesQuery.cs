@@ -17,6 +17,11 @@ public sealed class GetWarehousesQueryHandler(
 {
     public async Task<IReadOnlyCollection<WarehouseDto>> Handle(GetWarehousesQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         return await db.Warehouses
             .Include(w => w.Branch)
             .ToPagedListAsync(request,

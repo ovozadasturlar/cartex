@@ -16,6 +16,11 @@ public sealed class GetUnitsQueryHandler(
 {
     public async Task<IReadOnlyCollection<UnitDto>> Handle(GetUnitsQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         return await db.Units
             .ToPagedListAsync(request,
                 u => new UnitDto(u.Id, u.Name, u.ShortName, u.Dimension.ToString(), u.Factor, u.IsSystem, u.IsEnabled, u.IsDefault),

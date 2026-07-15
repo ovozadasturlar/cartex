@@ -23,6 +23,11 @@ public sealed class GetUsersQueryHandler(
 {
     public async Task<IReadOnlyCollection<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         var ctx = await accessControl.GetContextAsync(cancellationToken);
 
         var query = db.Users

@@ -5,7 +5,6 @@ using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -45,10 +44,7 @@ public sealed class GetSalesQueryHandler(
 {
     public async Task<IReadOnlyCollection<SaleDto>> Handle(GetSalesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Sales
-            .Include(s => s.Customer)
-            .Include(s => s.User)
-            .AsQueryable();
+        var query = db.Sales.AsQueryable();
 
         if (!currentUser.HasPermission(AppPermissions.Sales.ViewAll))
             query = query.Where(s => s.UserId == currentUser.UserId);

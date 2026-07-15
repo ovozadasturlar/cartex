@@ -23,9 +23,14 @@ public sealed class GetShiftsQueryHandler(
         if (branchId is null)
             return [];
 
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = nameof(Domain.Entities.Shift.OpenedAt);
+            request.Descending = true;
+        }
+
         return await db.Shifts
             .Where(s => s.BranchId == branchId)
-            .OrderByDescending(s => s.OpenedAt)
             .ToPagedListAsync(request,
                 s => new ShiftHistoryDto(s.Id, s.User.FullName, s.OpenedAt, s.ClosedAt, s.OpeningFloat, s.CountedCash, s.Status.ToString()),
                 writer, cancellationToken);
