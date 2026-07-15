@@ -5,6 +5,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.SuppliersView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <Panel>
@@ -77,9 +78,12 @@
         </DockPanel>
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[suppliers]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
@@ -100,9 +104,12 @@
         </Border>
 
         <Border IsVisible="{Binding IsRepayOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding RepayCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelRepayCommand}">
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[repay_debt]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />

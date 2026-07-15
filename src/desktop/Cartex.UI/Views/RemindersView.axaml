@@ -9,8 +9,10 @@
         <StackPanel Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="16">
             <c:PageHeader Title="{Binding L[debt_reminders]}" />
 
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
                 <StackPanel Spacing="14">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding L[reminder_enabled]}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />

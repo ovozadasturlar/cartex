@@ -5,6 +5,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.RolesView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <UserControl.Resources>
@@ -79,9 +80,12 @@
         </DockPanel>
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="940" MaxHeight="640"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="940" MaxHeight="640"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
+                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
                 <DockPanel Margin="24">
                     <TextBlock DockPanel.Dock="Top" Text="{Binding EditTitle}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,16" />

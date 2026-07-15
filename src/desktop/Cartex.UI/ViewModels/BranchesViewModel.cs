@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Branches;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -24,6 +25,11 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _editIsActive = true;
 
     public bool IsEmpty => Branches.Count == 0;
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+        CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
     public BranchesViewModel(IBranchesApi api, IToastService toast, IBusyService busy)
     {

@@ -31,6 +31,11 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     public bool IsEmpty => ProductTypes.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
 
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+        CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
     public ProductTypesViewModel(IProductTypesApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {
         _api = api;

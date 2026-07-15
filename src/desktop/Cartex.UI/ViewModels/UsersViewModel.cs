@@ -51,6 +51,9 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     public string EditTitle => IsNew ? L["create_user"] : L["edit_user"];
     public string PasswordLabel => IsNew ? L["password"] : L["new_password"];
 
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
     public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {
         _usersApi = usersApi;

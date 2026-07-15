@@ -31,7 +31,25 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _fromWarehouse;
     [ObservableProperty] private IdOption? _toWarehouse;
     [ObservableProperty] private IdOption? _product;
+    [ObservableProperty] private string _productText = "";
     [ObservableProperty] private decimal _quantity = 1;
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
+    partial void OnProductChanged(IdOption? value)
+    {
+        if (value is not null && ProductText != value.Name) ProductText = value.Name;
+    }
+
+    [RelayCommand]
+    private void CommitProduct()
+    {
+        var name = ProductText.Trim();
+        if (name.Length == 0) return;
+        if (ProductOptions.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match)
+            Product = match;
+    }
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;

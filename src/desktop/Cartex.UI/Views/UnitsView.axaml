@@ -5,6 +5,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.UnitsView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <Panel>
@@ -97,7 +98,11 @@
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Classes="form"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[units]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />

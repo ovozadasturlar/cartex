@@ -5,6 +5,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Suppliers;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
 
@@ -39,6 +40,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Suppliers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
     public SuppliersViewModel(ISuppliersApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth, ReferenceCache cache)
     {

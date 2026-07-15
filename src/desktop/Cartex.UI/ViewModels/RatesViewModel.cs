@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Rates;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -40,6 +41,11 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     public bool CanManageCurrencies => auth.HasPermission("currencies.manage");
     public bool CanManageRates => auth.HasPermission("rates.manage");
     public bool HasStale => StaleCount > 0;
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanManageCurrencies
+        ? CrudShortcuts(OpenAddCommand, AddCommand, () => IsAddOpen = false, () => IsAddOpen)
+        : [];
 
     partial void OnStaleCountChanged(int value) => OnPropertyChanged(nameof(HasStale));
 

@@ -71,6 +71,9 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     public bool CanExport => _auth.HasPermission("reports.export");
     public string EditTitle => IsNew ? L["create_role"] : L["edit_role"];
 
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
     public RolesViewModel(IRolesApi rolesApi, IPermissionsApi permissionsApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export)
     {
         _rolesApi = rolesApi;
