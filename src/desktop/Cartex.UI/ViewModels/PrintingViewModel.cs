@@ -90,8 +90,6 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     {
         var s = _printer.GetSettings();
 
-        // Ro'yxat avval to'ldiriladi: ItemsSource keyin o'zgarsa, ComboBox ro'yxatda topolmagan tanlovni
-        // tozalab, sozlamadagi printer nomini null qilib yuboradi.
         var printers = await Task.Run(_printer.GetInstalledPrinters);
         Printers.Clear();
         foreach (var p in printers) Printers.Add(p);
@@ -189,15 +187,23 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private void TestLabelPrint()
     {
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
-        _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
-        _toast.Info(L["success"]);
+        try
+        {
+            _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void CalibrateLabel()
     {
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
-        _toast.Info(L["label_calibrate_started"]);
+        try
+        {
+            _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
+            _toast.Info(L["label_calibrate_started"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 }

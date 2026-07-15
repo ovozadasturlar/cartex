@@ -67,11 +67,11 @@
               <input matInput type="number" min="0" [(ngModel)]="quantity" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('purchase_price') }}</mat-label>
+              <mat-label>{{ t('purchase_price') }}{{ entryUnitName() ? ' / ' + entryUnitName() : '' }}</mat-label>
               <input matInput type="number" min="0" [(ngModel)]="price" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('selling_price') }}</mat-label>
+              <mat-label>{{ t('selling_price') }}{{ stockingUnitName() ? ' / ' + stockingUnitName() : '' }}</mat-label>
               <input matInput type="number" min="0" [(ngModel)]="sellingPrice" />
               @if (margin() !== null) {
                 <span matTextSuffix class="margin" [class.neg]="margin()! < 0">{{ margin() }}%</span>

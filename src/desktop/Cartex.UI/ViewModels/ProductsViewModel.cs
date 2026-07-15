@@ -250,15 +250,22 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Qadoqlar: kirimda "Qop 50 kg", rastada "1 kg paket". Hajm mahsulotning saqlash birligida.
     public ObservableCollection<ProductPackDto> EditPacks { get; } = [];
-    public ObservableCollection<string> PackKinds { get; } = ["Purchase", "Sale", "Both"];
+    public ObservableCollection<PackKindOption> PackKinds { get; } = [];
 
     [ObservableProperty] private string _packName = string.Empty;
     [ObservableProperty] private decimal _packSize = 1;
-    [ObservableProperty] private string _packKind = "Purchase";
+    [ObservableProperty] private PackKindOption? _selectedPackKind;
     [ObservableProperty] private bool _packIsDefault;
     private long? _editingPackId;
+
+    private void BuildPackKinds()
+    {
+        PackKinds.Clear();
+        PackKinds.Add(new PackKindOption("Purchase", L["pack_purchase"]));
+        PackKinds.Add(new PackKindOption("Sale", L["pack_sale"]));
+        PackKinds.Add(new PackKindOption("Both", L["pack_both"]));
+    }
 
     public string PackSizeHint => EditUnit is { } unit ? $"{L["pack_size"]} ({unit.ShortName})" : L["pack_size"];
 
@@ -281,7 +288,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
         try
         {
-            var request = new SaveProductPackRequest(name, PackSize, PackKind, PackIsDefault);
+            var request = new SaveProductPackRequest(name, PackSize, SelectedPackKind?.Key ?? "Purchase", PackIsDefault);
             if (_editingPackId is { } id)
                 await _productsApi.UpdatePackAsync(id, request);
             else
@@ -300,7 +307,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editingPackId = pack.Id;
         PackName = pack.Name;
         PackSize = pack.Size;
-        PackKind = pack.Kind;
+        SelectedPackKind = PackKinds.FirstOrDefault(k => k.Key == pack.Kind);
         PackIsDefault = pack.IsDefault;
     }
 
@@ -317,26 +324,12 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Sotuv qadog'iga barkod: skanerlanganda savatga shu hajmdagi miqdor tushadi.
-    [RelayCommand]
-    private async Task GeneratePackBarcodeAsync(ProductPackDto pack)
-    {
-        if (_editDefaultVariantId == 0) return;
-        try
-        {
-            await _barcodesApi.GenerateAsync(_editDefaultVariantId, pack.Size);
-            await LoadEditBarcodesAsync();
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
     private void ResetPackForm()
     {
         _editingPackId = null;
         PackName = string.Empty;
         PackSize = 1;
-        PackKind = "Purchase";
+        SelectedPackKind = PackKinds.FirstOrDefault();
         PackIsDefault = false;
     }
 
@@ -596,6 +589,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
         EditPacks.Clear();
+        BuildPackKinds();
         ResetPackForm();
         IsEditOpen = true;
     }
@@ -630,6 +624,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editDefaultVariantId = product.DefaultVariantId;
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
+        BuildPackKinds();
         ResetPackForm();
         _ = LoadEditBarcodesAsync();
         _ = LoadEditPacksAsync();
@@ -861,3 +856,5 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 }
+
+public sealed record PackKindOption(string Key, string Text);

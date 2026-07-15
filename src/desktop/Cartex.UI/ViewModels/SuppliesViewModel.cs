@@ -19,16 +19,11 @@ using Cartex.UI.ViewModels.Common;
 
 namespace Cartex.UI.ViewModels;
 
-// Miqdor va narxlar jadvalning o'zida tahrirlanadi, shuning uchun qator o'zgaruvchan.
-// Miqdor va sotib olish narxi kiritish birligida (mas. tonna), zaxira va sotish narxi esa
-// saqlash birligida (mas. kg) — shuning uchun qator ikkalasini ham ko'rsatadi.
 public partial class SupplyLine : ObservableObject
 {
     public long VariantId { get; init; }
     public string ProductName { get; init; } = "";
 
-    // Qator kiritilgan ko'rinishda saqlanadi: birlik (t) yoki qadoq (Qop 50 kg), narx esa
-    // o'sha kiritish birligi uchun yoki saqlash birligi uchun.
     public long? UnitId { get; init; }
     public long? PackId { get; init; }
     public string UnitName { get; init; } = "";
@@ -64,7 +59,6 @@ public partial class SupplyLine : ObservableObject
     partial void OnSellingPriceChanged(decimal? value) => OnPropertyChanged(nameof(Margin));
 }
 
-// Bitta ta'minotga biriktiriladigan alohida to'lov: o'z summasi, usuli va valyutasi bilan.
 public partial class SupplyPaymentLine : ObservableObject
 {
     [ObservableProperty] private decimal _amount;
@@ -76,14 +70,8 @@ public partial class SupplyPaymentLine : ObservableObject
     partial void OnModeChanged(string value) => OnPropertyChanged(nameof(ModeText));
 }
 
-// To'lov usuli ro'yxati uchun element: Key serverga, Text foydalanuvchiga.
 public sealed record PayMode(string Key, string Text);
 
-/// <summary>
-/// Kirim qatoridagi yagona tanlov: mahsulotning saqlash birligi, o'sha o'lchovdagi boshqa birlik
-/// (g, t) yoki mahsulotning kirim qadog'i ("Qop 50 kg"). Ratio — bitta tanlov necha saqlash
-/// birligiga teng: kg->1, t->1000, Qop->50. Server ham xuddi shu natijani mustaqil hisoblaydi.
-/// </summary>
 public sealed record SupplyEntryOption(string Display, string ShortName, long? UnitId, long? PackId, decimal Ratio)
 {
     public bool IsPack => PackId is not null;
@@ -118,7 +106,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly Dictionary<long, (long Id, string ShortName)> _variantStockUnits = [];
     private readonly Dictionary<long, decimal> _supplierPayables = [];
     private readonly Dictionary<long, decimal> _lastPurchasePrices = [];
-    // Kirimda ishlatiladigan qadoqlar (Purchase/Both), variant bo'yicha.
     private readonly Dictionary<long, List<ProductPackDto>> _variantPacks = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
@@ -126,8 +113,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _selectedSupplier;
     [ObservableProperty] private IdOption? _selectedWarehouse;
     [ObservableProperty] private DateTime _supplyDate = DateTime.Now;
-    [ObservableProperty] private decimal _paidCash;
-    [ObservableProperty] private decimal _paidCard;
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private string? _supplyCurrency;
 
@@ -137,8 +122,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private IRatesApi _ratesApi = null!;
     private ReferenceCache _cache = null!;
 
-    // Har sahifaga kirilganda qayta o'qiladi: imkoniyat (ko'p valyuta) sozlamalardan o'chirilsa,
-    // qayta kirmasdan darhol qo'llanishi kerak. Kesh o'zi ortiqcha so'rovlardan saqlaydi.
     private async Task EnsureCurrenciesAsync()
     {
         try
@@ -157,8 +140,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch { }
     }
 
-    // To'lov ta'minot saqlangandan keyin alohida modalda kiritiladi. Bitta ta'minot uchun bir nechta
-    // to'lov qatori bo'lishi mumkin: har biri o'z usuli (naqd/karta) va valyutasida.
     [ObservableProperty] private bool _isPaymentOpen;
     [ObservableProperty] private decimal _paymentSupplyTotal;
 
@@ -169,7 +150,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _paymentCurrency;
     [ObservableProperty] private bool _isEditingPayment;
 
-    // To'lov usuli ro'yxatdan tanlanadi; ro'yxat modal ochilganda joriy tilda quriladi.
     public ObservableCollection<PayMode> PaymentModes { get; } = [];
     [ObservableProperty] private PayMode? _selectedPaymentMode;
 
@@ -187,11 +167,11 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     private long _paymentSupplierId;
+    private long? _paymentSupplyId;
     private string? _paymentDebtCurrency;
     private SupplyPaymentLine? _editingPayment;
     private readonly Dictionary<string, decimal> _rates = [];
 
-    // Har bir qator o'z valyutasida; qoldiqni ko'rsatish uchun hammasi ta'minot valyutasiga o'giriladi.
     private decimal ToSupplyCurrency(decimal amount, string? currency)
     {
         var supplyRate = RateOf(_paymentDebtCurrency);
@@ -201,7 +181,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private decimal RateOf(string? currency) =>
         currency is null || currency == _baseCurrency ? 1 : _rates.TryGetValue(currency, out var r) && r > 0 ? r : 1;
 
-    // Teskarisi: ta'minot valyutasidagi summani formadagi tanlangan valyutaga o'girish.
     private decimal FromSupplyCurrency(decimal amount, string? currency)
     {
         var rate = RateOf(currency);
@@ -222,18 +201,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void PayFull() => PaymentAmount = FromSupplyCurrency(PaymentRemains, PaymentCurrency);
 
-    // Valyuta almashsa, formadagi summa yangi valyutada qoldiqqa moslanadi.
     partial void OnPaymentCurrencyChanged(string? value)
     {
         if (IsPaymentOpen && !IsEditingPayment)
             PaymentAmount = FromSupplyCurrency(PaymentRemains, value);
     }
 
-    // Formadagi ma'lumot ro'yxatga qator sifatida qo'shiladi (yoki tahrirlanayotgan qator yangilanadi).
     [RelayCommand]
     private void AddPaymentLine()
     {
         if (PaymentAmount <= 0) { _toast.Warning(L["err_amount_positive"]); return; }
+
+        var remains = PaymentRemains;
+        if (IsEditingPayment && _editingPayment is not null)
+            remains += ToSupplyCurrency(_editingPayment.Amount, _editingPayment.Currency);
+        if (ToSupplyCurrency(PaymentAmount, PaymentCurrency) > remains) { _toast.Warning(L["err_overpaid"]); return; }
 
         if (IsEditingPayment && _editingPayment is not null)
         {
@@ -288,16 +270,24 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         try
         {
             using (_busy.Begin(L["loading"]))
-                foreach (var line in PaymentLines)
+                while (PaymentLines.Count > 0)
+                {
+                    var line = PaymentLines[0];
                     await _suppliersApi.PayDebtAsync(_paymentSupplierId,
-                        new PaySupplierDebtRequest(line.Amount, line.Mode == "card", _paymentDebtCurrency, line.Currency));
+                        new PaySupplierDebtRequest(line.Amount, line.Mode == "card", _paymentDebtCurrency, line.Currency, SupplyId: _paymentSupplyId));
+                    PaymentLines.RemoveAt(0);
+                }
 
             IsPaymentOpen = false;
-            PaymentLines.Clear();
             _toast.Success(L["success"]);
             await LoadAsync();
         }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        catch (Exception ex)
+        {
+            RaisePaymentTotals();
+            _toast.Error(ApiErrors.Describe(ex));
+            await LoadAsync();
+        }
     }
 
     private async Task EnsureRatesAsync()
@@ -337,10 +327,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _lineProductText = "";
     [ObservableProperty] private SupplyEntryOption? _lineEntry;
 
-    // Mahsulot maydoniga fokusni qaytarish (matn tanlangan holda) — ko'rinish shu hodisaga ulanadi.
     public event Action? FocusProductRequested;
 
-    // Nom kiritilib Enter bosilganda: bazada bor bo'lsa tanlanadi, yo'q bo'lsa yangi mahsulot yaratish so'raladi.
     [RelayCommand]
     private async Task CommitProductAsync()
     {
@@ -368,11 +356,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _lineSellingPrice;
     [ObservableProperty] private DateTime? _lineExpiry;
 
-    // Narx kiritilgan birlik/qadoq uchunmi ("1 qop = 600 000") yoki saqlash birligi uchunmi
-    // ("1 kg = 12 000") — do'konlar ikkala usulda kelishadi, shuning uchun tanlanadi.
     [ObservableProperty] private bool _pricePerStockingUnit;
 
-    // Kiritish tanlovi saqlash birligiga nisbatan: 1 t = 1000 kg, 1 qop = 50 kg.
     private decimal LineRatio => LineEntry?.Ratio is { } r && r > 0 ? r : 1;
 
     private UnitDto? LineStockingUnit =>
@@ -384,16 +369,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private string LinePriceUnitName => PricePerStockingUnit ? LineStockingUnitName : LineEntry?.ShortName ?? LineStockingUnitName;
     public string LinePriceLabel => $"{L["purchase_price"]} / {LinePriceUnitName}";
 
-    // Narx bazasi tanlovi faqat qadoq yoki boshqa birlik tanlanganda ma'noga ega.
     public bool CanChoosePriceBasis => LineRatio != 1;
 
-    // Sotib olish narxi kiritish birligida bo'lishi mumkin, sotish narxi esa doim saqlash
-    // birligida — marja ikkalasini bir birlikka keltirgandan keyin hisoblanadi.
     public decimal LinePricePerStockingUnit => PricePerStockingUnit || LineRatio == 0 ? LinePrice : LinePrice / LineRatio;
-    public decimal LineMargin => LineSellingPrice - LinePricePerStockingUnit;
 
-    // Kiritilgan qiymat zaxiraga qanday tushishini qatorning ostida ko'rsatamiz — noto'g'ri
-    // birlik yoki narx darhol ko'zga tashlanadi.
     public bool HasLinePreview => LineProduct is not null && LineRatio != 1 && LineQuantity > 0;
     public string LinePreview => HasLinePreview
         ? $"= {LineQuantity * LineRatio:0.###} {LineStockingUnitName} · {LinePricePerStockingUnit:N0} / {LineStockingUnitName}"
@@ -402,7 +381,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private void RaiseLinePreview()
     {
         OnPropertyChanged(nameof(LinePricePerStockingUnit));
-        OnPropertyChanged(nameof(LineMargin));
         OnPropertyChanged(nameof(HasLinePreview));
         OnPropertyChanged(nameof(LinePreview));
         OnPropertyChanged(nameof(LinePriceLabel));
@@ -424,7 +402,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _ = FillPricesAsync(value);
     }
 
-    // Tanlov ro'yxati: saqlash birligi, o'sha o'lchovdagi boshqa birliklar va mahsulotning kirim qadoqlari.
     private void RebuildEntryOptions(IdOption? product)
     {
         EntryOptions.Clear();
@@ -465,7 +442,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             if (LineProduct?.Id != variantId) return;
             if (info.LastPurchasePrice is { } lastPrice) _lastPurchasePrices[variantId] = lastPrice;
 
-            // Qator oxirgi kirim qanday kiritilgan bo'lsa shunday ochiladi: o'sha qadoq/birlik va narx bazasi.
             if (LineEntry == entrySnapshot)
             {
                 var restored = info.LastPackId is { } packId
@@ -478,7 +454,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
             PricePerStockingUnit = info.LastPriceBasis == "PerStockingUnit";
 
-            // Bazadagi narx saqlash birligida — tanlangan kiritish birligiga qaytariladi.
             if (LinePrice == priceSnapshot)
                 LinePrice = PricePerStockingUnit
                     ? info.LastPurchasePrice ?? 0
@@ -501,7 +476,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
     public bool CanVoid => _auth.HasPermission("supplies.manage");
 
-    // Tahrirlash endi modal emas, sahifaning o'zi — shuning uchun IsModalOpen ga kirmaydi.
     public bool IsModalOpen => IsDetailOpen || IsPrintOpen || IsPaymentOpen || QuickProduct.IsOpen;
 
     partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -513,8 +487,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
     public bool HasItems => Items.Count > 0;
 
-    // Pastki paneldagi jamilar: xarid summasi (EditTotal), kutilayotgan sotuv tushumi va
-    // ular orasidagi farq — foyda. Sotish narxi ko'rsatilmagan qatorlar tushumga qo'shilmaydi.
     public decimal EditSellingTotal => Items.Sum(i => i.StockingQuantity * (i.SellingPrice ?? 0));
     public decimal EditProfit => Items.Where(i => i.SellingPrice is not null)
         .Sum(i => i.StockingQuantity * (i.SellingPrice!.Value - i.PricePerStockingUnitValue));
@@ -563,8 +535,22 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _export = export;
         _auth = auth;
+        _auth.LoggedOut += ResetState;
         Items.CollectionChanged += OnItemsChanged;
         Paging.Attach(LoadSuppliesAsync);
+    }
+
+    private void ResetState()
+    {
+        Items.Clear();
+        ResetLine();
+        PaymentLines.Clear();
+        IsEditOpen = false;
+        IsPaymentOpen = false;
+        IsDetailOpen = false;
+        IsPrintOpen = false;
+        SelectedSupplier = null;
+        SelectedWarehouse = null;
     }
 
     private async Task LoadSuppliesAsync()
@@ -711,9 +697,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    [RelayCommand]
-    private Task OpenQuickCreate() => QuickProduct.OpenCommand.ExecuteAsync(null);
-
     public async Task LoadAsync()
     {
         try
@@ -764,8 +747,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Tugallanmagan ta'minot qoralama sifatida saqlanadi: sahifadan chiqib qaytilsa yoki
-    // "Qo'shish" qayta bosilsa, kiritilgan qatorlar joyida turadi. Yangi hujjat "Tozalash" dan keyin boshlanadi.
     [RelayCommand]
     private void OpenCreate()
     {
@@ -795,14 +776,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         LineExpiry = null;
     }
 
-    // AllowConcurrentExecutions: aks holda skaner ketma-ket ikki kod yuborsa, ikkinchisi tashlab yuboriladi.
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ScanLineAsync()
     {
         var code = LineBarcode.Trim();
         if (string.IsNullOrEmpty(code)) return;
 
-        // Maydon so'rovdan oldin tozalanadi, aks holda keyingi kod eskisining ustiga yopishadi.
         LineBarcode = "";
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
 
@@ -813,7 +792,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             if (!ProductOptions.Any(o => o.Id == found.VariantId))
                 ProductOptions.Add(new IdOption(found.VariantId, found.ProductName));
 
-            // Skanerlangan qadoq-barkod (mas. 12 dona quti) bir skanerlashda shuncha birlik qo'shadi.
             var scanned = found.PackQty > 1 ? found.PackQty : 1;
             await AddOrMergeAsync(found.VariantId, found.ProductName, scanned, warehouseId, entry: null);
         }
@@ -825,8 +803,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Bir xil mahsulot, bir xil kiritish tanlovi va narx bazasi bo'lsa yangi qator ochilmaydi —
-    // mavjud qatorning miqdori oshadi (skanerni ketma-ket bosish shunday ishlaydi).
     private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, long warehouseId,
         SupplyEntryOption? entry, bool pricePerStockingUnit = false,
         decimal? purchasePrice = null, decimal? sellingPrice = null, DateOnly? expiredAt = null)
@@ -835,12 +811,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var packId = entry?.PackId;
 
         if (Items.FirstOrDefault(i => i.VariantId == variantId && i.UnitId == unitId && i.PackId == packId
-                                      && i.PricePerStockingUnit == pricePerStockingUnit) is { } existing)
+                                      && i.PricePerStockingUnit == pricePerStockingUnit
+                                      && (purchasePrice is null || i.PurchasePrice == purchasePrice)
+                                      && (sellingPrice is null || i.SellingPrice == sellingPrice)
+                                      && (expiredAt is null || i.ExpiredAt == expiredAt)) is { } existing)
         {
             existing.Quantity += quantity;
-            if (purchasePrice is { } price) existing.PurchasePrice = price;
-            if (sellingPrice is { } selling) existing.SellingPrice = selling;
-            if (expiredAt is not null) existing.ExpiredAt = expiredAt;
             _toast.Info($"{productName} ×{existing.Quantity:0.###}");
             return;
         }
@@ -868,7 +844,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
         if (purchasePrice is not null) return;
 
-        // Narxlar oxirgi ta'minotdan to'ldiriladi; foydalanuvchi jadvalda o'zgartira oladi.
         try
         {
             var info = await _productsApi.GetVariantPriceInfoAsync(variantId, warehouseId);
@@ -885,7 +860,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
         if (!await ConfirmPriceAsync(variantId)) return;
 
-        // Saqlash birligining o'zi tanlangan bo'lsa serverga birlik yuborilmaydi (u allaqachon shu birlikda).
         var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;
 
         await AddOrMergeAsync(variantId, LineProduct.Name, LineQuantity, warehouseId,
@@ -895,8 +869,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         ResetLine();
     }
 
-    // Narx oxirgi kirimdan o'nlab barobar farq qilsa — deyarli har doim birlik yoki maxraj adashgan
-    // (mas. "1 qop uchun" narx grammga yozilgan). Yozishdan oldin so'raymiz.
     private async Task<bool> ConfirmPriceAsync(long variantId)
     {
         if (!_lastPurchasePrices.TryGetValue(variantId, out var last) || last <= 0) return true;
@@ -924,24 +896,22 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
         var supplyCurrency = IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null;
         var total = EditTotal;
+        long supplyId;
 
         try
         {
-            // Ta'minot to'lovsiz saqlanadi — to'lov keyin, alohida modalda kiritiladi.
             var request = new CreateSupplyRequest(
                 supplierId,
                 SelectedWarehouse.Id.Value,
                 DateOnly.FromDateTime(SupplyDate.Date),
-                // Serverga foydalanuvchi kiritgan ko'rinish yuboriladi; saqlash birligiga o'girishni server bajaradi.
                 [.. Items.Select(i => new CreateSupplyItemRequest(i.VariantId, i.Quantity, i.PurchasePrice, i.ExpiredAt,
                     i.UnitId, i.SellingPrice, i.PackId, i.PricePerStockingUnit ? "PerStockingUnit" : "PerEntry"))],
                 0,
                 0,
                 supplyCurrency);
             using (_busy.Begin(L["loading"]))
-                await _api.CreateAsync(request);
+                supplyId = await _api.CreateAsync(request);
 
-            // Saqlangach qoralama tugaydi — keyingi safar bo'sh hujjat ochiladi.
             Items.Clear();
             ResetLine();
             IsEditOpen = false;
@@ -955,6 +925,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         await EnsureRatesAsync();
 
         _paymentSupplierId = supplierId;
+        _paymentSupplyId = supplyId;
         _paymentDebtCurrency = supplyCurrency;
         _editingPayment = null;
         IsEditingPayment = false;

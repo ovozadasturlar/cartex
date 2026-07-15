@@ -588,7 +588,7 @@
                                                 <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
                                                            IsVisible="{Binding !$parent[UserControl].DataContext.CanOverridePrice}"
                                                            Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}" />
-                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
+                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0"
                                                                FormatString="0.##" ShowButtonSpinner="False"
                                                                MinHeight="28" MinWidth="96" HorizontalAlignment="Left"
                                                                IsVisible="{Binding $parent[UserControl].DataContext.CanOverridePrice}" />
@@ -599,7 +599,7 @@
                                                         CommandParameter="{Binding}">
                                                     <mi:MaterialIcon Kind="Minus" Width="14" Height="14" />
                                                 </Button>
-                                                <NumericUpDown Value="{Binding Quantity, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
+                                                <NumericUpDown Value="{Binding Quantity, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0"
                                                                Increment="1" FormatString="0.###" ShowButtonSpinner="False"
                                                                MinWidth="64" MinHeight="32" VerticalAlignment="Center"
                                                                HorizontalContentAlignment="Center" IsEnabled="{Binding !IsPrepack}" />

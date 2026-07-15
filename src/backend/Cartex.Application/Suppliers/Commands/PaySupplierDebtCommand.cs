@@ -12,7 +12,7 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record PaySupplierDebtCommand(long SupplierId, decimal Amount, bool ViaCard, string? DebtCurrency = null, string? PayCurrency = null) : ICommand<Unit>;
+public record PaySupplierDebtCommand(long SupplierId, decimal Amount, bool ViaCard, string? DebtCurrency = null, string? PayCurrency = null, long? SupplyId = null) : ICommand<Unit>;
 
 public sealed class PaySupplierDebtCommandHandler(
     IApplicationDbContext db,
@@ -25,7 +25,16 @@ public sealed class PaySupplierDebtCommandHandler(
     public async Task<Unit> Handle(PaySupplierDebtCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-        var branchId = currentUser.DefaultBranchId ?? throw new BusinessRuleException("Foydalanuvchi filiali aniqlanmadi.");
+
+        long branchId;
+        if (request.SupplyId is { } supplyId)
+            branchId = await db.Supplies
+                .Where(s => s.Id == supplyId && s.SupplierId == request.SupplierId)
+                .Select(s => (long?)s.BranchId)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new NotFoundException("Ta'minot topilmadi.");
+        else
+            branchId = currentUser.DefaultBranchId ?? throw new BusinessRuleException("Foydalanuvchi filiali aniqlanmadi.");
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var debtCurrency = request.DebtCurrency ?? baseCode;
@@ -60,14 +69,16 @@ public sealed class PaySupplierDebtCommandHandler(
 
         var branchAccount = await ledger.BranchAccountAsync(branchId, request.ViaCard ? AccountType.Card : AccountType.Cash, cancellationToken, payCurrency);
 
+        var opType = request.SupplyId is null ? OperationType.DebtPay : OperationType.SupplyPay;
+
         if (payCurrency == debtCurrency)
         {
-            ledger.Post(OperationType.DebtPay, request.Amount, branchAccount, debt, userId, shiftId, debtRate);
+            ledger.Post(opType, request.Amount, branchAccount, debt, userId, shiftId, debtRate).SupplyId = request.SupplyId;
         }
         else
         {
-            ledger.Post(OperationType.DebtPay, request.Amount, branchAccount, null, userId, shiftId, payRate);
-            ledger.Post(OperationType.DebtPay, debtReduce, null, debt, userId, shiftId, debtRate);
+            ledger.Post(opType, request.Amount, branchAccount, null, userId, shiftId, payRate).SupplyId = request.SupplyId;
+            ledger.Post(opType, debtReduce, null, debt, userId, shiftId, debtRate).SupplyId = request.SupplyId;
         }
 
         audit.Add("supplierpay", "suppliers", request.SupplierId, new { request.Amount });

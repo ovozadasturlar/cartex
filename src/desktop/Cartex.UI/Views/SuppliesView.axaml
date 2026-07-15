@@ -9,8 +9,6 @@
              x:CompileBindings="False">
 
     <UserControl.Styles>
-        <!-- Ta'minot muharriridagi barcha kiritish kontrollari bir xil balandlik va shriftda -->
-        <!-- Tanlangan matn ochiq fonda oqarib ketmasin: tanlov rangi aniq belgilanadi -->
         <Style Selector="DockPanel.editor TextBox">
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="FontSize" Value="13" />
@@ -40,7 +38,6 @@
             <Setter Property="FontSize" Value="11.5" />
             <Setter Property="Margin" Value="2,0,0,3" />
         </Style>
-        <!-- Jami ko'rsatkichlari: bo'yi tugma bilan bir xil, kengligi ichidagi matnga bog'liq emas -->
         <Style Selector="DockPanel.editor Border.total">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Height" Value="38" />
@@ -129,7 +126,6 @@
             </Panel>
         </DockPanel>
 
-        <!-- Ta'minot kiritish: modal emas, to'liq sahifa — maydon keng, sessiya saqlanadi -->
         <DockPanel Margin="24" Classes="editor" IsVisible="{Binding IsEditOpen}" Classes.blurred="{Binding IsModalOpen}">
             <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="0,0,0,12">
                 <Button Classes="icon" Command="{Binding CancelEditCommand}" ToolTip.Tip="{Binding L[back]}"
@@ -140,7 +136,6 @@
                            Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
             </Grid>
 
-            <!-- Sana | Ombor | Ta'minotchi (+ balansi) -->
             <Border DockPanel.Dock="Top" Background="{DynamicResource CardBg}" CornerRadius="10" Padding="12" Margin="0,0,0,10"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <Grid ColumnDefinitions="150,180,240,Auto,*" ColumnSpacing="10">
@@ -170,7 +165,6 @@
                 </Grid>
             </Border>
 
-            <!-- Bitta qatorda: skaner | mahsulot nomi | miqdor | birlik | narxlar | muddat | qo'shish -->
             <Border DockPanel.Dock="Top" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12" Margin="0,0,0,10"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <StackPanel Spacing="6">
@@ -195,7 +189,6 @@
                         </AutoCompleteBox>
                         <NumericUpDown Grid.Column="2" MinWidth="70" Value="{Binding LineQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1" FormatString="0.###"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding L[quantity]}" />
-                        <!-- Bitta tanlov: birlik (kg, g, t) yoki kirim qadog'i (Qop 50 kg) -->
                         <ComboBox Grid.Column="3" MinWidth="80" ItemsSource="{Binding EntryOptions}" SelectedItem="{Binding LineEntry}"
                                   HorizontalAlignment="Stretch" PlaceholderText="{Binding L[unit]}" ToolTip.Tip="{Binding L[unit_or_pack]}">
                             <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" /></DataTemplate></ComboBox.ItemTemplate>
@@ -210,7 +203,6 @@
                                 Content="{Binding L[add]}" />
                     </Grid>
 
-                    <!-- Qadoq yoki boshqa birlik tanlansa: narx nimaga tegishli va zaxiraga nima tushadi -->
                     <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding CanChoosePriceBasis}" Margin="4,0,0,0">
                         <CheckBox IsChecked="{Binding PricePerStockingUnit}" MinHeight="0"
                                   Content="{Binding L[price_per_stocking_unit]}" FontSize="12" />
@@ -220,8 +212,6 @@
                 </StackPanel>
             </Border>
 
-            <!-- Pastki qator: chapda bir xil o'lchamli jami kartochkalari, o'ngda tugmalar (kartochkalardan tashqarida).
-                 Balandligi tugma bo'yiga teng — jadvalga ko'proq joy qoladi. -->
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,*,*,*,Auto" ColumnSpacing="8" Margin="0,10,0,0">
                 <Border Grid.Column="0" Classes="total">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
@@ -270,7 +260,6 @@
                                                 Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" IsReadOnly="True" Binding="{Binding UnitName}"
                                                 Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <!-- Boshqa birlikda kiritilgan qator zaxiraga qanday tushishini ko'rsatadi -->
                             <DataGridTemplateColumn Width="130" IsReadOnly="True"
                                                     Header="{Binding [to_stock], Source={x:Static svc:LocalizationManager.Instance}}">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -282,9 +271,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Width="140" Binding="{Binding PurchasePrice, StringFormat='{}{0:N0}'}"
+                            <DataGridTextColumn Width="140" Binding="{Binding PurchasePrice}"
                                                 Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="140" Binding="{Binding SellingPrice, StringFormat='{}{0:N0}'}"
+                            <DataGridTextColumn Width="140" Binding="{Binding SellingPrice}"
                                                 Header="{Binding [selling_price], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="110" IsReadOnly="True" Binding="{Binding Margin, StringFormat='{}{0:N0}'}"
                                                 Header="{Binding [margin], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -413,7 +402,7 @@
                     </Border>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[quantity]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
+                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
                         <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"
@@ -430,7 +419,6 @@
             </Border>
         </Border>
 
-        <!-- To'lov modali: bir nechta to'lov qatori, har biri o'z usuli va valyutasida -->
         <Border IsVisible="{Binding IsPaymentOpen}" Background="#30000000">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" MaxWidth="720" MaxHeight="620" Margin="32" Padding="22"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -439,7 +427,6 @@
                     <TextBlock DockPanel.Dock="Top" Text="{Binding L[payment]}" FontSize="17" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,14" />
 
-                    <!-- Jami | To'landi | Qoldiq -->
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*" Margin="0,0,0,14">
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding L[total]}" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
@@ -458,13 +445,16 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- To'lov kiritish formasi -->
                     <Border DockPanel.Dock="Top" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12" Margin="0,0,0,12"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                             <StackPanel Grid.Column="0" Spacing="4">
                                 <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="11.5" />
-                                <NumericUpDown Value="{Binding PaymentAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                    <NumericUpDown Value="{Binding PaymentAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
+                                    <Button Grid.Column="1" Classes="outline" Command="{Binding PayFullCommand}"
+                                            Content="{Binding L[pay_full]}" MinHeight="36" Padding="10,0" />
+                                </Grid>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Text="{Binding L[payment_type]}" Foreground="{DynamicResource TextSecondary}" FontSize="11.5" />
@@ -493,7 +483,6 @@
                         <Button Classes="brand" Command="{Binding ConfirmPaymentCommand}" Content="{Binding L[save]}" MinWidth="110" />
                     </StackPanel>
 
-                    <!-- Kiritilgan to'lovlar ro'yxati -->
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" MinHeight="120"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                         <Panel>

@@ -88,7 +88,6 @@ public enum UnitDimension
     Length
 }
 
-// Qadoq qayerda ishlatiladi: kirimda (qop), rastada (paket) yoki ikkalasida.
 public enum PackKind
 {
     Purchase,
@@ -96,7 +95,6 @@ public enum PackKind
     Both
 }
 
-// Ta'minot qatoridagi narx nimaga tegishli: kiritilgan birlik/qadoqqa yoki saqlash birligiga.
 public enum SupplyPriceBasis
 {
     PerEntry,

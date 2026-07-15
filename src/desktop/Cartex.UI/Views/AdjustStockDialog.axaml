@@ -23,7 +23,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="6">
                     <TextBlock Text="{Binding L[counted]}" Classes="caption" />
-                    <NumericUpDown Value="{Binding CountedQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" />
+                    <NumericUpDown Value="{Binding CountedQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" />
                 </StackPanel>
             </Grid>
 

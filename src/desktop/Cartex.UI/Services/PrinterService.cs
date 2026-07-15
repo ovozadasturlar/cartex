@@ -13,7 +13,6 @@ public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, st
 
 public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
 
-// Yorliq chop etishning barcha parametrlari — sozlamalardan olinadi, kodda qotib qolmaydi.
 public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed);
 
 public static class LabelSize
@@ -21,7 +20,6 @@ public static class LabelSize
     public static (double Width, double Height) Resolve(double width, double height) =>
         (width is < 20 or > 120 ? 40 : width, height is < 20 or > 120 ? 30 : height);
 
-    // GAP 0 — printer uchun "uzluksiz qog'oz" degani: yorliqlar orasidagi bo'shliqni sezmay, chop etish asta siljib ketadi.
     public static double ResolveGap(double gap) => gap is < 1 or > 20 ? 4 : gap;
 
     public static LabelOptions Resolve(PrinterSettings s)
@@ -59,7 +57,6 @@ public sealed class PrinterService : IPrinterService
 {
     private readonly string? _path;
     private PrinterSettings _settings = new(null, null, null, null, false);
-
 
     public PrinterService()
     {
@@ -155,11 +152,7 @@ public sealed class PrinterService : IPrinterService
     public void PrintRawBytes(string? printerName, byte[] data)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || data.Length == 0) return;
-        Task.Run(() =>
-        {
-            try { RawPrinter.Send(printerName, data, "Cartex Label"); }
-            catch { }
-        });
+        RawPrinter.Send(printerName, data, "Cartex Label");
     }
 
     public void PrintDocument(string filePath, string? printerName)
@@ -266,11 +259,13 @@ internal static class RawPrinter
         try
         {
             Marshal.Copy(bytes, 0, unmanaged, bytes.Length);
-            if (!OpenPrinter(printerName, out var hPrinter, IntPtr.Zero)) return;
+            if (!OpenPrinter(printerName, out var hPrinter, IntPtr.Zero))
+                throw new InvalidOperationException($"OpenPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
             try
             {
                 var di = new DOCINFO { DocName = docName, DataType = "RAW" };
-                if (!StartDocPrinter(hPrinter, 1, ref di)) return;
+                if (!StartDocPrinter(hPrinter, 1, ref di))
+                    throw new InvalidOperationException($"StartDocPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
                 try
                 {
                     if (!StartPagePrinter(hPrinter)) return;

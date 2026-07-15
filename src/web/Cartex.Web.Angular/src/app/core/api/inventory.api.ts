@@ -18,6 +18,7 @@ export interface UnitOption {
   name: string;
   shortName: string;
   dimension: string;
+  factor: number;
   isEnabled: boolean;
 }
 
@@ -34,7 +35,6 @@ export interface VariantPriceInfo {
   lastPurchasePrice: number | null;
   sellingPrice: number | null;
   lastUnitId: number | null;
-  lastPackSize: number | null;
 }
 
 export interface StockOnHand {
@@ -116,7 +116,6 @@ export interface CreateSupplyItem {
   expiredAt: string | null;
   unitId: number | null;
   sellingPrice: number | null;
-  packSize: number;
 }
 
 export interface CreateSupply {

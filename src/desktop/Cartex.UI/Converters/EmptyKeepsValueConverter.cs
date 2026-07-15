@@ -1,23 +1,23 @@
 using System.Globalization;
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 
 namespace Cartex.UI.Converters;
 
-public sealed class EmptyToZeroConverter : IValueConverter
+public sealed class EmptyKeepsValueConverter : IValueConverter
 {
-    public static readonly EmptyToZeroConverter Instance = new();
+    public static readonly EmptyKeepsValueConverter Instance = new();
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is null ? null : System.Convert.ToDecimal(value, culture);
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var underlying = Nullable.GetUnderlyingType(targetType);
         if (value is null)
-            return underlying is not null ? null : Activator.CreateInstance(targetType);
+            return BindingOperations.DoNothing;
 
-        var target = underlying ?? targetType;
+        var target = Nullable.GetUnderlyingType(targetType) ?? targetType;
         try { return System.Convert.ChangeType(value, target, culture); }
-        catch { return Activator.CreateInstance(target); }
+        catch { return BindingOperations.DoNothing; }
     }
 }

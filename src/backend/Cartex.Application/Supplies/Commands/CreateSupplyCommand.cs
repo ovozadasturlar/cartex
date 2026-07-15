@@ -13,12 +13,6 @@ using Cartex.Application.Products;
 
 namespace Cartex.Application.Supplies.Commands;
 
-/// <summary>
-/// Bitta kirim qatori foydalanuvchi kiritgan ko'rinishda keladi: miqdor + qaysi birlikda (UnitId)
-/// yoki qaysi qadoqda (PackId), narx esa PriceBasis bo'yicha o'sha birlik/qadoq uchun yoki saqlash
-/// birligi uchun. Server hammasini saqlash birligiga o'zi keltiradi — qadoq hajmi bazadan olinadi.
-/// UnitId va PackId birga kelmaydi.
-/// </summary>
 public record CreateSupplyItemDto(
     long VariantId,
     decimal Quantity,
@@ -69,9 +63,6 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             ? []
             : await db.ProductPacks.Where(p => packIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
 
-        // Miqdor va sotib olish narxi kiritilgan birlik/qadoqdan saqlash birligiga keltiriladi.
-        // Sotish narxi esa hech qachon o'girilmaydi: do'kon tonna yoki qop bilan sotmaydi, u doim
-        // saqlash birligida (mas. so'm/kg) belgilanadi.
         (decimal Quantity, decimal Price, decimal? SellingPrice, decimal PackSize) Resolve(CreateSupplyItemDto item)
         {
             if (!variants.TryGetValue(item.VariantId, out var variant))

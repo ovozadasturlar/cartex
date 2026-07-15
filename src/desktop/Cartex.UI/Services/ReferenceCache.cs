@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Cartex.ApiClient;
 
 namespace Cartex.UI.Services;
 
@@ -22,6 +23,7 @@ public sealed class ReferenceCache
 
     private async Task<T> FetchAsync<T>(string key, Func<Task<T>> factory)
     {
+        using var detached = PageRequestScope.Detach();
         try { return await factory(); }
         catch
         {

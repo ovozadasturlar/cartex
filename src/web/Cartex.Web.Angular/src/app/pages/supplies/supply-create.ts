@@ -24,7 +24,6 @@ interface SupplyLine {
   quantity: number;
   unitId: number | null;
   unitName: string;
-  packSize: number;
   purchasePrice: number;
   sellingPrice: number | null;
   expiredAt: string | null;
@@ -96,8 +95,25 @@ export class SupplyCreate implements OnInit {
   }
 
   margin(): number | null {
-    if (this.price <= 0 || this.sellingPrice <= 0) return null;
-    return Math.round(((this.sellingPrice - this.price) / this.price) * 100);
+    const base = this.price / this.ratio();
+    if (base <= 0 || this.sellingPrice <= 0) return null;
+    return Math.round(((this.sellingPrice - base) / base) * 100);
+  }
+
+  stockingUnitName(): string {
+    return this.product()?.unitShortName ?? '';
+  }
+
+  entryUnitName(): string {
+    return this.unitOptions().find((u) => u.id === this.unitId)?.shortName ?? '';
+  }
+
+  private ratio(): number {
+    const p = this.product();
+    if (!p || !this.unitId || this.unitId === p.unitId) return 1;
+    const entry = this.unitOptions().find((u) => u.id === this.unitId);
+    const stocking = this.unitOptions().find((u) => u.id === p.unitId);
+    return entry && stocking && entry.factor > 0 && stocking.factor > 0 ? entry.factor / stocking.factor : 1;
   }
 
   async ngOnInit(): Promise<void> {
@@ -146,16 +162,16 @@ export class SupplyCreate implements OnInit {
   }
 
   private applyPriceInfo(info: VariantPriceInfo): void {
-    this.price = info.lastPurchasePrice ?? 0;
-    this.sellingPrice = info.sellingPrice ?? 0;
     if (info.lastUnitId && this.unitOptions().some((u) => u.id === info.lastUnitId)) this.unitId = info.lastUnitId;
+    this.price = (info.lastPurchasePrice ?? 0) * this.ratio();
+    this.sellingPrice = info.sellingPrice ?? 0;
   }
 
   private rebuildUnits(p: ProductOption): void {
     const options: UnitOption[] = [];
     const stocking = p.unitId ? this.units().find((u) => u.id === p.unitId) : undefined;
     if (stocking) options.push(stocking);
-    else if (p.unitId) options.push({ id: p.unitId, name: p.unitShortName ?? '', shortName: p.unitShortName ?? '', dimension: p.dimension ?? 'Count', isEnabled: true });
+    else if (p.unitId) options.push({ id: p.unitId, name: p.unitShortName ?? '', shortName: p.unitShortName ?? '', dimension: p.dimension ?? 'Count', factor: 0, isEnabled: true });
     if (p.dimension && p.dimension !== 'Count')
       for (const u of this.units()) if (u.dimension === p.dimension && u.id !== p.unitId) options.push(u);
     this.unitOptions.set(options);
@@ -174,7 +190,6 @@ export class SupplyCreate implements OnInit {
         quantity: this.quantity,
         unitId: this.unitId && this.unitId !== p.unitId ? this.unitId : null,
         unitName: unit?.shortName ?? p.unitShortName ?? '',
-        packSize: 1,
         purchasePrice: this.price,
         sellingPrice: this.sellingPrice > 0 ? this.sellingPrice : null,
         expiredAt: this.expiry || null,
@@ -212,7 +227,6 @@ export class SupplyCreate implements OnInit {
         expiredAt: i.expiredAt,
         unitId: i.unitId,
         sellingPrice: i.sellingPrice,
-        packSize: i.packSize,
       }));
       await lastValueFrom(
         this.api.createSupply({

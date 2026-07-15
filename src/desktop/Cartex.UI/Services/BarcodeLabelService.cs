@@ -35,44 +35,33 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
 
         if (!string.Equals(settings.LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
         {
-            Task.Run(() =>
-            {
-                try { printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options)); }
-                catch { }
-            });
+            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options));
             return;
         }
 
-        Task.Run(() =>
+        var image = RenderCode128(code);
+        var document = Document.Create(container =>
         {
-            try
+            for (var i = 0; i < quantity; i++)
             {
-                var image = RenderCode128(code);
-                var document = Document.Create(container =>
+                container.Page(page =>
                 {
-                    for (var i = 0; i < quantity; i++)
+                    page.Size((float)width, (float)height, Unit.Millimetre);
+                    page.Margin(height < 40 ? 2 : 3, Unit.Millimetre);
+                    page.Content().Column(col =>
                     {
-                        container.Page(page =>
-                        {
-                            page.Size((float)width, (float)height, Unit.Millimetre);
-                            page.Margin(height < 40 ? 2 : 3, Unit.Millimetre);
-                            page.Content().Column(col =>
-                            {
-                                col.Spacing(1);
-                                col.Item().AlignCenter().Text(name).FontSize(width < 50 ? 7 : 8).SemiBold();
-                                col.Item().Image(image).FitWidth();
-                                col.Item().AlignCenter().Text(code).FontSize(9).FontFamily("Consolas").LetterSpacing(0.05f);
-                            });
-                        });
-                    }
+                        col.Spacing(1);
+                        col.Item().AlignCenter().Text(name).FontSize(width < 50 ? 7 : 8).SemiBold();
+                        col.Item().Image(image).FitWidth();
+                        col.Item().AlignCenter().Text(code).FontSize(9).FontFamily("Consolas").LetterSpacing(0.05f);
+                    });
                 });
-
-                var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
-                document.GeneratePdf(path);
-                printer.PrintDocument(path, target);
             }
-            catch { }
         });
+
+        var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
+        document.GeneratePdf(path);
+        printer.PrintDocument(path, target);
     }
 
     private static byte[] RenderCode128(string code)

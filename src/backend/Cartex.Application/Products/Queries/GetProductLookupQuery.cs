@@ -7,8 +7,6 @@ namespace Cartex.Application.Products.Queries;
 
 public record GetProductLookupQuery : IRequest<IReadOnlyCollection<ProductOptionDto>>;
 
-// Qadoqlar shu yerda birga keladi: kirim qatori mahsulot tanlanishi bilan qo'shimcha so'rovsiz
-// "Qop 50 kg" kabi variantlarni ko'rsatadi.
 public record ProductOptionDto(
     long Id,
     long DefaultVariantId,
