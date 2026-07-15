@@ -441,18 +441,23 @@
                                        Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,*,*" Margin="0,2,0,0" IsVisible="{Binding !IsMulticurrency}">
-                            <StackPanel Margin="0,0,4,0">
+                        <Grid ColumnDefinitions="Auto,*,*,*" Margin="0,2,0,0" IsVisible="{Binding !IsMulticurrency}">
+                            <Button Classes="icon" Margin="0,15,4,0" VerticalAlignment="Bottom"
+                                    Command="{Binding PayExactCommand}"
+                                    ToolTip.Tip="{Binding L[shortcut_pay_exact]}">
+                                <mi:MaterialIcon Kind="Sigma" Width="20" Height="20" />
+                            </Button>
+                            <StackPanel Grid.Column="1" Margin="0,0,4,0">
                                 <TextBlock Text="{Binding L[cash]}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
                                 <NumericUpDown Value="{Binding PaidCash, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                                ShowButtonSpinner="False" MinHeight="38" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="2,0">
+                            <StackPanel Grid.Column="2" Margin="2,0">
                                 <TextBlock Text="{Binding L[card]}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
                                 <NumericUpDown Value="{Binding PaidCard, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                                ShowButtonSpinner="False" MinHeight="38" />
                             </StackPanel>
-                            <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                            <StackPanel Grid.Column="3" Margin="4,0,0,0">
                                 <TextBlock Text="{Binding L[bonus]}" FontSize="11" Foreground="{DynamicResource TextMuted}" />
                                 <NumericUpDown Value="{Binding PaidBonus, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                                ShowButtonSpinner="False" MinHeight="38" />
@@ -524,11 +529,10 @@
                         </StackPanel>
 
                         <Grid ColumnDefinitions="Auto,*">
-                            <Button Classes="paybtn" Padding="12,8" Command="{Binding PayExactCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <mi:MaterialIcon Kind="CashMultiple" Width="16" Height="16" />
-                                    <TextBlock Text="{Binding L[exact]}" />
-                                </StackPanel>
+                            <Button Classes="icon" Command="{Binding PayExactCommand}"
+                                    IsVisible="{Binding IsMulticurrency}"
+                                    ToolTip.Tip="{Binding L[shortcut_pay_exact]}">
+                                <mi:MaterialIcon Kind="Sigma" Width="20" Height="20" />
                             </Button>
                             <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <TextBlock HorizontalAlignment="Right" FontSize="12"

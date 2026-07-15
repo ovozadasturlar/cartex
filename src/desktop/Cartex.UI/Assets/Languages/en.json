@@ -219,7 +219,6 @@
   "err_password_mismatch": "Passwords do not match",
   "err_password_short": "Password must be at least 6 characters",
   "error": "Error",
-  "exact": "Exact",
   "exchange_rates": "Exchange rates",
   "exclude_from_total": "Exclude this line from the general %",
   "expected_cash": "Expected cash",
