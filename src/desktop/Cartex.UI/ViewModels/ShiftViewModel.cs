@@ -48,28 +48,55 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     public ObservableCollection<CurrencyCashRow> CurrencyRows { get; } = [];
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
+    private readonly ReferenceCache _cache;
 
-    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IToastService toast, IBusyService busy, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi)
+    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IToastService toast, IBusyService busy, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
+        _cache = cache;
         _api = api;
         _expenseApi = expenseApi;
         _toast = toast;
         _busy = busy;
         _auth = auth;
+        _auth.LoggedOut += ResetState;
         HistoryPaging.Attach(LoadHistoryAsync);
+    }
+
+    private void ResetState()
+    {
+        Current = null;
+        LastReport = null;
+        IsReportOpen = false;
+        History.Clear();
+        ExpenseCategories.Clear();
+        CurrencyRows.Clear();
+        IsMulticurrency = false;
+        OpeningFloat = 0;
+        MovementAmount = 0;
+        MovementReason = null;
+        SelectedExpenseCategory = null;
+        CountedCash = 0;
+    }
+
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanViewHistory));
     }
 
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
+            var currentTask = _api.GetCurrentAsync();
+            var historyTask = LoadHistoryAsync();
+            var expensesTask = LoadExpenseCategoriesAsync();
             using (_busy.Begin(L["loading"]))
-                Current = await _api.GetCurrentAsync();
+                Current = await currentTask;
             await LoadCurrenciesAsync();
-            if (CanViewHistory) await LoadHistoryAsync();
-            await LoadExpenseCategoriesAsync();
+            await Task.WhenAll(historyTask, expensesTask);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -78,11 +105,11 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             IsMulticurrency = business.Multicurrency;
             if (!IsMulticurrency) { CurrencyRows.Clear(); return; }
 
-            var rates = await _ratesApi.GetCurrentAsync();
+            var rates = await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync);
             CurrencyRows.Clear();
             foreach (var rate in rates.OrderBy(r => r.Code))
             {
@@ -95,10 +122,10 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     private async Task LoadExpenseCategoriesAsync()
     {
-        if (ExpenseCategories.Count > 0) return;
         try
         {
-            var items = await _expenseApi.GetAllAsync();
+            var items = await _cache.GetAsync(CacheKeys.ExpenseCategories, () => _expenseApi.GetAllAsync());
+            ExpenseCategories.Clear();
             foreach (var c in items) ExpenseCategories.Add(c);
         }
         catch { }

@@ -60,6 +60,21 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         _export = export;
         _auth = auth;
         Paging.Attach(LoadTransfersAsync);
+        _auth.LoggedOut += ResetState;
+    }
+
+    private void ResetState()
+    {
+        Transfers.Clear();
+        SelectedTransfer = null;
+        IsEditOpen = false;
+        IsDetailOpen = false;
+        FilterWarehouse = null;
+        DateFrom = DateTimeOffset.Now.AddDays(-30);
+        DateTo = DateTimeOffset.Now;
+        Totals = null;
+        Paging.Page = 1;
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private async Task LoadTransfersAsync()
@@ -86,8 +101,14 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanExport));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))

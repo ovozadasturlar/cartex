@@ -7,8 +7,24 @@ using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class OrdersViewModel(IOrderingApi api, PosHandoffService handoff, NavigationService navigation, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
+public partial class OrdersViewModel : ViewModelBase, ILoadable
 {
+    private readonly IOrderingApi _api;
+    private readonly PosHandoffService _handoff;
+    private readonly NavigationService _navigation;
+    private readonly IToastService _toast;
+    private readonly IBusyService _busy;
+
+    public OrdersViewModel(IOrderingApi api, PosHandoffService handoff, NavigationService navigation, IToastService toast, IBusyService busy, AuthService auth)
+    {
+        _api = api;
+        _handoff = handoff;
+        _navigation = navigation;
+        _toast = toast;
+        _busy = busy;
+        auth.LoggedOut += ResetState;
+    }
+
     public ObservableCollection<CartListDto> Carts { get; } = [];
 
     [ObservableProperty] private string _statusFilter = "Open";
@@ -16,19 +32,27 @@ public partial class OrdersViewModel(IOrderingApi api, PosHandoffService handoff
     public string[] StatusFilters { get; } = ["Open", "Confirmed", "Ready", "CheckedOut", "Cancelled"];
     public bool IsEmpty => Carts.Count == 0;
 
+    private void ResetState()
+    {
+        Carts.Clear();
+        _statusFilter = "Open";
+        OnPropertyChanged(nameof(StatusFilter));
+        OnPropertyChanged(nameof(IsEmpty));
+    }
+
     public async Task LoadAsync()
     {
         try
         {
-            using (busy.Begin(L["loading"]))
+            using (_busy.Begin(L["loading"]))
             {
-                var carts = await api.GetAllAsync(StatusFilter, kind: "Order");
+                var carts = await _api.GetAllAsync(StatusFilter, kind: "Order");
                 Carts.Clear();
                 foreach (var cart in carts) Carts.Add(cart);
                 OnPropertyChanged(nameof(IsEmpty));
             }
         }
-        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     partial void OnStatusFilterChanged(string value) => _ = LoadAsync();
@@ -37,11 +61,11 @@ public partial class OrdersViewModel(IOrderingApi api, PosHandoffService handoff
     {
         try
         {
-            await api.UpdateStatusAsync(cart.AggregateCode, new UpdateCartStatusRequest(status));
-            toast.Success(L["success"]);
+            await _api.UpdateStatusAsync(cart.AggregateCode, new UpdateCartStatusRequest(status));
+            _toast.Success(L["success"]);
             await LoadAsync();
         }
-        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
@@ -56,7 +80,7 @@ public partial class OrdersViewModel(IOrderingApi api, PosHandoffService handoff
     [RelayCommand]
     private void TakeToPos(CartListDto cart)
     {
-        handoff.PendingCartCode = cart.AggregateCode;
-        navigation.RequestMenuNavigation("pos");
+        _handoff.PendingCartCode = cart.AggregateCode;
+        _navigation.RequestMenuNavigation("pos");
     }
 }

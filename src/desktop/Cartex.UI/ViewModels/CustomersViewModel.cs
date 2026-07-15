@@ -69,19 +69,19 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private IBusinessApi _businessApi = null!;
     private IRatesApi _ratesApi = null!;
+    private ReferenceCache _cache = null!;
 
-    // Sahifaga har kirilganda qayta o'qiladi — ko'p valyuta imkoniyati yoqilsa/o'chirilsa darhol qo'llanadi.
     private async Task EnsureCurrenciesAsync()
     {
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
             PayCurrencies.Clear();
             PayCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)
-                foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
+                foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
                     PayCurrencies.Add(r.Code);
         }
         catch { }
@@ -118,20 +118,37 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Take(2)
             .Select(w => char.ToUpperInvariant(w[0])));
 
-    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi)
+    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
+        _cache = cache;
         _api = api;
         _salesApi = salesApi;
         _toast = toast;
         _busy = busy;
         _auth = auth;
         _export = export;
+        _auth.LoggedOut += ResetState;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
         LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
         SalesPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadSalesAsync(_ledgerCustomerId));
+    }
+
+    private void ResetState()
+    {
+        _searchCts?.Cancel();
+        SelectedCustomer = null;
+        Customers.Clear();
+        Totals = null;
+        IsEditOpen = false;
+        IsMessageOpen = false;
+        IsRepayOpen = false;
+        IsSalesTab = false;
+        _searchText = "";
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]
@@ -155,8 +172,17 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanMessage));
+        OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanViewSales));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         IsLoading = true;
         try
         {

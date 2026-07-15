@@ -54,4 +54,6 @@ public static class CacheKeys
     public const string Receipt = "receipt";
     public const string Features = "features";
     public const string ProductLookup = "product-lookup";
+    public const string ExpenseCategories = "expense-categories";
+    public const string Suppliers = "suppliers";
 }

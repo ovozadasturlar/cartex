@@ -150,6 +150,28 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _settingsApi = settingsApi;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);
+        _auth.LoggedOut += ResetState;
+    }
+
+    private void ResetState()
+    {
+        _searchCts?.Cancel();
+        _suppressReload = true;
+        SearchText = string.Empty;
+        FilterCategory = null;
+        _suppressReload = false;
+        Products.Clear();
+        PriceCurrencies.Clear();
+        Totals = null;
+        _needsReload = false;
+        IsEditOpen = false;
+        IsVariantsOpen = false;
+        IsVariantEditOpen = false;
+        IsPrintOpen = false;
+        IsAddingManufacturer = false;
+        Import.IsOpen = false;
+        Paging.Page = 1;
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private readonly IBusinessApi _businessApi;
@@ -465,8 +487,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanImport));
+        OnPropertyChanged(nameof(CanPrintBarcode));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))

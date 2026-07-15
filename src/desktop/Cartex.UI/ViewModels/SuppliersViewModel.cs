@@ -17,6 +17,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly ReferenceCache _cache;
     private long _editId;
 
     public ObservableCollection<SupplierDto> Suppliers { get; } = [];
@@ -39,13 +40,14 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     public bool IsEmpty => Suppliers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
 
-    public SuppliersViewModel(ISuppliersApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
+    public SuppliersViewModel(ISuppliersApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth, ReferenceCache cache)
     {
         _api = api;
         _toast = toast;
         _busy = busy;
         _export = export;
         _auth = auth;
+        _cache = cache;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);
     }
@@ -149,6 +151,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
                 await _api.PayDebtAsync(RepaySupplier.Id, new PaySupplierDebtRequest(RepayAmount, RepayViaCard));
             IsRepayOpen = false;
             _toast.Success(L["success"]);
+            _cache.Invalidate(CacheKeys.Suppliers);
             await LoadAsync();
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -170,6 +173,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
             }
             IsEditOpen = false;
             _toast.Success(L["success"]);
+            _cache.Invalidate(CacheKeys.Suppliers);
             await LoadAsync();
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

@@ -28,7 +28,7 @@
         <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
                      Height="4" Margin="0,0,0,8" />
 
-        <TabControl>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="{Binding L[sales_report]}">
                 <ScrollViewer>
                     <StackPanel Spacing="16">

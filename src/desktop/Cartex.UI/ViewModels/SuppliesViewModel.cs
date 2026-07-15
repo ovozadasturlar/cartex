@@ -280,12 +280,14 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
             IsPaymentOpen = false;
             _toast.Success(L["success"]);
+            _cache.Invalidate(CacheKeys.Suppliers);
             await LoadAsync();
         }
         catch (Exception ex)
         {
             RaisePaymentTotals();
             _toast.Error(ApiErrors.Describe(ex));
+            _cache.Invalidate(CacheKeys.Suppliers);
             await LoadAsync();
         }
     }
@@ -697,13 +699,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanVoid));
+        OnPropertyChanged(nameof(CanExport));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))
             {
-                var suppliersTask = _suppliersApi.GetAllAsync();
+                var suppliersTask = _cache.GetAsync(CacheKeys.Suppliers, () => _suppliersApi.GetAllAsync());
                 var warehousesTask = _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync());
                 var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
                 var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());

@@ -268,7 +268,6 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
     {
-        // Sahifa almashdi — eski sahifa uchun ketayotgan o'qish so'rovlari endi keraksiz.
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         (oldValue as IDisposable)?.Dispose();
     }
@@ -296,7 +295,6 @@ public partial class MainViewModel : ViewModelBase
         StartPageLoad(CurrentPage);
     }
 
-    /// <summary>Sahifa yuklashini sahifa umriga bog'lab boshlaydi — keyingi navigatsiyada bekor qilinadi.</summary>
     internal static void StartPageLoad(object? page)
     {
         if (page is not ILoadable loadable) return;

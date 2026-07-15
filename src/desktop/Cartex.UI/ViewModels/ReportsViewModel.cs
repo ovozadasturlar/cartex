@@ -24,6 +24,9 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private int _selectedTabIndex;
+
+    private readonly bool[] _loaded = new bool[5];
 
     [ObservableProperty] private decimal _totalSales;
     [ObservableProperty] private decimal _totalProfit;
@@ -87,27 +90,67 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
         _export = export;
         _toast = toast;
         _auth = auth;
+        _auth.LoggedOut += ResetState;
     }
 
-    public Task LoadAsync() => LoadReportAsync();
+    public Task LoadAsync()
+    {
+        OnPropertyChanged(nameof(CanGiveBonus));
+        OnPropertyChanged(nameof(CanExport));
+        return LoadTabAsync(SelectedTabIndex, force: true);
+    }
 
     [RelayCommand]
-    private async Task LoadReportAsync()
+    private Task LoadReportAsync()
     {
+        Array.Clear(_loaded);
+        return LoadTabAsync(SelectedTabIndex, force: true);
+    }
+
+    partial void OnSelectedTabIndexChanged(int value) => _ = LoadTabAsync(value);
+
+    partial void OnDateFromChanged(DateTimeOffset value) => _ = LoadReportAsync();
+
+    partial void OnDateToChanged(DateTimeOffset value) => _ = LoadReportAsync();
+
+    private async Task LoadTabAsync(int index, bool force = false)
+    {
+        if (!force && _loaded[index]) return;
         IsLoading = true;
         try
         {
-            await Task.WhenAll(
-                LoadSalesAsync(),
-                LoadDebtAgingAsync(),
-                LoadInventoryAsync(),
-                LoadBreakdownAsync(),
-                LoadTopCustomersAsync());
+            await (index switch
+            {
+                0 => LoadSalesAsync(),
+                1 => LoadDebtAgingAsync(),
+                2 => LoadInventoryAsync(),
+                3 => LoadBreakdownAsync(),
+                _ => LoadTopCustomersAsync()
+            });
+            _loaded[index] = true;
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    private void ResetState()
+    {
+        Array.Clear(_loaded);
+        TopProducts.Clear();
+        DebtRows.Clear();
+        InventoryByWarehouse.Clear();
+        InventoryByCategory.Clear();
+        SalesByCashier.Clear();
+        SalesByCategory.Clear();
+        TopCustomers.Clear();
+        SalesChartSeries.Clear();
+        TotalSales = TotalProfit = AverageSale = MaxSale = 0;
+        TotalTransactions = 0;
+        DebtTotal = Debt0_30 = Debt31_60 = Debt60Plus = 0;
+        InventoryTotalCost = InventoryTotalRetail = 0;
+        PayCash = PayCard = PayBonus = PayDebt = 0;
     }
 
     private DateTime FromUtc => new DateTimeOffset(DateFrom.Date).UtcDateTime;
