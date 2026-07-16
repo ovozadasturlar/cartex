@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddSingleton<NavigationService>();
         services.AddSingleton<BranchContextService>();
         services.AddSingleton<ConnectivityService>();
+        services.AddSingleton<QueueHubService>();
         services.AddSingleton<OfflineStore>();
         services.AddSingleton<OfflineSyncService>();
         services.AddSingleton(LocalizationManager.Instance);

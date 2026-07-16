@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cartex.Api.Hubs;
 using Cartex.Api.Middleware;
 using Cartex.Api.Services;
 using Cartex.Application;
@@ -37,7 +38,10 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
+builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
+
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -162,6 +166,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+app.MapHub<OrderingHub>("/hubs/ordering");
 
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 

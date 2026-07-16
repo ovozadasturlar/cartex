@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Domain.Authorization;
@@ -11,7 +12,7 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record UpdateCartStatusCommand(string Code, CartStatus Status) : ICommand<Unit>;
 
-public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCartStatusCommand, Unit>
+public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ICartNotifier notifier) : IRequestHandler<UpdateCartStatusCommand, Unit>
 {
     private static readonly Dictionary<CartStatus, CartStatus[]> Allowed = new()
     {
@@ -43,11 +44,13 @@ public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICu
                     .SetProperty(c => c.UpdatedBy, currentUser.UserId), cancellationToken);
             if (claimed == 0)
                 throw new BusinessRuleException("Savat allaqachon olingan.");
+            await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
             return Unit.Value;
         }
 
         cart.Status = request.Status;
         await db.SaveChangesAsync(cancellationToken);
+        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
         return Unit.Value;
     }
 }

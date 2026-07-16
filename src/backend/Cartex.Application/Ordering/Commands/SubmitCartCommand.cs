@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
@@ -12,7 +13,7 @@ public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
 public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null, string? Note = null, CartKind? Kind = null) : ICommand<string>;
 
-public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<SubmitCartCommand, string>
+public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ICartNotifier notifier) : IRequestHandler<SubmitCartCommand, string>
 {
     public async Task<string> Handle(SubmitCartCommand request, CancellationToken cancellationToken)
     {
@@ -46,6 +47,7 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentU
 
         db.Carts.Add(cart);
         await db.SaveChangesAsync(cancellationToken);
+        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
 
         return cart.AggregateCode;
     }
