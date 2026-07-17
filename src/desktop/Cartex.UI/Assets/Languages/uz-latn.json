@@ -819,5 +819,8 @@
   "pack_sale": "Sotuv",
   "pack_both": "Ikkalasi",
   "pack_default": "Birlamchi",
-  "add_pack": "Qadoq qo'shish"
+  "add_pack": "Qadoq qo'shish",
+  "pay_transfer": "Mobil o'tkazma",
+  "pay_bank": "Bank o'tkazmasi",
+  "payment_method": "To'lov turi"
 }

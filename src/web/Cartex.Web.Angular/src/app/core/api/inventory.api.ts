@@ -254,7 +254,7 @@ export class InventoryApi {
     return this.http.put<void>(`/api/suppliers/${id}`, body);
   }
 
-  paySupplierDebt(id: number, amount: number, viaCard: boolean): Observable<void> {
-    return this.http.post<void>(`/api/suppliers/${id}/pay-debt`, { amount, viaCard });
+  paySupplierDebt(id: number, amount: number, method: string = 'Cash'): Observable<void> {
+    return this.http.post<void>(`/api/suppliers/${id}/pay-debt`, { amount, method });
   }
 }

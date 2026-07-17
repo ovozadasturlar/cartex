@@ -223,7 +223,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, false, DebtCurrency: "USD", PayCurrency: "UZS"));
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, AccountType.Cash, DebtCurrency: "USD", PayCurrency: "UZS"));
         }
 
         using var check2 = Fixture.CreateScope();

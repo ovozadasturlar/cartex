@@ -123,10 +123,13 @@
                         <NumericUpDown Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0"
                                        ShowButtonSpinner="False" MinHeight="38" />
                     </StackPanel>
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding L[via_card]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding RepayViaCard}" />
-                    </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[payment_method]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding RepayModes}" SelectedItem="{Binding RepayMode}"
+                                  MinHeight="38" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
                         <Button Classes="outline" Command="{Binding CancelRepayCommand}" Content="{Binding L[cancel]}" />
                         <Button Classes="brand" Command="{Binding RepayCommand}" Content="{Binding L[confirm]}" />

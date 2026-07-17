@@ -819,5 +819,8 @@
   "pack_sale": "Сотув",
   "pack_both": "Иккаласи",
   "pack_default": "Бирламчи",
-  "add_pack": "Қадоқ қўшиш"
+  "add_pack": "Қадоқ қўшиш",
+  "pay_transfer": "Мобил ўтказма",
+  "pay_bank": "Банк ўтказмаси",
+  "payment_method": "Тўлов тури"
 }

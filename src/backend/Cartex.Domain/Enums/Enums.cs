@@ -4,6 +4,8 @@ public enum AccountType
 {
     Cash,
     Card,
+    Transfer,
+    Bank,
     Bonus,
     Debt
 }

@@ -12,7 +12,7 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record PaySupplierDebtCommand(long SupplierId, decimal Amount, bool ViaCard, string? DebtCurrency = null, string? PayCurrency = null, long? SupplyId = null) : ICommand<Unit>;
+public record PaySupplierDebtCommand(long SupplierId, decimal Amount, AccountType Method = AccountType.Cash, string? DebtCurrency = null, string? PayCurrency = null, long? SupplyId = null) : ICommand<Unit>;
 
 public sealed class PaySupplierDebtCommandHandler(
     IApplicationDbContext db,
@@ -43,8 +43,8 @@ public sealed class PaySupplierDebtCommandHandler(
         if ((debtCurrency != baseCode || payCurrency != baseCode) && !await currency.IsMulticurrencyAsync(cancellationToken))
             throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
 
-        if (request.ViaCard && payCurrency != baseCode)
-            throw new BusinessRuleException("Karta to'lovi faqat bazaviy valyutada.");
+        if (request.Method != AccountType.Cash && payCurrency != baseCode)
+            throw new BusinessRuleException("Naqd bo'lmagan to'lov faqat bazaviy valyutada.");
 
         var debt = await ledger.FindSupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, debtCurrency)
             ?? throw new BusinessRuleException("Yetkazib beruvchida qarz mavjud emas.");
@@ -64,10 +64,10 @@ public sealed class PaySupplierDebtCommandHandler(
             .FirstOrDefaultAsync(cancellationToken);
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-        if (!request.ViaCard && shiftId is null && policy.ShiftPolicy != "Off")
+        if (request.Method == AccountType.Cash && shiftId is null && policy.ShiftPolicy != "Off")
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
-        var branchAccount = await ledger.BranchAccountAsync(branchId, request.ViaCard ? AccountType.Card : AccountType.Cash, cancellationToken, payCurrency);
+        var branchAccount = await ledger.BranchAccountAsync(branchId, request.Method, cancellationToken, payCurrency);
 
         var opType = request.SupplyId is null ? OperationType.DebtPay : OperationType.SupplyPay;
 
@@ -90,8 +90,12 @@ public sealed class PaySupplierDebtCommandHandler(
 
 public sealed class PaySupplierDebtCommandValidator : AbstractValidator<PaySupplierDebtCommand>
 {
+    private static readonly AccountType[] PaymentAccounts =
+        [AccountType.Cash, AccountType.Card, AccountType.Transfer, AccountType.Bank];
+
     public PaySupplierDebtCommandValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0);
+        RuleFor(x => x.Method).Must(PaymentAccounts.Contains).WithMessage("To'lov turi noto'g'ri.");
     }
 }

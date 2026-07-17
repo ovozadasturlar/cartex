@@ -15,6 +15,8 @@ public record SupplyDetailDto(
     decimal TotalAmount,
     decimal PaidCash,
     decimal PaidCard,
+    decimal PaidTransfer,
+    decimal PaidBank,
     string Currency,
     decimal Rate,
     List<SupplyItemDto> Items);

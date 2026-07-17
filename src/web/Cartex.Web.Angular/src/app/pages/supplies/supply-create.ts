@@ -240,7 +240,7 @@ export class SupplyCreate implements OnInit {
       );
       if (this.payOldDebt > 0) {
         try {
-          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt, false));
+          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt));
         } catch {
           this.notify.error(this.transloco.translate('err_debt_pay_failed'));
         }

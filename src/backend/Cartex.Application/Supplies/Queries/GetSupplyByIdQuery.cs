@@ -19,6 +19,8 @@ public record SupplyDetailDto(
     decimal TotalAmount,
     decimal PaidCash,
     decimal PaidCard,
+    decimal PaidTransfer,
+    decimal PaidBank,
     string Currency,
     decimal Rate,
     List<SupplyItemDto> Items);
@@ -48,7 +50,8 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
             .ToDictionary(g => g.Key, g => new Queue<DateOnly?>(g.Select(x => x.ExpiredAt)));
 
         var payments = await db.Transactions
-            .Where(t => t.SupplyId == supply.Id && t.OperationType == OperationType.SupplyPay && t.FromAccount != null)
+            .Where(t => t.SupplyId == supply.Id && t.FromAccount != null
+                && (t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay))
             .GroupBy(t => t.FromAccount!.Type)
             .Select(g => new { Type = g.Key, Amount = g.Sum(t => t.Amount) })
             .ToListAsync(cancellationToken);
@@ -76,6 +79,8 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
             supply.TotalAmount,
             payments.FirstOrDefault(p => p.Type == AccountType.Cash)?.Amount ?? 0,
             payments.FirstOrDefault(p => p.Type == AccountType.Card)?.Amount ?? 0,
+            payments.FirstOrDefault(p => p.Type == AccountType.Transfer)?.Amount ?? 0,
+            payments.FirstOrDefault(p => p.Type == AccountType.Bank)?.Amount ?? 0,
             supply.Currency,
             supply.Rate,
             items);

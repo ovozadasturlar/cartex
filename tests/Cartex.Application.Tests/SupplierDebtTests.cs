@@ -95,14 +95,14 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await Assert.ThrowsAsync<BusinessRuleException>(() =>
-                sender.Send(new PaySupplierDebtCommand(supplierId, 10_000m, false)));
+                sender.Send(new PaySupplierDebtCommand(supplierId, 10_000m)));
         }
 
         await TestShift.OpenAsync(Fixture);
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m, false));
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m));
         }
 
         Assert.Equal(0m, await PayableAsync(supplierId));
@@ -126,8 +126,43 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using var scope2 = Fixture.CreateScope();
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new PaySupplierDebtCommand(supplierId, 40_001m, false)));
+            sender2.Send(new PaySupplierDebtCommand(supplierId, 40_001m)));
 
         Assert.Equal(40_000m, await PayableAsync(supplierId));
+    }
+
+    [Theory]
+    [InlineData(AccountType.Transfer)]
+    [InlineData(AccountType.Bank)]
+    public async Task Paying_supplier_debt_by_transfer_uses_own_account_without_shift(AccountType method)
+    {
+        var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        var supplierId = await CreateSupplierAsync();
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new CreateSupplyCommand(supplierId, warehouse1, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 5, 8000m, null)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m, method));
+        }
+
+        Assert.Equal(0m, await PayableAsync(supplierId));
+
+        using var check = Fixture.CreateScope();
+        var db = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var balance = await db.Accounts
+            .Where(a => a.BranchId == branch1 && a.Type == method)
+            .Select(a => a.Balance)
+            .SingleAsync();
+
+        Assert.Equal(-40_000m, balance);
+        Assert.Equal(0m, await db.Accounts.Where(a => a.BranchId == branch1 && a.Type == AccountType.Cash).Select(a => a.Balance).SingleAsync());
     }
 }

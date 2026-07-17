@@ -64,15 +64,13 @@ public partial class SupplyLine : ObservableObject
 public partial class SupplyPaymentLine : ObservableObject
 {
     [ObservableProperty] private decimal _amount;
-    [ObservableProperty] private string _mode = "cash";
+    [ObservableProperty] private string _mode = "Cash";
     [ObservableProperty] private string _currency = "";
 
-    public string ModeText => LocalizationManager.Instance[Mode == "card" ? "card" : "cash"];
+    public string ModeText => PayMode.TextFor(Mode);
 
     partial void OnModeChanged(string value) => OnPropertyChanged(nameof(ModeText));
 }
-
-public sealed record PayMode(string Key, string Text);
 
 public sealed record SupplyEntryOption(string Display, string ShortName, long? UnitId, long? PackId, decimal Ratio)
 {
@@ -152,7 +150,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<SupplyPaymentLine> PaymentLines { get; } = [];
 
     [ObservableProperty] private decimal _paymentAmount;
-    [ObservableProperty] private string _paymentMode = "cash";
+    [ObservableProperty] private string _paymentMode = "Cash";
     [ObservableProperty] private string? _paymentCurrency;
     [ObservableProperty] private bool _isEditingPayment;
 
@@ -167,8 +165,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private void BuildPaymentModes()
     {
         PaymentModes.Clear();
-        PaymentModes.Add(new PayMode("cash", L["cash"]));
-        PaymentModes.Add(new PayMode("card", L["card"]));
+        foreach (var mode in PayMode.All()) PaymentModes.Add(mode);
         SelectedPaymentMode = PaymentModes[0];
     }
 
@@ -280,7 +277,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 {
                     var line = PaymentLines[0];
                     await _suppliersApi.PayDebtAsync(_paymentSupplierId,
-                        new PaySupplierDebtRequest(line.Amount, line.Mode == "card", _paymentDebtCurrency, line.Currency, SupplyId: _paymentSupplyId));
+                        new PaySupplierDebtRequest(line.Amount, line.Mode, _paymentDebtCurrency, line.Currency, SupplyId: _paymentSupplyId));
                     PaymentLines.RemoveAt(0);
                 }
 

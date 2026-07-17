@@ -819,5 +819,8 @@
   "pack_sale": "Sale",
   "pack_both": "Both",
   "pack_default": "Default",
-  "add_pack": "Add pack"
+  "add_pack": "Add pack",
+  "pay_transfer": "Mobile transfer",
+  "pay_bank": "Bank transfer",
+  "payment_method": "Payment method"
 }

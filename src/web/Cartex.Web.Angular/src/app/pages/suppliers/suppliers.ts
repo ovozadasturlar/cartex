@@ -193,9 +193,11 @@ export class SupplierEditDialog {
             <mat-label>{{ t('amount') }}</mat-label>
             <input matInput type="number" min="0" [(ngModel)]="amount" />
           </mat-form-field>
-          <mat-button-toggle-group [(ngModel)]="viaCard" hideSingleSelectionIndicator>
-            <mat-button-toggle [value]="false">{{ t('cash') }}</mat-button-toggle>
-            <mat-button-toggle [value]="true">{{ t('card') }}</mat-button-toggle>
+          <mat-button-toggle-group [(ngModel)]="method" hideSingleSelectionIndicator>
+            <mat-button-toggle value="Cash">{{ t('cash') }}</mat-button-toggle>
+            <mat-button-toggle value="Card">{{ t('card') }}</mat-button-toggle>
+            <mat-button-toggle value="Transfer">{{ t('pay_transfer') }}</mat-button-toggle>
+            <mat-button-toggle value="Bank">{{ t('pay_bank') }}</mat-button-toggle>
           </mat-button-toggle-group>
         </div>
       </mat-dialog-content>
@@ -220,13 +222,13 @@ export class SupplierPayDebtDialog {
   readonly saving = signal(false);
 
   amount = this.supplier.payable;
-  viaCard = false;
+  method = 'Cash';
 
   async save(): Promise<void> {
     if (this.amount <= 0) return;
     this.saving.set(true);
     try {
-      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.viaCard));
+      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

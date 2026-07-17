@@ -31,7 +31,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editPhone = "";
     [ObservableProperty] private bool _isRepayOpen;
     [ObservableProperty] private decimal _repayAmount;
-    [ObservableProperty] private bool _repayViaCard;
+    [ObservableProperty] private PayMode? _repayMode;
+
+    public ObservableCollection<PayMode> RepayModes { get; } = [];
     [ObservableProperty] private SupplierDto? _repaySupplier;
 
     public bool IsModalOpen => IsEditOpen || IsRepayOpen;
@@ -138,7 +140,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     {
         RepaySupplier = supplier;
         RepayAmount = 0;
-        RepayViaCard = false;
+        RepayModes.Clear();
+        foreach (var mode in PayMode.All()) RepayModes.Add(mode);
+        RepayMode = RepayModes[0];
         IsRepayOpen = true;
     }
 
@@ -152,7 +156,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         try
         {
             using (_busy.Begin(L["loading"]))
-                await _api.PayDebtAsync(RepaySupplier.Id, new PaySupplierDebtRequest(RepayAmount, RepayViaCard));
+                await _api.PayDebtAsync(RepaySupplier.Id, new PaySupplierDebtRequest(RepayAmount, RepayMode?.Key ?? "Cash"));
             IsRepayOpen = false;
             _toast.Success(L["success"]);
             _cache.Invalidate(CacheKeys.Suppliers);
