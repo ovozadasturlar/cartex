@@ -4,7 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Supplies.Queries;
 
-public record SupplyItemDto(long VariantId, string ProductName, string UnitName, decimal Quantity, long? UnitId, decimal PackSize, decimal PurchasePrice, DateOnly? ExpiredAt);
+public record SupplyItemDto(long VariantId, string ProductName, string UnitName, decimal Quantity, long? UnitId, decimal PackSize, decimal PurchasePrice, DateOnly? ExpiredAt)
+{
+    public decimal Total => Quantity * PurchasePrice;
+}
 
 public record SupplyDetailDto(
     long Id,

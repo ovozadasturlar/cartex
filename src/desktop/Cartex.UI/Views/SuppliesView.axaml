@@ -193,10 +193,10 @@
                                   HorizontalAlignment="Stretch" PlaceholderText="{Binding L[unit]}" ToolTip.Tip="{Binding L[unit_or_pack]}">
                             <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" /></DataTemplate></ComboBox.ItemTemplate>
                         </ComboBox>
-                        <NumericUpDown Grid.Column="4" MinWidth="100" Value="{Binding LinePrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##"
+                        <NumericUpDown Grid.Column="4" MinWidth="100" Value="{Binding LinePrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="#,##0.##"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding LinePriceLabel}"
                                        PlaceholderText="{Binding LinePriceLabel}" />
-                        <NumericUpDown Grid.Column="5" MinWidth="100" Value="{Binding LineSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##"
+                        <NumericUpDown Grid.Column="5" MinWidth="100" Value="{Binding LineSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="#,##0.##"
                                        ShowButtonSpinner="False" ToolTip.Tip="{Binding L[selling_price]}" />
                         <CalendarDatePicker Grid.Column="6" MinWidth="145" SelectedDate="{Binding LineExpiry}" ToolTip.Tip="{Binding L[expired_at]}" />
                         <Button Grid.Column="7" Classes="outline" Command="{Binding AddLineCommand}" MinHeight="34" Padding="14,0"
@@ -381,6 +381,8 @@
                                                     Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}" />
                                 <DataGridTextColumn Width="Auto" Binding="{Binding ExpiredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy}', TargetNullValue=—}"
                                                     Header="{Binding [expired_at], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="140" Binding="{Binding Total, Mode=OneWay, StringFormat='{}{0:N0}'}"
+                                                    Header="{Binding [total], Source={x:Static svc:LocalizationManager.Instance}}" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>

@@ -196,4 +196,8 @@
         <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
     </Style>
 
+    <Style Selector="NumericUpDown">
+        <Setter Property="(c:MoneyInput.Group)" Value="True" />
+    </Style>
+
 </Styles>

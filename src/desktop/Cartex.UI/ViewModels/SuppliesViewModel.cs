@@ -865,7 +865,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task AddLineAsync()
     {
-        if (LineProduct?.Id is not { } variantId || LineQuantity <= 0 || LinePrice < 0) { _toast.Error(L["error"]); return; }
+        if (LineProduct?.Id is not { } variantId) { _toast.Warning(L["err_select_product"]); return; }
+        if (LineQuantity <= 0) { _toast.Warning(L["err_qty_positive"]); return; }
+        if (LinePrice < 0) { _toast.Warning(L["err_price_negative"]); return; }
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
         if (!await ConfirmPriceAsync(variantId)) return;
 
@@ -901,7 +903,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (SelectedSupplier?.Id is not { } supplierId || SelectedWarehouse?.Id is null || Items.Count == 0) { _toast.Error(L["error"]); return; }
+        if (SelectedSupplier?.Id is not { } supplierId) { _toast.Warning(L["err_select_supplier"]); return; }
+        if (SelectedWarehouse?.Id is null) { _toast.Warning(L["select_warehouse"]); return; }
+        if (Items.Count == 0) { _toast.Warning(L["err_no_items"]); return; }
 
         var supplyCurrency = IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null;
         var total = EditTotal;
