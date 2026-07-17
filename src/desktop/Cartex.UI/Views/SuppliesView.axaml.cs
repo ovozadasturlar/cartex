@@ -13,6 +13,8 @@ public partial class SuppliesView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        Controls.FocusNavigator.Attach(this,
+            LineBarcodeBox, ProductBox, LineQtyBox, LineEntryBox, LinePriceBox, LineSellingBox, LineExpiryBox, LineAddButton);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
