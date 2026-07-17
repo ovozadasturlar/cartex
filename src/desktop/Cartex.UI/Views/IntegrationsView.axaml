@@ -51,7 +51,6 @@
             <ScrollViewer Grid.Column="1">
                 <Panel MaxWidth="620" HorizontalAlignment="Left">
 
-                    <!-- Telegram -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsTelegram}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
@@ -91,7 +90,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Email -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsEmail}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
@@ -148,7 +146,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- SMS -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsSms}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
@@ -213,7 +210,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Receipt delivery -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsReceipt}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
@@ -242,7 +238,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Storage (MinIO) -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsStorage}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">
@@ -289,7 +284,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Cloud bridge (push relay) -->
                     <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20" IsVisible="{Binding IsCloudBridge}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14">

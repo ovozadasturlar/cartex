@@ -704,8 +704,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private Task LoadMoreProducts() => LoadProductsPageAsync(reset: false);
 
-    // AllowConcurrentExecutions: aks holda birinchi skaner tugamaguncha buyruq CanExecute=false bo'lib,
-    // bir mahsulotni ketma-ket skaner qilganda ikkinchi Enter jimgina tashlab yuboriladi.
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ScanAsync()
     {
@@ -719,8 +717,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        // Maydon so'rovlardan oldin tozalanadi: skaner keyingi kodni darhol yuborsa,
-        // u eskisining ustiga yopishib qolmasin.
         SearchText = string.Empty;
         var visibleProducts = Products.ToList();
 
@@ -798,7 +794,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
         }
 
-        // Maydon tozalangani uchun Products ro'yxati qayta yuklanishi mumkin — skaner boshidagi nusxadan olamiz.
         if (visibleProducts.Count > 0)
         {
             var first = visibleProducts[0];
