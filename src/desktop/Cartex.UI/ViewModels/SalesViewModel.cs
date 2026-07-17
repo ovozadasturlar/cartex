@@ -1270,10 +1270,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             CurrentReceipt = await _receiptApi.GetAsync(token);
             IsReceiptOpen = true;
-            if (_printer.AutoPrintEnabled)
-                await PrintCurrentReceiptAsync();
         }
-        catch { }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        if (!_printer.AutoPrintEnabled) return;
+        try { await PrintCurrentReceiptAsync(); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

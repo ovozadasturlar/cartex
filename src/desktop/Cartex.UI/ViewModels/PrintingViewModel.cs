@@ -171,16 +171,24 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private void TestPrint()
     {
         if (string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintRaw(ReceiptPrinter, "Cartex\n  Test print\n\n\n");
-        _toast.Info(L["success"]);
+        try
+        {
+            _printer.PrintRaw(ReceiptPrinter, "Cartex\n  Test print\n\n\n");
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void TestZPrint()
     {
         if (string.IsNullOrWhiteSpace(ZReportPrinter) && string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintZReport(new ZReportDto(0, 100_000, 1_250_000, 0, 50_000, 30_000, 200_000, 0, 1_570_000, 1_570_000, 0));
-        _toast.Info(L["success"]);
+        try
+        {
+            _printer.PrintZReport(new ZReportDto(0, 100_000, 1_250_000, 0, 50_000, 30_000, 200_000, 0, 1_570_000, 1_570_000, 0));
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

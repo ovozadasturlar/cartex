@@ -220,12 +220,14 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
             LastReport = report;
             IsReportOpen = true;
             CountedCash = 0;
-            var printer = ServiceLocator.Resolve<IPrinterService>();
-            if (printer.GetSettings().AutoPrintZReport)
-                printer.PrintZReport(report);
             _toast.Success(L["success"]);
             await LoadAsync();
         }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        var printer = ServiceLocator.Resolve<IPrinterService>();
+        if (!printer.GetSettings().AutoPrintZReport || LastReport is null) return;
+        try { printer.PrintZReport(LastReport); }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
@@ -233,7 +235,11 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     private void PrintReport()
     {
         if (LastReport is null) return;
-        ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
-        _toast.Info(L["success"]);
+        try
+        {
+            ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 }

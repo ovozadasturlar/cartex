@@ -142,11 +142,7 @@ public sealed class PrinterService : IPrinterService
     public void PrintRaw(string? printerName, string text)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName)) return;
-        Task.Run(() =>
-        {
-            try { RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt"); }
-            catch { }
-        });
+        RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt");
     }
 
     public void PrintRawBytes(string? printerName, byte[] data)
