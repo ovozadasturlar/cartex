@@ -21,7 +21,7 @@ public static class FeatureCatalog
         [Reports] = [AppPermissions.Reports.View, AppPermissions.Reports.Export],
         [Loyalty] = [AppPermissions.Loyalty.View, AppPermissions.Loyalty.Manage],
         [StockTransfers] = [AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Manage],
-        [Supplies] = [AppPermissions.Supplies.View, AppPermissions.Supplies.Manage],
+        [Supplies] = [AppPermissions.Supplies.View, AppPermissions.Supplies.Manage, AppPermissions.Supplies.Edit],
         [Suppliers] = [AppPermissions.Suppliers.View, AppPermissions.Suppliers.Manage],
         [Accounts] = [AppPermissions.Accounts.View, AppPermissions.Accounts.Manage, AppPermissions.Transactions.View],
         [Multicurrency] = [AppPermissions.Rates.Manage],

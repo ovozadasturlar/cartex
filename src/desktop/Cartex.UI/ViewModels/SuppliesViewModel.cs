@@ -414,10 +414,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private decimal LineRatio => LineEntry?.Ratio is { } r && r > 0 ? r : 1;
 
-    private UnitDto? LineStockingUnit =>
-        LineProduct?.Id is { } id && _variantStockUnits.TryGetValue(id, out var s)
-            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
-            : null;
+    private UnitDto? StockingUnitOf(long variantId) =>
+        _variantStockUnits.TryGetValue(variantId, out var s) ? _allUnits.FirstOrDefault(u => u.Id == s.Id) : null;
+
+    private UnitDto? LineStockingUnit => LineProduct?.Id is { } id ? StockingUnitOf(id) : null;
 
     public string LineStockingUnitName => LineStockingUnit?.ShortName ?? LineEntry?.ShortName ?? "";
     private string LinePriceUnitName => PricePerStockingUnit ? LineStockingUnitName : LineEntry?.ShortName ?? LineStockingUnitName;
@@ -456,31 +456,47 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _ = FillPricesAsync(value);
     }
 
-    private void RebuildEntryOptions(IdOption? product)
+    private List<SupplyEntryOption> BuildEntryOptions(long id)
     {
-        EntryOptions.Clear();
-        if (product?.Id is not { } id) { LineEntry = null; return; }
-
+        List<SupplyEntryOption> options = [];
         var dimension = _variantDimensions.TryGetValue(id, out var d) ? d : null;
         UnitDto? stocking = null;
         if (_variantStockUnits.TryGetValue(id, out var s))
         {
             stocking = _allUnits.FirstOrDefault(u => u.Id == s.Id)
                 ?? new UnitDto(s.Id, s.ShortName, s.ShortName, dimension ?? "Count", 1, false);
-            EntryOptions.Add(new SupplyEntryOption(stocking.ShortName, stocking.ShortName, stocking.Id, null, 1));
+            options.Add(new SupplyEntryOption(stocking.ShortName, stocking.ShortName, stocking.Id, null, 1));
         }
 
         if (dimension is not (null or "Count") && stocking is { Factor: > 0 })
             foreach (var u in _allUnits.Where(u => u.Dimension == dimension && u.IsEnabled && u.Id != stocking.Id))
-                EntryOptions.Add(new SupplyEntryOption(u.ShortName, u.ShortName, u.Id, null, u.Factor / stocking.Factor));
+                options.Add(new SupplyEntryOption(u.ShortName, u.ShortName, u.Id, null, u.Factor / stocking.Factor));
 
         var stockingName = stocking?.ShortName ?? "";
         if (_variantPacks.TryGetValue(id, out var packs))
             foreach (var pack in packs)
-                EntryOptions.Add(new SupplyEntryOption(
+                options.Add(new SupplyEntryOption(
                     $"{pack.Name} ({pack.Size:0.###} {stockingName})", pack.Name, null, pack.Id, pack.Size));
 
+        return options;
+    }
+
+    private void RebuildEntryOptions(IdOption? product)
+    {
+        EntryOptions.Clear();
+        if (product?.Id is not { } id) { LineEntry = null; return; }
+        foreach (var option in BuildEntryOptions(id)) EntryOptions.Add(option);
         LineEntry = EntryOptions.FirstOrDefault();
+    }
+
+    private SupplyEntryOption? EntryFor(long variantId, long? unitId, long? packId)
+    {
+        var options = BuildEntryOptions(variantId);
+        return packId is not null
+            ? options.FirstOrDefault(o => o.PackId == packId)
+            : unitId is not null
+                ? options.FirstOrDefault(o => o.UnitId == unitId)
+                : options.FirstOrDefault(o => o.PackId is null && o.Ratio == 1);
     }
 
     private async Task FillPricesAsync(IdOption? product)
@@ -530,6 +546,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
     public bool CanVoid => _auth.HasPermission("supplies.manage");
     public bool CanPay => _auth.HasPermission("suppliers.manage");
+    public bool CanEdit => _auth.HasPermission("supplies.edit");
+
+    private long? _editingSupplyId;
+    public string EditorTitle => _editingSupplyId is null ? L["supply_new"] : L["supply_edit"];
 
     public bool IsModalOpen => IsDetailOpen || IsPrintOpen || IsPaymentOpen || QuickProduct.IsOpen;
 
@@ -598,6 +618,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
+        _editingSupplyId = null;
+        OnPropertyChanged(nameof(EditorTitle));
         Items.Clear();
         ResetLine();
         PaymentLines.Clear();
@@ -696,6 +718,48 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         RaisePaymentTotals();
         IsDetailOpen = false;
         IsPaymentOpen = true;
+    }
+
+    [RelayCommand]
+    private async Task OpenEditAsync()
+    {
+        if (Detail is null || !CanEdit) return;
+        if (Items.Count > 0 && !await _dialog.ConfirmAsync(L["supply_edit_discard"], L["supply_edit"])) return;
+        await EnsureCurrenciesAsync();
+
+        _editingSupplyId = Detail.Id;
+        SelectedSupplier = SupplierOptions.FirstOrDefault(o => o.Id == Detail.SupplierId);
+        SelectedWarehouse = WarehouseOptions.FirstOrDefault(o => o.Id == Detail.WarehouseId);
+        SupplyDate = Detail.SupplyDate.ToDateTime(TimeOnly.MinValue);
+        SupplyCurrency = Currencies.Contains(Detail.Currency) ? Detail.Currency : _baseCurrency;
+
+        Items.Clear();
+        foreach (var i in Detail.Items)
+        {
+            var entry = EntryFor(i.VariantId, i.UnitId, i.PackId);
+            var stockingName = StockingUnitOf(i.VariantId)?.ShortName ?? i.UnitName;
+            Items.Add(new SupplyLine
+            {
+                VariantId = i.VariantId,
+                ProductName = i.ProductName,
+                ImageKey = _variantImages.GetValueOrDefault(i.VariantId),
+                UnitId = i.UnitId,
+                PackId = i.PackId,
+                UnitName = entry?.ShortName ?? i.UnitName,
+                StockingUnitName = stockingName,
+                Ratio = entry?.Ratio is { } r && r > 0 ? r : 1,
+                PricePerStockingUnit = i.PriceBasis == "PerStockingUnit",
+                Quantity = i.EntryQuantity > 0 ? i.EntryQuantity : i.Quantity,
+                PurchasePrice = i.EntryPrice > 0 ? i.EntryPrice : i.PurchasePrice,
+                ExpiredAt = i.ExpiredAt,
+                SellingPrice = null
+            });
+        }
+
+        ResetLine();
+        IsDetailOpen = false;
+        IsEditOpen = true;
+        OnPropertyChanged(nameof(EditorTitle));
     }
 
     [RelayCommand]
@@ -845,6 +909,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         OnPropertyChanged(nameof(CanVoid));
         OnPropertyChanged(nameof(CanPay));
+        OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanExport));
     }
 
@@ -904,6 +969,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        _editingSupplyId = null;
+        OnPropertyChanged(nameof(EditorTitle));
         if (Items.Count == 0)
         {
             SelectedSupplier ??= SupplierOptions.FirstOrDefault();
@@ -1044,7 +1111,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private void RemoveLine(SupplyLine line) => Items.Remove(line);
 
     [RelayCommand]
-    private void CancelEdit() => IsEditOpen = false;
+    private void CancelEdit()
+    {
+        if (_editingSupplyId is not null)
+        {
+            Items.Clear();
+            ResetLine();
+            _editingSupplyId = null;
+            OnPropertyChanged(nameof(EditorTitle));
+        }
+        IsEditOpen = false;
+    }
 
     [RelayCommand]
     private async Task SaveAsync()
@@ -1055,7 +1132,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
         var supplyCurrency = IsMulticurrency && SupplyCurrency != _baseCurrency ? SupplyCurrency : null;
         var total = EditTotal;
-        long supplyId;
+        var editId = _editingSupplyId;
+        long supplyId = 0;
 
         try
         {
@@ -1069,16 +1147,22 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 0,
                 supplyCurrency);
             using (_busy.Begin(L["loading"]))
-                supplyId = await _api.CreateAsync(request);
+            {
+                if (editId is { } id) await _api.UpdateAsync(id, request);
+                else supplyId = await _api.CreateAsync(request);
+            }
 
             Items.Clear();
             ResetLine();
+            _editingSupplyId = null;
+            OnPropertyChanged(nameof(EditorTitle));
             IsEditOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
 
+        if (editId is not null) return;
         if (!CanPay) return;
         if (!await _dialog.ConfirmAsync(L["supply_pay_confirm"], L["payment"])) return;
 

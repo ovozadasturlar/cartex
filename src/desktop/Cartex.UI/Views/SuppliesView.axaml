@@ -148,7 +148,7 @@
                         VerticalAlignment="Center" Margin="0,0,10,0">
                     <mi:MaterialIcon Kind="ArrowLeft" Width="18" Height="18" />
                 </Button>
-                <TextBlock Grid.Column="1" Text="{Binding L[supply_new]}" FontSize="18" FontWeight="Bold"
+                <TextBlock Grid.Column="1" Text="{Binding EditorTitle}" FontSize="18" FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
             </Grid>
 
@@ -409,13 +409,16 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
                             <Button Classes="danger" Command="{Binding VoidSupplyCommand}" Content="{Binding L[supply_void]}"
                                     IsVisible="{Binding CanVoid}" />
-                            <Button Grid.Column="2" Classes="brand" MinWidth="120" Margin="0,0,10,0" HorizontalContentAlignment="Center"
+                            <Button Grid.Column="2" Classes="outline" MinWidth="120" Margin="0,0,10,0" HorizontalContentAlignment="Center"
+                                    Command="{Binding OpenEditCommand}" Content="{Binding L[edit]}"
+                                    IsVisible="{Binding CanEdit}" />
+                            <Button Grid.Column="3" Classes="brand" MinWidth="120" Margin="0,0,10,0" HorizontalContentAlignment="Center"
                                     Command="{Binding OpenPaymentCommand}" Content="{Binding L[payment]}"
                                     IsVisible="{Binding CanPay}" />
-                            <Button Grid.Column="3" MinWidth="120" HorizontalContentAlignment="Center"
+                            <Button Grid.Column="4" MinWidth="120" HorizontalContentAlignment="Center"
                                     Command="{Binding CloseDetailCommand}" Content="{Binding L[back]}" />
                         </Grid>
                     </StackPanel>

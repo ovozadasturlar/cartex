@@ -49,6 +49,14 @@ public class SuppliesController(ISender sender) : ControllerBase
         return Ok(id);
     }
 
+    [HttpPut("{id:long}")]
+    [HasPermission(AppPermissions.Supplies.Edit)]
+    public async Task<IActionResult> UpdateSupply(long id, UpdateSupplyCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
+    }
+
     [HttpPost("{id:long}/attach-payments")]
     [HasPermission(AppPermissions.Suppliers.Manage)]
     public async Task<IActionResult> AttachPayments(long id, AttachSupplierPaymentsRequest request)

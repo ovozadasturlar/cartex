@@ -4,7 +4,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Supplies.Queries;
 
-public record SupplyItemDto(long VariantId, string ProductName, string UnitName, decimal Quantity, long? UnitId, decimal PackSize, decimal PurchasePrice, DateOnly? ExpiredAt)
+public record SupplyItemDto(
+    long VariantId,
+    string ProductName,
+    string UnitName,
+    decimal Quantity,
+    long? UnitId,
+    decimal PackSize,
+    decimal PurchasePrice,
+    DateOnly? ExpiredAt,
+    long? PackId = null,
+    decimal EntryQuantity = 0,
+    decimal EntryPrice = 0,
+    string PriceBasis = "PerEntry")
 {
     public decimal Total => Quantity * PurchasePrice;
 }
@@ -14,6 +26,7 @@ public record SupplyDetailDto(
     DateOnly SupplyDate,
     long SupplierId,
     string SupplierName,
+    long WarehouseId,
     string WarehouseName,
     string UserName,
     decimal TotalAmount,
@@ -66,7 +79,11 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
                 i.UnitId,
                 i.PackSize,
                 i.PurchasePrice,
-                expiries.TryGetValue(i.VariantId, out var q) && q.Count > 0 ? q.Dequeue() : null))
+                expiries.TryGetValue(i.VariantId, out var q) && q.Count > 0 ? q.Dequeue() : null,
+                i.PackId,
+                i.EntryQuantity,
+                i.EntryPrice,
+                i.PriceBasis.ToString()))
             .ToList();
 
         return new SupplyDetailDto(
@@ -74,6 +91,7 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
             supply.SupplyDate,
             supply.SupplierId,
             supply.Supplier.Name,
+            supply.WarehouseId,
             supply.Warehouse.Name,
             supply.User.FullName,
             supply.TotalAmount,

@@ -98,6 +98,7 @@ public static class AppPermissions
     {
         public const string View = "supplies.view";
         public const string Manage = "supplies.manage";
+        public const string Edit = "supplies.edit";
     }
 
     public static class Customers
@@ -205,7 +206,8 @@ public static class AppPermissions
         [Shifts.Manage] = "Open/close cash shift",
         [Shifts.View] = "View shift history",
         [Supplies.View] = "View supplies",
-        [Supplies.Manage] = "Create/edit supplies",
+        [Supplies.Manage] = "Create and void supplies",
+        [Supplies.Edit] = "Edit a saved supply",
         [Customers.View] = "View customers",
         [Customers.ViewAll] = "View all customers (not only own)",
         [Customers.Manage] = "Create/edit customers",

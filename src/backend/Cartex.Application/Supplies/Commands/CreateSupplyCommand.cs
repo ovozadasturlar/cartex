@@ -47,53 +47,8 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
         var supplyRate = supplyCurrency == baseCode ? 1m : await currency.RateAsync(supplyCurrency, cancellationToken);
 
-        var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
-        var variants = await db.ProductVariants
-            .Where(v => variantIds.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId, v.Product.Unit })
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-
-        var lineUnitIds = request.Items.Where(i => i.UnitId is not null).Select(i => i.UnitId!.Value).Distinct().ToList();
-        var lineUnits = lineUnitIds.Count == 0
-            ? []
-            : await db.Units.Where(u => lineUnitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
-
-        var packIds = request.Items.Where(i => i.PackId is not null).Select(i => i.PackId!.Value).Distinct().ToList();
-        var packs = packIds.Count == 0
-            ? []
-            : await db.ProductPacks.Where(p => packIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
-
-        (decimal Quantity, decimal Price, decimal? SellingPrice, decimal PackSize) Resolve(CreateSupplyItemDto item)
-        {
-            if (!variants.TryGetValue(item.VariantId, out var variant))
-                throw new NotFoundException("Mahsulot topilmadi.");
-
-            if (item.UnitId is not null && item.PackId is not null)
-                throw new BusinessRuleException("Bir qatorda birlik va qadoq birga tanlanmaydi.");
-
-            Domain.Entities.Unit? entryUnit = null;
-            if (item.UnitId is { } uid && !lineUnits.TryGetValue(uid, out entryUnit))
-                throw new NotFoundException("Birlik topilmadi.");
-
-            var packSize = 1m;
-            if (item.PackId is { } packId)
-            {
-                if (!packs.TryGetValue(packId, out var pack))
-                    throw new NotFoundException("Qadoq topilmadi.");
-                if (pack.ProductId != variant.ProductId)
-                    throw new BusinessRuleException("Qadoq boshqa mahsulotga tegishli.");
-                if (pack.Kind == PackKind.Sale)
-                    throw new BusinessRuleException("Bu qadoq faqat sotuv uchun — kirimda ishlatilmaydi.");
-                packSize = pack.Size;
-            }
-
-            var normalized = UnitConversion.Normalize(
-                item.Quantity, item.PurchasePrice, entryUnit, variant.Unit, packSize, item.PriceBasis);
-
-            return (normalized.Quantity, normalized.Price, item.SellingPrice, packSize);
-        }
-
-        var lines = request.Items.Select(item => (item, resolved: Resolve(item))).ToList();
+        var resolver = await SupplyLineResolver.LoadAsync(db, request.Items, cancellationToken);
+        var lines = request.Items.Select(item => (item, resolved: resolver.Resolve(item))).ToList();
 
         var supply = new Supply
         {
