@@ -387,6 +387,16 @@
                                     <TextBlock Text="{Binding L[paid_card]}" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
                                     <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
                                                Text="{Binding Detail.PaidCard, StringFormat='{}{0:N0}'}" />
+                                    <StackPanel Spacing="3" IsVisible="{Binding Detail.PaidTransfer}">
+                                        <TextBlock Text="{Binding L[pay_transfer]}" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                                        <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                                   Text="{Binding Detail.PaidTransfer, StringFormat='{}{0:N0}'}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="3" IsVisible="{Binding Detail.PaidBank}">
+                                        <TextBlock Text="{Binding L[pay_bank]}" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                                        <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                                   Text="{Binding Detail.PaidBank, StringFormat='{}{0:N0}'}" />
+                                    </StackPanel>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="3" HorizontalAlignment="Right">
                                     <TextBlock Text="{Binding L[total]}" Foreground="{DynamicResource TextSecondary}" FontSize="12" HorizontalAlignment="Right" />
@@ -399,10 +409,13 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                             <Button Classes="danger" Command="{Binding VoidSupplyCommand}" Content="{Binding L[supply_void]}"
                                     IsVisible="{Binding CanVoid}" />
-                            <Button Grid.Column="2" MinWidth="120" HorizontalContentAlignment="Center"
+                            <Button Grid.Column="2" Classes="brand" MinWidth="120" Margin="0,0,10,0" HorizontalContentAlignment="Center"
+                                    Command="{Binding OpenPaymentCommand}" Content="{Binding L[payment]}"
+                                    IsVisible="{Binding CanPay}" />
+                            <Button Grid.Column="3" MinWidth="120" HorizontalContentAlignment="Center"
                                     Command="{Binding CloseDetailCommand}" Content="{Binding L[back]}" />
                         </Grid>
                     </StackPanel>
@@ -510,7 +523,7 @@
         </Border>
 
         <Border IsVisible="{Binding IsPaymentOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" MaxWidth="720" MaxHeight="620" Margin="32" Padding="22"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" MaxWidth="720" MaxHeight="720" Margin="32" Padding="22"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <DockPanel>
@@ -534,6 +547,30 @@
                                        Foreground="{DynamicResource DangerBrush}" />
                         </StackPanel>
                     </Grid>
+
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12" Margin="0,0,0,12"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            IsVisible="{Binding HasExistingPayments}">
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[existing_payments]}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" FontSize="13" />
+                                <TextBlock Text="{Binding L[attach_payments_hint]}" Foreground="{DynamicResource TextSecondary}" FontSize="11.5" />
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding ExistingPayments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected}" Margin="0,2">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                                                <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{DynamicResource TextSecondary}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
 
                     <Border DockPanel.Dock="Top" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12" Margin="0,0,0,12"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">

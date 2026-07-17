@@ -20,6 +20,9 @@ public interface ISuppliesApi
     [Post("/api/supplies")]
     Task<long> CreateAsync([Body] CreateSupplyRequest request);
 
+    [Post("/api/supplies/{id}/attach-payments")]
+    Task AttachPaymentsAsync(long id, [Body] AttachSupplierPaymentsRequest request);
+
     [Delete("/api/supplies/{id}")]
     Task DeleteAsync(long id);
 }

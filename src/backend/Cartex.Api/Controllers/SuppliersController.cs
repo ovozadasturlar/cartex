@@ -45,4 +45,12 @@ public class SuppliersController(ISender sender) : ControllerBase
         await sender.Send(command with { SupplierId = id });
         return Ok();
     }
+
+    [HttpGet("{id:long}/payments")]
+    [HasPermission(AppPermissions.Suppliers.Manage)]
+    public async Task<ActionResult<IReadOnlyCollection<SupplierPaymentDto>>> GetPayments(long id, [FromQuery] DateOnly date)
+    {
+        var result = await sender.Send(new GetSupplierPaymentsQuery(id, date));
+        return Ok(result);
+    }
 }

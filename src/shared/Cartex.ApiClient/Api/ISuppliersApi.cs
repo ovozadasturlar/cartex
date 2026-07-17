@@ -19,4 +19,7 @@ public interface ISuppliersApi
 
     [Post("/api/suppliers/{id}/pay-debt")]
     Task PayDebtAsync(long id, [Body] PaySupplierDebtRequest request);
+
+    [Get("/api/suppliers/{id}/payments")]
+    Task<List<SupplierPaymentDto>> GetPaymentsAsync(long id, [Query(Format = "yyyy-MM-dd")] DateOnly date);
 }

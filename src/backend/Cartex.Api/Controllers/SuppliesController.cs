@@ -1,10 +1,13 @@
 using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Supplies.Queries;
+using Cartex.Application.Suppliers.Commands;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
+using AttachSupplierPaymentsRequest = Cartex.Shared.Models.Supplies.AttachSupplierPaymentsRequest;
 
 namespace Cartex.Api.Controllers;
 
@@ -44,6 +47,14 @@ public class SuppliesController(ISender sender) : ControllerBase
     {
         var id = await sender.Send(command);
         return Ok(id);
+    }
+
+    [HttpPost("{id:long}/attach-payments")]
+    [HasPermission(AppPermissions.Suppliers.Manage)]
+    public async Task<IActionResult> AttachPayments(long id, AttachSupplierPaymentsRequest request)
+    {
+        await sender.Send(new AttachSupplierPaymentsCommand(id, request.TransactionIds));
+        return NoContent();
     }
 
     [HttpDelete("{id:long}")]

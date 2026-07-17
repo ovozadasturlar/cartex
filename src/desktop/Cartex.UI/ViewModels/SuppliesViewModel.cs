@@ -72,6 +72,18 @@ public partial class SupplyPaymentLine : ObservableObject
     partial void OnModeChanged(string value) => OnPropertyChanged(nameof(ModeText));
 }
 
+public partial class SupplierPaymentRow(SupplierPaymentDto dto) : ObservableObject
+{
+    public SupplierPaymentDto Dto { get; } = dto;
+    public long TransactionId => Dto.TransactionId;
+    public decimal Amount => Dto.Amount;
+    public string Currency => Dto.Currency;
+    public string Title => $"{Dto.CreatedAt.ToLocalTime():HH:mm} · {Dto.Amount:N0} {Dto.Currency}";
+    public string Subtitle => $"{PayMode.TextFor(Dto.Method)}{(Dto.UserName is null ? "" : " · " + Dto.UserName)}";
+
+    [ObservableProperty] private bool _isSelected;
+}
+
 public sealed record SupplyEntryOption(string Display, string ShortName, long? UnitId, long? PackId, decimal Ratio)
 {
     public bool IsPack => PackId is not null;
@@ -148,6 +160,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paymentSupplyTotal;
 
     public ObservableCollection<SupplyPaymentLine> PaymentLines { get; } = [];
+    public ObservableCollection<SupplierPaymentRow> ExistingPayments { get; } = [];
 
     [ObservableProperty] private decimal _paymentAmount;
     [ObservableProperty] private string _paymentMode = "Cash";
@@ -190,15 +203,40 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         return rate == 0 ? amount : amount * RateOf(_paymentDebtCurrency) / rate;
     }
 
-    public decimal PaymentPaidTotal => PaymentLines.Sum(p => ToSupplyCurrency(p.Amount, p.Currency));
+    public decimal PaymentPaidTotal =>
+        PaymentLines.Sum(p => ToSupplyCurrency(p.Amount, p.Currency))
+        + ExistingPayments.Where(p => p.IsSelected).Sum(p => ToSupplyCurrency(p.Amount, p.Currency));
     public decimal PaymentRemains => Math.Max(0, PaymentSupplyTotal - PaymentPaidTotal);
     public bool HasPaymentLines => PaymentLines.Count > 0;
+    public bool HasExistingPayments => ExistingPayments.Count > 0;
 
     private void RaisePaymentTotals()
     {
         OnPropertyChanged(nameof(PaymentPaidTotal));
         OnPropertyChanged(nameof(PaymentRemains));
         OnPropertyChanged(nameof(HasPaymentLines));
+        OnPropertyChanged(nameof(HasExistingPayments));
+    }
+
+    private void OnExistingPaymentChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SupplierPaymentRow.IsSelected)) RaisePaymentTotals();
+    }
+
+    private async Task LoadExistingPaymentsAsync(long supplierId, DateOnly date)
+    {
+        ExistingPayments.Clear();
+        try
+        {
+            foreach (var p in await _suppliersApi.GetPaymentsAsync(supplierId, date))
+            {
+                var row = new SupplierPaymentRow(p);
+                row.PropertyChanged += OnExistingPaymentChanged;
+                ExistingPayments.Add(row);
+            }
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        RaisePaymentTotals();
     }
 
     [RelayCommand]
@@ -263,16 +301,25 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         IsPaymentOpen = false;
         PaymentLines.Clear();
+        ExistingPayments.Clear();
     }
 
     [RelayCommand]
     private async Task ConfirmPaymentAsync()
     {
-        if (PaymentLines.Count == 0) { _toast.Warning(L["err_no_payment_lines"]); return; }
+        var attach = ExistingPayments.Where(p => p.IsSelected).Select(p => p.TransactionId).ToList();
+        if (PaymentLines.Count == 0 && attach.Count == 0) { _toast.Warning(L["err_no_payment_lines"]); return; }
 
         try
         {
             using (_busy.Begin(L["loading"]))
+            {
+                if (attach.Count > 0 && _paymentSupplyId is { } sid)
+                {
+                    await _api.AttachPaymentsAsync(sid, new AttachSupplierPaymentsRequest(attach));
+                    ExistingPayments.Clear();
+                }
+
                 while (PaymentLines.Count > 0)
                 {
                     var line = PaymentLines[0];
@@ -280,8 +327,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                         new PaySupplierDebtRequest(line.Amount, line.Mode, _paymentDebtCurrency, line.Currency, SupplyId: _paymentSupplyId));
                     PaymentLines.RemoveAt(0);
                 }
+            }
 
             IsPaymentOpen = false;
+            ExistingPayments.Clear();
             _toast.Success(L["success"]);
             _cache.Invalidate(CacheKeys.Suppliers);
             await LoadAsync();
@@ -480,6 +529,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private SupplyDetailDto? _detail;
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
     public bool CanVoid => _auth.HasPermission("supplies.manage");
+    public bool CanPay => _auth.HasPermission("suppliers.manage");
 
     public bool IsModalOpen => IsDetailOpen || IsPrintOpen || IsPaymentOpen || QuickProduct.IsOpen;
 
@@ -551,6 +601,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         Items.Clear();
         ResetLine();
         PaymentLines.Clear();
+        ExistingPayments.Clear();
         IsEditOpen = false;
         IsPaymentOpen = false;
         IsDetailOpen = false;
@@ -623,6 +674,29 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CloseDetail() => IsDetailOpen = false;
+
+    [RelayCommand]
+    private async Task OpenPaymentAsync()
+    {
+        if (Detail is null || !CanPay) return;
+        await EnsureCurrenciesAsync();
+        await EnsureRatesAsync();
+
+        _paymentSupplierId = Detail.SupplierId;
+        _paymentSupplyId = Detail.Id;
+        _paymentDebtCurrency = Detail.Currency == _baseCurrency ? null : Detail.Currency;
+        _editingPayment = null;
+        IsEditingPayment = false;
+        PaymentLines.Clear();
+        PaymentSupplyTotal = Detail.TotalAmount - Detail.PaidCash - Detail.PaidCard - Detail.PaidTransfer - Detail.PaidBank;
+        PaymentAmount = PaymentSupplyTotal;
+        BuildPaymentModes();
+        PaymentCurrency = Detail.Currency;
+        await LoadExistingPaymentsAsync(Detail.SupplierId, Detail.SupplyDate);
+        RaisePaymentTotals();
+        IsDetailOpen = false;
+        IsPaymentOpen = true;
+    }
 
     [RelayCommand]
     private async Task VoidSupplyAsync()
@@ -770,6 +844,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanVoid));
+        OnPropertyChanged(nameof(CanPay));
         OnPropertyChanged(nameof(CanExport));
     }
 
@@ -1004,6 +1079,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
 
+        if (!CanPay) return;
         if (!await _dialog.ConfirmAsync(L["supply_pay_confirm"], L["payment"])) return;
 
         await EnsureRatesAsync();
@@ -1018,6 +1094,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         PaymentAmount = total;
         BuildPaymentModes();
         PaymentCurrency = SupplyCurrency ?? _baseCurrency;
+        await LoadExistingPaymentsAsync(supplierId, DateOnly.FromDateTime(SupplyDate.Date));
         RaisePaymentTotals();
         IsPaymentOpen = true;
     }

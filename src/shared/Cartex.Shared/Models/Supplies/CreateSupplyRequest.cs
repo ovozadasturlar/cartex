@@ -18,3 +18,5 @@ public record CreateSupplyRequest(
     decimal PaidCash = 0,
     decimal PaidCard = 0,
     string? Currency = null);
+
+public record AttachSupplierPaymentsRequest(List<long> TransactionIds);
