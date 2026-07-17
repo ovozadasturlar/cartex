@@ -7,4 +7,5 @@ public record ProductOptionDto(
     string? Dimension,
     long? UnitId = null,
     string? UnitShortName = null,
-    IReadOnlyCollection<ProductPackDto>? Packs = null);
+    IReadOnlyCollection<ProductPackDto>? Packs = null,
+    string? ImageKey = null);

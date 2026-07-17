@@ -9,6 +9,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
+using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
@@ -23,6 +24,7 @@ public partial class SupplyLine : ObservableObject
 {
     public long VariantId { get; init; }
     public string ProductName { get; init; } = "";
+    public string? ImageKey { get; init; }
 
     public long? UnitId { get; init; }
     public long? PackId { get; init; }
@@ -77,6 +79,8 @@ public sealed record SupplyEntryOption(string Display, string ShortName, long? U
     public bool IsPack => PackId is not null;
 }
 
+public sealed record BarcodeChip(string Code, decimal PackQty, string Label);
+
 public partial class SuppliesViewModel : ViewModelBase, ILoadable
 {
     private readonly ISuppliesApi _api;
@@ -85,6 +89,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly IProductsApi _productsApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IBarcodesApi _barcodesApi;
+    private readonly IStorageApi _storageApi;
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
     private readonly IToastService _toast;
@@ -107,6 +112,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly Dictionary<long, decimal> _supplierPayables = [];
     private readonly Dictionary<long, decimal> _lastPurchasePrices = [];
     private readonly Dictionary<long, List<ProductPackDto>> _variantPacks = [];
+    private readonly Dictionary<long, string?> _variantImages = [];
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -515,7 +521,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
-        IUnitsApi unitsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
+        IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
         IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, IDialogService dialog)
     {
         _dialog = dialog;
@@ -528,6 +534,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _productsApi = productsApi;
         _unitsApi = unitsApi;
         _barcodesApi = barcodesApi;
+        _storageApi = storageApi;
         _labels = labels;
         _printer = printer;
         QuickProduct = quickProduct;
@@ -641,25 +648,89 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _printCode;
     [ObservableProperty] private int _printQuantity = 1;
     [ObservableProperty] private Bitmap? _printPreview;
+    [ObservableProperty] private Bitmap? _printImage;
+
+    [ObservableProperty] private BarcodeChip? _selectedPrintBarcode;
+
+    public ObservableCollection<BarcodeChip> PrintBarcodes { get; } = [];
+    public bool HasManyBarcodes => PrintBarcodes.Count > 1;
+
+    private long _printVariantId;
 
     [RelayCommand]
     private async Task OpenPrintBarcode(SupplyLine line)
     {
+        PrintBarcodes.Clear();
+        SelectedPrintBarcode = null;
+        PrintImage = null;
+        PrintPreview = null;
+        PrintCode = null;
         PrintProductName = line.ProductName;
         PrintQuantity = 1;
-        PrintCode = null;
-        PrintPreview = null;
+        _printVariantId = line.VariantId;
         IsPrintOpen = true;
         try
         {
-            var existing = await _barcodesApi.GetByVariantAsync(line.VariantId);
-            PrintCode = existing.OrderBy(b => b.PackQty).FirstOrDefault()?.Code
-                ?? await _barcodesApi.GenerateAsync(line.VariantId);
-            using var stream = new MemoryStream(_labels.RenderPng(PrintCode));
-            PrintPreview = new Bitmap(stream);
+            var codes = await _barcodesApi.GetByVariantAsync(line.VariantId);
+            if (codes.Count == 0)
+            {
+                var generated = await _barcodesApi.GenerateAsync(line.VariantId);
+                codes = [new BarcodeDto(0, generated, 1)];
+            }
+
+            foreach (var b in codes.OrderBy(b => b.PackQty))
+                PrintBarcodes.Add(new BarcodeChip(b.Code, b.PackQty,
+                    b.PackQty > 1 ? $"×{b.PackQty:0.###}" : L["unit_piece"]));
+
+            SelectedPrintBarcode = PrintBarcodes[0];
+            _ = SetPrintImageAsync(line.VariantId, line.ImageKey);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { OnPropertyChanged(nameof(HasManyBarcodes)); }
     }
+
+    private async Task SetPrintImageAsync(long variantId, string? key)
+    {
+        var image = await LoadBitmapAsync(key);
+        if (_printVariantId == variantId) PrintImage = image;
+    }
+
+    private static readonly HttpClient _imageClient = new();
+
+    private async Task<Bitmap?> LoadBitmapAsync(string? key)
+    {
+        if (string.IsNullOrEmpty(key)) return null;
+        try
+        {
+            var url = ImageUrl.Absolute((await _storageApi.GetUrlAsync(key)).Url);
+            var bytes = await _imageClient.GetByteArrayAsync(url);
+            return new Bitmap(new MemoryStream(bytes));
+        }
+        catch { return null; }
+    }
+
+    partial void OnSelectedPrintBarcodeChanged(BarcodeChip? value)
+    {
+        PrintCode = value?.Code;
+        if (value is null) { PrintPreview = null; return; }
+        try
+        {
+            using var stream = new MemoryStream(_labels.RenderPng(value.Code));
+            PrintPreview = new Bitmap(stream);
+        }
+        catch { PrintPreview = null; }
+    }
+
+    public event Action? FocusPrintQuantityRequested;
+
+    [RelayCommand]
+    private void FocusPrintQuantity() => FocusPrintQuantityRequested?.Invoke();
+
+    [RelayCommand]
+    private void PrintQtyDec() => PrintQuantity = Math.Max(1, PrintQuantity - 1);
+
+    [RelayCommand]
+    private void PrintQtyInc() => PrintQuantity++;
 
     [RelayCommand]
     private void CancelPrint() => IsPrintOpen = false;
@@ -736,6 +807,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 _variantDimensions.Clear();
                 _variantStockUnits.Clear();
                 _variantPacks.Clear();
+                _variantImages.Clear();
                 foreach (var p in products)
                 {
                     ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
@@ -743,6 +815,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                     if (p.UnitId is { } unitId) _variantStockUnits[p.DefaultVariantId] = (unitId, p.UnitShortName ?? "");
                     if (p.Packs is { Count: > 0 } packs)
                         _variantPacks[p.DefaultVariantId] = [.. packs.Where(pk => pk.Kind is "Purchase" or "Both")];
+                    _variantImages[p.DefaultVariantId] = p.ImageKey;
                 }
 
                 var units = await unitsTask;
@@ -838,6 +911,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         {
             VariantId = variantId,
             ProductName = productName,
+            ImageKey = _variantImages.GetValueOrDefault(variantId),
             Quantity = quantity,
             UnitId = unitId,
             PackId = packId,

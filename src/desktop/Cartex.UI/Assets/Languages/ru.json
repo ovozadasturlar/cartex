@@ -811,6 +811,7 @@
   "z_report": "Z-отчёт",
   "zreport_printer_hint": "Если не выбран, Z-отчёт печатается на принтере чеков",
   "unit_or_pack": "Единица или упаковка",
+  "unit_piece": "шт",
   "price_per_stocking_unit": "Цена за единицу склада",
   "packs": "Упаковки",
   "pack_kind": "Тип упаковки",

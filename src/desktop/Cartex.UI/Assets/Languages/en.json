@@ -811,6 +811,7 @@
   "z_report": "Z-report",
   "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer",
   "unit_or_pack": "Unit or pack",
+  "unit_piece": "pcs",
   "price_per_stocking_unit": "Price per stocking unit",
   "packs": "Packs",
   "pack_kind": "Pack type",

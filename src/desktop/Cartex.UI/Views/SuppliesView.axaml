@@ -9,6 +9,22 @@
              x:CompileBindings="False">
 
     <UserControl.Styles>
+        <Style Selector="ListBox#PrintChips ListBoxItem">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="ListBox#PrintChips ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
         <Style Selector="DockPanel.editor TextBox">
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="FontSize" Value="13" />
@@ -271,10 +287,36 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Width="140" Binding="{Binding PurchasePrice}"
-                                                Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="140" Binding="{Binding SellingPrice}"
-                                                Header="{Binding [selling_price], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="140"
+                                                    Header="{Binding [purchase_price], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding PurchasePrice, StringFormat='{}{0:#,##0.##}'}"
+                                                   VerticalAlignment="Center" Margin="8,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <NumericUpDown Value="{Binding PurchasePrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
+                                                       Minimum="0" FormatString="#,##0.##" ShowButtonSpinner="False" Padding="4,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Width="140"
+                                                    Header="{Binding [selling_price], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding SellingPrice, StringFormat='{}{0:#,##0.##}'}"
+                                                   VerticalAlignment="Center" Margin="8,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <NumericUpDown Value="{Binding SellingPrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
+                                                       Minimum="0" FormatString="#,##0.##" ShowButtonSpinner="False" Padding="4,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="110" IsReadOnly="True" Binding="{Binding Margin, StringFormat='{}{0:N0}'}"
                                                 Header="{Binding [margin], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="140" IsReadOnly="True" Binding="{Binding LineTotal, StringFormat='{}{0:N0}'}"
@@ -391,20 +433,66 @@
         </Border>
 
         <Border Background="#30000000" IsVisible="{Binding IsPrintOpen}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380"
+            <Border x:Name="PrintCard" Background="{DynamicResource CardBg}" CornerRadius="14" Width="520"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
+                <Border.KeyBindings>
+                    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding DoPrintBarcodeCommand}" />
+                </Border.KeyBindings>
                 <StackPanel Spacing="14">
                     <TextBlock Text="{Binding L[barcode_print]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
-                    <TextBlock Text="{Binding PrintProductName}" Foreground="{DynamicResource TextSecondary}" />
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Border Width="56" Height="56" CornerRadius="8" ClipToBounds="True" Margin="0,0,12,0"
+                                Background="{DynamicResource AppBg}"
+                                IsVisible="{Binding PrintImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Image Source="{Binding PrintImage}" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding PrintProductName}" FontSize="16" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                    </Grid>
+                    <ListBox x:Name="PrintChips" ItemsSource="{Binding PrintBarcodes}"
+                             SelectedItem="{Binding SelectedPrintBarcode}"
+                             IsVisible="{Binding HasManyBarcodes}"
+                             Background="Transparent" BorderThickness="0" Padding="0">
+                        <ListBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding FocusPrintQuantityCommand}" />
+                        </ListBox.KeyBindings>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Code}" FontSize="11" Foreground="{DynamicResource TextSecondary}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14" MinHeight="110"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <Image Source="{Binding PrintPreview}" Height="84" Stretch="Uniform" />
                     </Border>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[quantity]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
+                        <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="8" HorizontalAlignment="Left">
+                            <Button Classes="icon" Command="{Binding PrintQtyDecCommand}">
+                                <mi:MaterialIcon Kind="Minus" Width="18" Height="18" />
+                            </Button>
+                            <NumericUpDown x:Name="PrintQuantityBox" Grid.Column="1" Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
+                                           Minimum="1" Increment="1" FormatString="0" MinWidth="90"
+                                           ShowButtonSpinner="False" HorizontalContentAlignment="Center">
+                                <NumericUpDown.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding DoPrintBarcodeCommand}" />
+                                </NumericUpDown.KeyBindings>
+                            </NumericUpDown>
+                            <Button Grid.Column="2" Classes="icon" Command="{Binding PrintQtyIncCommand}">
+                                <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            </Button>
+                        </Grid>
                     </StackPanel>
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
                         <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"
