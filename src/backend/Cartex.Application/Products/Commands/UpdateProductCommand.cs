@@ -64,6 +64,8 @@ public sealed class UpdateProductCommandHandler(IApplicationDbContext db, ICurre
         var defaultVariant = await db.ProductVariants.FirstOrDefaultAsync(v => v.ProductId == product.Id && v.IsDefault, cancellationToken);
         if (defaultVariant is not null)
         {
+            if (!string.IsNullOrWhiteSpace(request.Code) && await db.ProductVariants.AnyAsync(v => v.Code == request.Code && v.Id != defaultVariant.Id, cancellationToken))
+                throw new BusinessRuleException($"Bu kod allaqachon mavjud: {request.Code}");
             defaultVariant.Code = request.Code;
             if (request.SellingPrice is { } sellingPrice)
             {

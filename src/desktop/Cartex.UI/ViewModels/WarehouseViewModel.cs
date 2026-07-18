@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -8,7 +9,6 @@ using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Stocks;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
-using Cartex.UI.Views;
 
 namespace Cartex.UI.ViewModels;
 
@@ -19,7 +19,6 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
-    private readonly IDialogService _dialog;
     private readonly AuthService _auth;
 
     private bool _suppressReload;
@@ -36,6 +35,11 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     [ObservableProperty] private int _totalCount;
     [ObservableProperty] private decimal _totalQuantity;
     [ObservableProperty] private decimal _totalValue;
+    [ObservableProperty] private AdjustStockDialogViewModel? _adjustVm;
+
+    public bool IsModalOpen => AdjustVm is not null;
+
+    partial void OnAdjustVmChanged(AdjustStockDialogViewModel? value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsOnHand => Tab == "onhand";
     public bool IsLowStock => Tab == "low";
@@ -50,7 +54,12 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     public bool IsLowStockEmpty => LowStock.Count == 0;
     public bool IsExpiringEmpty => Expiring.Count == 0;
 
-    public WarehouseViewModel(IStocksApi stocksApi, ICategoriesApi categoriesApi, BranchContextService branch, IToastService toast, IBusyService busy, IExportService export, IDialogService dialog, AuthService auth)
+    public int LowStockCount => LowStock.Count;
+    public decimal LowStockShortage => LowStock.Sum(i => Math.Max(0, i.MinStock - i.OnHand));
+    public int ExpiringCount => Expiring.Count;
+    public decimal ExpiringQuantity => Expiring.Sum(e => e.Quantity);
+
+    public WarehouseViewModel(IStocksApi stocksApi, ICategoriesApi categoriesApi, BranchContextService branch, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {
         _stocksApi = stocksApi;
         _categoriesApi = categoriesApi;
@@ -58,7 +67,6 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
         _toast = toast;
         _busy = busy;
         _export = export;
-        _dialog = dialog;
         _auth = auth;
         Paging.Attach(LoadOnHandAsync);
         Branch.PropertyChanged += OnBranchChanged;
@@ -98,6 +106,8 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
                 var categoriesTask = ServiceLocator.Resolve<ReferenceCache>()
                     .GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
                 var expiringTask = _stocksApi.GetExpiringAsync(30);
+                var onHandTask = LoadOnHandAsync();
+                var lowStockTask = LoadLowStockAsync();
 
                 _suppressReload = true;
                 var categories = await categoriesTask;
@@ -107,13 +117,15 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
                 FilterCategory = FilterCategories[0];
                 _suppressReload = false;
 
-                await Task.WhenAll(LoadOnHandAsync(), LoadLowStockAsync());
+                await Task.WhenAll(onHandTask, lowStockTask);
 
                 var expiring = await expiringTask;
                 Expiring.Clear();
                 foreach (var e in expiring)
                     Expiring.Add(e);
                 OnPropertyChanged(nameof(IsExpiringEmpty));
+                OnPropertyChanged(nameof(ExpiringCount));
+                OnPropertyChanged(nameof(ExpiringQuantity));
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -153,6 +165,8 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
             foreach (var i in items) LowStock.Add(i);
         }
         OnPropertyChanged(nameof(IsLowStockEmpty));
+        OnPropertyChanged(nameof(LowStockCount));
+        OnPropertyChanged(nameof(LowStockShortage));
     }
 
     private void OnBranchChanged(object? sender, PropertyChangedEventArgs e)
@@ -165,7 +179,23 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
         }
     }
 
-    partial void OnSearchTextChanged(string value) { if (_suppressReload) return; Paging.Page = 1; _ = LoadOnHandAsync(); }
+    private CancellationTokenSource? _searchCts;
+
+    partial void OnSearchTextChanged(string value)
+    {
+        if (_suppressReload) return;
+        _searchCts?.Cancel();
+        var cts = _searchCts = new CancellationTokenSource();
+        _ = DebouncedSearchAsync(cts.Token);
+    }
+
+    private async Task DebouncedSearchAsync(CancellationToken token)
+    {
+        try { await Task.Delay(300, token); } catch { return; }
+        if (token.IsCancellationRequested) return;
+        Paging.Page = 1;
+        await LoadOnHandAsync();
+    }
     partial void OnFilterCategoryChanged(CategoryDto? value) { if (_suppressReload) return; Paging.Page = 1; _ = LoadOnHandAsync(); }
 
     partial void OnTabChanged(string value)
@@ -205,16 +235,22 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     }
 
     [RelayCommand]
-    private async Task Adjust(StockOnHandDto item)
+    private void Adjust(StockOnHandDto item)
     {
-        if (item is null) return;
+        if (item is null || Branch.CurrentWarehouseId is null) return;
+        var vm = new AdjustStockDialogViewModel(item.ProductName, item.UnitName, item.Quantity);
+        vm.RequestClose += async (_, result) =>
+        {
+            AdjustVm = null;
+            if (result is AdjustStockResult r) await ApplyAdjustAsync(item, r);
+        };
+        AdjustVm = vm;
+    }
+
+    private async Task ApplyAdjustAsync(StockOnHandDto item, AdjustStockResult result)
+    {
         var warehouseId = Branch.CurrentWarehouseId;
         if (warehouseId is null) return;
-
-        var vm = new AdjustStockDialogViewModel(item.ProductName, item.UnitName, item.Quantity);
-        var result = await _dialog.ShowAsync<AdjustStockDialog, AdjustStockDialogViewModel, AdjustStockResult>(vm);
-        if (result is null) return;
-
         try
         {
             using (_busy.Begin(L["loading"]))

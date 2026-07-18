@@ -62,7 +62,7 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         await using var file = Sheet(
             ["Nomi", "Barkod", "Kategoriya", "Sotish narxi", "Soni"],
-            ["Coca-Cola 1.5L", null, "Ichimliklar", "12000", 5m],
+            ["Smesitel oshxona Zegor", null, "Smesitellar", "12000", 5m],
             ["Yangi mahsulot", "4780000000001", "Yangi turkum", "3000", 2m]);
 
         var preview = await sender.Send(new PreviewProductImportQuery(file));

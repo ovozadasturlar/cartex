@@ -25,6 +25,9 @@ public sealed class CreateVariantCommandHandler(IApplicationDbContext db) : IReq
             AttributeSchema.Validate(schema, request.Attributes);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Code) && await db.ProductVariants.AnyAsync(v => v.Code == request.Code, cancellationToken))
+            throw new BusinessRuleException($"Bu kod allaqachon mavjud: {request.Code}");
+
         var variant = new ProductVariant
         {
             ProductId = product.Id,

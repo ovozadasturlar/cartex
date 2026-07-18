@@ -198,6 +198,11 @@
 
     <Style Selector="NumericUpDown">
         <Setter Property="(c:MoneyInput.Group)" Value="True" />
+        <Setter Property="(c:MoneyInput.Clean)" Value="True" />
+    </Style>
+
+    <Style Selector="AutoCompleteBox">
+        <Setter Property="(c:FormBehaviors.CloseOnSelect)" Value="True" />
     </Style>
 
 </Styles>

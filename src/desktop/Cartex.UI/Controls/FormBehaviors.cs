@@ -22,6 +22,12 @@ public static class FormBehaviors
     public static readonly AttachedProperty<bool> EnterMovesNextProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>("EnterMovesNext", typeof(FormBehaviors));
 
+    public static readonly AttachedProperty<bool> CloseOnSelectProperty =
+        AvaloniaProperty.RegisterAttached<Control, bool>("CloseOnSelect", typeof(FormBehaviors));
+
+    public static readonly AttachedProperty<bool> SelectAllOnFocusProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, bool>("SelectAllOnFocus", typeof(FormBehaviors));
+
     public static bool GetAutoFocus(Control c) => c.GetValue(AutoFocusProperty);
     public static void SetAutoFocus(Control c, bool value) => c.SetValue(AutoFocusProperty, value);
     public static ICommand? GetEnterSubmits(Control c) => c.GetValue(EnterSubmitsProperty);
@@ -30,6 +36,10 @@ public static class FormBehaviors
     public static void SetEscCancels(Control c, ICommand? value) => c.SetValue(EscCancelsProperty, value);
     public static bool GetEnterMovesNext(Control c) => c.GetValue(EnterMovesNextProperty);
     public static void SetEnterMovesNext(Control c, bool value) => c.SetValue(EnterMovesNextProperty, value);
+    public static bool GetCloseOnSelect(Control c) => c.GetValue(CloseOnSelectProperty);
+    public static void SetCloseOnSelect(Control c, bool value) => c.SetValue(CloseOnSelectProperty, value);
+    public static bool GetSelectAllOnFocus(TextBox c) => c.GetValue(SelectAllOnFocusProperty);
+    public static void SetSelectAllOnFocus(TextBox c, bool value) => c.SetValue(SelectAllOnFocusProperty, value);
 
     static FormBehaviors()
     {
@@ -57,7 +67,49 @@ public static class FormBehaviors
             if (e.NewValue is true)
                 input.AddHandler(InputElement.KeyDownEvent, OnEnterKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
         });
+
+        SelectAllOnFocusProperty.Changed.AddClassHandler<TextBox>((box, e) =>
+        {
+            box.GotFocus -= OnSelectAllFocus;
+            if (e.NewValue is true)
+                box.GotFocus += OnSelectAllFocus;
+        });
+
+        CloseOnSelectProperty.Changed.AddClassHandler<AutoCompleteBox>((box, e) =>
+        {
+            box.SelectionChanged -= OnSelectClose;
+            box.RemoveHandler(InputElement.KeyUpEvent, OnCommitKeyUp);
+            if (e.NewValue is true)
+            {
+                box.SelectionChanged += OnSelectClose;
+                box.AddHandler(InputElement.KeyUpEvent, OnCommitKeyUp, RoutingStrategies.Tunnel, handledEventsToo: true);
+            }
+        });
     }
+
+    private static void OnSelectAllFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (sender is TextBox box)
+            Dispatcher.UIThread.Post(box.SelectAll, DispatcherPriority.Background);
+    }
+
+    private static void OnSelectClose(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && sender is AutoCompleteBox box)
+            CloseDropDown(box);
+    }
+
+    private static void OnCommitKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is (Key.Enter or Key.Return) && sender is AutoCompleteBox box)
+            CloseDropDown(box);
+    }
+
+    private static void CloseDropDown(AutoCompleteBox box) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (box.IsDropDownOpen) box.IsDropDownOpen = false;
+        }, DispatcherPriority.Background);
 
     private static void OnHostAttached(object? sender, VisualTreeAttachmentEventArgs e)
     {

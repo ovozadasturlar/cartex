@@ -27,6 +27,9 @@ public sealed class UpdateVariantCommandHandler(IApplicationDbContext db, IObjec
             AttributeSchema.Validate(schema, request.Attributes);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Code) && await db.ProductVariants.AnyAsync(v => v.Code == request.Code && v.Id != variant.Id, cancellationToken))
+            throw new BusinessRuleException($"Bu kod allaqachon mavjud: {request.Code}");
+
         var oldImageKey = variant.ImageKey;
         variant.Name = request.Name;
         variant.Code = request.Code;

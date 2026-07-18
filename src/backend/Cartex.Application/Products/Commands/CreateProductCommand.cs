@@ -37,6 +37,9 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             AttributeSchema.Validate(schema, request.Attributes);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Code) && await db.ProductVariants.AnyAsync(v => v.Code == request.Code, cancellationToken))
+            throw new BusinessRuleException($"Bu kod allaqachon mavjud: {request.Code}");
+
         var product = new Product
         {
             Name = request.Name,

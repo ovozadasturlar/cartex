@@ -357,9 +357,17 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private bool _isPrintOpen;
     [ObservableProperty] private string _printProductName = string.Empty;
+    [ObservableProperty] private string _printUnitName = string.Empty;
     [ObservableProperty] private string? _printCode;
     [ObservableProperty] private int _printQuantity = 1;
     [ObservableProperty] private Bitmap? _printPreview;
+    [ObservableProperty] private string? _printImageUrl;
+
+    [ObservableProperty] private BarcodeChip? _selectedPrintBarcode;
+
+    public ObservableCollection<BarcodeChip> PrintBarcodes { get; } = [];
+    public bool HasManyBarcodes => PrintBarcodes.Count > 1;
+
     private long _printVariantId;
 
     public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || Import.IsOpen;
@@ -379,30 +387,57 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)
     {
-        _printVariantId = product.DefaultVariantId;
-        PrintProductName = product.Name;
-        PrintQuantity = 1;
-        PrintCode = null;
+        PrintBarcodes.Clear();
+        SelectedPrintBarcode = null;
         PrintPreview = null;
+        PrintCode = null;
+        PrintProductName = product.Name;
+        PrintUnitName = product.UnitName;
+        PrintImageUrl = ImageUrl.Absolute(product.ImageUrl);
+        PrintQuantity = 1;
+        _printVariantId = product.DefaultVariantId;
         IsPrintOpen = true;
         try
         {
-            PrintCode = product.Barcodes.FirstOrDefault() ?? await _barcodesApi.GenerateAsync(_printVariantId);
-            UpdatePrintPreview();
+            var codes = await _barcodesApi.GetByVariantAsync(_printVariantId);
+            if (codes.Count == 0)
+            {
+                var generated = await _barcodesApi.GenerateAsync(_printVariantId);
+                codes = [new BarcodeDto(0, generated, 1)];
+            }
+
+            foreach (var b in codes.OrderBy(b => b.PackQty))
+                PrintBarcodes.Add(new BarcodeChip(b.Code, b.PackQty,
+                    b.PackQty > 1 ? $"×{b.PackQty:0.###}" : L["unit_piece"]));
+
+            SelectedPrintBarcode = PrintBarcodes[0];
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { OnPropertyChanged(nameof(HasManyBarcodes)); }
     }
 
-    private void UpdatePrintPreview()
+    partial void OnSelectedPrintBarcodeChanged(BarcodeChip? value)
     {
-        if (string.IsNullOrWhiteSpace(PrintCode)) { PrintPreview = null; return; }
+        PrintCode = value?.Code;
+        if (value is null) { PrintPreview = null; return; }
         try
         {
-            using var stream = new MemoryStream(_labels.RenderPng(PrintCode));
+            using var stream = new MemoryStream(_labels.RenderPng(value.Code));
             PrintPreview = new Bitmap(stream);
         }
         catch { PrintPreview = null; }
     }
+
+    public event Action? FocusPrintQuantityRequested;
+
+    [RelayCommand]
+    private void FocusPrintQuantity() => FocusPrintQuantityRequested?.Invoke();
+
+    [RelayCommand]
+    private void PrintQtyDec() => PrintQuantity = Math.Max(1, PrintQuantity - 1);
+
+    [RelayCommand]
+    private void PrintQtyInc() => PrintQuantity++;
 
     [RelayCommand]
     private void CancelPrint() => IsPrintOpen = false;
@@ -413,7 +448,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
         try
         {
-            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, null);
+            var name = SelectedPrintBarcode is { IsPack: true } chip ? $"{PrintProductName} {chip.Label}" : PrintProductName;
+            _labels.PrintLabels(PrintCode, name, PrintQuantity, null);
             IsPrintOpen = false;
             _toast.Success(L["success"]);
         }

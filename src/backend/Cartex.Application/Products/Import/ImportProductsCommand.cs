@@ -183,7 +183,7 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             supplyId = await sender.Send(new CreateSupplyCommand(
                 request.SupplierId!.Value,
                 request.WarehouseId!.Value,
-                request.SupplyDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+                request.SupplyDate ?? DateOnly.FromDateTime(DateTime.Now),
                 items,
                 request.PaidCash,
                 request.PaidCard,

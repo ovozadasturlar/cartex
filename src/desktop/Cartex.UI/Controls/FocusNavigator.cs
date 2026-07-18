@@ -45,6 +45,7 @@ public sealed class FocusNavigator
             Key.Enter or Key.Return or Key.Tab when element is Button button => Press(button, e, back, index),
             Key.Enter or Key.Return or Key.Tab => Next(index, !back),
             Key.Left or Key.Right or Key.Up or Key.Down when Dropped(element) => null,
+            Key.Left or Key.Right or Key.Up or Key.Down when element is ListBox => null,
             Key.Up or Key.Down when element is ComboBox => null,
             Key.Right when Inner(element) is { } right => Caret(right, atEnd: true) ? Next(index, !back) : null,
             Key.Left when Inner(element) is { } left => Caret(left, atEnd: false) ? Next(index, back) : null,

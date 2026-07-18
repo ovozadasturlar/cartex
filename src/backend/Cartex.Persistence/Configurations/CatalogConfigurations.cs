@@ -52,6 +52,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.IkpuCode).HasMaxLength(30);
         builder.Property(x => x.VatRate).HasPrecision(5, 2);
         builder.Property(x => x.ImageKey).HasMaxLength(200);
+        builder.HasIndex(x => x.Name, "ix_products_name_trgm").HasDatabaseName("ix_products_name_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
+        builder.HasIndex(x => x.IkpuCode, "ix_products_ikpu_code_trgm").HasDatabaseName("ix_products_ikpu_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 
         builder.HasOne(x => x.Category)
             .WithMany(c => c.Products)
@@ -88,6 +90,7 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
         builder.HasIndex(x => x.Code)
             .IsUnique()
             .HasFilter("\"code\" IS NOT NULL AND \"is_deleted\" = false");
+        builder.HasIndex(x => x.Code, "ix_product_variants_code_trgm").HasDatabaseName("ix_product_variants_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 
         builder.HasOne(x => x.Product)
             .WithMany(p => p.Variants)
@@ -103,6 +106,7 @@ public class BarcodeConfiguration : IEntityTypeConfiguration<Barcode>
         builder.ToTable("barcodes");
         builder.Property(x => x.Code).HasMaxLength(60).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique().HasFilter("\"is_deleted\" = false");
+        builder.HasIndex(x => x.Code, "ix_barcodes_code_trgm").HasDatabaseName("ix_barcodes_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.PackQty).HasPrecision(12, 3);
 
         builder.HasOne(x => x.Variant)

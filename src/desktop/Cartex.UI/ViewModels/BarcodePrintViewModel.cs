@@ -1,21 +1,22 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Paging;
 using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Products;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
+using Cartex.UI.ViewModels.Common;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class BarcodeChoice(string code, decimal packQty, string display) : ObservableObject
+public sealed record BarcodeChoice(string Code, decimal PackQty, string Display)
 {
-    public string Code { get; } = code;
-    public decimal PackQty { get; } = packQty;
-    public string Display { get; } = display;
-    [ObservableProperty] private bool _isSelected;
+    public bool IsPack => PackQty > 1;
 }
 
 public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
@@ -26,19 +27,31 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private readonly IPrinterService _printer;
     private readonly IToastService _toast;
 
+    public PaginationState Paging { get; } = new();
     public ObservableCollection<ProductDto> Products { get; } = [];
     public ObservableCollection<BarcodeChoice> BarcodeOptions { get; } = [];
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private ProductDto? _selectedProduct;
+    [ObservableProperty] private BarcodeChoice? _selectedBarcode;
     [ObservableProperty] private string? _currentCode;
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
+
+    public event Action? FocusChipsRequested;
+    public event Action? FocusQuantityRequested;
 
     public bool HasCode => !string.IsNullOrWhiteSpace(CurrentCode);
     public bool HasSelection => SelectedProduct is not null;
     public bool HasBarcodes => BarcodeOptions.Count > 0;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+    [
+        new(Key.Enter, KeyModifiers.Control, "shortcut_print", () => PrintCommand.Execute(null), () => HasCode, WorksInText: true),
+    ];
 
     public BarcodePrintViewModel(IProductsApi productsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast)
     {
@@ -47,6 +60,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         _labels = labels;
         _printer = printer;
         _toast = toast;
+        Paging.Attach(LoadProductsAsync);
     }
 
     public Task LoadAsync()
@@ -67,18 +81,28 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private async Task DebouncedSearchAsync(CancellationToken token)
     {
         try { await Task.Delay(300, token); } catch { return; }
-        if (!token.IsCancellationRequested) await SearchAsync();
+        if (token.IsCancellationRequested) return;
+        Paging.Page = 1;
+        await LoadProductsAsync();
     }
 
     [RelayCommand]
-    private async Task SearchAsync()
+    private Task SearchAsync()
+    {
+        Paging.Page = 1;
+        return LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
     {
         try
         {
-            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(1, 50).Search(Search).Build());
+            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(Paging.Page, Paging.PageSize).Search(Search).Build());
+            var paged = response.ToPaged();
             Products.Clear();
-            foreach (var p in response.Content ?? []) Products.Add(p);
-            if (Products.Count == 1) SelectedProduct = Products[0];
+            foreach (var p in paged.Items) Products.Add(p);
+            Paging.Apply(paged.Meta);
+            if (paged.Meta.TotalCount == 1) SelectedProduct = Products[0];
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -92,7 +116,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private async Task LoadBarcodesAsync(ProductDto? product)
     {
         BarcodeOptions.Clear();
-        CurrentCode = null;
+        SelectedBarcode = null;
         OnPropertyChanged(nameof(HasBarcodes));
         if (product is null) return;
         try
@@ -102,18 +126,17 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
             foreach (var b in barcodes)
                 BarcodeOptions.Add(new BarcodeChoice(b.Code, b.PackQty,
                     b.PackQty <= 1 ? L["barcode_single"] : string.Format(L["barcode_pack_fmt"], b.PackQty.ToString("0.##"))));
-            if (BarcodeOptions.Count > 0) SelectBarcode(BarcodeOptions[0]);
+            if (BarcodeOptions.Count > 0) SelectedBarcode = BarcodeOptions[0];
             OnPropertyChanged(nameof(HasBarcodes));
+            if (BarcodeOptions.Count > 1) FocusChipsRequested?.Invoke();
+            else if (BarcodeOptions.Count == 1) FocusQuantityRequested?.Invoke();
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    [RelayCommand]
-    private void SelectBarcode(BarcodeChoice choice)
-    {
-        foreach (var b in BarcodeOptions) b.IsSelected = ReferenceEquals(b, choice);
-        CurrentCode = choice.Code;
-    }
+    partial void OnSelectedBarcodeChanged(BarcodeChoice? value) => CurrentCode = value?.Code;
+
+    [RelayCommand] private void FocusQuantity() => FocusQuantityRequested?.Invoke();
 
     partial void OnCurrentCodeChanged(string? value)
     {

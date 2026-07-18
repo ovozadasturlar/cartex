@@ -4,24 +4,27 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:il="using:AsyncImageLoader"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.BarcodePrintView"
-             x:CompileBindings="False">
+             x:CompileBindings="False"
+             c:Shortcuts.Source="{Binding Shortcuts}">
 
     <UserControl.Styles>
-        <Style Selector="Button.chip">
-            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+        <Style Selector="ListBox#ChipsList ListBoxItem">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,6" />
             <Setter Property="Margin" Value="0,0,8,8" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
         </Style>
-        <Style Selector="Button.chip.active">
-            <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
+        <Style Selector="ListBox#ChipsList ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
         </Style>
     </UserControl.Styles>
 
@@ -33,7 +36,7 @@
             <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="14"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <DockPanel>
-                    <TextBox DockPanel.Dock="Top" Text="{Binding Search}" MinHeight="40" Margin="0,0,0,10"
+                    <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Text="{Binding Search}" MinHeight="40" Margin="0,0,0,10"
                              PlaceholderText="{Binding L[search_product_hint]}">
                         <TextBox.InnerLeftContent>
                             <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
@@ -43,15 +46,17 @@
                             <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
                         </TextBox.KeyBindings>
                     </TextBox>
-                    <ListBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}"
+                    <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}" Margin="0,10,0,0" />
+                    <ListBox x:Name="ProductsList" ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}"
                              Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Spacing="2" Margin="2,4">
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5"
                                                Foreground="{DynamicResource TextPrimary}" />
-                                    <TextBlock Text="{Binding Barcodes.Count, StringFormat='{}{0} barkod'}" FontSize="11.5"
-                                               Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock FontSize="11.5" Foreground="{DynamicResource TextMuted}">
+                                        <Run Text="{Binding Barcodes.Count}" /><Run Text=" " /><Run Text="{Binding [barcode_count_label], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -80,25 +85,27 @@
 
                         <StackPanel Spacing="7">
                             <TextBlock Text="{Binding L[barcode]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <ItemsControl ItemsSource="{Binding BarcodeOptions}" IsVisible="{Binding HasBarcodes}">
-                                <ItemsControl.ItemsPanel>
+                            <ListBox x:Name="ChipsList" ItemsSource="{Binding BarcodeOptions}"
+                                     SelectedItem="{Binding SelectedBarcode}"
+                                     IsVisible="{Binding HasBarcodes}"
+                                     Background="Transparent" BorderThickness="0" Padding="0">
+                                <ListBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding FocusQuantityCommand}" />
+                                </ListBox.KeyBindings>
+                                <ListBox.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <WrapPanel />
+                                        <WrapPanel Orientation="Horizontal" />
                                     </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Classes="chip" Classes.active="{Binding IsSelected}"
-                                                Command="{Binding $parent[UserControl].DataContext.SelectBarcodeCommand}"
-                                                CommandParameter="{Binding}">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <TextBlock Text="{Binding Display}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Code}" FontSize="11.5" Opacity="0.75" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Display}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Code}" FontSize="11" Foreground="{DynamicResource TextSecondary}" />
+                                        </StackPanel>
                                     </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                             <TextBlock Text="{Binding L[no_barcode_hint]}" IsVisible="{Binding !HasBarcodes}"
                                        Foreground="{DynamicResource TextMuted}" FontSize="12.5" TextWrapping="Wrap" />
                         </StackPanel>
@@ -106,10 +113,15 @@
                         <Border Background="White" CornerRadius="12" Padding="20" MinHeight="150"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                 IsVisible="{Binding HasCode}">
-                            <StackPanel Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding SelectedProduct.Name}" FontSize="12" HorizontalAlignment="Center"
-                                           Foreground="#0f172a" />
-                                <Image Source="{Binding Preview}" Height="120" Stretch="Uniform" />
+                            <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedProduct.Name}" Foreground="Black" FontWeight="SemiBold"
+                                           FontSize="13" TextWrapping="Wrap" TextAlignment="Center" />
+                                <TextBlock Text="{Binding SelectedBarcode.Display}" Foreground="Black" FontSize="11.5"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding SelectedBarcode.IsPack, FallbackValue=False}" />
+                                <Image Source="{Binding Preview}" Height="96" Stretch="Uniform" />
+                                <TextBlock Text="{Binding CurrentCode}" Foreground="Black" FontFamily="Consolas" FontSize="13.5"
+                                           HorizontalAlignment="Center" />
                             </StackPanel>
                         </Border>
 
@@ -122,8 +134,13 @@
                                             Command="{Binding DecrementCommand}">
                                         <mi:MaterialIcon Kind="Minus" Width="16" Height="16" />
                                     </Button>
-                                    <TextBox Text="{Binding Quantity}" Width="64" Height="40" TextAlignment="Center"
-                                             VerticalContentAlignment="Center" />
+                                    <NumericUpDown x:Name="QuantityBox" Value="{Binding Quantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
+                                                   Minimum="1" Increment="1" FormatString="0" Width="90" Height="40"
+                                                   ShowButtonSpinner="False" HorizontalContentAlignment="Center">
+                                        <NumericUpDown.KeyBindings>
+                                            <KeyBinding Gesture="Enter" Command="{Binding PrintCommand}" />
+                                        </NumericUpDown.KeyBindings>
+                                    </NumericUpDown>
                                     <Button Classes="outline" Width="40" Height="40" Padding="0"
                                             HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                             Command="{Binding IncrementCommand}">
@@ -133,7 +150,7 @@
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Bottom">
                                 <TextBlock Text=" " FontSize="12.5" />
-                                <Button Classes="brand" Command="{Binding PrintCommand}" MinHeight="42" MinWidth="170"
+                                <Button x:Name="PrintButton" Classes="brand" Command="{Binding PrintCommand}" MinHeight="42" MinWidth="170"
                                         HorizontalContentAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <mi:MaterialIcon Kind="Printer" Width="18" Height="18" />

@@ -143,7 +143,7 @@
             </Panel>
         </DockPanel>
 
-        <Border Background="#30000000" IsVisible="{Binding IsEditOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsEditOpen}" c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
             <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="640" MaxHeight="780"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -397,7 +397,7 @@
                 </ScrollViewer>
             </Border>
         </Border>
-        <Border Background="#30000000" IsVisible="{Binding IsVariantsOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsVariantsOpen}" c:OverlayBehaviors.DismissCommand="{Binding CloseVariantsCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -456,7 +456,7 @@
             </Border>
         </Border>
 
-        <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}">
+        <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}" c:OverlayBehaviors.DismissCommand="{Binding CancelVariantEditCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -520,25 +520,96 @@
             </Border>
         </Border>
 
-        <Border Background="#30000000" IsVisible="{Binding IsPrintOpen}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="380"
+        <Border Background="#30000000" IsVisible="{Binding IsPrintOpen}" c:OverlayBehaviors.DismissCommand="{Binding CancelPrintCommand}">
+            <Border x:Name="PrintCard" Background="{DynamicResource CardBg}" CornerRadius="14" Width="560"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
+                <Border.KeyBindings>
+                    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding DoPrintBarcodeCommand}" />
+                </Border.KeyBindings>
                 <StackPanel Spacing="14">
-                    <TextBlock Text="{Binding L[barcode_print]}" Classes="h3" />
-                    <TextBlock Text="{Binding PrintProductName}" Foreground="{DynamicResource TextSecondary}" />
-                    <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14" MinHeight="110"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                        <Image Source="{Binding PrintPreview}" Height="84" Stretch="Uniform" />
-                    </Border>
-                    <StackPanel Spacing="5">
-                        <TextBlock Text="{Binding L[quantity]}" Classes="caption" />
-                        <NumericUpDown Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="1" Increment="1" FormatString="0" MinWidth="110" HorizontalAlignment="Left" />
-                    </StackPanel>
-                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
-                        <Button Grid.Column="1" Classes="outline" Margin="0,0,10,0" MinWidth="100" HorizontalContentAlignment="Center"
+                    <TextBlock Text="{Binding L[barcode_print]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <ListBox x:Name="PrintChips" ItemsSource="{Binding PrintBarcodes}"
+                             SelectedItem="{Binding SelectedPrintBarcode}"
+                             IsVisible="{Binding HasManyBarcodes}"
+                             Background="Transparent" BorderThickness="0" Padding="0">
+                        <ListBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding FocusPrintQuantityCommand}" />
+                        </ListBox.KeyBindings>
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Code}" FontSize="11" Foreground="{DynamicResource TextSecondary}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid ColumnDefinitions="180,16,*">
+                        <Border CornerRadius="12" ClipToBounds="True" Width="180" Height="180" VerticalAlignment="Top"
+                                Background="{DynamicResource SidebarItemHover}">
+                            <Panel>
+                                <mi:MaterialIcon Kind="PackageVariantClosed" Width="48" Height="48"
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                 Foreground="{DynamicResource TextMuted}" />
+                                <Image il:ImageLoader.Source="{Binding PrintImageUrl}" Stretch="UniformToFill" />
+                            </Panel>
+                        </Border>
+                        <Grid Grid.Column="2" RowDefinitions="Auto,10,*">
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding PrintProductName}" FontWeight="SemiBold" FontSize="15"
+                                               TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding L[unit]}" FontSize="12" Foreground="{DynamicResource TextMuted}" />
+                                        <TextBlock Text="{Binding PrintUnitName}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                IsVisible="{Binding SelectedPrintBarcode.IsPack, FallbackValue=False}">
+                                        <TextBlock Text="{Binding L[pack_size]}" FontSize="12" Foreground="{DynamicResource TextMuted}" />
+                                        <TextBlock Text="{Binding SelectedPrintBarcode.Label}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="10"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding PrintProductName}" Foreground="Black" FontWeight="SemiBold"
+                                               FontSize="11" TextWrapping="Wrap" TextAlignment="Center" />
+                                    <TextBlock Text="{Binding SelectedPrintBarcode.Label}" Foreground="Black" FontSize="10.5"
+                                               HorizontalAlignment="Center"
+                                               IsVisible="{Binding SelectedPrintBarcode.IsPack, FallbackValue=False}" />
+                                    <Image Source="{Binding PrintPreview}" Height="42" Stretch="Uniform" />
+                                    <TextBlock Text="{Binding PrintCode}" Foreground="Black" FontFamily="Consolas" FontSize="11.5"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,8,Auto,8,Auto,*,Auto,10,Auto" Margin="0,4,0,0">
+                        <Button Classes="icon" Command="{Binding PrintQtyDecCommand}">
+                            <mi:MaterialIcon Kind="Minus" Width="18" Height="18" />
+                        </Button>
+                        <NumericUpDown x:Name="PrintQuantityBox" Grid.Column="2" Value="{Binding PrintQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
+                                       Minimum="1" Increment="1" FormatString="0" MinWidth="90"
+                                       ShowButtonSpinner="False" HorizontalContentAlignment="Center">
+                            <NumericUpDown.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding DoPrintBarcodeCommand}" />
+                            </NumericUpDown.KeyBindings>
+                        </NumericUpDown>
+                        <Button Grid.Column="4" Classes="icon" Command="{Binding PrintQtyIncCommand}">
+                            <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                        </Button>
+                        <Button Grid.Column="6" Classes="outline" MinWidth="100" HorizontalContentAlignment="Center"
                                 Command="{Binding CancelPrintCommand}" Content="{Binding L[cancel]}" />
-                        <Button Grid.Column="2" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                        <Button Grid.Column="8" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
                                 Command="{Binding DoPrintBarcodeCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <mi:MaterialIcon Kind="Printer" Width="18" Height="18" />
