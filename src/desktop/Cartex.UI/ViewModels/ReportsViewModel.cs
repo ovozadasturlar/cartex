@@ -155,12 +155,13 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
 
     private DateTime FromUtc => new DateTimeOffset(DateFrom.Date).UtcDateTime;
     private DateTime ToUtc => new DateTimeOffset(DateTo.Date.AddDays(1)).UtcDateTime;
+    private static int TzOffset => (int)DateTimeOffset.Now.Offset.TotalMinutes;
 
     private async Task LoadSalesAsync()
     {
         try
         {
-            var report = await _api.GetSalesReportAsync(FromUtc, ToUtc);
+            var report = await _api.GetSalesReportAsync(FromUtc, ToUtc, tzOffsetMinutes: TzOffset);
 
             TotalSales = report.Revenue;
             TotalProfit = report.Profit;
@@ -237,7 +238,7 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var report = await _api.GetSalesReportAsync(FromUtc, ToUtc);
+            var report = await _api.GetSalesReportAsync(FromUtc, ToUtc, tzOffsetMinutes: TzOffset);
             await _export.ExportAsync(L["top_products"], report.TopProducts,
             [
                 new(L["product_name"], x => x.ProductName),

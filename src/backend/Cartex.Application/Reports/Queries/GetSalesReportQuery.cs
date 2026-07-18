@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Reports.Queries;
 
-public record GetSalesReportQuery(DateTime From, DateTime To, long? WarehouseId) : IRequest<SalesReportDto>;
+public record GetSalesReportQuery(DateTime From, DateTime To, long? WarehouseId, int? TzOffsetMinutes = null) : IRequest<SalesReportDto>;
 
 public record TopProductReportDto(long ProductId, string ProductName, decimal Quantity, decimal Revenue, decimal Profit);
 
@@ -91,12 +91,13 @@ public sealed class GetSalesReportQueryHandler(IApplicationDbContext db) : IRequ
             .Take(10)
             .ToList();
 
-        var dateById = sales.ToDictionary(s => s.Id, s => s.CreatedAt.Date);
+        var offset = TimeSpan.FromMinutes(request.TzOffsetMinutes ?? (int)TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow).TotalMinutes);
+        var dateById = sales.ToDictionary(s => s.Id, s => DateTime.SpecifyKind((s.CreatedAt + offset).Date, DateTimeKind.Unspecified));
         var revenueByDate = lines.GroupBy(l => dateById[l.SaleId]).ToDictionary(g => g.Key, g => g.Sum(x => x.Revenue));
         var profitByDate = lines.GroupBy(l => dateById[l.SaleId]).ToDictionary(g => g.Key, g => g.Sum(x => x.Profit));
 
         var daily = sales
-            .GroupBy(s => s.CreatedAt.Date)
+            .GroupBy(s => dateById[s.Id])
             .Select(g => new DailySalesDto(
                 g.Key,
                 revenueByDate.GetValueOrDefault(g.Key),

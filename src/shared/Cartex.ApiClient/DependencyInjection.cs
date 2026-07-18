@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Refit;
 
@@ -15,7 +16,7 @@ public static class DependencyInjection
             ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new JsonStringEnumConverter() }
+                Converters = { new JsonStringEnumConverter(), new LocalDateTimeConverter() }
             })
         };
 

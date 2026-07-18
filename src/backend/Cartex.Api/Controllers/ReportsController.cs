@@ -15,17 +15,17 @@ public class ReportsController(ISender sender) : ControllerBase
 {
     [HttpGet("sales")]
     [HasPermission(AppPermissions.Reports.View)]
-    public async Task<ActionResult<SalesReportDto>> GetSalesReport([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] long? warehouseId)
+    public async Task<ActionResult<SalesReportDto>> GetSalesReport([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] long? warehouseId, [FromQuery] int? tzOffsetMinutes = null)
     {
-        var result = await sender.Send(new GetSalesReportQuery(from, to, warehouseId));
+        var result = await sender.Send(new GetSalesReportQuery(from, to, warehouseId, tzOffsetMinutes));
         return Ok(result);
     }
 
     [HttpGet("cash-flow")]
     [HasPermission(AppPermissions.Reports.View)]
-    public async Task<ActionResult<IReadOnlyCollection<DailyCashFlowDto>>> GetCashFlow([FromQuery] DateTime from, [FromQuery] DateTime to)
+    public async Task<ActionResult<IReadOnlyCollection<DailyCashFlowDto>>> GetCashFlow([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] int? tzOffsetMinutes = null)
     {
-        var result = await sender.Send(new GetCashFlowQuery(from, to));
+        var result = await sender.Send(new GetCashFlowQuery(from, to, tzOffsetMinutes));
         return Ok(result);
     }
 

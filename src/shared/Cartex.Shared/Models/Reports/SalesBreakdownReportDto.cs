@@ -10,4 +10,5 @@ public record SalesBreakdownReportDto(
     decimal Bonus,
     decimal Debt,
     List<CashierSalesDto> ByCashier,
-    List<CategorySalesDto> ByCategory);
+    List<CategorySalesDto> ByCategory,
+    decimal Credit = 0);

@@ -181,7 +181,7 @@ public sealed class TelegramUpdatePoller(
 
         var lines = sales.Select(s =>
         {
-            var line = $"📅 {s.CreatedAt:dd.MM.yyyy HH:mm} — {s.TotalAmount:N0} {baseCode}";
+            var line = $"📅 {s.CreatedAt.ToLocalTime():dd.MM.yyyy HH:mm} — {s.TotalAmount:N0} {baseCode}";
             return publicBaseUrl is null ? line : $"{line}\n{publicBaseUrl}/r/{s.ReceiptToken}";
         });
         var text = $"{TelegramBotTexts.Get("sales_header", lang)}\n\n{string.Join("\n\n", lines)}";

@@ -372,7 +372,8 @@
         </TabControl>
     </DockPanel>
 
-        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000">
+        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelBonusCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -382,7 +383,7 @@
                     <TextBlock Text="{Binding BonusCustomer.CustomerName}" Foreground="{DynamicResource TextSecondary}" />
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <NumericUpDown Value="{Binding BonusAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="0.##" />
+                        <NumericUpDown Value="{Binding BonusAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" />
                     </StackPanel>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[note]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
