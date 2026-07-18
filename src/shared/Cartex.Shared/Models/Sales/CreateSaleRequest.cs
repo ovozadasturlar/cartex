@@ -16,4 +16,5 @@ public record CreateSaleRequest(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     string? IdempotencyKey = null,
-    bool ApplyAutoDiscount = true);
+    bool ApplyAutoDiscount = true,
+    decimal CreditAmount = 0);

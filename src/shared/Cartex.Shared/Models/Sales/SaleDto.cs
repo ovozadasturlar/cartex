@@ -15,6 +15,7 @@ public record SaleDto(
     decimal PaidCard,
     decimal PaidBonus,
     decimal DebtAmount,
+    decimal CreditAmount,
     string Status,
     string ReceiptToken,
     string? CustomerName,

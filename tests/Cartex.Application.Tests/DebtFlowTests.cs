@@ -22,7 +22,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
     }
@@ -160,6 +160,32 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         Assert.Equal(50_000m, await DebtBalanceAsync(debtorId));
         Assert.Equal(-30_000m, await DebtBalanceAsync(creditorId));
+    }
+
+    [Fact]
+    public async Task Credit_balance_widens_credit_limit()
+    {
+        var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture);
+
+        long customerId;
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            customerId = await sender.Send(new CreateCustomerCommand("Haqdor Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m,
+                CreditLimit: 30_000m, OpeningBalance: -20_000m));
+        }
+
+        Assert.Equal(-20_000m, await DebtBalanceAsync(customerId));
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1, 45_000m)]));
+        }
+
+        Assert.Equal(25_000m, await DebtBalanceAsync(customerId));
     }
 
     [Fact]

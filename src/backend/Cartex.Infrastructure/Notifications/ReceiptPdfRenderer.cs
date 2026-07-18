@@ -47,21 +47,26 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
 
                     col.Item().LineHorizontal(0.5f);
                     if (receipt.DiscountAmount > 0)
-                        Line(col, T("discount"), receipt.DiscountAmount);
+                        Line(col, T("discount"), $"{receipt.DiscountAmount:N0}");
                     col.Item().Row(row =>
                     {
                         row.RelativeItem().Text(T("total")).FontSize(12).Bold();
                         row.ConstantItem(90).AlignRight().Text($"{receipt.TotalAmount:N0}").FontSize(12).Bold();
                     });
-                    if (receipt.PaidCash > 0) Line(col, T("cash"), receipt.PaidCash);
-                    if (receipt.PaidCard > 0) Line(col, T("card"), receipt.PaidCard);
-                    if (receipt.PaidBonus > 0) Line(col, T("bonus"), receipt.PaidBonus);
-                    if (receipt.ChangeAmount > 0) Line(col, T("change"), receipt.ChangeAmount);
-                    if (receipt.DebtAmount > 0) Line(col, T("debt"), receipt.DebtAmount);
-                    if (receipt.CashbackEarned > 0) Line(col, "Cashback", receipt.CashbackEarned);
-
-                    foreach (var payment in receipt.Payments)
-                        Line(col, $"{ReceiptTexts.PaymentLabel(payment.Method, lang)} {payment.Currency}", payment.Amount);
+                    if (receipt.Payments.Count > 0)
+                        foreach (var payment in receipt.Payments)
+                            Line(col, ReceiptTexts.PaymentLabel(payment.Method, lang),
+                                payment.IsForeign ? $"{payment.Amount:N2} {payment.Currency} ≈ {payment.AmountBase:N0}" : $"{payment.Amount:N0}");
+                    else
+                    {
+                        if (receipt.PaidCash > 0) Line(col, T("cash"), $"{receipt.PaidCash:N0}");
+                        if (receipt.PaidCard > 0) Line(col, T("card"), $"{receipt.PaidCard:N0}");
+                        if (receipt.PaidBonus > 0) Line(col, T("bonus"), $"{receipt.PaidBonus:N0}");
+                    }
+                    if (receipt.ChangeAmount > 0) Line(col, T("change"), $"{receipt.ChangeAmount:N0}");
+                    if (receipt.CreditAmount > 0) Line(col, T("credit"), $"{receipt.CreditAmount:N0}");
+                    if (receipt.DebtAmount > 0) Line(col, T("debt"), $"{receipt.DebtAmount:N0}");
+                    if (receipt.CashbackEarned > 0) Line(col, "Cashback", $"{receipt.CashbackEarned:N0}");
 
                     col.Item().LineHorizontal(0.5f);
                     col.Item().AlignCenter().Text(receipt.UserName).FontSize(8);
@@ -70,11 +75,11 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
             });
         }).GeneratePdf();
 
-        static void Line(ColumnDescriptor col, string label, decimal value) =>
+        static void Line(ColumnDescriptor col, string label, string value) =>
             col.Item().Row(row =>
             {
                 row.RelativeItem().Text(label);
-                row.ConstantItem(90).AlignRight().Text($"{value:N0}");
+                row.ConstantItem(90).AlignRight().Text(value);
             });
     }
 
@@ -169,12 +174,12 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
 
                     col.Item().PaddingTop(12).AlignRight().Width(a4 ? 260 : 220).Column(totals =>
                     {
-                        void Row(string label, decimal value, string? color = null, bool bold = false)
+                        void Row(string label, string value, string? color = null, bool bold = false)
                         {
                             totals.Item().Row(row =>
                             {
                                 row.RelativeItem().Text(label).FontColor(color ?? muted).SemiBold();
-                                var text = row.ConstantItem(110).AlignRight().Text($"{value:N0}");
+                                var text = row.ConstantItem(110).AlignRight().Text(value);
                                 if (bold) text.Bold();
                                 if (color is not null) text.FontColor(color);
                             });
@@ -182,8 +187,8 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
 
                         if (receipt.DiscountAmount > 0)
                         {
-                            Row(T("subtotal"), subtotal);
-                            Row(T("discount"), -receipt.DiscountAmount);
+                            Row(T("subtotal"), $"{subtotal:N0}");
+                            Row(T("discount"), $"{-receipt.DiscountAmount:N0}");
                         }
                         totals.Item().PaddingVertical(3).LineHorizontal(1).LineColor(ink);
                         totals.Item().Row(row =>
@@ -194,16 +199,18 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                         totals.Item().PaddingTop(4);
                         if (receipt.Payments.Count > 0)
                             foreach (var payment in receipt.Payments)
-                                Row($"{ReceiptTexts.PaymentLabel(payment.Method, lang)} ({payment.Currency})", payment.Amount);
+                                Row(ReceiptTexts.PaymentLabel(payment.Method, lang),
+                                    payment.IsForeign ? $"{payment.Amount:N2} {payment.Currency} ≈ {payment.AmountBase:N0}" : $"{payment.Amount:N0}");
                         else
                         {
-                            if (receipt.PaidCash > 0) Row(T("cash"), receipt.PaidCash);
-                            if (receipt.PaidCard > 0) Row(T("card"), receipt.PaidCard);
+                            if (receipt.PaidCash > 0) Row(T("cash"), $"{receipt.PaidCash:N0}");
+                            if (receipt.PaidCard > 0) Row(T("card"), $"{receipt.PaidCard:N0}");
+                            if (receipt.PaidBonus > 0) Row(T("bonus"), $"{receipt.PaidBonus:N0}");
                         }
-                        if (receipt.PaidBonus > 0) Row(T("bonus"), receipt.PaidBonus);
-                        if (receipt.ChangeAmount > 0) Row(T("change"), receipt.ChangeAmount);
-                        if (receipt.DebtAmount > 0) Row(T("debt"), receipt.DebtAmount, danger, bold: true);
-                        if (receipt.CashbackEarned > 0) Row(T("cashback"), receipt.CashbackEarned, success);
+                        if (receipt.ChangeAmount > 0) Row(T("change"), $"{receipt.ChangeAmount:N0}");
+                        if (receipt.CreditAmount > 0) Row(T("credit"), $"{receipt.CreditAmount:N0}");
+                        if (receipt.DebtAmount > 0) Row(T("debt"), $"{receipt.DebtAmount:N0}", danger, bold: true);
+                        if (receipt.CashbackEarned > 0) Row(T("cashback"), $"{receipt.CashbackEarned:N0}", success);
                     });
 
                     col.Item().PaddingTop(10).AlignRight()

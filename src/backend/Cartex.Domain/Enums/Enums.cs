@@ -20,7 +20,8 @@ public enum OperationType
     SupplyPay,
     CashIn,
     CashOut,
-    Change
+    Change,
+    CustomerCredit
 }
 
 public enum PaymentMethod

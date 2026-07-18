@@ -49,6 +49,9 @@ public sealed class RepayCustomerDebtCommandHandler(
             ? request.Amount
             : Math.Round(request.Amount * payRate / debtRate, 2);
 
+        if (debt.Balance <= 0)
+            throw new BusinessRuleException("Mijozda qarz yo'q.");
+
         if (debtReduce > debt.Balance)
             throw new BusinessRuleException("To'lov summasi qarzdan oshib ketdi.");
 

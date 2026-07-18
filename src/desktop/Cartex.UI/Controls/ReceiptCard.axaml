@@ -55,32 +55,66 @@
                            FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" />
             </Grid>
 
-            <Grid ColumnDefinitions="*,Auto"
-                  IsVisible="{Binding PaidCash, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
-                <TextBlock Text="{Binding [cash], Source={x:Static svc:LocalizationManager.Instance}}"
-                           Foreground="{DynamicResource TextSecondary}" />
-                <TextBlock Grid.Column="1" Text="{Binding PaidCash, StringFormat='{}{0:N0}'}"
-                           Foreground="{DynamicResource TextPrimary}" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto"
-                  IsVisible="{Binding PaidCard, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
-                <TextBlock Text="{Binding [card], Source={x:Static svc:LocalizationManager.Instance}}"
-                           Foreground="{DynamicResource TextSecondary}" />
-                <TextBlock Grid.Column="1" Text="{Binding PaidCard, StringFormat='{}{0:N0}'}"
-                           Foreground="{DynamicResource TextPrimary}" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto"
-                  IsVisible="{Binding PaidBonus, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
-                <TextBlock Text="{Binding [bonus], Source={x:Static svc:LocalizationManager.Instance}}"
-                           Foreground="{DynamicResource TextSecondary}" />
-                <TextBlock Grid.Column="1" Text="{Binding PaidBonus, StringFormat='{}{0:N0}'}"
-                           Foreground="{DynamicResource TextPrimary}" />
-            </Grid>
+            <ItemsControl ItemsSource="{Binding Payments}" IsVisible="{Binding HasPayments}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="7" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Method, Converter={x:Static conv:PaymentMethodConverter.Instance}}"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat='{}{0:N0}'}"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       IsVisible="{Binding !IsForeign}" />
+                            <TextBlock Grid.Column="1" Foreground="{DynamicResource TextPrimary}"
+                                       IsVisible="{Binding IsForeign}">
+                                <Run Text="{Binding Amount, StringFormat='{}{0:N2}'}" />
+                                <Run Text="{Binding Currency}" />
+                                <Run Text="≈" Foreground="{DynamicResource TextMuted}" />
+                                <Run Text="{Binding AmountBase, StringFormat='{}{0:N0}'}" />
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Spacing="7" IsVisible="{Binding !HasPayments}">
+                <Grid ColumnDefinitions="*,Auto"
+                      IsVisible="{Binding PaidCash, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
+                    <TextBlock Text="{Binding [cash], Source={x:Static svc:LocalizationManager.Instance}}"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding PaidCash, StringFormat='{}{0:N0}'}"
+                               Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto"
+                      IsVisible="{Binding PaidCard, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
+                    <TextBlock Text="{Binding [card], Source={x:Static svc:LocalizationManager.Instance}}"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding PaidCard, StringFormat='{}{0:N0}'}"
+                               Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto"
+                      IsVisible="{Binding PaidBonus, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
+                    <TextBlock Text="{Binding [bonus], Source={x:Static svc:LocalizationManager.Instance}}"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding PaidBonus, StringFormat='{}{0:N0}'}"
+                               Foreground="{DynamicResource TextPrimary}" />
+                </Grid>
+            </StackPanel>
             <Grid ColumnDefinitions="*,Auto"
                   IsVisible="{Binding ChangeAmount, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
                 <TextBlock Text="{Binding [change], Source={x:Static svc:LocalizationManager.Instance}}"
                            Foreground="{DynamicResource TextSecondary}" />
                 <TextBlock Grid.Column="1" Text="{Binding ChangeAmount, StringFormat='{}{0:N0}'}"
+                           Foreground="{DynamicResource TextPrimary}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto"
+                  IsVisible="{Binding CreditAmount, Converter={x:Static conv:DecimalPositiveConverter.Instance}}">
+                <TextBlock Text="{Binding [credited], Source={x:Static svc:LocalizationManager.Instance}}"
+                           Foreground="{DynamicResource TextSecondary}" />
+                <TextBlock Grid.Column="1" Text="{Binding CreditAmount, StringFormat='{}{0:N0}'}"
                            Foreground="{DynamicResource TextPrimary}" />
             </Grid>
             <Grid ColumnDefinitions="*,Auto"
