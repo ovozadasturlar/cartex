@@ -11,6 +11,12 @@ public interface ISuppliersApi
     [Get("/api/suppliers")]
     Task<IApiResponse<List<SupplierDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
+    [Get("/api/suppliers/totals")]
+    Task<SupplierTotalsDto> GetTotalsAsync([Query] string? search = null);
+
+    [Get("/api/suppliers/{id}/ledger")]
+    Task<IApiResponse<List<SupplierLedgerEntryDto>>> GetLedgerAsync(long id, [Query] int page = 1, [Query] int pageSize = 50, CancellationToken cancellationToken = default);
+
     [Post("/api/suppliers")]
     Task<long> CreateAsync([Body] CreateSupplierRequest request);
 

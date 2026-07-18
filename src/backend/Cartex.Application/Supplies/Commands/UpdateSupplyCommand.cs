@@ -1,6 +1,7 @@
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.Products;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -15,7 +16,7 @@ namespace Cartex.Application.Supplies.Commands;
 
 public record UpdateSupplyCommand(
     long Id,
-    long SupplierId,
+    long? SupplierId,
     long WarehouseId,
     DateOnly SupplyDate,
     List<CreateSupplyItemDto> Items,
@@ -26,11 +27,19 @@ public sealed class UpdateSupplyCommandHandler(
     ICurrentUser currentUser,
     ILedgerService ledger,
     ICurrencyService currency,
+    ISettingsService settingsService,
     IAuditService audit) : IRequestHandler<UpdateSupplyCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateSupplyCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+
+        if (request.SupplierId is null)
+        {
+            var supplierPolicy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+            if (supplierPolicy.RequireSupplier)
+                throw new BusinessRuleException("Ta'minotchi tanlash majburiy.");
+        }
 
         var supply = await db.Supplies
             .Include(s => s.Items)
@@ -127,8 +136,11 @@ public sealed class UpdateSupplyCommandHandler(
                 await ProductPriceWriter.UpsertAsync(db, item.VariantId, null, sellingPrice, cancellationToken, supplyCurrency);
         }
 
-        var supplierDebt = await ledger.SupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, supplyCurrency);
-        ledger.Post(OperationType.DebtCharge, total, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
+        if (request.SupplierId is { } sid)
+        {
+            var supplierDebt = await ledger.SupplierAccountAsync(sid, AccountType.Debt, cancellationToken, supplyCurrency);
+            ledger.Post(OperationType.DebtCharge, total, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
+        }
 
         audit.Add("supplyedit", "supplies", supply.Id, new { supply.SupplierId, supply.TotalAmount, Lines = request.Items.Count });
         await db.SaveChangesAsync(cancellationToken);

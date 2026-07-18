@@ -20,7 +20,7 @@ public sealed class GetSupplierPaymentsQueryHandler(IApplicationDbContext db) : 
         if (debtAccountIds.Count == 0)
             return [];
 
-        var from = DateTime.SpecifyKind(request.Date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var from = request.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
         var to = from.AddDays(1);
 
         return await db.Transactions

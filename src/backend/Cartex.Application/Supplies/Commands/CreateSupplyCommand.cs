@@ -24,7 +24,7 @@ public record CreateSupplyItemDto(
     SupplyPriceBasis PriceBasis = SupplyPriceBasis.PerEntry);
 
 public record CreateSupplyCommand(
-    long SupplierId,
+    long? SupplierId,
     long WarehouseId,
     DateOnly SupplyDate,
     List<CreateSupplyItemDto> Items,
@@ -37,6 +37,13 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
     public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+
+        if (request.SupplierId is null)
+        {
+            var supplierPolicy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+            if (supplierPolicy.RequireSupplier)
+                throw new BusinessRuleException("Ta'minotchi tanlash majburiy.");
+        }
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
@@ -110,30 +117,33 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
         }
 
-        var supplierDebt = await ledger.SupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, supplyCurrency);
-        ledger.Post(OperationType.DebtCharge, supply.TotalAmount, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
-
-        if (request.PaidCash > 0)
+        if (request.SupplierId is { } supplierId)
         {
-            var cash = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Cash, cancellationToken);
-            PostPayment(request.PaidCash, cash);
-        }
+            var supplierDebt = await ledger.SupplierAccountAsync(supplierId, AccountType.Debt, cancellationToken, supplyCurrency);
+            ledger.Post(OperationType.DebtCharge, supply.TotalAmount, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
 
-        if (request.PaidCard > 0)
-        {
-            var card = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Card, cancellationToken);
-            PostPayment(request.PaidCard, card);
-        }
-
-        void PostPayment(decimal amountBase, Cartex.Domain.Entities.Account account)
-        {
-            if (supplyCurrency == baseCode)
+            if (request.PaidCash > 0)
             {
-                ledger.Post(OperationType.SupplyPay, amountBase, account, supplierDebt, userId, shiftId).Supply = supply;
-                return;
+                var cash = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Cash, cancellationToken);
+                PostPayment(request.PaidCash, cash);
             }
-            ledger.Post(OperationType.SupplyPay, amountBase, account, null, userId, shiftId).Supply = supply;
-            ledger.Post(OperationType.SupplyPay, Math.Round(amountBase / supplyRate, 2), null, supplierDebt, userId, shiftId, supplyRate).Supply = supply;
+
+            if (request.PaidCard > 0)
+            {
+                var card = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Card, cancellationToken);
+                PostPayment(request.PaidCard, card);
+            }
+
+            void PostPayment(decimal amountBase, Cartex.Domain.Entities.Account account)
+            {
+                if (supplyCurrency == baseCode)
+                {
+                    ledger.Post(OperationType.SupplyPay, amountBase, account, supplierDebt, userId, shiftId).Supply = supply;
+                    return;
+                }
+                ledger.Post(OperationType.SupplyPay, amountBase, account, null, userId, shiftId).Supply = supply;
+                ledger.Post(OperationType.SupplyPay, Math.Round(amountBase / supplyRate, 2), null, supplierDebt, userId, shiftId, supplyRate).Supply = supply;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -152,6 +162,8 @@ public sealed class CreateSupplyCommandValidator : AbstractValidator<CreateSuppl
         RuleFor(x => x.Items).NotEmpty();
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.PaidCash + x.PaidCard).Equal(0).When(x => x.SupplierId is null)
+            .WithMessage("Ta'minotchisiz kirimda to'lov bo'lmaydi.");
 
         RuleForEach(x => x.Items).ChildRules(item =>
         {

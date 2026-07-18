@@ -22,6 +22,22 @@ public class SuppliersController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("totals")]
+    [HasPermission(AppPermissions.Suppliers.View)]
+    public async Task<ActionResult<SupplierTotalsDto>> GetTotals([FromQuery] GetSupplierTotalsQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:long}/ledger")]
+    [HasPermission(AppPermissions.Suppliers.View)]
+    public async Task<ActionResult<IReadOnlyCollection<SupplierLedgerEntryDto>>> GetLedger(long id, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        var result = await sender.Send(new GetSupplierLedgerQuery(id, page, pageSize));
+        return Ok(result);
+    }
+
     [HttpPost]
     [HasPermission(AppPermissions.Suppliers.Manage)]
     public async Task<ActionResult<long>> CreateSupplier(CreateSupplierCommand command)

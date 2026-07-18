@@ -12,7 +12,7 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record PaySupplierDebtCommand(long SupplierId, decimal Amount, AccountType Method = AccountType.Cash, string? DebtCurrency = null, string? PayCurrency = null, long? SupplyId = null) : ICommand<Unit>;
+public record PaySupplierDebtCommand(long SupplierId, decimal Amount, AccountType Method = AccountType.Cash, string? DebtCurrency = null, string? PayCurrency = null, long? SupplyId = null, string? IdempotencyKey = null) : ICommand<Unit>;
 
 public sealed class PaySupplierDebtCommandHandler(
     IApplicationDbContext db,
@@ -36,6 +36,11 @@ public sealed class PaySupplierDebtCommandHandler(
         else
             branchId = currentUser.DefaultBranchId ?? throw new BusinessRuleException("Foydalanuvchi filiali aniqlanmadi.");
 
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null
+            && await db.Transactions.AnyAsync(t => t.UserId == userId && t.IdempotencyKey == idempotencyKey, cancellationToken))
+            return Unit.Value;
+
         var baseCode = await currency.BaseAsync(cancellationToken);
         var debtCurrency = request.DebtCurrency ?? baseCode;
         var payCurrency = request.PayCurrency ?? debtCurrency;
@@ -46,17 +51,13 @@ public sealed class PaySupplierDebtCommandHandler(
         if (request.Method != AccountType.Cash && payCurrency != baseCode)
             throw new BusinessRuleException("Naqd bo'lmagan to'lov faqat bazaviy valyutada.");
 
-        var debt = await ledger.FindSupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, debtCurrency)
-            ?? throw new BusinessRuleException("Yetkazib beruvchida qarz mavjud emas.");
+        var debt = await ledger.SupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, debtCurrency);
 
         var payRate = payCurrency == baseCode ? 1m : await currency.RateAsync(payCurrency, cancellationToken);
         var debtRate = debtCurrency == baseCode ? 1m : await currency.RateAsync(debtCurrency, cancellationToken);
         var debtReduce = payCurrency == debtCurrency
             ? request.Amount
             : Math.Round(request.Amount * payRate / debtRate, 2);
-
-        if (debtReduce > -debt.Balance)
-            throw new BusinessRuleException("To'lov summasi qarzdan oshib ketdi.");
 
         var shiftId = await db.Shifts
             .Where(s => s.UserId == userId && s.BranchId == branchId && s.Status == ShiftStatus.Open)
@@ -73,11 +74,15 @@ public sealed class PaySupplierDebtCommandHandler(
 
         if (payCurrency == debtCurrency)
         {
-            ledger.Post(opType, request.Amount, branchAccount, debt, userId, shiftId, debtRate).SupplyId = request.SupplyId;
+            var tx = ledger.Post(opType, request.Amount, branchAccount, debt, userId, shiftId, debtRate);
+            tx.SupplyId = request.SupplyId;
+            tx.IdempotencyKey = idempotencyKey;
         }
         else
         {
-            ledger.Post(opType, request.Amount, branchAccount, null, userId, shiftId, payRate).SupplyId = request.SupplyId;
+            var tx = ledger.Post(opType, request.Amount, branchAccount, null, userId, shiftId, payRate);
+            tx.SupplyId = request.SupplyId;
+            tx.IdempotencyKey = idempotencyKey;
             ledger.Post(opType, debtReduce, null, debt, userId, shiftId, debtRate).SupplyId = request.SupplyId;
         }
 

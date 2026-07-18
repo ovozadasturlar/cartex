@@ -11,7 +11,7 @@ public record CreateSupplyItemRequest(
     string PriceBasis = "PerEntry");
 
 public record CreateSupplyRequest(
-    long SupplierId,
+    long? SupplierId,
     long WarehouseId,
     DateOnly SupplyDate,
     List<CreateSupplyItemRequest> Items,

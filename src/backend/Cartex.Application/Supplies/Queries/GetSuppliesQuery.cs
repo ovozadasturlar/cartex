@@ -13,7 +13,7 @@ public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<
     public long? SupplierId { get; set; }
 }
 
-public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string SupplierName, string WarehouseName, string UserName);
+public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string? SupplierName, string WarehouseName, string UserName);
 
 public sealed class GetSuppliesQueryHandler(
     IApplicationDbContext db,
@@ -36,7 +36,7 @@ public sealed class GetSuppliesQueryHandler(
                     s.Id,
                     s.SupplyDate,
                     s.TotalAmount,
-                    s.Supplier.Name,
+                    s.Supplier != null ? s.Supplier.Name : null,
                     s.Warehouse.Name,
                     s.User.FullName),
                 writer, cancellationToken);

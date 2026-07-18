@@ -23,7 +23,7 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
     }
@@ -109,7 +109,7 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     }
 
     [Fact]
-    public async Task Overpaying_supplier_debt_throws()
+    public async Task Overpaying_supplier_debt_creates_advance()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
@@ -125,10 +125,9 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         using var scope2 = Fixture.CreateScope();
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new PaySupplierDebtCommand(supplierId, 40_001m)));
+        await sender2.Send(new PaySupplierDebtCommand(supplierId, 50_000m));
 
-        Assert.Equal(40_000m, await PayableAsync(supplierId));
+        Assert.Equal(-10_000m, await PayableAsync(supplierId));
     }
 
     [Theory]

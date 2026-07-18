@@ -20,8 +20,8 @@ public record SupplyItemDto(
 public record SupplyDetailDto(
     long Id,
     DateOnly SupplyDate,
-    long SupplierId,
-    string SupplierName,
+    long? SupplierId,
+    string? SupplierName,
     long WarehouseId,
     string WarehouseName,
     string UserName,

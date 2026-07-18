@@ -10,7 +10,10 @@ namespace Cartex.Application.Suppliers.Queries;
 
 public record GetSuppliersQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplierDto>>;
 
-public record SupplierDto(long Id, string Name, string? Phone, decimal Payable);
+public record SupplierDto(long Id, string Name, string? Phone, decimal Payable)
+{
+    public IReadOnlyList<CurrencyAmountDto> PayableBalances { get; init; } = [];
+}
 
 public sealed class GetSuppliersQueryHandler(
     IApplicationDbContext db,
@@ -24,11 +27,28 @@ public sealed class GetSuppliersQueryHandler(
             request.Descending = false;
         }
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        return await db.Suppliers
+        var items = await db.Suppliers
             .ToPagedListAsync(request,
-                s => new SupplierDto(s.Id, s.Name, s.Phone,
-                    -(s.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => (decimal?)(a.Balance * (a.Currency == baseCode ? 1m
-                    : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault()))) ?? 0)),
+                s => new
+                {
+                    Dto = new SupplierDto(s.Id, s.Name, s.Phone, 0m),
+                    Payables = db.Accounts
+                        .Where(a => a.SupplierId == s.Id && a.Type == AccountType.Debt && a.Balance != 0)
+                        .Select(a => new CurrencyAmountDto(a.Currency, -a.Balance))
+                        .ToList()
+                },
                 writer, cancellationToken);
+
+        var rates = (await db.ExchangeRates
+            .GroupBy(r => r.Code)
+            .Select(g => g.OrderByDescending(r => r.EffectiveAt).First())
+            .ToListAsync(cancellationToken))
+            .ToDictionary(r => r.Code, r => r.Rate);
+
+        return items.Select(x => x.Dto with
+        {
+            Payable = x.Payables.Sum(p => p.Amount * (p.Currency == baseCode ? 1m : rates.GetValueOrDefault(p.Currency))),
+            PayableBalances = x.Payables
+        }).ToList();
     }
 }

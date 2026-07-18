@@ -17,11 +17,14 @@ public sealed class AttachSupplierPaymentsCommandHandler(IApplicationDbContext d
         if (ids.Count == 0)
             return Unit.Value;
 
-        var supplierId = await db.Supplies
+        var supply = await db.Supplies
             .Where(s => s.Id == request.SupplyId)
-            .Select(s => (long?)s.SupplierId)
+            .Select(s => new { s.Id, s.SupplierId })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Ta'minot topilmadi.");
+
+        if (supply.SupplierId is not { } supplierId)
+            throw new BusinessRuleException("Ta'minotchisiz kirimga to'lov biriktirilmaydi.");
 
         var debtAccountIds = await db.Accounts
             .Where(a => a.SupplierId == supplierId && a.Type == AccountType.Debt)
