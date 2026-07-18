@@ -9,6 +9,11 @@ public record ZReportCurrencyDto(string Currency, decimal OpeningFloat, decimal 
 
 public record ZReportDto(long ShiftId, decimal OpeningFloat, decimal CashSales, decimal CashReturns, decimal PayIn, decimal PayOut, decimal DebtPayIn, decimal SupplyPayOut, decimal ExpectedCash, decimal CountedCash, decimal Difference)
 {
+    public decimal CardSales { get; init; }
+    public decimal CardReturns { get; init; }
+    public decimal BonusUsed { get; init; }
+    public decimal NewDebtIssued { get; init; }
+    public int SalesCount { get; init; }
     public List<ZReportCurrencyDto> Currencies { get; init; } = [];
 }
 
@@ -24,6 +29,23 @@ public static class ShiftCalculator
 
         var cashRows = await db.ShiftCashes.Where(c => c.ShiftId == shift.Id).ToListAsync(cancellationToken);
         var txns = await db.Transactions.Where(t => t.ShiftId == shift.Id).ToListAsync(cancellationToken);
+        var cardAccounts = await db.Accounts
+            .Where(a => a.BranchId == shift.BranchId && a.Type == AccountType.Card)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken);
+
+        var cardSales = Math.Round(txns.Where(t => t.OperationType == OperationType.Sale && t.ToAccountId is { } toId && cardAccounts.Contains(toId)).Sum(t => t.Amount * t.Rate), 2);
+        var cardReturns = Math.Round(txns.Where(t => t.OperationType == OperationType.Sale && t.FromAccountId is { } fromId && cardAccounts.Contains(fromId)).Sum(t => t.Amount * t.Rate), 2);
+        var bonusUsed = txns.Where(t => t.OperationType == OperationType.BonusSpend && t.FromAccountId != null).Sum(t => t.Amount);
+        var newDebt = Math.Round(txns.Where(t => t.OperationType == OperationType.DebtCharge && t.SaleId != null && t.ToAccountId != null).Sum(t => t.Amount * t.Rate), 2);
+        var salesCount = txns
+            .Where(t => t.SaleId != null
+                && ((t.OperationType == OperationType.Sale && t.ToAccountId != null)
+                    || (t.OperationType == OperationType.BonusSpend && t.FromAccountId != null)
+                    || (t.OperationType == OperationType.DebtCharge && t.ToAccountId != null)))
+            .Select(t => t.SaleId)
+            .Distinct()
+            .Count();
 
         (decimal Sales, decimal Returns, decimal DebtIn, decimal SupplyOut, decimal ChangeOut) Terms(long? accountId)
         {
@@ -58,6 +80,11 @@ public static class ShiftCalculator
         return new ZReportDto(shift.Id, shift.OpeningFloat, baseTerms.Sales, baseTerms.Returns, payIn, payOut,
             baseTerms.DebtIn, baseTerms.SupplyOut, expected, countedCash, countedCash - expected)
         {
+            CardSales = cardSales,
+            CardReturns = cardReturns,
+            BonusUsed = bonusUsed,
+            NewDebtIssued = newDebt,
+            SalesCount = salesCount,
             Currencies = currencies
         };
     }

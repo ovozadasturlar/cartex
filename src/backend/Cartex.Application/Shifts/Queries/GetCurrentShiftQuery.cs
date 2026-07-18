@@ -10,6 +10,11 @@ public record GetCurrentShiftQuery : IRequest<CurrentShiftDto?>;
 
 public record CurrentShiftDto(long Id, DateTime OpenedAt, decimal OpeningFloat, decimal CashSales, decimal CashReturns, decimal PayIn, decimal PayOut, decimal DebtPayIn, decimal SupplyPayOut, decimal ExpectedCash)
 {
+    public decimal CardSales { get; init; }
+    public decimal CardReturns { get; init; }
+    public decimal BonusUsed { get; init; }
+    public decimal NewDebtIssued { get; init; }
+    public int SalesCount { get; init; }
     public List<ZReportCurrencyDto> Currencies { get; init; } = [];
 }
 
@@ -31,6 +36,11 @@ public sealed class GetCurrentShiftQueryHandler(IApplicationDbContext db, ICurre
         return new CurrentShiftDto(shift.Id, shift.OpenedAt, shift.OpeningFloat,
             report.CashSales, report.CashReturns, report.PayIn, report.PayOut, report.DebtPayIn, report.SupplyPayOut, report.ExpectedCash)
         {
+            CardSales = report.CardSales,
+            CardReturns = report.CardReturns,
+            BonusUsed = report.BonusUsed,
+            NewDebtIssued = report.NewDebtIssued,
+            SalesCount = report.SalesCount,
             Currencies = report.Currencies
         };
     }

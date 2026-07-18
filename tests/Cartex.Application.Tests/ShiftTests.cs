@@ -23,7 +23,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
     }
@@ -39,7 +39,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new OpenShiftCommand(100000));
-            await sender.Send(new CreateSaleCommand(warehouse1, null, 20000, 0, 0, [new CreateSaleItemDto(variantId, 2)]));
+            await sender.Send(new CreateSaleCommand(warehouse1, null, 770000, 0, 0, [new CreateSaleItemDto(variantId, 2)]));
             await sender.Send(new AddCashMovementCommand(50000, IsPayOut: false));
             await sender.Send(new AddCashMovementCommand(30000, IsPayOut: true));
 

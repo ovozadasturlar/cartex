@@ -1,3 +1,4 @@
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
@@ -14,6 +15,9 @@ public sealed class GetShiftReportQueryHandler(IApplicationDbContext db, ICurren
         var shift = await db.Shifts.FirstOrDefaultAsync(
             s => s.Id == request.ShiftId && s.BranchId == currentUser.DefaultBranchId, cancellationToken)
             ?? throw new NotFoundException("Shift not found.");
+
+        if (shift.UserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.Shifts.ViewAll))
+            throw new ForbiddenException("Boshqa kassir smenasini ko'rishga ruxsat yo'q.");
 
         return await ShiftCalculator.ComputeAsync(db, shift, shift.CountedCash ?? 0, cancellationToken);
     }

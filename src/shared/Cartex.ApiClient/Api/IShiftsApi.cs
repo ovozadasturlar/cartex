@@ -9,7 +9,7 @@ public interface IShiftsApi
     Task<CurrentShiftDto?> GetCurrentAsync();
 
     [Get("/api/shifts")]
-    Task<IApiResponse<List<ShiftHistoryDto>>> GetHistoryAsync([Query] int page, [Query] int pageSize);
+    Task<IApiResponse<List<ShiftHistoryDto>>> GetHistoryAsync([Query] int page, [Query] int pageSize, [Query] long? userId = null);
 
     [Get("/api/shifts/{id}/report")]
     Task<ZReportDto> GetReportAsync(long id);

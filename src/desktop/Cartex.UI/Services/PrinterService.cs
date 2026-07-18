@@ -115,14 +115,23 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(Center(l["z_report"], w));
         sb.AppendLine(Center(DateTime.Now.ToString("dd.MM.yyyy HH:mm"), w));
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
+        sb.AppendLine(Center(l["z_section_sales"], w));
         sb.AppendLine(Row(l["cash_sales"], $"{r.CashSales:N0}", w));
+        if (r.CardSales > 0) sb.AppendLine(Row(l["card_sales"], $"{r.CardSales:N0}", w));
+        if (r.BonusUsed > 0) sb.AppendLine(Row(l["bonus_used"], $"{r.BonusUsed:N0}", w));
+        if (r.NewDebtIssued > 0) sb.AppendLine(Row(l["debt_issued"], $"{r.NewDebtIssued:N0}", w));
         if (r.CashReturns > 0) sb.AppendLine(Row(l["cash_returns"], $"-{r.CashReturns:N0}", w));
-        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
+        if (r.CardReturns > 0) sb.AppendLine(Row(l["card_returns"], $"-{r.CardReturns:N0}", w));
+        sb.AppendLine(Row(l["sales_count"], $"{r.SalesCount:N0}", w));
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Center(l["z_section_cash"], w));
+        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
         if (r.PayIn > 0) sb.AppendLine(Row(l["pay_in"], $"{r.PayIn:N0}", w));
         if (r.PayOut > 0) sb.AppendLine(Row(l["pay_out"], $"-{r.PayOut:N0}", w));
+        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
         if (r.SupplyPayOut > 0) sb.AppendLine(Row(l["supply_pay_out"], $"-{r.SupplyPayOut:N0}", w));
         sb.AppendLine(new string('-', w));
+        sb.AppendLine(Center(l["z_section_summary"], w));
         sb.AppendLine(Row(l["expected_cash"], $"{r.ExpectedCash:N0}", w));
         sb.AppendLine(Row(l["counted_cash"], $"{r.CountedCash:N0}", w));
         sb.AppendLine(Row(l["difference"], $"{r.Difference:N0}", w));
@@ -188,10 +197,17 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(new string('-', w));
         if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));
         sb.AppendLine(Row(T("total"), $"{r.TotalAmount:N0}", w));
-        if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
-        if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
-        if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+        if (r.Payments.Count > 0)
+            foreach (var p in r.Payments)
+                sb.AppendLine(Row(ReceiptTexts.PaymentLabel(p.Method, r.Language), p.IsForeign ? $"{p.Amount:N2} {p.Currency} ≈ {p.AmountBase:N0}" : $"{p.Amount:N0}", w));
+        else
+        {
+            if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
+            if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
+            if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+        }
         if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
+        if (r.CreditAmount > 0) sb.AppendLine(Row(T("credit"), $"{r.CreditAmount:N0}", w));
         if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
         if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
         sb.AppendLine(new string('-', w));
