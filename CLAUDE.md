@@ -12,6 +12,11 @@ Loyiha production'ga chiqmagan — bu mukammal qilish uchun to'liq erkinlik. O'z
 - Senior arxitektor sifatida nazorat qil: zaif dizayn, noto'g'ri abstraksiya, kelajakda muammo tug'diradigan qarorni ko'rsang — jim turma, ayt va yaxshiroq yechim taklif qil.
 - Har katta o'zgarishdan oldin sabab va ta'sirni qisqa tushuntir, tasdiqlangach bajar. Orqaga moslik (backward compatibility) hozir cheklov emas.
 
+## Commit qoidalari (qat'iy)
+- Xabar bir qatorlik, ingliz tilida, sodda.
+- Hech qanday trailer qo'shilmaydi (Co-Authored-By, Claude-Session, Generated-with va h.k.).
+- Commitlar faqat `muqimjon` profili nomidan.
+
 ## Arxitektura qoidalari
 - Bog'liqlik yo'nalishi ichkariga: `Api/Infrastructure/Persistence → Application → Domain`. Domain hech narsaga bog'lanmaydi.
 - CQRS: har use-case alohida Command/Query + Handler. Mediator — loyihaning **o'z mini-mediatori**; MediatR tijoriy bo'lgani uchun ataylab olib tashlangan, qaytarilmasin. Validatsiya — FluentValidation.

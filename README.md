@@ -33,3 +33,9 @@ Bir biznes, ko'p filial. O'zbekiston kichik va o'rta biznesi uchun.
 
 Mulkiy (proprietary) — barcha huquqlar himoyalangan. Manba kodi maxfiy.
 Foydalanish faqat yozma shartnoma asosida. [LICENSE](LICENSE)
+
+## Commit qoidalari
+
+- Xabar bir qatorlik, ingliz tilida, sodda va aniq.
+- Hech qanday trailer yo'q (Co-Authored-By, Generated-with va h.k.).
+- Commitlar faqat `muqimjon` profili nomidan qilinadi.
