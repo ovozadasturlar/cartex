@@ -5,9 +5,9 @@ Ikki ssenariy bor. Ikkalasida ham **zaxira majburiy** — pastdagi "Zaxira" bo'l
 | | Lokal (do'kon kompyuteri) | Server (VPS / do'kon serveri) |
 |---|---|---|
 | O'rnatish | Inno Setup `.exe` | `docker compose` |
-| Baza | Portable PostgreSQL 16 (Windows servis) | `postgres:16-alpine` konteyneri |
+| Baza | Portable PostgreSQL (Windows servis) | `postgres:18-alpine` konteyneri |
 | Rasm saqlash | Lokal disk (`C:\ProgramData\Cartex\storage`) | Lokal disk (volume) yoki MinIO |
-| Web UI | Yo'q (faqat Desktop + mobil) | Bor — `http://<server>:5015` |
+| Web UI | Yo'q (faqat Desktop + mobil) | Bor — `http://<server>:8080` yoki `https://DOMAIN` |
 | Internet | Kerak emas | Kerak |
 
 ---
@@ -54,19 +54,24 @@ internet qaytganda o'z-o'zidan davom etadi (outbox eksponensial kutish bilan 12 
 
 ## 2. Server (Docker)
 
+Ikki image: **`muqimjon/cartex-api`** (API, port 5015) va **`muqimjon/cartex-web`**
+(nginx + Angular; `/api`, `/hubs`, `/health`ni API'ga proxy qiladi).
+
 ```
 cd deploy
 cp .env.example .env     # keyin qiymatlarni to'ldiring (4 ta parol majburiy)
 docker compose up -d
 ```
 
-Ochiladi: **`http://<server>:5015`** — shu manzilda ham API, ham Angular web UI turadi
-(Desktop ilova ham shu manzilga ulanadi).
+Ochiladi: web UI — **`http://<server>:8080`** (`WEB_PORT` bilan o'zgaradi), API —
+`http://<server>:5015`. Desktop ilova LAN'da `http://<server>:5015`ga, internet orqali
+esa `https://DOMAIN`ga ulanadi (nginx proxy orqali).
 
-Profillar:
+Profillar (birga ishlatish mumkin):
 ```
-docker compose --profile tls up -d      # + Caddy avto-HTTPS (DOMAIN kerak)
+docker compose --profile tls up -d      # + Caddy avto-HTTPS: DOMAIN -> web (DOMAIN kerak)
 docker compose --profile minio up -d    # + MinIO obyekt saqlash (MINIO_USER/PASSWORD kerak)
+docker compose --profile backup up -d   # + Zaxira agenti (pastdagi bo'lim)
 ```
 
 MinIO yoqilgach: Sozlamalar → Integratsiyalar → Saqlash → `minio`, Endpoint `minio:9000`,
@@ -102,9 +107,18 @@ Zaxiraga **ikki narsa** kirishi shart, aks holda tiklash to'liq bo'lmaydi:
 Qo'shimcha: `keys` papkasi/volume (DataProtection) — busiz shifrlangan integratsiya sirlari
 (MinIO secret, SMTP paroli) tiklanmaydi. Kichik, lekin zaxiraga qo'shing.
 
-Zaxira uchun **Zaxira platformasi** (`muqimjon/zaxira` agent) ishlatiladi — u Docker soketi
-orqali Postgres va MinIO'ni o'zi topadi (`/var/run/docker.sock:ro`) va jadval bo'yicha
-hub'ga yuboradi. Agent compose bloki Zaxira repo'sida.
+Zaxira uchun **Zaxira platformasi** (`muqimjon/zaxira` agent) — `deploy/docker-compose.yml`da
+tayyor `backup` profili bor: Postgres + MinIO **bitta izchil nuqtai-vaqt versiyasi** sifatida
+zaxiralanadi va rclone orqali bulutga yuboriladi. Yoqish:
+
+1. `.env`da: `BACKUP_MINIO_ENDPOINT=http://minio:9000`, `BACKUP_MINIO_BUCKET`,
+   `BACKUP_RCLONE_REMOTE`, `BACKUP_RCLONE_PATH` (jadval: `BACKUP_SCHEDULE`, default 03:00).
+2. `cp rclone.conf.example rclone.conf` — o'z bulut remote'ingizni joylang.
+3. `docker compose --profile backup up -d`
+4. Ixtiyoriy: `ZAXIRA_HUB_URL`/`ZAXIRA_HUB_TOKEN` — Hub'dan boshqarish uchun.
+
+Deploydan keyin 1 kun ichida bulutda arxiv paydo bo'lganini tekshiring va **bitta restore
+sinovi** o'tkazing — tiklanmaydigan zaxira zaxira emas.
 
 > **Lokal (Windows, Dockersiz) o'rnatishda** Zaxira agenti bash+Docker'ga tayanadi va native
 > ishlamaydi. Ikki yo'l bor: (a) do'kon kompyuteriga ham Docker Desktop qo'yish, (b) Windows
@@ -115,7 +129,7 @@ hub'ga yuboradi. Agent compose bloki Zaxira repo'sida.
 
 ## Eslatmalar
 - Server vaqt zonasi to'g'ri bo'lsin — qarz eslatmalari `SendHourLocal` mahalliy soatga tayanadi.
-- PostgreSQL major yangilashda `pg_upgrade` rejasi kerak (paket PG16 ga qadalgan).
+- PostgreSQL major yangilashda `pg_upgrade` rejasi kerak (paket PG18 ga qadalgan; PG18'da volume `/var/lib/postgresql`ga ulanadi).
 - Barkod prefiksi har mijozda unikal: `BARCODE_PREFIX=XN` (default `CTX`) → `XN-000042`, pachka: `XN-P6-000042`.
 - Sinov chop etish: Sozlamalar → Chop etish → etiketka o'lchami presetlari (58×40 default).
 

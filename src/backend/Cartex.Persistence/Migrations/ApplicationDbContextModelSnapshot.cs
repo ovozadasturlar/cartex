@@ -20,6 +20,7 @@ namespace Cartex.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Cartex.Domain.Entities.Account", b =>
@@ -237,6 +238,12 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("VariantId")
                         .HasDatabaseName("ix_barcodes_variant_id");
+
+                    b.HasIndex(new[] { "Code" }, "ix_barcodes_code_trgm")
+                        .HasDatabaseName("ix_barcodes_code_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Code" }, "ix_barcodes_code_trgm"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "Code" }, "ix_barcodes_code_trgm"), new[] { "gin_trgm_ops" });
 
                     b.ToTable("barcodes", (string)null);
                 });
@@ -1769,6 +1776,18 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("UnitId")
                         .HasDatabaseName("ix_products_unit_id");
 
+                    b.HasIndex(new[] { "IkpuCode" }, "ix_products_ikpu_code_trgm")
+                        .HasDatabaseName("ix_products_ikpu_code_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "IkpuCode" }, "ix_products_ikpu_code_trgm"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "IkpuCode" }, "ix_products_ikpu_code_trgm"), new[] { "gin_trgm_ops" });
+
+                    b.HasIndex(new[] { "Name" }, "ix_products_name_trgm")
+                        .HasDatabaseName("ix_products_name_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Name" }, "ix_products_name_trgm"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "Name" }, "ix_products_name_trgm"), new[] { "gin_trgm_ops" });
+
                     b.ToTable("products", (string)null);
                 });
 
@@ -2039,6 +2058,12 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_product_variants_product_id");
 
+                    b.HasIndex(new[] { "Code" }, "ix_product_variants_code_trgm")
+                        .HasDatabaseName("ix_product_variants_code_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Code" }, "ix_product_variants_code_trgm"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "Code" }, "ix_product_variants_code_trgm"), new[] { "gin_trgm_ops" });
+
                     b.ToTable("product_variants", (string)null);
                 });
 
@@ -2251,6 +2276,11 @@ namespace Cartex.Persistence.Migrations
                     b.Property<long?>("CreatedBy")
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
+
+                    b.Property<decimal>("CreditAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("credit_amount");
 
                     b.Property<long?>("CustomerId")
                         .HasColumnType("bigint")
@@ -3044,7 +3074,7 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(18,6)")
                         .HasColumnName("rate");
 
-                    b.Property<long>("SupplierId")
+                    b.Property<long?>("SupplierId")
                         .HasColumnType("bigint")
                         .HasColumnName("supplier_id");
 
@@ -4121,7 +4151,6 @@ namespace Cartex.Persistence.Migrations
                         .WithMany("Supplies")
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_supplies_suppliers_supplier_id");
 
                     b.HasOne("Cartex.Domain.Entities.User", "User")

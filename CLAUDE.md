@@ -20,6 +20,10 @@ Loyiha production'ga chiqmagan — bu mukammal qilish uchun to'liq erkinlik. O'z
 - **Integratsiya kanallari:** tashqi servislar (to'lov, SMS, email, boshqa API) uchun `Application` da interfeys (port), implementatsiya `Infrastructure` da (adapter). Yangi servis qo'shish faqat yangi adapter yozish bilan cheklansin — yadro kodga tegmasdan.
 - Logikani buzmasdan eng kam va sodda kod. Refactor qilganda mavjud xulq-atvor saqlansin.
 
+## Ma'lumotlar bazasi va migratsiyalar (qat'iy qoidalar)
+- **Migratsiya fayllari HECH QACHON qo'lda yozilmaydi yoki tahrirlanmaydi.** Sxemaning yagona haqiqat manbai — Domain entity'lar + `Persistence/Configurations` dagi EF konfiguratsiyalar (indekslar, extensionlar, cheklovlar ham shu yerda: `HasIndex`, `HasMethod("gin")`, `HasPostgresExtension` va h.k.). Migratsiya faqat `dotnet ef migrations add <Nom>` bilan generatsiya qilinadi; generatsiya kutilgandek chiqmasa, migratsiya emas — model/konfiguratsiya tuzatiladi va qayta generatsiya qilinadi. Production'dan oldin barcha migratsiyalar o'chirilib bitta `InitialMigration` yaratiladi — shuning uchun har bir sxema detali modeldan qayta tiklanadigan bo'lishi SHART.
+- **Production'gacha DB erkin mukammallashtiriladi.** "Bazani o'zgartirmay algoritm bilan aylanib o'tish" taqiqlanadi: unumdorlik yoki to'g'ri dizayn sxema o'zgarishini talab qilsa — sxema o'zgartiriladi (ustun, jadval, indeks qo'shish/o'zgartirish). Sabab: production'da algoritmni yaxshilash oson, sxemani o'zgartirish xavfli — shuning uchun sxema hozir keng o'ylab, keyin kam o'zgaradigan qilib quriladi. Dev bazani drop/reseed qilish normal ish jarayoni.
+
 ## Xavfsizlik va ma'lumot yaxlitligi (birinchi darajali)
 Loyiha real biznesning real ma'lumotlari bilan ishlaydi. Ma'lumot oshkor bo'lmasligi va yo'qolmasligi shart. Buni dizaynning o'zagiga singdir, keyin qo'shiladigan narsa emas.
 - **Autentifikatsiya/avtorizatsiya:** har endpoint himoyalangan bo'lsin (default = yopiq). Rol/ruxsat tekshiruvi `Application`/`Auth` da, `Api` da emas. Foydalanuvchi faqat o'ziga ruxsat berilgan ma'lumotni ko'rsin.

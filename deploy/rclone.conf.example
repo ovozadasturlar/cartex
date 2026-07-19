@@ -1,0 +1,7 @@
+# Nusxa oling: cp rclone.conf.example rclone.conf — keyin o'z remote'ingizni sozlang.
+# Yaratish: rclone config (yoki tayyor konfigni shu faylga joylang).
+# Misol — Google Drive:
+# [gdrive]
+# type = drive
+# scope = drive
+# token = {"access_token":"...","refresh_token":"...","expiry":"..."}
