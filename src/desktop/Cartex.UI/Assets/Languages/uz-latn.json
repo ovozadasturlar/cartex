@@ -270,7 +270,7 @@
   "export": "Eksport",
   "export_done": "Eksport qilindi",
   "factor": "Koeffitsient",
-  "feature_effect_agents": "Dala agentlari mobil ilovasi va agent sync API",
+  "feature_effect_agents": "Savdo agentlari mobil ilovasi va agent sync API",
   "feature_effect_offline_cache": "Bitta kassada oflayn savdo (SQLite kesh, keyin sinxron)",
   "feature_effect_ordering": "Onlayn buyurtmalar bo'limi va POS'da savat-kod skaneri",
   "feature_locked": "Bu imkoniyat tarifingizda mavjud emas. Yoqish uchun tarifni yangilang.",

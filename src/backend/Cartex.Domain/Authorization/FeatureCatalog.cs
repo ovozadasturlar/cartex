@@ -45,7 +45,7 @@ public static class FeatureCatalog
         [Audit] = "Audit jurnali",
         [Ordering] = "Onlayn buyurtma",
         [Prepack] = "Qadoqlash (tarozi)",
-        [Agents] = "Agentlar (dala savdosi)",
+        [Agents] = "Agentlar (mobil savdo)",
         [Store] = "Do'kon xodimi ilovasi",
         [OfflineCache] = "Oflayn kassa (bitta qurilma)",
     };

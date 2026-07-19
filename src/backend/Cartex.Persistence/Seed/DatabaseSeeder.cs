@@ -121,7 +121,7 @@ public static class DatabaseSeeder
 
         if (!await context.Roles.AnyAsync(r => r.Name == AppRoles.Agent))
         {
-            context.Roles.Add(new Role { Name = AppRoles.Agent, Description = "Dala agenti (mobil savdo)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true });
+            context.Roles.Add(new Role { Name = AppRoles.Agent, Description = "Savdo agenti (mobil)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true });
             await context.SaveChangesAsync();
         }
 
@@ -219,7 +219,7 @@ public static class DatabaseSeeder
         var developerRole = new Role { Name = AppRoles.Developer, Description = "Vendor / tizim ishlab chiquvchi", StartPage = "dashboard", Priority = AppRoles.DeveloperLevel, Level = AppRoles.DeveloperLevel, IsSystem = true, AccessAll = true };
         var adminRole = new Role { Name = AppRoles.Admin, Description = "Biznes egasi", StartPage = "dashboard", Priority = AppRoles.AdminLevel, Level = AppRoles.AdminLevel, IsSystem = true, GrantablePermissions = [.. AdminGrant] };
         var sellerRole = new Role { Name = AppRoles.Seller, Description = "Sotuvchi (kassa)", StartPage = "pos", CartDestination = "queue", Priority = AppRoles.SellerLevel, Level = AppRoles.SellerLevel, IsSystem = true };
-        var agentRole = new Role { Name = AppRoles.Agent, Description = "Dala agenti (mobil savdo)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true };
+        var agentRole = new Role { Name = AppRoles.Agent, Description = "Savdo agenti (mobil)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true };
 
         await context.Roles.AddRangeAsync(developerRole, adminRole, sellerRole, agentRole);
         await context.SaveChangesAsync();

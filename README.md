@@ -19,7 +19,7 @@ Bir biznes, ko'p filial. O'zbekiston kichik va o'rta biznesi uchun.
 | Desktop (asosiy kassa) | Avalonia |
 | Web | Angular 22 |
 | Do'kon xodimi (mobil) | .NET MAUI Android |
-| Dala agenti (mobil) | .NET MAUI Android |
+| Savdo agenti (mobil) | .NET MAUI Android |
 | Backend | .NET 10, Clean Architecture, CQRS, PostgreSQL |
 
 ## Hujjatlar
