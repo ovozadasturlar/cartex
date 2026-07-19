@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -41,12 +41,20 @@ const chipClasses: Record<string, string> = {
   templateUrl: './orders.html',
   styleUrl: './orders.scss',
 })
-export class Orders implements OnInit {
+export class Orders implements OnInit, OnDestroy {
   private readonly api = inject(OrderingApi);
   private readonly features = inject(FeaturesApi);
   private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private refreshTimer?: ReturnType<typeof setTimeout>;
+  private readonly refresh = (): void => {
+    if (document.visibilityState !== 'visible') return;
+    clearTimeout(this.refreshTimer);
+    this.refreshTimer = setTimeout(() => {
+      if (this.enabled() && !this.loading() && !this.busy()) this.load();
+    }, 400);
+  };
 
   readonly loading = signal(true);
   readonly busy = signal(false);
@@ -58,6 +66,8 @@ export class Orders implements OnInit {
   readonly canManage = this.auth.hasPermission('sales.create');
 
   async ngOnInit(): Promise<void> {
+    document.addEventListener('visibilitychange', this.refresh);
+    window.addEventListener('focus', this.refresh);
     try {
       const enabled = await lastValueFrom(this.features.enabled());
       this.enabled.set(enabled.includes('ordering'));
@@ -67,6 +77,12 @@ export class Orders implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.refreshTimer);
+    document.removeEventListener('visibilitychange', this.refresh);
+    window.removeEventListener('focus', this.refresh);
   }
 
   setStatus(value: string): void {
@@ -97,7 +113,7 @@ export class Orders implements OnInit {
   private async load(): Promise<void> {
     this.busy.set(true);
     try {
-      this.carts.set(await lastValueFrom(this.api.list(this.status() || undefined)));
+      this.carts.set(await lastValueFrom(this.api.list(this.status() || undefined, 'Order')));
     } catch (e) {
       this.notify.error(e);
     } finally {

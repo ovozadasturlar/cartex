@@ -52,10 +52,10 @@ public static class DemoDataSeeder
 
         var suppliers = new[]
         {
-            new Supplier { Name = "Mega Distribution", Phone = "+998711110011", CreatedAt = openingDate },
-            new Supplier { Name = "Oziq Optom Savdo", Phone = "+998711110022", CreatedAt = openingDate },
-            new Supplier { Name = "Nestle Uzbekistan", Phone = "+998711110033", CreatedAt = openingDate },
-            new Supplier { Name = "Mahalliy Non Zavodi", Phone = "+998711110044", CreatedAt = openingDate },
+            new Supplier { Name = "Santex Optom Savdo", Phone = "+998711110011", CreatedAt = openingDate },
+            new Supplier { Name = "AquaTrade Toshkent", Phone = "+998711110022", CreatedAt = openingDate },
+            new Supplier { Name = "Polimer Plast Zavod", Phone = "+998711110033", CreatedAt = openingDate },
+            new Supplier { Name = "Termo Group Distribution", Phone = "+998711110044", CreatedAt = openingDate },
         };
         await context.Suppliers.AddRangeAsync(suppliers);
 
@@ -147,7 +147,7 @@ public static class DemoDataSeeder
         for (var i = 0; i < supplies.Count; i++)
         {
             var sup = supplies[i];
-            var acc = supplierDebt[sup.Supplier];
+            var acc = supplierDebt[sup.Supplier!];
             Post(OperationType.DebtCharge, sup.TotalAmount, acc, null, admin.Id, sup.CreatedAt, supply: sup);
             var paid = i == supplies.Count - 1 ? 0m
                 : i == supplies.Count - 2 ? R(sup.TotalAmount * 0.6m, 1000m)

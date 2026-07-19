@@ -87,19 +87,20 @@ public partial class DashboardViewModel(
         var todayEnd = new DateTimeOffset(DateTime.Today.AddDays(1)).UtcDateTime;
         var weekStart = new DateTimeOffset(DateTime.Today.AddDays(-6)).UtcDateTime;
         var warehouseId = branch.CurrentWarehouseId;
+        var tz = (int)DateTimeOffset.Now.Offset.TotalMinutes;
 
-        var todayReportTask = reportsApi.GetSalesReportAsync(todayStart, todayEnd);
+        var todayReportTask = reportsApi.GetSalesReportAsync(todayStart, todayEnd, tzOffsetMinutes: tz);
         var totalsTask = productsApi.GetTotalsAsync();
         var categoriesTask = productsApi.GetCategoryCountsAsync();
         var lowStockTask = warehouseId is { } wid ? stocksApi.GetLowStockAsync(wid) : null;
         var transactionsTask = transactionsApi.QueryAsync(QueryRequest.Create()
             .Page(1, 10)
             .Sort("CreatedAt", descending: true)
-            .With("fromDate", DateTime.Today)
-            .With("toDate", DateTime.Today.AddDays(1))
+            .With("fromDate", todayStart)
+            .With("toDate", todayEnd)
             .Build());
-        var weekReportTask = reportsApi.GetSalesReportAsync(weekStart, todayEnd);
-        var flowTask = reportsApi.GetCashFlowAsync(weekStart, todayEnd);
+        var weekReportTask = reportsApi.GetSalesReportAsync(weekStart, todayEnd, tzOffsetMinutes: tz);
+        var flowTask = reportsApi.GetCashFlowAsync(weekStart, todayEnd, tz);
         var topCustomersTask = reportsApi.GetTopCustomersAsync(weekStart, todayEnd);
 
         try

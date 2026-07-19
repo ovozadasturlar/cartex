@@ -30,7 +30,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         var price = await db.ProductPrices.Where(p => p.VariantId == variantId).Select(p => p.SellingPrice).FirstAsync();
         return (branch1, warehouse1, businessId, adminId, variantId, price);
@@ -223,7 +223,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, false, DebtCurrency: "USD", PayCurrency: "UZS"));
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, AccountType.Cash, DebtCurrency: "USD", PayCurrency: "UZS"));
         }
 
         using var check2 = Fixture.CreateScope();

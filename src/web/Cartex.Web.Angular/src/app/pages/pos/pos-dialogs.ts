@@ -122,7 +122,7 @@ import { EmptyState } from '../../shared/empty-state';
     </div>
   `,
   styles: `
-    .picker { display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 14px; width: min(460px, 90vw); }
+    .picker { display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 14px; width: min(460px, 90vw); height: min(640px, 82vh); box-sizing: border-box; }
     .head { display: flex; align-items: center; justify-content: space-between; }
     .back-row { display: flex; align-items: center; gap: 6px; }
     h2 { margin: 0; font-size: 18px; font-weight: 700; }
@@ -136,7 +136,7 @@ import { EmptyState } from '../../shared/empty-state';
       &.brand { background: var(--cx-brand); border-color: var(--cx-brand); color: #fff; &:hover { background: var(--cx-brand-ink); } }
       mat-icon { font-size: 19px; width: 19px; height: 19px; }
     }
-    .list { max-height: 46vh; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; }
+    .list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; }
     .row {
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
       padding: 10px 8px; border: none; border-bottom: 1px solid var(--cx-border);
@@ -284,13 +284,23 @@ export class CustomerPickerDialog implements OnInit {
         @for (p of receipt.payments; track $index) {
           <div class="row">
             <span>{{ t(p.method.toLowerCase()) }}</span>
-            <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
+            @if (p.isForeign) {
+              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }} ≈ {{ p.amountBase | cxMoney }}</span>
+            } @else {
+              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
+            }
           </div>
         }
         @if (receipt.debtAmount > 0) {
           <div class="row debt">
             <span>{{ t('debt') }}</span>
             <span class="cx-money">{{ receipt.debtAmount | cxMoney }}</span>
+          </div>
+        }
+        @if (receipt.creditAmount > 0) {
+          <div class="row">
+            <span>{{ t('advance') }}</span>
+            <span class="cx-money">{{ receipt.creditAmount | cxMoney }}</span>
           </div>
         }
         @if (receipt.changeAmount > 0) {

@@ -22,7 +22,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        AsyncImageLoader.ImageLoader.AsyncImageLoader = new AsyncImageLoader.Loaders.DiskCachedWebImageLoader(
+        AsyncImageLoader.ImageLoader.AsyncImageLoader = new CachedImageLoader(
             System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cartex", "imagecache"));
 
         var services = new ServiceCollection();

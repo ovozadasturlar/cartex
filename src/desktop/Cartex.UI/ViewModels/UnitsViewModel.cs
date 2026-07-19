@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Units;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -31,6 +32,11 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Units.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+        CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
     public UnitsViewModel(IUnitsApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {

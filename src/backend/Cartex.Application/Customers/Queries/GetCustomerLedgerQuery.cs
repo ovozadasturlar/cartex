@@ -11,7 +11,7 @@ namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerLedgerQuery(long CustomerId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
 
-public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter);
+public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter, string? Currency = null);
 
 public sealed class GetCustomerLedgerQueryHandler(
     IApplicationDbContext db,
@@ -26,13 +26,15 @@ public sealed class GetCustomerLedgerQueryHandler(
 
         var accounts = await db.Accounts
             .Where(a => a.CustomerId == request.CustomerId)
-            .Select(a => new { a.Id, a.Type })
+            .Select(a => new { a.Id, a.Type, a.Currency })
             .ToListAsync(cancellationToken);
 
         if (accounts.Count == 0)
             return [];
 
+        var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         var typeById = accounts.ToDictionary(a => a.Id, a => a.Type);
+        var currencyById = accounts.ToDictionary(a => a.Id, a => a.Currency == baseCode ? null : a.Currency);
         var ids = typeById.Keys.ToList();
 
         var txQuery = db.Transactions
@@ -45,7 +47,7 @@ public sealed class GetCustomerLedgerQueryHandler(
                 .OrderBy(t => t.CreatedAt).ThenBy(t => t.Id)
                 .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
                 .ToListAsync(cancellationToken);
-            var full = BuildEntries(all, typeById, ids.ToDictionary(id => id, _ => 0m));
+            var full = BuildEntries(all, typeById, currencyById, ids.ToDictionary(id => id, _ => 0m));
             full.Reverse();
             return full;
         }
@@ -81,7 +83,7 @@ public sealed class GetCustomerLedgerQueryHandler(
         foreach (var x in priorSums) running[x.Id] += x.Sum;
 
         pageTx.Reverse();
-        var entries = BuildEntries(pageTx, typeById, running);
+        var entries = BuildEntries(pageTx, typeById, currencyById, running);
         entries.Reverse();
         return entries;
     }
@@ -91,6 +93,7 @@ public sealed class GetCustomerLedgerQueryHandler(
     private static List<CustomerLedgerEntryDto> BuildEntries(
         List<TxRow> transactions,
         Dictionary<long, AccountType> typeById,
+        Dictionary<long, string?> currencyById,
         Dictionary<long, decimal> running)
     {
         var entries = new List<CustomerLedgerEntryDto>();
@@ -100,14 +103,14 @@ public sealed class GetCustomerLedgerQueryHandler(
             {
                 var balance = running.GetValueOrDefault(from) - t.Amount;
                 running[from] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance, currencyById.GetValueOrDefault(from)));
             }
 
             if (t.ToAccountId is long to && typeById.TryGetValue(to, out var toType))
             {
                 var balance = running.GetValueOrDefault(to) + t.Amount;
                 running[to] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance, currencyById.GetValueOrDefault(to)));
             }
         }
         return entries;

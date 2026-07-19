@@ -13,15 +13,6 @@ public partial class SalesView : UserControl
         InitializeComponent();
     }
 
-    private void OnTileHolding(object? sender, HoldingRoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: StockOnHandDto product } && DataContext is SalesViewModel vm)
-        {
-            vm.ShowProductDetail(product);
-            e.Handled = true;
-        }
-    }
-
     private void OnProductsScroll(object? sender, ScrollChangedEventArgs e)
     {
         if (sender is not ScrollViewer sv || DataContext is not SalesViewModel vm) return;

@@ -5,7 +5,6 @@ namespace Cartex.UnitTests;
 
 public class PageRequestScopeTests
 {
-    /// <summary>So'rovni ushlab turadi va bekor qilinishini kutadi.</summary>
     private sealed class BlockingHandler : HttpMessageHandler
     {
         public TaskCompletionSource Started { get; } = new();
@@ -47,7 +46,6 @@ public class PageRequestScopeTests
         var scope = new PageRequestScope();
         var (client, inner) = Build(scope);
 
-        // Sahifa doirasidan tashqarida — fon sinxronizatsiyasi kabi.
         var request = client.GetAsync("/offline/snapshot");
         await inner.Started.Task;
         scope.CancelPending();
@@ -64,6 +62,23 @@ public class PageRequestScopeTests
         Task<HttpResponseMessage> request;
         using (scope.BeginPageRequest())
             request = client.PostAsync("/sales", new StringContent("{}"));
+
+        await inner.Started.Task;
+        scope.CancelPending();
+
+        Assert.False(request.IsCompleted);
+    }
+
+    [Fact]
+    public async Task DetachedGet_InsidePageRequest_IsNotCancelled()
+    {
+        var scope = new PageRequestScope();
+        var (client, inner) = Build(scope);
+
+        Task<HttpResponseMessage> request;
+        using (scope.BeginPageRequest())
+        using (PageRequestScope.Detach())
+            request = client.GetAsync("/units");
 
         await inner.Started.Task;
         scope.CancelPending();

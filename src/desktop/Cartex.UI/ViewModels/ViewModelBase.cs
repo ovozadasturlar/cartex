@@ -1,3 +1,6 @@
+using System.Windows.Input;
+using Avalonia.Input;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -25,5 +28,12 @@ public abstract class ViewModelBase : ObservableObject
         _l = new LocalizationLookup();
         OnPropertyChanged(nameof(L));
     }
+
+    protected static IReadOnlyList<PageShortcut> CrudShortcuts(ICommand openCreate, ICommand save, Action close, Func<bool> isEditOpen) =>
+    [
+        new(Key.N, KeyModifiers.Control, "shortcut_new", () => openCreate.Execute(null), () => !isEditOpen(), WorksInText: true),
+        new(Key.F2, KeyModifiers.None, "shortcut_save", () => save.Execute(null), isEditOpen, WorksInText: true),
+        new(Key.Escape, KeyModifiers.None, "shortcut_close", close, isEditOpen, WorksInText: true),
+    ];
 }
 

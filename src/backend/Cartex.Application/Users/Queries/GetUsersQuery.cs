@@ -14,7 +14,7 @@ public record UserDto(
     long Id, string FullName, string Username,
     List<long> RoleIds, List<string> RoleNames,
     long? DefaultBranchId, string? DefaultBranchName,
-    List<long> BranchIds, string? StartPage, bool IsActive);
+    List<long> BranchIds, string? StartPage, string? CartDestination, bool IsActive);
 
 public sealed class GetUsersQueryHandler(
     IApplicationDbContext db,
@@ -23,6 +23,11 @@ public sealed class GetUsersQueryHandler(
 {
     public async Task<IReadOnlyCollection<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         var ctx = await accessControl.GetContextAsync(cancellationToken);
 
         var query = db.Users
@@ -43,7 +48,7 @@ public sealed class GetUsersQueryHandler(
                     u.DefaultBranchId,
                     u.DefaultBranch != null ? u.DefaultBranch.Name : null,
                     u.UserBranches.Select(ub => ub.BranchId).ToList(),
-                    u.StartPage, u.IsActive),
+                    u.StartPage, u.CartDestination, u.IsActive),
                 writer, cancellationToken);
     }
 }

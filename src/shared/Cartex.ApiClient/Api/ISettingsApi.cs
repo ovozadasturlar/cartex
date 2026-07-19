@@ -56,6 +56,12 @@ public interface ISettingsApi
     [Put("/api/settings/storage")]
     Task UpdateStorageAsync([Body] UpdateStorageSettingsRequest request);
 
+    [Post("/api/settings/storage/migrate")]
+    Task StartStorageMigrationAsync([Body] StartStorageMigrationRequest request);
+
+    [Get("/api/settings/storage/migrate")]
+    Task<StorageMigrationStatusDto> GetStorageMigrationAsync();
+
     [Get("/api/settings/reminder")]
     Task<ReminderSettingsDto> GetReminderAsync();
 

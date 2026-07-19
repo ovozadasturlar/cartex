@@ -16,6 +16,11 @@ public sealed class GetBranchesQueryHandler(
 {
     public async Task<IReadOnlyCollection<BranchDto>> Handle(GetBranchesQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         return await db.Branches
             .ToPagedListAsync(request,
                 b => new BranchDto(b.Id, b.Name, b.Address, b.Phone, b.IsActive),

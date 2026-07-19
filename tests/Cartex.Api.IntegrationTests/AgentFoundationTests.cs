@@ -18,18 +18,18 @@ public class AgentFoundationTests(CartexApiFactory factory)
         await AuthHelper.EnsureOpenShiftAsync(client);
 
         var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
-        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=Sprite");
-        var sprite = products!.First(p => p.Name == "Sprite 1L");
+        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=TEN");
+        var heater = products!.First(p => p.Name == "TEN 1.5kVt suv isitgich uchun");
         var key = Guid.NewGuid().ToString("N");
 
         object body = new
         {
             warehouseId = warehouses![0].Id,
             customerId = (long?)null,
-            paidCash = 100_000m,
+            paidCash = 300_000m,
             paidCard = 0m,
             paidBonus = 0m,
-            items = new[] { new { variantId = sprite.DefaultVariantId, quantity = 2m } },
+            items = new[] { new { variantId = heater.DefaultVariantId, quantity = 2m } },
             discountAmount = 0m,
             idempotencyKey = key
         };

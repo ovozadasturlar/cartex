@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Rates;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -41,6 +42,11 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     public bool CanManageRates => auth.HasPermission("rates.manage");
     public bool HasStale => StaleCount > 0;
 
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanManageCurrencies
+        ? CrudShortcuts(OpenAddCommand, AddCommand, () => IsAddOpen = false, () => IsAddOpen)
+        : [];
+
     partial void OnStaleCountChanged(int value) => OnPropertyChanged(nameof(HasStale));
 
     private int _staleDays = 3;
@@ -57,7 +63,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
                 try { _staleDays = (await ServiceLocator.Resolve<ReferenceCache>().GetAsync(CacheKeys.SalesPolicy, settingsApi.GetSalesPolicyAsync)).StaleRateDays; } catch { }
 
                 var list = await api.GetCurrenciesAsync();
-                var limit = DateTime.UtcNow.AddDays(-_staleDays);
+                var limit = DateTime.Now.AddDays(-_staleDays);
                 Currencies.Clear();
                 foreach (var c in list.OrderByDescending(c => c.IsBase).ThenBy(c => c.Code))
                     Currencies.Add(new CurrencyRow(c, c.IsEnabled && !c.IsBase && (c.RateAt is null || c.RateAt < limit)));

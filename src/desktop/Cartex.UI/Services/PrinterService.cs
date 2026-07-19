@@ -13,7 +13,6 @@ public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, st
 
 public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
 
-// Yorliq chop etishning barcha parametrlari — sozlamalardan olinadi, kodda qotib qolmaydi.
 public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed);
 
 public static class LabelSize
@@ -21,7 +20,6 @@ public static class LabelSize
     public static (double Width, double Height) Resolve(double width, double height) =>
         (width is < 20 or > 120 ? 40 : width, height is < 20 or > 120 ? 30 : height);
 
-    // GAP 0 — printer uchun "uzluksiz qog'oz" degani: yorliqlar orasidagi bo'shliqni sezmay, chop etish asta siljib ketadi.
     public static double ResolveGap(double gap) => gap is < 1 or > 20 ? 4 : gap;
 
     public static LabelOptions Resolve(PrinterSettings s)
@@ -59,7 +57,6 @@ public sealed class PrinterService : IPrinterService
 {
     private readonly string? _path;
     private PrinterSettings _settings = new(null, null, null, null, false);
-
 
     public PrinterService()
     {
@@ -118,14 +115,23 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(Center(l["z_report"], w));
         sb.AppendLine(Center(DateTime.Now.ToString("dd.MM.yyyy HH:mm"), w));
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
+        sb.AppendLine(Center(l["z_section_sales"], w));
         sb.AppendLine(Row(l["cash_sales"], $"{r.CashSales:N0}", w));
+        if (r.CardSales > 0) sb.AppendLine(Row(l["card_sales"], $"{r.CardSales:N0}", w));
+        if (r.BonusUsed > 0) sb.AppendLine(Row(l["bonus_used"], $"{r.BonusUsed:N0}", w));
+        if (r.NewDebtIssued > 0) sb.AppendLine(Row(l["debt_issued"], $"{r.NewDebtIssued:N0}", w));
         if (r.CashReturns > 0) sb.AppendLine(Row(l["cash_returns"], $"-{r.CashReturns:N0}", w));
-        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
+        if (r.CardReturns > 0) sb.AppendLine(Row(l["card_returns"], $"-{r.CardReturns:N0}", w));
+        sb.AppendLine(Row(l["sales_count"], $"{r.SalesCount:N0}", w));
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Center(l["z_section_cash"], w));
+        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
         if (r.PayIn > 0) sb.AppendLine(Row(l["pay_in"], $"{r.PayIn:N0}", w));
         if (r.PayOut > 0) sb.AppendLine(Row(l["pay_out"], $"-{r.PayOut:N0}", w));
+        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
         if (r.SupplyPayOut > 0) sb.AppendLine(Row(l["supply_pay_out"], $"-{r.SupplyPayOut:N0}", w));
         sb.AppendLine(new string('-', w));
+        sb.AppendLine(Center(l["z_section_summary"], w));
         sb.AppendLine(Row(l["expected_cash"], $"{r.ExpectedCash:N0}", w));
         sb.AppendLine(Row(l["counted_cash"], $"{r.CountedCash:N0}", w));
         sb.AppendLine(Row(l["difference"], $"{r.Difference:N0}", w));
@@ -145,21 +151,13 @@ public sealed class PrinterService : IPrinterService
     public void PrintRaw(string? printerName, string text)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName)) return;
-        Task.Run(() =>
-        {
-            try { RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt"); }
-            catch { }
-        });
+        RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt");
     }
 
     public void PrintRawBytes(string? printerName, byte[] data)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || data.Length == 0) return;
-        Task.Run(() =>
-        {
-            try { RawPrinter.Send(printerName, data, "Cartex Label"); }
-            catch { }
-        });
+        RawPrinter.Send(printerName, data, "Cartex Label");
     }
 
     public void PrintDocument(string filePath, string? printerName)
@@ -199,10 +197,17 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(new string('-', w));
         if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));
         sb.AppendLine(Row(T("total"), $"{r.TotalAmount:N0}", w));
-        if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
-        if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
-        if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+        if (r.Payments.Count > 0)
+            foreach (var p in r.Payments)
+                sb.AppendLine(Row(ReceiptTexts.PaymentLabel(p.Method, r.Language), p.IsForeign ? $"{p.Amount:N2} {p.Currency} ≈ {p.AmountBase:N0}" : $"{p.Amount:N0}", w));
+        else
+        {
+            if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
+            if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
+            if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+        }
         if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
+        if (r.CreditAmount > 0) sb.AppendLine(Row(T("credit"), $"{r.CreditAmount:N0}", w));
         if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
         if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
         sb.AppendLine(new string('-', w));
@@ -266,11 +271,13 @@ internal static class RawPrinter
         try
         {
             Marshal.Copy(bytes, 0, unmanaged, bytes.Length);
-            if (!OpenPrinter(printerName, out var hPrinter, IntPtr.Zero)) return;
+            if (!OpenPrinter(printerName, out var hPrinter, IntPtr.Zero))
+                throw new InvalidOperationException($"OpenPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
             try
             {
                 var di = new DOCINFO { DocName = docName, DataType = "RAW" };
-                if (!StartDocPrinter(hPrinter, 1, ref di)) return;
+                if (!StartDocPrinter(hPrinter, 1, ref di))
+                    throw new InvalidOperationException($"StartDocPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
                 try
                 {
                     if (!StartPagePrinter(hPrinter)) return;

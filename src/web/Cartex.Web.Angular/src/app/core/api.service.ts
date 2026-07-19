@@ -101,8 +101,14 @@ export class CustomersApi {
     return this.http.delete<void>(`/api/customers/${id}`);
   }
 
-  repayDebt(id: number, amount: number, viaCard: boolean): Observable<void> {
-    return this.http.post<void>(`/api/customers/${id}/repay-debt`, { amount, viaCard });
+  repayDebt(id: number, body: {
+    amount: number;
+    viaCard: boolean;
+    debtCurrency: string | null;
+    payCurrency: string | null;
+    idempotencyKey: string;
+  }): Observable<void> {
+    return this.http.post<void>(`/api/customers/${id}/repay-debt`, body);
   }
 }
 
@@ -111,13 +117,15 @@ export class ReportsApi {
   private readonly http = inject(HttpClient);
 
   sales(from: string, to: string, warehouseId?: number): Observable<SalesReport> {
-    const params: Record<string, string> = { from, to };
+    const params: Record<string, string> = { from, to, tzOffsetMinutes: String(-new Date().getTimezoneOffset()) };
     if (warehouseId) params['warehouseId'] = String(warehouseId);
     return this.http.get<SalesReport>('/api/reports/sales', { params });
   }
 
   cashFlow(from: string, to: string): Observable<DailyCashFlow[]> {
-    return this.http.get<DailyCashFlow[]>('/api/reports/cash-flow', { params: { from, to } });
+    return this.http.get<DailyCashFlow[]>('/api/reports/cash-flow', {
+      params: { from, to, tzOffsetMinutes: String(-new Date().getTimezoneOffset()) },
+    });
   }
 
   debtAging(): Observable<DebtAgingReport> {

@@ -74,6 +74,10 @@ export interface SalesPolicy {
   maxDiscountPercent: number;
   defaultMinStock: number;
   staleRateDays: number;
+  allowDebtSales: boolean;
+  allowCustomerCredit: boolean;
+  requireDebtDueDate: boolean;
+  requireSupplier: boolean;
 }
 
 export interface LoginMethods {
@@ -90,6 +94,7 @@ export interface StorageSettings {
   bucket: string | null;
   useSsl: boolean;
   hasSecretKey: boolean;
+  secretKeyLength: number;
 }
 
 @Injectable({ providedIn: 'root' })

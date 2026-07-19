@@ -4,6 +4,8 @@ public enum AccountType
 {
     Cash,
     Card,
+    Transfer,
+    Bank,
     Bonus,
     Debt
 }
@@ -18,7 +20,8 @@ public enum OperationType
     SupplyPay,
     CashIn,
     CashOut,
-    Change
+    Change,
+    CustomerCredit
 }
 
 public enum PaymentMethod
@@ -88,7 +91,6 @@ public enum UnitDimension
     Length
 }
 
-// Qadoq qayerda ishlatiladi: kirimda (qop), rastada (paket) yoki ikkalasida.
 public enum PackKind
 {
     Purchase,
@@ -96,7 +98,6 @@ public enum PackKind
     Both
 }
 
-// Ta'minot qatoridagi narx nimaga tegishli: kiritilgan birlik/qadoqqa yoki saqlash birligiga.
 public enum SupplyPriceBasis
 {
     PerEntry,
@@ -123,6 +124,12 @@ public enum SmsStatus
     Failed,
     Delivered,
     Undelivered
+}
+
+public enum CartKind
+{
+    Queue,
+    Order
 }
 
 public enum CartStatus

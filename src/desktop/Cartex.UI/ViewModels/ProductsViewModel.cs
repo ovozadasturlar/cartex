@@ -116,13 +116,22 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
     public bool IsEmpty => Products.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanImport => _auth.HasPermission("products.manage");
+
+    public ProductImportViewModel Import { get; }
 
     public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IPrinterService printer, IFilePickerService filePicker, IToastService toast, IBusyService busy, IExportService export, AuthService auth,
-        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache)
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import)
     {
         _cache = cache;
+        Import = import;
+        Import.Imported += () => _ = LoadAsync();
+        Import.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ProductImportViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen));
+        };
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
@@ -141,6 +150,28 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _settingsApi = settingsApi;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);
+        _auth.LoggedOut += ResetState;
+    }
+
+    private void ResetState()
+    {
+        _searchCts?.Cancel();
+        _suppressReload = true;
+        SearchText = string.Empty;
+        FilterCategory = null;
+        _suppressReload = false;
+        Products.Clear();
+        PriceCurrencies.Clear();
+        Totals = null;
+        _needsReload = false;
+        IsEditOpen = false;
+        IsVariantsOpen = false;
+        IsVariantEditOpen = false;
+        IsPrintOpen = false;
+        IsAddingManufacturer = false;
+        Import.IsOpen = false;
+        Paging.Page = 1;
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private readonly IBusinessApi _businessApi;
@@ -176,13 +207,14 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public IReadOnlyList<PageShortcut> Shortcuts => _pageShortcuts ??=
     [
-        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), WorksInText: true),
+        new(Key.N, KeyModifiers.Control, "shortcut_new", () => OpenCreateCommand.Execute(null), () => !Import.IsOpen, WorksInText: true),
         new(Key.F2, KeyModifiers.None, "shortcut_save", () => SaveCommand.Execute(null), () => IsEditOpen, WorksInText: true),
         new(Key.Escape, KeyModifiers.None, "shortcut_close", HandleEscape, WorksInText: true),
     ];
 
     private void HandleEscape()
     {
+        if (Import.IsOpen) { Import.IsOpen = false; return; }
         if (IsPrintOpen) { IsPrintOpen = false; return; }
         if (IsVariantsOpen) { IsVariantsOpen = false; return; }
         if (IsEditOpen) IsEditOpen = false;
@@ -240,15 +272,22 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Qadoqlar: kirimda "Qop 50 kg", rastada "1 kg paket". Hajm mahsulotning saqlash birligida.
     public ObservableCollection<ProductPackDto> EditPacks { get; } = [];
-    public ObservableCollection<string> PackKinds { get; } = ["Purchase", "Sale", "Both"];
+    public ObservableCollection<PackKindOption> PackKinds { get; } = [];
 
     [ObservableProperty] private string _packName = string.Empty;
     [ObservableProperty] private decimal _packSize = 1;
-    [ObservableProperty] private string _packKind = "Purchase";
+    [ObservableProperty] private PackKindOption? _selectedPackKind;
     [ObservableProperty] private bool _packIsDefault;
     private long? _editingPackId;
+
+    private void BuildPackKinds()
+    {
+        PackKinds.Clear();
+        PackKinds.Add(new PackKindOption("Purchase", L["pack_purchase"]));
+        PackKinds.Add(new PackKindOption("Sale", L["pack_sale"]));
+        PackKinds.Add(new PackKindOption("Both", L["pack_both"]));
+    }
 
     public string PackSizeHint => EditUnit is { } unit ? $"{L["pack_size"]} ({unit.ShortName})" : L["pack_size"];
 
@@ -271,7 +310,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
         try
         {
-            var request = new SaveProductPackRequest(name, PackSize, PackKind, PackIsDefault);
+            var request = new SaveProductPackRequest(name, PackSize, SelectedPackKind?.Key ?? "Purchase", PackIsDefault);
             if (_editingPackId is { } id)
                 await _productsApi.UpdatePackAsync(id, request);
             else
@@ -290,7 +329,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editingPackId = pack.Id;
         PackName = pack.Name;
         PackSize = pack.Size;
-        PackKind = pack.Kind;
+        SelectedPackKind = PackKinds.FirstOrDefault(k => k.Key == pack.Kind);
         PackIsDefault = pack.IsDefault;
     }
 
@@ -307,37 +346,31 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    // Sotuv qadog'iga barkod: skanerlanganda savatga shu hajmdagi miqdor tushadi.
-    [RelayCommand]
-    private async Task GeneratePackBarcodeAsync(ProductPackDto pack)
-    {
-        if (_editDefaultVariantId == 0) return;
-        try
-        {
-            await _barcodesApi.GenerateAsync(_editDefaultVariantId, pack.Size);
-            await LoadEditBarcodesAsync();
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
     private void ResetPackForm()
     {
         _editingPackId = null;
         PackName = string.Empty;
         PackSize = 1;
-        PackKind = "Purchase";
+        SelectedPackKind = PackKinds.FirstOrDefault();
         PackIsDefault = false;
     }
 
     [ObservableProperty] private bool _isPrintOpen;
     [ObservableProperty] private string _printProductName = string.Empty;
+    [ObservableProperty] private string _printUnitName = string.Empty;
     [ObservableProperty] private string? _printCode;
     [ObservableProperty] private int _printQuantity = 1;
     [ObservableProperty] private Bitmap? _printPreview;
+    [ObservableProperty] private string? _printImageUrl;
+
+    [ObservableProperty] private BarcodeChip? _selectedPrintBarcode;
+
+    public ObservableCollection<BarcodeChip> PrintBarcodes { get; } = [];
+    public bool HasManyBarcodes => PrintBarcodes.Count > 1;
+
     private long _printVariantId;
 
-    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen;
+    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || Import.IsOpen;
     partial void OnIsEditOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(IsModalOpen));
@@ -354,30 +387,57 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)
     {
-        _printVariantId = product.DefaultVariantId;
-        PrintProductName = product.Name;
-        PrintQuantity = 1;
-        PrintCode = null;
+        PrintBarcodes.Clear();
+        SelectedPrintBarcode = null;
         PrintPreview = null;
+        PrintCode = null;
+        PrintProductName = product.Name;
+        PrintUnitName = product.UnitName;
+        PrintImageUrl = ImageUrl.Absolute(product.ImageUrl);
+        PrintQuantity = 1;
+        _printVariantId = product.DefaultVariantId;
         IsPrintOpen = true;
         try
         {
-            PrintCode = product.Barcodes.FirstOrDefault() ?? await _barcodesApi.GenerateAsync(_printVariantId);
-            UpdatePrintPreview();
+            var codes = await _barcodesApi.GetByVariantAsync(_printVariantId);
+            if (codes.Count == 0)
+            {
+                var generated = await _barcodesApi.GenerateAsync(_printVariantId);
+                codes = [new BarcodeDto(0, generated, 1)];
+            }
+
+            foreach (var b in codes.OrderBy(b => b.PackQty))
+                PrintBarcodes.Add(new BarcodeChip(b.Code, b.PackQty,
+                    b.PackQty > 1 ? $"×{b.PackQty:0.###}" : L["unit_piece"]));
+
+            SelectedPrintBarcode = PrintBarcodes[0];
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { OnPropertyChanged(nameof(HasManyBarcodes)); }
     }
 
-    private void UpdatePrintPreview()
+    partial void OnSelectedPrintBarcodeChanged(BarcodeChip? value)
     {
-        if (string.IsNullOrWhiteSpace(PrintCode)) { PrintPreview = null; return; }
+        PrintCode = value?.Code;
+        if (value is null) { PrintPreview = null; return; }
         try
         {
-            using var stream = new MemoryStream(_labels.RenderPng(PrintCode));
+            using var stream = new MemoryStream(_labels.RenderPng(value.Code));
             PrintPreview = new Bitmap(stream);
         }
         catch { PrintPreview = null; }
     }
+
+    public event Action? FocusPrintQuantityRequested;
+
+    [RelayCommand]
+    private void FocusPrintQuantity() => FocusPrintQuantityRequested?.Invoke();
+
+    [RelayCommand]
+    private void PrintQtyDec() => PrintQuantity = Math.Max(1, PrintQuantity - 1);
+
+    [RelayCommand]
+    private void PrintQtyInc() => PrintQuantity++;
 
     [RelayCommand]
     private void CancelPrint() => IsPrintOpen = false;
@@ -388,7 +448,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
         try
         {
-            _labels.PrintLabels(PrintCode, PrintProductName, PrintQuantity, null);
+            var name = SelectedPrintBarcode is { IsPack: true } chip ? $"{PrintProductName} {chip.Label}" : PrintProductName;
+            _labels.PrintLabels(PrintCode, name, PrintQuantity, null);
             IsPrintOpen = false;
             _toast.Success(L["success"]);
         }
@@ -462,8 +523,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanImport));
+        OnPropertyChanged(nameof(CanPrintBarcode));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -586,6 +655,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
         EditPacks.Clear();
+        BuildPackKinds();
         ResetPackForm();
         IsEditOpen = true;
     }
@@ -620,6 +690,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editDefaultVariantId = product.DefaultVariantId;
         EditBarcodeInput = string.Empty;
         EditBarcodePackQty = 1;
+        BuildPackKinds();
         ResetPackForm();
         _ = LoadEditBarcodesAsync();
         _ = LoadEditPacksAsync();
@@ -851,3 +922,5 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 }
+
+public sealed record PackKindOption(string Key, string Text);

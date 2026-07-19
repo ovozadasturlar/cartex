@@ -12,15 +12,6 @@ public interface IBusyService
     IDisposable Begin(string? message = null);
 }
 
-/// <summary>
-/// Ikki xil kutish holati:
-/// <list type="bullet">
-/// <item>Sahifa ma'lumotlarini yuklash — yengil chiziqli indikator. Foydalanuvchi kutmaydi: darhol
-/// forma ochishi yoki boshqa sahifaga o'tishi mumkin, o'tganda so'rov bekor qilinadi.</item>
-/// <item>Amal (saqlash, o'chirish, to'lov) — ekran ustidagi kutish kartochkasi.</item>
-/// </list>
-/// Turi avtomatik aniqlanadi: sahifa yuklash oqimida <see cref="PageRequestScope.IsPageLoad"/> true bo'ladi.
-/// </summary>
 public partial class BusyService : ObservableObject, IBusyService
 {
     [ObservableProperty] private bool _isBusy;

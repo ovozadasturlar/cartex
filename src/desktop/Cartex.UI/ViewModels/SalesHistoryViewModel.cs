@@ -52,6 +52,23 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["total"], "TotalAmount")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
+        _auth.LoggedOut += ResetState;
+    }
+
+    private void ResetState()
+    {
+        Sales.Clear();
+        ReturnLines.Clear();
+        Receipt = null;
+        _receiptSale = null;
+        ReturningSale = null;
+        IsReceiptOpen = false;
+        IsReturnOpen = false;
+        Totals = null;
+        DateFrom = DateTimeOffset.Now.AddDays(-7);
+        DateTo = DateTimeOffset.Now;
+        Paging.Page = 1;
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]
@@ -78,8 +95,15 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanReturn));
+        OnPropertyChanged(nameof(CanExport));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))

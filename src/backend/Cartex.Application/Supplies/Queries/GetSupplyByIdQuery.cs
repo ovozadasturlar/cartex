@@ -4,18 +4,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Supplies.Queries;
 
-public record SupplyItemDto(long VariantId, string ProductName, string UnitName, decimal Quantity, long? UnitId, decimal PackSize, decimal PurchasePrice, DateOnly? ExpiredAt);
+public record SupplyItemDto(
+    long VariantId,
+    string ProductName,
+    string UnitName,
+    decimal Quantity,
+    long? UnitId,
+    decimal PackSize,
+    decimal PurchasePrice,
+    DateOnly? ExpiredAt,
+    long? PackId = null,
+    decimal EntryQuantity = 0,
+    decimal EntryPrice = 0,
+    string PriceBasis = "PerEntry")
+{
+    public decimal Total => Quantity * PurchasePrice;
+}
 
 public record SupplyDetailDto(
     long Id,
     DateOnly SupplyDate,
-    long SupplierId,
-    string SupplierName,
+    long? SupplierId,
+    string? SupplierName,
+    long WarehouseId,
     string WarehouseName,
     string UserName,
     decimal TotalAmount,
     decimal PaidCash,
     decimal PaidCard,
+    decimal PaidTransfer,
+    decimal PaidBank,
     string Currency,
     decimal Rate,
     List<SupplyItemDto> Items);
@@ -45,7 +63,8 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
             .ToDictionary(g => g.Key, g => new Queue<DateOnly?>(g.Select(x => x.ExpiredAt)));
 
         var payments = await db.Transactions
-            .Where(t => t.SupplyId == supply.Id && t.OperationType == OperationType.SupplyPay && t.FromAccount != null)
+            .Where(t => t.SupplyId == supply.Id && t.FromAccount != null
+                && (t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay))
             .GroupBy(t => t.FromAccount!.Type)
             .Select(g => new { Type = g.Key, Amount = g.Sum(t => t.Amount) })
             .ToListAsync(cancellationToken);
@@ -60,19 +79,26 @@ public sealed class GetSupplyByIdQueryHandler(IApplicationDbContext db) : IReque
                 i.UnitId,
                 i.PackSize,
                 i.PurchasePrice,
-                expiries.TryGetValue(i.VariantId, out var q) && q.Count > 0 ? q.Dequeue() : null))
+                expiries.TryGetValue(i.VariantId, out var q) && q.Count > 0 ? q.Dequeue() : null,
+                i.PackId,
+                i.EntryQuantity,
+                i.EntryPrice,
+                i.PriceBasis.ToString()))
             .ToList();
 
         return new SupplyDetailDto(
             supply.Id,
             supply.SupplyDate,
             supply.SupplierId,
-            supply.Supplier.Name,
+            supply.Supplier?.Name,
+            supply.WarehouseId,
             supply.Warehouse.Name,
             supply.User.FullName,
             supply.TotalAmount,
             payments.FirstOrDefault(p => p.Type == AccountType.Cash)?.Amount ?? 0,
             payments.FirstOrDefault(p => p.Type == AccountType.Card)?.Amount ?? 0,
+            payments.FirstOrDefault(p => p.Type == AccountType.Transfer)?.Amount ?? 0,
+            payments.FirstOrDefault(p => p.Type == AccountType.Bank)?.Amount ?? 0,
             supply.Currency,
             supply.Rate,
             items);

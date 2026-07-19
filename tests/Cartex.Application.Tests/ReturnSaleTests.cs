@@ -21,7 +21,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
     }
@@ -42,7 +42,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             cashBefore = (await db.Accounts.FirstAsync(a => a.BranchId == branch1 && a.Type == AccountType.Cash)).Balance;
 
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 20000, 0, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 770000, 0, 0, [new CreateSaleItemDto(variantId, 2)]))).SaleId;
         }
 
         using (var scope = Fixture.CreateScope())
@@ -79,7 +79,7 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 10000, 0, 0, [new CreateSaleItemDto(variantId, 1)]))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 385000, 0, 0, [new CreateSaleItemDto(variantId, 1)]))).SaleId;
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             lines = await db.SaleItems.Where(i => i.SaleId == saleId)
                 .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();

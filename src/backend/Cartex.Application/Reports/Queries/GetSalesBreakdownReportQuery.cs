@@ -17,7 +17,8 @@ public record SalesBreakdownReportDto(
     decimal Bonus,
     decimal Debt,
     List<CashierSalesDto> ByCashier,
-    List<CategorySalesDto> ByCategory);
+    List<CategorySalesDto> ByCategory,
+    decimal Credit = 0);
 
 public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSalesBreakdownReportQuery, SalesBreakdownReportDto>
 {
@@ -31,7 +32,7 @@ public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db
             salesQuery = salesQuery.Where(s => s.WarehouseId == warehouseId);
 
         var sales = await salesQuery
-            .Select(s => new { s.Id, s.UserId, UserName = s.User.FullName, s.TotalAmount, s.PaidCash, s.PaidCard, s.PaidBonus, s.DebtAmount })
+            .Select(s => new { s.Id, s.UserId, UserName = s.User.FullName, s.TotalAmount, s.PaidCash, s.PaidCard, s.PaidBonus, s.DebtAmount, s.CreditAmount })
             .ToListAsync(cancellationToken);
 
         var byCashier = sales
@@ -58,6 +59,7 @@ public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db
             sales.Sum(s => s.PaidBonus),
             sales.Sum(s => s.DebtAmount),
             byCashier,
-            byCategory);
+            byCategory,
+            sales.Sum(s => s.CreditAmount));
     }
 }

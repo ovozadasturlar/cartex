@@ -5,6 +5,7 @@
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.TransfersView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <Panel>
@@ -85,10 +86,14 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
+        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[transfers]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
@@ -106,9 +111,14 @@
                     </StackPanel>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[product_name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <ComboBox ItemsSource="{Binding ProductOptions}" SelectedItem="{Binding Product}" HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <AutoCompleteBox ItemsSource="{Binding ProductOptions}" SelectedItem="{Binding Product, Mode=TwoWay}"
+                                         Text="{Binding ProductText, Mode=TwoWay}" FilterMode="ContainsOrdinal" MinimumPrefixLength="1"
+                                         PlaceholderText="{Binding L[product_name]}" ValueMemberBinding="{Binding Name}" HorizontalAlignment="Stretch">
+                            <AutoCompleteBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></AutoCompleteBox.ItemTemplate>
+                            <AutoCompleteBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding CommitProductCommand}" />
+                            </AutoCompleteBox.KeyBindings>
+                        </AutoCompleteBox>
                     </StackPanel>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[quantity]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -122,7 +132,8 @@
             </Border>
         </Border>
 
-        <Border IsVisible="{Binding IsDetailOpen}" Background="#30000000">
+        <Border IsVisible="{Binding IsDetailOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CloseDetailCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">

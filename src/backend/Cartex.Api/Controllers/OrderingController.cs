@@ -20,9 +20,9 @@ public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]
     [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.View)]
-    public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null, [FromQuery] long? warehouseId = null)
+    public async Task<ActionResult<IReadOnlyCollection<CartListDto>>> GetCarts([FromQuery] string? status = null, [FromQuery] long? warehouseId = null, [FromQuery] string? kind = null)
     {
-        var result = await sender.Send(new GetCartsQuery(status, warehouseId));
+        var result = await sender.Send(new GetCartsQuery(status, warehouseId, kind));
         return Ok(result);
     }
 

@@ -38,6 +38,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.DebtCurrency).HasMaxLength(3);
         builder.Property(x => x.DebtRate).HasPrecision(18, 6);
         builder.Property(x => x.ChangeAmount).HasPrecision(18, 2);
+        builder.Property(x => x.CreditAmount).HasPrecision(18, 2);
         builder.Property(x => x.RefundedCash).HasPrecision(18, 2);
         builder.Property(x => x.RefundedCard).HasPrecision(18, 2);
         builder.Property(x => x.RefundedBonus).HasPrecision(18, 2);

@@ -23,7 +23,7 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
     }
@@ -95,21 +95,21 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await Assert.ThrowsAsync<BusinessRuleException>(() =>
-                sender.Send(new PaySupplierDebtCommand(supplierId, 10_000m, false)));
+                sender.Send(new PaySupplierDebtCommand(supplierId, 10_000m)));
         }
 
         await TestShift.OpenAsync(Fixture);
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m, false));
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m));
         }
 
         Assert.Equal(0m, await PayableAsync(supplierId));
     }
 
     [Fact]
-    public async Task Overpaying_supplier_debt_throws()
+    public async Task Overpaying_supplier_debt_creates_advance()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
@@ -125,9 +125,43 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         using var scope2 = Fixture.CreateScope();
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new PaySupplierDebtCommand(supplierId, 40_001m, false)));
+        await sender2.Send(new PaySupplierDebtCommand(supplierId, 50_000m));
 
-        Assert.Equal(40_000m, await PayableAsync(supplierId));
+        Assert.Equal(-10_000m, await PayableAsync(supplierId));
+    }
+
+    [Theory]
+    [InlineData(AccountType.Transfer)]
+    [InlineData(AccountType.Bank)]
+    public async Task Paying_supplier_debt_by_transfer_uses_own_account_without_shift(AccountType method)
+    {
+        var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        var supplierId = await CreateSupplierAsync();
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new CreateSupplyCommand(supplierId, warehouse1, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 5, 8000m, null)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m, method));
+        }
+
+        Assert.Equal(0m, await PayableAsync(supplierId));
+
+        using var check = Fixture.CreateScope();
+        var db = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var balance = await db.Accounts
+            .Where(a => a.BranchId == branch1 && a.Type == method)
+            .Select(a => a.Balance)
+            .SingleAsync();
+
+        Assert.Equal(-40_000m, balance);
+        Assert.Equal(0m, await db.Accounts.Where(a => a.BranchId == branch1 && a.Type == AccountType.Cash).Select(a => a.Balance).SingleAsync());
     }
 }

@@ -58,7 +58,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                     });
                 IsActive = status.IsActive;
                 Tariff = options.Tariffs.Contains(status.Tariff) ? status.Tariff : options.Tariffs.FirstOrDefault();
-                ExpiresAt = status.ExpiresAt is { } e ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Utc)) : null;
+                ExpiresAt = status.ExpiresAt is { } e ? new DateTimeOffset(e) : null;
                 _suppress = false;
             }
         }
@@ -84,8 +84,6 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                 foreach (var f in Features)
                     await featuresApi.SetAsync(f.Code, new SetFeatureRequest(f.IsEnabled));
             }
-            // Imkoniyatlar biznes ma'lumotiga ham ta'sir qiladi (masalan Multicurrency) — sahifalar uni
-            // keshdan o'qiydi. Kesh tozalanmasa yangi holat faqat qayta kirgandan keyin ko'rinadi.
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features, CacheKeys.Business, CacheKeys.Rates, CacheKeys.SalesPolicy);
             toast.Success(L["success"]);
             await LoadAsync();

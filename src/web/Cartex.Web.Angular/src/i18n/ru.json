@@ -68,6 +68,7 @@
   "status_returned": "Возвращена",
   "status_sent": "Отправлен",
   "stock_ok": "Запасов достаточно",
+  "supplier_ledger": "История поставщика",
   "suppliers_subtitle": "Поставщики и задолженности",
   "supplies_subtitle": "Приходы товара и оплаты поставщикам",
   "to_date": "По дату",

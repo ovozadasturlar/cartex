@@ -12,7 +12,7 @@ public sealed class GetExpiringStocksQueryHandler(IApplicationDbContext db) : IR
 {
     public async Task<IReadOnlyCollection<ExpiringStockDto>> Handle(GetExpiringStocksQuery request, CancellationToken cancellationToken)
     {
-        var threshold = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(request.WithinDays);
+        var threshold = DateOnly.FromDateTime(DateTime.Now).AddDays(request.WithinDays);
 
         return await db.Stocks
             .Where(s => s.Quantity > 0 && s.ExpiredAt != null && s.ExpiredAt <= threshold)

@@ -5,6 +5,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.RolesView"
+             c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
 
     <UserControl.Resources>
@@ -78,10 +79,14 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="940" MaxHeight="640"
+        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="940" MaxHeight="640"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
+                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
                 <DockPanel Margin="24">
                     <TextBlock DockPanel.Dock="Top" Text="{Binding EditTitle}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,16" />
@@ -106,6 +111,17 @@
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[start_page]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                 <ComboBox ItemsSource="{Binding StartPages}" SelectedItem="{Binding SelectedStartPage}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[cart_destination]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                <ComboBox ItemsSource="{Binding CartDestinations}" SelectedItem="{Binding SelectedCartDestination}"
                                           HorizontalAlignment="Stretch">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>

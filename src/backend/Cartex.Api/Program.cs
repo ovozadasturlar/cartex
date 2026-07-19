@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cartex.Api.Hubs;
 using Cartex.Api.Middleware;
 using Cartex.Api.Services;
 using Cartex.Application;
@@ -20,7 +21,7 @@ builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
-    .WriteTo.File("logs/cartex-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14));
+    .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "cartex-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14));
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -37,7 +38,10 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
+builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
+
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -115,6 +119,7 @@ using (var scope = app.Services.CreateScope())
     await DatabaseSeeder.SyncUnitsAsync(db);
     await DatabaseSeeder.SyncFeaturesAsync(db);
     await DatabaseSeeder.SyncCurrenciesAsync(db);
+    await DatabaseSeeder.SyncStorageDefaultAsync(db);
     await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
     await DatabaseSeeder.EnsureAdminPasswordAsync(db, hasher.Verify, hasher.Hash, adminPassword);
 
@@ -126,6 +131,14 @@ if (trustProxyHeaders)
     app.UseForwardedHeaders();
 
 app.UseResponseCompression();
+
+var hasWebUi = File.Exists(Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html"));
+if (hasWebUi)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.UseSerilogRequestLogging(options => options.GetLevel = (ctx, _, ex) =>
     ex is not null || ctx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
     : ctx.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
@@ -154,7 +167,15 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
+app.MapHub<OrderingHub>("/hubs/ordering");
+
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+
+if (hasWebUi)
+{
+    app.Map("/api/{**path}", () => Results.NotFound()).AllowAnonymous();
+    app.MapFallbackToFile("index.html").AllowAnonymous();
+}
 
 app.Run();
 

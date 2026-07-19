@@ -6,10 +6,10 @@ namespace Cartex.ApiClient.Api;
 public interface IReportsApi
 {
     [Get("/api/reports/sales")]
-    Task<SalesReportDto> GetSalesReportAsync([Query] DateTime from, [Query] DateTime to, [Query] long? warehouseId = null);
+    Task<SalesReportDto> GetSalesReportAsync([Query] DateTime from, [Query] DateTime to, [Query] long? warehouseId = null, [Query] int? tzOffsetMinutes = null);
 
     [Get("/api/reports/cash-flow")]
-    Task<List<DailyCashFlowDto>> GetCashFlowAsync([Query] DateTime from, [Query] DateTime to);
+    Task<List<DailyCashFlowDto>> GetCashFlowAsync([Query] DateTime from, [Query] DateTime to, [Query] int? tzOffsetMinutes = null);
 
     [Get("/api/reports/debt-aging")]
     Task<DebtAgingReportDto> GetDebtAgingReportAsync();

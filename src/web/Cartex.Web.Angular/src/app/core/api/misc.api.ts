@@ -10,6 +10,9 @@ export interface CartListItem {
   warehouseName: string;
   itemCount: number;
   createdAt: string;
+  createdByName: string | null;
+  note: string | null;
+  estimatedTotal: number;
 }
 
 export interface CartItem {
@@ -23,9 +26,11 @@ export interface CartItem {
 export interface Cart {
   aggregateCode: string;
   status: string;
+  customerId: number | null;
   customerName: string | null;
   total: number;
   items: CartItem[];
+  note: string | null;
 }
 
 export interface CartLoadItem {
@@ -136,8 +141,10 @@ export interface CustomerOption {
 export class OrderingApi {
   private readonly http = inject(HttpClient);
 
-  list(status?: string): Observable<CartListItem[]> {
-    return this.http.get<CartListItem[]>('/api/ordering/carts', { params: status ? { status } : {} });
+  list(status?: string, kind?: string): Observable<CartListItem[]> {
+    return this.http.get<CartListItem[]>('/api/ordering/carts', {
+      params: { ...(status ? { status } : {}), ...(kind ? { kind } : {}) },
+    });
   }
 
   byCode(code: string): Observable<Cart> {

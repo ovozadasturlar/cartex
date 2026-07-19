@@ -20,6 +20,11 @@ public sealed class GetPermissionsQueryHandler(
 {
     public async Task<IReadOnlyCollection<PermissionDto>> Handle(GetPermissionsQuery request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.SortBy))
+        {
+            request.SortBy = "Id";
+            request.Descending = false;
+        }
         var permissions = await db.Permissions
             .ToPagedListAsync(request,
                 p => new PermissionDto(p.Id, p.Name, p.Description, p.IsEnabled),

@@ -12,7 +12,7 @@ namespace Cartex.Application.Users.Commands;
 
 public record UpdateUserCommand(
     long Id, string FullName, List<long> RoleIds, bool IsActive, string? NewPassword,
-    long? DefaultBranchId, List<long> BranchIds, string? StartPage) : ICommand<Unit>;
+    long? DefaultBranchId, List<long> BranchIds, string? StartPage, string? CartDestination = null) : ICommand<Unit>;
 
 public sealed class UpdateUserCommandHandler(
     IApplicationDbContext db,
@@ -43,6 +43,7 @@ public sealed class UpdateUserCommandHandler(
         user.IsActive = request.IsActive;
         user.DefaultBranchId = request.DefaultBranchId;
         user.StartPage = request.StartPage;
+        user.CartDestination = request.CartDestination;
 
         var revokeSessions = request.NewPassword is not null || (wasActive && !request.IsActive);
         if (request.NewPassword is not null)
@@ -79,5 +80,6 @@ public sealed class UpdateUserCommandValidator : AbstractValidator<UpdateUserCom
         RuleFor(x => x.FullName).NotEmpty();
         RuleFor(x => x.RoleIds).NotEmpty();
         RuleFor(x => x.NewPassword).MinimumLength(6).When(x => x.NewPassword is not null);
+        RuleFor(x => x.CartDestination).Must(v => v is null or "queue" or "order");
     }
 }

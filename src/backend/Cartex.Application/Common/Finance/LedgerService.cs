@@ -103,6 +103,8 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
         {
             AccountType.Cash => "Naqd kassa",
             AccountType.Card => "Bank karta",
+            AccountType.Transfer => "Mobil o'tkazma",
+            AccountType.Bank => "Bank o'tkazmasi",
             AccountType.Bonus => "Bonus",
             AccountType.Debt => "Qarz",
             _ => type.ToString()

@@ -2,6 +2,7 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
 using Cartex.Domain.Common.Exceptions;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Cartex.Domain.Events;
 using Cartex.Persistence;
 using FluentValidation;
@@ -45,7 +46,8 @@ public sealed class SubmitStoreCartCommandHandler(IApplicationDbContext db, ICur
             WarehouseId = warehouse.Id,
             CustomerId = customerId,
             AggregateCode = Guid.NewGuid().ToString("N"),
-            IdempotencyKey = idempotencyKey
+            IdempotencyKey = idempotencyKey,
+            Kind = CartKind.Order
         };
 
         foreach (var item in request.Items)

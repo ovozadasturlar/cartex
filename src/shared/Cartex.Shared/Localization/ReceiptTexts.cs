@@ -21,6 +21,7 @@ public static class ReceiptTexts
         ["card"] = new() { ["uz-latn"] = "Karta", ["uz-cyrl"] = "Карта", ["ru"] = "Карта", ["en"] = "Card" },
         ["bonus"] = new() { ["uz-latn"] = "Bonus", ["uz-cyrl"] = "Бонус", ["ru"] = "Бонус", ["en"] = "Bonus" },
         ["change"] = new() { ["uz-latn"] = "Qaytim", ["uz-cyrl"] = "Қайтим", ["ru"] = "Сдача", ["en"] = "Change" },
+        ["credit"] = new() { ["uz-latn"] = "Hisobga yozildi", ["uz-cyrl"] = "Ҳисобга ёзилди", ["ru"] = "Зачислено на счёт", ["en"] = "Credited to account" },
         ["debt"] = new() { ["uz-latn"] = "Qarz", ["uz-cyrl"] = "Қарз", ["ru"] = "Долг", ["en"] = "Debt" },
         ["cashback"] = new() { ["uz-latn"] = "Cashback to'plandi", ["uz-cyrl"] = "Cashback тўпланди", ["ru"] = "Начислен кэшбэк", ["en"] = "Cashback earned" },
         ["paid"] = new() { ["uz-latn"] = "TO'LANDI", ["uz-cyrl"] = "ТЎЛАНДИ", ["ru"] = "ОПЛАЧЕНО", ["en"] = "PAID" },

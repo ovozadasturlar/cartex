@@ -12,7 +12,7 @@ public record OfflineBarcodeDto(long VariantId, string Code, decimal PackQty);
 
 public record OfflineCustomerDto(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, decimal DebtBalance, decimal CreditLimit);
 
-public record OfflineSnapshotDto(string BaseCurrency, DateTime ServerTime, List<StockOnHandDto> Products, List<OfflineBarcodeDto> Barcodes, List<OfflineCustomerDto> Customers);
+public record OfflineSnapshotDto(string BaseCurrency, DateTime ServerTime, List<StockOnHandDto> Products, List<OfflineBarcodeDto> Barcodes, List<OfflineCustomerDto> Customers, bool AllowDebtSales = true);
 
 public record GetOfflineSnapshotQuery(long WarehouseId, string DeviceId) : IRequest<OfflineSnapshotDto>;
 
@@ -24,6 +24,8 @@ public sealed class GetOfflineSnapshotQueryHandler(IApplicationDbContext db, ISe
         var cfg = await settings.GetAsync<OfflineCacheSettings>(SettingKeys.OfflineCache, cancellationToken);
         if (cfg?.DeviceId != request.DeviceId)
             throw new BusinessRuleException("Oflayn kesh bu qurilmaga berilmagan.");
+
+        var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
 
@@ -54,6 +56,6 @@ public sealed class GetOfflineSnapshotQueryHandler(IApplicationDbContext db, ISe
                 c.CreditLimit))
             .ToListAsync(cancellationToken);
 
-        return new OfflineSnapshotDto(baseCode, DateTime.UtcNow, products, barcodes, customers);
+        return new OfflineSnapshotDto(baseCode, DateTime.UtcNow, products, barcodes, customers, policy.AllowDebtSales);
     }
 }

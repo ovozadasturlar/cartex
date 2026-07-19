@@ -92,12 +92,15 @@ public static class AppPermissions
     {
         public const string Manage = "shifts.manage";
         public const string View = "shifts.view";
+        public const string ViewAll = "shifts.viewAll";
+        public const string ManageAll = "shifts.manageAll";
     }
 
     public static class Supplies
     {
         public const string View = "supplies.view";
         public const string Manage = "supplies.manage";
+        public const string Edit = "supplies.edit";
     }
 
     public static class Customers
@@ -155,6 +158,9 @@ public static class AppPermissions
     public static class Settings
     {
         public const string Manage = "settings.manage";
+        public const string Integrations = "settings.integrations";
+        public const string Receipt = "settings.receipt";
+        public const string Security = "settings.security";
     }
 
     public static class Features
@@ -168,7 +174,7 @@ public static class AppPermissions
     }
 
     public static readonly IReadOnlyList<string> DeveloperOnly =
-        [Settings.Manage, Features.Manage, Keys.Manage, Permissions.Govern];
+        [Features.Manage, Keys.Manage, Permissions.Govern];
 
     public static readonly IReadOnlyDictionary<string, string> Catalog = new Dictionary<string, string>
     {
@@ -204,8 +210,11 @@ public static class AppPermissions
         [Devices.Manage] = "View and revoke connected devices",
         [Shifts.Manage] = "Open/close cash shift",
         [Shifts.View] = "View shift history",
+        [Shifts.ViewAll] = "View all users' shifts and Z-reports",
+        [Shifts.ManageAll] = "Force-close other users' shifts",
         [Supplies.View] = "View supplies",
-        [Supplies.Manage] = "Create/edit supplies",
+        [Supplies.Manage] = "Create and void supplies",
+        [Supplies.Edit] = "Edit a saved supply",
         [Customers.View] = "View customers",
         [Customers.ViewAll] = "View all customers (not only own)",
         [Customers.Manage] = "Create/edit customers",
@@ -223,7 +232,9 @@ public static class AppPermissions
         [Reports.Export] = "Export data (Excel/PDF/CSV)",
         [Audit.View] = "View audit logs",
         [Business.Manage] = "Manage business profile and onboarding",
-        [Settings.Manage] = "Manage business settings (developer)",
+        [Settings.Integrations] = "Manage integrations (Telegram, SMS, email, storage, cloud bridge)",
+        [Settings.Receipt] = "Manage receipt settings",
+        [Settings.Security] = "Manage login methods and security settings",
         [Features.Manage] = "Manage tariff and features (developer)",
         [Keys.Manage] = "Generate hardware login keys (developer)",
         [Permissions.Govern] = "Enable/disable global permissions (developer)",

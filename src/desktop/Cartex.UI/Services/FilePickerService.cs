@@ -8,6 +8,7 @@ public sealed record PickedFile(Stream Content, string FileName, string ContentT
 public interface IFilePickerService
 {
     Task<PickedFile?> PickImageAsync();
+    Task<PickedFile?> PickSpreadsheetAsync();
     Task<Stream?> SaveFileAsync(string suggestedName, string extension);
 }
 
@@ -42,6 +43,25 @@ public sealed class FilePickerService : IFilePickerService
         };
 
         return new PickedFile(stream, file.Name, contentType);
+    }
+
+    public async Task<PickedFile?> PickSpreadsheetAsync()
+    {
+        if (_top is null)
+            return null;
+
+        var files = await _top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Excel") { Patterns = ["*.xlsx"] }]
+        });
+
+        if (files.Count == 0)
+            return null;
+
+        var file = files[0];
+        return new PickedFile(await file.OpenReadAsync(), file.Name,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
     public async Task<Stream?> SaveFileAsync(string suggestedName, string extension)

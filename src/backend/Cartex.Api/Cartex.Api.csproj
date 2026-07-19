@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="storage\seed\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\Cartex.Auth\Cartex.Auth.csproj" />
     <ProjectReference Include="..\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />

@@ -43,6 +43,14 @@ public partial class RepayViewModel(AgentDb db, SyncService sync) : ObservableOb
             Error = Loc.Instance["err_enter_amount"];
             return;
         }
+        var maxAmount = Math.Max(0, _customer.DebtBalance);
+        if (amount > maxAmount)
+        {
+            Error = maxAmount == 0
+                ? Loc.Instance["no_debt"]
+                : string.Format(Loc.Instance["err_amount_gt_debt"], maxAmount, _currency);
+            return;
+        }
         await sync.EnqueueRepayAsync(new RepayDraft(_customer.Id, _customer.FullName, amount));
         Ui.Toast(Loc.Instance["repay_queued"]);
         await Shell.Current.GoToAsync("..");

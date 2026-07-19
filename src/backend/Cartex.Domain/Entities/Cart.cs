@@ -17,6 +17,7 @@ public class Cart : SoftDeleteEntity, IBranchScoped
     public string? IdempotencyKey { get; set; }
     public string? Note { get; set; }
     public CartStatus Status { get; set; } = CartStatus.Open;
+    public CartKind Kind { get; set; } = CartKind.Queue;
 
     public ICollection<CartItem> Items { get; set; } = [];
 }

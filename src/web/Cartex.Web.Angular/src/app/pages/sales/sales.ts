@@ -194,6 +194,12 @@ export class Sales implements OnInit {
             <span class="cx-money">{{ data.receipt.debtAmount | cxMoney }}</span>
           </div>
         }
+        @if (data.receipt.creditAmount > 0) {
+          <div class="row">
+            <span>{{ t('advance') }}</span>
+            <span class="cx-money">{{ data.receipt.creditAmount | cxMoney }}</span>
+          </div>
+        }
         @if (data.receipt.changeAmount > 0) {
           <div class="row">
             <span>{{ t('change') }}</span>

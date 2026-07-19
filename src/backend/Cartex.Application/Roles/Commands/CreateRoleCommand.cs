@@ -6,7 +6,7 @@ using Cartex.Application.Common.Security;
 
 namespace Cartex.Application.Roles.Commands;
 
-public record CreateRoleCommand(string Name, string? Description, string? StartPage, int Priority, List<string>? GrantablePermissions = null, List<string>? AssignableRoles = null) : ICommand<long>;
+public record CreateRoleCommand(string Name, string? Description, string? StartPage, int Priority, List<string>? GrantablePermissions = null, List<string>? AssignableRoles = null, string? CartDestination = null) : ICommand<long>;
 
 public sealed class CreateRoleCommandHandler(IApplicationDbContext db, IAccessControlService accessControl) : IRequestHandler<CreateRoleCommand, long>
 {
@@ -22,6 +22,7 @@ public sealed class CreateRoleCommandHandler(IApplicationDbContext db, IAccessCo
             Name = request.Name,
             Description = request.Description,
             StartPage = request.StartPage,
+            CartDestination = request.CartDestination,
             Priority = request.Priority,
             Level = request.Priority,
             GrantablePermissions = grantable,
@@ -40,5 +41,6 @@ public sealed class CreateRoleCommandValidator : AbstractValidator<CreateRoleCom
     public CreateRoleCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(30);
+        RuleFor(x => x.CartDestination).Must(v => v is null or "queue" or "order");
     }
 }

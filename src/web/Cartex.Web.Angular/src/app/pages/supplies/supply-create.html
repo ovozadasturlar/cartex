@@ -17,6 +17,9 @@
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
               <mat-label>{{ t('supplier') }}</mat-label>
               <mat-select [value]="supplierId()" (valueChange)="supplierId.set($event)">
+                @if (!requireSupplier()) {
+                  <mat-option [value]="null">{{ t('none') }}</mat-option>
+                }
                 @for (s of suppliers(); track s.id) {
                   <mat-option [value]="s.id">{{ s.name }}</mat-option>
                 }
@@ -67,11 +70,11 @@
               <input matInput type="number" min="0" [(ngModel)]="quantity" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('purchase_price') }}</mat-label>
+              <mat-label>{{ t('purchase_price') }}{{ entryUnitName() ? ' / ' + entryUnitName() : '' }}</mat-label>
               <input matInput type="number" min="0" [(ngModel)]="price" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('selling_price') }}</mat-label>
+              <mat-label>{{ t('selling_price') }}{{ stockingUnitName() ? ' / ' + stockingUnitName() : '' }}</mat-label>
               <input matInput type="number" min="0" [(ngModel)]="sellingPrice" />
               @if (margin() !== null) {
                 <span matTextSuffix class="margin" [class.neg]="margin()! < 0">{{ margin() }}%</span>
@@ -134,28 +137,30 @@
           <span>{{ t('total') }}</span>
           <b class="cx-money big">{{ total() | cxMoney }}</b>
         </div>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('paid_cash') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="paidCash" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('paid_card') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="paidCard" />
-        </mat-form-field>
-        @if (payable() > 0) {
+        @if (supplierId() !== null) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ t('pay_old_debt') }}</mat-label>
-            <input matInput type="number" min="0" [(ngModel)]="payOldDebt" />
+            <mat-label>{{ t('paid_cash') }}</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="paidCash" />
           </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('paid_card') }}</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="paidCard" />
+          </mat-form-field>
+          @if (payable() > 0) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('pay_old_debt') }}</mat-label>
+              <input matInput type="number" min="0" [(ngModel)]="payOldDebt" />
+            </mat-form-field>
+          }
+          <div class="sum-row">
+            <span>{{ t('remains_debt') }}</span>
+            <b class="cx-money" [class.danger]="remainsDebt() > 0">{{ remainsDebt() | cxMoney }}</b>
+          </div>
         }
-        <div class="sum-row">
-          <span>{{ t('remains_debt') }}</span>
-          <b class="cx-money" [class.danger]="remainsDebt() > 0">{{ remainsDebt() | cxMoney }}</b>
-        </div>
         <button
           matButton="filled"
           class="save-btn"
-          [disabled]="saving() || !supplierId() || !warehouseId() || !items().length"
+          [disabled]="saving() || (requireSupplier() && supplierId() === null) || !warehouseId() || !items().length"
           (click)="save()">
           {{ t('save') }}
         </button>

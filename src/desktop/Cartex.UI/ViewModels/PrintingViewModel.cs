@@ -14,6 +14,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IToastService _toast;
     private readonly ISettingsApi _settingsApi;
     private readonly IBarcodeLabelService _labels;
+    private readonly AuthService _auth;
+
+    public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
 
     public ObservableCollection<string> Printers { get; } = [];
 
@@ -78,20 +81,19 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         LabelHeightMm = decimal.Parse(parts[1]);
     }
 
-    public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels)
+    public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels, AuthService auth)
     {
         _printer = printer;
         _toast = toast;
         _settingsApi = settingsApi;
         _labels = labels;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
     {
         var s = _printer.GetSettings();
 
-        // Ro'yxat avval to'ldiriladi: ItemsSource keyin o'zgarsa, ComboBox ro'yxatda topolmagan tanlovni
-        // tozalab, sozlamadagi printer nomini null qilib yuboradi.
         var printers = await Task.Run(_printer.GetInstalledPrinters);
         Printers.Clear();
         foreach (var p in printers) Printers.Add(p);
@@ -152,6 +154,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelRotation,
             (int)LabelDensity,
             (int)LabelSpeed));
+        if (CanEditReceiptContent)
         try
         {
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(
@@ -173,31 +176,47 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private void TestPrint()
     {
         if (string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintRaw(ReceiptPrinter, "Cartex\n  Test print\n\n\n");
-        _toast.Info(L["success"]);
+        try
+        {
+            _printer.PrintRaw(ReceiptPrinter, "Cartex\n  Test print\n\n\n");
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void TestZPrint()
     {
         if (string.IsNullOrWhiteSpace(ZReportPrinter) && string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintZReport(new ZReportDto(0, 100_000, 1_250_000, 0, 50_000, 30_000, 200_000, 0, 1_570_000, 1_570_000, 0));
-        _toast.Info(L["success"]);
+        try
+        {
+            _printer.PrintZReport(new ZReportDto(0, 100_000, 1_250_000, 0, 50_000, 30_000, 200_000, 0, 1_570_000, 1_570_000, 0));
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void TestLabelPrint()
     {
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
-        _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
-        _toast.Info(L["success"]);
+        try
+        {
+            _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
     private void CalibrateLabel()
     {
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
-        _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
-        _toast.Info(L["label_calibrate_started"]);
+        try
+        {
+            _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
+            _toast.Info(L["label_calibrate_started"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 }

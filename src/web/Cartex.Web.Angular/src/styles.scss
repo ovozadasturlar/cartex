@@ -348,3 +348,29 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
   border: 1px solid var(--cx-border);
   border-radius: 6px;
 }
+
+.queue-menu {
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    min-width: 260px;
+
+    + .queue-row { border-top: 1px solid var(--cx-border); }
+  }
+
+  .qinfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .qtitle { font-size: 13px; font-weight: 600; color: var(--cx-text-1); }
+  .qsub { font-size: 11.5px; color: var(--cx-text-2); }
+  .qnote { font-size: 11.5px; font-style: italic; color: var(--cx-text-3); }
+  .qplay { color: var(--cx-brand); }
+  .qcancel { color: var(--cx-danger); }
+}

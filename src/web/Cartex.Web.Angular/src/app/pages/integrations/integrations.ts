@@ -101,6 +101,7 @@ export class Integrations implements OnInit {
   storageBucket = '';
   storageUseSsl = false;
   storageHasSecret = false;
+  storageSecretMask = '';
 
   channelTelegram = false;
   channelSms = false;
@@ -194,6 +195,7 @@ export class Integrations implements OnInit {
     this.storageBucket = s.bucket ?? '';
     this.storageUseSsl = s.useSsl;
     this.storageHasSecret = s.hasSecretKey;
+    this.storageSecretMask = s.hasSecretKey ? '•'.repeat(s.secretKeyLength || 8) : '';
   }
 
   saveNotification(message: string): Promise<void> {

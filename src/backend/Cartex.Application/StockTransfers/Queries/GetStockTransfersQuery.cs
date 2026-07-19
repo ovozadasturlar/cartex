@@ -3,7 +3,6 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.StockTransfers.Queries;
 
@@ -31,12 +30,7 @@ public sealed class GetStockTransfersQueryHandler(
 {
     public async Task<IReadOnlyCollection<StockTransferDto>> Handle(GetStockTransfersQuery request, CancellationToken cancellationToken)
     {
-        var query = db.StockTransfers
-            .Include(t => t.Variant).ThenInclude(v => v.Product)
-            .Include(t => t.FromWarehouse)
-            .Include(t => t.ToWarehouse)
-            .Include(t => t.User)
-            .AsQueryable();
+        var query = db.StockTransfers.AsQueryable();
 
         if (request.FromDate is { } fromDate)
             query = query.Where(t => t.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));

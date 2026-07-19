@@ -10,4 +10,4 @@ public record OfflineBarcodeDto(long VariantId, string Code, decimal PackQty);
 
 public record OfflineCustomerDto(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, decimal DebtBalance, decimal CreditLimit);
 
-public record OfflineSnapshotDto(string BaseCurrency, DateTime ServerTime, List<StockOnHandDto> Products, List<OfflineBarcodeDto> Barcodes, List<OfflineCustomerDto> Customers);
+public record OfflineSnapshotDto(string BaseCurrency, DateTime ServerTime, List<StockOnHandDto> Products, List<OfflineBarcodeDto> Barcodes, List<OfflineCustomerDto> Customers, bool AllowDebtSales = true);

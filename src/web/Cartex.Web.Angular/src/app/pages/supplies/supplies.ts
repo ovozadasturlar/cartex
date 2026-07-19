@@ -187,7 +187,7 @@ export class SupplyDetailDialog implements OnInit {
   }
 
   debt(d: SupplyDetail): number {
-    return Math.max(0, d.totalAmount - d.paidCash - d.paidCard);
+    return Math.max(0, d.totalAmount - d.paidCash - d.paidCard - d.paidTransfer - d.paidBank);
   }
 
   async voidSupply(): Promise<void> {

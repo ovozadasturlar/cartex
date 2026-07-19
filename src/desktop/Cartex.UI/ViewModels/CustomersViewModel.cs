@@ -38,6 +38,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isLedgerLoading;
     [ObservableProperty] private bool _isSalesLoading;
     [ObservableProperty] private bool _isSalesTab;
+    [ObservableProperty] private bool _isProfileOpen;
 
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
@@ -66,23 +67,28 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> RepayDebtCurrencies { get; } = [];
     public ObservableCollection<string> PayCurrencies { get; } = [];
     private string _baseCurrency = "UZS";
+    private readonly Dictionary<string, decimal> _rates = [];
 
     private IBusinessApi _businessApi = null!;
     private IRatesApi _ratesApi = null!;
+    private ReferenceCache _cache = null!;
 
-    // Sahifaga har kirilganda qayta o'qiladi — ko'p valyuta imkoniyati yoqilsa/o'chirilsa darhol qo'llanadi.
     private async Task EnsureCurrenciesAsync()
     {
         try
         {
-            var business = await _businessApi.GetAsync();
+            var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
             IsMulticurrency = business.Multicurrency;
             PayCurrencies.Clear();
             PayCurrencies.Add(_baseCurrency);
+            _rates.Clear();
             if (IsMulticurrency)
-                foreach (var r in (await _ratesApi.GetCurrentAsync()).OrderBy(r => r.Code))
+                foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
+                {
                     PayCurrencies.Add(r.Code);
+                    _rates[r.Code] = r.Rate;
+                }
         }
         catch { }
     }
@@ -98,7 +104,35 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private void HandleEscape()
     {
         if (IsRepayOpen) { IsRepayOpen = false; return; }
-        if (IsEditOpen) IsEditOpen = false;
+        if (IsMessageOpen) { IsMessageOpen = false; return; }
+        if (IsEditOpen) { IsEditOpen = false; return; }
+        if (IsProfileOpen) CloseProfile();
+    }
+
+    [RelayCommand]
+    private void OpenProfile(CustomerDto customer)
+    {
+        SelectedCustomer = customer;
+        IsProfileOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseProfile()
+    {
+        IsProfileOpen = false;
+        SelectedCustomer = null;
+    }
+
+    private decimal RateOf(string? code) => code is null || code == _baseCurrency ? 1m : _rates.GetValueOrDefault(code, 0m);
+
+    [RelayCommand]
+    private void FillRepayAmount()
+    {
+        var balance = SelectedCustomer?.DebtBalances.FirstOrDefault(b => b.Currency == RepayDebtCurrency && b.Amount > 0);
+        var debt = balance?.Amount ?? SelectedDebtAmount;
+        var debtRate = RateOf(balance?.Currency ?? _baseCurrency);
+        var payRate = RateOf(RepayPayCurrency);
+        RepayAmount = payRate > 0 && debtRate > 0 ? Math.Round(debt * debtRate / payRate, 2) : debt;
     }
 
     public bool IsEmpty => Customers.Count == 0;
@@ -111,6 +145,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool CanMessage => _auth.HasPermission("customers.message");
     public bool CanExport => _auth.HasPermission("reports.export");
     public bool CanViewSales => _auth.HasPermission("sales.view");
+    public bool CanRepay => CanManage && (SelectedCustomer?.DebtBalances?.Any(b => b.Amount > 0) ?? false);
+    public bool SelectedIsCredit => SelectedCustomer is { DebtBalance: < 0 };
+    public decimal SelectedDebtAmount => Math.Abs(SelectedCustomer?.DebtBalance ?? 0);
 
     public string SelectedInitials => string.Concat(
         $"{SelectedCustomer?.FullName} {SelectedCustomer?.LastName}"
@@ -118,20 +155,38 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Take(2)
             .Select(w => char.ToUpperInvariant(w[0])));
 
-    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi)
+    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
+        _cache = cache;
         _api = api;
         _salesApi = salesApi;
         _toast = toast;
         _busy = busy;
         _auth = auth;
         _export = export;
+        _auth.LoggedOut += ResetState;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
         LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
         SalesPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadSalesAsync(_ledgerCustomerId));
+    }
+
+    private void ResetState()
+    {
+        _searchCts?.Cancel();
+        SelectedCustomer = null;
+        Customers.Clear();
+        Totals = null;
+        IsEditOpen = false;
+        IsMessageOpen = false;
+        IsRepayOpen = false;
+        IsProfileOpen = false;
+        IsSalesTab = false;
+        _searchText = "";
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]
@@ -155,8 +210,19 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanMessage));
+        OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanViewSales));
+        OnPropertyChanged(nameof(CanRepay));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
+        IsProfileOpen = false;
         IsLoading = true;
         try
         {
@@ -208,6 +274,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     {
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(SelectedInitials));
+        OnPropertyChanged(nameof(CanRepay));
+        OnPropertyChanged(nameof(SelectedIsCredit));
+        OnPropertyChanged(nameof(SelectedDebtAmount));
         Ledger.Clear();
         Sales.Clear();
         _ledgerCustomerId = value?.Id ?? 0;

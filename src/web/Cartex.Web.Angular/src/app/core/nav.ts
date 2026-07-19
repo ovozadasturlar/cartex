@@ -76,17 +76,17 @@ export const SETTINGS_SECTIONS: NavSection[] = [
     labelKey: 'settings_system',
     items: [
       { labelKey: 'loyalty', icon: 'loyalty', route: '/settings/loyalty', permission: 'loyalty.view' },
-      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'settings.manage' },
+      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'business.manage' },
+      { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'settings.receipt' },
       { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.manage' },
       { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
-      { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'business.manage' },
     ],
   },
   {
     labelKey: 'settings_developer',
     items: [
-      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'settings.manage' },
-      { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.manage' },
+      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'features.manage' },
+      { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.integrations' },
     ],
   },
   {

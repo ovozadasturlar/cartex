@@ -40,13 +40,13 @@ public class DiscountRuleTests(CartexApiFactory factory)
         try
         {
             var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
-            var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=Sprite");
-            var sprite = products!.First(p => p.Name == "Sprite 1L");
+            var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=TEN");
+            var heater = products!.First(p => p.Name == "TEN 1.5kVt suv isitgich uchun");
 
             var preview = await client.PostAsJsonAsync("/api/loyalty/discount-preview", new
             {
                 customerId = (long?)null,
-                items = new[] { new { variantId = sprite.DefaultVariantId, quantity = 2m, unitPrice = 10_000m } }
+                items = new[] { new { variantId = heater.DefaultVariantId, quantity = 2m, unitPrice = 10_000m } }
             });
             preview.EnsureSuccessStatusCode();
             var previewResult = (await preview.Content.ReadFromJsonAsync<Preview>())!;
@@ -59,7 +59,7 @@ public class DiscountRuleTests(CartexApiFactory factory)
                 paidCash = 500_000m,
                 paidCard = 0m,
                 paidBonus = 0m,
-                items = new[] { new { variantId = sprite.DefaultVariantId, quantity = 1m } },
+                items = new[] { new { variantId = heater.DefaultVariantId, quantity = 1m } },
                 discountAmount = 0m
             });
             sale.EnsureSuccessStatusCode();

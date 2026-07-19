@@ -5,11 +5,15 @@
              x:Class="Cartex.UI.Views.QuickProductView"
              x:CompileBindings="False">
 
-    <Border Background="#30000000" IsVisible="{Binding IsOpen}">
-        <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}"
+            c:OverlayBehaviors.DismissCommand="{Binding CancelCommand}">
+        <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                BoxShadow="0 18 50 0 #33000000" Padding="24">
+                BoxShadow="0 18 50 0 #33000000" Padding="24"
+                c:FormBehaviors.AutoFocus="True"
+                c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                c:FormBehaviors.EscCancels="{Binding CancelCommand}">
             <StackPanel Spacing="14">
                 <TextBlock Text="{Binding L[add_product]}" Classes="h2" />
 

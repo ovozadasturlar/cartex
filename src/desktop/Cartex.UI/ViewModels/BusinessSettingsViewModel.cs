@@ -40,6 +40,10 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _maxDiscountPercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
+    [ObservableProperty] private bool _allowDebtSales = true;
+    [ObservableProperty] private bool _allowCustomerCredit;
+    [ObservableProperty] private bool _requireDebtDueDate = true;
+    [ObservableProperty] private bool _requireSupplier;
     [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     [ObservableProperty] private bool _keyLoginEnabled = true;
@@ -47,10 +51,14 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     private bool _loginLoaded;
 
     private readonly ISettingsApi _settingsApi;
+    private readonly AuthService _auth;
 
-    public BusinessSettingsViewModel(IBusinessApi api, IStorageApi storageApi, IFilePickerService filePicker, IToastService toast, IBusyService busy, ISettingsApi settingsApi)
+    public bool CanManageSecurity => _auth.HasPermission("settings.security");
+
+    public BusinessSettingsViewModel(IBusinessApi api, IStorageApi storageApi, IFilePickerService filePicker, IToastService toast, IBusyService busy, ISettingsApi settingsApi, AuthService auth)
     {
         _settingsApi = settingsApi;
+        _auth = auth;
         _api = api;
         _storageApi = storageApi;
         _filePicker = filePicker;
@@ -69,9 +77,14 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             MaxDiscountPercent = policy.MaxDiscountPercent;
             DefaultMinStock = policy.DefaultMinStock;
             StaleRateDays = policy.StaleRateDays;
+            AllowDebtSales = policy.AllowDebtSales;
+            AllowCustomerCredit = policy.AllowCustomerCredit;
+            RequireDebtDueDate = policy.RequireDebtDueDate;
+            RequireSupplier = policy.RequireSupplier;
             _policyLoaded = true;
         }
         catch { }
+        if (CanManageSecurity)
         try
         {
             var login = await _settingsApi.GetLoginMethodsAsync();
@@ -147,7 +160,8 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     string.IsNullOrWhiteSpace(Website) ? null : Website.Trim()));
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
-                        ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays));
+                        ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
+                        AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));

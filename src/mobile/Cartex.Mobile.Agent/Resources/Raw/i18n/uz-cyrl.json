@@ -61,6 +61,7 @@
   "repay_accept": "Қабул қилиш",
   "current_debt_fmt": "Жорий қарз: {0:N0} {1} (ҳолат: {2})",
   "err_enter_amount": "Суммани киритинг",
+  "err_amount_gt_debt": "Тўлов қарздан ошмасин (макс: {0:N0} {1})",
   "repay_queued": "Тўлов навбатга қўшилди",
   "transfers_title": "Юк хати (бугун)",
   "transfer_receive": "Қабул қилиш",

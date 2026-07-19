@@ -11,6 +11,8 @@ using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Rates;
+using Cartex.Shared.Models.Supplies;
+using Cartex.Shared.Models.Shifts;
 using Avalonia.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -23,7 +25,7 @@ public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, dec
 public record QueueRow(Cartex.Shared.Models.Ordering.CartListDto Cart)
 {
     public string Title => Cart.CreatedByName ?? "";
-    public string Subtitle => $"{Cart.CreatedAt.ToLocalTime():HH:mm} · {Cart.ItemCount} · {Cart.EstimatedTotal:N0}";
+    public string Subtitle => $"{Cart.CreatedAt:HH:mm} · {Cart.ItemCount} · {Cart.EstimatedTotal:N0}";
     public string? Note => Cart.Note;
     public bool HasNote => !string.IsNullOrWhiteSpace(Cart.Note);
     public string? CustomerName => Cart.CustomerName;
@@ -35,27 +37,51 @@ public record PayMethodOption(string Key, string Label);
 public partial class PaymentRow : ObservableObject
 {
     private readonly Action _changed;
-    private readonly Func<string, decimal> _rateOf;
+    private readonly Func<string?, decimal> _rateOf;
     private readonly string _baseCurrency;
+    private PayMethodOption _method;
+    private string _currency;
 
-    [ObservableProperty] private PayMethodOption? _method;
-    [ObservableProperty] private string _currency;
     [ObservableProperty] private decimal _amount;
 
-    public PaymentRow(string currency, PayMethodOption method, Action changed, Func<string, decimal> rateOf, string baseCurrency)
+    public ObservableCollection<string> Currencies { get; }
+    public ObservableCollection<PayMethodOption> Methods { get; }
+
+    public PaymentRow(string currency, PayMethodOption method, ObservableCollection<string> currencies,
+        ObservableCollection<PayMethodOption> methods, Action changed, Func<string?, decimal> rateOf, string baseCurrency)
     {
         _currency = currency;
         _method = method;
+        Currencies = currencies;
+        Methods = methods;
         _changed = changed;
         _rateOf = rateOf;
         _baseCurrency = baseCurrency;
     }
 
+    public PayMethodOption Method
+    {
+        get => _method;
+        set { if (value is not null && SetProperty(ref _method, value)) _changed(); }
+    }
+
+    public string Currency
+    {
+        get => _currency;
+        set
+        {
+            if (value is null || !SetProperty(ref _currency, value)) return;
+            OnPropertyChanged(nameof(AmountBase));
+            OnPropertyChanged(nameof(ShowBase));
+            _changed();
+        }
+    }
+
+    public void RefreshCurrency() => OnPropertyChanged(nameof(Currency));
+
     public decimal AmountBase => Math.Round(Amount * _rateOf(Currency), 2);
     public bool ShowBase => Currency != _baseCurrency;
 
-    partial void OnMethodChanged(PayMethodOption? value) => _changed();
-    partial void OnCurrencyChanged(string value) { OnPropertyChanged(nameof(AmountBase)); OnPropertyChanged(nameof(ShowBase)); _changed(); }
     partial void OnAmountChanged(decimal value) { OnPropertyChanged(nameof(AmountBase)); _changed(); }
 }
 
@@ -107,11 +133,14 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 {
     private readonly ISalesApi _salesApi;
     private readonly IStocksApi _stocksApi;
+    private readonly ISuppliersApi _suppliersApi;
+    private readonly ISuppliesApi _suppliesApi;
     private readonly ICustomersApi _customersApi;
     private readonly IProductsApi _productsApi;
     private readonly ICategoriesApi _categoriesApi;
     private readonly IReceiptApi _receiptApi;
     private readonly IBarcodesApi _barcodesApi;
+    private readonly IShiftsApi _shiftsApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IHeldSaleStore _heldStore;
@@ -150,11 +179,26 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isProductDetailOpen;
     [ObservableProperty] private StockOnHandDto? _detailProduct;
     [ObservableProperty] private string _detailBarcodes = string.Empty;
+    [ObservableProperty] private bool _isReceiveOpen;
+    [ObservableProperty] private decimal _receiveQuantity;
+    [ObservableProperty] private decimal _receivePurchasePrice;
+    [ObservableProperty] private decimal _receiveSellingPrice;
+    [ObservableProperty] private DateTime? _receiveExpiry;
+    [ObservableProperty] private string? _receiveCurrency;
+    [ObservableProperty] private IdOption? _receiveSupplier;
+    [ObservableProperty] private bool _hasNoSuppliers;
+    [ObservableProperty] private bool _canReceiveStock;
+    public ObservableCollection<IdOption> SupplierOptions { get; } = [];
+    private long? _lastSupplierId;
+    private decimal _lastPurchasePrice;
+    private decimal _detailRequestedQty;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || QuickProduct.IsOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || QuickProduct.IsOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsQueuePanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsHeldPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     partial void OnPosListModeChanged(bool value) => SettingsService.Instance.PosListMode = value;
 
@@ -187,6 +231,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IRatesApi _ratesApi;
     private readonly IOrderingApi _orderingApi;
     private readonly PosHandoffService _handoff;
+    private readonly QueueHubService _queueHub;
     private string? _activeCartCode;
     private readonly Dictionary<string, decimal> _rates = [];
     private string _baseCurrency = "UZS";
@@ -196,8 +241,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private bool _hasStaleRate;
     [ObservableProperty] private bool _isQuickRatesOpen;
-    [ObservableProperty] private string? _selectedDebtCurrency;
+    private string? _selectedDebtCurrency;
     [ObservableProperty] private DateTimeOffset? _debtDueDate;
+    [ObservableProperty] private bool _dueDateMissing;
+
+    partial void OnDebtDueDateChanged(DateTimeOffset? value) => DueDateMissing = false;
+
+    public string? SelectedDebtCurrency
+    {
+        get => _selectedDebtCurrency;
+        set { if (value is not null && SetProperty(ref _selectedDebtCurrency, value)) OnPropertyChanged(nameof(DebtDisplay)); }
+    }
 
     public ObservableCollection<QuickRateItem> QuickRates { get; } = [];
     public bool CanManageRates => _auth.HasPermission("rates.manage");
@@ -216,8 +270,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> Currencies { get; } = [];
     public ObservableCollection<PayMethodOption> PayMethods { get; } = [];
 
-    private decimal RateOf(string code) => code == _baseCurrency ? 1m : _rates.GetValueOrDefault(code, 0m);
-    private decimal PaidBonusBase => IsMulticurrency ? PaymentRows.Where(r => r.Method?.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
+    private decimal RateOf(string? code) => code == _baseCurrency ? 1m : code is null ? 0m : _rates.GetValueOrDefault(code, 0m);
+    private decimal PaidBonusBase => IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
     public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
@@ -234,14 +288,67 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public bool HasCreditLimit => (SelectedCustomer?.CreditLimit ?? 0) > 0;
     public decimal RemainingCredit => Math.Max(0, (SelectedCustomer?.CreditLimit ?? 0) - CustomerDebt);
     public bool IsOverCreditLimit => HasCreditLimit && CustomerDebt + DebtAmount > SelectedCustomer!.CreditLimit;
+    public bool CustomerIsDebtor => CustomerDebt > 0;
+    public bool CustomerIsCreditor => CustomerDebt < 0;
+    public decimal CustomerBalanceAbs => Math.Abs(CustomerDebt);
+
+    private bool _allowDebtSales = true;
+    private bool _requireDebtDueDate = true;
+    [ObservableProperty] private bool _allowCustomerCredit;
+    private bool? _excessOverride;
+
+    public bool CanCreditExcess => AllowCustomerCredit && SelectedCustomer is not null;
+    public bool ExcessToCredit => ChangeAmount > 0 && CanCreditExcess && (_excessOverride ?? true);
+    public bool ShowChange => ChangeAmount > 0 && !ExcessToCredit;
+    public decimal CreditAmount => ExcessToCredit ? ChangeAmount : 0;
+    public bool DebtCoveredByCredit => DebtAmount > 0 && DebtAmount <= Math.Max(0, -CustomerDebt);
+    public bool ShowDebt => DebtAmount > 0;
+    public bool ShowDebtDueDate => DebtAmount > 0 && !DebtCoveredByCredit;
+
+    public string DebtDisplay
+    {
+        get
+        {
+            var currency = SelectedDebtCurrency ?? _baseCurrency;
+            var rate = RateOf(currency);
+            if (currency == _baseCurrency || rate <= 0) return DebtAmount.ToString("N0");
+            return $"{Math.Round(DebtAmount / rate, 2):N2} {currency}";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleExcessTarget()
+    {
+        if (!CanCreditExcess) return;
+        _excessOverride = !ExcessToCredit;
+        NotifyExcess();
+    }
+
+    private void NotifyExcess()
+    {
+        OnPropertyChanged(nameof(CanCreditExcess));
+        OnPropertyChanged(nameof(ExcessToCredit));
+        OnPropertyChanged(nameof(ShowChange));
+        OnPropertyChanged(nameof(CreditAmount));
+        OnPropertyChanged(nameof(DebtCoveredByCredit));
+        OnPropertyChanged(nameof(ShowDebt));
+        OnPropertyChanged(nameof(ShowDebtDueDate));
+        OnPropertyChanged(nameof(DebtDisplay));
+    }
+
+    partial void OnAllowCustomerCreditChanged(bool value) => NotifyExcess();
 
     public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi,
         IProductsApi productsApi, ICategoriesApi categoriesApi, IReceiptApi receiptApi, IBarcodesApi barcodesApi, BranchContextService branch,
         QuickProductViewModel quickProduct, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
-        IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache)
+        IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
+        ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi)
     {
+        _shiftsApi = shiftsApi;
         _cache = cache;
+        _suppliersApi = suppliersApi;
+        _suppliesApi = suppliesApi;
         _prepacksApi = prepacksApi;
         Prepack = prepack;
         _featuresApi = featuresApi;
@@ -249,6 +356,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _ratesApi = ratesApi;
         _orderingApi = orderingApi;
         _handoff = handoff;
+        _queueHub = queueHub;
         _settingsApi = settingsApi;
         PaymentRows.CollectionChanged += (_, _) => NotifyTotals();
         _salesApi = salesApi;
@@ -298,9 +406,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         if (IsQuickRatesOpen) { IsQuickRatesOpen = false; return; }
         if (IsReceiptOpen) { IsReceiptOpen = false; return; }
+        if (IsReceiveOpen) { IsReceiveOpen = false; return; }
         if (IsProductDetailOpen) { IsProductDetailOpen = false; return; }
         if (IsCustomerPanelOpen) { IsCustomerPanelOpen = false; return; }
         if (IsHeldPanelOpen) { IsHeldPanelOpen = false; return; }
+        if (IsQueuePanelOpen) { IsQueuePanelOpen = false; return; }
         ClearCart();
     }
 
@@ -319,6 +429,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private ISettingsApi _settingsApi = null!;
     private ReferenceCache _cache = null!;
     private int _staleRateDays = 3;
+    private bool _supplierRequired;
 
     private async Task LoadClientPolicyAsync()
     {
@@ -326,7 +437,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             var policyTask = _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync);
             var receiptTask = _cache.GetAsync(CacheKeys.Receipt, _settingsApi.GetReceiptAsync);
-            _staleRateDays = (await policyTask).StaleRateDays;
+            var policy = await policyTask;
+            _staleRateDays = policy.StaleRateDays;
+            _allowDebtSales = policy.AllowDebtSales;
+            _requireDebtDueDate = policy.RequireDebtDueDate;
+            _supplierRequired = policy.RequireSupplier;
+            ShiftRequired = policy.ShiftPolicy != "Off";
+            AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
             _printer.ReceiptOptions = new ReceiptPrintOptions(receipt.HeaderText, receipt.FooterText, receipt.PaperWidth);
         }
@@ -342,7 +459,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             LoadCategoriesAsync(),
             LoadProductsAsync(),
             LoadPrepackAccessAsync(),
-            LoadQueueAccessAsync());
+            LoadReceiveAccessAsync(),
+            LoadQueueAccessAsync(),
+            LoadShiftAsync());
 
         if (_handoff.PendingCartCode is { } pending)
         {
@@ -409,20 +528,36 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _defaultCurrency = currencies.FirstOrDefault(c => c.IsDefault)?.Code ?? _baseCurrency;
             _rates.Clear();
             foreach (var c in _foreignCurrencies.Where(c => c.Rate is > 0)) _rates[c.Code] = c.Rate!.Value;
+            if (_defaultCurrency != _baseCurrency && !_rates.ContainsKey(_defaultCurrency)) _defaultCurrency = _baseCurrency;
             await policyTask;
-            var limit = DateTime.UtcNow.AddDays(-_staleRateDays);
+            var limit = DateTime.Now.AddDays(-_staleRateDays);
             HasStaleRate = _foreignCurrencies.Any(c => c.RateAt is null || c.RateAt < limit);
 
-            Currencies.Clear();
-            Currencies.Add(_baseCurrency);
-            foreach (var c in _foreignCurrencies) Currencies.Add(c.Code);
+            var codes = new List<string> { _baseCurrency };
+            codes.AddRange(_foreignCurrencies.Where(c => c.Rate is > 0).Select(c => c.Code));
+            if (!codes.SequenceEqual(Currencies))
+            {
+                Currencies.Clear();
+                foreach (var code in codes) Currencies.Add(code);
+                foreach (var row in PaymentRows)
+                {
+                    if (!codes.Contains(row.Currency)) row.Currency = _defaultCurrency;
+                    else row.RefreshCurrency();
+                }
+            }
 
-            PayMethods.Clear();
-            PayMethods.Add(new PayMethodOption("cash", L["cash"]));
-            PayMethods.Add(new PayMethodOption("card", L["card"]));
-            PayMethods.Add(new PayMethodOption("bonus", L["bonus"]));
+            var methods = new List<PayMethodOption> { new("cash", L["cash"]), new("card", L["card"]), new("bonus", L["bonus"]) };
+            if (!methods.SequenceEqual(PayMethods))
+            {
+                var methodKeys = PaymentRows.Select(r => r.Method.Key).ToList();
+                PayMethods.Clear();
+                foreach (var m in methods) PayMethods.Add(m);
+                for (var i = 0; i < PaymentRows.Count; i++)
+                    PaymentRows[i].Method = PayMethods.FirstOrDefault(m => m.Key == methodKeys[i]) ?? PayMethods[0];
+            }
 
-            SelectedDebtCurrency = _baseCurrency;
+            if (SelectedDebtCurrency is null || !codes.Contains(SelectedDebtCurrency))
+                SelectedDebtCurrency = _baseCurrency;
             if (PaymentRows.Count == 0)
                 AddPayment();
         }
@@ -432,20 +567,44 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void AddPayment()
     {
-        var row = new PaymentRow(_defaultCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"]), NotifyTotals, RateOf, _baseCurrency);
-        row.PropertyChanged += (_, _) => NotifyTotals();
+        var row = new PaymentRow(_defaultCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"]),
+            Currencies, PayMethods, NotifyTotals, RateOf, _baseCurrency);
         PaymentRows.Add(row);
     }
 
     [RelayCommand]
     private void RemovePayment(PaymentRow row) => PaymentRows.Remove(row);
 
+    [ObservableProperty] private bool _shiftRequired;
+    [ObservableProperty] private bool _shiftOpen;
+    [ObservableProperty] private decimal _shiftOpeningFloat;
+
+    private async Task LoadShiftAsync()
+    {
+        try { ShiftOpen = await _shiftsApi.GetCurrentAsync() is not null; }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task OpenShiftAsync()
+    {
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _shiftsApi.OpenAsync(new OpenShiftRequest(ShiftOpeningFloat, null));
+            ShiftOpeningFloat = 0;
+            ShiftOpen = true;
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
     [RelayCommand]
     private void OpenQuickRates()
     {
         if (!CanManageRates) return;
         QuickRates.Clear();
-        var limit = DateTime.UtcNow.AddDays(-_staleRateDays);
+        var limit = DateTime.Now.AddDays(-_staleRateDays);
         foreach (var c in _foreignCurrencies)
             QuickRates.Add(new QuickRateItem(c, c.RateAt is null || c.RateAt < limit));
         IsQuickRatesOpen = true;
@@ -550,6 +709,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(DebtAmount));
         OnPropertyChanged(nameof(IsCartEmpty));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        NotifyExcess();
         SchedulePreview();
     }
 
@@ -564,7 +724,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task PreviewAsync(CancellationToken token)
     {
-        try { await Task.Delay(400, token); } catch { return; }
+        try { await Task.Delay(250, token); } catch { return; }
         if (token.IsCancellationRequested) return;
 
         if (CartItems.Count == 0 || IsOfflineMode)
@@ -574,18 +734,33 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
         try
         {
-            var items = CartItems
-                .Select(c => new PreviewDiscountItemRequest(c.VariantId, c.Quantity, c.UnitPrice))
-                .ToList();
-            var result = await ServiceLocator.Resolve<ILoyaltyApi>()
-                .PreviewDiscountAsync(new PreviewDiscountRequest(SelectedCustomer?.Id, items));
+            var total = await FetchPreviewTotalAsync();
             if (!token.IsCancellationRequested)
-                SetAutoDiscount(result.Total);
+                SetAutoDiscount(total);
         }
-        catch
+        catch { }
+    }
+
+    private async Task RefreshPreviewNowAsync()
+    {
+        _previewCts?.Cancel();
+        if (CartItems.Count == 0 || IsOfflineMode)
         {
             SetAutoDiscount(0);
+            return;
         }
+        try { SetAutoDiscount(await FetchPreviewTotalAsync()); }
+        catch { }
+    }
+
+    private async Task<decimal> FetchPreviewTotalAsync()
+    {
+        var items = CartItems
+            .Select(c => new PreviewDiscountItemRequest(c.VariantId, c.Quantity, c.UnitPrice))
+            .ToList();
+        var result = await ServiceLocator.Resolve<ILoyaltyApi>()
+            .PreviewDiscountAsync(new PreviewDiscountRequest(SelectedCustomer?.Id, items));
+        return result.Total;
     }
 
     private void SetAutoDiscount(decimal value)
@@ -597,6 +772,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(ChangeAmount));
         OnPropertyChanged(nameof(DebtAmount));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        NotifyExcess();
     }
 
     partial void OnSelectedCustomerChanged(CustomerDto? value)
@@ -605,6 +781,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(HasCreditLimit));
         OnPropertyChanged(nameof(RemainingCredit));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        OnPropertyChanged(nameof(CustomerIsDebtor));
+        OnPropertyChanged(nameof(CustomerIsCreditor));
+        OnPropertyChanged(nameof(CustomerBalanceAbs));
+        NotifyExcess();
         SchedulePreview();
     }
 
@@ -704,8 +884,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private Task LoadMoreProducts() => LoadProductsPageAsync(reset: false);
 
-    // AllowConcurrentExecutions: aks holda birinchi skaner tugamaguncha buyruq CanExecute=false bo'lib,
-    // bir mahsulotni ketma-ket skaner qilganda ikkinchi Enter jimgina tashlab yuboriladi.
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ScanAsync()
     {
@@ -719,8 +897,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        // Maydon so'rovlardan oldin tozalanadi: skaner keyingi kodni darhol yuborsa,
-        // u eskisining ustiga yopishib qolmasin.
         SearchText = string.Empty;
         var visibleProducts = Products.ToList();
 
@@ -798,7 +974,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
         }
 
-        // Maydon tozalangani uchun Products ro'yxati qayta yuklanishi mumkin — skaner boshidagi nusxadan olamiz.
         if (visibleProducts.Count > 0)
         {
             var first = visibleProducts[0];
@@ -817,13 +992,21 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void AddStockToCart(StockOnHandDto stock) =>
         AddToCart(stock.VariantId, stock.ProductName, stock.SellingPrice, available: stock.Quantity);
 
+    [RelayCommand]
     public void ShowProductDetail(StockOnHandDto product)
     {
         DetailProduct = product;
         DetailBarcodes = string.Empty;
+        _detailRequestedQty = CartItems.Where(c => c.VariantId == product.VariantId && !c.IsPrepack).Sum(c => c.Quantity);
+        IsReceiveOpen = false;
         IsProductDetailOpen = true;
         _ = LoadDetailBarcodesAsync(product.VariantId);
     }
+
+    [RelayCommand]
+    private void ShowCartDetail(CartItem item) =>
+        ShowProductDetail(Products.FirstOrDefault(p => p.VariantId == item.VariantId)
+            ?? new StockOnHandDto(item.VariantId, item.ProductName, null, null, string.Empty, string.Empty, item.Available ?? 0, item.UnitPrice, null));
 
     private async Task LoadDetailBarcodesAsync(long variantId)
     {
@@ -843,6 +1026,105 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         if (DetailProduct is not null) AddStockToCart(DetailProduct);
         IsProductDetailOpen = false;
+    }
+
+    private async Task LoadReceiveAccessAsync()
+    {
+        if (!_auth.HasPermission("supplies.manage"))
+        {
+            CanReceiveStock = false;
+            return;
+        }
+        try
+        {
+            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
+            CanReceiveStock = enabled.Contains("supplies");
+        }
+        catch { CanReceiveStock = true; }
+    }
+
+    private async Task EnsureSuppliersAsync()
+    {
+        SupplierOptions.Clear();
+        if (!_supplierRequired) SupplierOptions.Add(new IdOption(null, L["none"]));
+        try
+        {
+            var suppliers = await _cache.GetAsync(CacheKeys.Suppliers, () => _suppliersApi.GetAllAsync());
+            foreach (var s in suppliers) SupplierOptions.Add(new IdOption(s.Id, s.Name));
+        }
+        catch { }
+        ReceiveSupplier = SupplierOptions.FirstOrDefault(o => o.Id == _lastSupplierId) ?? SupplierOptions.FirstOrDefault();
+        HasNoSuppliers = !SupplierOptions.Any(o => o.Id is not null);
+    }
+
+    [RelayCommand]
+    private async Task OpenReceive()
+    {
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
+        ReceiveQuantity = Math.Max(0, _detailRequestedQty - (DetailProduct?.Quantity ?? 0));
+        ReceivePurchasePrice = 0;
+        _lastPurchasePrice = 0;
+        ReceiveSellingPrice = DetailProduct?.SellingPrice ?? 0;
+        ReceiveExpiry = null;
+        ReceiveCurrency = _baseCurrency;
+        IsReceiveOpen = true;
+        await EnsureSuppliersAsync();
+        if (DetailProduct is not { } product || Branch.CurrentWarehouseId is not { } warehouseId) return;
+        try
+        {
+            var info = await _productsApi.GetVariantPriceInfoAsync(product.VariantId, warehouseId);
+            _lastPurchasePrice = info.LastPurchasePrice ?? 0;
+            if (ReceiveCurrency == _baseCurrency) ReceivePurchasePrice = _lastPurchasePrice;
+        }
+        catch { }
+    }
+
+    partial void OnReceiveCurrencyChanged(string? value)
+    {
+        if (!IsReceiveOpen) return;
+        var isBase = value == _baseCurrency;
+        ReceivePurchasePrice = isBase ? _lastPurchasePrice : 0;
+        ReceiveSellingPrice = isBase ? DetailProduct?.SellingPrice ?? 0 : 0;
+    }
+
+    [RelayCommand]
+    private void CloseReceive() => IsReceiveOpen = false;
+
+    [RelayCommand]
+    private async Task ReceiveSupplyAsync()
+    {
+        if (DetailProduct is not { } product) return;
+        if (Branch.CurrentWarehouseId is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+        if (ReceiveQuantity <= 0) return;
+        if (_supplierRequired && ReceiveSupplier?.Id is null) { _toast.Warning(L["err_select_supplier"]); return; }
+        var supplierId = ReceiveSupplier?.Id;
+        var currency = IsMulticurrency && ReceiveCurrency != _baseCurrency ? ReceiveCurrency : null;
+        var sellingPrice = ReceiveSellingPrice > 0 && (currency is not null || ReceiveSellingPrice != product.SellingPrice)
+            ? ReceiveSellingPrice : (decimal?)null;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _suppliesApi.CreateAsync(new CreateSupplyRequest(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
+                    [new CreateSupplyItemRequest(product.VariantId, ReceiveQuantity, ReceivePurchasePrice,
+                        ReceiveExpiry is { } exp ? DateOnly.FromDateTime(exp) : null, null, sellingPrice)],
+                    Currency: currency));
+
+            _lastSupplierId = supplierId;
+            _cache.Invalidate(CacheKeys.Suppliers);
+            var updated = product with
+            {
+                Quantity = product.Quantity + ReceiveQuantity,
+                SellingPrice = currency is null && sellingPrice is { } sp ? sp : product.SellingPrice
+            };
+            var index = Products.IndexOf(product);
+            if (index >= 0) Products[index] = updated;
+            DetailProduct = updated;
+            foreach (var item in CartItems.Where(c => c.VariantId == updated.VariantId && !c.IsPrepack))
+                item.Available = updated.Quantity;
+            IsReceiveOpen = false;
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     private async Task LoadPrepackAccessAsync()
@@ -939,13 +1221,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         if (IsMulticurrency)
         {
-            PaymentRows.Clear();
-            AddPayment();
-            PaymentRows[0].Currency = _baseCurrency;
-            PaymentRows[0].Amount = TotalAmount;
+            var remaining = TotalAmount - TotalPaid;
+            if (remaining <= 0) return;
+            var row = PaymentRows.FirstOrDefault(r => r.Currency == _baseCurrency && r.Method.Key == "cash")
+                ?? PaymentRows.FirstOrDefault(r => r.Amount == 0);
+            if (row is null) { AddPayment(); row = PaymentRows[^1]; }
+            row.Method = PayMethods.FirstOrDefault(m => m.Key == "cash") ?? row.Method;
+            row.Currency = _baseCurrency;
+            row.Amount += remaining;
             return;
         }
-        PaidCash = TotalAmount; PaidCard = 0; PaidBonus = 0;
+        PaidCash = Math.Max(0, TotalAmount - PaidCard - PaidBonus);
     }
 
     [RelayCommand]
@@ -954,7 +1240,14 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         CartItems.Clear();
         _activeCartCode = null;
         DebtDueDate = null;
+        DueDateMissing = false;
         PaidCash = PaidCard = PaidBonus = DiscountAmount = 0;
+        _syncingDiscount = true;
+        DiscountPercent = 0;
+        _syncingDiscount = false;
+        _discountByPercent = false;
+        _saleIdempotencyKey = null;
+        _excessOverride = null;
         if (IsMulticurrency)
         {
             PaymentRows.Clear();
@@ -1143,7 +1436,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!CanSeeQueue) return;
         try
         {
-            var carts = await _orderingApi.GetAllAsync("Open");
+            var carts = await _orderingApi.GetAllAsync("Open", kind: "Queue");
             QueueCarts.Clear();
             foreach (var cart in carts) QueueCarts.Add(new QueueRow(cart));
             QueueCount = QueueCarts.Count;
@@ -1181,27 +1474,36 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         catch { return; }
         if (!CanSeeQueue) return;
         await LoadQueueAsync();
-        _queueTimer = new System.Threading.Timer(_ =>
-            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
-            {
-                if (IsQueuePanelOpen) return;
-                try { QueueCount = (await _orderingApi.GetAllAsync("Open")).Count; }
-                catch { }
-            }), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+        if (!_queueHubWired)
+        {
+            _queueHubWired = true;
+            _queueHub.CartsChanged += kind => { if (kind == "Queue") _ = LoadQueueAsync(); };
+            _queueHub.Resynced += () => _ = LoadQueueAsync();
+        }
+        _ = _queueHub.EnsureStartedAsync();
     }
 
-    private System.Threading.Timer? _queueTimer;
+    private bool _queueHubWired;
+    private string? _saleIdempotencyKey;
 
     [RelayCommand]
     private async Task CompleteSaleAsync()
     {
-        if (CartItems.Count == 0) return;
+        if (CartItems.Count == 0) { _toast.Warning(L["no_items"]); return; }
 
         var warehouseId = Branch.CurrentWarehouseId;
         if (warehouseId is null) { _toast.Warning(L["select_warehouse"]); return; }
-        if (PaidBonusBase > 0 && SelectedCustomer is null) { _toast.Warning(L["customer"]); return; }
-        if (PaidBonusBase > (SelectedCustomer?.CashbackBalance ?? 0)) { _toast.Warning(L["cashback_balance"]); return; }
-        if (DebtAmount > 0 && SelectedCustomer is null) { _toast.Warning(L["customer"]); return; }
+        if (!IsOfflineMode) await RefreshPreviewNowAsync();
+        if (PaidBonusBase > 0 && SelectedCustomer is null) { _toast.Warning(L["bonus_customer_required"]); return; }
+        if (PaidBonusBase > (SelectedCustomer?.CashbackBalance ?? 0)) { _toast.Warning(L["bonus_insufficient"]); return; }
+        if (DebtAmount > 0 && SelectedCustomer is null) { _toast.Warning(L["debt_customer_required"]); return; }
+        if (DebtAmount > 0 && !DebtCoveredByCredit && !_allowDebtSales) { _toast.Warning(L["debt_sales_disabled"]); return; }
+        if (DebtAmount > 0 && !DebtCoveredByCredit && _requireDebtDueDate && DebtDueDate is null)
+        {
+            DueDateMissing = true;
+            _toast.Warning(L["debt_due_required"]);
+            return;
+        }
 
         if (!ServiceLocator.Resolve<ConnectivityService>().IsOnline &&
             !ServiceLocator.Resolve<OfflineSyncService>().IsEnabled)
@@ -1218,15 +1520,23 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _toast.Warning(L["offline_pos_limited"]);
                 return;
             }
+            if (DebtAmount > 0 && !DebtCoveredByCredit && !await Offline.GetAllowDebtSalesAsync())
+            {
+                _toast.Warning(L["debt_sales_disabled"]);
+                return;
+            }
             var draft = new OfflineSaleDraft(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard,
                 CartItems.Select(c => new OfflineSaleItemDraft(c.VariantId, c.Quantity, CanOverridePrice ? c.PriceOverride : null)).ToList(),
-                DiscountAmount);
+                DiscountAmount,
+                DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } offlineDue ? DateOnly.FromDateTime(offlineDue.Date) : null);
             await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSaleAsync(draft);
             ClearCart();
             _toast.Success(L["offline_sale_queued"]);
             await LoadProductsAsync();
             return;
         }
+
+        _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
 
         try
         {
@@ -1236,13 +1546,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 var items = CartItems.Select(c => new CreateSaleItemRequest(c.VariantId, c.Quantity,
                     c.IsPrepack ? null : CanOverridePrice ? c.PriceOverride : null, c.PrepackId)).ToList();
                 var payments = IsMulticurrency
-                    ? PaymentRows.Where(r => r.Amount > 0 && r.Method is not null)
-                        .Select(r => new SalePaymentRequest(r.Method!.Key switch { "card" => "Card", "bonus" => "Bonus", _ => "Cash" }, r.Currency, r.Amount)).ToList()
+                    ? PaymentRows.Where(r => r.Amount > 0)
+                        .Select(r => new SalePaymentRequest(r.Method.Key switch { "card" => "Card", "bonus" => "Bonus", _ => "Cash" }, r.Currency, r.Amount)).ToList()
                     : null;
                 var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items, DiscountAmount,
                     payments is { Count: > 0 } ? payments : null,
                     IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
-                    DebtAmount > 0 && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null);
+                    DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
+                    IdempotencyKey: _saleIdempotencyKey,
+                    CreditAmount: CreditAmount);
                 result = await _salesApi.CreateAsync(request);
             }
 
@@ -1254,7 +1566,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             }
 
             ClearCart();
-            _toast.Success(L["complete_sale"]);
+            _toast.Success(L["sale_completed"]);
             await ShowReceiptAsync(result.ReceiptToken);
             await LoadProductsAsync();
         }
@@ -1270,10 +1582,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             CurrentReceipt = await _receiptApi.GetAsync(token);
             IsReceiptOpen = true;
-            if (_printer.AutoPrintEnabled)
-                await PrintCurrentReceiptAsync();
         }
-        catch { }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        if (!_printer.AutoPrintEnabled) return;
+        try { await PrintCurrentReceiptAsync(); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

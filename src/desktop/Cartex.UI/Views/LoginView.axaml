@@ -60,6 +60,27 @@
                                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                TextWrapping="Wrap" HorizontalAlignment="Center" />
 
+                    <TextBlock Text="{Binding ServerStatus}"
+                               Foreground="{DynamicResource SuccessBrush}" FontSize="12.5"
+                               IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               TextWrapping="Wrap" HorizontalAlignment="Center" />
+
+                    <StackPanel Spacing="6" IsVisible="{Binding IsServerEditOpen}">
+                        <TextBlock Text="{Binding L[api_url]}" FontSize="12.5" Foreground="{DynamicResource TextSecondary}" />
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <TextBox Text="{Binding ServerUrl}" MinHeight="40"
+                                     PlaceholderText="http://192.168.1.10:5015">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding SaveServerUrlCommand}" />
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <Button Grid.Column="2" Classes="brand" MinHeight="40" MinWidth="90"
+                                    HorizontalContentAlignment="Center"
+                                    Command="{Binding SaveServerUrlCommand}" IsEnabled="{Binding !IsLoading}"
+                                    Content="{Binding L[save]}" />
+                        </Grid>
+                    </StackPanel>
+
                     <Button Content="{Binding L[login_button]}"
                             Command="{Binding LoginCommand}"
                             Classes="brand"
@@ -98,6 +119,16 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="QrcodeScan" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[login_with_qr]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Background="Transparent" BorderThickness="0" Padding="6,3"
+                            HorizontalAlignment="Center" Command="{Binding ToggleServerEditCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <mi:MaterialIcon Kind="ServerNetwork" Width="14" Height="14"
+                                             Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Text="{Binding L[api_url]}" FontSize="12"
+                                       Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

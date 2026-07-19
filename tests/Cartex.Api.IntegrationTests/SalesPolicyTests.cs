@@ -24,7 +24,7 @@ public class SalesPolicyTests(CartexApiFactory factory)
     {
         var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
         var products = await client.GetFromJsonAsync<List<Product>>("/api/products");
-        return (warehouses![0].Id, products!.First(p => p.Name == "Coca-Cola 1.5L").DefaultVariantId);
+        return (warehouses![0].Id, products!.First(p => p.Name == "Smesitel oshxona Zegor").DefaultVariantId);
     }
 
     private static Task<HttpResponseMessage> SellAsync(HttpClient client, long warehouseId, long variantId, decimal paidCash, decimal discount = 0) =>
@@ -49,7 +49,7 @@ public class SalesPolicyTests(CartexApiFactory factory)
         try
         {
             (await SetPolicyAsync(admin, "CashOnly", 5)).EnsureSuccessStatusCode();
-            var response = await SellAsync(seller, warehouseId, variantId, 5_000m, 5_000m);
+            var response = await SellAsync(seller, warehouseId, variantId, 335_000m, 50_000m);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
         finally
@@ -71,13 +71,13 @@ public class SalesPolicyTests(CartexApiFactory factory)
         {
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
                 new { name = warehouses![0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
-            var blocked = await SellAsync(admin, warehouseId, variantId, 100_000m);
+            var blocked = await SellAsync(admin, warehouseId, variantId, 400_000m);
             Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
 
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
                 new { name = warehouses![0].Name, isOnline = false, assignedUserId = adminId })).EnsureSuccessStatusCode();
 
-            var response = await SellAsync(admin, warehouseId, variantId, 100_000m);
+            var response = await SellAsync(admin, warehouseId, variantId, 400_000m);
             response.EnsureSuccessStatusCode();
         }
         finally
@@ -134,7 +134,7 @@ public class SalesPolicyTests(CartexApiFactory factory)
         try
         {
             (await SetPolicyAsync(admin, "Off", 0)).EnsureSuccessStatusCode();
-            var response = await SellAsync(admin, warehouseId, variantId, 100_000m);
+            var response = await SellAsync(admin, warehouseId, variantId, 400_000m);
             response.EnsureSuccessStatusCode();
         }
         finally

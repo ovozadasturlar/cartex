@@ -23,7 +23,7 @@ public class StockOperationTests(DatabaseFixture fixture) : DatabaseTest(fixture
         var warehouse2 = (await db.Warehouses.Where(w => w.Id != warehouse1).Select(w => w.Id).FirstAsync());
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
-        var productId = (await db.Products.FirstAsync(p => p.Name == "Coca-Cola 1.5L")).Id;
+        var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, warehouse2, businessId, adminId, variantId);
     }

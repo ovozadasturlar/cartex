@@ -14,6 +14,7 @@ export interface Sale {
   paidCard: number;
   paidBonus: number;
   debtAmount: number;
+  creditAmount: number;
   status: string;
   receiptToken: string;
   customerName: string | null;
@@ -82,6 +83,7 @@ export interface LedgerEntry {
   accountType: string;
   change: number;
   balanceAfter: number;
+  currency: string | null;
 }
 
 export interface TopProduct {
@@ -153,6 +155,7 @@ export interface SalesBreakdown {
   card: number;
   bonus: number;
   debt: number;
+  credit: number;
   byCashier: CashierSales[];
   byCategory: CategorySales[];
 }
@@ -195,10 +198,12 @@ export interface Receipt {
   paidCard: number;
   paidBonus: number;
   debtAmount: number;
+  creditAmount: number;
   changeAmount: number;
   cashbackEarned: number;
+  baseCurrency: string;
   userName: string;
   customerName: string | null;
   items: { productName: string; quantity: number; unitName: string; unitPrice: number; lineTotal: number }[];
-  payments: { method: string; currency: string; amount: number }[];
+  payments: { method: string; currency: string; amount: number; rate: number; amountBase: number; isForeign: boolean }[];
 }

@@ -33,7 +33,8 @@ public record CreateSaleCommand(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     string? IdempotencyKey = null,
-    bool ApplyAutoDiscount = true) : ICommand<CreateSaleResult>;
+    bool ApplyAutoDiscount = true,
+    decimal CreditAmount = 0) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -194,9 +195,24 @@ public sealed class CreateSaleCommandHandler(
         }
 
         var debtAmount = Math.Max(0, totalAmount - paidCash - paidCard - paidBonus);
-        var changeAmount = Math.Max(0, paidCash + paidCard + paidBonus - totalAmount);
+        var excessAmount = Math.Max(0, paidCash + paidCard + paidBonus - totalAmount);
 
-        if (changeAmount > 0 && paidCard + paidBonus > totalAmount)
+        if (request.CreditAmount > 0)
+        {
+            if (!policy.AllowCustomerCredit)
+                throw new BusinessRuleException("Haqdorlik funksiyasi o'chirilgan.");
+            if (request.CustomerId is null)
+                throw new BusinessRuleException("Haqdorlik uchun mijoz tanlanishi shart.");
+            if (request.CreditAmount > excessAmount)
+                throw new BusinessRuleException("Haqdorlik summasi ortiqcha to'lovdan oshib ketdi.");
+            if (paidBonus > totalAmount)
+                throw new BusinessRuleException("Bonus haqdorlikka o'tkazilmaydi.");
+        }
+
+        var creditAmount = request.CreditAmount;
+        var changeAmount = excessAmount - creditAmount;
+
+        if (changeAmount > 0 && paidCard + paidBonus > totalAmount + creditAmount)
             throw new BusinessRuleException("Qaytim faqat naqd to'lovdan beriladi.");
 
         var requiresShift = warehouse.AssignedUserId != userId && policy.ShiftPolicy switch
@@ -225,7 +241,7 @@ public sealed class CreateSaleCommandHandler(
         {
             var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId.Value, cancellationToken)
                 ?? throw new NotFoundException("Customer not found.");
-            if (customer.CreditLimit > 0)
+            if (!policy.AllowDebtSales || customer.CreditLimit > 0)
             {
                 var debtAccounts = await db.Accounts
                     .Where(a => a.CustomerId == request.CustomerId.Value && a.Type == AccountType.Debt)
@@ -233,7 +249,9 @@ public sealed class CreateSaleCommandHandler(
                 decimal currentDebt = 0;
                 foreach (var account in debtAccounts)
                     currentDebt += account.Balance * (account.Currency == baseCode ? 1m : await currency.RateAsync(account.Currency, cancellationToken));
-                if (currentDebt + debtAmount > customer.CreditLimit)
+                if (!policy.AllowDebtSales && currentDebt + debtAmount > 0)
+                    throw new BusinessRuleException("Nasiya savdo o'chirilgan.");
+                if (customer.CreditLimit > 0 && currentDebt + debtAmount > customer.CreditLimit)
                     throw new BusinessRuleException("Qarz limiti oshib ketdi.");
             }
         }
@@ -254,6 +272,7 @@ public sealed class CreateSaleCommandHandler(
             DebtCurrency = debtCurrency,
             DebtRate = debtRate,
             ChangeAmount = changeAmount,
+            CreditAmount = creditAmount,
             Status = SaleStatus.Completed,
             ReceiptToken = Guid.NewGuid().ToString("N"),
             IdempotencyKey = idempotencyKey,
@@ -364,6 +383,12 @@ public sealed class CreateSaleCommandHandler(
             Post(OperationType.DebtCharge, debtInCurrency, null, debt, sale.DebtRate);
         }
 
+        if (sale.CreditAmount > 0)
+        {
+            var debt = await ledger.CustomerAccountAsync(customerId, AccountType.Debt, cancellationToken);
+            Post(OperationType.CustomerCredit, sale.CreditAmount, debt, null);
+        }
+
         var cashback = await cashbackCalculator.CalculateAsync(branchId, cashbackLines, cancellationToken);
         if (cashback > 0)
         {
@@ -383,5 +408,6 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
     }
 }

@@ -16,6 +16,8 @@ public static class SortingExtensions
                     ? query.OrderByDescendingDynamic(request.SortBy)
                     : query.OrderByDynamic(request.SortBy);
         }
-        return query.OrderBy(x => EF.Property<long>(x!, "Id"));
+        return query
+            .OrderByDescending(x => EF.Property<DateTime>(x!, "CreatedAt"))
+            .ThenByDescending(x => EF.Property<long>(x!, "Id"));
     }
 }

@@ -31,6 +31,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddScoped<IFeatureStateProvider, TestFeatureStates>();
         services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IPagingMetadataWriter, NoopPagingWriter>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier, NullCartNotifier>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();
         _services = services.BuildServiceProvider();
@@ -69,6 +72,16 @@ public sealed class DatabaseFixture : IAsyncLifetime
     }
 
     public IServiceScope CreateScope() => _services.CreateScope();
+
+    private sealed class NoopPagingWriter : Cartex.Application.Common.Interfaces.IPagingMetadataWriter
+    {
+        public void Write(Cartex.Application.Common.Models.PagedListMetadata metadata) { }
+    }
+
+    private sealed class NullCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier
+    {
+        public Task CartsChangedAsync(string kind, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
 
     public async ValueTask DisposeAsync()
     {

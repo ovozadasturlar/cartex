@@ -15,6 +15,8 @@ public class CartConfiguration : IEntityTypeConfiguration<Cart>
         builder.HasIndex(x => new { x.CustomerId, x.IdempotencyKey }).IsUnique()
             .HasFilter("idempotency_key IS NOT NULL");
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);
+        builder.HasIndex(x => new { x.Kind, x.Status });
         builder.HasIndex(x => x.BranchId);
 
         builder.HasOne<Branch>()

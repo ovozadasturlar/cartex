@@ -64,6 +64,10 @@ export class BusinessSettings implements OnInit {
   maxDiscountPercent = 0;
   defaultMinStock = 0;
   staleRateDays = 3;
+  allowDebtSales = true;
+  allowCustomerCredit = false;
+  requireDebtDueDate = true;
+  requireSupplier = false;
   private policyLoaded = false;
 
   qrEnabled = false;
@@ -78,6 +82,10 @@ export class BusinessSettings implements OnInit {
       this.maxDiscountPercent = policy.maxDiscountPercent;
       this.defaultMinStock = policy.defaultMinStock;
       this.staleRateDays = policy.staleRateDays;
+      this.allowDebtSales = policy.allowDebtSales;
+      this.allowCustomerCredit = policy.allowCustomerCredit;
+      this.requireDebtDueDate = policy.requireDebtDueDate;
+      this.requireSupplier = policy.requireSupplier;
       this.policyLoaded = true;
     } catch {}
     try {
@@ -146,6 +154,10 @@ export class BusinessSettings implements OnInit {
           maxDiscountPercent: this.maxDiscountPercent || 0,
           defaultMinStock: this.defaultMinStock || 0,
           staleRateDays: Math.round(this.staleRateDays) || 3,
+          allowDebtSales: this.allowDebtSales,
+          allowCustomerCredit: this.allowCustomerCredit,
+          requireDebtDueDate: this.requireDebtDueDate,
+          requireSupplier: this.requireSupplier,
         }),
       );
       this.notify.success(message);

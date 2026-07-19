@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Sales.Commands;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
@@ -9,7 +10,7 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus, string? IdempotencyKey = null) : ICommand<long>;
 
-public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser) : IRequestHandler<CheckoutCartCommand, long>
+public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser, ICartNotifier notifier) : IRequestHandler<CheckoutCartCommand, long>
 {
     public async Task<long> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
@@ -44,6 +45,7 @@ public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender
 
         cart.Status = CartStatus.CheckedOut;
         await db.SaveChangesAsync(cancellationToken);
+        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
 
         return result.SaleId;
     }

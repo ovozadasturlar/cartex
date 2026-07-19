@@ -33,6 +33,7 @@ public class SupplyConfiguration : IEntityTypeConfiguration<Supply>
         builder.HasOne(x => x.Supplier)
             .WithMany(s => s.Supplies)
             .HasForeignKey(x => x.SupplierId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Warehouse)

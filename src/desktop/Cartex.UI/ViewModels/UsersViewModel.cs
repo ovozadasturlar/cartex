@@ -33,6 +33,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     public ObservableCollection<SelectItem> EditBranches { get; } = [];
     public ObservableCollection<BranchOption> DefaultBranches { get; } = [];
     public ObservableCollection<StartPageOption> StartPages { get; } = [];
+    public ObservableCollection<StartPageOption> CartDestinations { get; } = [];
 
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _isEditOpen;
@@ -43,11 +44,15 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _editIsActive = true;
     [ObservableProperty] private BranchOption? _selectedDefaultBranch;
     [ObservableProperty] private StartPageOption? _selectedStartPage;
+    [ObservableProperty] private StartPageOption? _selectedCartDestination;
 
     public bool IsEmpty => Users.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
     public string EditTitle => IsNew ? L["create_user"] : L["edit_user"];
     public string PasswordLabel => IsNew ? L["password"] : L["new_password"];
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
     public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
     {
@@ -89,6 +94,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
                 _allRoles = await _rolesApi.GetAllAsync();
                 _allBranches = await _branchesApi.GetAllAsync();
                 BuildStartPages();
+                BuildCartDestinations();
                 await LoadUsersAsync();
             }
         }
@@ -122,6 +128,14 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         StartPages.Add(new StartPageOption(null, L["none"]));
         foreach (var p in NavRegistry.SidebarPages)
             StartPages.Add(new StartPageOption(p.Key, L[p.Key]));
+    }
+
+    private void BuildCartDestinations()
+    {
+        CartDestinations.Clear();
+        CartDestinations.Add(new StartPageOption(null, "—"));
+        CartDestinations.Add(new StartPageOption("queue", L["dest_queue"]));
+        CartDestinations.Add(new StartPageOption("order", L["dest_order"]));
     }
 
     private void BuildDefaultBranches()
@@ -160,6 +174,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         BuildDefaultBranches();
         SelectedDefaultBranch = DefaultBranches.FirstOrDefault();
         SelectedStartPage = StartPages.FirstOrDefault();
+        SelectedCartDestination = CartDestinations.FirstOrDefault();
         OnPropertyChanged(nameof(EditTitle));
         OnPropertyChanged(nameof(PasswordLabel));
         IsEditOpen = true;
@@ -179,6 +194,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         BuildDefaultBranches();
         SelectedDefaultBranch = DefaultBranches.FirstOrDefault(b => b.Id == user.DefaultBranchId) ?? DefaultBranches.FirstOrDefault();
         SelectedStartPage = StartPages.FirstOrDefault(s => s.Key == user.StartPage) ?? StartPages.FirstOrDefault();
+        SelectedCartDestination = CartDestinations.FirstOrDefault(s => s.Key == user.CartDestination) ?? CartDestinations.FirstOrDefault();
         OnPropertyChanged(nameof(EditTitle));
         OnPropertyChanged(nameof(PasswordLabel));
         IsEditOpen = true;
@@ -200,6 +216,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         var branchIds = EditBranches.Where(b => b.IsSelected).Select(b => b.Id).ToList();
         var defaultBranchId = SelectedDefaultBranch?.Id;
         var startPage = SelectedStartPage?.Key;
+        var cartDestination = SelectedCartDestination?.Key;
 
         try
         {
@@ -209,13 +226,13 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
                 {
                     if (string.IsNullOrWhiteSpace(EditPassword)) { _toast.Error(L["error"]); return; }
                     await _usersApi.CreateAsync(new CreateUserRequest(
-                        EditFullName.Trim(), EditUsername.Trim(), EditPassword, roleIds, defaultBranchId, branchIds, startPage));
+                        EditFullName.Trim(), EditUsername.Trim(), EditPassword, roleIds, defaultBranchId, branchIds, startPage, CartDestination: cartDestination));
                 }
                 else
                 {
                     var newPassword = string.IsNullOrWhiteSpace(EditPassword) ? null : EditPassword;
                     await _usersApi.UpdateAsync(_editId, new UpdateUserRequest(
-                        EditFullName.Trim(), roleIds, EditIsActive, newPassword, defaultBranchId, branchIds, startPage));
+                        EditFullName.Trim(), roleIds, EditIsActive, newPassword, defaultBranchId, branchIds, startPage, CartDestination: cartDestination));
                 }
             }
             IsEditOpen = false;

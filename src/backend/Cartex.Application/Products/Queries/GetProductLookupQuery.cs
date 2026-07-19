@@ -7,8 +7,6 @@ namespace Cartex.Application.Products.Queries;
 
 public record GetProductLookupQuery : IRequest<IReadOnlyCollection<ProductOptionDto>>;
 
-// Qadoqlar shu yerda birga keladi: kirim qatori mahsulot tanlanishi bilan qo'shimcha so'rovsiz
-// "Qop 50 kg" kabi variantlarni ko'rsatadi.
 public record ProductOptionDto(
     long Id,
     long DefaultVariantId,
@@ -16,7 +14,8 @@ public record ProductOptionDto(
     string? Dimension,
     long? UnitId = null,
     string? UnitShortName = null,
-    IReadOnlyCollection<ProductPackDto>? Packs = null);
+    IReadOnlyCollection<ProductPackDto>? Packs = null,
+    string? ImageKey = null);
 
 public sealed class GetProductLookupQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetProductLookupQuery, IReadOnlyCollection<ProductOptionDto>>
@@ -34,6 +33,7 @@ public sealed class GetProductLookupQueryHandler(IApplicationDbContext db)
                 p.Packs
                     .OrderBy(pack => pack.Size)
                     .Select(pack => new ProductPackDto(pack.Id, pack.ProductId, pack.Name, pack.Size, pack.Kind.ToString(), pack.IsDefault))
-                    .ToList()))
+                    .ToList(),
+                p.Variants.Where(v => v.IsDefault).Select(v => v.ImageKey).FirstOrDefault() ?? p.ImageKey))
             .ToListAsync(cancellationToken);
 }

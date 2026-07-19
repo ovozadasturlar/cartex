@@ -9,10 +9,13 @@ public static class PermissionDependencies
         [AppPermissions.Roles.Manage] = [AppPermissions.Roles.View],
         [AppPermissions.Supplies.View] = [AppPermissions.Suppliers.View, AppPermissions.Warehouses.View, AppPermissions.Products.View],
         [AppPermissions.Supplies.Manage] = [AppPermissions.Supplies.View],
+        [AppPermissions.Supplies.Edit] = [AppPermissions.Supplies.Manage],
         [AppPermissions.StockTransfers.View] = [AppPermissions.Warehouses.View],
         [AppPermissions.StockTransfers.Manage] = [AppPermissions.StockTransfers.View],
         [AppPermissions.Sales.Create] = [AppPermissions.Products.View, AppPermissions.Stocks.View, AppPermissions.Categories.View, AppPermissions.Customers.View],
         [AppPermissions.Sales.Return] = [AppPermissions.Sales.View],
+        [AppPermissions.Shifts.ViewAll] = [AppPermissions.Shifts.View],
+        [AppPermissions.Shifts.ManageAll] = [AppPermissions.Shifts.Manage, AppPermissions.Shifts.ViewAll],
     };
 
     public static string[] DependsOn(string permission) =>

@@ -8,9 +8,6 @@ using ZXing.Common;
 
 namespace Cartex.UI.Services;
 
-// Gprinter/TSC yorliq printerlari (GP-320TUD va shunga o'xshash) TSPL tilini tushunadi. Yorliq
-// butunlay bitta monoxrom rasm sifatida chiziladi: TSPL ichki shriftlari lotin/kirill mahsulot
-// nomlarini chiqara olmaydi, rasm esa har qanday shriftni va aniq joylashuvni saqlaydi.
 public static class TsplLabel
 {
     public static byte[] Build(string code, string name, int quantity, LabelOptions options)
@@ -38,8 +35,6 @@ public static class TsplLabel
         return stream.ToArray();
     }
 
-    // Printer rulonni o'zi o'lchaydi (bir necha yorliqni o'tkazib) va yorliq/bo'shliq o'lchamini xotirasiga yozadi.
-    // Rulon almashtirilganda bir marta yuborilsa, keyingi chop etishlar bo'shliq qiymatiga bog'liq bo'lmay qoladi.
     public static byte[] BuildCalibration(LabelOptions options)
     {
         var tspl = $"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm\r\nDIRECTION 1\r\nGAPDETECT\r\n";
@@ -50,7 +45,6 @@ public static class TsplLabel
 
     private static void Write(Stream stream, string text) => stream.Write(Encoding.ASCII.GetBytes(text));
 
-    // Shtrix-kod rasmidagi qora chiziqlarning chap va o'ng chegarasi.
     private static (int Left, int Right) InkBounds(SKBitmap bitmap)
     {
         int left = bitmap.Width, right = 0;
@@ -74,9 +68,6 @@ public static class TsplLabel
         var canvas = surface.Canvas;
         canvas.Clear(SKColors.White);
 
-        // Aylantirish TSPL DIRECTION bilan emas, rasmning o'zi orqali: DIRECTION 0 bosish boshlanish nuqtasini
-        // ham siljitadi va tarkib qo'shni yorliqqa chiqib ketadi.
-        // Surish sozlamada o'qish holatida beriladi: 180° da rasm koordinatalari teskari bo'lgani uchun ishorasi almashadi.
         var shiftX = Dots(options.ShiftXMm);
         var shiftY = Dots(options.ShiftYMm);
         if (options.Rotation == 180)
@@ -88,8 +79,8 @@ public static class TsplLabel
             canvas.Translate(-shiftX, -shiftY);
 
         using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = false };
-        var sideMargin = Dots(2);     // chap/o'ng chet — 2 mm
-        var edgeMargin = Dots(2.5);   // tepa/past chet — 2.5 mm, raqam qog'oz chetiga tegib qolmasin
+        var sideMargin = Dots(2);
+        var edgeMargin = Dots(2.5);
         var usable = widthDots - sideMargin * 2;
 
         using var nameFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, heightDots * 0.09f);
@@ -100,7 +91,6 @@ public static class TsplLabel
         var codeHeight = codeFont.Spacing;
         var spacing = Dots(1);
 
-        // Tarkib chet chegaralari orasida vertikal markazlashadi: shtrix-kod qolgan bo'sh joyni to'ldiradi.
         var contentTop = (float)edgeMargin;
         var contentBottom = heightDots - edgeMargin;
         var barcodeHeight = (int)Math.Max(Dots(6), contentBottom - contentTop - nameHeight - codeHeight - spacing * 2);
@@ -115,7 +105,6 @@ public static class TsplLabel
 
         using var barcode = RenderBarcode(code, usable, barcodeHeight);
         var (inkLeft, inkRight) = InkBounds(barcode);
-        // ZXing chetlarga teng bo'lmagan bo'sh joy qoldiradi — shuning uchun rasm emas, chiziqlarning o'zi markazlanadi.
         var barcodeX = (widthDots - (inkRight - inkLeft + 1)) / 2f - inkLeft;
         canvas.DrawBitmap(barcode, barcodeX, top + spacing);
 
@@ -153,7 +142,7 @@ public static class TsplLabel
             if (font.MeasureText(candidate) <= maxWidth) { current = candidate; continue; }
 
             if (current.Length > 0) lines.Add(current);
-            if (lines.Count == maxLines) return lines;
+            if (lines.Count == maxLines) { current = string.Empty; break; }
             current = word;
         }
 
@@ -166,7 +155,6 @@ public static class TsplLabel
         return lines;
     }
 
-    // TSPL BITMAP: bit 0 — qora nuqta, bit 1 — bo'sh joy.
     private static byte[] ToMonochrome(SKPixmap pixmap, int width, int height)
     {
         var stride = width / 8;

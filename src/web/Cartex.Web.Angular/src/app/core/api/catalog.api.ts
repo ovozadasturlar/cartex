@@ -51,6 +51,60 @@ export interface ProductsTotals {
   totalOnHand: number;
 }
 
+export type ImportRowAction = 'Create' | 'Existing' | 'Skip';
+
+export type ImportStockMode = 'None' | 'Supply' | 'Opening';
+
+export interface ImportRow {
+  row: number;
+  name: string | null;
+  barcode: string | null;
+  packQty: number | null;
+  sku: string | null;
+  category: string | null;
+  unit: string | null;
+  sellingPrice: number | null;
+  purchasePrice: number | null;
+  quantity: number | null;
+  expiredAt: string | null;
+  minStock: number | null;
+  ikpu: string | null;
+  vat: number | null;
+  variantId: number | null;
+  action: ImportRowAction;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ImportPreview {
+  columns: string[];
+  mapping: Record<number, string>;
+  rows: ImportRow[];
+  createCount: number;
+  existingCount: number;
+  errorCount: number;
+}
+
+export interface ImportRequest {
+  rows: ImportRow[];
+  stockMode: ImportStockMode;
+  warehouseId: number | null;
+  supplierId: number | null;
+  supplyDate: string | null;
+  paidCash: number;
+  paidCard: number;
+  updatePrices: boolean;
+  createMissingCategories: boolean;
+}
+
+export interface ImportResult {
+  created: number;
+  existing: number;
+  barcodesGenerated: number;
+  supplyId: number | null;
+  stockAdjusted: number;
+}
+
 export interface Category {
   id: number;
   name: string;
@@ -115,6 +169,22 @@ export class ProductsCatalogApi {
 
   update(id: number, r: SaveProductRequest): Observable<void> {
     return this.http.put<void>(`/api/products/${id}`, r);
+  }
+
+  previewImport(file: File, mapping?: string): Observable<ImportPreview> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ImportPreview>('/api/products/import/preview', form, {
+      params: mapping ? { mapping } : {},
+    });
+  }
+
+  import(r: ImportRequest): Observable<ImportResult> {
+    return this.http.post<ImportResult>('/api/products/import', r);
+  }
+
+  importTemplate(): Observable<Blob> {
+    return this.http.get('/api/products/import/template', { responseType: 'blob' });
   }
 }
 

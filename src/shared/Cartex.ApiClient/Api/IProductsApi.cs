@@ -35,6 +35,16 @@ public interface IProductsApi
     [Post("/api/products/price")]
     Task SetPriceAsync([Body] SetProductPriceRequest request);
 
+    [Multipart]
+    [Post("/api/products/import/preview")]
+    Task<ProductImportPreviewDto> PreviewImportAsync(StreamPart file, [Query] string? mapping = null);
+
+    [Post("/api/products/import")]
+    Task<ImportResultDto> ImportAsync([Body] ImportProductsRequest request);
+
+    [Get("/api/products/import/template")]
+    Task<Stream> GetImportTemplateAsync();
+
     [Get("/api/products/{productId}/variants")]
     Task<List<VariantDto>> GetVariantsAsync(long productId);
 

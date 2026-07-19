@@ -10,9 +10,9 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.ProductPacks.Commands;
 
-public record CreateProductPackCommand(long ProductId, string Name, decimal Size, string Kind, bool IsDefault) : ICommand<long>;
+public record CreateProductPackCommand(long ProductId, string Name, decimal Size, PackKind Kind, bool IsDefault) : ICommand<long>;
 
-public record UpdateProductPackCommand(long Id, string Name, decimal Size, string Kind, bool IsDefault) : ICommand<Unit>;
+public record UpdateProductPackCommand(long Id, string Name, decimal Size, PackKind Kind, bool IsDefault) : ICommand<Unit>;
 
 public record DeleteProductPackCommand(long Id) : ICommand<Unit>;
 
@@ -28,7 +28,7 @@ public sealed class CreateProductPackCommandHandler(IApplicationDbContext db) : 
             ProductId = request.ProductId,
             Name = request.Name.Trim(),
             Size = request.Size,
-            Kind = ParsePackKind(request.Kind),
+            Kind = request.Kind,
             IsDefault = request.IsDefault
         };
 
@@ -38,9 +38,6 @@ public sealed class CreateProductPackCommandHandler(IApplicationDbContext db) : 
 
         return pack.Id;
     }
-
-    internal static PackKind ParsePackKind(string kind) =>
-        Enum.TryParse<PackKind>(kind, true, out var parsed) ? parsed : PackKind.Purchase;
 
     internal static async Task ClearOtherDefaultsAsync(IApplicationDbContext db, long productId, long packId, CancellationToken token)
     {
@@ -60,12 +57,8 @@ public sealed class UpdateProductPackCommandHandler(IApplicationDbContext db) : 
 
         pack.Name = request.Name.Trim();
         pack.Size = request.Size;
-        pack.Kind = CreateProductPackCommandHandler.ParsePackKind(request.Kind);
+        pack.Kind = request.Kind;
         pack.IsDefault = request.IsDefault;
-
-        // Qadoqqa bog'langan barkodlar bitta skanerlashda shu hajmni bildiradi — hajm o'zgarsa ular ham yangilanadi.
-        var linked = await db.Barcodes.Where(b => b.PackId == pack.Id).ToListAsync(cancellationToken);
-        foreach (var barcode in linked) barcode.PackQty = pack.Size;
 
         if (pack.IsDefault)
             await CreateProductPackCommandHandler.ClearOtherDefaultsAsync(db, pack.ProductId, pack.Id, cancellationToken);

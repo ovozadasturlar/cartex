@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { CurrencyAmount, LedgerEntry } from '../models';
 import { ListQuery, Paged, listParams, toPaged } from '../paging';
 
 export interface WarehouseOption {
@@ -18,6 +19,7 @@ export interface UnitOption {
   name: string;
   shortName: string;
   dimension: string;
+  factor: number;
   isEnabled: boolean;
 }
 
@@ -34,7 +36,6 @@ export interface VariantPriceInfo {
   lastPurchasePrice: number | null;
   sellingPrice: number | null;
   lastUnitId: number | null;
-  lastPackSize: number | null;
 }
 
 export interface StockOnHand {
@@ -45,6 +46,7 @@ export interface StockOnHand {
   quantity: number;
   sellingPrice: number;
   nearestExpiry: string | null;
+  code: string | null;
 }
 
 export interface StockOnHandPage {
@@ -105,6 +107,8 @@ export interface SupplyDetail {
   totalAmount: number;
   paidCash: number;
   paidCard: number;
+  paidTransfer: number;
+  paidBank: number;
   currency: string;
   items: SupplyItem[];
 }
@@ -116,11 +120,10 @@ export interface CreateSupplyItem {
   expiredAt: string | null;
   unitId: number | null;
   sellingPrice: number | null;
-  packSize: number;
 }
 
 export interface CreateSupply {
-  supplierId: number;
+  supplierId: number | null;
   warehouseId: number;
   supplyDate: string;
   items: CreateSupplyItem[];
@@ -144,6 +147,13 @@ export interface Supplier {
   name: string;
   phone: string | null;
   payable: number;
+  payableBalances: CurrencyAmount[];
+}
+
+export interface SupplierTotals {
+  count: number;
+  totalPayable: number;
+  totalAdvance: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -255,7 +265,15 @@ export class InventoryApi {
     return this.http.put<void>(`/api/suppliers/${id}`, body);
   }
 
-  paySupplierDebt(id: number, amount: number, viaCard: boolean): Observable<void> {
-    return this.http.post<void>(`/api/suppliers/${id}/pay-debt`, { amount, viaCard });
+  paySupplierDebt(id: number, amount: number, method: string = 'Cash', idempotencyKey?: string): Observable<void> {
+    return this.http.post<void>(`/api/suppliers/${id}/pay-debt`, { amount, method, idempotencyKey });
+  }
+
+  supplierTotals(): Observable<SupplierTotals> {
+    return this.http.get<SupplierTotals>('/api/suppliers/totals');
+  }
+
+  supplierLedger(id: number, page: number, pageSize: number): Observable<LedgerEntry[]> {
+    return this.http.get<LedgerEntry[]>(`/api/suppliers/${id}/ledger`, { params: { page, pageSize } });
   }
 }

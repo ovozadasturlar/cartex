@@ -26,6 +26,7 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public string DebtCurrency { get; set; } = "UZS";
     public decimal DebtRate { get; set; } = 1m;
     public decimal ChangeAmount { get; set; }
+    public decimal CreditAmount { get; set; }
     public decimal CashbackEarned { get; set; }
     public decimal RefundedCash { get; set; }
     public decimal RefundedCard { get; set; }

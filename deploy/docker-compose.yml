@@ -1,13 +1,13 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: cartex
       POSTGRES_USER: cartex
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD .env faylida majburiy}
     volumes:
-      - cartex-db:/var/lib/postgresql/data
+      - cartex-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cartex"]
       interval: 5s
@@ -15,6 +15,7 @@ services:
       retries: 10
 
   api:
+    image: muqimjon/cartex-api
     build:
       context: ..
       dockerfile: src/backend/Cartex.Api/Dockerfile
@@ -27,25 +28,100 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Database=cartex;Username=cartex;Password=${DB_PASSWORD}
       Jwt__Key: ${JWT_KEY:?JWT_KEY .env faylida majburiy (64+ belgi)}
       Seed__DeveloperPassword: ${DEVELOPER_PASSWORD:?DEVELOPER_PASSWORD .env faylida majburiy}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?ADMIN_PASSWORD .env faylida majburiy}
       Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
+      Storage__LocalPath: /data/storage
+      DataProtection__KeysPath: /data/keys
+    volumes:
+      - cartex-storage:/data/storage
+      - cartex-keys:/data/keys
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5015/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     ports:
       - "5015:5015"
+
+  web:
+    image: muqimjon/cartex-web
+    build:
+      context: ..
+      dockerfile: src/web/Cartex.Web.Angular/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+  minio:
+    image: minio/minio:latest
+    profiles: ["minio"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-cartex}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-}
+    volumes:
+      - cartex-minio:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9002}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9003}:9001"
 
   caddy:
     image: caddy:2-alpine
     profiles: ["tls"]
     restart: unless-stopped
     depends_on:
-      - api
-    environment:
-      DOMAIN: ${DOMAIN:?DOMAIN .env faylida majburiy (tls profili uchun)}
-    command: caddy reverse-proxy --from ${DOMAIN} --to api:5015
+      - web
+    command: caddy reverse-proxy --from ${DOMAIN:-} --to web:80
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - caddy-data:/data
 
+  # backup:
+  #   image: muqimjon/zaxira
+  #   profiles: ["backup"]
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     PROJECT_NAME: cartex
+  #     TZ: ${TZ:-Asia/Tashkent}
+  #     PG_HOST: db
+  #     PG_USER: cartex
+  #     PG_PASSWORD: ${DB_PASSWORD}
+  #     PG_DATABASE: cartex
+  #     MINIO_ENDPOINT: ${BACKUP_MINIO_ENDPOINT:-}
+  #     MINIO_ACCESS_KEY: ${MINIO_USER:-}
+  #     MINIO_SECRET_KEY: ${MINIO_PASSWORD:-}
+  #     MINIO_BUCKET: ${BACKUP_MINIO_BUCKET:-}
+  #     BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
+  #     UPLOAD_SCHEDULE: ${UPLOAD_SCHEDULE:-0 */6 * * *}
+  #     MIN_LOCAL_BACKUPS: ${MIN_LOCAL_BACKUPS:-2}
+  #     MAX_LOCAL_BACKUPS: ${MAX_LOCAL_BACKUPS:-5}
+  #     MAX_REMOTE_BACKUPS: ${MAX_REMOTE_BACKUPS:-30}
+  #     RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+  #     RCLONE_PATH: ${BACKUP_RCLONE_PATH:-backups/cartex}
+  #     HUB_URL: ${ZAXIRA_HUB_URL:-}
+  #     HUB_TOKEN: ${ZAXIRA_HUB_TOKEN:-}
+  #   volumes:
+  #     - cartex-backup:/backup
+  #     - ./rclone.conf:/etc/rclone/rclone.conf:ro
+
 volumes:
   cartex-db:
+  cartex-storage:
+  cartex-keys:
+  cartex-minio:
   caddy-data:
+  # cartex-backup:

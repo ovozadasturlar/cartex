@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,10 +12,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
+import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { Customer } from '../../core/models';
+import { MoneyInputDirective } from '../../core/money-input.directive';
+import { CartListItem, OrderingApi } from '../../core/api/misc.api';
 import { NotifyService } from '../../core/notify.service';
+import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
@@ -27,6 +32,7 @@ const PAGE_SIZE = 40;
 @Component({
   selector: 'app-pos',
   imports: [
+    FormsModule,
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
@@ -38,18 +44,23 @@ const PAGE_SIZE = 40;
     CxDatePipe,
     CxMoneyPipe,
     EmptyState,
+    MoneyInputDirective,
   ],
   templateUrl: './pos.html',
   styleUrl: './pos.scss',
 })
 export class Pos implements OnInit {
   private readonly api = inject(PosApi);
+  private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
   private readonly wh = inject(WarehouseContextService);
   private readonly transloco = inject(TranslocoService);
   readonly state = inject(PosCartState);
+  private readonly orderingApi = inject(OrderingApi);
+  private readonly queueHub = inject(QueueHubService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -57,6 +68,7 @@ export class Pos implements OnInit {
   readonly busy = signal(false);
   readonly warehouseId = this.wh.selectedWarehouseId;
   readonly viewMode = signal<'grid' | 'list'>(localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid');
+  readonly cartWidth = signal(Math.min(760, Math.max(320, Number(localStorage.getItem('cartex.pos.cartWidth')) || 400)));
   readonly categories = signal<Category[]>([]);
   readonly categoryId = signal<number | null>(null);
   readonly categoryPath = signal<number[]>([]);
@@ -76,6 +88,10 @@ export class Pos implements OnInit {
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
   readonly canOpenShift = this.auth.hasPermission('shifts.manage');
+  readonly canOverridePrice = this.auth.hasPermission('sales.priceOverride');
+  readonly queue = signal<CartListItem[]>([]);
+  private queueAvailable = this.auth.hasPermission('sales.view');
+  private activeQueueCode: string | null = null;
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
 
   readonly cart = this.state.cart;
@@ -87,6 +103,11 @@ export class Pos implements OnInit {
   readonly dueDate = this.state.dueDate;
   readonly paying = signal(false);
   readonly minDueDate = isoDay(new Date());
+  readonly policy = signal<SalesPolicy | null>(null);
+  readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
+  readonly bonusAuto = signal(false);
+  readonly dueDateMissing = signal(false);
+  private lastCustomerId: number | null | undefined;
 
   readonly subTotal = computed(() => this.cart().reduce((sum, l) => sum + l.price * l.qty, 0));
   readonly discount = computed(() => {
@@ -133,21 +154,108 @@ export class Pos implements OnInit {
     effect(() => {
       if (this.wh.selectedWarehouseId()) untracked(() => this.reset());
     });
+    effect(() => {
+      const id = this.customer()?.id ?? null;
+      untracked(() => {
+        if (this.lastCustomerId !== undefined && this.lastCustomerId !== id && this.bonusAuto()) {
+          this.bonusAuto.set(false);
+          this.bonus.set(0);
+        }
+        this.lastCustomerId = id;
+      });
+    });
+    effect(() => {
+      if (!this.bonusAuto()) return;
+      const c = this.customer();
+      if (!c) return;
+      const target = Math.min(c.cashbackBalance, Math.max(0, this.total() - this.cash() - this.card()));
+      untracked(() => this.bonus.set(target));
+    });
   }
 
   async ngOnInit(): Promise<void> {
     try {
-      const [categories, shift] = await Promise.all([
+      const [categories, shift, policy] = await Promise.all([
         lastValueFrom(this.api.categories()),
         lastValueFrom(this.api.currentShift()),
+        lastValueFrom(this.settingsApi.salesPolicy()).catch(() => null),
       ]);
       this.categories.set(categories);
       this.shift.set(shift);
+      this.policy.set(policy);
     } catch (e) {
       this.notify.error(e);
     } finally {
       this.loading.set(false);
     }
+    if (this.queueAvailable) {
+      await this.loadQueue();
+      this.destroyRef.onDestroy(this.queueHub.onQueueChanged(() => this.loadQueue()));
+      this.queueHub.ensureStarted();
+    }
+  }
+
+  private async loadQueue(): Promise<void> {
+    try {
+      this.queue.set(await lastValueFrom(this.orderingApi.list('Open', 'Queue')));
+    } catch {
+      this.queueAvailable = false;
+      this.queue.set([]);
+    }
+  }
+
+  async openQueueCart(item: CartListItem): Promise<void> {
+    if (this.cart().length) {
+      this.notify.error(this.transloco.translate('cart_not_empty'));
+      return;
+    }
+    try {
+      const cart = await lastValueFrom(this.orderingApi.byCode(item.aggregateCode));
+      this.cart.set(cart.items.map((i) => ({
+        variantId: i.variantId,
+        name: i.productName,
+        unitName: '',
+        price: i.unitPrice,
+        originalPrice: i.unitPrice,
+        qty: i.quantity,
+        available: Number.MAX_SAFE_INTEGER,
+      })));
+      if (cart.customerId) {
+        try {
+          this.customer.set(await lastValueFrom(this.api.customer(cart.customerId)));
+        } catch {}
+      }
+      await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Confirmed'));
+      this.activeQueueCode = item.aggregateCode;
+      this.queue.update((q) => q.filter((c) => c.aggregateCode !== item.aggregateCode));
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  async cancelQueueCart(item: CartListItem): Promise<void> {
+    try {
+      await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Cancelled'));
+      this.queue.update((q) => q.filter((c) => c.aggregateCode !== item.aggregateCode));
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  startCartResize(e: PointerEvent): void {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = this.cartWidth();
+    const move = (ev: PointerEvent) => {
+      this.cartWidth.set(Math.min(760, Math.max(320, startWidth + (startX - ev.clientX))));
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      localStorage.setItem('cartex.pos.cartWidth', String(this.cartWidth()));
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
   }
 
   toggleView(): void {
@@ -205,6 +313,7 @@ export class Pos implements OnInit {
       name: t.productName,
       unitName: t.unitName,
       price: t.sellingPrice,
+      originalPrice: t.sellingPrice,
       qty: 1,
       available: t.quantity,
     });
@@ -229,21 +338,19 @@ export class Pos implements OnInit {
 
   clearCart(): void {
     this.state.clearAll();
+    this.activeQueueCode = null;
   }
 
-  num(e: Event): number {
-    const v = Number((e.target as HTMLInputElement).value);
-    return Number.isFinite(v) && v > 0 ? v : 0;
+  onPrice(line: CartLine, v: number): void {
+    if (v > 0) this.cart.update((c) => c.map((l) => (l === line ? { ...l, price: v } : l)));
   }
 
-  onDiscountPercent(e: Event): void {
-    const v = Math.min(100, this.num(e));
-    this.discountPercent.set(v);
+  onDiscountPercent(v: number): void {
+    this.discountPercent.set(Math.min(100, v));
     this.state.discountByPercent.set(true);
   }
 
-  onDiscountAmount(e: Event): void {
-    const v = this.num(e);
+  onDiscountAmount(v: number): void {
     this.state.discountManual.set(v);
     this.state.discountByPercent.set(false);
     const sub = this.subTotal();
@@ -252,6 +359,18 @@ export class Pos implements OnInit {
 
   onDueDate(e: Event): void {
     this.dueDate.set((e.target as HTMLInputElement).value);
+    this.dueDateMissing.set(false);
+  }
+
+  toggleUseBonus(): void {
+    const on = !this.bonusAuto();
+    this.bonusAuto.set(on);
+    if (!on) this.bonus.set(0);
+  }
+
+  onBonusManual(v: number): void {
+    this.bonusAuto.set(false);
+    this.bonus.set(v);
   }
 
   payExact(): void {
@@ -293,6 +412,16 @@ export class Pos implements OnInit {
       this.notify.error(t('debt_customer_required'));
       return;
     }
+    const policy = this.policy();
+    if (this.debt() > 0 && policy && !policy.allowDebtSales) {
+      this.notify.error(t('debt_sales_disabled'));
+      return;
+    }
+    if (this.debt() > 0 && policy?.requireDebtDueDate && !this.dueDate()) {
+      this.dueDateMissing.set(true);
+      this.notify.error(t('debt_due_required'));
+      return;
+    }
     this.paying.set(true);
     try {
       const payload = {
@@ -301,13 +430,21 @@ export class Pos implements OnInit {
         paidCash: this.cash(),
         paidCard: this.card(),
         paidBonus: this.bonus(),
-        items: this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty })),
+        items: this.cart().map((l) => ({
+          variantId: l.variantId,
+          quantity: l.qty,
+          unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+        })),
         discountAmount: this.discount(),
         debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
         idempotencyKey: crypto.randomUUID(),
         applyAutoDiscount: true,
       };
       const result = await lastValueFrom(this.api.createSale(payload));
+      if (this.activeQueueCode) {
+        lastValueFrom(this.orderingApi.updateStatus(this.activeQueueCode, 'CheckedOut')).catch(() => {});
+        this.activeQueueCode = null;
+      }
       try {
         const receipt = await lastValueFrom(this.api.receipt(result.receiptToken));
         await lastValueFrom(
@@ -338,6 +475,7 @@ export class Pos implements OnInit {
       name: p.productName,
       unitName: p.unitName,
       price: p.sellingPrice,
+      originalPrice: p.sellingPrice,
       qty,
       available: p.onHand,
     });

@@ -12,8 +12,6 @@ using Xunit;
 
 namespace Cartex.Application.Tests;
 
-// Kirim boshqa birlikda (tonna, gramm) kiritilishi mumkin, zaxira esa doim mahsulotning saqlash
-// birligida (kg) yuritiladi. Shu o'girish pul va miqdorni buzmasligi shu yerda qulflanadi.
 [Collection("database")]
 public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
@@ -45,7 +43,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         return (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
     }
 
-    // 500 kg @ 12 000/kg va 0.5 t @ 12 000 000/t — bir xil tovar, bir xil pul.
     [Fact]
     public async Task Ton_and_kilogram_entries_produce_the_same_stock_and_money()
     {
@@ -82,7 +79,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         }
     }
 
-    // Sotish narxi do'kon narxi: u kg uchun belgilanadi va kirim birligiga bog'liq emas.
     [Fact]
     public async Task Selling_price_is_never_converted_to_the_entry_unit()
     {
@@ -104,7 +100,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         }
     }
 
-    // Qopda kirim: "10 qop × 600 000 so'm" — 500 kg va 12 000 so'm/kg bo'lib tushadi.
     [Fact]
     public async Task Pack_entry_matches_a_plain_weight_entry()
     {
@@ -118,7 +113,7 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var productId = (await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync());
 
-            packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, "Purchase", true));
+            packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, PackKind.Purchase, true));
 
             await sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
                 [new CreateSupplyItemDto(variantId, 10m, 600_000m, null, PackId: packId)]));
@@ -131,7 +126,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
             Assert.Equal(500m, stock.Quantity);
             Assert.Equal(12_000m, stock.PurchasePrice);
 
-            // Kirim ko'rinishi ham saqlanadi: "10 qop, 600 000 so'm/qop".
             var line = await db.SupplyItems.SingleAsync(i => i.VariantId == variantId);
             Assert.Equal(10m, line.EntryQuantity);
             Assert.Equal(600_000m, line.EntryPrice);
@@ -140,7 +134,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         }
     }
 
-    // Qop bilan kirim, lekin narx kilogramm bo'yicha kelishilgan bo'lsa ham natija bir xil.
     [Fact]
     public async Task Pack_entry_with_price_per_stocking_unit()
     {
@@ -152,7 +145,7 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var productId = await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync();
-            var packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, "Purchase", false));
+            var packId = await sender.Send(new CreateProductPackCommand(productId, "Qop", 50m, PackKind.Purchase, false));
 
             await sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
                 [new CreateSupplyItemDto(variantId, 10m, 12_000m, null, PackId: packId, PriceBasis: SupplyPriceBasis.PerStockingUnit)]));
@@ -170,7 +163,6 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         }
     }
 
-    // Sotuv qadog'i (rastadagi paket) kirimda ishlatilmaydi.
     [Fact]
     public async Task Sale_only_pack_is_rejected_in_a_supply()
     {
@@ -181,14 +173,13 @@ public class SupplyUnitConversionTests(DatabaseFixture fixture) : DatabaseTest(f
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var productId = await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync();
-        var packId = await sender.Send(new CreateProductPackCommand(productId, "1 kg paket", 1m, "Sale", false));
+        var packId = await sender.Send(new CreateProductPackCommand(productId, "1 kg paket", 1m, PackKind.Sale, false));
 
         await Assert.ThrowsAsync<Cartex.Domain.Common.Exceptions.BusinessRuleException>(() =>
             sender.Send(new CreateSupplyCommand(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
                 [new CreateSupplyItemDto(variantId, 5m, 5_000m, null, PackId: packId)])));
     }
 
-    // Boshqa o'lchov (dona <-> kg) qabul qilinmasligi kerak.
     [Fact]
     public async Task Entry_unit_of_another_dimension_is_rejected()
     {

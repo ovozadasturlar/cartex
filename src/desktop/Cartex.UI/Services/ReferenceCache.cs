@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Cartex.ApiClient;
 
 namespace Cartex.UI.Services;
 
@@ -22,6 +23,7 @@ public sealed class ReferenceCache
 
     private async Task<T> FetchAsync<T>(string key, Func<Task<T>> factory)
     {
+        using var detached = PageRequestScope.Detach();
         try { return await factory(); }
         catch
         {
@@ -52,4 +54,6 @@ public static class CacheKeys
     public const string Receipt = "receipt";
     public const string Features = "features";
     public const string ProductLookup = "product-lookup";
+    public const string ExpenseCategories = "expense-categories";
+    public const string Suppliers = "suppliers";
 }

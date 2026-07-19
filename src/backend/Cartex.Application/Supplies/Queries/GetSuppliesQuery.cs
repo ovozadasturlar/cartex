@@ -3,7 +3,6 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Supplies.Queries;
 
@@ -14,7 +13,7 @@ public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<
     public long? SupplierId { get; set; }
 }
 
-public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string SupplierName, string WarehouseName, string UserName);
+public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string? SupplierName, string WarehouseName, string UserName);
 
 public sealed class GetSuppliesQueryHandler(
     IApplicationDbContext db,
@@ -22,11 +21,7 @@ public sealed class GetSuppliesQueryHandler(
 {
     public async Task<IReadOnlyCollection<SupplyDto>> Handle(GetSuppliesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Supplies
-            .Include(s => s.Supplier)
-            .Include(s => s.Warehouse)
-            .Include(s => s.User)
-            .AsQueryable();
+        var query = db.Supplies.AsQueryable();
 
         if (request.FromDate is { } fromDate)
             query = query.Where(s => s.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));
@@ -41,7 +36,7 @@ public sealed class GetSuppliesQueryHandler(
                     s.Id,
                     s.SupplyDate,
                     s.TotalAmount,
-                    s.Supplier.Name,
+                    s.Supplier != null ? s.Supplier.Name : null,
                     s.Warehouse.Name,
                     s.User.FullName),
                 writer, cancellationToken);

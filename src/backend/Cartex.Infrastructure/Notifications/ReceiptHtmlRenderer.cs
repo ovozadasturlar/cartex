@@ -41,6 +41,7 @@ public static class ReceiptHtmlRenderer
         sb.Append(".pays{margin-top:10px}");
         sb.Append(".prow{display:flex;justify-content:space-between;font-size:13px;margin:5px 0;color:#334155}");
         sb.Append(".prow .lbl{color:#94a3b8}");
+        sb.Append(".approx{color:#94a3b8;font-size:11px}");
         sb.Append(".debt{color:#dc2626;font-weight:600}");
         sb.Append(".plus{color:#16a34a;font-weight:600}");
         sb.Append(".foot{border-top:1px dashed #cbd5e1;margin-top:16px;padding-top:14px;text-align:center}");
@@ -49,7 +50,7 @@ public static class ReceiptHtmlRenderer
         sb.Append(".token{color:#cbd5e1;font-size:10.5px;margin-top:12px;font-family:ui-monospace,monospace;word-break:break-all}");
         sb.Append("@media(prefers-color-scheme:dark){body{background:#0f172a}.card{background:#1e293b;box-shadow:none}");
         sb.Append(".iname,.isum{color:#e2e8f0}.chip{background:#334155;color:#cbd5e1}.item{border-color:#334155}");
-        sb.Append(".totals{background:#14261d}.grand{color:#4ade80}.trow{color:#94a3b8}.prow{color:#cbd5e1}");
+        sb.Append(".totals{background:#14261d}.grand{color:#4ade80}.trow{color:#94a3b8}.prow{color:#cbd5e1}.approx{color:#64748b}");
         sb.Append(".foot{border-color:#475569}.thanks{color:#94a3b8}.token{color:#475569}}");
         sb.Append("</style></head><body>");
 
@@ -82,12 +83,18 @@ public static class ReceiptHtmlRenderer
         sb.Append("</div>");
 
         sb.Append("<div class=\"pays\">");
-        if (r.PaidCash > 0) Row(sb, T("cash"), $"{r.PaidCash:N0}");
-        if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
-        if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
-        foreach (var payment in r.Payments)
-            Row(sb, $"{E(ReceiptTexts.PaymentLabel(payment.Method, r.Language))} {E(payment.Currency)}", $"{payment.Amount:N2}");
+        if (r.Payments.Count > 0)
+            foreach (var payment in r.Payments)
+                Row(sb, E(ReceiptTexts.PaymentLabel(payment.Method, r.Language)),
+                    payment.IsForeign ? $"{payment.Amount:N2} {E(payment.Currency)} <span class=\"approx\">≈ {payment.AmountBase:N0}</span>" : $"{payment.Amount:N0}");
+        else
+        {
+            if (r.PaidCash > 0) Row(sb, T("cash"), $"{r.PaidCash:N0}");
+            if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
+            if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
+        }
         if (r.ChangeAmount > 0) Row(sb, T("change"), $"{r.ChangeAmount:N0}");
+        if (r.CreditAmount > 0) Row(sb, T("credit"), $"{r.CreditAmount:N0}");
         if (r.DebtAmount > 0) Row(sb, T("debt"), $"{r.DebtAmount:N0}", "debt");
         if (r.CashbackEarned > 0) Row(sb, "Cashback", $"+{r.CashbackEarned:N0}", "plus");
         sb.Append("</div>");

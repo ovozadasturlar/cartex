@@ -12,6 +12,7 @@ import { lastValueFrom } from 'rxjs';
 import { FeaturesApi } from '../../core/api/misc.api';
 import { LicenseApi, LicenseOptions, LicenseStatus } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
+import { isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
 
@@ -64,7 +65,7 @@ export class License implements OnInit {
       this.options.set(options);
       this.status.set(status);
       this.tariff = options.tariffs.includes(status.tariff) ? status.tariff : (options.tariffs[0] ?? '');
-      this.expires = status.expiresAt?.slice(0, 10) ?? '';
+      this.expires = status.expiresAt ? isoDay(new Date(status.expiresAt)) : '';
       const enabled = status.enabledFeatures.length
         ? status.enabledFeatures
         : options.features.filter((f) => f.includedTariffs.includes(status.tariff)).map((f) => f.code);
@@ -106,7 +107,7 @@ export class License implements OnInit {
       await lastValueFrom(
         this.api.update({
           tariff: this.tariff,
-          expiresAt: this.expires ? `${this.expires}T00:00:00Z` : null,
+          expiresAt: this.expires ? new Date(this.expires + 'T00:00:00').toISOString() : null,
           enabledFeatures: JSON.stringify(codes),
         }),
       );

@@ -1,12 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:c="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.AdjustStockDialog"
              x:CompileBindings="False">
 
-    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+    <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-            BoxShadow="0 18 50 0 #33000000" Padding="24">
+            BoxShadow="0 18 50 0 #33000000" Padding="24"
+            c:FormBehaviors.AutoFocus="True"
+            c:FormBehaviors.EnterSubmits="{Binding ConfirmCommand}">
         <StackPanel Spacing="14">
             <TextBlock Text="{Binding L[stock_count]}" Classes="h2" />
 
@@ -23,7 +26,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="6">
                     <TextBlock Text="{Binding L[counted]}" Classes="caption" />
-                    <NumericUpDown Value="{Binding CountedQuantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" />
+                    <NumericUpDown Value="{Binding CountedQuantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0" FormatString="0.##" MinHeight="38" />
                 </StackPanel>
             </Grid>
 

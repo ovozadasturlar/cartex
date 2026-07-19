@@ -6,7 +6,7 @@ namespace Cartex.Application.Reports.Queries;
 
 public record DailyCashFlowDto(DateTime Date, decimal Income, decimal Expense, decimal Sales);
 
-public record GetCashFlowQuery(DateTime From, DateTime To) : IRequest<IReadOnlyCollection<DailyCashFlowDto>>;
+public record GetCashFlowQuery(DateTime From, DateTime To, int? TzOffsetMinutes = null) : IRequest<IReadOnlyCollection<DailyCashFlowDto>>;
 
 public sealed class GetCashFlowQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCashFlowQuery, IReadOnlyCollection<DailyCashFlowDto>>
 {
@@ -31,15 +31,19 @@ public sealed class GetCashFlowQueryHandler(IApplicationDbContext db) : IRequest
             .Select(s => new { s.CreatedAt, s.TotalAmount })
             .ToListAsync(cancellationToken);
 
-        return Enumerable.Range(0, Math.Max(1, (int)(to - from).TotalDays))
-            .Select(offset =>
+        var offset = TimeSpan.FromMinutes(request.TzOffsetMinutes ?? (int)TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow).TotalMinutes);
+        var start = DateTime.SpecifyKind((from + offset).Date, DateTimeKind.Unspecified);
+        var days = Math.Max(1, (int)Math.Ceiling((to + offset - start).TotalDays));
+
+        return Enumerable.Range(0, days)
+            .Select(i =>
             {
-                var day = from.AddDays(offset).Date;
-                var daily = rows.Where(r => r.CreatedAt.Date == day).ToList();
+                var day = start.AddDays(i);
+                var daily = rows.Where(r => (r.CreatedAt + offset).Date == day).ToList();
                 return new DailyCashFlowDto(day,
                     daily.Where(r => r.Incoming && !r.Outgoing).Sum(r => r.Base),
                     daily.Where(r => r.Outgoing && !r.Incoming).Sum(r => r.Base),
-                    sales.Where(s => s.CreatedAt.Date == day).Sum(s => s.TotalAmount));
+                    sales.Where(s => (s.CreatedAt + offset).Date == day).Sum(s => s.TotalAmount));
             })
             .ToList();
     }

@@ -22,6 +22,10 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty] private bool _isThemePopupOpen;
     [ObservableProperty] private bool _isLanguagePopupOpen;
 
+    [ObservableProperty] private bool _isServerEditOpen;
+    [ObservableProperty] private string _serverUrl = SettingsService.Instance.ApiBaseUrl;
+    [ObservableProperty] private string? _serverStatus;
+
     [ObservableProperty] private bool _keyDetected;
     public ObservableCollection<KeyProfile> KeyProfiles { get; } = [];
     public bool HasMultipleKeys => KeyProfiles.Count > 1;
@@ -201,14 +205,68 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
-                ? L["login_error"]
-                : ex.Message;
+            HandleLoginError(ex);
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    [RelayCommand]
+    private void ToggleServerEdit()
+    {
+        ServerUrl = SettingsService.Instance.ApiBaseUrl;
+        ServerStatus = null;
+        IsServerEditOpen = !IsServerEditOpen;
+    }
+
+    [RelayCommand]
+    private async Task SaveServerUrlAsync()
+    {
+        var url = ServerUrl.Trim().TrimEnd('/');
+        if (url.Length == 0) return;
+        if (!url.StartsWith("http://") && !url.StartsWith("https://")) url = "http://" + url;
+        ServerUrl = url;
+        ServerStatus = null;
+        ErrorMessage = null;
+        IsLoading = true;
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            (await http.GetAsync($"{url}/health")).EnsureSuccessStatusCode();
+            SettingsService.Instance.ApiBaseUrl = url;
+            ServerStatus = L["server_connected"];
+            IsServerEditOpen = false;
+            _ = InitLoginMethodsAsync();
+        }
+        catch
+        {
+            ErrorMessage = L["err_server_unreachable"];
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private static bool IsConnectionError(Exception ex) =>
+        ex is System.Net.Http.HttpRequestException or TaskCanceledException
+        || ex.InnerException is System.Net.Http.HttpRequestException or System.Net.Sockets.SocketException;
+
+    private void HandleLoginError(Exception ex)
+    {
+        if (IsConnectionError(ex))
+        {
+            ErrorMessage = L["err_server_unreachable"];
+            ServerUrl = SettingsService.Instance.ApiBaseUrl;
+            ServerStatus = null;
+            IsServerEditOpen = true;
+            return;
+        }
+        ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
+            ? L["login_error"]
+            : ex.Message;
     }
 
     [RelayCommand]
@@ -241,9 +299,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
-                ? L["login_error"]
-                : ex.Message;
+            HandleLoginError(ex);
         }
         finally
         {

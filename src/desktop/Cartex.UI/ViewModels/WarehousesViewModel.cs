@@ -27,6 +27,11 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Warehouses.Count == 0;
 
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+        CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
     public WarehousesViewModel(IWarehousesApi api, IBranchesApi branchesApi, IToastService toast, IBusyService busy)
     {
         _api = api;

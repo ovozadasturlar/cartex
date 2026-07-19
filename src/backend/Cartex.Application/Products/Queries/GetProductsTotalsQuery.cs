@@ -36,6 +36,8 @@ public sealed class GetProductsTotalsQueryHandler(IApplicationDbContext db) : IR
 
         return new ProductsTotalsDto(
             await query.CountAsync(cancellationToken),
-            await query.SumAsync(p => (decimal?)p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity), cancellationToken) ?? 0);
+            await db.Stocks
+                .Where(s => query.Any(p => p.Id == s.Variant.ProductId))
+                .SumAsync(s => (decimal?)s.Quantity, cancellationToken) ?? 0);
     }
 }

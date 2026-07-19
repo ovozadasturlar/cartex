@@ -6,12 +6,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CustomersApi, SalesApi } from '../../core/api.service';
+import { RatesApi } from '../../core/api/finance.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
@@ -145,7 +147,7 @@ export class CustomerProfile implements OnInit {
 
   async repay(): Promise<void> {
     const done = await lastValueFrom(
-      this.dialog.open(RepayDebtDialog, { data: this.id, width: '380px', maxWidth: '94vw' }).afterClosed(),
+      this.dialog.open(RepayDebtDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
     );
     if (done) {
       this.load();
@@ -316,7 +318,7 @@ export class CustomerEditDialog {
 
 @Component({
   selector: 'app-repay-debt-dialog',
-  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, TranslocoModule],
   styleUrl: './customer-profile.scss',
   template: `
     <div class="edit-dlg" *transloco="let t">
@@ -324,6 +326,26 @@ export class CustomerEditDialog {
         <h2>{{ t('repay_debt') }}</h2>
       </div>
       <div mat-dialog-content class="form">
+        @if (multicurrency()) {
+          <div class="pair">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('debt_currency') }}</mat-label>
+              <mat-select [(ngModel)]="debtCurrency">
+                @for (c of debtCurrencies(); track c) {
+                  <mat-option [value]="c">{{ c }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('pay_currency') }}</mat-label>
+              <mat-select [(ngModel)]="payCurrency">
+                @for (c of payCurrencies(); track c) {
+                  <mat-option [value]="c">{{ c }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        }
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
           <mat-label>{{ t('amount') }}</mat-label>
           <input matInput type="number" min="0" [(ngModel)]="amount" cdkFocusInitial />
@@ -339,20 +361,51 @@ export class CustomerEditDialog {
     </div>
   `,
 })
-export class RepayDebtDialog {
+export class RepayDebtDialog implements OnInit {
   private readonly api = inject(CustomersApi);
+  private readonly ratesApi = inject(RatesApi);
   private readonly notify = inject(NotifyService);
   private readonly ref = inject(MatDialogRef<RepayDebtDialog>);
-  private readonly customerId = inject<number>(MAT_DIALOG_DATA);
+  private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
+  private readonly idempotencyKey = crypto.randomUUID();
 
   readonly busy = signal(false);
+  readonly multicurrency = signal(false);
+  readonly debtCurrencies = signal<string[]>([]);
+  readonly payCurrencies = signal<string[]>([]);
   amount: number | null = null;
   viaCard = false;
+  debtCurrency: string | null = null;
+  payCurrency: string | null = null;
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const business = await lastValueFrom(this.ratesApi.business());
+      if (!business.multicurrency) return;
+      const currencies = await lastValueFrom(this.ratesApi.currencies(true));
+      this.payCurrencies.set(
+        [...currencies].sort((a, b) => Number(b.isBase) - Number(a.isBase)).map((c) => c.code),
+      );
+      const debts = this.customer.debtBalances.map((b) => b.currency);
+      this.debtCurrencies.set(debts.length ? debts : [business.currency]);
+      this.debtCurrency = this.debtCurrencies()[0];
+      this.payCurrency = this.debtCurrency;
+      this.multicurrency.set(true);
+    } catch {}
+  }
 
   async save(message: string): Promise<void> {
     this.busy.set(true);
     try {
-      await lastValueFrom(this.api.repayDebt(this.customerId, this.amount!, this.viaCard));
+      await lastValueFrom(
+        this.api.repayDebt(this.customer.id, {
+          amount: this.amount!,
+          viaCard: this.viaCard,
+          debtCurrency: this.multicurrency() ? this.debtCurrency : null,
+          payCurrency: this.multicurrency() ? this.payCurrency : null,
+          idempotencyKey: this.idempotencyKey,
+        }),
+      );
       this.notify.success(message);
       this.ref.close(true);
     } catch (e) {

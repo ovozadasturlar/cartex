@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
@@ -21,6 +22,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
     MatInputModule,
     MatButtonModule,
     MatCheckboxModule,
+    MatIconModule,
     MatProgressBarModule,
     TranslocoModule,
     Logo,
@@ -37,6 +39,7 @@ export class Login implements OnDestroy {
   rememberMe = false;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly showPassword = signal(false);
 
   readonly qrAvailable = signal(false);
   readonly qrOpen = signal(false);

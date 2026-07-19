@@ -8,7 +8,7 @@ public record GetReceiptByTokenQuery(string Token) : IRequest<ReceiptDto?>;
 
 public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal);
 
-public record ReceiptPaymentDto(string Method, string Currency, decimal Amount);
+public record ReceiptPaymentDto(string Method, string Currency, decimal Amount, decimal Rate = 1m, decimal AmountBase = 0, bool IsForeign = false);
 
 public record ReceiptDto(
     string ReceiptToken,
@@ -34,7 +34,9 @@ public record ReceiptDto(
     string? BusinessPhone = null,
     string? BusinessTelegram = null,
     string? BusinessWebsite = null,
-    string? LogoImageKey = null);
+    string? LogoImageKey = null,
+    decimal CreditAmount = 0,
+    string? BaseCurrency = null);
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
@@ -62,14 +64,16 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.CashbackEarned,
                 sale.User.FullName,
                 sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList(),
-                sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount)).ToList(),
+                sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount, p.Rate, p.AmountBase, p.Currency != business.Currency)).ToList(),
                 sale.Id,
                 sale.Customer != null ? sale.Customer.FullName : null,
                 sale.Customer != null ? sale.Customer.PreferredLanguage : null,
                 business.Phone,
                 business.Telegram,
                 business.Website,
-                business.LogoImageKey))
+                business.LogoImageKey,
+                sale.CreditAmount,
+                business.Currency))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

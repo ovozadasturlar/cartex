@@ -61,6 +61,7 @@
   "repay_accept": "Принять",
   "current_debt_fmt": "Текущий долг: {0:N0} {1} (состояние: {2})",
   "err_enter_amount": "Введите сумму",
+  "err_amount_gt_debt": "Оплата не может превышать долг (макс: {0:N0} {1})",
   "repay_queued": "Оплата добавлена в очередь",
   "transfers_title": "Накладные (сегодня)",
   "transfer_receive": "Принять",

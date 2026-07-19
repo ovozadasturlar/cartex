@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using Refit;
 
@@ -11,12 +13,24 @@ public static class ApiErrors
     public static bool IsCancelled(Exception ex) =>
         ex is OperationCanceledException || ex.InnerException is OperationCanceledException;
 
+    private static bool IsUnreachable(Exception ex) =>
+        ex is HttpRequestException
+        || ex.InnerException is HttpRequestException or System.Net.Sockets.SocketException
+        || (ex is TaskCanceledException && ex.InnerException is TimeoutException);
+
     public static string Describe(Exception ex)
     {
+        if (IsUnreachable(ex)) return LocalizationManager.Instance["err_server_unreachable"];
         if (IsCancelled(ex)) return string.Empty;
 
-        if (ex is ApiException api && !string.IsNullOrEmpty(api.Content))
+        if (ex is ApiException api)
         {
+            if (api.StatusCode == HttpStatusCode.Forbidden)
+                return LocalizationManager.Instance["err_forbidden"];
+            if ((int)api.StatusCode >= 500)
+                return LocalizationManager.Instance["err_server_error"];
+            if (string.IsNullOrEmpty(api.Content)) return ex.Message;
+
             try
             {
                 using var doc = JsonDocument.Parse(api.Content);

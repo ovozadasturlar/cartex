@@ -68,6 +68,7 @@
   "status_returned": "Returned",
   "status_sent": "Sent",
   "stock_ok": "Everything is well stocked",
+  "supplier_ledger": "Supplier ledger",
   "suppliers_subtitle": "Suppliers and payables",
   "supplies_subtitle": "Goods receipts and supplier payments",
   "to_date": "To",

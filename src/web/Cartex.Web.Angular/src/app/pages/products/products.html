@@ -1,6 +1,9 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('products')" [subtitle]="t('products_subtitle')">
     @if (canManage) {
+      <button mat-stroked-button (click)="openImport()">
+        <mat-icon>upload_file</mat-icon>{{ t('import_excel') }}
+      </button>
       <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add_product') }}</button>
     }
   </cx-page-header>

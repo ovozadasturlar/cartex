@@ -89,6 +89,16 @@ h3 {
   background: var(--cx-surface-2);
 }
 
+.policy-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .nested {
+    margin-left: 28px;
+  }
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

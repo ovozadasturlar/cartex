@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Loyalty;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -21,6 +22,11 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editName = "";
 
     public bool IsEmpty => Manufacturers.Count == 0;
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
+        CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
     public ManufacturersViewModel(IManufacturersApi api, IToastService toast, IBusyService busy)
     {

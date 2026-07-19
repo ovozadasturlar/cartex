@@ -21,7 +21,7 @@ public class ExpenseCategoriesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Business.Manage)]
     public async Task<ActionResult<long>> CreateExpenseCategory(CreateExpenseCategoryCommand command)
     {
         var id = await sender.Send(command);
@@ -29,7 +29,7 @@ public class ExpenseCategoriesController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Business.Manage)]
     public async Task<IActionResult> UpdateExpenseCategory(long id, UpdateExpenseCategoryCommand command)
     {
         await sender.Send(command with { Id = id });

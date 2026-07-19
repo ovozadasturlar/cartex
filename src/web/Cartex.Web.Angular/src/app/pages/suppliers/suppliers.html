@@ -9,6 +9,14 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
+    @if (totals(); as tt) {
+      <div class="cx-grid stats">
+        <cx-stat-card [label]="t('suppliers')" [value]="tt.count | cxMoney" icon="local_shipping" />
+        <cx-stat-card [label]="t('payable')" [value]="tt.totalPayable | cxMoney" icon="money_off" tone="danger" />
+        <cx-stat-card [label]="t('advance')" [value]="tt.totalAdvance | cxMoney" icon="savings" tone="success" />
+      </div>
+    }
+
     <mat-form-field class="search" appearance="outline" subscriptSizing="dynamic">
       <mat-icon matPrefix>search</mat-icon>
       <input matInput [placeholder]="t('search')" [value]="search()" (input)="onSearch($any($event.target).value)" />
@@ -35,6 +43,8 @@
                 <td mat-cell *matCellDef="let s" class="num">
                   @if (s.payable > 0) {
                     <span class="cx-chip bad cx-money">{{ s.payable | cxMoney }}</span>
+                  } @else if (s.payable < 0) {
+                    <span class="cx-chip ok">{{ t('advance') }} · <span class="cx-money">{{ -s.payable | cxMoney }}</span></span>
                   } @else {
                     <span class="muted cx-money">{{ s.payable | cxMoney }}</span>
                   }
@@ -49,6 +59,9 @@
                       {{ t('repay_debt') }}
                     </button>
                   }
+                  <button matIconButton [title]="t('supplier_ledger')" (click)="openLedger(s)">
+                    <mat-icon>receipt_long</mat-icon>
+                  </button>
                   <button matIconButton (click)="openEdit(s)"><mat-icon>edit</mat-icon></button>
                 </td>
               </ng-container>

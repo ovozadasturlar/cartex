@@ -12,34 +12,22 @@ Loyiha production'ga chiqmagan — bu mukammal qilish uchun to'liq erkinlik. O'z
 - Senior arxitektor sifatida nazorat qil: zaif dizayn, noto'g'ri abstraksiya, kelajakda muammo tug'diradigan qarorni ko'rsang — jim turma, ayt va yaxshiroq yechim taklif qil.
 - Har katta o'zgarishdan oldin sabab va ta'sirni qisqa tushuntir, tasdiqlangach bajar. Orqaga moslik (backward compatibility) hozir cheklov emas.
 
-## Struktura
-```
-src/
-  backend/
-    Cartex.Domain          # entity, value object, biznes qoidalar (hech narsaga bog'liq emas)
-    Cartex.Application      # CQRS (MediatR), use-case, FluentValidation, interfeyslar
-    Cartex.Infrastructure   # tashqi servis implementatsiyalari
-    Cartex.Persistence      # DB, EF Core, repository implementatsiyalari
-    Cartex.Auth             # autentifikatsiya / avtorizatsiya
-    Cartex.Api              # ASP.NET Core endpoint'lar (Scalar/OpenAPI)
-  desktop/
-    Cartex.Desktop         # Avalonia kirish nuqtasi
-    Cartex.UI              # Avalonia UI (view/viewmodel/servislar)
-  mobile/
-    Cartex.Mobile.Agent    # MAUI Android (dala agenti)
-  web/                     # W3: Angular (kelajakda)
-  shared/
-    Cartex.ApiClient       # backend bilan ishlash uchun mijoz
-    Cartex.Shared          # umumiy DTO/contract
-```
+## Commit qoidalari (qat'iy)
+- Xabar bir qatorlik, ingliz tilida, sodda.
+- Hech qanday trailer qo'shilmaydi (Co-Authored-By, Claude-Session, Generated-with va h.k.).
+- Commitlar faqat `muqimjon` profili nomidan.
 
 ## Arxitektura qoidalari
 - Bog'liqlik yo'nalishi ichkariga: `Api/Infrastructure/Persistence → Application → Domain`. Domain hech narsaga bog'lanmaydi.
-- CQRS: har use-case alohida Command/Query + Handler (MediatR). Validatsiya — FluentValidation.
+- CQRS: har use-case alohida Command/Query + Handler. Mediator — loyihaning **o'z mini-mediatori**; MediatR tijoriy bo'lgani uchun ataylab olib tashlangan, qaytarilmasin. Validatsiya — FluentValidation.
 - Biznes logika `Application`/`Domain` da. `Api` faqat yupqa kirish nuqtasi. `Persistence`/`Infrastructure` faqat texnik detal.
 - **Modullik:** har funksional bo'lim (feature) o'z papkasida, mustaqil va tushunarli bo'lsin. Bir feature o'zgarishi boshqasini buzmasin.
 - **Integratsiya kanallari:** tashqi servislar (to'lov, SMS, email, boshqa API) uchun `Application` da interfeys (port), implementatsiya `Infrastructure` da (adapter). Yangi servis qo'shish faqat yangi adapter yozish bilan cheklansin — yadro kodga tegmasdan.
 - Logikani buzmasdan eng kam va sodda kod. Refactor qilganda mavjud xulq-atvor saqlansin.
+
+## Ma'lumotlar bazasi va migratsiyalar (qat'iy qoidalar)
+- **Migratsiya fayllari HECH QACHON qo'lda yozilmaydi yoki tahrirlanmaydi.** Sxemaning yagona haqiqat manbai — Domain entity'lar + `Persistence/Configurations` dagi EF konfiguratsiyalar (indekslar, extensionlar, cheklovlar ham shu yerda: `HasIndex`, `HasMethod("gin")`, `HasPostgresExtension` va h.k.). Migratsiya faqat `dotnet ef migrations add <Nom>` bilan generatsiya qilinadi; generatsiya kutilgandek chiqmasa, migratsiya emas — model/konfiguratsiya tuzatiladi va qayta generatsiya qilinadi. Production'dan oldin barcha migratsiyalar o'chirilib bitta `InitialMigration` yaratiladi — shuning uchun har bir sxema detali modeldan qayta tiklanadigan bo'lishi SHART.
+- **Production'gacha DB erkin mukammallashtiriladi.** "Bazani o'zgartirmay algoritm bilan aylanib o'tish" taqiqlanadi: unumdorlik yoki to'g'ri dizayn sxema o'zgarishini talab qilsa — sxema o'zgartiriladi (ustun, jadval, indeks qo'shish/o'zgartirish). Sabab: production'da algoritmni yaxshilash oson, sxemani o'zgartirish xavfli — shuning uchun sxema hozir keng o'ylab, keyin kam o'zgaradigan qilib quriladi. Dev bazani drop/reseed qilish normal ish jarayoni.
 
 ## Xavfsizlik va ma'lumot yaxlitligi (birinchi darajali)
 Loyiha real biznesning real ma'lumotlari bilan ishlaydi. Ma'lumot oshkor bo'lmasligi va yo'qolmasligi shart. Buni dizaynning o'zagiga singdir, keyin qo'shiladigan narsa emas.
@@ -54,6 +42,3 @@ Loyiha real biznesning real ma'lumotlari bilan ishlaydi. Ma'lumot oshkor bo'lmas
 - Katta o'zgarish yoki yangi feature'dan oldin qisqa reja ber, tasdiqlangach yoz.
 - Yangi NuGet qo'shishdan oldin (shubha bo'lsa) so'ra; ishonchli, bepul, unumdor, barqaror bo'lsin.
 - Til: foydalanuvchi bilan o'zbekcha.
-
-## Holat (yangilanib boriladi)
-- Loyiha mohiyati/maqsadi hali to'liq aniqlanmagan — foydalanuvchi bilan kelishilgach shu yerga yoziladi.

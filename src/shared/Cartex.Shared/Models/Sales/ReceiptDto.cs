@@ -2,7 +2,7 @@ namespace Cartex.Shared.Models.Sales;
 
 public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal);
 
-public record ReceiptPaymentDto(string Method, string Currency, decimal Amount);
+public record ReceiptPaymentDto(string Method, string Currency, decimal Amount, decimal Rate = 1m, decimal AmountBase = 0, bool IsForeign = false);
 
 public record ReceiptDto(
     string ReceiptToken,
@@ -24,4 +24,8 @@ public record ReceiptDto(
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
     string? CustomerName = null,
-    string? Language = null);
+    string? Language = null,
+    decimal CreditAmount = 0)
+{
+    public bool HasPayments => Payments.Count > 0;
+}

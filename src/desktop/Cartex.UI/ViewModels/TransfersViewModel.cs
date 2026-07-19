@@ -31,7 +31,25 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _fromWarehouse;
     [ObservableProperty] private IdOption? _toWarehouse;
     [ObservableProperty] private IdOption? _product;
+    [ObservableProperty] private string _productText = "";
     [ObservableProperty] private decimal _quantity = 1;
+
+    private IReadOnlyList<PageShortcut>? _shortcuts;
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
+
+    partial void OnProductChanged(IdOption? value)
+    {
+        if (value is not null && ProductText != value.Name) ProductText = value.Name;
+    }
+
+    [RelayCommand]
+    private void CommitProduct()
+    {
+        var name = ProductText.Trim();
+        if (name.Length == 0) return;
+        if (ProductOptions.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match)
+            Product = match;
+    }
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;
@@ -60,6 +78,21 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         _export = export;
         _auth = auth;
         Paging.Attach(LoadTransfersAsync);
+        _auth.LoggedOut += ResetState;
+    }
+
+    private void ResetState()
+    {
+        Transfers.Clear();
+        SelectedTransfer = null;
+        IsEditOpen = false;
+        IsDetailOpen = false;
+        FilterWarehouse = null;
+        DateFrom = DateTimeOffset.Now.AddDays(-30);
+        DateTo = DateTimeOffset.Now;
+        Totals = null;
+        Paging.Page = 1;
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private async Task LoadTransfersAsync()
@@ -86,8 +119,14 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private void RaisePermissions()
+    {
+        OnPropertyChanged(nameof(CanExport));
+    }
+
     public async Task LoadAsync()
     {
+        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))
