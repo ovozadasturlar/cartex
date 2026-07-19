@@ -18,12 +18,12 @@ namespace Cartex.Api.Controllers;
 public class SettingsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.SettingsDto>> Get() =>
         Ok(await sender.Send(new GetSettingsQuery()));
 
     [HttpPut("telegram")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateTelegram(UpdateTelegramSettingsCommand command)
     {
         await sender.Send(command);
@@ -31,7 +31,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("telegram/test")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<TelegramTestResult>> TestTelegram(TelegramTestRequest request)
     {
         var info = await sender.Send(new TestTelegramQuery(request.BotToken));
@@ -39,7 +39,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("integrations/test")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> SendTestMessage(SendTestMessageCommand command)
     {
         await sender.Send(command);
@@ -47,7 +47,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("email")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateEmail(UpdateEmailSettingsCommand command)
     {
         await sender.Send(command);
@@ -55,7 +55,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("sms")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateSms(UpdateSmsSettingsCommand command)
     {
         await sender.Send(command);
@@ -63,17 +63,17 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("sms/journal")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<IReadOnlyCollection<SmsMessageDto>>> GetSmsJournal([FromQuery] GetSmsJournalQuery query) =>
         Ok(await sender.Send(query));
 
     [HttpGet("sms/stats")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<SmsStatsDto>> GetSmsStats([FromQuery] GetSmsStatsQuery query) =>
         Ok(await sender.Send(query));
 
     [HttpPut("notification")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateNotification(UpdateNotificationSettingsCommand command)
     {
         await sender.Send(command);
@@ -88,7 +88,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("receipt")]
-    [HasPermission(AppPermissions.Business.Manage)]
+    [HasPermission(AppPermissions.Settings.Receipt)]
     public async Task<IActionResult> UpdateReceipt(UpdateReceiptSettingsCommand command)
     {
         await sender.Send(command);
@@ -96,7 +96,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("login-methods")]
-    [HasPermission(AppPermissions.Business.Manage)]
+    [HasPermission(AppPermissions.Settings.Security)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.LoginMethodsSettingsDto>> GetLoginMethods()
     {
         var result = await sender.Send(new GetLoginMethodsSettingsQuery());
@@ -104,7 +104,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("login-methods")]
-    [HasPermission(AppPermissions.Business.Manage)]
+    [HasPermission(AppPermissions.Settings.Security)]
     public async Task<IActionResult> UpdateLoginMethods(UpdateLoginMethodsSettingsCommand command)
     {
         await sender.Send(command);
@@ -127,7 +127,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("storage")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.StorageSettingsDto>> GetStorage()
     {
         var result = await sender.Send(new GetStorageSettingsQuery());
@@ -135,15 +135,31 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("storage")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateStorage(UpdateStorageSettingsCommand command)
     {
         await sender.Send(command);
         return NoContent();
     }
 
+    [HttpPost("storage/migrate")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<IActionResult> StartStorageMigration(StartStorageMigrationCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpGet("storage/migrate")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<ActionResult<Cartex.Application.Common.Interfaces.StorageMigrationStatus>> GetStorageMigration()
+    {
+        var result = await sender.Send(new GetStorageMigrationStatusQuery());
+        return Ok(result);
+    }
+
     [HttpGet("cloud-bridge")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.CloudBridgeSettingsDto>> GetCloudBridge()
     {
         var result = await sender.Send(new GetCloudBridgeSettingsQuery());
@@ -151,7 +167,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("cloud-bridge")]
-    [HasPermission(AppPermissions.Settings.Manage)]
+    [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateCloudBridge(UpdateCloudBridgeSettingsCommand command)
     {
         await sender.Send(command);

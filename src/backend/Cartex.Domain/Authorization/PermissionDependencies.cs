@@ -14,6 +14,8 @@ public static class PermissionDependencies
         [AppPermissions.StockTransfers.Manage] = [AppPermissions.StockTransfers.View],
         [AppPermissions.Sales.Create] = [AppPermissions.Products.View, AppPermissions.Stocks.View, AppPermissions.Categories.View, AppPermissions.Customers.View],
         [AppPermissions.Sales.Return] = [AppPermissions.Sales.View],
+        [AppPermissions.Shifts.ViewAll] = [AppPermissions.Shifts.View],
+        [AppPermissions.Shifts.ManageAll] = [AppPermissions.Shifts.Manage, AppPermissions.Shifts.ViewAll],
     };
 
     public static string[] DependsOn(string permission) =>

@@ -105,6 +105,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
     [ObservableProperty] private string? _storageBucket;
     [ObservableProperty] private bool _storageUseSsl;
     [ObservableProperty] private bool _storageHasSecret;
+    [ObservableProperty] private string? _storageSecretPlaceholder;
     [ObservableProperty] private bool _cloudBridgeEnabled;
     [ObservableProperty] private string? _cloudBridgeGatewayUrl;
     [ObservableProperty] private string? _cloudBridgeLicenseKey;
@@ -163,6 +164,10 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
                 StorageUseSsl = storage.UseSsl;
                 StorageHasSecret = storage.HasSecretKey;
                 StorageSecretKey = null;
+                StorageSecretPlaceholder = storage.SecretKeyLength > 0
+                    ? new string('•', storage.SecretKeyLength)
+                    : L["secret_keep_blank"];
+                _ = RefreshMigrationStateAsync();
 
                 var bridge = await api.GetCloudBridgeAsync();
                 CloudBridgeEnabled = bridge.Enabled;
@@ -307,6 +312,67 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
             await LoadAsync();
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [ObservableProperty] private bool _migrationRunning;
+    [ObservableProperty] private string? _migrationText;
+    [ObservableProperty] private double _migrationProgress;
+    private Avalonia.Threading.DispatcherTimer? _migrationTimer;
+
+    [RelayCommand]
+    private Task MigrateToRemoteAsync() => StartMigrationAsync("LocalToRemote");
+
+    [RelayCommand]
+    private Task MigrateToLocalAsync() => StartMigrationAsync("RemoteToLocal");
+
+    private async Task StartMigrationAsync(string direction)
+    {
+        try
+        {
+            await api.StartStorageMigrationAsync(new StartStorageMigrationRequest(direction));
+            MigrationRunning = true;
+            MigrationText = "…";
+            StartMigrationPolling();
+        }
+        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private void StartMigrationPolling()
+    {
+        _migrationTimer ??= new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _migrationTimer.Tick -= OnMigrationTick;
+        _migrationTimer.Tick += OnMigrationTick;
+        _migrationTimer.Start();
+    }
+
+    private async void OnMigrationTick(object? sender, EventArgs e)
+    {
+        try
+        {
+            var s = await api.GetStorageMigrationAsync();
+            MigrationRunning = s.Running;
+            MigrationText = $"{s.Processed}/{s.Total}";
+            MigrationProgress = s.Total > 0 ? s.Processed * 100.0 / s.Total : 0;
+            if (s.Running) return;
+            _migrationTimer?.Stop();
+            if (s.Error is not null) toast.Error(s.Error);
+            else toast.Success(string.Format(L["migrate_storage_done_fmt"], s.Processed, s.Failed));
+        }
+        catch { _migrationTimer?.Stop(); MigrationRunning = false; }
+    }
+
+    private async Task RefreshMigrationStateAsync()
+    {
+        try
+        {
+            var s = await api.GetStorageMigrationAsync();
+            if (!s.Running) return;
+            MigrationRunning = true;
+            MigrationText = $"{s.Processed}/{s.Total}";
+            MigrationProgress = s.Total > 0 ? s.Processed * 100.0 / s.Total : 0;
+            StartMigrationPolling();
+        }
+        catch { }
     }
 
     [RelayCommand]

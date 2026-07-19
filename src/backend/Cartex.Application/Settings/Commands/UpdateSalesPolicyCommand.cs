@@ -6,20 +6,22 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays) : ICommand<Unit>;
+public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false) : ICommand<Unit>;
 
 public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateSalesPolicyCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateSalesPolicyCommand request, CancellationToken cancellationToken)
     {
-        var cfg = new SalesPolicySettings
-        {
-            ShiftPolicy = request.ShiftPolicy,
-            MaxDiscountPercent = request.MaxDiscountPercent,
-            DefaultMinStock = request.DefaultMinStock,
-            StaleRateDays = request.StaleRateDays
-        };
+        var cfg = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+        cfg.ShiftPolicy = request.ShiftPolicy;
+        cfg.MaxDiscountPercent = request.MaxDiscountPercent;
+        cfg.DefaultMinStock = request.DefaultMinStock;
+        cfg.StaleRateDays = request.StaleRateDays;
+        cfg.AllowDebtSales = request.AllowDebtSales;
+        cfg.AllowCustomerCredit = request.AllowCustomerCredit;
+        cfg.RequireDebtDueDate = request.RequireDebtDueDate;
+        cfg.RequireSupplier = request.RequireSupplier;
         audit.Add("settings", "settings", null, new { section = "salesPolicy" });
         await settings.SetAsync(SettingKeys.SalesPolicy, cfg, cancellationToken);
         return Unit.Value;

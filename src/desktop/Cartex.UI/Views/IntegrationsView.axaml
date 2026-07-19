@@ -266,7 +266,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="5">
                                         <TextBlock Text="{Binding L[secret_key]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                        <TextBox Text="{Binding StorageSecretKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding L[secret_keep_blank]}" />
+                                        <TextBox Text="{Binding StorageSecretKey}" MinHeight="38" PasswordChar="•" PlaceholderText="{Binding StorageSecretPlaceholder}" />
                                     </StackPanel>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,10,Auto">
@@ -280,7 +280,19 @@
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
-                            <Button Classes="brand" Command="{Binding SaveStorageCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="brand" Command="{Binding SaveStorageCommand}" Content="{Binding L[save]}" />
+                                <Button Classes="outline" Command="{Binding MigrateToRemoteCommand}"
+                                        Content="{Binding L[migrate_storage]}" IsVisible="{Binding StorageIsMinio}"
+                                        IsEnabled="{Binding !MigrationRunning}" ToolTip.Tip="{Binding L[migrate_storage_hint]}" />
+                                <Button Classes="outline" Command="{Binding MigrateToLocalCommand}"
+                                        Content="{Binding L[migrate_storage_to_local]}" IsVisible="{Binding StorageIsMinio}"
+                                        IsEnabled="{Binding !MigrationRunning}" ToolTip.Tip="{Binding L[migrate_storage_to_local_hint]}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding MigrationRunning}">
+                                <ProgressBar Value="{Binding MigrationProgress}" Maximum="100" Width="220" Height="6" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding MigrationText}" FontSize="12" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

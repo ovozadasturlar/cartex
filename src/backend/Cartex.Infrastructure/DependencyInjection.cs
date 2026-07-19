@@ -56,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<Storage.LocalObjectStorage>();
         services.AddScoped<Storage.MinioObjectStorage>();
         services.AddScoped<IObjectStorage, Storage.RoutedObjectStorage>();
+        services.AddScoped<IStorageConnectionTester, Storage.MinioConnectionTester>();
+        services.AddSingleton<IStorageMigrator, Storage.StorageMigrator>();
         services.AddSingleton<IImageProcessor, Storage.SkiaImageProcessor>();
         services.AddSingleton<IPushGateway, Push.NullPushGateway>();
         services.AddHostedService<OutboxProcessor>();

@@ -8,12 +8,25 @@ namespace Cartex.Application.Settings.Commands;
 
 public record UpdateStorageSettingsCommand(bool Enabled, string Provider, string? Endpoint, string? AccessKey, string? SecretKey, string? Bucket, bool UseSsl) : ICommand<Unit>;
 
-public sealed class UpdateStorageSettingsCommandHandler(ISettingsService settings, ISecretProtector protector, IAuditService audit)
+public sealed class UpdateStorageSettingsCommandHandler(ISettingsService settings, ISecretProtector protector, IStorageConnectionTester tester, IAuditService audit)
     : IRequestHandler<UpdateStorageSettingsCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateStorageSettingsCommand request, CancellationToken cancellationToken)
     {
         var cfg = await settings.GetAsync<StorageSettings>(SettingKeys.Storage, cancellationToken) ?? new StorageSettings();
+
+        if (request.Enabled && request.Provider == "minio")
+            await tester.EnsureReachableAsync(new StorageSettings
+            {
+                Enabled = true,
+                Provider = "minio",
+                Endpoint = request.Endpoint?.Trim(),
+                AccessKey = request.AccessKey?.Trim(),
+                SecretKey = !string.IsNullOrWhiteSpace(request.SecretKey) ? request.SecretKey.Trim() : Reveal(cfg.SecretKey),
+                Bucket = request.Bucket?.Trim(),
+                UseSsl = request.UseSsl
+            }, cancellationToken);
+
         cfg.Enabled = request.Enabled;
         cfg.Provider = request.Provider;
         cfg.Endpoint = request.Endpoint?.Trim();
@@ -26,6 +39,13 @@ public sealed class UpdateStorageSettingsCommandHandler(ISettingsService setting
         audit.Add("settings", "settings", null, new { section = "storage" });
         await settings.SetAsync(SettingKeys.Storage, cfg, cancellationToken);
         return Unit.Value;
+    }
+
+    private string? Reveal(string? secret)
+    {
+        if (string.IsNullOrWhiteSpace(secret)) return secret;
+        try { return protector.Unprotect(secret); }
+        catch { return secret; }
     }
 }
 

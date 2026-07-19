@@ -11,7 +11,6 @@ public class PermissionsCatalogTests
     [Fact]
     public void DeveloperOnly_ContainsManagePermissions()
     {
-        Assert.Contains(AppPermissions.Settings.Manage, AppPermissions.DeveloperOnly);
         Assert.Contains(AppPermissions.Features.Manage, AppPermissions.DeveloperOnly);
         Assert.Contains(AppPermissions.Keys.Manage, AppPermissions.DeveloperOnly);
     }

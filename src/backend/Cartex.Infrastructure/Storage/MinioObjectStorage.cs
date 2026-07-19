@@ -12,19 +12,26 @@ public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtect
     {
         var (client, s) = await CreateAsync(cancellationToken);
 
-        var exists = await client.BucketExistsAsync(new BucketExistsArgs().WithBucket(s.Bucket), cancellationToken);
-        if (!exists)
-            await client.MakeBucketAsync(new MakeBucketArgs().WithBucket(s.Bucket), cancellationToken);
+        try
+        {
+            var exists = await client.BucketExistsAsync(new BucketExistsArgs().WithBucket(s.Bucket), cancellationToken);
+            if (!exists)
+                await client.MakeBucketAsync(new MakeBucketArgs().WithBucket(s.Bucket), cancellationToken);
 
-        key ??= $"{Guid.NewGuid():N}{extension}";
-        await client.PutObjectAsync(new PutObjectArgs()
-            .WithBucket(s.Bucket)
-            .WithObject(key)
-            .WithStreamData(content)
-            .WithObjectSize(length)
-            .WithContentType(contentType), cancellationToken);
+            key ??= $"{Guid.NewGuid():N}{extension}";
+            await client.PutObjectAsync(new PutObjectArgs()
+                .WithBucket(s.Bucket)
+                .WithObject(key)
+                .WithStreamData(content)
+                .WithObjectSize(length)
+                .WithContentType(contentType), cancellationToken);
 
-        return key;
+            return key;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or Minio.Exceptions.MinioException)
+        {
+            throw new BusinessRuleException($"MinIO'ga ulanib bo'lmadi ({s.Endpoint}) — Sozlamalar → Integratsiyalar → Saqlash bo'limini tekshiring.");
+        }
     }
 
     public async Task<string?> GetUrlAsync(string key, CancellationToken cancellationToken = default)
@@ -103,6 +110,15 @@ public sealed class MinioObjectStorage(ISettingsService settings, ISecretProtect
         catch (Minio.Exceptions.MinioException)
         {
         }
+    }
+
+    public async Task<IReadOnlyList<string>> ListKeysAsync(CancellationToken cancellationToken = default)
+    {
+        var (client, s) = await CreateAsync(cancellationToken);
+        var keys = new List<string>();
+        await foreach (var item in client.ListObjectsEnumAsync(new ListObjectsArgs().WithBucket(s.Bucket).WithRecursive(true), cancellationToken))
+            if (!item.IsDir) keys.Add(item.Key);
+        return keys;
     }
 
     private static string ContentUrl(string key) => $"/api/storage/content?key={Uri.EscapeDataString(key)}";

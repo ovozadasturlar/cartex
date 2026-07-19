@@ -20,9 +20,20 @@ public sealed class RoutedObjectStorage(ISettingsService settings, LocalObjectSt
     public async Task<IReadOnlyDictionary<string, string>> GetUrlsAsync(IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default) =>
         await (await ResolveAsync(cancellationToken)).GetUrlsAsync(keys, cancellationToken);
 
-    public async Task<(Stream Content, string ContentType)?> DownloadAsync(string key, CancellationToken cancellationToken = default) =>
-        await (await ResolveAsync(cancellationToken)).DownloadAsync(key, cancellationToken);
+    public async Task<(Stream Content, string ContentType)?> DownloadAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var provider = await ResolveAsync(cancellationToken);
+        var result = await provider.DownloadAsync(key, cancellationToken);
+        if (result is null && ReferenceEquals(provider, minio))
+            result = await local.DownloadAsync(key, cancellationToken);
+        return result;
+    }
 
-    public async Task DeleteAsync(string key, CancellationToken cancellationToken = default) =>
-        await (await ResolveAsync(cancellationToken)).DeleteAsync(key, cancellationToken);
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var provider = await ResolveAsync(cancellationToken);
+        await provider.DeleteAsync(key, cancellationToken);
+        if (ReferenceEquals(provider, minio))
+            await local.DeleteAsync(key, cancellationToken);
+    }
 }

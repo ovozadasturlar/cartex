@@ -76,6 +76,29 @@ public static class DatabaseSeeder
 
         var permByName = permissions.ToDictionary(p => p.Name, p => p.Id);
 
+        if (permByName.TryGetValue(AppPermissions.Settings.Manage, out var legacyId))
+        {
+            string[] replacements = [AppPermissions.Settings.Integrations, AppPermissions.Settings.Receipt, AppPermissions.Settings.Security];
+            var legacyGrants = await context.RolePermissions.Where(rp => rp.PermissionId == legacyId).ToListAsync();
+            var roleIds = legacyGrants.Select(rp => rp.RoleId).ToHashSet();
+            var pairs = (await context.RolePermissions.Where(rp => roleIds.Contains(rp.RoleId))
+                .Select(rp => new { rp.RoleId, rp.PermissionId }).ToListAsync())
+                .Select(x => (x.RoleId, x.PermissionId)).ToHashSet();
+            foreach (var roleId in roleIds)
+                foreach (var name in replacements)
+                    if (pairs.Add((roleId, permByName[name])))
+                        context.RolePermissions.Add(new RolePermission { RoleId = roleId, PermissionId = permByName[name] });
+            context.RolePermissions.RemoveRange(legacyGrants);
+            context.Permissions.Remove(permissions.First(p => p.Id == legacyId));
+            permByName.Remove(AppPermissions.Settings.Manage);
+
+            var allRoles = await context.Roles.ToListAsync();
+            foreach (var role in allRoles.Where(r => r.GrantablePermissions.Contains(AppPermissions.Settings.Manage)))
+                role.GrantablePermissions = [.. role.GrantablePermissions.Where(p => p != AppPermissions.Settings.Manage).Union(replacements)];
+
+            await context.SaveChangesAsync();
+        }
+
         async Task GrantAsync(string roleName, IEnumerable<string> names, string[]? grantable = null)
         {
             var role = await context.Roles.Include(r => r.RolePermissions)
@@ -290,70 +313,65 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         var dona = defaultUnits.First(u => u.ShortName == "dona");
-        var kg = defaultUnits.First(u => u.ShortName == "kg");
-        var litr = defaultUnits.First(u => u.ShortName == "l");
+        var metr = defaultUnits.First(u => u.ShortName == "m");
 
-        var catFood = new Category { Name = "Oziq-ovqat" };
-        var catBeverages = new Category { Name = "Ichimliklar" };
-        var catDairy = new Category { Name = "Sut mahsulotlari" };
-        var catBakery = new Category { Name = "Non mahsulotlari" };
-        var catHousehold = new Category { Name = "Uy-ro'zg'or" };
-        var catPersonalCare = new Category { Name = "Shaxsiy gigiyena" };
+        var catMixers = new Category { Name = "Smesitellar" };
+        var catPipes = new Category { Name = "Trubalar va fitinglar" };
+        var catValves = new Category { Name = "Kranlar va ventillar" };
+        var catSewage = new Category { Name = "Kanalizatsiya" };
+        var catFixtures = new Category { Name = "Santexnika jihozlari" };
+        var catSealants = new Category { Name = "Germetik va yelimlar" };
 
-        var catSnacks = new Category { Name = "Konditeriya" };
+        var catHeating = new Category { Name = "Isitish" };
 
-        await context.Categories.AddRangeAsync(catFood, catBeverages, catDairy, catBakery, catHousehold, catPersonalCare, catSnacks);
+        await context.Categories.AddRangeAsync(catMixers, catPipes, catValves, catSewage, catFixtures, catSealants, catHeating);
 
-        var typeFood = new ProductType { Name = "Oziq-ovqat", TracksExpiry = true };
-        var typeWeighed = new ProductType { Name = "Tarozili mahsulot", TracksExpiry = true };
-        var typeNonFood = new ProductType { Name = "Nooziq-ovqat", TracksExpiry = false };
-        await context.ProductTypes.AddRangeAsync(typeFood, typeWeighed, typeNonFood);
+        var typeRegular = new ProductType { Name = "Oddiy mahsulot", TracksExpiry = false };
+        var typeExpiring = new ProductType { Name = "Muddatli mahsulot", TracksExpiry = true };
+        await context.ProductTypes.AddRangeAsync(typeRegular, typeExpiring);
         await context.SaveChangesAsync();
 
         var products = new List<Product>
         {
-            new() { Name = "Coca-Cola 1.5L", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Pepsi 1L", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Fanta 0.5L", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Non", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Bulka", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Lavash", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Sut 1L", CategoryId = catDairy.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Qatiq 0.5L", CategoryId = catDairy.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Tvorog 200g", CategoryId = catDairy.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Guruch 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 10 },
-            new() { Name = "Shakar 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 10 },
-            new() { Name = "Un 2kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 10 },
-            new() { Name = "Yog' 1L", CategoryId = catFood.Id, UnitId = litr.Id, MinStock = 5 },
-            new() { Name = "Sabun", CategoryId = catHousehold.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Shampun", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Kolbasa", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Smetana 400g", CategoryId = catDairy.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Oq non", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Patir non", CategoryId = catBakery.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Chips Lays 150g", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Shokolad Alpen Gold", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Konfet Karakum 1kg", CategoryId = catSnacks.Id, UnitId = kg.Id, MinStock = 5 },
-            new() { Name = "Pechenye Yubileynoe", CategoryId = catSnacks.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Tish pastasi Colgate", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Sovun Safeguard", CategoryId = catPersonalCare.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Makaron 400g", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 10 },
-            new() { Name = "Tuz 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 10 },
-            new() { Name = "Sirka 0.5L", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Pomidor pastasi 200g", CategoryId = catFood.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Sprite 1L", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Choy Tess 100p", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Kofe Nescafe 3v1", CategoryId = catBeverages.Id, UnitId = dona.Id, MinStock = 5 },
-            new() { Name = "Tovuq go'shti 1kg", CategoryId = catFood.Id, UnitId = kg.Id, MinStock = 5 },
+            new() { Name = "Smesitel oshxona Zegor", CategoryId = catMixers.Id, UnitId = dona.Id, MinStock = 3, ImageKey = "seed/p00.jpg" },
+            new() { Name = "Smesitel vanna Mixxus", CategoryId = catMixers.Id, UnitId = dona.Id, MinStock = 3, ImageKey = "seed/p01.jpg" },
+            new() { Name = "Smesitel rakovina Haiba", CategoryId = catMixers.Id, UnitId = dona.Id, MinStock = 3, ImageKey = "seed/p02.jpg" },
+            new() { Name = "PPR truba 20mm PN20", CategoryId = catPipes.Id, UnitId = metr.Id, MinStock = 50, ImageKey = "seed/p03.jpg" },
+            new() { Name = "PPR truba 25mm PN20", CategoryId = catPipes.Id, UnitId = metr.Id, MinStock = 50, ImageKey = "seed/p04.jpg" },
+            new() { Name = "PPR truba 32mm PN20", CategoryId = catPipes.Id, UnitId = metr.Id, MinStock = 30, ImageKey = "seed/p05.jpg" },
+            new() { Name = "Mufta PPR 20mm", CategoryId = catPipes.Id, UnitId = dona.Id, MinStock = 40, ImageKey = "seed/p06.jpg" },
+            new() { Name = "Burchak PPR 20mm 90", CategoryId = catPipes.Id, UnitId = dona.Id, MinStock = 40 },
+            new() { Name = "Trojnik PPR 25mm", CategoryId = catPipes.Id, UnitId = dona.Id, MinStock = 30, ImageKey = "seed/p08.jpg" },
+            new() { Name = "Amerikanka PPR 20mm", CategoryId = catPipes.Id, UnitId = dona.Id, MinStock = 20 },
+            new() { Name = "Sharli kran 1/2 Itap", CategoryId = catValves.Id, UnitId = dona.Id, MinStock = 10, ImageKey = "seed/p10.jpg" },
+            new() { Name = "Sharli kran 3/4 Itap", CategoryId = catValves.Id, UnitId = dona.Id, MinStock = 10, ImageKey = "seed/p11.jpg" },
+            new() { Name = "Radiator ventili 1/2", CategoryId = catValves.Id, UnitId = dona.Id, MinStock = 8, ImageKey = "seed/p12.jpg" },
+            new() { Name = "Sifon rakovina uchun", CategoryId = catSewage.Id, UnitId = dona.Id, MinStock = 8, ImageKey = "seed/p13.jpg" },
+            new() { Name = "Gofra unitaz uchun", CategoryId = catSewage.Id, UnitId = dona.Id, MinStock = 6, ImageKey = "seed/p14.jpg" },
+            new() { Name = "Kanalizatsiya quvuri 50mm 2m", CategoryId = catSewage.Id, UnitId = dona.Id, MinStock = 15, ImageKey = "seed/p15.jpg" },
+            new() { Name = "Kanalizatsiya quvuri 110mm 2m", CategoryId = catSewage.Id, UnitId = dona.Id, MinStock = 10, ImageKey = "seed/p16.jpg" },
+            new() { Name = "Kanalizatsiya burchagi 50mm 45", CategoryId = catSewage.Id, UnitId = dona.Id, MinStock = 20 },
+            new() { Name = "Unitaz o'rindig'i universal", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 4, ImageKey = "seed/p18.jpg" },
+            new() { Name = "Rakovina keramik oq", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 2, ImageKey = "seed/p19.jpg" },
+            new() { Name = "Dush lednika 5 rejimli", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 6, ImageKey = "seed/p20.jpg" },
+            new() { Name = "Dush shlangi 1.5m", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 8, ImageKey = "seed/p21.jpg" },
+            new() { Name = "Suv shlangi 1/2 60sm juft", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 12, ImageKey = "seed/p22.jpg" },
+            new() { Name = "Unitaz armaturasi to'plam", CategoryId = catFixtures.Id, UnitId = dona.Id, MinStock = 4 },
+            new() { Name = "FUM lenta 19mm", CategoryId = catSealants.Id, UnitId = dona.Id, MinStock = 30, ImageKey = "seed/p24.jpg" },
+            new() { Name = "Len tolasi 100g", CategoryId = catSealants.Id, UnitId = dona.Id, MinStock = 15 },
+            new() { Name = "Silikon germetik sanitar 280ml", CategoryId = catSealants.Id, UnitId = dona.Id, MinStock = 10, ImageKey = "seed/p26.jpg" },
+            new() { Name = "PVX yelim 250ml", CategoryId = catSealants.Id, UnitId = dona.Id, MinStock = 8 },
+            new() { Name = "Radiator alyuminiy seksiya", CategoryId = catHeating.Id, UnitId = dona.Id, MinStock = 10, ImageKey = "seed/p28.jpg" },
+            new() { Name = "TEN 1.5kVt suv isitgich uchun", CategoryId = catHeating.Id, UnitId = dona.Id, MinStock = 4, ImageKey = "seed/p29.jpg" },
+            new() { Name = "Sirkulyatsion nasos 25-40", CategoryId = catHeating.Id, UnitId = dona.Id, MinStock = 2, ImageKey = "seed/p30.jpg" },
+            new() { Name = "Suv hisoblagichi DN15", CategoryId = catHeating.Id, UnitId = dona.Id, MinStock = 4, ImageKey = "seed/p31.jpg" },
+            new() { Name = "O'tish muftasi 1/2x3/4", CategoryId = catPipes.Id, UnitId = dona.Id, MinStock = 20, ImageKey = "seed/p32.jpg" },
         };
 
-        var weighedIdx = new[] { 9, 10, 11, 21, 26, 32 };
-        var nonFoodIdx = new[] { 13, 14, 23, 24 };
+        var expiryIdx = new[] { 26, 27 };
         for (var i = 0; i < products.Count; i++)
-            products[i].ProductTypeId = weighedIdx.Contains(i) ? typeWeighed.Id
-                : nonFoodIdx.Contains(i) ? typeNonFood.Id
-                : typeFood.Id;
-        products[0].Attributes = """{"hajm":"1.5L","brend":"Coca-Cola"}""";
+            products[i].ProductTypeId = expiryIdx.Contains(i) ? typeExpiring.Id : typeRegular.Id;
+        products[0].Attributes = """{"brend":"Zegor","turi":"oshxona"}""";
 
         await context.Products.AddRangeAsync(products);
         await context.SaveChangesAsync();
@@ -364,9 +382,9 @@ public static class DatabaseSeeder
 
         var sellingPrices = new[]
         {
-            10000m, 7500m, 5000m, 4000m, 4500m, 5000m, 10000m, 7500m, 9000m, 15000m, 12000m, 17000m,
-            22000m, 6500m, 19000m, 18000m, 8000m, 5000m, 6000m, 7000m, 10000m, 20000m, 9000m, 12000m,
-            5500m, 6000m, 4000m, 7000m, 5500m, 7500m, 12000m, 9000m, 25000m
+            385000m, 520000m, 295000m, 9500m, 14000m, 22000m, 1500m, 1800m, 3500m, 12000m, 38000m, 52000m,
+            45000m, 35000m, 48000m, 28000m, 65000m, 6500m, 95000m, 420000m, 55000m, 40000m, 18000m, 85000m,
+            4000m, 8000m, 42000m, 55000m, 115000m, 120000m, 950000m, 185000m, 9000m
         };
         for (var i = 0; i < products.Count; i++)
             await context.ProductPrices.AddAsync(new ProductPrice { VariantId = variants[i].Id, SellingPrice = sellingPrices[i] });
@@ -413,39 +431,39 @@ public static class DatabaseSeeder
 
         var stocks = new List<Stock>
         {
-            new() { VariantId = variants[0].Id, WarehouseId = warehouse.Id, Quantity = 120, PurchasePrice = 8000 },
-            new() { VariantId = variants[1].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 6000 },
-            new() { VariantId = variants[2].Id, WarehouseId = warehouse.Id, Quantity = 150, PurchasePrice = 4000 },
-            new() { VariantId = variants[3].Id, WarehouseId = warehouse.Id, Quantity = 80, PurchasePrice = 3000 },
-            new() { VariantId = variants[4].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 3500 },
-            new() { VariantId = variants[5].Id, WarehouseId = warehouse.Id, Quantity = 50, PurchasePrice = 4000 },
-            new() { VariantId = variants[6].Id, WarehouseId = warehouse.Id, Quantity = 90, PurchasePrice = 8000 },
-            new() { VariantId = variants[7].Id, WarehouseId = warehouse.Id, Quantity = 70, PurchasePrice = 6000 },
-            new() { VariantId = variants[8].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 7000 },
-            new() { VariantId = variants[9].Id, WarehouseId = warehouse.Id, Quantity = 200, PurchasePrice = 12000 },
-            new() { VariantId = variants[10].Id, WarehouseId = warehouse.Id, Quantity = 180, PurchasePrice = 10000 },
-            new() { VariantId = variants[11].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 14000 },
-            new() { VariantId = variants[12].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 18000 },
-            new() { VariantId = variants[13].Id, WarehouseId = warehouse.Id, Quantity = 45, PurchasePrice = 5000 },
-            new() { VariantId = variants[14].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 15000 },
-            new() { VariantId = variants[15].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 15000 },
-            new() { VariantId = variants[16].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 6000 },
-            new() { VariantId = variants[17].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 3500 },
-            new() { VariantId = variants[18].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 4500 },
-            new() { VariantId = variants[19].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 5500 },
-            new() { VariantId = variants[20].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 8000 },
-            new() { VariantId = variants[21].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 16000 },
-            new() { VariantId = variants[22].Id, WarehouseId = warehouse.Id, Quantity = 2, PurchasePrice = 7000 },
-            new() { VariantId = variants[23].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 9000 },
-            new() { VariantId = variants[24].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000 },
-            new() { VariantId = variants[25].Id, WarehouseId = warehouse.Id, Quantity = 55, PurchasePrice = 4500 },
-            new() { VariantId = variants[26].Id, WarehouseId = warehouse.Id, Quantity = 3, PurchasePrice = 3000 },
-            new() { VariantId = variants[27].Id, WarehouseId = warehouse.Id, Quantity = 1, PurchasePrice = 5000 },
-            new() { VariantId = variants[28].Id, WarehouseId = warehouse.Id, Quantity = 0, PurchasePrice = 4000 },
-            new() { VariantId = variants[29].Id, WarehouseId = warehouse.Id, Quantity = 65, PurchasePrice = 5500 },
-            new() { VariantId = variants[30].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 9000 },
-            new() { VariantId = variants[31].Id, WarehouseId = warehouse.Id, Quantity = 4, PurchasePrice = 7000 },
-            new() { VariantId = variants[32].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 20000 },
+            new() { VariantId = variants[0].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 265000 },
+            new() { VariantId = variants[1].Id, WarehouseId = warehouse.Id, Quantity = 6, PurchasePrice = 360000 },
+            new() { VariantId = variants[2].Id, WarehouseId = warehouse.Id, Quantity = 10, PurchasePrice = 205000 },
+            new() { VariantId = variants[3].Id, WarehouseId = warehouse.Id, Quantity = 200, PurchasePrice = 6200 },
+            new() { VariantId = variants[4].Id, WarehouseId = warehouse.Id, Quantity = 160, PurchasePrice = 9100 },
+            new() { VariantId = variants[5].Id, WarehouseId = warehouse.Id, Quantity = 120, PurchasePrice = 14300 },
+            new() { VariantId = variants[6].Id, WarehouseId = warehouse.Id, Quantity = 150, PurchasePrice = 900 },
+            new() { VariantId = variants[7].Id, WarehouseId = warehouse.Id, Quantity = 140, PurchasePrice = 1100 },
+            new() { VariantId = variants[8].Id, WarehouseId = warehouse.Id, Quantity = 100, PurchasePrice = 2200 },
+            new() { VariantId = variants[9].Id, WarehouseId = warehouse.Id, Quantity = 80, PurchasePrice = 7800 },
+            new() { VariantId = variants[10].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 26000 },
+            new() { VariantId = variants[11].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 36000 },
+            new() { VariantId = variants[12].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 31000 },
+            new() { VariantId = variants[13].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 23000 },
+            new() { VariantId = variants[14].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 33000 },
+            new() { VariantId = variants[15].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 18500 },
+            new() { VariantId = variants[16].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 44000 },
+            new() { VariantId = variants[17].Id, WarehouseId = warehouse.Id, Quantity = 90, PurchasePrice = 4200 },
+            new() { VariantId = variants[18].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 64000 },
+            new() { VariantId = variants[19].Id, WarehouseId = warehouse.Id, Quantity = 5, PurchasePrice = 290000 },
+            new() { VariantId = variants[20].Id, WarehouseId = warehouse.Id, Quantity = 30, PurchasePrice = 37000 },
+            new() { VariantId = variants[21].Id, WarehouseId = warehouse.Id, Quantity = 35, PurchasePrice = 27000 },
+            new() { VariantId = variants[22].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 11500 },
+            new() { VariantId = variants[23].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 58000 },
+            new() { VariantId = variants[24].Id, WarehouseId = warehouse.Id, Quantity = 150, PurchasePrice = 2400 },
+            new() { VariantId = variants[25].Id, WarehouseId = warehouse.Id, Quantity = 60, PurchasePrice = 5100 },
+            new() { VariantId = variants[26].Id, WarehouseId = warehouse.Id, Quantity = 40, PurchasePrice = 28000 },
+            new() { VariantId = variants[27].Id, WarehouseId = warehouse.Id, Quantity = 25, PurchasePrice = 37500 },
+            new() { VariantId = variants[28].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 82000 },
+            new() { VariantId = variants[29].Id, WarehouseId = warehouse.Id, Quantity = 20, PurchasePrice = 82000 },
+            new() { VariantId = variants[30].Id, WarehouseId = warehouse.Id, Quantity = 5, PurchasePrice = 680000 },
+            new() { VariantId = variants[31].Id, WarehouseId = warehouse.Id, Quantity = 15, PurchasePrice = 128000 },
+            new() { VariantId = variants[32].Id, WarehouseId = warehouse.Id, Quantity = 90, PurchasePrice = 5600 },
         };
 
         foreach (var s in stocks) s.BranchId = branch1.Id;
@@ -453,9 +471,9 @@ public static class DatabaseSeeder
 
         var branch2Stocks = new List<Stock>
         {
-            new() { BranchId = branch2.Id, VariantId = variants[0].Id, WarehouseId = warehouse2.Id, Quantity = 50, PurchasePrice = 8000 },
-            new() { BranchId = branch2.Id, VariantId = variants[3].Id, WarehouseId = warehouse2.Id, Quantity = 40, PurchasePrice = 3000 },
-            new() { BranchId = branch2.Id, VariantId = variants[9].Id, WarehouseId = warehouse2.Id, Quantity = 30, PurchasePrice = 12000 },
+            new() { BranchId = branch2.Id, VariantId = variants[0].Id, WarehouseId = warehouse2.Id, Quantity = 4, PurchasePrice = 265000 },
+            new() { BranchId = branch2.Id, VariantId = variants[3].Id, WarehouseId = warehouse2.Id, Quantity = 80, PurchasePrice = 6200 },
+            new() { BranchId = branch2.Id, VariantId = variants[9].Id, WarehouseId = warehouse2.Id, Quantity = 30, PurchasePrice = 7800 },
         };
         await context.Stocks.AddRangeAsync(branch2Stocks);
 
