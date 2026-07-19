@@ -6,6 +6,7 @@ export interface CartLine {
   name: string;
   unitName: string;
   price: number;
+  originalPrice: number;
   qty: number;
   available: number;
 }

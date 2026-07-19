@@ -94,6 +94,7 @@ export interface StorageSettings {
   bucket: string | null;
   useSsl: boolean;
   hasSecretKey: boolean;
+  secretKeyLength: number;
 }
 
 @Injectable({ providedIn: 'root' })

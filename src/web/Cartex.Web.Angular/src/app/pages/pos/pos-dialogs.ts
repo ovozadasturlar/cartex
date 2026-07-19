@@ -122,7 +122,7 @@ import { EmptyState } from '../../shared/empty-state';
     </div>
   `,
   styles: `
-    .picker { display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 14px; width: min(460px, 90vw); }
+    .picker { display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 14px; width: min(460px, 90vw); height: min(640px, 82vh); box-sizing: border-box; }
     .head { display: flex; align-items: center; justify-content: space-between; }
     .back-row { display: flex; align-items: center; gap: 6px; }
     h2 { margin: 0; font-size: 18px; font-weight: 700; }
@@ -136,7 +136,7 @@ import { EmptyState } from '../../shared/empty-state';
       &.brand { background: var(--cx-brand); border-color: var(--cx-brand); color: #fff; &:hover { background: var(--cx-brand-ink); } }
       mat-icon { font-size: 19px; width: 19px; height: 19px; }
     }
-    .list { max-height: 46vh; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; }
+    .list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; }
     .row {
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
       padding: 10px 8px; border: none; border-bottom: 1px solid var(--cx-border);

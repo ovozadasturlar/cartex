@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,7 +17,9 @@ import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { Customer } from '../../core/models';
 import { MoneyInputDirective } from '../../core/money-input.directive';
+import { CartListItem, OrderingApi } from '../../core/api/misc.api';
 import { NotifyService } from '../../core/notify.service';
+import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
@@ -56,6 +58,9 @@ export class Pos implements OnInit {
   private readonly wh = inject(WarehouseContextService);
   private readonly transloco = inject(TranslocoService);
   readonly state = inject(PosCartState);
+  private readonly orderingApi = inject(OrderingApi);
+  private readonly queueHub = inject(QueueHubService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -63,6 +68,7 @@ export class Pos implements OnInit {
   readonly busy = signal(false);
   readonly warehouseId = this.wh.selectedWarehouseId;
   readonly viewMode = signal<'grid' | 'list'>(localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid');
+  readonly cartWidth = signal(Math.min(760, Math.max(320, Number(localStorage.getItem('cartex.pos.cartWidth')) || 400)));
   readonly categories = signal<Category[]>([]);
   readonly categoryId = signal<number | null>(null);
   readonly categoryPath = signal<number[]>([]);
@@ -82,6 +88,10 @@ export class Pos implements OnInit {
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
   readonly canOpenShift = this.auth.hasPermission('shifts.manage');
+  readonly canOverridePrice = this.auth.hasPermission('sales.priceOverride');
+  readonly queue = signal<CartListItem[]>([]);
+  private queueAvailable = this.auth.hasPermission('sales.view');
+  private activeQueueCode: string | null = null;
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
 
   readonly cart = this.state.cart;
@@ -178,6 +188,74 @@ export class Pos implements OnInit {
     } finally {
       this.loading.set(false);
     }
+    if (this.queueAvailable) {
+      await this.loadQueue();
+      this.destroyRef.onDestroy(this.queueHub.onQueueChanged(() => this.loadQueue()));
+      this.queueHub.ensureStarted();
+    }
+  }
+
+  private async loadQueue(): Promise<void> {
+    try {
+      this.queue.set(await lastValueFrom(this.orderingApi.list('Open', 'Queue')));
+    } catch {
+      this.queueAvailable = false;
+      this.queue.set([]);
+    }
+  }
+
+  async openQueueCart(item: CartListItem): Promise<void> {
+    if (this.cart().length) {
+      this.notify.error(this.transloco.translate('cart_not_empty'));
+      return;
+    }
+    try {
+      const cart = await lastValueFrom(this.orderingApi.byCode(item.aggregateCode));
+      this.cart.set(cart.items.map((i) => ({
+        variantId: i.variantId,
+        name: i.productName,
+        unitName: '',
+        price: i.unitPrice,
+        originalPrice: i.unitPrice,
+        qty: i.quantity,
+        available: Number.MAX_SAFE_INTEGER,
+      })));
+      if (cart.customerId) {
+        try {
+          this.customer.set(await lastValueFrom(this.api.customer(cart.customerId)));
+        } catch {}
+      }
+      await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Confirmed'));
+      this.activeQueueCode = item.aggregateCode;
+      this.queue.update((q) => q.filter((c) => c.aggregateCode !== item.aggregateCode));
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  async cancelQueueCart(item: CartListItem): Promise<void> {
+    try {
+      await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Cancelled'));
+      this.queue.update((q) => q.filter((c) => c.aggregateCode !== item.aggregateCode));
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  startCartResize(e: PointerEvent): void {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = this.cartWidth();
+    const move = (ev: PointerEvent) => {
+      this.cartWidth.set(Math.min(760, Math.max(320, startWidth + (startX - ev.clientX))));
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      localStorage.setItem('cartex.pos.cartWidth', String(this.cartWidth()));
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
   }
 
   toggleView(): void {
@@ -235,6 +313,7 @@ export class Pos implements OnInit {
       name: t.productName,
       unitName: t.unitName,
       price: t.sellingPrice,
+      originalPrice: t.sellingPrice,
       qty: 1,
       available: t.quantity,
     });
@@ -259,6 +338,11 @@ export class Pos implements OnInit {
 
   clearCart(): void {
     this.state.clearAll();
+    this.activeQueueCode = null;
+  }
+
+  onPrice(line: CartLine, v: number): void {
+    if (v > 0) this.cart.update((c) => c.map((l) => (l === line ? { ...l, price: v } : l)));
   }
 
   onDiscountPercent(v: number): void {
@@ -346,13 +430,21 @@ export class Pos implements OnInit {
         paidCash: this.cash(),
         paidCard: this.card(),
         paidBonus: this.bonus(),
-        items: this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty })),
+        items: this.cart().map((l) => ({
+          variantId: l.variantId,
+          quantity: l.qty,
+          unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+        })),
         discountAmount: this.discount(),
         debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
         idempotencyKey: crypto.randomUUID(),
         applyAutoDiscount: true,
       };
       const result = await lastValueFrom(this.api.createSale(payload));
+      if (this.activeQueueCode) {
+        lastValueFrom(this.orderingApi.updateStatus(this.activeQueueCode, 'CheckedOut')).catch(() => {});
+        this.activeQueueCode = null;
+      }
       try {
         const receipt = await lastValueFrom(this.api.receipt(result.receiptToken));
         await lastValueFrom(
@@ -383,6 +475,7 @@ export class Pos implements OnInit {
       name: p.productName,
       unitName: p.unitName,
       price: p.sellingPrice,
+      originalPrice: p.sellingPrice,
       qty,
       available: p.onHand,
     });

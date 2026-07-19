@@ -26,7 +26,10 @@
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('password') }}</mat-label>
-          <input matInput name="password" type="password" [(ngModel)]="password" autocomplete="current-password" />
+          <input matInput name="password" [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" autocomplete="current-password" />
+          <button matIconButton matSuffix type="button" tabindex="-1" (click)="showPassword.set(!showPassword())">
+            <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
         </mat-form-field>
         <mat-checkbox name="rememberMe" [(ngModel)]="rememberMe">{{ t('remember_me') }}</mat-checkbox>
         @if (error(); as key) {

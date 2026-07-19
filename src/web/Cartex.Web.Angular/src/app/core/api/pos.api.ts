@@ -43,7 +43,7 @@ export interface CreateSalePayload {
   paidCash: number;
   paidCard: number;
   paidBonus: number;
-  items: { variantId: number; quantity: number }[];
+  items: { variantId: number; quantity: number; unitPrice?: number | null }[];
   debtDueDate?: string | null;
   idempotencyKey: string;
   applyAutoDiscount: boolean;

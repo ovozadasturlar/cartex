@@ -2,20 +2,7 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    @if (shiftRequired() && !shift()) {
-      <div class="shift-banner">
-        <mat-icon>schedule</mat-icon>
-        <span>{{ t('no_open_shift') }}</span>
-        @if (canOpenShift) {
-          <button matButton="filled" (click)="openShift()">
-            <mat-icon>play_arrow</mat-icon>
-            {{ t('open_shift') }}
-          </button>
-        }
-      </div>
-    }
-
-    <div class="layout">
+    <div class="layout" [style.grid-template-columns]="'minmax(0, 1fr) ' + cartWidth() + 'px'">
       <div class="catalog">
         <div class="toolbar">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
@@ -32,13 +19,19 @@
             @if (shift(); as s) {
               <span class="cx-chip ok shift-chip">
                 <mat-icon>schedule</mat-icon>
-                {{ t('shift_open') }} · {{ s.openedAt | cxDate }}
+                {{ t('pos_shift_open') }} · {{ s.openedAt | cxDate }}
               </span>
             } @else {
               <span class="cx-chip warn shift-chip">
-                <mat-icon>schedule</mat-icon>
-                {{ t('shift_closed') }}
+                <mat-icon>warning_amber</mat-icon>
+                {{ t('pos_shift_closed') }}
               </span>
+              @if (canOpenShift) {
+                <button matButton="filled" class="open-shift-btn" (click)="openShift()">
+                  <mat-icon>play_arrow</mat-icon>
+                  {{ t('open_shift') }}
+                </button>
+              }
             }
           }
           <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
@@ -128,12 +121,40 @@
       </div>
 
       <div class="cx-card cart">
+        <div class="cart-resizer" (pointerdown)="startCartResize($event)">
+          <span class="grip"></span>
+        </div>
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
+          @if (queue().length) {
+            <button class="queue-btn" [matTooltip]="t('queue')" [matMenuTriggerFor]="queueMenu">
+              <mat-icon>menu</mat-icon>
+              <span class="badge">{{ queue().length }}</span>
+            </button>
+            <mat-menu #queueMenu="matMenu" class="queue-menu">
+              @for (q of queue(); track q.aggregateCode) {
+                <div class="queue-row" (click)="$event.stopPropagation()">
+                  <div class="qinfo">
+                    <span class="qtitle">{{ q.createdByName || q.customerName || q.warehouseName }}</span>
+                    <span class="qsub">{{ q.createdAt | cxDate }} · {{ q.itemCount }} · <span class="cx-money">{{ q.estimatedTotal | cxMoney }}</span></span>
+                    @if (q.note) {
+                      <span class="qnote">{{ q.note }}</span>
+                    }
+                  </div>
+                  <button matIconButton class="qplay" [matTooltip]="t('resume')" (click)="openQueueCart(q)">
+                    <mat-icon>play_arrow</mat-icon>
+                  </button>
+                  <button matIconButton class="qcancel" [matTooltip]="t('cancel')" (click)="cancelQueueCart(q)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+            </mat-menu>
+          }
           @if (state.held().length) {
-            <button class="held-btn" [matMenuTriggerFor]="heldMenu">
+            <button class="held-btn" [matTooltip]="t('held_sales')" [matMenuTriggerFor]="heldMenu">
               <mat-icon>pause_circle</mat-icon>
-              {{ t('held_sales') }} · {{ state.held().length }}
+              {{ state.held().length }}
             </button>
             <mat-menu #heldMenu="matMenu">
               @for (h of state.held(); track h.heldAt; let i = $index) {
@@ -185,7 +206,13 @@
             <div class="line" [class.over]="isOver(line)">
               <div class="info">
                 <span class="name">{{ line.name }}</span>
-                <span class="price cx-money">{{ line.price | cxMoney }}</span>
+                @if (canOverridePrice) {
+                  <input class="price-edit" type="text" inputmode="numeric" cxMoneyInput
+                         [class.overridden]="line.price !== line.originalPrice"
+                         [ngModel]="line.price" (ngModelChange)="onPrice(line, $event)" />
+                } @else {
+                  <span class="price cx-money">{{ line.price | cxMoney }}</span>
+                }
               </div>
               <div class="qty-box">
                 <button (click)="changeQty(line, -1)"><mat-icon>remove</mat-icon></button>
