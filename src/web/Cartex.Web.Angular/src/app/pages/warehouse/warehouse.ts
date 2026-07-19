@@ -66,7 +66,7 @@ export class Warehouse implements OnInit {
     totalPages: Math.ceil((this.onHand()?.totalCount ?? 0) / this.pageSize()),
   }));
 
-  readonly onHandCols = ['name', 'category', 'unit', 'qty', 'price', 'expiry'];
+  readonly onHandCols = ['name', 'code', 'category', 'unit', 'qty', 'price', 'expiry'];
   readonly lowStockCols = ['name', 'unit', 'onHand', 'minStock'];
   readonly expiringCols = ['name', 'warehouse', 'qty', 'expiredAt'];
 

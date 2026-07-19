@@ -13,6 +13,7 @@ import {
   ImportPreview, ImportRow, ImportStockMode, ProductsCatalogApi,
 } from '../../core/api/catalog.api';
 import { InventoryApi, Supplier, WarehouseOption } from '../../core/api/inventory.api';
+import { isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 
 const FIELDS = [
@@ -313,7 +314,7 @@ export class ProductImportDialog implements OnInit {
           stockMode: this.mode,
           warehouseId: this.mode === 'None' ? null : this.warehouseId,
           supplierId: this.mode === 'Supply' ? this.supplierId : null,
-          supplyDate: new Date().toISOString().slice(0, 10),
+          supplyDate: isoDay(new Date()),
           paidCash: 0,
           paidCard: 0,
           updatePrices: this.updatePrices,

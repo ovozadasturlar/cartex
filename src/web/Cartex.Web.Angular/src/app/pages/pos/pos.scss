@@ -157,7 +157,18 @@
   }
 
   .name { font-size: 13px; font-weight: 600; overflow: hidden; }
+  .code { font-size: 11px; color: var(--cx-text-3); white-space: nowrap; }
   .price { font-size: 14px; font-weight: 700; color: var(--cx-brand); }
+
+  .disc {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--cx-danger);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 
   .qty {
     font-size: 11px;
@@ -182,6 +193,7 @@
     aspect-ratio: 3 / 2;
 
     img { position: absolute; inset: 0; }
+    .disc { position: absolute; top: 6px; right: 6px; }
   }
 
   .body {
@@ -323,6 +335,23 @@
   .cbonus { color: var(--cx-text-2); }
   .cdebt { color: var(--cx-danger); }
   .climit { color: var(--cx-text-3); }
+
+  .bonus-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 11px;
+    color: var(--cx-text-2);
+    cursor: pointer;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    &.on { color: var(--cx-success); font-weight: 600; }
+  }
 }
 
 .unlink,
@@ -459,16 +488,18 @@
 
 .discount-row {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 8px;
   font-size: 13.5px;
   color: var(--cx-text-2);
+
+  > span { flex: 1; }
 }
 
 .dinputs {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 8px;
+  grid-template-columns: 96px 136px;
+  gap: 6px;
 }
 
 .dinput {
@@ -496,8 +527,20 @@
 
 .pay-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
   gap: 8px;
+
+  .exact {
+    display: grid;
+    place-items: center;
+    align-self: end;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    color: var(--cx-text-1);
+
+    mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  }
 
   label {
     display: flex;
@@ -520,30 +563,13 @@
   }
 }
 
-.exact-row {
+.due {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
 
-  .exact {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--cx-text-1);
-  }
-
-  .due {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-
-    .chg { font-size: 12px; color: var(--cx-text-2); }
-    .dbt { font-size: 13px; font-weight: 600; color: var(--cx-danger); }
-  }
+  .chg { font-size: 12px; color: var(--cx-text-2); }
+  .dbt { font-size: 13px; font-weight: 600; color: var(--cx-danger); }
 }
 
 .warn-box {
@@ -575,6 +601,8 @@
     color: var(--cx-text-1);
     font: inherit;
     font-size: 13px;
+
+    &.missing { border-color: var(--cx-danger); }
   }
 }
 

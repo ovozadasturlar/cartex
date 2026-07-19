@@ -6,6 +6,11 @@ import { NAV_SECTIONS, SETTINGS_SECTIONS } from './nav';
 export const authGuard: CanActivateFn = () =>
   inject(AuthService).isAuthenticated() || inject(Router).createUrlTree(['/login']);
 
+export const permissionGuard: CanActivateFn = (route) => {
+  const permission = route.data['permission'] as string | undefined;
+  return !permission || inject(AuthService).hasPermission(permission) || inject(Router).createUrlTree(['/']);
+};
+
 export const landingGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);

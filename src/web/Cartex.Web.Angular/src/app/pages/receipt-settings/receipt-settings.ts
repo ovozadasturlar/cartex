@@ -33,7 +33,7 @@ export class ReceiptSettings implements OnInit {
   private readonly api = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
 
-  readonly canManage = inject(AuthService).hasPermission('business.manage');
+  readonly canManage = inject(AuthService).hasPermission('settings.receipt');
   readonly loading = signal(true);
   readonly busy = signal(false);
 

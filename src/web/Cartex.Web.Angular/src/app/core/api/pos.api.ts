@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { Customer, Receipt } from '../models';
+import { CurrencyAmount, Customer, Receipt } from '../models';
 import { ListQuery, Paged, listParams, toPaged } from '../paging';
 
 export interface Category {
@@ -19,6 +19,8 @@ export interface StockOnHand {
   quantity: number;
   sellingPrice: number;
   imageUrl: string | null;
+  code: string | null;
+  discountPct: number | null;
 }
 
 export interface StockOnHandPage {
@@ -52,6 +54,18 @@ export interface CreateSaleResult {
   receiptToken: string;
 }
 
+export interface ZReportCurrency {
+  currency: string;
+  openingFloat: number;
+  cashSales: number;
+  cashReturns: number;
+  debtPayIn: number;
+  supplyPayOut: number;
+  expectedCash: number;
+  countedCash: number;
+  difference: number;
+}
+
 export interface CurrentShift {
   id: number;
   openedAt: string;
@@ -63,6 +77,12 @@ export interface CurrentShift {
   debtPayIn: number;
   supplyPayOut: number;
   expectedCash: number;
+  cardSales: number;
+  cardReturns: number;
+  bonusUsed: number;
+  newDebtIssued: number;
+  salesCount: number;
+  currencies: ZReportCurrency[];
 }
 
 export interface ZReport {
@@ -77,10 +97,17 @@ export interface ZReport {
   expectedCash: number;
   countedCash: number;
   difference: number;
+  cardSales: number;
+  cardReturns: number;
+  bonusUsed: number;
+  newDebtIssued: number;
+  salesCount: number;
+  currencies: ZReportCurrency[];
 }
 
 export interface ShiftHistory {
   id: number;
+  userId: number;
   userName: string;
   openedAt: string;
   closedAt: string | null;
@@ -143,17 +170,29 @@ export class PosApi {
     return this.http.get<CurrentShift | null>('/api/shifts/current');
   }
 
-  shiftHistory(page: number, pageSize: number): Observable<Paged<ShiftHistory>> {
+  shiftHistory(page: number, pageSize: number, userId?: number): Observable<Paged<ShiftHistory>> {
+    const params: Record<string, number> = { page, pageSize };
+    if (userId) params['userId'] = userId;
     return this.http
-      .get<ShiftHistory[]>('/api/shifts', { params: { page, pageSize }, observe: 'response' })
+      .get<ShiftHistory[]>('/api/shifts', { params, observe: 'response' })
       .pipe(map(toPaged));
   }
 
-  openShift(openingFloat: number): Observable<number> {
-    return this.http.post<number>('/api/shifts/open', { openingFloat });
+  shiftReport(id: number): Observable<ZReport> {
+    return this.http.get<ZReport>(`/api/shifts/${id}/report`);
   }
 
-  closeShift(id: number, countedCash: number): Observable<ZReport> {
-    return this.http.post<ZReport>(`/api/shifts/${id}/close`, { countedCash });
+  openShift(payload: number | { openingFloat: number; floats?: CurrencyAmount[] }): Observable<number> {
+    const body = typeof payload === 'number' ? { openingFloat: payload } : payload;
+    return this.http.post<number>('/api/shifts/open', body);
+  }
+
+  closeShift(id: number, payload: number | { countedCash: number; counted?: CurrencyAmount[] }): Observable<ZReport> {
+    const body = typeof payload === 'number' ? { countedCash: payload } : payload;
+    return this.http.post<ZReport>(`/api/shifts/${id}/close`, body);
+  }
+
+  cashMovement(payload: { amount: number; isPayOut: boolean; reason?: string | null; expenseCategoryId?: number | null }): Observable<void> {
+    return this.http.post<void>('/api/shifts/cash-movement', payload);
   }
 }

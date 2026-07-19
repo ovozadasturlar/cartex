@@ -284,13 +284,23 @@ export class CustomerPickerDialog implements OnInit {
         @for (p of receipt.payments; track $index) {
           <div class="row">
             <span>{{ t(p.method.toLowerCase()) }}</span>
-            <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
+            @if (p.isForeign) {
+              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }} ≈ {{ p.amountBase | cxMoney }}</span>
+            } @else {
+              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
+            }
           </div>
         }
         @if (receipt.debtAmount > 0) {
           <div class="row debt">
             <span>{{ t('debt') }}</span>
             <span class="cx-money">{{ receipt.debtAmount | cxMoney }}</span>
+          </div>
+        }
+        @if (receipt.creditAmount > 0) {
+          <div class="row">
+            <span>{{ t('advance') }}</span>
+            <span class="cx-money">{{ receipt.creditAmount | cxMoney }}</span>
           </div>
         }
         @if (receipt.changeAmount > 0) {

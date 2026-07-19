@@ -13,7 +13,7 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CashbackRule, DiscountRule, LookupsApi, LoyaltyApi, LoyaltyProgram, LoyaltyStats, NamedOption, ProductOption } from '../../core/api/misc.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -121,7 +121,7 @@ export class Loyalty implements OnInit {
 
   discountStatus(r: DiscountRule): string {
     if (!r.isEnabled) return 'off';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoDay(new Date());
     if (r.startsOn && today < r.startsOn) return 'pending';
     if (r.endsOn && today > r.endsOn) return 'expired';
     return 'active';

@@ -10,13 +10,15 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { InventoryApi, Supplier } from '../../core/api/inventory.api';
-import { CxMoneyPipe } from '../../core/format';
+import { InventoryApi, Supplier, SupplierTotals } from '../../core/api/inventory.api';
+import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { LedgerEntry } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
+import { StatCard } from '../../shared/stat-card';
 
 @Component({
   selector: 'app-suppliers',
@@ -32,6 +34,7 @@ import { PagingBar } from '../../shared/paging-bar';
     EmptyState,
     PageHeader,
     PagingBar,
+    StatCard,
   ],
   templateUrl: './suppliers.html',
   styleUrl: './suppliers.scss',
@@ -44,6 +47,7 @@ export class Suppliers implements OnInit {
 
   readonly loading = signal(true);
   readonly busy = signal(false);
+  readonly totals = signal<SupplierTotals | null>(null);
   readonly paged = signal<Paged<Supplier> | null>(null);
   readonly search = signal('');
   readonly page = signal(1);
@@ -51,7 +55,7 @@ export class Suppliers implements OnInit {
   readonly cols = ['name', 'phone', 'payable', 'actions'];
 
   async ngOnInit(): Promise<void> {
-    await this.load();
+    await Promise.all([this.load(), this.loadTotals()]);
     this.loading.set(false);
   }
 
@@ -77,7 +81,10 @@ export class Suppliers implements OnInit {
       maxWidth: '94vw',
       autoFocus: false,
     });
-    if (await lastValueFrom(ref.afterClosed())) this.load();
+    if (await lastValueFrom(ref.afterClosed())) {
+      this.load();
+      this.loadTotals();
+    }
   }
 
   async openPayDebt(supplier: Supplier): Promise<void> {
@@ -87,7 +94,27 @@ export class Suppliers implements OnInit {
       maxWidth: '94vw',
       autoFocus: false,
     });
-    if (await lastValueFrom(ref.afterClosed())) this.load();
+    if (await lastValueFrom(ref.afterClosed())) {
+      this.load();
+      this.loadTotals();
+    }
+  }
+
+  openLedger(supplier: Supplier): void {
+    this.dialog.open(SupplierLedgerDialog, {
+      data: supplier,
+      width: '640px',
+      maxWidth: '94vw',
+      autoFocus: false,
+    });
+  }
+
+  private async loadTotals(): Promise<void> {
+    try {
+      this.totals.set(await lastValueFrom(this.api.supplierTotals()));
+    } catch (e) {
+      this.notify.error(e);
+    }
   }
 
   private async load(): Promise<void> {
@@ -228,13 +255,129 @@ export class SupplierPayDebtDialog {
     if (this.amount <= 0) return;
     this.saving.set(true);
     try {
-      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method));
+      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method, crypto.randomUUID()));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {
       this.notify.error(e);
     } finally {
       this.saving.set(false);
+    }
+  }
+}
+
+@Component({
+  selector: 'app-supplier-ledger-dialog',
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatTableModule,
+    TranslocoModule,
+    CxDatePipe,
+    CxMoneyPipe,
+    EmptyState,
+  ],
+  template: `
+    <ng-container *transloco="let t">
+      <h2 mat-dialog-title>{{ t('supplier_ledger') }} · {{ supplier.name }}</h2>
+      <mat-dialog-content>
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (entries().length) {
+          <div class="scroll">
+            <table mat-table [dataSource]="entries()">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.date | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="op">
+                <th mat-header-cell *matHeaderCellDef>{{ t('operation') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.operationType }}</td>
+              </ng-container>
+              <ng-container matColumnDef="change">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('change') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money" [class.up]="e.change > 0" [class.down]="e.change < 0">
+                  {{ e.change > 0 ? '+' : '' }}{{ e.change | cxMoney }}{{ e.currency ? ' ' + e.currency : '' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="after">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('balance_after') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">{{ e.balanceAfter | cxMoney }}{{ e.currency ? ' ' + e.currency : '' }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let e; columns: cols"></tr>
+            </table>
+          </div>
+          <div class="pager">
+            <button matIconButton [disabled]="loading() || page() === 1" (click)="prev()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span>{{ page() }}</span>
+            <button matIconButton [disabled]="loading() || !hasMore()" (click)="next()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        } @else if (!loading()) {
+          <cx-empty-state icon="receipt_long" [message]="t('no_ledger')" />
+        }
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>{{ t('back') }}</button>
+      </mat-dialog-actions>
+    </ng-container>
+  `,
+  styles: `
+    .scroll { overflow-x: auto; }
+    table { width: 100%; }
+    .num { text-align: right; }
+    .up { color: var(--cx-success); }
+    .down { color: var(--cx-danger); }
+    .pager {
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 8px;
+      span { font-size: 13px; color: var(--cx-text-2); }
+    }
+  `,
+})
+export class SupplierLedgerDialog implements OnInit {
+  private readonly api = inject(InventoryApi);
+  private readonly notify = inject(NotifyService);
+
+  readonly supplier = inject<Supplier>(MAT_DIALOG_DATA);
+  readonly loading = signal(true);
+  readonly entries = signal<LedgerEntry[]>([]);
+  readonly page = signal(1);
+  readonly hasMore = signal(false);
+  readonly cols = ['date', 'op', 'change', 'after'];
+  private readonly pageSize = 20;
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  prev(): void {
+    if (this.page() === 1) return;
+    this.page.update((p) => p - 1);
+    this.load();
+  }
+
+  next(): void {
+    this.page.update((p) => p + 1);
+    this.load();
+  }
+
+  private async load(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const entries = await lastValueFrom(this.api.supplierLedger(this.supplier.id, this.page(), this.pageSize));
+      this.entries.set(entries);
+      this.hasMore.set(entries.length === this.pageSize);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.loading.set(false);
     }
   }
 }

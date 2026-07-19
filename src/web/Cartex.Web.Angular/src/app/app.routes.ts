@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, landingGuard } from './core/auth.guard';
+import { authGuard, landingGuard, permissionGuard } from './core/auth.guard';
 import { Login } from './pages/login/login';
 import { Shell } from './shell/shell';
 
@@ -29,27 +29,28 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings),
+        canActivateChild: [permissionGuard],
         children: [
           { path: 'security', loadComponent: () => import('./pages/security/security').then((m) => m.Security) },
-          { path: 'devices', loadComponent: () => import('./pages/devices/devices').then((m) => m.Devices) },
-          { path: 'categories', loadComponent: () => import('./pages/categories/categories').then((m) => m.Categories) },
-          { path: 'units', loadComponent: () => import('./pages/units/units').then((m) => m.Units) },
-          { path: 'product-types', loadComponent: () => import('./pages/product-types/product-types').then((m) => m.ProductTypes) },
-          { path: 'manufacturers', loadComponent: () => import('./pages/manufacturers/manufacturers').then((m) => m.Manufacturers) },
-          { path: 'business', loadComponent: () => import('./pages/business/business').then((m) => m.BusinessSettings) },
-          { path: 'branches', loadComponent: () => import('./pages/branches/branches').then((m) => m.Branches) },
-          { path: 'warehouses', loadComponent: () => import('./pages/warehouses/warehouses').then((m) => m.Warehouses) },
-          { path: 'suppliers', loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers) },
-          { path: 'users', loadComponent: () => import('./pages/users/users').then((m) => m.Users) },
-          { path: 'roles', loadComponent: () => import('./pages/roles/roles').then((m) => m.Roles) },
-          { path: 'loyalty', loadComponent: () => import('./pages/loyalty/loyalty').then((m) => m.Loyalty) },
-          { path: 'expense-categories', loadComponent: () => import('./pages/expense-categories/expense-categories').then((m) => m.ExpenseCategories) },
-          { path: 'rates', loadComponent: () => import('./pages/rates/rates').then((m) => m.Rates) },
-          { path: 'audit', loadComponent: () => import('./pages/audit/audit').then((m) => m.Audit) },
-          { path: 'license', loadComponent: () => import('./pages/license/license').then((m) => m.License) },
+          { path: 'devices', data: { permission: 'devices.manage' }, loadComponent: () => import('./pages/devices/devices').then((m) => m.Devices) },
+          { path: 'categories', data: { permission: 'categories.manage' }, loadComponent: () => import('./pages/categories/categories').then((m) => m.Categories) },
+          { path: 'units', data: { permission: 'products.manage' }, loadComponent: () => import('./pages/units/units').then((m) => m.Units) },
+          { path: 'product-types', data: { permission: 'products.manage' }, loadComponent: () => import('./pages/product-types/product-types').then((m) => m.ProductTypes) },
+          { path: 'manufacturers', data: { permission: 'products.manage' }, loadComponent: () => import('./pages/manufacturers/manufacturers').then((m) => m.Manufacturers) },
+          { path: 'business', data: { permission: 'business.manage' }, loadComponent: () => import('./pages/business/business').then((m) => m.BusinessSettings) },
+          { path: 'branches', data: { permission: 'branches.manage' }, loadComponent: () => import('./pages/branches/branches').then((m) => m.Branches) },
+          { path: 'warehouses', data: { permission: 'warehouses.manage' }, loadComponent: () => import('./pages/warehouses/warehouses').then((m) => m.Warehouses) },
+          { path: 'suppliers', data: { permission: 'suppliers.manage' }, loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers) },
+          { path: 'users', data: { permission: 'users.view' }, loadComponent: () => import('./pages/users/users').then((m) => m.Users) },
+          { path: 'roles', data: { permission: 'roles.view' }, loadComponent: () => import('./pages/roles/roles').then((m) => m.Roles) },
+          { path: 'loyalty', data: { permission: 'loyalty.view' }, loadComponent: () => import('./pages/loyalty/loyalty').then((m) => m.Loyalty) },
+          { path: 'expense-categories', data: { permission: 'business.manage' }, loadComponent: () => import('./pages/expense-categories/expense-categories').then((m) => m.ExpenseCategories) },
+          { path: 'rates', data: { permission: 'rates.manage' }, loadComponent: () => import('./pages/rates/rates').then((m) => m.Rates) },
+          { path: 'audit', data: { permission: 'audit.view' }, loadComponent: () => import('./pages/audit/audit').then((m) => m.Audit) },
+          { path: 'license', data: { permission: 'features.manage' }, loadComponent: () => import('./pages/license/license').then((m) => m.License) },
           { path: 'features', redirectTo: 'license' },
-          { path: 'integrations', loadComponent: () => import('./pages/integrations/integrations').then((m) => m.Integrations) },
-          { path: 'receipt-settings', loadComponent: () => import('./pages/receipt-settings/receipt-settings').then((m) => m.ReceiptSettings) },
+          { path: 'integrations', data: { permission: 'settings.integrations' }, loadComponent: () => import('./pages/integrations/integrations').then((m) => m.Integrations) },
+          { path: 'receipt-settings', data: { permission: 'settings.receipt' }, loadComponent: () => import('./pages/receipt-settings/receipt-settings').then((m) => m.ReceiptSettings) },
         ],
       },
     ],

@@ -111,8 +111,10 @@ export class RatesApi {
     return this.http.post<number>('/api/rates', { code, rate });
   }
 
-  currencies(): Observable<Currency[]> {
-    return this.http.get<Currency[]>('/api/rates/currencies');
+  currencies(onlyEnabled?: boolean): Observable<Currency[]> {
+    return this.http.get<Currency[]>('/api/rates/currencies', {
+      params: onlyEnabled ? { onlyEnabled: true } : {},
+    });
   }
 
   createCurrency(code: string, name: string): Observable<void> {

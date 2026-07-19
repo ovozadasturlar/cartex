@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,9 +12,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
+import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { Customer } from '../../core/models';
+import { MoneyInputDirective } from '../../core/money-input.directive';
 import { NotifyService } from '../../core/notify.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
@@ -27,6 +30,7 @@ const PAGE_SIZE = 40;
 @Component({
   selector: 'app-pos',
   imports: [
+    FormsModule,
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
@@ -38,12 +42,14 @@ const PAGE_SIZE = 40;
     CxDatePipe,
     CxMoneyPipe,
     EmptyState,
+    MoneyInputDirective,
   ],
   templateUrl: './pos.html',
   styleUrl: './pos.scss',
 })
 export class Pos implements OnInit {
   private readonly api = inject(PosApi);
+  private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
@@ -87,6 +93,11 @@ export class Pos implements OnInit {
   readonly dueDate = this.state.dueDate;
   readonly paying = signal(false);
   readonly minDueDate = isoDay(new Date());
+  readonly policy = signal<SalesPolicy | null>(null);
+  readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
+  readonly bonusAuto = signal(false);
+  readonly dueDateMissing = signal(false);
+  private lastCustomerId: number | null | undefined;
 
   readonly subTotal = computed(() => this.cart().reduce((sum, l) => sum + l.price * l.qty, 0));
   readonly discount = computed(() => {
@@ -133,16 +144,35 @@ export class Pos implements OnInit {
     effect(() => {
       if (this.wh.selectedWarehouseId()) untracked(() => this.reset());
     });
+    effect(() => {
+      const id = this.customer()?.id ?? null;
+      untracked(() => {
+        if (this.lastCustomerId !== undefined && this.lastCustomerId !== id && this.bonusAuto()) {
+          this.bonusAuto.set(false);
+          this.bonus.set(0);
+        }
+        this.lastCustomerId = id;
+      });
+    });
+    effect(() => {
+      if (!this.bonusAuto()) return;
+      const c = this.customer();
+      if (!c) return;
+      const target = Math.min(c.cashbackBalance, Math.max(0, this.total() - this.cash() - this.card()));
+      untracked(() => this.bonus.set(target));
+    });
   }
 
   async ngOnInit(): Promise<void> {
     try {
-      const [categories, shift] = await Promise.all([
+      const [categories, shift, policy] = await Promise.all([
         lastValueFrom(this.api.categories()),
         lastValueFrom(this.api.currentShift()),
+        lastValueFrom(this.settingsApi.salesPolicy()).catch(() => null),
       ]);
       this.categories.set(categories);
       this.shift.set(shift);
+      this.policy.set(policy);
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -231,19 +261,12 @@ export class Pos implements OnInit {
     this.state.clearAll();
   }
 
-  num(e: Event): number {
-    const v = Number((e.target as HTMLInputElement).value);
-    return Number.isFinite(v) && v > 0 ? v : 0;
-  }
-
-  onDiscountPercent(e: Event): void {
-    const v = Math.min(100, this.num(e));
-    this.discountPercent.set(v);
+  onDiscountPercent(v: number): void {
+    this.discountPercent.set(Math.min(100, v));
     this.state.discountByPercent.set(true);
   }
 
-  onDiscountAmount(e: Event): void {
-    const v = this.num(e);
+  onDiscountAmount(v: number): void {
     this.state.discountManual.set(v);
     this.state.discountByPercent.set(false);
     const sub = this.subTotal();
@@ -252,6 +275,18 @@ export class Pos implements OnInit {
 
   onDueDate(e: Event): void {
     this.dueDate.set((e.target as HTMLInputElement).value);
+    this.dueDateMissing.set(false);
+  }
+
+  toggleUseBonus(): void {
+    const on = !this.bonusAuto();
+    this.bonusAuto.set(on);
+    if (!on) this.bonus.set(0);
+  }
+
+  onBonusManual(v: number): void {
+    this.bonusAuto.set(false);
+    this.bonus.set(v);
   }
 
   payExact(): void {
@@ -291,6 +326,16 @@ export class Pos implements OnInit {
     }
     if (this.debt() > 0 && !this.customer()) {
       this.notify.error(t('debt_customer_required'));
+      return;
+    }
+    const policy = this.policy();
+    if (this.debt() > 0 && policy && !policy.allowDebtSales) {
+      this.notify.error(t('debt_sales_disabled'));
+      return;
+    }
+    if (this.debt() > 0 && policy?.requireDebtDueDate && !this.dueDate()) {
+      this.dueDateMissing.set(true);
+      this.notify.error(t('debt_due_required'));
       return;
     }
     this.paying.set(true);

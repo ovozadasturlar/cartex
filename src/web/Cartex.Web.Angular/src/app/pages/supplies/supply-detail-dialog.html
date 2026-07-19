@@ -73,6 +73,18 @@
           <span class="lbl">{{ t('paid_card') }}</span>
           <span class="val cx-money">{{ d.paidCard | cxMoney }}</span>
         </div>
+        @if (d.paidTransfer > 0) {
+          <div class="box">
+            <span class="lbl">{{ t('pay_transfer') }}</span>
+            <span class="val cx-money">{{ d.paidTransfer | cxMoney }}</span>
+          </div>
+        }
+        @if (d.paidBank > 0) {
+          <div class="box">
+            <span class="lbl">{{ t('pay_bank') }}</span>
+            <span class="val cx-money">{{ d.paidBank | cxMoney }}</span>
+          </div>
+        }
         <div class="box">
           <span class="lbl">{{ t('debt') }}</span>
           <span class="val cx-money" [class.danger]="debt(d) > 0">{{ debt(d) | cxMoney }}</span>

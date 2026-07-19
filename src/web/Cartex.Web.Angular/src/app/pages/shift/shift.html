@@ -21,34 +21,95 @@
     @if (shift(); as s) {
       <div class="cx-card current">
         <div class="top">
-          <span class="cx-chip ok">{{ t('shift_open') }}</span>
-          <span class="opened">{{ t('opened_at') }}: {{ s.openedAt | cxDate }}</span>
-          @if (cashier()) {
-            <span class="opened">{{ t('cashier') }}: {{ cashier() }}</span>
-          }
-        </div>
-        <div class="facts">
-          <div class="fact">
-            <span class="lbl">{{ t('opening_float') }}</span>
-            <span class="val cx-money">{{ s.openingFloat | cxMoney }}</span>
+          <div class="info">
+            <span class="cx-chip ok">{{ t('shift_open') }}</span>
+            <span class="opened">{{ s.openedAt | cxDate }} · {{ duration() }}</span>
           </div>
-          <div class="fact">
-            <span class="lbl">{{ t('cash_sales') }}</span>
-            <span class="val cx-money">{{ s.cashSales | cxMoney }}</span>
-          </div>
-          <div class="fact">
-            <span class="lbl">{{ t('debt_pay_in') }}</span>
-            <span class="val cx-money">{{ s.debtPayIn | cxMoney }}</span>
-          </div>
-          <div class="fact">
-            <span class="lbl">{{ t('pay_in') }} / {{ t('pay_out') }}</span>
-            <span class="val cx-money">{{ s.payIn | cxMoney }} / −{{ s.payOut | cxMoney }}</span>
-          </div>
-          <div class="fact accent">
+          <div class="hero">
             <span class="lbl">{{ t('expected_cash') }}</span>
-            <span class="val cx-money">{{ s.expectedCash | cxMoney }}</span>
+            <span class="big cx-money">{{ s.expectedCash | cxMoney }}</span>
           </div>
         </div>
+        <div class="groups">
+          <div class="group">
+            <h4>{{ t('z_section_sales') }}</h4>
+            <div class="stats">
+              <div class="fact">
+                <span class="lbl">{{ t('cash_sales') }}</span>
+                <span class="val cx-money" [class.dim]="s.cashSales === 0">{{ s.cashSales | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('card_sales') }}</span>
+                <span class="val cx-money" [class.dim]="s.cardSales === 0">{{ s.cardSales | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('sales_count') }}</span>
+                <span class="val cx-money" [class.dim]="s.salesCount === 0">{{ s.salesCount | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('debt_issued') }}</span>
+                <span class="val cx-money" [class.dim]="s.newDebtIssued === 0">{{ s.newDebtIssued | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('bonus_used') }}</span>
+                <span class="val cx-money" [class.dim]="s.bonusUsed === 0">{{ s.bonusUsed | cxMoney }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="group">
+            <h4>{{ t('z_section_cash') }}</h4>
+            <div class="stats">
+              <div class="fact">
+                <span class="lbl">{{ t('opening_float') }}</span>
+                <span class="val cx-money" [class.dim]="s.openingFloat === 0">{{ s.openingFloat | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('pay_in') }}</span>
+                <span class="val cx-money" [class.dim]="s.payIn === 0">{{ s.payIn | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('pay_out') }}</span>
+                <span class="val cx-money" [class.dim]="s.payOut === 0">{{ s.payOut | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('debt_pay_in') }}</span>
+                <span class="val cx-money" [class.dim]="s.debtPayIn === 0">{{ s.debtPayIn | cxMoney }}</span>
+              </div>
+              <div class="fact">
+                <span class="lbl">{{ t('supply_pay_out') }}</span>
+                <span class="val cx-money" [class.dim]="s.supplyPayOut === 0">{{ s.supplyPayOut | cxMoney }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        @if (canCashOut) {
+          <div class="movement">
+            <span class="mlbl">{{ t('cash_movement') }}</span>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reason">
+              <mat-label>{{ t('movement_reason') }}</mat-label>
+              <input matInput [(ngModel)]="movementReason" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cat">
+              <mat-label>{{ t('expense_category') }}</mat-label>
+              <mat-select [(ngModel)]="movementCategoryId">
+                <mat-option [value]="null">—</mat-option>
+                @for (c of expenseCategories(); track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="amt">
+              <mat-label>{{ t('amount') }}</mat-label>
+              <input matInput type="number" min="0" [(ngModel)]="movementAmount" />
+            </mat-form-field>
+            <button matButton="filled" class="pay-in" [disabled]="busy() || !movementAmount" (click)="movement(false, t)">
+              {{ t('pay_in') }}
+            </button>
+            <button matButton="filled" class="pay-out" [disabled]="busy() || !movementAmount" (click)="movement(true, t)">
+              {{ t('pay_out') }}
+            </button>
+          </div>
+        }
       </div>
     } @else {
       <div class="cx-card closed-card">
@@ -57,52 +118,80 @@
       </div>
     }
 
-    <h3 class="section">{{ t('shift_history') }}</h3>
-    <div class="cx-table-card">
-      @if (busy()) {
-        <mat-progress-bar mode="indeterminate" />
-      }
-      @if (history(); as h) {
-        @if (h.items.length) {
-          <div class="table-wrap">
-            <table mat-table [dataSource]="h.items">
-              <ng-container matColumnDef="cashier">
-                <th mat-header-cell *matHeaderCellDef>{{ t('cashier') }}</th>
-                <td mat-cell *matCellDef="let r">{{ r.userName }}</td>
-              </ng-container>
-              <ng-container matColumnDef="opened">
-                <th mat-header-cell *matHeaderCellDef>{{ t('opened_at') }}</th>
-                <td mat-cell *matCellDef="let r">{{ r.openedAt | cxDate }}</td>
-              </ng-container>
-              <ng-container matColumnDef="closed">
-                <th mat-header-cell *matHeaderCellDef>{{ t('closed_at') }}</th>
-                <td mat-cell *matCellDef="let r">{{ r.closedAt | cxDate }}</td>
-              </ng-container>
-              <ng-container matColumnDef="float">
-                <th mat-header-cell *matHeaderCellDef class="num">{{ t('opening_float') }}</th>
-                <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.openingFloat | cxMoney }}</td>
-              </ng-container>
-              <ng-container matColumnDef="counted">
-                <th mat-header-cell *matHeaderCellDef class="num">{{ t('counted_cash') }}</th>
-                <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.countedCash | cxMoney }}</td>
-              </ng-container>
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
-                <td mat-cell *matCellDef="let r">
-                  <span class="cx-chip" [class.ok]="r.status === 'Open'">
-                    {{ t(r.status === 'Open' ? 'shift_open' : 'shift_closed') }}
-                  </span>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr mat-row *matRowDef="let r; columns: cols"></tr>
-            </table>
-          </div>
-          <cx-paging-bar [meta]="h.meta" (changed)="onPage($event)" />
-        } @else {
-          <cx-empty-state icon="schedule" [message]="t('no_shifts')" />
+    @if (canViewHistory) {
+      <div class="history-head">
+        <h3 class="section">{{ t('shift_history') }}</h3>
+        @if (canViewAll && cashiers().length) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cashier-filter">
+            <mat-label>{{ t('cashier') }}</mat-label>
+            <mat-select [(ngModel)]="cashierId" (ngModelChange)="onFilter()">
+              <mat-option [value]="null">{{ t('all_cashiers') }}</mat-option>
+              @for (u of cashiers(); track u.id) {
+                <mat-option [value]="u.id">{{ u.fullName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         }
-      }
-    </div>
+      </div>
+      <div class="cx-table-card">
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (history(); as h) {
+          @if (h.items.length) {
+            <div class="table-wrap">
+              <table mat-table [dataSource]="h.items">
+                <ng-container matColumnDef="cashier">
+                  <th mat-header-cell *matHeaderCellDef>{{ t('cashier') }}</th>
+                  <td mat-cell *matCellDef="let r">{{ r.userName }}</td>
+                </ng-container>
+                <ng-container matColumnDef="opened">
+                  <th mat-header-cell *matHeaderCellDef>{{ t('opened_at') }}</th>
+                  <td mat-cell *matCellDef="let r">{{ r.openedAt | cxDate }}</td>
+                </ng-container>
+                <ng-container matColumnDef="closed">
+                  <th mat-header-cell *matHeaderCellDef>{{ t('closed_at') }}</th>
+                  <td mat-cell *matCellDef="let r">{{ r.closedAt | cxDate }}</td>
+                </ng-container>
+                <ng-container matColumnDef="float">
+                  <th mat-header-cell *matHeaderCellDef class="num">{{ t('opening_float') }}</th>
+                  <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.openingFloat | cxMoney }}</td>
+                </ng-container>
+                <ng-container matColumnDef="counted">
+                  <th mat-header-cell *matHeaderCellDef class="num">{{ t('counted_cash') }}</th>
+                  <td mat-cell *matCellDef="let r" class="num cx-money">{{ r.countedCash | cxMoney }}</td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+                  <td mat-cell *matCellDef="let r">
+                    <span class="cx-chip" [class.ok]="r.status === 'Open'">
+                      {{ t(r.status === 'Open' ? 'shift_open' : 'shift_closed') }}
+                    </span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let r" class="actions">
+                    <button matIconButton [title]="t('z_report')" (click)="viewReport(r)">
+                      <mat-icon>receipt_long</mat-icon>
+                    </button>
+                    @if (canManageAll && r.status === 'Open') {
+                      <button matIconButton class="danger" [title]="t('force_close')" (click)="forceClose(r, t)">
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="cols"></tr>
+                <tr mat-row *matRowDef="let r; columns: cols"></tr>
+              </table>
+            </div>
+            <cx-paging-bar [meta]="h.meta" (changed)="onPage($event)" />
+          } @else {
+            <cx-empty-state icon="schedule" [message]="t('no_shifts')" />
+          }
+        }
+      </div>
+    }
   }
 </div>

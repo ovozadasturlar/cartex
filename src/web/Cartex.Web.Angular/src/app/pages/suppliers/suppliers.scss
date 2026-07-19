@@ -2,6 +2,12 @@
   display: block;
 }
 
+.stats {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .search {
   width: min(340px, 100%);
   margin-bottom: 14px;

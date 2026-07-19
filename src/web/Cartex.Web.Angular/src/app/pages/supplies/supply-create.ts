@@ -14,6 +14,7 @@ import { lastValueFrom } from 'rxjs';
 import {
   CreateSupplyItem, InventoryApi, ProductOption, Supplier, UnitOption, VariantPriceInfo, WarehouseOption,
 } from '../../core/api/inventory.api';
+import { SettingsApi } from '../../core/api/settings.api';
 import { CxMoneyPipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
@@ -50,12 +51,14 @@ interface SupplyLine {
 })
 export class SupplyCreate implements OnInit {
   private readonly api = inject(InventoryApi);
+  private readonly settings = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly requireSupplier = signal(true);
   readonly suppliers = signal<Supplier[]>([]);
   readonly warehouses = signal<WarehouseOption[]>([]);
   readonly products = signal<ProductOption[]>([]);
@@ -118,17 +121,19 @@ export class SupplyCreate implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [suppliers, warehouses, products, units] = await Promise.all([
+      const [suppliers, warehouses, products, units, policy] = await Promise.all([
         lastValueFrom(this.api.suppliersAll()),
         lastValueFrom(this.api.warehouses()),
         lastValueFrom(this.api.productLookup()),
         lastValueFrom(this.api.units()),
+        lastValueFrom(this.settings.salesPolicy()).catch(() => null),
       ]);
       this.suppliers.set(suppliers);
       this.warehouses.set(warehouses);
       this.products.set(products);
       this.units.set(units.filter((u) => u.isEnabled));
       if (warehouses.length === 1) this.warehouseId.set(warehouses[0].id);
+      if (policy) this.requireSupplier.set(policy.requireSupplier);
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -217,7 +222,7 @@ export class SupplyCreate implements OnInit {
   async save(): Promise<void> {
     const supplierId = this.supplierId();
     const warehouseId = this.warehouseId();
-    if (!supplierId || !warehouseId || !this.items().length) return;
+    if ((this.requireSupplier() && supplierId === null) || !warehouseId || !this.items().length) return;
     this.saving.set(true);
     try {
       const items: CreateSupplyItem[] = this.items().map((i) => ({
@@ -234,13 +239,13 @@ export class SupplyCreate implements OnInit {
           warehouseId,
           supplyDate: this.supplyDate,
           items,
-          paidCash: this.paidCash,
-          paidCard: this.paidCard,
+          paidCash: supplierId === null ? 0 : this.paidCash,
+          paidCard: supplierId === null ? 0 : this.paidCard,
         }),
       );
-      if (this.payOldDebt > 0) {
+      if (supplierId !== null && this.payOldDebt > 0) {
         try {
-          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt));
+          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt, 'Cash', crypto.randomUUID()));
         } catch {
           this.notify.error(this.transloco.translate('err_debt_pay_failed'));
         }

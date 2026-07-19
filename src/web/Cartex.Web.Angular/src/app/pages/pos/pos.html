@@ -2,7 +2,7 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    @if (!shift()) {
+    @if (shiftRequired() && !shift()) {
       <div class="shift-banner">
         <mat-icon>schedule</mat-icon>
         <span>{{ t('no_open_shift') }}</span>
@@ -28,16 +28,18 @@
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
           </mat-form-field>
-          @if (shift(); as s) {
-            <span class="cx-chip ok shift-chip">
-              <mat-icon>schedule</mat-icon>
-              {{ t('shift_open') }} · {{ s.openedAt | cxDate }}
-            </span>
-          } @else {
-            <span class="cx-chip warn shift-chip">
-              <mat-icon>schedule</mat-icon>
-              {{ t('shift_closed') }}
-            </span>
+          @if (shiftRequired()) {
+            @if (shift(); as s) {
+              <span class="cx-chip ok shift-chip">
+                <mat-icon>schedule</mat-icon>
+                {{ t('shift_open') }} · {{ s.openedAt | cxDate }}
+              </span>
+            } @else {
+              <span class="cx-chip warn shift-chip">
+                <mat-icon>schedule</mat-icon>
+                {{ t('shift_closed') }}
+              </span>
+            }
           }
           <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
             <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
@@ -74,9 +76,15 @@
                     } @else {
                       <mat-icon>inventory_2</mat-icon>
                     }
+                    @if (p.discountPct != null) {
+                      <span class="disc">-{{ p.discountPct }}%</span>
+                    }
                   </div>
                   <div class="body">
                     <span class="name">{{ p.productName }}</span>
+                    @if (p.code) {
+                      <span class="code">{{ p.code }}</span>
+                    }
                     <span class="meta">
                       <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
                       <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
@@ -97,6 +105,12 @@
                     }
                   </div>
                   <span class="name">{{ p.productName }}</span>
+                  @if (p.code) {
+                    <span class="code">{{ p.code }}</span>
+                  }
+                  @if (p.discountPct != null) {
+                    <span class="disc">-{{ p.discountPct }}%</span>
+                  }
                   <span class="qty">{{ p.quantity | cxMoney }} {{ p.unitName }}</span>
                   <span class="price cx-money">{{ p.sellingPrice | cxMoney }}</span>
                 </button>
@@ -141,7 +155,14 @@
               <div class="who">
                 <span class="cname">{{ c.fullName }} {{ c.lastName || '' }}</span>
                 <span class="cmeta">
-                  <span class="cbonus cx-money">{{ c.cashbackBalance | cxMoney }} 🎁</span>
+                  @if (c.cashbackBalance > 0) {
+                    <button class="bonus-toggle" [class.on]="bonusAuto()" (click)="toggleUseBonus()">
+                      <mat-icon>{{ bonusAuto() ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                      {{ t('use_bonus') }} · <span class="cx-money">{{ c.cashbackBalance | cxMoney }}</span>
+                    </button>
+                  } @else {
+                    <span class="cbonus cx-money">{{ c.cashbackBalance | cxMoney }} 🎁</span>
+                  }
                   @if (c.creditLimit > 0) {
                     <span class="cdebt cx-money">{{ c.debtBalance | cxMoney }}</span>
                     <span class="climit cx-money">{{ t('credit_remaining') }} {{ c.creditLimit - c.debtBalance | cxMoney }}</span>
@@ -183,7 +204,7 @@
 
         <div class="cart-foot">
           <div class="row">
-            <span>{{ t('subtotal') }}</span>
+            <span>{{ t('total') }}</span>
             <span class="cx-money">{{ subTotal() | cxMoney }}</span>
           </div>
 
@@ -191,11 +212,11 @@
             <span>{{ t('discount') }}</span>
             <div class="dinputs">
               <div class="dinput">
-                <input type="number" min="0" max="100" [value]="discountPercent()" (change)="onDiscountPercent($event)" />
+                <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="discountPercent()" (ngModelChange)="onDiscountPercent($event)" />
                 <span class="suffix">%</span>
               </div>
               <div class="dinput">
-                <input type="number" min="0" [value]="discount()" (change)="onDiscountAmount($event)" />
+                <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="discount()" (ngModelChange)="onDiscountAmount($event)" />
                 <span class="suffix">{{ t('currency_sum') }}</span>
               </div>
             </div>
@@ -204,30 +225,29 @@
           <div class="sep"></div>
 
           <div class="row total-row">
-            <span>{{ t('total') }}</span>
+            <span>{{ t('pos_payable') }}</span>
             <span class="cx-money">{{ total() | cxMoney }}</span>
           </div>
 
           <div class="pay-grid">
+            <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
+              <mat-icon>functions</mat-icon>
+            </button>
             <label>
               <span>{{ t('cash') }}</span>
-              <input type="number" min="0" [value]="cash()" (input)="cash.set(num($event))" />
+              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="cash" />
             </label>
             <label>
               <span>{{ t('card') }}</span>
-              <input type="number" min="0" [value]="card()" (input)="card.set(num($event))" />
+              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="card" />
             </label>
             <label>
               <span>{{ t('bonus') }}</span>
-              <input type="number" min="0" [value]="bonus()" (input)="bonus.set(num($event))" />
+              <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="bonus()" (ngModelChange)="onBonusManual($event)" />
             </label>
           </div>
 
-          <div class="exact-row">
-            <button class="exact" (click)="payExact()">
-              <mat-icon>payments</mat-icon>
-              {{ t('exact') }}
-            </button>
+          @if (change() > 0 || debt() > 0) {
             <div class="due">
               @if (change() > 0) {
                 <span class="chg cx-money">{{ change() | cxMoney }}</span>
@@ -236,12 +256,12 @@
                 <span class="dbt cx-money">{{ debt() | cxMoney }}</span>
               }
             </div>
-          </div>
+          }
 
           @if (debt() > 0) {
             <label class="due-date">
               <span>{{ t('debt_due_date') }}</span>
-              <input type="date" [min]="minDueDate" [value]="dueDate()" (change)="onDueDate($event)" />
+              <input type="date" [min]="minDueDate" [value]="dueDate()" [class.missing]="dueDateMissing()" (change)="onDueDate($event)" />
             </label>
           }
           @if (overCreditLimit()) {
