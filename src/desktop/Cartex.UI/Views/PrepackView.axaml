@@ -1,11 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:c="using:Cartex.UI.Controls"
              xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.PrepackView"
              x:CompileBindings="False">
 
-    <Border Background="#30000000" IsVisible="{Binding IsOpen}">
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}"
+            c:OverlayBehaviors.DismissCommand="{Binding CloseCommand}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

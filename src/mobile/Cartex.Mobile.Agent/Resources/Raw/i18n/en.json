@@ -61,6 +61,7 @@
   "repay_accept": "Accept",
   "current_debt_fmt": "Current debt: {0:N0} {1} (as of: {2})",
   "err_enter_amount": "Enter an amount",
+  "err_amount_gt_debt": "Payment cannot exceed the debt (max: {0:N0} {1})",
   "repay_queued": "Payment added to the queue",
   "transfers_title": "Waybills (today)",
   "transfer_receive": "Receive",

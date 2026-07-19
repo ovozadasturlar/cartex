@@ -95,7 +95,8 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
+        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center"

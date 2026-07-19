@@ -349,7 +349,8 @@
         </DockPanel>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsPaletteOpen}"
-                Background="#30000000">
+                Background="#30000000"
+                controls:OverlayBehaviors.DismissCommand="{Binding ClosePaletteCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="580" MaxHeight="460"
                     VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,100,0,0"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -382,7 +383,8 @@
         </Border>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsShortcutHelpOpen}"
-                Background="#30000000">
+                Background="#30000000"
+                controls:OverlayBehaviors.DismissCommand="{Binding ToggleShortcutHelpCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="440" MaxHeight="540"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

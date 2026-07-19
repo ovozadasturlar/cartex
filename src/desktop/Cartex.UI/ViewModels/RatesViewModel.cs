@@ -63,7 +63,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
                 try { _staleDays = (await ServiceLocator.Resolve<ReferenceCache>().GetAsync(CacheKeys.SalesPolicy, settingsApi.GetSalesPolicyAsync)).StaleRateDays; } catch { }
 
                 var list = await api.GetCurrenciesAsync();
-                var limit = DateTime.UtcNow.AddDays(-_staleDays);
+                var limit = DateTime.Now.AddDays(-_staleDays);
                 Currencies.Clear();
                 foreach (var c in list.OrderByDescending(c => c.IsBase).ThenBy(c => c.Code))
                     Currencies.Add(new CurrencyRow(c, c.IsEnabled && !c.IsBase && (c.RateAt is null || c.RateAt < limit)));

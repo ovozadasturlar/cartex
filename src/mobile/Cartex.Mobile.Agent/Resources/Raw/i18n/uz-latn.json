@@ -61,6 +61,7 @@
   "repay_accept": "Qabul qilish",
   "current_debt_fmt": "Joriy qarz: {0:N0} {1} (holat: {2})",
   "err_enter_amount": "Summani kiriting",
+  "err_amount_gt_debt": "To'lov qarzdan oshmasin (maks: {0:N0} {1})",
   "repay_queued": "To'lov navbatga qo'shildi",
   "transfers_title": "Yuk xati (bugun)",
   "transfer_receive": "Qabul qilish",

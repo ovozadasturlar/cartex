@@ -86,7 +86,8 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000">
+        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
             <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -131,7 +132,8 @@
             </Border>
         </Border>
 
-        <Border IsVisible="{Binding IsDetailOpen}" Background="#30000000">
+        <Border IsVisible="{Binding IsDetailOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CloseDetailCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
