@@ -29,7 +29,7 @@ public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, I
                 Sessions.Clear();
                 foreach (var s in list)
                     Sessions.Add(new DeviceRow(s.Id, string.IsNullOrWhiteSpace(s.DeviceName) ? L["devices_unknown"] : s.DeviceName!,
-                        s.CreatedAt.ToLocalTime(), s.LastUsedAt.ToLocalTime(), s.ExpiresAt.ToLocalTime(), s.Username));
+                        s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.Username));
             }
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }

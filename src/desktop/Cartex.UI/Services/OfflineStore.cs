@@ -174,6 +174,8 @@ public sealed class OfflineStore
         await _db.InsertOrReplaceAsync(new OfflineMeta { Key = key, Value = value });
     }
 
+    public async Task<bool> GetAllowDebtSalesAsync() => await GetMetaAsync("allow_debt_sales") != "0";
+
     public async Task ClearAsync()
     {
         await InitAsync();

@@ -20,19 +20,19 @@ public class PrepackTests(CartexApiFactory factory)
 
         var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
         var warehouseId = warehouses![0].Id;
-        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=Shakar");
-        var sugar = products!.First(p => p.Name == "Shakar 1kg");
+        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=PPR");
+        var pipe = products!.First(p => p.Name == "PPR truba 20mm PN20");
 
         var create = await client.PostAsJsonAsync("/api/prepacks",
-            new { warehouseId, variantId = sugar.DefaultVariantId, quantity = 2.5m, count = 1 });
+            new { warehouseId, variantId = pipe.DefaultVariantId, quantity = 2.5m, count = 1 });
         create.EnsureSuccessStatusCode();
         var label = (await create.Content.ReadFromJsonAsync<List<Label>>())!.Single();
         Assert.StartsWith("PP", label.LabelCode);
-        Assert.Equal(2.5m * 12000m, label.Price);
+        Assert.Equal(2.5m * 9500m, label.Price);
 
         var lookup = await client.GetFromJsonAsync<Lookup>($"/api/prepacks/by-code?code={label.LabelCode}&warehouseId={warehouseId}");
         Assert.Equal(2.5m, lookup!.Quantity);
-        Assert.Equal(sugar.DefaultVariantId, lookup.VariantId);
+        Assert.Equal(pipe.DefaultVariantId, lookup.VariantId);
 
         var sale = await client.PostAsJsonAsync("/api/sales", new
         {
@@ -69,10 +69,10 @@ public class PrepackTests(CartexApiFactory factory)
         var seller = await AuthHelper.LoginAsync(factory, "seller", "seller123");
         var warehouses = await seller.GetFromJsonAsync<List<IdName>>("/api/warehouses");
         var warehouseId = warehouses![0].Id;
-        var products = await seller.GetFromJsonAsync<List<Product>>("/api/products?search=Tuz");
-        var salt = products!.First(p => p.Name == "Tuz 1kg");
+        var products = await seller.GetFromJsonAsync<List<Product>>("/api/products?search=PPR");
+        var pipe = products!.First(p => p.Name == "PPR truba 25mm PN20");
 
-        object body = new { warehouseId, variantId = salt.DefaultVariantId, quantity = 1m, count = 1 };
+        object body = new { warehouseId, variantId = pipe.DefaultVariantId, quantity = 1m, count = 1 };
 
         (await dev.PutAsJsonAsync("/api/features/prepack", new { isEnabled = false })).EnsureSuccessStatusCode();
         try
@@ -95,11 +95,11 @@ public class PrepackTests(CartexApiFactory factory)
         var client = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
         var warehouseId = warehouses![0].Id;
-        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=Guruch");
-        var rice = products!.First(p => p.Name == "Guruch 1kg");
+        var products = await client.GetFromJsonAsync<List<Product>>("/api/products?search=PPR");
+        var pipe = products!.First(p => p.Name == "PPR truba 32mm PN20");
 
         var create = await client.PostAsJsonAsync("/api/prepacks",
-            new { warehouseId, variantId = rice.DefaultVariantId, quantity = 1m, count = 1 });
+            new { warehouseId, variantId = pipe.DefaultVariantId, quantity = 1m, count = 1 });
         create.EnsureSuccessStatusCode();
         var label = (await create.Content.ReadFromJsonAsync<List<Label>>())!.Single();
 

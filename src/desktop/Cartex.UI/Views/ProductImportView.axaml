@@ -29,7 +29,8 @@
         </Style>
     </UserControl.Styles>
 
-    <Border Background="#30000000" IsVisible="{Binding IsOpen}">
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}"
+            c:OverlayBehaviors.DismissCommand="{Binding CancelCommand}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="1000" MaxHeight="700"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

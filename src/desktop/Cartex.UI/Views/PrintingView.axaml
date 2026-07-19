@@ -82,7 +82,7 @@
                                 </Grid>
                                 <TextBlock Text="{Binding L[receipt_width_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
 
-                                <StackPanel Spacing="5">
+                                <StackPanel Spacing="5" IsVisible="{Binding CanEditReceiptContent}">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
                                     <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding BusinessPaperWidth}" HorizontalAlignment="Stretch" />
                                 </StackPanel>
@@ -95,21 +95,23 @@
                                 <TextBlock Text="{Binding L[print_document_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
 
-                            <Separator Background="{DynamicResource BorderBrush}" Height="1" />
+                            <StackPanel Spacing="14" IsVisible="{Binding CanEditReceiptContent}">
+                                <Separator Background="{DynamicResource BorderBrush}" Height="1" />
 
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
-                                <TextBox Text="{Binding HeaderText}" MinHeight="36" />
-                            </StackPanel>
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
-                                <TextBox Text="{Binding FooterText}" MinHeight="36" />
-                            </StackPanel>
-                            <TextBlock Text="{Binding L[receipt_texts_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
+                                    <TextBox Text="{Binding HeaderText}" MinHeight="36" />
+                                </StackPanel>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
+                                    <TextBox Text="{Binding FooterText}" MinHeight="36" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding L[receipt_texts_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
 
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[paper_format]}" />
-                                <ComboBox ItemsSource="{Binding SendFormats}" SelectedItem="{Binding SendFormat}" MinWidth="180" MinHeight="36" />
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[paper_format]}" />
+                                    <ComboBox ItemsSource="{Binding SendFormats}" SelectedItem="{Binding SendFormat}" MinWidth="180" MinHeight="36" />
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -157,11 +159,11 @@
                             <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" c:MoneyInput.Clean="False" MinHeight="34" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" c:MoneyInput.Clean="False" MinHeight="34" />
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />

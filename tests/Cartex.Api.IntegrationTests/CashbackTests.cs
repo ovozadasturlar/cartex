@@ -21,7 +21,7 @@ public class CashbackTests(CartexApiFactory factory)
         var warehouseId = warehouses![0].Id;
 
         var products = await client.GetFromJsonAsync<List<Product>>("/api/products");
-        var cola = products!.First(p => p.Name == "Coca-Cola 1.5L");
+        var mixer = products!.First(p => p.Name == "Smesitel oshxona Zegor");
 
         var custResp = await client.PostAsJsonAsync("/api/customers", new
         {
@@ -40,7 +40,7 @@ public class CashbackTests(CartexApiFactory factory)
         var ruleResp = await client.PostAsJsonAsync("/api/loyalty/rules", new
         {
             scope = "Product",
-            targetId = cola.Id,
+            targetId = mixer.Id,
             method = "Percent",
             value = 7m,
             priority = 1
@@ -48,22 +48,22 @@ public class CashbackTests(CartexApiFactory factory)
         ruleResp.EnsureSuccessStatusCode();
 
         var program = await client.GetFromJsonAsync<Program>("/api/loyalty");
-        Assert.Contains(program!.Rules, r => r.TargetName == "Coca-Cola 1.5L" && r.Value == 7m);
+        Assert.Contains(program!.Rules, r => r.TargetName == "Smesitel oshxona Zegor" && r.Value == 7m);
 
         var saleResp = await client.PostAsJsonAsync("/api/sales", new
         {
             warehouseId,
             customerId,
-            paidCash = 10000m,
+            paidCash = 385000m,
             paidCard = 0m,
             paidBonus = 0m,
-            items = new[] { new { variantId = cola.DefaultVariantId, quantity = 1m } },
+            items = new[] { new { variantId = mixer.DefaultVariantId, quantity = 1m } },
             discountAmount = 0m
         });
         saleResp.EnsureSuccessStatusCode();
 
         var customers = await client.GetFromJsonAsync<List<Customer>>("/api/customers?search=Cashback Test Customer");
         var customer = customers!.First(c => c.Id == customerId);
-        Assert.Equal(700m, customer.CashbackBalance);
+        Assert.Equal(26950m, customer.CashbackBalance);
     }
 }

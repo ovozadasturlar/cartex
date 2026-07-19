@@ -58,7 +58,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                     });
                 IsActive = status.IsActive;
                 Tariff = options.Tariffs.Contains(status.Tariff) ? status.Tariff : options.Tariffs.FirstOrDefault();
-                ExpiresAt = status.ExpiresAt is { } e ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Utc)) : null;
+                ExpiresAt = status.ExpiresAt is { } e ? new DateTimeOffset(e) : null;
                 _suppress = false;
             }
         }

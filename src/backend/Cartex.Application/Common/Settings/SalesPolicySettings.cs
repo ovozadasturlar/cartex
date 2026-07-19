@@ -6,4 +6,8 @@ public sealed class SalesPolicySettings
     public decimal MaxDiscountPercent { get; set; }
     public decimal DefaultMinStock { get; set; }
     public int StaleRateDays { get; set; } = 3;
+    public bool AllowDebtSales { get; set; } = true;
+    public bool AllowCustomerCredit { get; set; }
+    public bool RequireDebtDueDate { get; set; } = true;
+    public bool RequireSupplier { get; set; }
 }

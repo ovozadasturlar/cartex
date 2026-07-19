@@ -14,6 +14,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IToastService _toast;
     private readonly ISettingsApi _settingsApi;
     private readonly IBarcodeLabelService _labels;
+    private readonly AuthService _auth;
+
+    public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
 
     public ObservableCollection<string> Printers { get; } = [];
 
@@ -78,12 +81,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         LabelHeightMm = decimal.Parse(parts[1]);
     }
 
-    public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels)
+    public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels, AuthService auth)
     {
         _printer = printer;
         _toast = toast;
         _settingsApi = settingsApi;
         _labels = labels;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -150,6 +154,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelRotation,
             (int)LabelDensity,
             (int)LabelSpeed));
+        if (CanEditReceiptContent)
         try
         {
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(

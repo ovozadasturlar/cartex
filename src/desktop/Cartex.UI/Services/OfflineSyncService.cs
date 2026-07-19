@@ -9,7 +9,7 @@ namespace Cartex.UI.Services;
 
 public record OfflineSaleItemDraft(long VariantId, decimal Quantity, decimal? UnitPrice);
 
-public record OfflineSaleDraft(long WarehouseId, long? CustomerId, decimal PaidCash, decimal PaidCard, List<OfflineSaleItemDraft> Items, decimal DiscountAmount);
+public record OfflineSaleDraft(long WarehouseId, long? CustomerId, decimal PaidCash, decimal PaidCard, List<OfflineSaleItemDraft> Items, decimal DiscountAmount, DateOnly? DebtDueDate = null);
 
 public record OfflineRepayDraft(long CustomerId, decimal Amount);
 
@@ -86,6 +86,7 @@ public sealed class OfflineSyncService(IOfflineCacheApi offlineApi, ISalesApi sa
                 CreditLimit = c.CreditLimit
             }));
         await store.SetMetaAsync("base_currency", snapshot.BaseCurrency);
+        await store.SetMetaAsync("allow_debt_sales", snapshot.AllowDebtSales ? "1" : "0");
         await store.SetMetaAsync("last_sync", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
     }
 
@@ -100,7 +101,7 @@ public sealed class OfflineSyncService(IOfflineCacheApi offlineApi, ISalesApi sa
                     var d = JsonSerializer.Deserialize<OfflineSaleDraft>(item.PayloadJson)!;
                     var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
                     await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, d.PaidCard, 0, items,
-                        d.DiscountAmount, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
+                        d.DiscountAmount, DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
                 }
                 else
                 {

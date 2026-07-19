@@ -48,12 +48,12 @@ public class OrderingPickerTests(CartexApiFactory factory)
     {
         var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
         var products = await client.GetFromJsonAsync<List<Product>>("/api/products");
-        var cola = products!.First(p => p.Name == "Coca-Cola 1.5L");
+        var mixer = products!.First(p => p.Name == "Smesitel oshxona Zegor");
         var resp = await client.PostAsJsonAsync("/api/ordering/carts", new
         {
             warehouseId = warehouses![0].Id,
             customerId = (long?)null,
-            items = new[] { new { variantId = cola.DefaultVariantId, quantity = 2m } },
+            items = new[] { new { variantId = mixer.DefaultVariantId, quantity = 2m } },
             note
         });
         resp.EnsureSuccessStatusCode();

@@ -62,6 +62,27 @@ public static class DiscountEngine
         return applied;
     }
 
+    public static decimal? BestPercent(
+        IReadOnlyCollection<DiscountRule> rules,
+        DateOnly today,
+        long productId,
+        long? categoryId,
+        long? manufacturerId)
+    {
+        var line = new DiscountLine(productId, categoryId, manufacturerId, 0);
+
+        var best = rules
+            .Where(r => r.IsEnabled && r.CustomerId is null && r.MinAmount == 0 && r.Method == DiscountMethod.Percent)
+            .Where(r => r.StartsOn is not { } from || today >= from)
+            .Where(r => r.EndsOn is not { } to || today <= to)
+            .Where(r => Matches(r, line) && !IsExcluded(r, line))
+            .Select(r => r.Value)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return best > 0 ? best : null;
+    }
+
     private static bool Matches(DiscountRule rule, DiscountLine line) => rule.Scope switch
     {
         DiscountScope.All => true,

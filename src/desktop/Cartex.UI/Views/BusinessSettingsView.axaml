@@ -93,12 +93,29 @@
                                     <NumericUpDown Value="{Binding StaleRateDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
                                 </StackPanel>
                             </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[allow_debt_sales]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtSales}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AllowDebtSales}">
+                                <TextBlock Text="{Binding L[require_debt_due_date]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireDebtDueDate}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[allow_customer_credit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowCustomerCredit}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[require_supplier]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireSupplier}" />
+                            </Grid>
                             <TextBlock Text="{Binding L[sales_policy_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
                     <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="16"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            IsVisible="{Binding CanManageSecurity}">
                         <StackPanel Spacing="12">
                             <TextBlock Text="{Binding L[login_methods]}" FontWeight="SemiBold" FontSize="14"
                                        Foreground="{DynamicResource TextPrimary}" />
