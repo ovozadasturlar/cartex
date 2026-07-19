@@ -15,7 +15,7 @@ import { lastValueFrom } from 'rxjs';
 import { CustomersApi, SalesApi } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
@@ -367,7 +367,7 @@ export class RepayDebtDialog implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly ref = inject(MatDialogRef<RepayDebtDialog>);
   private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
-  private readonly idempotencyKey = crypto.randomUUID();
+  private readonly idempotencyKey = newUuid();
 
   readonly busy = signal(false);
   readonly multicurrency = signal(false);

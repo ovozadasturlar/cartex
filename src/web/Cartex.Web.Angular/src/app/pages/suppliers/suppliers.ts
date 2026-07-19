@@ -11,7 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { InventoryApi, Supplier, SupplierTotals } from '../../core/api/inventory.api';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { LedgerEntry } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
@@ -255,7 +255,7 @@ export class SupplierPayDebtDialog {
     if (this.amount <= 0) return;
     this.saving.set(true);
     try {
-      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method, crypto.randomUUID()));
+      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method, newUuid()));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

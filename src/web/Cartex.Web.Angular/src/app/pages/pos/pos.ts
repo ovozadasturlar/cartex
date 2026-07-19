@@ -14,7 +14,7 @@ import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
 import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
+import { CxDatePipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer } from '../../core/models';
 import { MoneyInputDirective } from '../../core/money-input.directive';
 import { CartListItem, OrderingApi } from '../../core/api/misc.api';
@@ -437,7 +437,7 @@ export class Pos implements OnInit {
         })),
         discountAmount: this.discount(),
         debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: newUuid(),
         applyAutoDiscount: true,
       };
       const result = await lastValueFrom(this.api.createSale(payload));

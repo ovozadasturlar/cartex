@@ -15,7 +15,7 @@ import {
   CreateSupplyItem, InventoryApi, ProductOption, Supplier, UnitOption, VariantPriceInfo, WarehouseOption,
 } from '../../core/api/inventory.api';
 import { SettingsApi } from '../../core/api/settings.api';
-import { CxMoneyPipe, isoDay } from '../../core/format';
+import { CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 
@@ -245,7 +245,7 @@ export class SupplyCreate implements OnInit {
       );
       if (supplierId !== null && this.payOldDebt > 0) {
         try {
-          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt, 'Cash', crypto.randomUUID()));
+          await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt, 'Cash', newUuid()));
         } catch {
           this.notify.error(this.transloco.translate('err_debt_pay_failed'));
         }
