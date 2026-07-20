@@ -52,9 +52,9 @@ public class ProductsController(ISender sender) : ControllerBase
 
     [HttpGet("by-barcode")]
     [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
-    public async Task<ActionResult<ProductLookupDto>> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId)
+    public async Task<ActionResult<ProductLookupDto>> GetByBarcode([FromQuery] string code, [FromQuery] long warehouseId, [FromQuery] bool forSale = false)
     {
-        var result = await sender.Send(new GetProductByBarcodeQuery(code, warehouseId));
+        var result = await sender.Send(new GetProductByBarcodeQuery(code, warehouseId, forSale));
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -85,6 +85,14 @@ public class ProductsController(ISender sender) : ControllerBase
     [HttpPut("{id:long}")]
     [HasPermission(AppPermissions.Products.Manage)]
     public async Task<IActionResult> UpdateProduct(long id, UpdateProductCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return NoContent();
+    }
+
+    [HttpPut("{id:long}/state")]
+    [HasPermission(AppPermissions.Products.Toggle)]
+    public async Task<IActionResult> SetProductState(long id, SetProductStateCommand command)
     {
         await sender.Send(command with { Id = id });
         return NoContent();

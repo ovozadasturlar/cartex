@@ -866,7 +866,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             var search = SearchText.Trim();
             var page = await _stocksApi.GetOnHandAsync(warehouseId.Value, _selectedCategoryId,
-                string.IsNullOrEmpty(search) ? null : search, targetPage, PosPageSize);
+                string.IsNullOrEmpty(search) ? null : search, targetPage, PosPageSize, forSale: true);
             if (generation != _productsGeneration) return;
             _productsPage = targetPage;
             if (reset) Products.Clear();
@@ -931,7 +931,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
         try
         {
-            var product = await _productsApi.GetByBarcodeAsync(scanned.Code, warehouseId.Value);
+            var product = await _productsApi.GetByBarcodeAsync(scanned.Code, warehouseId.Value, forSale: true);
             var quantity = scanned.Type == ScannedCodeType.Weighted && scanned.Weight is { } weight
                 ? weight
                 : product.PackQty > 1 ? product.PackQty : 1;

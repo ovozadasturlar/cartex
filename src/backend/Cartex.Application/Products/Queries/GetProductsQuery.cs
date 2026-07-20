@@ -33,7 +33,8 @@ public record ProductDto(
     string? ImageUrl = null,
     string? PriceCurrency = null,
     string? Dimension = null,
-    long? ManufacturerId = null);
+    long? ManufacturerId = null,
+    bool IsEnabled = true);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -82,7 +83,8 @@ public sealed class GetProductsQueryHandler(
                     Price = p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => new { pr.SellingPrice, pr.Currency }).FirstOrDefault(),
                     OnHand = p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
                     Dimension = p.Unit.Dimension.ToString(),
-                    p.ManufacturerId
+                    p.ManufacturerId,
+                    p.IsEnabled
                 },
                 writer, cancellationToken);
 
@@ -108,7 +110,8 @@ public sealed class GetProductsQueryHandler(
                 null,
                 r.Price?.Currency,
                 r.Dimension,
-                r.ManufacturerId))
+                r.ManufacturerId,
+                r.IsEnabled))
             .ToList();
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();

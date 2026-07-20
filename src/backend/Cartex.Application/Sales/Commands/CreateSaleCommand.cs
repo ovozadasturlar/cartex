@@ -73,6 +73,17 @@ public sealed class CreateSaleCommandHandler(
             await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
             throw new BusinessRuleException("Sizga biriktirilgan ombor bor — savdo faqat o'sha ombordan qilinadi.");
 
+        var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
+        var variants = await db.ProductVariants
+            .Where(v => variantIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.ProductId, v.Product.IsEnabled, ProductName = v.Product.Name })
+            .ToListAsync(cancellationToken);
+
+        if (variants.FirstOrDefault(v => !v.IsEnabled) is { } blocked)
+            throw new BusinessRuleException($"\"{blocked.ProductName}\" savdo uchun yopilgan.");
+
+        var variantProduct = variants.ToDictionary(v => v.Id, v => v.ProductId);
+
         var prepackIds = request.Items.Where(i => i.PrepackId is not null).Select(i => i.PrepackId!.Value).ToList();
         Dictionary<long, Prepack> prepacks = [];
         if (prepackIds.Count > 0)
@@ -102,14 +113,9 @@ public sealed class CreateSaleCommandHandler(
             .Select(s => (long?)s.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
         var prices = await db.ProductPrices
             .Where(p => variantIds.Contains(p.VariantId) && (p.WarehouseId == warehouse.Id || p.WarehouseId == null))
             .ToListAsync(cancellationToken);
-
-        var variantProduct = await db.ProductVariants
-            .Where(v => variantIds.Contains(v.Id))
-            .ToDictionaryAsync(v => v.Id, v => v.ProductId, cancellationToken);
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var priceRates = new Dictionary<string, decimal>();

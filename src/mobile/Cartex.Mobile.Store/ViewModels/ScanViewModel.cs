@@ -111,7 +111,7 @@ public partial class ScanViewModel : ObservableObject
         }
         try
         {
-            var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value);
+            var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: true);
             _product = product;
             _step = product.PackQty > 0 ? product.PackQty : 1;
             Quantity = _step;
@@ -195,7 +195,7 @@ public partial class ScanViewModel : ObservableObject
             var products = await _productsApi.GetAllAsync(search: text);
             if (ct.IsCancellationRequested) return;
             SearchResults.Clear();
-            foreach (var p in products.Take(30))
+            foreach (var p in products.Where(p => p.IsEnabled).Take(30))
                 SearchResults.Add(new SearchRow(p));
         }
         catch (OperationCanceledException) { }

@@ -52,6 +52,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.IkpuCode).HasMaxLength(30);
         builder.Property(x => x.VatRate).HasPrecision(5, 2);
         builder.Property(x => x.ImageKey).HasMaxLength(200);
+        builder.Property(x => x.IsEnabled).HasDefaultValue(true);
         builder.HasIndex(x => x.Name, "ix_products_name_trgm").HasDatabaseName("ix_products_name_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.HasIndex(x => x.IkpuCode, "ix_products_ikpu_code_trgm").HasDatabaseName("ix_products_ikpu_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 

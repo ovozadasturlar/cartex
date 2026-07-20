@@ -10,7 +10,7 @@ public interface IStocksApi
 
     [Get("/api/stocks/on-hand")]
     Task<StockOnHandPageDto> GetOnHandAsync([Query] long warehouseId, [Query] long? categoryId = null,
-        [Query] string? search = null, [Query] int page = 1, [Query] int pageSize = 50);
+        [Query] string? search = null, [Query] int page = 1, [Query] int pageSize = 50, [Query] bool forSale = false);
 
     [Get("/api/stocks/expiring")]
     Task<List<ExpiringStockDto>> GetExpiringAsync([Query] int withinDays = 30);

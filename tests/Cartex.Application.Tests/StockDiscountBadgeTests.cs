@@ -62,7 +62,8 @@ public class StockDiscountBadgeTests(DatabaseFixture fixture) : DatabaseTest(fix
         var handler = new GetStockOnHandQueryHandler(
             scope.ServiceProvider.GetRequiredService<IApplicationDbContext>(),
             new NoStorage(),
-            scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>());
+            scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>(),
+            scope.ServiceProvider.GetRequiredService<ISettingsService>());
         var page = await handler.Handle(new GetStockOnHandQuery(warehouseId), default);
         return page.Items;
     }

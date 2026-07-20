@@ -125,14 +125,14 @@ export class PosApi {
   }
 
   onHand(warehouseId: number, categoryId: number | null, search: string, page: number, pageSize = 40): Observable<StockOnHandPage> {
-    const params: Record<string, string | number> = { warehouseId, page, pageSize };
+    const params: Record<string, string | number | boolean> = { warehouseId, page, pageSize, forSale: true };
     if (categoryId) params['categoryId'] = categoryId;
     if (search) params['search'] = search;
     return this.http.get<StockOnHandPage>('/api/stocks/on-hand', { params });
   }
 
   byBarcode(code: string, warehouseId: number): Observable<ProductLookup> {
-    return this.http.get<ProductLookup>('/api/products/by-barcode', { params: { code, warehouseId } });
+    return this.http.get<ProductLookup>('/api/products/by-barcode', { params: { code, warehouseId, forSale: true } });
   }
 
   customers(q: ListQuery): Observable<Paged<Customer>> {

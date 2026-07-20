@@ -1,5 +1,6 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Loyalty;
+using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
@@ -10,14 +11,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Stocks.Queries;
 
-public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50)
+public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
     : IRequest<StockOnHandPageDto>;
 
 public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null);
 
 public record StockOnHandPageDto(IReadOnlyCollection<StockOnHandDto> Items, int TotalCount, decimal TotalQuantity, decimal TotalValue);
 
-public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObjectStorage storage, IFeatureStateProvider features) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
+public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObjectStorage storage, IFeatureStateProvider features, ISettingsService settings) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
 {
     public async Task<StockOnHandPageDto> Handle(GetStockOnHandQuery request, CancellationToken cancellationToken)
     {
@@ -50,6 +51,7 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                 ProductName = v.Product.Name,
                 v.Product.CategoryId,
                 v.Product.ManufacturerId,
+                v.Product.IsEnabled,
                 CategoryName = v.Product.Category != null ? v.Product.Category.Name : null,
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
@@ -78,6 +80,14 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                 query = query.Where(o => EF.Functions.ILike(o.ProductName, term)
                     || (o.Code != null && EF.Functions.ILike(o.Code, term)));
             }
+        }
+
+        if (request.ForSale)
+        {
+            var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+            query = query.Where(o => o.IsEnabled);
+            if (!policy.ShowOutOfStock)
+                query = query.Where(o => o.OnHand > 0);
         }
 
         var totals = await query

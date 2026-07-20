@@ -10,4 +10,5 @@ public sealed class SalesPolicySettings
     public bool AllowCustomerCredit { get; set; }
     public bool RequireDebtDueDate { get; set; } = true;
     public bool RequireSupplier { get; set; }
+    public bool ShowOutOfStock { get; set; }
 }

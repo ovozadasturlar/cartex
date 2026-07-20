@@ -23,6 +23,7 @@ public class Product : SoftDeleteEntity
     public string? IkpuCode { get; set; }
     public decimal? VatRate { get; set; }
     public string? ImageKey { get; set; }
+    public bool IsEnabled { get; set; } = true;
 
     public ICollection<ProductVariant> Variants { get; set; } = [];
     public ICollection<ProductPack> Packs { get; set; } = [];

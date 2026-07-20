@@ -32,7 +32,7 @@ public sealed class GetOfflineSnapshotQueryHandler(IApplicationDbContext db, ISe
         var products = new List<StockOnHandDto>();
         for (var page = 1; ; page++)
         {
-            var chunk = await sender.Send(new GetStockOnHandQuery(request.WarehouseId, Page: page, PageSize: 1000), cancellationToken);
+            var chunk = await sender.Send(new GetStockOnHandQuery(request.WarehouseId, Page: page, PageSize: 1000, ForSale: true), cancellationToken);
             products.AddRange(chunk.Items);
             if (chunk.Items.Count < 1000) break;
         }

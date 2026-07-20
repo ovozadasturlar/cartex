@@ -78,6 +78,7 @@ export interface SalesPolicy {
   allowCustomerCredit: boolean;
   requireDebtDueDate: boolean;
   requireSupplier: boolean;
+  showOutOfStock: boolean;
 }
 
 export interface LoginMethods {

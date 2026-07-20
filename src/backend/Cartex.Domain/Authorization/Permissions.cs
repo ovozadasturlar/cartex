@@ -38,6 +38,7 @@ public static class AppPermissions
         public const string View = "products.view";
         public const string Manage = "products.manage";
         public const string PrintBarcode = "products.printBarcode";
+        public const string Toggle = "products.toggle";
     }
 
     public static class Categories
@@ -188,6 +189,7 @@ public static class AppPermissions
         [Products.View] = "View products",
         [Products.Manage] = "Create/edit products",
         [Products.PrintBarcode] = "Generate/print product barcodes",
+        [Products.Toggle] = "Enable/disable products for sale",
         [Categories.View] = "View categories",
         [Categories.Manage] = "Create/edit categories",
         [Warehouses.View] = "View warehouses",

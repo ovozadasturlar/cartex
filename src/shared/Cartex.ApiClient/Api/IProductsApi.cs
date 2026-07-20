@@ -21,7 +21,7 @@ public interface IProductsApi
     Task<List<ProductOptionDto>> GetLookupAsync();
 
     [Get("/api/products/by-barcode")]
-    Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId);
+    Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId, [Query] bool forSale = false);
 
     [Get("/api/products/variants/{id}/price-info")]
     Task<VariantPriceInfoDto> GetVariantPriceInfoAsync(long id, [Query] long warehouseId);
@@ -31,6 +31,9 @@ public interface IProductsApi
 
     [Put("/api/products/{id}")]
     Task UpdateAsync(long id, [Body] UpdateProductRequest request);
+
+    [Put("/api/products/{id}/state")]
+    Task SetStateAsync(long id, [Body] SetProductStateRequest request);
 
     [Post("/api/products/price")]
     Task SetPriceAsync([Body] SetProductPriceRequest request);

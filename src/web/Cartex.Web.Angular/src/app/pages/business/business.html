@@ -124,6 +124,9 @@
           <mat-slide-toggle [(ngModel)]="requireSupplier" [disabled]="!canManage">
             {{ t('require_supplier') }}
           </mat-slide-toggle>
+          <mat-slide-toggle [(ngModel)]="showOutOfStock" [disabled]="!canManage">
+            {{ t('show_out_of_stock') }}
+          </mat-slide-toggle>
         </div>
         <p class="hint">{{ t('sales_policy_hint') }}</p>
         @if (canManage) {

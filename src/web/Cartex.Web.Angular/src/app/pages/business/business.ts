@@ -68,6 +68,7 @@ export class BusinessSettings implements OnInit {
   allowCustomerCredit = false;
   requireDebtDueDate = true;
   requireSupplier = false;
+  showOutOfStock = false;
   private policyLoaded = false;
 
   qrEnabled = false;
@@ -86,6 +87,7 @@ export class BusinessSettings implements OnInit {
       this.allowCustomerCredit = policy.allowCustomerCredit;
       this.requireDebtDueDate = policy.requireDebtDueDate;
       this.requireSupplier = policy.requireSupplier;
+      this.showOutOfStock = policy.showOutOfStock;
       this.policyLoaded = true;
     } catch {}
     try {
@@ -158,6 +160,7 @@ export class BusinessSettings implements OnInit {
           allowCustomerCredit: this.allowCustomerCredit,
           requireDebtDueDate: this.requireDebtDueDate,
           requireSupplier: this.requireSupplier,
+          showOutOfStock: this.showOutOfStock,
         }),
       );
       this.notify.success(message);

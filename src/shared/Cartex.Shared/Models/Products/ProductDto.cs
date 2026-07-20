@@ -21,4 +21,5 @@ public record ProductDto(
     string? ImageUrl = null,
     string? PriceCurrency = null,
     string? Dimension = null,
-    long? ManufacturerId = null);
+    long? ManufacturerId = null,
+    bool IsEnabled = true);

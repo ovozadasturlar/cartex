@@ -44,6 +44,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowCustomerCredit;
     [ObservableProperty] private bool _requireDebtDueDate = true;
     [ObservableProperty] private bool _requireSupplier;
+    [ObservableProperty] private bool _showOutOfStock;
     [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     [ObservableProperty] private bool _keyLoginEnabled = true;
@@ -81,6 +82,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             AllowCustomerCredit = policy.AllowCustomerCredit;
             RequireDebtDueDate = policy.RequireDebtDueDate;
             RequireSupplier = policy.RequireSupplier;
+            ShowOutOfStock = policy.ShowOutOfStock;
             _policyLoaded = true;
         }
         catch { }
@@ -161,7 +163,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
-                        AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier));
+                        AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier, ShowOutOfStock));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));

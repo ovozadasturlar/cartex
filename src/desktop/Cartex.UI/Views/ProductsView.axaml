@@ -105,6 +105,18 @@
                                                 Header="{Binding [min_stock], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="*" Binding="{Binding ProductTypeName}"
                                                 Header="{Binding [product_type], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [active], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=OneWay}" Margin="8,0"
+                                                      VerticalAlignment="Center"
+                                                      IsEnabled="{Binding $parent[DataGrid].DataContext.CanToggleProduct}"
+                                                      Command="{Binding $parent[DataGrid].DataContext.ToggleEnabledCommand}"
+                                                      CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

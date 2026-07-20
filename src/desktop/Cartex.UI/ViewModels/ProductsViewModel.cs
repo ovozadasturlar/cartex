@@ -204,6 +204,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     public bool CanPrintBarcode => _auth.HasPermission("products.printBarcode");
+    public bool CanToggleProduct => _auth.HasPermission("products.toggle");
 
     private IReadOnlyList<PageShortcut>? _pageShortcuts;
 
@@ -385,6 +386,21 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     partial void OnIsVariantsOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsVariantEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+
+    [RelayCommand]
+    private async Task ToggleEnabled(ProductDto product)
+    {
+        var enabled = product.IsEnabled;
+        try
+        {
+            await _productsApi.SetStateAsync(product.Id, new SetProductStateRequest(!enabled));
+            enabled = !enabled;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+
+        var index = Products.IndexOf(product);
+        if (index >= 0) Products[index] = product with { IsEnabled = enabled };
+    }
 
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)

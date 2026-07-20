@@ -24,9 +24,9 @@ public class StocksController(ISender sender) : ControllerBase
     [HttpGet("on-hand")]
     [HasPermission(AppPermissions.Stocks.View)]
     public async Task<ActionResult<StockOnHandPageDto>> GetOnHand([FromQuery] long warehouseId, [FromQuery] long? categoryId = null,
-        [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] bool forSale = false)
     {
-        var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize));
+        var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize, forSale));
         return Ok(result);
     }
 

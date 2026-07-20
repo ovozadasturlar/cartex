@@ -49,7 +49,7 @@ public partial class PrepackViewModel(
         try
         {
             var page = await stocksApi.GetOnHandAsync(_warehouseId, null,
-                string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim(), 1, 20);
+                string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim(), 1, 20, forSale: true);
             Results.Clear();
             foreach (var s in page.Items) Results.Add(s);
         }
