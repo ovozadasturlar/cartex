@@ -34,6 +34,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPagingMetadataWriter, NoopPagingWriter>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier, NullCartNotifier>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IRemoteImageFetcher, NullRemoteImageFetcher>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IImageProcessor, NullImageProcessor>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IObjectStorage, MemoryObjectStorage>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();
         _services = services.BuildServiceProvider();
@@ -81,6 +84,33 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private sealed class NullCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier
     {
         public Task CartsChangedAsync(string kind, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class NullRemoteImageFetcher : Cartex.Application.Common.Interfaces.IRemoteImageFetcher
+    {
+        public Task<Cartex.Application.Common.Interfaces.RemoteImage?> FetchAsync(string url, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Cartex.Application.Common.Interfaces.RemoteImage?>(null);
+    }
+
+    private sealed class NullImageProcessor : Cartex.Application.Common.Interfaces.IImageProcessor
+    {
+        public Cartex.Application.Common.Interfaces.ProcessedImage? Process(Stream original) => null;
+    }
+
+    private sealed class MemoryObjectStorage : Cartex.Application.Common.Interfaces.IObjectStorage
+    {
+        public Task<string> UploadAsync(Stream content, long length, string contentType, string extension, CancellationToken cancellationToken = default, string? key = null) =>
+            Task.FromResult(key ?? Guid.NewGuid().ToString("N"));
+
+        public Task<string?> GetUrlAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+
+        public Task<IReadOnlyDictionary<string, string>> GetUrlsAsync(IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
+
+        public Task<(Stream Content, string ContentType)?> DownloadAsync(string key, CancellationToken cancellationToken = default) =>
+            Task.FromResult<(Stream, string)?>(null);
+
+        public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

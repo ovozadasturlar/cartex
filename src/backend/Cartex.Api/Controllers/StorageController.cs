@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Images;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
@@ -36,18 +37,7 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         await stream.CopyToAsync(buffer, ct);
         buffer.Position = 0;
 
-        var processed = processor.Process(buffer);
-        if (processed is null)
-        {
-            buffer.Position = 0;
-            var originalKey = await storage.UploadAsync(buffer, buffer.Length, file.ContentType, Path.GetExtension(file.FileName), ct);
-            return Ok(new { key = originalKey });
-        }
-
-        using var display = new MemoryStream(processed.Display);
-        var key = await storage.UploadAsync(display, processed.Display.Length, processed.ContentType, processed.Extension, ct);
-        using var thumb = new MemoryStream(processed.Thumb);
-        await storage.UploadAsync(thumb, processed.Thumb.Length, processed.ContentType, processed.Extension, ct, $"t_{key}");
+        var key = await ImageStore.SaveAsync(storage, processor, buffer, file.ContentType, Path.GetExtension(file.FileName), ct);
         return Ok(new { key });
     }
 

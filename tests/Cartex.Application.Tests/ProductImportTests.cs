@@ -1,10 +1,9 @@
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Products.Import;
-using Cartex.Application.Suppliers.Commands;
+using Cartex.Application.Supplies.Import;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
@@ -133,71 +132,6 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     }
 
     [Fact]
-    public async Task Import_SupplyMode_CreatesSupplyWithStockAndSupplierDebt()
-    {
-        var warehouseId = await LoginAsync();
-        using var scope = Fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        var supplierId = await sender.Send(new CreateSupplierCommand("Import ta'minotchi", null));
-
-        await using var file = Sheet(
-            ["Nomi", "Soni", "Kirim narxi"],
-            ["Import tovari", 10m, 2500m]);
-
-        var preview = await sender.Send(new PreviewProductImportQuery(file));
-        var result = await sender.Send(new ImportProductsCommand(preview.Rows, ImportStockMode.Supply,
-            warehouseId, supplierId));
-
-        Assert.NotNull(result.SupplyId);
-
-        var supply = await db.Supplies.Include(s => s.Items).SingleAsync(s => s.Id == result.SupplyId);
-        Assert.Equal(25000m, supply.TotalAmount);
-        Assert.Single(supply.Items);
-
-        var stock = await db.Stocks.SingleAsync(s => s.SupplyId == result.SupplyId);
-        Assert.Equal(10m, stock.Quantity);
-        Assert.Equal(2500m, stock.PurchasePrice);
-
-        var payable = -await db.Accounts
-            .Where(a => a.SupplierId == supplierId && a.Type == AccountType.Debt)
-            .Select(a => a.Balance)
-            .SingleAsync();
-        Assert.Equal(25000m, payable);
-    }
-
-    [Fact]
-    public async Task Import_OpeningMode_CreatesStock_WithoutLedgerMovement()
-    {
-        var warehouseId = await LoginAsync();
-        using var scope = Fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        var transactionsBefore = await db.Transactions.CountAsync();
-
-        await using var file = Sheet(
-            ["Nomi", "Soni", "Kirim narxi"],
-            ["Boshlang'ich tovar", 40m, 1800m]);
-
-        var preview = await sender.Send(new PreviewProductImportQuery(file));
-        var result = await sender.Send(new ImportProductsCommand(preview.Rows, ImportStockMode.Opening, warehouseId));
-
-        Assert.Null(result.SupplyId);
-        Assert.Equal(1, result.StockAdjusted);
-
-        var stock = await db.Stocks
-            .SingleAsync(s => s.Variant.Product.Name == "Boshlang'ich tovar" && s.WarehouseId == warehouseId);
-        Assert.Equal(40m, stock.Quantity);
-        Assert.Equal(1800m, stock.PurchasePrice);
-        Assert.Null(stock.SupplyId);
-
-        Assert.Equal(transactionsBefore, await db.Transactions.CountAsync());
-        Assert.Equal(0, await db.Supplies.CountAsync());
-    }
-
-    [Fact]
     public async Task Import_UnknownUnit_FallsBackToDefault_WithoutCreatingUnit()
     {
         await LoginAsync();
@@ -261,39 +195,6 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     }
 
     [Fact]
-    public async Task Import_OpeningMode_AddsBatch_WithoutWipingExistingStock()
-    {
-        var warehouseId = await LoginAsync();
-        using var scope = Fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        await using var first = Sheet(
-            ["Nomi", "Soni", "Kirim narxi", "Yaroqlilik muddati"],
-            ["Partiyali tovar", 10m, 1000m, "2027-01-31"]);
-        var opening = await sender.Send(new PreviewProductImportQuery(first));
-        await sender.Send(new ImportProductsCommand(opening.Rows, ImportStockMode.Opening, warehouseId));
-
-        await using var second = Sheet(
-            ["Nomi", "Soni", "Kirim narxi", "Yaroqlilik muddati"],
-            ["Partiyali tovar", 5m, 1200m, "2028-06-30"]);
-        var refill = await sender.Send(new PreviewProductImportQuery(second));
-        Assert.Equal(ImportRowAction.Existing, refill.Rows[0].Action);
-        await sender.Send(new ImportProductsCommand(refill.Rows, ImportStockMode.Opening, warehouseId));
-
-        var stocks = await db.Stocks
-            .Where(s => s.Variant.Product.Name == "Partiyali tovar")
-            .OrderBy(s => s.Id)
-            .ToListAsync();
-
-        Assert.Equal(2, stocks.Count);
-        Assert.Equal(15m, stocks.Sum(s => s.Quantity));
-        Assert.Equal(new DateOnly(2027, 1, 31), stocks[0].ExpiredAt);
-        Assert.Equal(new DateOnly(2028, 6, 30), stocks[1].ExpiredAt);
-        Assert.Equal(1200m, stocks[1].PurchasePrice);
-    }
-
-    [Fact]
     public async Task Preview_DuplicateSkuInFile_IsError()
     {
         await LoginAsync();
@@ -329,5 +230,55 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new ImportProductsCommand(tampered)));
         Assert.False(await db.Products.AnyAsync(p => p.Name == "Soxta A"));
+    }
+
+    [Fact]
+    public async Task SupplyImportPreview_MatchesByBarcodeAndName_FlagsUnknown()
+    {
+        await LoginAsync();
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        var unitId = await db.Units.Where(u => u.IsDefault).Select(u => u.Id).FirstAsync();
+        await sender.Send(new CreateProductCommand(
+            Name: "Kirim tovari", CategoryId: null, UnitId: unitId, MinStock: null,
+            Barcodes: [new BarcodeInput("4780000000021", 1)]));
+
+        await using var file = Sheet(
+            ["Nomi", "Barkod", "Soni", "Kirim narxi"],
+            [null, "4780000000021", 7m, 1500m],
+            ["Kirim tovari", null, 0m, 2000m],
+            ["Mavjud emas tovar", null, 4m, null]);
+
+        var preview = await sender.Send(new PreviewSupplyImportQuery(file));
+
+        Assert.Equal(1, preview.MatchedCount);
+        Assert.Equal(2, preview.UnmatchedCount);
+
+        var matched = preview.Rows[0];
+        Assert.NotNull(matched.VariantId);
+        Assert.Equal("Kirim tovari", matched.Name);
+        Assert.Equal(7m, matched.Quantity);
+        Assert.Equal(1500m, matched.PurchasePrice);
+
+        Assert.Null(preview.Rows[1].VariantId);
+        Assert.Contains("Miqdor", preview.Rows[1].Message);
+        Assert.Null(preview.Rows[2].VariantId);
+        Assert.Contains("topilmadi", preview.Rows[2].Message);
+    }
+
+    [Fact]
+    public async Task SupplyImportPreview_RequiresQuantityColumn()
+    {
+        await LoginAsync();
+        using var scope = Fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        await using var file = Sheet(
+            ["Nomi"],
+            ["Faqat nom"]);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new PreviewSupplyImportQuery(file)));
     }
 }

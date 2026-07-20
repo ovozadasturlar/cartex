@@ -1,8 +1,10 @@
 using Cartex.Application.Supplies.Commands;
+using Cartex.Application.Supplies.Import;
 using Cartex.Application.Supplies.Queries;
 using Cartex.Application.Suppliers.Commands;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Common.Exceptions;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -71,5 +73,28 @@ public class SuppliesController(ISender sender) : ControllerBase
     {
         await sender.Send(new DeleteSupplyCommand(id));
         return NoContent();
+    }
+
+    [HttpGet("import/template")]
+    [HasPermission(AppPermissions.Supplies.Manage)]
+    public async Task<IActionResult> ImportTemplate()
+    {
+        var content = await sender.Send(new GetSupplyImportTemplateQuery());
+        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "cartex-kirim.xlsx");
+    }
+
+    [HttpPost("import/preview")]
+    [HasPermission(AppPermissions.Supplies.Manage)]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<SupplyImportPreviewDto>> ImportPreview(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+            throw new BusinessRuleException("Fayl tanlanmagan.");
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException("Faqat .xlsx fayl qabul qilinadi.");
+
+        await using var content = file.OpenReadStream();
+        var result = await sender.Send(new PreviewSupplyImportQuery(content));
+        return Ok(result);
     }
 }

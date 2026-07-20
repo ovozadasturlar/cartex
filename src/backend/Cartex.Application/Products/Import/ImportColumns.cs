@@ -16,7 +16,8 @@ public enum ImportField
     ExpiredAt,
     MinStock,
     Ikpu,
-    Vat
+    Vat,
+    ImageUrl
 }
 
 public static class ImportColumns
@@ -35,7 +36,8 @@ public static class ImportColumns
         [ImportField.ExpiredAt] = ["yaroqlilikmuddati", "muddat", "muddati", "amalqilishmuddati", "муддат", "срокгодности", "срок", "годендо", "expiry", "expirydate", "expiredat", "bestbefore"],
         [ImportField.MinStock] = ["minqoldiq", "minimalqoldiq", "minsoni", "минимальныйостаток", "минзапас", "minstock", "minimum"],
         [ImportField.Ikpu] = ["ikpu", "mxik", "икпу", "мхик"],
-        [ImportField.Vat] = ["qqs", "nds", "ккс", "ндс", "vat", "tax"]
+        [ImportField.Vat] = ["qqs", "nds", "ккс", "ндс", "vat", "tax"],
+        [ImportField.ImageUrl] = ["suraturl", "surat", "rasm", "rasmurl", "сурат", "расм", "фото", "изображение", "картинка", "imageurl", "image", "photo", "picture", "imagelink"]
     };
 
     public static Dictionary<int, ImportField> Detect(IReadOnlyList<string> header)
@@ -98,6 +100,59 @@ public static class ImportColumns
 
     private static readonly string[] DateFormats =
         ["yyyy-MM-dd", "dd.MM.yyyy", "d.M.yyyy", "dd/MM/yyyy", "d/M/yyyy", "yyyy/MM/dd", "dd-MM-yyyy"];
+
+    public static ImportRowDto ReadRow(int number, IReadOnlyList<string> cells, Dictionary<int, ImportField> mapping)
+    {
+        var values = new Dictionary<ImportField, string>();
+        foreach (var (index, field) in mapping)
+            if (index >= 0 && index < cells.Count && !string.IsNullOrWhiteSpace(cells[index]))
+                values[field] = cells[index].Trim();
+
+        var warnings = new List<string>();
+
+        string? Text(ImportField field) => values.GetValueOrDefault(field);
+
+        decimal? Num(ImportField field)
+        {
+            if (Text(field) is not { } raw)
+                return null;
+            var value = Number(raw);
+            if (value is null)
+                warnings.Add($"Son o'qilmadi: {raw}");
+            return value;
+        }
+
+        DateOnly? Day(ImportField field)
+        {
+            if (Text(field) is not { } raw)
+                return null;
+            var value = Date(raw);
+            if (value is null)
+                warnings.Add($"Sana o'qilmadi: {raw}");
+            return value;
+        }
+
+        return new ImportRowDto(
+            number,
+            Text(ImportField.Name),
+            Text(ImportField.Barcode),
+            Num(ImportField.PackQty),
+            Text(ImportField.Sku),
+            Text(ImportField.Category),
+            Text(ImportField.Unit),
+            Num(ImportField.SellingPrice),
+            Num(ImportField.PurchasePrice),
+            Num(ImportField.Quantity),
+            Day(ImportField.ExpiredAt),
+            Num(ImportField.MinStock),
+            Text(ImportField.Ikpu),
+            Num(ImportField.Vat),
+            Text(ImportField.ImageUrl),
+            null,
+            ImportRowAction.Create,
+            [],
+            warnings);
+    }
 
     public static DateOnly? Date(string? raw)
     {

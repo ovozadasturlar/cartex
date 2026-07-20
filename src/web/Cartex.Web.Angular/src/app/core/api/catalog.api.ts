@@ -53,8 +53,6 @@ export interface ProductsTotals {
 
 export type ImportRowAction = 'Create' | 'Existing' | 'Skip';
 
-export type ImportStockMode = 'None' | 'Supply' | 'Opening';
-
 export interface ImportRow {
   row: number;
   name: string | null;
@@ -70,6 +68,7 @@ export interface ImportRow {
   minStock: number | null;
   ikpu: string | null;
   vat: number | null;
+  imageUrl: string | null;
   variantId: number | null;
   action: ImportRowAction;
   errors: string[];
@@ -87,12 +86,6 @@ export interface ImportPreview {
 
 export interface ImportRequest {
   rows: ImportRow[];
-  stockMode: ImportStockMode;
-  warehouseId: number | null;
-  supplierId: number | null;
-  supplyDate: string | null;
-  paidCash: number;
-  paidCard: number;
   updatePrices: boolean;
   createMissingCategories: boolean;
 }
@@ -101,8 +94,8 @@ export interface ImportResult {
   created: number;
   existing: number;
   barcodesGenerated: number;
-  supplyId: number | null;
-  stockAdjusted: number;
+  imagesSet: number;
+  imagesFailed: number;
 }
 
 export interface Category {

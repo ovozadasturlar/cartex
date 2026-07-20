@@ -378,8 +378,18 @@
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <Image Source="{Binding EditImagePreview}" Stretch="UniformToFill" />
                             </Border>
-                            <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Left"
-                                    Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
+                            <StackPanel Grid.Column="2" Spacing="6">
+                                <Button Classes="outline" HorizontalAlignment="Left"
+                                        Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
+                                <Grid ColumnDefinitions="*,8,Auto">
+                                    <TextBox Grid.Column="0" Text="{Binding EditImageUrl}" Watermark="{Binding L[image_url]}" />
+                                    <Button Grid.Column="2" Classes="outline" VerticalAlignment="Stretch"
+                                            Command="{Binding FetchImageCommand}" CommandParameter="edit"
+                                            ToolTip.Tip="{Binding L[image_url]}">
+                                        <mi:MaterialIcon Kind="Download" Width="16" Height="16" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
 
@@ -503,8 +513,18 @@
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <Image Source="{Binding VImagePreview}" Stretch="UniformToFill" />
                                 </Border>
-                                <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Left"
-                                        Command="{Binding PickVariantImageCommand}" Content="{Binding L[choose_image]}" />
+                                <StackPanel Grid.Column="2" Spacing="6">
+                                    <Button Classes="outline" HorizontalAlignment="Left"
+                                            Command="{Binding PickVariantImageCommand}" Content="{Binding L[choose_image]}" />
+                                    <Grid ColumnDefinitions="*,8,Auto">
+                                        <TextBox Grid.Column="0" Text="{Binding VImageUrl}" Watermark="{Binding L[image_url]}" />
+                                        <Button Grid.Column="2" Classes="outline" VerticalAlignment="Stretch"
+                                                Command="{Binding FetchImageCommand}" CommandParameter="variant"
+                                                ToolTip.Tip="{Binding L[image_url]}">
+                                            <mi:MaterialIcon Kind="Download" Width="16" Height="16" />
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
 

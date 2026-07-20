@@ -2,8 +2,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Products;
-using Cartex.Shared.Models.Suppliers;
-using Cartex.Shared.Models.Warehouses;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -38,32 +36,24 @@ public sealed partial class ImportRowVm(ImportRowDto row) : ObservableObject
 public partial class ProductImportViewModel : ViewModelBase
 {
     private readonly IProductsApi _productsApi;
-    private readonly IWarehousesApi _warehousesApi;
-    private readonly ISuppliersApi _suppliersApi;
     private readonly IFilePickerService _filePicker;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
-    private readonly AuthService _auth;
     private readonly ReferenceCache _cache;
 
     private byte[]? _file;
 
     public ObservableCollection<ImportColumnVm> Columns { get; } = [];
     public ObservableCollection<ImportRowVm> Rows { get; } = [];
-    public ObservableCollection<WarehouseDto> Warehouses { get; } = [];
-    public ObservableCollection<SupplierDto> Suppliers { get; } = [];
 
     public string[] Fields { get; } =
     [
         "", "Name", "Barcode", "PackQty", "Sku", "Category", "Unit",
-        "SellingPrice", "PurchasePrice", "Quantity", "ExpiredAt", "MinStock", "Ikpu", "Vat"
+        "SellingPrice", "PurchasePrice", "Quantity", "ExpiredAt", "MinStock", "Ikpu", "Vat", "ImageUrl"
     ];
 
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private string? _fileName;
-    [ObservableProperty] private ImportStockMode _mode = ImportStockMode.None;
-    [ObservableProperty] private WarehouseDto? _selectedWarehouse;
-    [ObservableProperty] private SupplierDto? _selectedSupplier;
     [ObservableProperty] private bool _updatePrices;
     [ObservableProperty] private bool _createMissingCategories = true;
     [ObservableProperty] private int _createCount;
@@ -72,72 +62,37 @@ public partial class ProductImportViewModel : ViewModelBase
 
     public bool HasPreview => Rows.Count > 0;
     public bool HasErrors => ErrorCount > 0;
-    public bool IsCatalog => Mode == ImportStockMode.None;
-    public bool IsSupply => Mode == ImportStockMode.Supply;
-    public bool IsOpening => Mode == ImportStockMode.Opening;
-    public bool NeedsWarehouse => Mode != ImportStockMode.None;
 
     public event Action? Imported;
 
-    public ProductImportViewModel(IProductsApi productsApi, IWarehousesApi warehousesApi, ISuppliersApi suppliersApi,
-        IFilePickerService filePicker, IToastService toast, IBusyService busy, AuthService auth, ReferenceCache cache)
+    public ProductImportViewModel(IProductsApi productsApi, IFilePickerService filePicker,
+        IToastService toast, IBusyService busy, ReferenceCache cache)
     {
         _productsApi = productsApi;
-        _warehousesApi = warehousesApi;
-        _suppliersApi = suppliersApi;
         _filePicker = filePicker;
         _toast = toast;
         _busy = busy;
-        _auth = auth;
         _cache = cache;
-    }
-
-    partial void OnModeChanged(ImportStockMode value)
-    {
-        OnPropertyChanged(nameof(IsCatalog));
-        OnPropertyChanged(nameof(IsSupply));
-        OnPropertyChanged(nameof(IsOpening));
-        OnPropertyChanged(nameof(NeedsWarehouse));
     }
 
     partial void OnErrorCountChanged(int value) => OnPropertyChanged(nameof(HasErrors));
 
     [RelayCommand]
-    private async Task Open()
+    private void Open()
     {
         _file = null;
         FileName = null;
-        Mode = ImportStockMode.None;
         UpdatePrices = false;
         CreateMissingCategories = true;
         Columns.Clear();
         Rows.Clear();
         CreateCount = ExistingCount = ErrorCount = 0;
         OnPropertyChanged(nameof(HasPreview));
-
-        try
-        {
-            if (Warehouses.Count == 0)
-                foreach (var w in await _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync()))
-                    Warehouses.Add(w);
-            if (Suppliers.Count == 0 && _auth.HasPermission("suppliers.view"))
-                foreach (var s in await _suppliersApi.GetAllAsync())
-                    Suppliers.Add(s);
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-
-        SelectedWarehouse = Warehouses.FirstOrDefault();
         IsOpen = true;
     }
 
     [RelayCommand]
     private void Cancel() => IsOpen = false;
-
-    [RelayCommand]
-    private void SetMode(string mode) => Mode = Enum.Parse<ImportStockMode>(mode);
 
     [RelayCommand]
     private async Task PickFile()
@@ -233,35 +188,22 @@ public partial class ProductImportViewModel : ViewModelBase
             return;
         }
 
-        if (NeedsWarehouse && SelectedWarehouse is null)
-        {
-            _toast.Warning(L["warehouse"]);
-            return;
-        }
-
-        if (IsSupply && SelectedSupplier is null)
-        {
-            _toast.Warning(L["supplier"]);
-            return;
-        }
-
         try
         {
             using (_busy.Begin(L["loading"]))
             {
                 var result = await _productsApi.ImportAsync(new ImportProductsRequest(
-                    rows,
-                    Mode,
-                    NeedsWarehouse ? SelectedWarehouse!.Id : null,
-                    IsSupply ? SelectedSupplier!.Id : null,
-                    DateOnly.FromDateTime(DateTime.Today),
-                    UpdatePrices: UpdatePrices,
-                    CreateMissingCategories: CreateMissingCategories));
+                    rows, UpdatePrices, CreateMissingCategories));
 
                 _cache.Invalidate(CacheKeys.ProductLookup);
                 _cache.Invalidate(CacheKeys.Categories);
                 IsOpen = false;
-                _toast.Success($"{L["import_done"]}: {result.Created} + {result.Existing} · {result.BarcodesGenerated} {L["barcode"]}");
+                var summary = $"{L["import_done"]}: {result.Created} + {result.Existing} · {result.BarcodesGenerated} {L["barcode"]}";
+                if (result.ImagesSet > 0)
+                    summary += $" · {L["image"]}: {result.ImagesSet}";
+                _toast.Success(summary);
+                if (result.ImagesFailed > 0)
+                    _toast.Warning(string.Format(L["import_images_failed_fmt"], result.ImagesFailed));
                 Imported?.Invoke();
             }
         }

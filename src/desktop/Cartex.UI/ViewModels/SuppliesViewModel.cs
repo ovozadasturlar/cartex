@@ -113,6 +113,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly IExportService _export;
     private readonly AuthService _auth;
     private readonly IDialogService _dialog;
+    private readonly IFilePickerService _filePicker;
 
     public QuickProductViewModel QuickProduct { get; }
 
@@ -577,6 +578,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Supplies.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanManage => _auth.HasPermission("supplies.manage");
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
     public bool HasItems => Items.Count > 0;
 
@@ -607,8 +609,10 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
-        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog)
+        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog,
+        IFilePickerService filePicker)
     {
+        _filePicker = filePicker;
         _dialog = dialog;
         _cache = cache;
         _businessApi = businessApi;
@@ -943,6 +947,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(DetailCanPay));
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanManage));
     }
 
     public async Task LoadAsync()
@@ -1148,6 +1153,60 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var unit = LineStockingUnitName;
         var message = $"{L["price_outlier_confirm"]}\n{entered:N0} / {unit} ({L["previous"]}: {last:N0} / {unit})";
         return await _dialog.ConfirmAsync(message, L["purchase_price"]);
+    }
+
+    [RelayCommand]
+    private async Task ImportExcelAsync()
+    {
+        try
+        {
+            var picked = await _filePicker.PickSpreadsheetAsync();
+            if (picked is null) return;
+
+            SupplyImportPreviewDto preview;
+            using (_busy.Begin(L["loading"]))
+            await using (picked.Content)
+            {
+                preview = await _api.PreviewImportAsync(new StreamPart(picked.Content, picked.FileName,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            }
+
+            OpenCreate();
+            if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+
+            var added = 0;
+            foreach (var row in preview.Rows.Where(r => r.VariantId is not null))
+            {
+                await AddOrMergeAsync(row.VariantId!.Value, row.Name ?? "", row.Quantity, warehouseId, entry: null,
+                    purchasePrice: row.PurchasePrice is > 0 ? row.PurchasePrice : null,
+                    sellingPrice: row.SellingPrice is > 0 ? row.SellingPrice : null,
+                    expiredAt: row.ExpiredAt);
+                added++;
+            }
+
+            if (added > 0) _toast.Success(string.Format(L["supply_import_added_fmt"], added));
+            var unmatched = preview.Rows.Where(r => r.VariantId is null).ToList();
+            if (unmatched.Count > 0)
+                _toast.Warning(string.Format(L["supply_import_unmatched_fmt"], unmatched.Count,
+                    string.Join(", ", unmatched.Take(3).Select(r => r.Name ?? r.Barcode ?? $"#{r.Row}"))));
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task ImportTemplateAsync()
+    {
+        try
+        {
+            await using var content = await _api.GetImportTemplateAsync();
+            var target = await _filePicker.SaveFileAsync("cartex-kirim", "xlsx");
+            if (target is null) return;
+
+            await using (target)
+                await content.CopyToAsync(target);
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

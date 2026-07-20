@@ -7,13 +7,6 @@ public enum ImportRowAction
     Skip
 }
 
-public enum ImportStockMode
-{
-    None,
-    Supply,
-    Opening
-}
-
 public record ImportRowDto(
     int Row,
     string? Name,
@@ -29,6 +22,7 @@ public record ImportRowDto(
     decimal? MinStock,
     string? Ikpu,
     decimal? Vat,
+    string? ImageUrl,
     long? VariantId,
     ImportRowAction Action,
     List<string> Errors,
@@ -42,4 +36,4 @@ public record ProductImportPreviewDto(
     int ExistingCount,
     int ErrorCount);
 
-public record ImportResultDto(int Created, int Existing, int BarcodesGenerated, long? SupplyId, int StockAdjusted);
+public record ImportResultDto(int Created, int Existing, int BarcodesGenerated, int ImagesSet, int ImagesFailed);

@@ -7,28 +7,6 @@
              x:Class="Cartex.UI.Views.ProductImportView"
              x:CompileBindings="False">
 
-    <UserControl.Styles>
-        <Style Selector="Border.segwrap">
-            <Setter Property="Background" Value="{DynamicResource AppBg}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="9" />
-            <Setter Property="Padding" Value="3" />
-        </Style>
-        <Style Selector="Button.seg">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-        </Style>
-        <Style Selector="Button.seg.active">
-            <Setter Property="Background" Value="{DynamicResource CardBg}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-        </Style>
-    </UserControl.Styles>
-
     <Border Background="#30000000" IsVisible="{Binding IsOpen}"
             c:OverlayBehaviors.DismissCommand="{Binding CancelCommand}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="1000" MaxHeight="700"
@@ -119,49 +97,9 @@
                         <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                 IsVisible="{Binding HasPreview}">
-                            <StackPanel Spacing="12">
-                                <Border Classes="segwrap" HorizontalAlignment="Left">
-                                    <StackPanel Orientation="Horizontal" Spacing="2">
-                                        <Button Classes="seg" Classes.active="{Binding IsCatalog}"
-                                                Command="{Binding SetModeCommand}" CommandParameter="None"
-                                                Content="{Binding L[import_mode_catalog]}" />
-                                        <Button Classes="seg" Classes.active="{Binding IsSupply}"
-                                                Command="{Binding SetModeCommand}" CommandParameter="Supply"
-                                                Content="{Binding L[import_mode_supply]}" />
-                                        <Button Classes="seg" Classes.active="{Binding IsOpening}"
-                                                Command="{Binding SetModeCommand}" CommandParameter="Opening"
-                                                Content="{Binding L[import_mode_opening]}" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Grid ColumnDefinitions="*,12,*" IsVisible="{Binding NeedsWarehouse}">
-                                    <StackPanel Grid.Column="0" Spacing="6">
-                                        <c:FieldLabel Text="{Binding L[warehouse]}" Required="True" />
-                                        <ComboBox ItemsSource="{Binding Warehouses}" SelectedItem="{Binding SelectedWarehouse}"
-                                                  HorizontalAlignment="Stretch" PlaceholderText="—">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Spacing="6" IsVisible="{Binding IsSupply}">
-                                        <c:FieldLabel Text="{Binding L[supplier]}" Required="True" />
-                                        <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}"
-                                                  HorizontalAlignment="Stretch" PlaceholderText="—">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </StackPanel>
-                                </Grid>
-
-                                <TextBlock Text="{Binding L[import_opening_hint]}" Classes="caption" TextWrapping="Wrap"
-                                           IsVisible="{Binding IsOpening}" />
-
-                                <StackPanel Orientation="Horizontal" Spacing="20">
-                                    <CheckBox IsChecked="{Binding UpdatePrices}" Content="{Binding L[import_update_prices]}" />
-                                    <CheckBox IsChecked="{Binding CreateMissingCategories}" Content="{Binding L[import_create_categories]}" />
-                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="20">
+                                <CheckBox IsChecked="{Binding UpdatePrices}" Content="{Binding L[import_update_prices]}" />
+                                <CheckBox IsChecked="{Binding CreateMissingCategories}" Content="{Binding L[import_create_categories]}" />
                             </StackPanel>
                         </Border>
 

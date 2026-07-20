@@ -16,7 +16,7 @@ public static class ProductImportMatcher
         return rows;
     }
 
-    private static async Task MatchAsync(IApplicationDbContext db, List<ImportRowDto> rows, CancellationToken cancellationToken)
+    public static async Task MatchAsync(IApplicationDbContext db, List<ImportRowDto> rows, CancellationToken cancellationToken)
     {
         var codes = rows.Where(r => r.Barcode is not null).Select(r => r.Barcode!).Distinct().ToList();
         Dictionary<string, Match> byBarcode = codes.Count == 0 ? [] : (await db.Barcodes

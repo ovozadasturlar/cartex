@@ -1,7 +1,7 @@
 using Cartex.Application.Barcodes.Commands;
+using Cartex.Application.Common.Images;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Products.Commands;
-using Cartex.Application.Stocks.Commands;
-using Cartex.Application.Supplies.Commands;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -13,35 +13,15 @@ namespace Cartex.Application.Products.Import;
 
 public record ImportProductsCommand(
     List<ImportRowDto> Rows,
-    ImportStockMode StockMode = ImportStockMode.None,
-    long? WarehouseId = null,
-    long? SupplierId = null,
-    DateOnly? SupplyDate = null,
-    decimal PaidCash = 0,
-    decimal PaidCard = 0,
-    string? Currency = null,
     bool UpdatePrices = false,
     bool CreateMissingCategories = true) : ICommand<ImportResultDto>;
 
-public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser)
+public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser,
+    IRemoteImageFetcher imageFetcher, IObjectStorage storage, IImageProcessor imageProcessor)
     : IRequestHandler<ImportProductsCommand, ImportResultDto>
 {
     public async Task<ImportResultDto> Handle(ImportProductsCommand request, CancellationToken cancellationToken)
     {
-        if (request.StockMode != ImportStockMode.None && request.WarehouseId is null)
-            throw new BusinessRuleException("Ombor tanlanmagan.");
-
-        if (request.StockMode == ImportStockMode.Supply)
-        {
-            if (!currentUser.HasPermission(AppPermissions.Supplies.Manage))
-                throw new ForbiddenException("Ta'minot kirimi uchun ruxsat yo'q.");
-            if (request.SupplierId is null)
-                throw new BusinessRuleException("Ta'minotchi tanlanmagan.");
-        }
-
-        if (request.StockMode == ImportStockMode.Opening && !currentUser.HasPermission(AppPermissions.Stocks.Manage))
-            throw new ForbiddenException("Zaxirani o'zgartirish uchun ruxsat yo'q.");
-
         var resolved = await ProductImportMatcher.ResolveAsync(
             db,
             [.. request.Rows.Select(r => r with { VariantId = null, Action = ImportRowAction.Create, Errors = [], Warnings = [] })],
@@ -167,48 +147,56 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        long? supplyId = null;
-        var adjusted = 0;
-        var stockRows = rows.Where(r => r.Quantity > 0).ToList();
-
-        if (request.StockMode != ImportStockMode.None && stockRows.Count == 0)
-            throw new BusinessRuleException("Miqdor ustuni topilmadi yoki barcha miqdorlar bo'sh.");
-
-        if (request.StockMode == ImportStockMode.Supply)
-        {
-            var items = stockRows
-                .Select(r => new CreateSupplyItemDto(variants[r.Row], r.Quantity!.Value, r.PurchasePrice ?? 0, r.ExpiredAt))
-                .ToList();
-
-            supplyId = await sender.Send(new CreateSupplyCommand(
-                request.SupplierId!.Value,
-                request.WarehouseId!.Value,
-                request.SupplyDate ?? DateOnly.FromDateTime(DateTime.Now),
-                items,
-                request.PaidCash,
-                request.PaidCard,
-                request.Currency), cancellationToken);
-        }
-        else if (request.StockMode == ImportStockMode.Opening)
-        {
-            foreach (var row in stockRows)
-            {
-                await sender.Send(new AddOpeningStockCommand(
-                    request.WarehouseId!.Value,
-                    variants[row.Row],
-                    row.Quantity!.Value,
-                    row.PurchasePrice ?? 0,
-                    row.ExpiredAt), cancellationToken);
-                adjusted++;
-            }
-        }
+        var (imagesSet, imagesFailed) = await AttachImagesAsync(rows, variants, cancellationToken);
 
         return new ImportResultDto(
             newProducts.Count,
             rows.Count(r => r.Action == ImportRowAction.Existing),
             generated,
-            supplyId,
-            adjusted);
+            imagesSet,
+            imagesFailed);
+    }
+
+    private async Task<(int Set, int Failed)> AttachImagesAsync(
+        List<ImportRowDto> rows, Dictionary<int, long> variants, CancellationToken cancellationToken)
+    {
+        var imageRows = rows.Where(r => !string.IsNullOrWhiteSpace(r.ImageUrl)).ToList();
+        if (imageRows.Count == 0)
+            return (0, 0);
+
+        var variantIds = imageRows.Select(r => variants[r.Row]).Distinct().ToList();
+        var productByVariant = (await db.ProductVariants
+                .Where(v => variantIds.Contains(v.Id))
+                .Select(v => new { v.Id, v.Product })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(v => v.Id, v => v.Product);
+
+        var set = 0;
+        var failed = 0;
+        var handled = new HashSet<long>();
+
+        foreach (var row in imageRows)
+        {
+            var product = productByVariant.GetValueOrDefault(variants[row.Row]);
+            if (product is null || !handled.Add(product.Id) || product.ImageKey is not null)
+                continue;
+
+            var fetched = await imageFetcher.FetchAsync(row.ImageUrl!.Trim(), cancellationToken);
+            if (fetched is null)
+            {
+                failed++;
+                continue;
+            }
+
+            using var buffer = new MemoryStream(fetched.Content);
+            product.ImageKey = await ImageStore.SaveAsync(storage, imageProcessor, buffer, fetched.ContentType, fetched.Extension, cancellationToken);
+            set++;
+        }
+
+        if (set > 0)
+            await db.SaveChangesAsync(cancellationToken);
+
+        return (set, failed);
     }
 }
 
@@ -218,7 +206,5 @@ public sealed class ImportProductsCommandValidator : AbstractValidator<ImportPro
     {
         RuleFor(x => x.Rows).NotEmpty();
         RuleFor(x => x.Rows.Count).LessThanOrEqualTo(ProductImportMatcher.MaxRows);
-        RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
     }
 }

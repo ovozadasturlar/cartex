@@ -1,7 +1,7 @@
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Reports.Queries;
 using Cartex.Application.Sales.Commands;
-using Cartex.Application.Stocks.Commands;
+using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Application.Warehouses.Commands;
 using Cartex.Persistence;
@@ -35,7 +35,8 @@ public class SalesReportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var productId = await sender.Send(new CreateProductCommand(
             Name: name, CategoryId: null, UnitId: unitId, MinStock: null, Barcodes: null, SellingPrice: sellingPrice));
         var variantId = await db.ProductVariants.Where(v => v.ProductId == productId).Select(v => v.Id).SingleAsync();
-        await sender.Send(new AddOpeningStockCommand(warehouseId, variantId, quantity, purchasePrice, null));
+        await sender.Send(new CreateSupplyCommand(null, warehouseId, DateOnly.FromDateTime(DateTime.Today),
+            [new CreateSupplyItemDto(variantId, quantity, purchasePrice, null)]));
         return variantId;
     }
 

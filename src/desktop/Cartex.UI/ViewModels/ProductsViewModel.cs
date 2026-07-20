@@ -82,6 +82,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal? _editSellingPrice;
     [ObservableProperty] private string? _editImageKey;
     [ObservableProperty] private Bitmap? _editImagePreview;
+    [ObservableProperty] private string? _editImageUrl;
 
     private long _editId;
 
@@ -106,6 +107,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _vBarcodes = string.Empty;
     [ObservableProperty] private string? _vImageKey;
     [ObservableProperty] private Bitmap? _vImagePreview;
+    [ObservableProperty] private string? _vImageUrl;
     public ObservableCollection<CategoryDto> Categories { get; } = [];
     public ObservableCollection<CategoryDto> FilterCategories { get; } = [];
     public ObservableCollection<UnitDto> Units { get; } = [];
@@ -523,6 +525,44 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 
+    [RelayCommand]
+    private async Task FetchImageAsync(string target)
+    {
+        var isVariant = target == "variant";
+        var url = (isVariant ? VImageUrl : EditImageUrl)?.Trim();
+        if (string.IsNullOrEmpty(url)) return;
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                using var response = await _imageClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+                if (!contentType.StartsWith("image/")) throw new InvalidOperationException(contentType);
+
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var ext = contentType switch
+                {
+                    "image/png" => ".png",
+                    "image/webp" => ".webp",
+                    "image/gif" => ".gif",
+                    _ => ".jpg"
+                };
+                using var stream = new MemoryStream(bytes);
+                var result = await _storageApi.UploadAsync(new StreamPart(stream, "image" + ext, contentType));
+                var preview = await LoadBitmapAsync(result.Key);
+
+                if (isVariant) { VImageKey = result.Key; VImagePreview = preview; VImageUrl = null; }
+                else { EditImageKey = result.Key; EditImagePreview = preview; EditImageUrl = null; }
+            }
+        }
+        catch
+        {
+            _toast.Error(L["image_fetch_failed"]);
+        }
+    }
+
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanExport));
@@ -650,6 +690,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditPriceCurrency = _baseCurrency;
         EditImageKey = null;
         EditImagePreview = null;
+        EditImageUrl = null;
         _editDefaultVariantId = 0;
         EditBarcodeList.Clear();
         EditBarcodeInput = string.Empty;
@@ -686,6 +727,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditPriceCurrency = product.PriceCurrency ?? _baseCurrency;
         EditImageKey = product.ImageKey;
         EditImagePreview = null;
+        EditImageUrl = null;
         _ = SetPreviewAsync(product.ImageKey, b => EditImagePreview = b);
         _editDefaultVariantId = product.DefaultVariantId;
         EditBarcodeInput = string.Empty;
@@ -729,6 +771,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditSellingPrice = null;
         EditImageKey = null;
         EditImagePreview = null;
+        EditImageUrl = null;
         _editDefaultVariantId = 0;
         EditBarcodeList.Clear();
         EditBarcodeInput = string.Empty;
@@ -833,6 +876,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         VBarcodes = string.Empty;
         VImageKey = null;
         VImagePreview = null;
+        VImageUrl = null;
         BuildVariantAttributes(null);
         IsVariantEditOpen = true;
     }
@@ -847,6 +891,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         VBarcodes = BarcodeSyntax.Format(variant.Barcodes);
         VImageKey = variant.ImageKey;
         VImagePreview = null;
+        VImageUrl = null;
         _ = SetPreviewAsync(variant.ImageKey, b => VImagePreview = b);
         BuildVariantAttributes(variant.Attributes);
         IsVariantEditOpen = true;
