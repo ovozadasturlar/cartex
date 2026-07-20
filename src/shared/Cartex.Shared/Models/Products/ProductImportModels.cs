@@ -23,6 +23,7 @@ public record ImportRowDto(
     string? Ikpu,
     decimal? Vat,
     string? ImageUrl,
+    string? Currency,
     long? VariantId,
     ImportRowAction Action,
     List<string> Errors,

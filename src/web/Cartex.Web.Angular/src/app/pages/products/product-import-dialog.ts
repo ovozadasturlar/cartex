@@ -16,7 +16,7 @@ import { NotifyService } from '../../core/notify.service';
 
 const FIELDS = [
   'Name', 'Barcode', 'PackQty', 'Sku', 'Category', 'Unit',
-  'SellingPrice', 'PurchasePrice', 'Quantity', 'ExpiredAt', 'MinStock', 'Ikpu', 'Vat', 'ImageUrl',
+  'SellingPrice', 'PurchasePrice', 'Quantity', 'ExpiredAt', 'MinStock', 'Ikpu', 'Vat', 'ImageUrl', 'Currency',
 ];
 
 @Component({

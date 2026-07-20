@@ -17,7 +17,8 @@ public enum ImportField
     MinStock,
     Ikpu,
     Vat,
-    ImageUrl
+    ImageUrl,
+    Currency
 }
 
 public static class ImportColumns
@@ -37,6 +38,7 @@ public static class ImportColumns
         [ImportField.MinStock] = ["minqoldiq", "minimalqoldiq", "minsoni", "минимальныйостаток", "минзапас", "minstock", "minimum"],
         [ImportField.Ikpu] = ["ikpu", "mxik", "икпу", "мхик"],
         [ImportField.Vat] = ["qqs", "nds", "ккс", "ндс", "vat", "tax"],
+        [ImportField.Currency] = ["valyuta", "valuta", "валюта", "currency"],
         [ImportField.ImageUrl] = ["suraturl", "surat", "rasm", "rasmurl", "сурат", "расм", "фото", "изображение", "картинка", "imageurl", "image", "photo", "picture", "imagelink"]
     };
 
@@ -148,6 +150,7 @@ public static class ImportColumns
             Text(ImportField.Ikpu),
             Num(ImportField.Vat),
             Text(ImportField.ImageUrl),
+            Text(ImportField.Currency),
             null,
             ImportRowAction.Create,
             [],

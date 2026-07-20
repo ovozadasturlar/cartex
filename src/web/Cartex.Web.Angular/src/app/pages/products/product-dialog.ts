@@ -123,6 +123,14 @@ import { NotifyService } from '../../core/notify.service';
             </button>
             <input #file type="file" accept="image/*" hidden (change)="onFile(file)" />
           </div>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('image_url') }}</mat-label>
+            <input matInput [(ngModel)]="imageUrlInput" placeholder="https://..." />
+            <button matSuffix mat-icon-button type="button" [disabled]="uploading() || !imageUrlInput.trim()"
+                    (click)="fetchFromUrl()">
+              <mat-icon>download</mat-icon>
+            </button>
+          </mat-form-field>
 
           <h3>{{ t('barcode') }}</h3>
           <div class="barcodes">
@@ -182,6 +190,7 @@ export class ProductDialog implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly uploading = signal(false);
+  imageUrlInput = '';
   readonly categories = signal<Category[]>([]);
   readonly units = signal<Unit[]>([]);
   readonly productTypes = signal<ProductType[]>([]);
@@ -253,6 +262,22 @@ export class ProductDialog implements OnInit {
       const result = await lastValueFrom(this.storageApi.upload(file));
       this.imageKey = result.key;
       this.preview.set(URL.createObjectURL(file));
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  async fetchFromUrl(): Promise<void> {
+    const url = this.imageUrlInput.trim();
+    if (!url) return;
+    this.uploading.set(true);
+    try {
+      const result = await lastValueFrom(this.storageApi.uploadFromUrl(url));
+      this.imageKey = result.key;
+      this.preview.set(`/api/storage/content?key=${result.key}`);
+      this.imageUrlInput = '';
     } catch (e) {
       this.notify.error(e);
     } finally {

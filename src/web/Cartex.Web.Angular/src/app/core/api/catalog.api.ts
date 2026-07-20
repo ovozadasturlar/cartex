@@ -69,6 +69,7 @@ export interface ImportRow {
   ikpu: string | null;
   vat: number | null;
   imageUrl: string | null;
+  currency: string | null;
   variantId: number | null;
   action: ImportRowAction;
   errors: string[];
@@ -286,6 +287,10 @@ export class StorageApi {
     const form = new FormData();
     form.append('file', file, file.name);
     return this.http.post<{ key: string }>('/api/storage/upload', form);
+  }
+
+  uploadFromUrl(url: string): Observable<{ key: string }> {
+    return this.http.post<{ key: string }>('/api/storage/from-url', { url });
   }
 }
 

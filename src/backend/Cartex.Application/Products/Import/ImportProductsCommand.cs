@@ -39,37 +39,41 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             .GroupBy(u => u.Key.ToLowerInvariant())
             .ToDictionary(g => g.Key, g => g.First().Id);
 
-        var categoryByName = (await db.Categories.Select(c => new { c.Id, c.Name }).ToListAsync(cancellationToken))
-            .GroupBy(c => c.Name.ToLowerInvariant())
+        var categoryByPath = (await db.Categories.Select(c => new { c.Id, c.Name, c.ParentId }).ToListAsync(cancellationToken))
+            .GroupBy(c => (c.ParentId, c.Name.ToLowerInvariant()))
             .ToDictionary(g => g.Key, g => g.First().Id);
-
-        if (request.CreateMissingCategories)
-        {
-            var missing = rows
-                .Where(r => r.Category is not null)
-                .Select(r => r.Category!.Trim())
-                .Where(c => !categoryByName.ContainsKey(c.ToLowerInvariant()))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(name => new Category { Name = name })
-                .ToList();
-
-            if (missing.Count > 0)
-            {
-                if (!currentUser.HasPermission(AppPermissions.Categories.Manage))
-                    throw new ForbiddenException("Yangi kategoriya yaratish uchun ruxsat yo'q.");
-
-                db.Categories.AddRange(missing);
-                await db.SaveChangesAsync(cancellationToken);
-                foreach (var category in missing)
-                    categoryByName[category.Name.ToLowerInvariant()] = category.Id;
-            }
-        }
 
         long UnitId(string? name) =>
             name is not null && unitByName.TryGetValue(name.ToLowerInvariant(), out var id) ? id : defaultUnit.Id;
 
-        long? CategoryId(string? name) =>
-            name is not null && categoryByName.TryGetValue(name.Trim().ToLowerInvariant(), out var id) ? id : null;
+        async Task<long?> CategoryIdAsync(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            long? parent = null;
+            foreach (var segment in path.Split(['/', '>'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var key = (parent, segment.ToLowerInvariant());
+                if (categoryByPath.TryGetValue(key, out var id))
+                {
+                    parent = id;
+                    continue;
+                }
+
+                if (!request.CreateMissingCategories)
+                    return parent;
+                if (!currentUser.HasPermission(AppPermissions.Categories.Manage))
+                    throw new ForbiddenException("Yangi kategoriya yaratish uchun ruxsat yo'q.");
+
+                var created = new Category { Name = segment, ParentId = parent };
+                db.Categories.Add(created);
+                await db.SaveChangesAsync(cancellationToken);
+                categoryByPath[key] = created.Id;
+                parent = created.Id;
+            }
+            return parent;
+        }
 
         var variants = new Dictionary<int, long>();
         var newProducts = new Dictionary<int, long>();
@@ -84,14 +88,15 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
 
             newProducts[row.Row] = await sender.Send(new CreateProductCommand(
                 Name: row.Name!.Trim(),
-                CategoryId: CategoryId(row.Category),
+                CategoryId: await CategoryIdAsync(row.Category),
                 UnitId: UnitId(row.Unit),
                 MinStock: row.MinStock,
                 Barcodes: row.Barcode is { } code ? [new BarcodeInput(code, row.PackQty ?? 1)] : null,
                 Code: row.Sku,
                 IkpuCode: row.Ikpu,
                 VatRate: row.Vat,
-                SellingPrice: row.SellingPrice), cancellationToken);
+                SellingPrice: row.SellingPrice,
+                PriceCurrency: row.Currency), cancellationToken);
         }
 
         if (newProducts.Count > 0)
@@ -143,7 +148,7 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
         if (request.UpdatePrices)
         {
             foreach (var row in rows.Where(r => r.Action == ImportRowAction.Existing && r.SellingPrice is not null))
-                await ProductPriceWriter.UpsertAsync(db, variants[row.Row], null, row.SellingPrice!.Value, cancellationToken);
+                await ProductPriceWriter.UpsertAsync(db, variants[row.Row], null, row.SellingPrice!.Value, cancellationToken, row.Currency);
             await db.SaveChangesAsync(cancellationToken);
         }
 

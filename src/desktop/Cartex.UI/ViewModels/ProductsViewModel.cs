@@ -9,6 +9,7 @@ using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Storage;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Units;
@@ -552,30 +553,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                using var response = await _imageClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
-                if (!contentType.StartsWith("image/")) throw new InvalidOperationException(contentType);
-
-                var bytes = await response.Content.ReadAsByteArrayAsync();
-                var ext = contentType switch
-                {
-                    "image/png" => ".png",
-                    "image/webp" => ".webp",
-                    "image/gif" => ".gif",
-                    _ => ".jpg"
-                };
-                using var stream = new MemoryStream(bytes);
-                var result = await _storageApi.UploadAsync(new StreamPart(stream, "image" + ext, contentType));
+                var result = await _storageApi.UploadFromUrlAsync(new ImageFromUrlRequest(url));
                 var preview = await LoadBitmapAsync(result.Key);
 
                 if (isVariant) { VImageKey = result.Key; VImagePreview = preview; VImageUrl = null; }
                 else { EditImageKey = result.Key; EditImagePreview = preview; EditImageUrl = null; }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _toast.Error(L["image_fetch_failed"]);
+            _toast.Error(ApiErrors.Describe(ex));
         }
     }
 

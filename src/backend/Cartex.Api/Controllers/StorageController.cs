@@ -11,7 +11,7 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class StorageController(IObjectStorage storage, IImageProcessor processor) : ControllerBase
+public class StorageController(IObjectStorage storage, IImageProcessor processor, IRemoteImageFetcher fetcher) : ControllerBase
 {
     private const long MaxFileSize = 5 * 1024 * 1024;
 
@@ -41,6 +41,19 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         return Ok(new { key });
     }
 
+    [HttpPost("from-url")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> UploadFromUrl(ImageUrlRequest request)
+    {
+        var ct = HttpContext.RequestAborted;
+        var fetched = await fetcher.FetchAsync(request.Url ?? string.Empty, ct)
+            ?? throw new BusinessRuleException("Havoladan rasm olib bo'lmadi — manzilni tekshiring (png, jpeg, webp, gif, 5 MB gacha).");
+
+        using var buffer = new MemoryStream(fetched.Content);
+        var key = await ImageStore.SaveAsync(storage, processor, buffer, fetched.ContentType, fetched.Extension, ct);
+        return Ok(new { key });
+    }
+
     [HttpGet("url")]
     [HasPermission(AppPermissions.Products.View)]
     public async Task<IActionResult> GetUrl([FromQuery] string key)
@@ -61,3 +74,5 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         return File(result.Value.Content, result.Value.ContentType);
     }
 }
+
+public record ImageUrlRequest(string? Url);

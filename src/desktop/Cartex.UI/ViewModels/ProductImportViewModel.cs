@@ -49,7 +49,7 @@ public partial class ProductImportViewModel : ViewModelBase
     public string[] Fields { get; } =
     [
         "", "Name", "Barcode", "PackQty", "Sku", "Category", "Unit",
-        "SellingPrice", "PurchasePrice", "Quantity", "ExpiredAt", "MinStock", "Ikpu", "Vat", "ImageUrl"
+        "SellingPrice", "PurchasePrice", "Quantity", "ExpiredAt", "MinStock", "Ikpu", "Vat", "ImageUrl", "Currency"
     ];
 
     [ObservableProperty] private bool _isOpen;
