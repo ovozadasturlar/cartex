@@ -6,7 +6,7 @@ namespace Cartex.ApiClient.Api;
 public interface IProductsApi
 {
     [Get("/api/products")]
-    Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null);
+    Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null, [Query] long? variantId = null);
 
     [Get("/api/products")]
     Task<IApiResponse<List<ProductDto>>> QueryAsync([Query] IDictionary<string, object> query);

@@ -22,4 +22,6 @@ public record ProductDto(
     string? PriceCurrency = null,
     string? Dimension = null,
     long? ManufacturerId = null,
-    bool IsEnabled = true);
+    bool IsEnabled = true,
+    long? CategoryId = null,
+    long UnitId = 0);

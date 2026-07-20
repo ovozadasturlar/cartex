@@ -14,7 +14,7 @@ namespace Cartex.Application.Stocks.Queries;
 public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
     : IRequest<StockOnHandPageDto>;
 
-public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null);
+public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null);
 
 public record StockOnHandPageDto(IReadOnlyCollection<StockOnHandDto> Items, int TotalCount, decimal TotalQuantity, decimal TotalValue);
 
@@ -48,6 +48,7 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                 o.NearestExpiry,
                 v.ProductId,
                 v.Code,
+                Barcodes = v.Barcodes.Select(b => b.Code).ToList(),
                 ProductName = v.Product.Name,
                 v.Product.CategoryId,
                 v.Product.ManufacturerId,
@@ -121,7 +122,7 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                 var discountPct = rules is { Count: > 0 }
                     ? DiscountEngine.BestPercent(rules, today, o.ProductId, o.CategoryId, o.ManufacturerId)
                     : null;
-                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), o.OnHand, o.Price, o.NearestExpiry, imageUrl, discountPct, o.Code);
+                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), o.OnHand, o.Price, o.NearestExpiry, imageUrl, discountPct, o.Code, o.Barcodes);
             })
             .ToList();
 

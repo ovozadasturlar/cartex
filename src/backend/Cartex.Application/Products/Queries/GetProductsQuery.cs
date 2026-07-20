@@ -10,6 +10,7 @@ namespace Cartex.Application.Products.Queries;
 public record GetProductsQuery : FilteringRequest, IRequest<IReadOnlyCollection<ProductDto>>
 {
     public long? CategoryId { get; set; }
+    public long? VariantId { get; set; }
 }
 
 public record ProductDto(
@@ -34,7 +35,9 @@ public record ProductDto(
     string? PriceCurrency = null,
     string? Dimension = null,
     long? ManufacturerId = null,
-    bool IsEnabled = true);
+    bool IsEnabled = true,
+    long? CategoryId = null,
+    long UnitId = 0);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -47,6 +50,9 @@ public sealed class GetProductsQueryHandler(
 
         if (request.CategoryId is { } categoryId)
             query = query.Where(p => p.CategoryId == categoryId);
+
+        if (request.VariantId is { } variantId)
+            query = query.Where(p => p.Variants.Any(v => v.Id == variantId));
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -69,7 +75,9 @@ public sealed class GetProductsQueryHandler(
                     p.Id,
                     Variant = p.Variants.Where(v => v.IsDefault).Select(v => new { v.Id, v.Code }).FirstOrDefault(),
                     p.Name,
+                    p.CategoryId,
                     CategoryName = p.Category != null ? p.Category.Name : null,
+                    p.UnitId,
                     UnitName = p.Unit.Name,
                     p.MinStock,
                     Barcodes = p.Variants.SelectMany(v => v.Barcodes).Select(b => b.Code).ToList(),
@@ -111,7 +119,9 @@ public sealed class GetProductsQueryHandler(
                 r.Price?.Currency,
                 r.Dimension,
                 r.ManufacturerId,
-                r.IsEnabled))
+                r.IsEnabled,
+                r.CategoryId,
+                r.UnitId))
             .ToList();
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();
