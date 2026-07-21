@@ -184,8 +184,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         IsRepayOpen = false;
         IsProfileOpen = false;
         IsSalesTab = false;
-        _searchText = "";
-        OnPropertyChanged(nameof(SearchText));
+        SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
     }
 

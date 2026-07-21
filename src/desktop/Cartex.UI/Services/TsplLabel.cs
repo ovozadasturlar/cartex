@@ -21,7 +21,10 @@ public static class TsplLabel
         void Command(string text) => Write(stream, text + "\r\n");
 
         Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
-        Command($"GAP {Mm(options.GapMm)} mm,0 mm");
+        // GAPDETECT stores the real measured gap in the printer.  Do not overwrite
+        // that value on every job, otherwise a completed calibration has no effect.
+        if (!options.UsePrinterGapCalibration)
+            Command($"GAP {Mm(options.GapMm)} mm,0 mm");
         Command("DIRECTION 1");
         Command("REFERENCE 0,0");
         Command($"DENSITY {options.Density}");
@@ -37,8 +40,17 @@ public static class TsplLabel
 
     public static byte[] BuildCalibration(LabelOptions options)
     {
-        var tspl = $"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm\r\nDIRECTION 1\r\nGAPDETECT\r\n";
-        return Encoding.ASCII.GetBytes(tspl);
+        using var stream = new MemoryStream();
+        void Command(string text) => Write(stream, text + "\r\n");
+
+        // GAPDETECT needs an approximate label size.  Sending the size selected in
+        // Cartex makes calibration independent of the Windows driver's paper setup.
+        Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
+        Command("DIRECTION 1");
+        Command("REFERENCE 0,0");
+        Command("GAPDETECT");
+        Command("HOME");
+        return stream.ToArray();
     }
 
     private static string Mm(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);

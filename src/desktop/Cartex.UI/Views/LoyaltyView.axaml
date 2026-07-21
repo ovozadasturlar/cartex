@@ -442,7 +442,7 @@
                                     </Button>
                                 </Grid>
                                 <StackPanel Spacing="4" IsVisible="{Binding DiscountCustomer, Converter={x:Static ObjectConverters.IsNull}}">
-                                    <TextBox Text="{Binding CustomerSearch}" Watermark="{Binding L[all_customers]}" MinHeight="38" />
+                                    <TextBox Text="{Binding CustomerSearch}" PlaceholderText="{Binding L[all_customers]}" MinHeight="38" />
                                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                             CornerRadius="8" IsVisible="{Binding !!CustomerResults.Count}">
                                         <ScrollViewer MaxHeight="160">
@@ -491,12 +491,12 @@
                                 <StackPanel Spacing="5">
                                     <TextBlock Text="{Binding L[discount_starts]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                     <CalendarDatePicker SelectedDate="{Binding DiscountStartsOn}" HorizontalAlignment="Stretch"
-                                                        MinHeight="38" Watermark="—" />
+                                                        MinHeight="38" PlaceholderText="—" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Text="{Binding L[discount_ends]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                     <CalendarDatePicker SelectedDate="{Binding DiscountEndsOn}" HorizontalAlignment="Stretch"
-                                                        MinHeight="38" Watermark="—" />
+                                                        MinHeight="38" PlaceholderText="—" />
                                 </StackPanel>
                             </Grid>
 

@@ -107,8 +107,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         IsEditOpen = false;
         IsRepayOpen = false;
         IsSuppliesTab = false;
-        _searchText = "";
-        OnPropertyChanged(nameof(SearchText));
+        SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
     }
 

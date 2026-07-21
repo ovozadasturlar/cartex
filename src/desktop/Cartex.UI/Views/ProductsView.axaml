@@ -394,7 +394,7 @@
                                 <Button Classes="outline" HorizontalAlignment="Left"
                                         Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
                                 <Grid ColumnDefinitions="*,8,Auto">
-                                    <TextBox Grid.Column="0" Text="{Binding EditImageUrl}" Watermark="{Binding L[image_url]}" />
+                                    <TextBox Grid.Column="0" Text="{Binding EditImageUrl}" PlaceholderText="{Binding L[image_url]}" />
                                     <Button Grid.Column="2" Classes="outline" VerticalAlignment="Stretch"
                                             Command="{Binding FetchImageCommand}" CommandParameter="edit"
                                             ToolTip.Tip="{Binding L[image_url]}">
@@ -529,7 +529,7 @@
                                     <Button Classes="outline" HorizontalAlignment="Left"
                                             Command="{Binding PickVariantImageCommand}" Content="{Binding L[choose_image]}" />
                                     <Grid ColumnDefinitions="*,8,Auto">
-                                        <TextBox Grid.Column="0" Text="{Binding VImageUrl}" Watermark="{Binding L[image_url]}" />
+                                        <TextBox Grid.Column="0" Text="{Binding VImageUrl}" PlaceholderText="{Binding L[image_url]}" />
                                         <Button Grid.Column="2" Classes="outline" VerticalAlignment="Stretch"
                                                 Command="{Binding FetchImageCommand}" CommandParameter="variant"
                                                 ToolTip.Tip="{Binding L[image_url]}">

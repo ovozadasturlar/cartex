@@ -9,11 +9,11 @@ using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.UI.Services;
 
-public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false, string? LabelMode = null, double LabelGapMm = 0, int LabelDpi = 0, double LabelShiftXMm = 0, double LabelShiftYMm = 0, int LabelRotation = -1, int LabelDensity = 0, int LabelSpeed = 0);
+public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false, string? LabelMode = null, double LabelGapMm = 0, int LabelDpi = 0, double LabelShiftXMm = 0, double LabelShiftYMm = 0, int LabelRotation = -1, int LabelDensity = 0, int LabelSpeed = 0, bool UsePrinterGapCalibration = false);
 
 public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
 
-public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed);
+public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed, bool UsePrinterGapCalibration);
 
 public static class LabelSize
 {
@@ -34,7 +34,8 @@ public static class LabelSize
             Math.Clamp(s.LabelShiftYMm, -10, 10),
             s.LabelRotation is 0 or 180 ? s.LabelRotation : 180,
             s.LabelDensity is >= 1 and <= 15 ? s.LabelDensity : 8,
-            s.LabelSpeed is >= 1 and <= 6 ? s.LabelSpeed : 4);
+            s.LabelSpeed is >= 1 and <= 6 ? s.LabelSpeed : 4,
+            s.UsePrinterGapCalibration);
     }
 }
 

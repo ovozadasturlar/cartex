@@ -10,6 +10,11 @@ namespace Cartex.UI.ViewModels;
 
 public partial class PrintingViewModel : ViewModelBase, ILoadable
 {
+    private const decimal ShiftStepMm = 0.5m;
+    private bool _isLoadingLabelSettings;
+
+    private sealed record PrinterCalibrationProfile(int Dpi, int Rotation, decimal Density, decimal Speed);
+
     private readonly IPrinterService _printer;
     private readonly IToastService _toast;
     private readonly ISettingsApi _settingsApi;
@@ -52,6 +57,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _labelRotation = 180;
     [ObservableProperty] private decimal _labelDensity = 8;
     [ObservableProperty] private decimal _labelSpeed = 4;
+    [ObservableProperty] private bool _usePrinterGapCalibration;
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
     [ObservableProperty] private string _receiptPaperWidth = "default";
@@ -81,6 +87,16 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         LabelHeightMm = decimal.Parse(parts[1]);
     }
 
+    partial void OnLabelWidthMmChanged(decimal value) => UseManualGapWhenLabelChanges();
+    partial void OnLabelHeightMmChanged(decimal value) => UseManualGapWhenLabelChanges();
+    partial void OnLabelGapMmChanged(decimal value) => UseManualGapWhenLabelChanges();
+
+    private void UseManualGapWhenLabelChanges()
+    {
+        if (!_isLoadingLabelSettings)
+            UsePrinterGapCalibration = false;
+    }
+
     public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels, AuthService auth)
     {
         _printer = printer;
@@ -98,27 +114,36 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         Printers.Clear();
         foreach (var p in printers) Printers.Add(p);
 
-        ReceiptPrinter = s.ReceiptPrinter;
-        ZReportPrinter = s.ZReportPrinter;
-        BarcodePrinter = s.BarcodePrinter;
-        DocumentPrinter = s.DocumentPrinter;
-        AutoPrintReceipt = s.AutoPrintReceipt;
-        AutoPrintZReport = s.AutoPrintZReport;
-        ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
-        ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
-        ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
-        var label = LabelSize.Resolve(s);
-        LabelWidthMm = (decimal)label.WidthMm;
-        LabelHeightMm = (decimal)label.HeightMm;
-        LabelGapMm = (decimal)label.GapMm;
-        LabelShiftXMm = (decimal)label.ShiftXMm;
-        LabelShiftYMm = (decimal)label.ShiftYMm;
-        LabelDpi = label.Dpi;
-        LabelRotation = label.Rotation;
-        LabelDensity = label.Density;
-        LabelSpeed = label.Speed;
-        LabelMode = s.LabelMode == "pdf" ? "pdf" : "tspl";
-        SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
+        _isLoadingLabelSettings = true;
+        try
+        {
+            ReceiptPrinter = s.ReceiptPrinter;
+            ZReportPrinter = s.ZReportPrinter;
+            BarcodePrinter = s.BarcodePrinter;
+            DocumentPrinter = s.DocumentPrinter;
+            AutoPrintReceipt = s.AutoPrintReceipt;
+            AutoPrintZReport = s.AutoPrintZReport;
+            ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
+            ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
+            ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
+            var label = LabelSize.Resolve(s);
+            LabelWidthMm = (decimal)label.WidthMm;
+            LabelHeightMm = (decimal)label.HeightMm;
+            LabelGapMm = (decimal)label.GapMm;
+            LabelShiftXMm = (decimal)label.ShiftXMm;
+            LabelShiftYMm = (decimal)label.ShiftYMm;
+            LabelDpi = label.Dpi;
+            LabelRotation = label.Rotation;
+            LabelDensity = label.Density;
+            LabelSpeed = label.Speed;
+            LabelMode = s.LabelMode == "pdf" ? "pdf" : "tspl";
+            UsePrinterGapCalibration = label.UsePrinterGapCalibration;
+            SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
+        }
+        finally
+        {
+            _isLoadingLabelSettings = false;
+        }
 
         try
         {
@@ -134,26 +159,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
-        _printer.SaveSettings(new PrinterSettings(
-            ReceiptPrinter,
-            ZReportPrinter,
-            BarcodePrinter,
-            DocumentPrinter,
-            AutoPrintReceipt,
-            (double)LabelWidthMm,
-            (double)LabelHeightMm,
-            ReceiptMode,
-            int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
-            (int)Math.Clamp(ReceiptCopies, 1, 5),
-            AutoPrintZReport,
-            LabelMode,
-            (double)LabelGapMm,
-            LabelDpi,
-            (double)LabelShiftXMm,
-            (double)LabelShiftYMm,
-            LabelRotation,
-            (int)LabelDensity,
-            (int)LabelSpeed));
+        SaveLocalPrinterSettings();
         if (CanEditReceiptContent)
         try
         {
@@ -202,6 +208,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
         try
         {
+            SaveLocalPrinterSettings();
             _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
             _toast.Info(L["success"]);
         }
@@ -212,11 +219,86 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private void CalibrateLabel()
     {
         if (string.IsNullOrWhiteSpace(BarcodePrinter)) { _toast.Warning(L["error"]); return; }
+
+        ApplyPrinterCalibrationProfile();
+        if (string.Equals(LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            _toast.Warning(L["label_calibrate_tspl_only"]);
+            return;
+        }
         try
         {
+            UsePrinterGapCalibration = true;
+            SaveLocalPrinterSettings();
             _printer.PrintRawBytes(BarcodePrinter, TsplLabel.BuildCalibration(LabelSize.Resolve(_printer.GetSettings())));
             _toast.Info(L["label_calibrate_started"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private void ApplyPrinterCalibrationProfile()
+    {
+        var name = BarcodePrinter;
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        // The Windows spooler cannot query a label printer's sensor values.  Known
+        // printer models can still supply their fixed hardware settings here.
+        PrinterCalibrationProfile? profile = name.Contains("GP-3120TUD", StringComparison.OrdinalIgnoreCase)
+            ? new PrinterCalibrationProfile(Dpi: 203, Rotation: 180, Density: 8, Speed: 3)
+            : null;
+
+        if (profile is null) return;
+
+        LabelMode = "tspl";
+        LabelDpi = profile.Dpi;
+        LabelRotation = profile.Rotation;
+        LabelDensity = profile.Density;
+        LabelSpeed = profile.Speed;
+        LabelShiftXMm = 0;
+        LabelShiftYMm = 0;
+    }
+
+    [RelayCommand]
+    private void NudgeLabelLeft() => LabelShiftXMm = Math.Clamp(LabelShiftXMm + ShiftStepMm, -10, 10);
+
+    [RelayCommand]
+    private void NudgeLabelRight() => LabelShiftXMm = Math.Clamp(LabelShiftXMm - ShiftStepMm, -10, 10);
+
+    [RelayCommand]
+    private void NudgeLabelUp() => LabelShiftYMm = Math.Clamp(LabelShiftYMm + ShiftStepMm, -10, 10);
+
+    [RelayCommand]
+    private void NudgeLabelDown() => LabelShiftYMm = Math.Clamp(LabelShiftYMm - ShiftStepMm, -10, 10);
+
+    [RelayCommand]
+    private void UseManualLabelGap()
+    {
+        UsePrinterGapCalibration = false;
+        SaveLocalPrinterSettings();
+    }
+
+    private void SaveLocalPrinterSettings()
+    {
+        _printer.SaveSettings(new PrinterSettings(
+            ReceiptPrinter,
+            ZReportPrinter,
+            BarcodePrinter,
+            DocumentPrinter,
+            AutoPrintReceipt,
+            (double)LabelWidthMm,
+            (double)LabelHeightMm,
+            ReceiptMode,
+            int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
+            (int)Math.Clamp(ReceiptCopies, 1, 5),
+            AutoPrintZReport,
+            LabelMode,
+            (double)LabelGapMm,
+            LabelDpi,
+            (double)LabelShiftXMm,
+            (double)LabelShiftYMm,
+            LabelRotation,
+            (int)LabelDensity,
+            (int)LabelSpeed,
+            UsePrinterGapCalibration));
     }
 }

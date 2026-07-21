@@ -45,7 +45,7 @@
                     <StackPanel Grid.Column="4" Spacing="5">
                         <TextBlock Text="{Binding L[prepack_expiry]}" Classes="caption" />
                         <NumericUpDown Value="{Binding ExpiresHours, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0"
-                                       ShowButtonSpinner="False" MinHeight="40" Watermark="{Binding L[prepack_expiry_hint]}" />
+                                       ShowButtonSpinner="False" MinHeight="40" PlaceholderText="{Binding L[prepack_expiry_hint]}" />
                     </StackPanel>
                 </Grid>
 

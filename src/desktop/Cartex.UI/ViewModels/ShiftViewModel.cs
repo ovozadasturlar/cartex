@@ -105,8 +105,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         History.Clear();
         ExpenseCategories.Clear();
         Cashiers.Clear();
-        _selectedCashier = null;
-        OnPropertyChanged(nameof(SelectedCashier));
+        SelectedCashier = null;
         CurrencyRows.Clear();
         IsMulticurrency = false;
         OpeningFloat = 0;

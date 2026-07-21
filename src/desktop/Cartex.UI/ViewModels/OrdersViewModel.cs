@@ -35,8 +35,7 @@ public partial class OrdersViewModel : ViewModelBase, ILoadable
     private void ResetState()
     {
         Carts.Clear();
-        _statusFilter = "Open";
-        OnPropertyChanged(nameof(StatusFilter));
+        StatusFilter = "Open";
         OnPropertyChanged(nameof(IsEmpty));
     }
 

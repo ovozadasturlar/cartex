@@ -62,11 +62,11 @@
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Spacing="6">
                             <TextBlock Text="{Binding L[telegram_address]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <TextBox Text="{Binding Telegram}" MinHeight="40" Watermark="@cartex_uz" />
+                            <TextBox Text="{Binding Telegram}" MinHeight="40" PlaceholderText="@cartex_uz" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="6">
                             <TextBlock Text="{Binding L[website]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <TextBox Text="{Binding Website}" MinHeight="40" Watermark="cartex.uz" />
+                            <TextBox Text="{Binding Website}" MinHeight="40" PlaceholderText="cartex.uz" />
                         </StackPanel>
                     </Grid>
 

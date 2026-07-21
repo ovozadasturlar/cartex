@@ -12,56 +12,69 @@ namespace Cartex.Desktop;
 
 public partial class App : Application
 {
-    public override void Initialize()
-    {
-        AvaloniaXamlLoader.Load(this);
+	public override void Initialize()
+	{
+		AvaloniaXamlLoader.Load(this);
 
-        ThemeManager.Instance.ThemeChanged += theme =>
-            RequestedThemeVariant = theme == AppTheme.Dark ? ThemeVariant.Dark : ThemeVariant.Light;
-    }
+		ThemeManager.Instance.ThemeChanged += theme =>
+			RequestedThemeVariant = theme == AppTheme.Dark ? ThemeVariant.Dark : ThemeVariant.Light;
+	}
 
-    public override void OnFrameworkInitializationCompleted()
-    {
-        AsyncImageLoader.ImageLoader.AsyncImageLoader = new CachedImageLoader(
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cartex", "imagecache"));
+	public override void OnFrameworkInitializationCompleted()
+	{
+		// 1. AppData papkasini aniqlaymiz va mavjud bo'lmasa yaratamiz
+		string appDataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cartex");
+		if (!Directory.Exists(appDataRoot))
+		{
+			Directory.CreateDirectory(appDataRoot);
+		}
 
-        var services = new ServiceCollection();
-        var settings = SettingsService.Instance;
+		// 2. Dasturning joriy ishchi papkasini AppData'ga o'zgartiramiz.
+		// Shunda nisbiy yo'l bilan yoziladigan barcha loglar va bazalar .exe yonida emas, shu yerda yaratiladi.
+		Environment.CurrentDirectory = appDataRoot;
 
-        services.AddSingleton(settings);
-        DependencyInjection.RegisterServices(services, settings);
+		// 3. Rasm keshini AppData ichiga yo'naltiramiz
+		AsyncImageLoader.ImageLoader.AsyncImageLoader = new CachedImageLoader(Path.Combine(appDataRoot, "imagecache"));
 
-        var provider = services.BuildServiceProvider();
-        ServiceLocator.Initialize(provider);
+		var services = new ServiceCollection();
+		var settings = SettingsService.Instance;
 
-        RequestedThemeVariant = settings.Theme == AppTheme.Dark
-            ? ThemeVariant.Dark
-            : ThemeVariant.Light;
-        ThemeManager.Instance.Theme = settings.Theme;
+		services.AddSingleton(settings);
 
-        LocalizationManager.Instance.LoadLanguage(settings.Language);
+		// Loyihangizdagi asl 2 ta argumentli metod (xatolik bermaydi)
+		DependencyInjection.RegisterServices(services, settings);
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            var nav = provider.GetRequiredService<NavigationService>();
-            var window = new MainWindow { DataContext = nav };
+		var provider = services.BuildServiceProvider();
+		ServiceLocator.Initialize(provider);
 
-            if (settings.RememberMe && provider.GetRequiredService<AuthService>().TryRestore())
-            {
-                var mainVm = provider.GetRequiredService<MainViewModel>();
-                mainVm.Initialize();
-                nav.NavigateTo(mainVm);
-                provider.GetRequiredService<ReferenceCache>();
-                _ = provider.GetRequiredService<AuthService>().ValidateSessionAsync();
-            }
-            else
-            {
-                nav.NavigateTo(provider.GetRequiredService<LoginViewModel>());
-            }
+		RequestedThemeVariant = settings.Theme == AppTheme.Dark
+			? ThemeVariant.Dark
+			: ThemeVariant.Light;
+		ThemeManager.Instance.Theme = settings.Theme;
 
-            desktop.MainWindow = window;
-        }
+		LocalizationManager.Instance.LoadLanguage(settings.Language);
 
-        base.OnFrameworkInitializationCompleted();
-    }
+		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		{
+			var nav = provider.GetRequiredService<NavigationService>();
+			var window = new MainWindow { DataContext = nav };
+
+			if (settings.RememberMe && provider.GetRequiredService<AuthService>().TryRestore())
+			{
+				var mainVm = provider.GetRequiredService<MainViewModel>();
+				mainVm.Initialize();
+				nav.NavigateTo(mainVm);
+				provider.GetRequiredService<ReferenceCache>();
+				_ = provider.GetRequiredService<AuthService>().ValidateSessionAsync();
+			}
+			else
+			{
+				nav.NavigateTo(provider.GetRequiredService<LoginViewModel>());
+			}
+
+			desktop.MainWindow = window;
+		}
+
+		base.OnFrameworkInitializationCompleted();
+	}
 }

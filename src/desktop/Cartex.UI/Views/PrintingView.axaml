@@ -151,9 +151,14 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
-                                    <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34" />
+                                    <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34"
+                                                   IsEnabled="{Binding !UsePrinterGapCalibration}" />
                                 </StackPanel>
                             </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UsePrinterGapCalibration}">
+                                <TextBlock Text="{Binding L[label_gap_detected]}" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
+                                <Button Classes="outline" Command="{Binding UseManualLabelGapCommand}" Content="{Binding L[label_use_manual_gap]}" />
+                            </StackPanel>
                             <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
 
                             <Grid ColumnDefinitions="*,12,*">
@@ -167,6 +172,13 @@
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelLeftCommand}" Content="←" />
+                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelRightCommand}" Content="→" />
+                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelUpCommand}" Content="↑" />
+                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelDownCommand}" Content="↓" />
+                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" Text="0.5 mm" />
+                            </StackPanel>
 
                             <Grid ColumnDefinitions="*,12,*,12,*,12,*">
                                 <StackPanel Spacing="5">

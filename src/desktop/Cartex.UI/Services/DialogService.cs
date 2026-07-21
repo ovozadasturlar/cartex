@@ -33,5 +33,5 @@ public sealed class DialogService : IDialogService
         await TrackAsync(MessageBox.ShowAsync(message, title, MessageBoxIcon.Information, MessageBoxButton.OK));
 
     public Task<TResult?> ShowAsync<TView, TViewModel, TResult>(TViewModel vm) where TView : Control, new() =>
-        TrackAsync(OverlayDialog.ShowCustomModal<TView, TViewModel, TResult>(vm));
+        TrackAsync(OverlayDialog.ShowCustomAsync<TView, TViewModel, TResult>(vm));
 }
