@@ -3,6 +3,7 @@
         x:Class="Cartex.Desktop.MainWindow"
         x:CompileBindings="False"
         Title="Cartex POS"
+        Icon="/Assets/app-icon.png"
         MinWidth="1000" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppBg}">
