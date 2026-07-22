@@ -54,6 +54,12 @@ services:
       - api
     ports:
       - "${WEB_PORT:-8080}:80"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cartex-web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.cartex-web.entrypoints=websecure
+      - traefik.http.routers.cartex-web.tls.certresolver=le
+      - traefik.http.services.cartex-web.loadbalancer.server.port=80
 
   minio:
     image: minio/minio:latest
@@ -74,6 +80,9 @@ services:
       - "127.0.0.1:${MINIO_PORT:-9002}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9003}:9001"
 
+  # caddy va traefik bir vaqtda ishga tushirilmasin — ikkalasi ham 80/443 portini so'raydi.
+  # Bitta domen/bitta backend uchun caddy soddaroq; bir nechta domen/servisni markazlashtirib
+  # boshqarish kerak bo'lsa traefik tanlansin.
   caddy:
     image: caddy:2-alpine
     profiles: ["tls"]
@@ -86,6 +95,48 @@ services:
       - "443:443"
     volumes:
       - caddy-data:/data
+
+  traefik:
+    image: traefik:v3.1
+    profiles: ["traefik"]
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL .env faylida majburiy}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - cartex-traefik-certs:/letsencrypt
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["traefik"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?PGADMIN_EMAIL .env faylida majburiy}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD .env faylida majburiy}
+      SCRIPT_NAME: /pgadmin
+    volumes:
+      - cartex-pgadmin:/var/lib/pgadmin
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cartex-pgadmin.rule=Host(`${DOMAIN}`) && PathPrefix(`/pgadmin`)
+      - traefik.http.routers.cartex-pgadmin.entrypoints=websecure
+      - traefik.http.routers.cartex-pgadmin.tls.certresolver=le
+      - traefik.http.services.cartex-pgadmin.loadbalancer.server.port=80
 
   # backup:
   #   image: muqimjon/zaxira
@@ -124,4 +175,6 @@ volumes:
   cartex-keys:
   cartex-minio:
   caddy-data:
+  cartex-traefik-certs:
+  cartex-pgadmin:
   # cartex-backup:

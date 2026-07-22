@@ -67,12 +67,20 @@ Ochiladi: web UI — **`http://<server>:8080`** (`WEB_PORT` bilan o'zgaradi), AP
 `http://<server>:5015`. Desktop ilova LAN'da `http://<server>:5015`ga, internet orqali
 esa `https://DOMAIN`ga ulanadi (nginx proxy orqali).
 
-Profillar (birga ishlatish mumkin):
+Profillar (`tls` va `traefik` bir vaqtda ishlatilmasin — ikkalasi ham 80/443 portini so'raydi,
+qolganlari birga ishlatish mumkin):
 ```
 docker compose --profile tls up -d      # + Caddy avto-HTTPS: DOMAIN -> web (DOMAIN kerak)
+docker compose --profile traefik up -d  # + Traefik HTTPS va /pgadmin (bir nechta domen/servis bo'lsa)
 docker compose --profile minio up -d    # + MinIO obyekt saqlash (MINIO_USER/PASSWORD kerak)
 docker compose --profile backup up -d   # + Zaxira agenti (pastdagi bo'lim)
 ```
+
+`traefik` profili: yagona domen/backend uchun odatda `tls` (Caddy) yetarli va soddaroq;
+bir nechta loyiha/domenni bitta serverda markazlashtirib boshqarish kerak bo'lsa `traefik`
+tanlansin (`DOMAIN`, `ACME_EMAIL` kerak). Shu profil bilan `https://DOMAIN/pgadmin` orqali
+pgAdmin ham ko'tariladi (`PGADMIN_EMAIL`/`PGADMIN_PASSWORD` kerak) — bazani brauzerdan
+boshqarish uchun.
 
 MinIO yoqilgach: Sozlamalar → Integratsiyalar → Saqlash → `minio`, Endpoint `minio:9000`,
 Bucket nomi, Access/Secret kalit.
