@@ -52,7 +52,8 @@ public sealed class PreviewSupplyImportQueryHandler(IApplicationDbContext db, IS
             ? []
             : await db.ProductVariants
                 .Where(v => variantIds.Contains(v.Id))
-                .ToDictionaryAsync(v => v.Id, v => v.Product.Name, cancellationToken);
+                .Select(v => new { v.Id, v.Product.Name })
+                .ToDictionaryAsync(v => v.Id, v => v.Name, cancellationToken);
 
         var result = rows.Select(r =>
         {
