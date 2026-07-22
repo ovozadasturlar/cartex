@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260719063524_InitialMigration")]
+    [Migration("20260722201137_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -1724,6 +1724,12 @@ namespace Cartex.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_enabled");
 
                     b.Property<long?>("ManufacturerId")
                         .HasColumnType("bigint")

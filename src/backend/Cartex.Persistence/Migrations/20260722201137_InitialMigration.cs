@@ -440,6 +440,7 @@ namespace Cartex.Persistence.Migrations
                     ikpu_code = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
                     vat_rate = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: true),
                     image_key = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    is_enabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     created_by = table.Column<long>(type: "bigint", nullable: true),
