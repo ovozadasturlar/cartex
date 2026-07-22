@@ -3,10 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:Cartex.Mobile.Agent"
              xmlns:conv="clr-namespace:Cartex.Mobile.Agent.Converters"
+             xmlns:core="clr-namespace:Cartex.Mobile.Core.Resources.Styles;assembly=Cartex.Mobile.Core"
              x:Class="Cartex.Mobile.Agent.App">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <core:CoreColors />
+                <core:CoreTokens />
+                <core:CoreTypography />
+                <core:CoreComponents />
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>

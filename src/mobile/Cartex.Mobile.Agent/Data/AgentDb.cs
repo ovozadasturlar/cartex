@@ -105,6 +105,14 @@ public sealed class AgentDb
         return await q.OrderBy(s => s.ProductName).ToListAsync();
     }
 
+    public async Task<LocalVanStock?> FindByBarcodeAsync(string code)
+    {
+        await InitAsync();
+        var term = $"|{code.Trim()}|";
+        return await _db.Table<LocalVanStock>().Where(s => s.Barcodes.Contains(term)).FirstOrDefaultAsync()
+            ?? await _db.Table<LocalVanStock>().Where(s => s.Code == code).FirstOrDefaultAsync();
+    }
+
     public async Task AdjustStockAsync(long variantId, decimal delta)
     {
         await InitAsync();

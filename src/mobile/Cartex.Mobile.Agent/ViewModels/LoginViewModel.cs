@@ -69,7 +69,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             if (!restored) IsChecking = false;
         }
         if (!restored) return;
-        await Shell.Current.GoToAsync("//home", false);
+        await Shell.Current.GoToAsync("//catalog", false);
         _ = auth.ValidateSessionAsync();
         if (AppLock.PinEnabled)
             await Shell.Current.GoToAsync("pin", false);
@@ -110,7 +110,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
             Password = "";
-            await Shell.Current.GoToAsync("//home");
+            await Shell.Current.GoToAsync("//catalog");
             _ = OfferPinSetupAsync();
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.CatalogPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CatalogViewModel"
+    Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+
+        <DataTemplate x:Key="TileTemplate" x:DataType="vm:ProductCard">
+            <Border Style="{StaticResource CardFlat}" Padding="0" Margin="0,0,10,10">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}}"
+                                          CommandParameter="{Binding .}" />
+                </Border.GestureRecognizers>
+                <Grid RowDefinitions="132,Auto">
+                    <ctl:Thumb Source="{Binding ImageUrl}" Size="132" Radius="12" Stretch="True" />
+                    <Border Style="{StaticResource BadgeAccent}" Margin="8" HorizontalOptions="Start" VerticalOptions="Start"
+                            IsVisible="{Binding HasDiscount}">
+                        <Label Text="{Binding DiscountText}" Style="{StaticResource TxAccent}" />
+                    </Border>
+                    <Border Grid.Row="0" Style="{StaticResource BadgeDanger}" Margin="8" HorizontalOptions="End" VerticalOptions="Start"
+                            IsVisible="{Binding IsOut}">
+                        <Label Text="{svc:T out_of_stock}" Style="{StaticResource TxDanger}" />
+                    </Border>
+
+                    <Grid Grid.Row="1" Padding="10,8,10,10" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                        <Label Text="{Binding Name}" Style="{StaticResource TxSmall}" MaxLines="2" LineBreakMode="TailTruncation" />
+                        <Label Grid.Row="1" Text="{Binding PriceText}" Style="{StaticResource TxBodyStrong}" />
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                            <Label Text="{Binding QtyText}" Style="{StaticResource TxCaption}" VerticalOptions="Center" />
+                            <Border Grid.Column="1" WidthRequest="34" HeightRequest="34" StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 10"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding AddCommand, Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{StaticResource IcPlus}" Style="{StaticResource Icon}" FontSize="18" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RowTemplate" x:DataType="vm:ProductCard">
+            <Border Style="{StaticResource CardFlat}" Padding="10" Margin="0,0,0,8" HeightRequest="84">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}}"
+                                          CommandParameter="{Binding .}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12">
+                    <ctl:Thumb Source="{Binding ImageUrl}" Size="64" Radius="10" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                        <Label Text="{Binding Name}" Style="{StaticResource TxBody}" MaxLines="1" LineBreakMode="TailTruncation" />
+                        <Label Text="{Binding PriceText}" Style="{StaticResource TxBodyStrong}" />
+                        <Label Text="{Binding QtyText}" Style="{StaticResource TxCaption}" />
+                    </VerticalStackLayout>
+                    <Border Grid.Column="2" WidthRequest="44" HeightRequest="44" StrokeThickness="0" VerticalOptions="Center"
+                            StrokeShape="RoundRectangle 12"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding AddCommand, Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{StaticResource IcPlus}" Style="{StaticResource Icon}" FontSize="20" />
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <Grid Padding="16,10,16,6" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Border Style="{StaticResource SearchField}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label Text="{StaticResource IcMagnify}" Style="{StaticResource Icon}" FontSize="18"
+                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                    <Entry Grid.Column="1" Text="{Binding Search}" Placeholder="{svc:T search_product}"
+                           ReturnType="Search" VerticalOptions="Center" />
+                    <Label Grid.Column="2" Text="{StaticResource IcClose}" Style="{StaticResource Icon}" FontSize="18"
+                           IsVisible="{Binding Search, Converter={StaticResource NotEmpty}}"
+                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ClearSearchCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
+            </Border>
+            <Button Grid.Column="1" Style="{StaticResource BtnScan}" HeightRequest="48" WidthRequest="52"
+                    Text="{StaticResource IcScan}" Command="{Binding ScanCommand}" />
+            <Border Grid.Column="2" WidthRequest="48" HeightRequest="48" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12"
+                    Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleViewCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" FontSize="19"
+                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            </Border>
+        </Grid>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Categories}" HeightRequest="52"
+                        ItemsLayout="HorizontalList" Margin="0,0,0,4">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryChip">
+                    <Border Style="{StaticResource Chip}" Margin="6,8,0,8">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}" />
+                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectCategoryCommand, Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{Binding Name}" Style="{StaticResource TxSmall}" VerticalOptions="Center" />
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <Grid>
+                <CollectionView ItemsSource="{Binding Items}" Margin="16,0,6,0"
+                                ItemTemplate="{StaticResource TileTemplate}"
+                                ItemSizingStrategy="MeasureFirstItem"
+                                IsVisible="{Binding IsGrid}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="2" />
+                    </CollectionView.ItemsLayout>
+                </CollectionView>
+
+                <CollectionView ItemsSource="{Binding Items}" Margin="16,0"
+                                ItemTemplate="{StaticResource RowTemplate}"
+                                ItemSizingStrategy="MeasureFirstItem"
+                                IsVisible="{Binding IsGrid, Converter={StaticResource Invert}}" />
+
+                <VerticalStackLayout IsVisible="{Binding IsEmpty}" Spacing="12" Padding="32,48"
+                                     HorizontalOptions="Center" VerticalOptions="Start">
+                    <Border WidthRequest="72" HeightRequest="72" StrokeThickness="0" StrokeShape="RoundRectangle 36"
+                            HorizontalOptions="Center"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}">
+                        <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" FontSize="30"
+                               TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                    </Border>
+                    <Label Text="{svc:T no_products}" Style="{StaticResource TxTitle}" HorizontalTextAlignment="Center" />
+                    <Button Text="{svc:T sync_now}" Style="{StaticResource BtnSecondary}" Command="{Binding RefreshCommand}" />
+                </VerticalStackLayout>
+
+                <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                                   VerticalOptions="Start" Margin="0,40,0,0" />
+            </Grid>
+        </RefreshView>
+
+        <Border Grid.Row="3" Style="{StaticResource Sheet}" Padding="12,10" IsVisible="{Binding Cart.IsEmpty, Converter={StaticResource Invert}}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout VerticalOptions="Center" Spacing="1">
+                    <Label Text="{Binding Cart.CountText}" Style="{StaticResource TxCaption}" />
+                    <Label Text="{Binding Cart.TotalText}" Style="{StaticResource TxTitle}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="{svc:T to_cart}" Style="{StaticResource BtnPrimary}"
+                        WidthRequest="160" Command="{Binding OpenCartCommand}" />
+            </Grid>
+        </Border>
+
+    </Grid>
+</ContentPage>

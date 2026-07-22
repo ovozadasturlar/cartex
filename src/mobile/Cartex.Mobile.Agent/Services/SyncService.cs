@@ -212,10 +212,16 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         {
             VariantId = s.VariantId,
             ProductName = s.ProductName,
+            CategoryId = s.CategoryId,
             CategoryName = s.CategoryName,
             UnitName = s.UnitName,
+            Dimension = s.Dimension,
             Quantity = s.Quantity,
-            SellingPrice = s.SellingPrice
+            SellingPrice = s.SellingPrice,
+            ImageUrl = s.ImageUrl,
+            DiscountPct = s.DiscountPct,
+            Code = s.Code,
+            Barcodes = s.Barcodes is { Count: > 0 } codes ? "|" + string.Join("|", codes) + "|" : ""
         }));
         await db.SetMetaAsync("warehouse_id", data.WarehouseId?.ToString() ?? "");
         await db.SetMetaAsync("warehouse_name", data.WarehouseName ?? "");

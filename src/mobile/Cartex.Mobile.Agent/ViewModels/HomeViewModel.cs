@@ -110,7 +110,7 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
 
     [RelayCommand]
-    private Task OpenStockAsync() => Shell.Current.GoToAsync("//vanstock");
+    private Task OpenStockAsync() => Shell.Current.GoToAsync("vanstock");
 
     [RelayCommand]
     private Task OpenDaySummaryAsync() => Shell.Current.GoToAsync("day-summary");

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.ProductPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:ProductViewModel"
+    Title="{Binding Name}">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <ctl:Thumb Source="{Binding ImageUrl}" Size="280" Radius="16" Stretch="True" />
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding Name}" Style="{StaticResource TxH2}" />
+                        <Label Text="{Binding PriceText}" Style="{StaticResource TxMoneyXL}" />
+                        <Border Style="{StaticResource BadgeDanger}" HorizontalOptions="Start" IsVisible="{Binding IsOut}">
+                            <Label Text="{svc:T out_of_stock}" Style="{StaticResource TxDanger}" />
+                        </Border>
+                    </VerticalStackLayout>
+                    <Button Grid.Column="1" Text="{svc:T edit}" Style="{StaticResource BtnOutline}"
+                            VerticalOptions="Start" Command="{Binding EditCommand}" IsVisible="{Binding CanManageProducts}" />
+                </Grid>
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{svc:T in_stock}" Style="{StaticResource TxCaption}" />
+                            <Label Grid.Column="1" Text="{Binding StockText}" Style="{StaticResource TxBodyStrong}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCategory}">
+                            <Label Text="{svc:T category}" Style="{StaticResource TxCaption}" />
+                            <Label Grid.Column="1" Text="{Binding CategoryName}" Style="{StaticResource TxBody}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCode}">
+                            <Label Text="{svc:T code}" Style="{StaticResource TxCaption}" />
+                            <Label Grid.Column="1" Text="{Binding Code}" Style="{StaticResource TxBody}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasDimension}">
+                            <Label Text="{svc:T dimension}" Style="{StaticResource TxCaption}" />
+                            <Label Grid.Column="1" Text="{Binding Dimension}" Style="{StaticResource TxBody}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" Style="{StaticResource Sheet}" Padding="16,12">
+            <VerticalStackLayout Spacing="10">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <ctl:QtyStepper Quantity="{Binding Quantity, Mode=TwoWay}" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding LineTotalText}" Style="{StaticResource TxMoney}"
+                           HorizontalTextAlignment="End" VerticalOptions="Center" />
+                </Grid>
+                <Button Text="{svc:T to_cart}" Style="{StaticResource BtnPrimary}" Command="{Binding AddCommand}" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

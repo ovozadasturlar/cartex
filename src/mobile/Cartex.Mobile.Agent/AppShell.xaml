@@ -10,13 +10,10 @@
     <ShellContent Route="login" ContentTemplate="{DataTemplate views:LoginPage}" Shell.NavBarIsVisible="False" />
 
     <TabBar Route="main">
-        <ShellContent Route="home" Title="{svc:T tab_home}" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Route="orders" Title="{svc:T orders}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:OrdersPage}" />
+        <ShellContent Route="catalog" Title="{svc:T tab_catalog}" Icon="tab_catalog.png" ContentTemplate="{DataTemplate views:CatalogPage}" />
+        <ShellContent Route="cart" Title="{svc:T tab_cart}" Icon="tab_cart.png" ContentTemplate="{DataTemplate views:CartPage}" />
         <ShellContent Route="customers" Title="{svc:T customers}" Icon="tab_customers.png" ContentTemplate="{DataTemplate views:CustomersPage}" />
-        <Tab Route="van" Title="{svc:T van_tab}" Icon="tab_truck.png">
-            <ShellContent Route="vanstock" Title="{svc:T products}" ContentTemplate="{DataTemplate views:VanStockPage}" />
-            <ShellContent Route="transfers" Title="{svc:T tab_transfers}" ContentTemplate="{DataTemplate views:TransfersPage}" />
-        </Tab>
+        <ShellContent Route="orders" Title="{svc:T orders}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:OrdersPage}" />
         <ShellContent Route="profile" Title="{svc:T profile}" Icon="tab_profile.png" ContentTemplate="{DataTemplate views:ProfilePage}" />
     </TabBar>
 

@@ -19,10 +19,16 @@ public class LocalVanStock
 {
     [PrimaryKey] public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
+    public long? CategoryId { get; set; }
     public string? CategoryName { get; set; }
     public string UnitName { get; set; } = "";
+    public string Dimension { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal SellingPrice { get; set; }
+    public string? ImageUrl { get; set; }
+    public decimal? DiscountPct { get; set; }
+    public string? Code { get; set; }
+    public string Barcodes { get; set; } = "";
 }
 
 public class OutboxItem

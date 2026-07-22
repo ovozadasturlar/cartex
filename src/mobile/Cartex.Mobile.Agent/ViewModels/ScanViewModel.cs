@@ -1,4 +1,5 @@
 using Cartex.ApiClient.Api;
+using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Shared.Models.Auth;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,7 +7,7 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ScanViewModel(ISessionsApi sessionsApi) : ObservableObject
+public partial class ScanViewModel(ISessionsApi sessionsApi, AgentDb db, CartService cart) : ObservableObject
 {
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint"];
@@ -39,9 +40,17 @@ public partial class ScanViewModel(ISessionsApi sessionsApi) : ObservableObject
                 Status = Loc.Instance["err_no_connection"];
             }
         }
+        else if (await db.FindByBarcodeAsync(value) is { } stock)
+        {
+            cart.Add(stock, 1);
+            Ui.Haptic();
+            Ui.Toast(string.Format(Loc.Instance["added_to_cart_fmt"], stock.ProductName));
+            await MainThread.InvokeOnMainThreadAsync(() => Shell.Current.GoToAsync(".."));
+            return;
+        }
         else
         {
-            Status = Loc.Instance["not_cartex_qr"];
+            Status = Loc.Instance["err_barcode_unknown"];
         }
 
         await Task.Delay(1800);

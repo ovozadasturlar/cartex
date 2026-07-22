@@ -42,6 +42,18 @@ public static class MauiProgram
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<AgentDb>();
         builder.Services.AddSingleton<SyncService>();
+        builder.Services.AddSingleton<MobilePermissions>();
+        builder.Services.AddSingleton<AppCapabilities>();
+        builder.Services.AddSingleton<ImageUrlBuilder>();
+        builder.Services.AddSingleton<CartService>();
+        builder.Services.AddTransient<CatalogViewModel>();
+        builder.Services.AddTransient<CartViewModel>();
+        builder.Services.AddTransient<ProductViewModel>();
+        builder.Services.AddTransient<ProductEditViewModel>();
+        builder.Services.AddTransient<CatalogPage>();
+        builder.Services.AddTransient<CartPage>();
+        builder.Services.AddTransient<ProductPage>();
+        builder.Services.AddTransient<ProductEditPage>();
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<HomeViewModel>();
         builder.Services.AddTransient<CustomersViewModel>();
@@ -86,6 +98,7 @@ public static class MauiProgram
         builder.Services.AddTransient<OrderPage>();
 
         var app = builder.Build();
+        Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
         var syncService = app.Services.GetRequiredService<SyncService>();
         syncService.StartConnectivityWatch();
         syncService.StartAutoSync();

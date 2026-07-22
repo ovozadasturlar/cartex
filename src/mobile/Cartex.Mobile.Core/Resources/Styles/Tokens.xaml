@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Cartex.Mobile.Core.Resources.Styles.CoreTokens"
+    xmlns:sys="clr-namespace:System;assembly=netstandard">
+
+    <sys:Double x:Key="Sp1">4</sys:Double>
+    <sys:Double x:Key="Sp2">8</sys:Double>
+    <sys:Double x:Key="Sp3">12</sys:Double>
+    <sys:Double x:Key="Sp4">16</sys:Double>
+    <sys:Double x:Key="Sp5">20</sys:Double>
+    <sys:Double x:Key="Sp6">24</sys:Double>
+    <sys:Double x:Key="Sp8">32</sys:Double>
+
+    <Thickness x:Key="PagePad">16,12,16,16</Thickness>
+    <Thickness x:Key="CardPad">16</Thickness>
+    <Thickness x:Key="CardPadTight">12</Thickness>
+    <Thickness x:Key="RowPad">16,12</Thickness>
+    <Thickness x:Key="ChipPad">14,0</Thickness>
+    <Thickness x:Key="BadgePad">8,3</Thickness>
+
+    <sys:Double x:Key="R1">8</sys:Double>
+    <sys:Double x:Key="R2">12</sys:Double>
+    <sys:Double x:Key="R3">16</sys:Double>
+    <sys:Double x:Key="R4">20</sys:Double>
+    <sys:Double x:Key="R5">24</sys:Double>
+    <sys:Double x:Key="RPill">999</sys:Double>
+
+    <sys:Double x:Key="HRow">76</sys:Double>
+    <sys:Double x:Key="HRowSm">64</sys:Double>
+    <sys:Double x:Key="HField">48</sys:Double>
+    <sys:Double x:Key="HBtn">56</sys:Double>
+    <sys:Double x:Key="HBtnSec">48</sys:Double>
+    <sys:Double x:Key="HCartBar">80</sys:Double>
+    <sys:Double x:Key="HTouch">44</sys:Double>
+    <sys:Double x:Key="SzThumb">64</sys:Double>
+    <sys:Double x:Key="SzThumbSm">48</sys:Double>
+    <sys:Double x:Key="SzAvatar">40</sys:Double>
+    <sys:Double x:Key="SzIconCircle">40</sys:Double>
+    <sys:Double x:Key="SzNumKey">64</sys:Double>
+
+</ResourceDictionary>

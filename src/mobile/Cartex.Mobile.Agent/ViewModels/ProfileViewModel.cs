@@ -39,6 +39,15 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
     private Task OpenDevicesAsync() => Shell.Current.GoToAsync("devices");
 
     [RelayCommand]
+    private Task OpenHomeAsync() => Shell.Current.GoToAsync("home");
+
+    [RelayCommand]
+    private Task OpenVanStockAsync() => Shell.Current.GoToAsync("vanstock");
+
+    [RelayCommand]
+    private Task OpenTransfersAsync() => Shell.Current.GoToAsync("transfers");
+
+    [RelayCommand]
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
 
     [RelayCommand]
