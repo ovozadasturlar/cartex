@@ -19,7 +19,7 @@ public class BranchIsolationTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
+            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
             branch2 = (await db.Branches.FirstAsync(b => b.Name == "Filial 2")).Id;
             businessId = (await db.Businesses.FirstAsync()).Id;
             cashierId = (await db.Users.FirstAsync(u => u.Username == "seller")).Id;

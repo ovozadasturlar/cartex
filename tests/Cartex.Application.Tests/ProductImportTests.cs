@@ -43,8 +43,8 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
 

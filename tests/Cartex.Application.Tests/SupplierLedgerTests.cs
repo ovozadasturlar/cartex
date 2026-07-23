@@ -20,8 +20,8 @@ public class SupplierLedgerTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-            warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+            warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
             businessId = (await db.Businesses.FirstAsync()).Id;
             adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
             var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;

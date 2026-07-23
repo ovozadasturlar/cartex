@@ -16,6 +16,7 @@ public sealed class CartexApiFactory : WebApplicationFactory<Program>, IAsyncLif
         Environment.SetEnvironmentVariable("Jwt__Key", "CartexIntegrationTestSigningKey-CartexIntegrationTestSigningKey");
         Environment.SetEnvironmentVariable("Seed__DeveloperPassword", "developer123");
         Environment.SetEnvironmentVariable("Seed__Demo", "false");
+        Environment.SetEnvironmentVariable("Seed__Catalog", "true");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseEnvironment("Development");
@@ -26,6 +27,7 @@ public sealed class CartexApiFactory : WebApplicationFactory<Program>, IAsyncLif
         Environment.SetEnvironmentVariable("Jwt__Key", null);
         Environment.SetEnvironmentVariable("Seed__DeveloperPassword", null);
         Environment.SetEnvironmentVariable("Seed__Demo", null);
+        Environment.SetEnvironmentVariable("Seed__Catalog", null);
         await _db.DisposeAsync();
         await base.DisposeAsync();
     }

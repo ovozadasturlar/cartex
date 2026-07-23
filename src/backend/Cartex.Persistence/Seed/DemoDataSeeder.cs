@@ -4,20 +4,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Persistence.Seed;
 
+public sealed record DemoCatalog(
+    Branch Branch1, Branch Branch2, Warehouse Wh1, Warehouse Wh2,
+    User Admin, User Seller, Account Cash, Account Card,
+    List<ProductVariant> Variants, decimal[] SellingPrices, List<Stock> Stocks,
+    Supplier[] Suppliers, List<Customer> Customers,
+    DateTime OpeningDate, DateTime Today0, DateTime Now);
+
 public static class DemoDataSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context)
     {
-        if (await context.BusinessSettings.AnyAsync(s => s.Key == "demo_seeded" && s.Value == "true"))
+        var catalog = await SeedCatalogAsync(context);
+        if (catalog is null)
             return;
-        if (await context.Sales.AnyAsync())
-            return;
+        await SeedTransactionsAsync(context, catalog);
+    }
 
-        var rnd = new Random(0xCA27EC);
+    public static async Task<DemoCatalog?> SeedCatalogAsync(ApplicationDbContext context)
+    {
+        if (await context.BusinessSettings.AnyAsync(s => s.Key == "demo_seeded" && s.Value == "true"))
+            return null;
+        if (await context.Products.AnyAsync())
+            return null;
+
         var now = DateTime.UtcNow;
         var today0 = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
-        DateTime Day(int offset) => today0.AddDays(offset);
-        var openingDate = Day(-30).AddHours(8);
+        var openingDate = today0.AddDays(-30).AddHours(8);
 
         var branch1 = await context.Branches.OrderBy(b => b.Id).FirstAsync();
         var wh1 = await context.Warehouses.FirstAsync(w => w.BranchId == branch1.Id);
@@ -147,50 +160,102 @@ public static class DemoDataSeeder
 
         var stocks = new List<Stock>
         {
-            new() { BranchId = branch1.Id, VariantId = variants[0].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 265000 },
-            new() { BranchId = branch1.Id, VariantId = variants[1].Id, WarehouseId = wh1.Id, Quantity = 6, PurchasePrice = 360000 },
-            new() { BranchId = branch1.Id, VariantId = variants[2].Id, WarehouseId = wh1.Id, Quantity = 10, PurchasePrice = 205000 },
-            new() { BranchId = branch1.Id, VariantId = variants[3].Id, WarehouseId = wh1.Id, Quantity = 200, PurchasePrice = 6200 },
-            new() { BranchId = branch1.Id, VariantId = variants[4].Id, WarehouseId = wh1.Id, Quantity = 160, PurchasePrice = 9100 },
-            new() { BranchId = branch1.Id, VariantId = variants[5].Id, WarehouseId = wh1.Id, Quantity = 120, PurchasePrice = 14300 },
-            new() { BranchId = branch1.Id, VariantId = variants[6].Id, WarehouseId = wh1.Id, Quantity = 150, PurchasePrice = 900 },
-            new() { BranchId = branch1.Id, VariantId = variants[7].Id, WarehouseId = wh1.Id, Quantity = 140, PurchasePrice = 1100 },
-            new() { BranchId = branch1.Id, VariantId = variants[8].Id, WarehouseId = wh1.Id, Quantity = 100, PurchasePrice = 2200 },
-            new() { BranchId = branch1.Id, VariantId = variants[9].Id, WarehouseId = wh1.Id, Quantity = 80, PurchasePrice = 7800 },
-            new() { BranchId = branch1.Id, VariantId = variants[10].Id, WarehouseId = wh1.Id, Quantity = 35, PurchasePrice = 26000 },
-            new() { BranchId = branch1.Id, VariantId = variants[11].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 36000 },
-            new() { BranchId = branch1.Id, VariantId = variants[12].Id, WarehouseId = wh1.Id, Quantity = 25, PurchasePrice = 31000 },
-            new() { BranchId = branch1.Id, VariantId = variants[13].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 23000 },
-            new() { BranchId = branch1.Id, VariantId = variants[14].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 33000 },
-            new() { BranchId = branch1.Id, VariantId = variants[15].Id, WarehouseId = wh1.Id, Quantity = 60, PurchasePrice = 18500 },
-            new() { BranchId = branch1.Id, VariantId = variants[16].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 44000 },
-            new() { BranchId = branch1.Id, VariantId = variants[17].Id, WarehouseId = wh1.Id, Quantity = 90, PurchasePrice = 4200 },
-            new() { BranchId = branch1.Id, VariantId = variants[18].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 64000 },
-            new() { BranchId = branch1.Id, VariantId = variants[19].Id, WarehouseId = wh1.Id, Quantity = 5, PurchasePrice = 290000 },
-            new() { BranchId = branch1.Id, VariantId = variants[20].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 37000 },
-            new() { BranchId = branch1.Id, VariantId = variants[21].Id, WarehouseId = wh1.Id, Quantity = 35, PurchasePrice = 27000 },
-            new() { BranchId = branch1.Id, VariantId = variants[22].Id, WarehouseId = wh1.Id, Quantity = 40, PurchasePrice = 11500 },
-            new() { BranchId = branch1.Id, VariantId = variants[23].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 58000 },
-            new() { BranchId = branch1.Id, VariantId = variants[24].Id, WarehouseId = wh1.Id, Quantity = 150, PurchasePrice = 2400 },
-            new() { BranchId = branch1.Id, VariantId = variants[25].Id, WarehouseId = wh1.Id, Quantity = 60, PurchasePrice = 5100 },
-            new() { BranchId = branch1.Id, VariantId = variants[26].Id, WarehouseId = wh1.Id, Quantity = 40, PurchasePrice = 28000 },
-            new() { BranchId = branch1.Id, VariantId = variants[27].Id, WarehouseId = wh1.Id, Quantity = 25, PurchasePrice = 37500 },
-            new() { BranchId = branch1.Id, VariantId = variants[28].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 82000 },
-            new() { BranchId = branch1.Id, VariantId = variants[29].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 82000 },
-            new() { BranchId = branch1.Id, VariantId = variants[30].Id, WarehouseId = wh1.Id, Quantity = 5, PurchasePrice = 680000 },
-            new() { BranchId = branch1.Id, VariantId = variants[31].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 128000 },
-            new() { BranchId = branch1.Id, VariantId = variants[32].Id, WarehouseId = wh1.Id, Quantity = 90, PurchasePrice = 5600 },
+            new() { BranchId = branch1.Id, VariantId = variants[0].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 265000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[1].Id, WarehouseId = wh1.Id, Quantity = 6, PurchasePrice = 360000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[2].Id, WarehouseId = wh1.Id, Quantity = 10, PurchasePrice = 205000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[3].Id, WarehouseId = wh1.Id, Quantity = 200, PurchasePrice = 6200, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[4].Id, WarehouseId = wh1.Id, Quantity = 160, PurchasePrice = 9100, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[5].Id, WarehouseId = wh1.Id, Quantity = 120, PurchasePrice = 14300, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[6].Id, WarehouseId = wh1.Id, Quantity = 150, PurchasePrice = 900, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[7].Id, WarehouseId = wh1.Id, Quantity = 140, PurchasePrice = 1100, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[8].Id, WarehouseId = wh1.Id, Quantity = 100, PurchasePrice = 2200, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[9].Id, WarehouseId = wh1.Id, Quantity = 80, PurchasePrice = 7800, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[10].Id, WarehouseId = wh1.Id, Quantity = 35, PurchasePrice = 26000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[11].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 36000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[12].Id, WarehouseId = wh1.Id, Quantity = 25, PurchasePrice = 31000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[13].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 23000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[14].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 33000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[15].Id, WarehouseId = wh1.Id, Quantity = 60, PurchasePrice = 18500, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[16].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 44000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[17].Id, WarehouseId = wh1.Id, Quantity = 90, PurchasePrice = 4200, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[18].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 64000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[19].Id, WarehouseId = wh1.Id, Quantity = 5, PurchasePrice = 290000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[20].Id, WarehouseId = wh1.Id, Quantity = 30, PurchasePrice = 37000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[21].Id, WarehouseId = wh1.Id, Quantity = 35, PurchasePrice = 27000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[22].Id, WarehouseId = wh1.Id, Quantity = 40, PurchasePrice = 11500, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[23].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 58000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[24].Id, WarehouseId = wh1.Id, Quantity = 150, PurchasePrice = 2400, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[25].Id, WarehouseId = wh1.Id, Quantity = 60, PurchasePrice = 5100, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[26].Id, WarehouseId = wh1.Id, Quantity = 40, PurchasePrice = 28000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[27].Id, WarehouseId = wh1.Id, Quantity = 25, PurchasePrice = 37500, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[28].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 82000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[29].Id, WarehouseId = wh1.Id, Quantity = 20, PurchasePrice = 82000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[30].Id, WarehouseId = wh1.Id, Quantity = 5, PurchasePrice = 680000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[31].Id, WarehouseId = wh1.Id, Quantity = 15, PurchasePrice = 128000, CreatedAt = openingDate },
+            new() { BranchId = branch1.Id, VariantId = variants[32].Id, WarehouseId = wh1.Id, Quantity = 90, PurchasePrice = 5600, CreatedAt = openingDate },
         };
         await context.Stocks.AddRangeAsync(stocks);
 
         var branch2Stocks = new List<Stock>
         {
-            new() { BranchId = branch2.Id, VariantId = variants[0].Id, WarehouseId = wh2.Id, Quantity = 4, PurchasePrice = 265000 },
-            new() { BranchId = branch2.Id, VariantId = variants[3].Id, WarehouseId = wh2.Id, Quantity = 80, PurchasePrice = 6200 },
-            new() { BranchId = branch2.Id, VariantId = variants[9].Id, WarehouseId = wh2.Id, Quantity = 30, PurchasePrice = 7800 },
+            new() { BranchId = branch2.Id, VariantId = variants[0].Id, WarehouseId = wh2.Id, Quantity = 4, PurchasePrice = 265000, CreatedAt = openingDate },
+            new() { BranchId = branch2.Id, VariantId = variants[3].Id, WarehouseId = wh2.Id, Quantity = 80, PurchasePrice = 6200, CreatedAt = openingDate },
+            new() { BranchId = branch2.Id, VariantId = variants[9].Id, WarehouseId = wh2.Id, Quantity = 30, PurchasePrice = 7800, CreatedAt = openingDate },
         };
         await context.Stocks.AddRangeAsync(branch2Stocks);
+
+        var suppliers = new[]
+        {
+            new Supplier { Name = "Santex Optom Savdo", Phone = "+998711110011", CreatedAt = openingDate },
+            new Supplier { Name = "AquaTrade Toshkent", Phone = "+998711110022", CreatedAt = openingDate },
+            new Supplier { Name = "Polimer Plast Zavod", Phone = "+998711110033", CreatedAt = openingDate },
+            new Supplier { Name = "Termo Group Distribution", Phone = "+998711110044", CreatedAt = openingDate },
+        };
+        await context.Suppliers.AddRangeAsync(suppliers);
+
+        var custInfo = new (string Full, string Phone, string Card, decimal Disc, decimal Limit)[]
+        {
+            ("Alisher Karimov", "+998901112201", "DC1001", 5, 2_000_000),
+            ("Dilnoza Rahimova", "+998901112202", "DC1002", 3, 0),
+            ("Jasur Toshmatov", "+998901112203", "DC1003", 0, 1_500_000),
+            ("Nodira Yusupova", "+998901112204", "DC1004", 2, 0),
+            ("Sardor Aliyev", "+998901112205", "DC1005", 0, 3_000_000),
+            ("Kamola Saidova", "+998901112206", "DC1006", 4, 0),
+            ("Bekzod Ergashev", "+998901112207", "DC1007", 0, 1_000_000),
+            ("Malika Islomova", "+998901112208", "DC1008", 2, 0),
+            ("Otabek Norov", "+998901112209", "DC1009", 0, 0),
+            ("Zulfiya Qodirova", "+998901112210", "DC1010", 3, 2_500_000),
+        };
+        var customers = custInfo.Select(c => new Customer { FullName = c.Full, Phone = c.Phone, CardBarcode = c.Card, DiscountPct = c.Disc, CreditLimit = c.Limit, CreatedAt = openingDate }).ToList();
+        await context.Customers.AddRangeAsync(customers);
         await context.SaveChangesAsync();
+
+        return new DemoCatalog(branch1, branch2, wh1, wh2, admin, seller, cash, card, variants, sellingPrices, stocks, suppliers, customers, openingDate, today0, now);
+    }
+
+    public static async Task SeedTransactionsAsync(ApplicationDbContext context, DemoCatalog cat)
+    {
+        if (await context.Sales.AnyAsync())
+            return;
+
+        var rnd = new Random(0xCA27EC);
+        var openingDate = cat.OpeningDate;
+        var today0 = cat.Today0;
+        DateTime Day(int offset) => today0.AddDays(offset);
+
+        var branch1 = cat.Branch1;
+        var branch2 = cat.Branch2;
+        var wh1 = cat.Wh1;
+        var wh2 = cat.Wh2;
+        var admin = cat.Admin;
+        var seller = cat.Seller;
+        var cash = cat.Cash;
+        var card = cat.Card;
+        var variants = cat.Variants;
+        var sellingPrices = cat.SellingPrices;
+        var stocks = cat.Stocks;
+        var suppliers = cat.Suppliers;
+        var customers = cat.Customers;
 
         var prices = variants.Select((v, i) => (v.Id, sellingPrices[i])).ToDictionary(x => x.Id, x => x.Item2);
         var purchase = stocks.GroupBy(s => s.VariantId).ToDictionary(g => g.Key, g => g.First().PurchasePrice);
@@ -207,19 +272,7 @@ public static class DemoDataSeeder
         }
 
         foreach (var s in stocks)
-        {
-            s.CreatedAt = openingDate;
             if (s.Quantity > 0) AddLot(s);
-        }
-
-        var suppliers = new[]
-        {
-            new Supplier { Name = "Santex Optom Savdo", Phone = "+998711110011", CreatedAt = openingDate },
-            new Supplier { Name = "AquaTrade Toshkent", Phone = "+998711110022", CreatedAt = openingDate },
-            new Supplier { Name = "Polimer Plast Zavod", Phone = "+998711110033", CreatedAt = openingDate },
-            new Supplier { Name = "Termo Group Distribution", Phone = "+998711110044", CreatedAt = openingDate },
-        };
-        await context.Suppliers.AddRangeAsync(suppliers);
 
         var supplies = new List<Supply>();
         decimal totalSupply = 0m;
@@ -255,22 +308,6 @@ public static class DemoDataSeeder
         AddSupply(suppliers[3], Day(-26).AddHours(10), groups[3], 60);
         AddSupply(suppliers[0], Day(-15).AddHours(10), groups[0].Take(4), 40);
         AddSupply(suppliers[3], Day(-7).AddHours(10), groups[3].Take(4), 40);
-
-        var custInfo = new (string Full, string Phone, string Card, decimal Disc, decimal Limit)[]
-        {
-            ("Alisher Karimov", "+998901112201", "DC1001", 5, 2_000_000),
-            ("Dilnoza Rahimova", "+998901112202", "DC1002", 3, 0),
-            ("Jasur Toshmatov", "+998901112203", "DC1003", 0, 1_500_000),
-            ("Nodira Yusupova", "+998901112204", "DC1004", 2, 0),
-            ("Sardor Aliyev", "+998901112205", "DC1005", 0, 3_000_000),
-            ("Kamola Saidova", "+998901112206", "DC1006", 4, 0),
-            ("Bekzod Ergashev", "+998901112207", "DC1007", 0, 1_000_000),
-            ("Malika Islomova", "+998901112208", "DC1008", 2, 0),
-            ("Otabek Norov", "+998901112209", "DC1009", 0, 0),
-            ("Zulfiya Qodirova", "+998901112210", "DC1010", 3, 2_500_000),
-        };
-        var customers = custInfo.Select(c => new Customer { FullName = c.Full, Phone = c.Phone, CardBarcode = c.Card, DiscountPct = c.Disc, CreditLimit = c.Limit, CreatedAt = openingDate }).ToList();
-        await context.Customers.AddRangeAsync(customers);
 
         var bonusAcc = new Dictionary<Customer, Account>();
         var debtAcc = new Dictionary<Customer, Account>();
@@ -485,10 +522,10 @@ public static class DemoDataSeeder
             if (rnd.Next(100) < 40 && cashByDay.GetValueOrDefault(d) > 150_000m)
             {
                 var amount = rnd.Next(3, 9) * 10_000m;
-                var cat = expenseCats[rnd.Next(expenseCats.Length)];
+                var cat2 = expenseCats[rnd.Next(expenseCats.Length)];
                 var expense = Post(OperationType.CashOut, amount, cash, null, seller.Id, Day(d).AddHours(14).AddMinutes(rnd.Next(0, 240)), shift: shift);
-                expense.ExpenseCategory = cat;
-                expense.Description = cat.Name;
+                expense.ExpenseCategory = cat2;
+                expense.Description = cat2.Name;
                 Drawer(d, -amount);
             }
         }
@@ -553,7 +590,7 @@ public static class DemoDataSeeder
             new StockTransfer { BranchId = branch1.Id, FromWarehouseId = wh1.Id, ToWarehouseId = wh2.Id, VariantId = allVids[3], Quantity = 20, UserId = admin.Id, Status = TransferStatus.Sent, CreatedAt = Day(-5).AddHours(15) },
             new StockTransfer { BranchId = branch1.Id, FromWarehouseId = wh1.Id, ToWarehouseId = wh2.Id, VariantId = allVids[9], Quantity = 5, UserId = admin.Id, Status = TransferStatus.Cancelled, CreatedAt = Day(-3).AddHours(16) });
 
-        context.BusinessSettings.Add(new BusinessSetting { Key = "demo_seeded", Value = "true", CreatedAt = now });
+        context.BusinessSettings.Add(new BusinessSetting { Key = "demo_seeded", Value = "true", CreatedAt = cat.Now });
 
         await context.SaveChangesAsync();
     }

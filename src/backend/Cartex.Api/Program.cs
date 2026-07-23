@@ -125,6 +125,8 @@ using (var scope = app.Services.CreateScope())
 
     if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Demo"))
         await DemoDataSeeder.SeedAsync(db);
+    else if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Catalog"))
+        await DemoDataSeeder.SeedCatalogAsync(db);
 }
 
 if (trustProxyHeaders)

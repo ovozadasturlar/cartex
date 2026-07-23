@@ -26,8 +26,8 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         if (enableFeature)
             await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
                 .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, true));
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
