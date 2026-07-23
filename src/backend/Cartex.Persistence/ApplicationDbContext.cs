@@ -79,6 +79,14 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         else _afterCommit.Add(action);
     }
 
+    public Task ReloadAsync(object entity, CancellationToken cancellationToken = default)
+    {
+        var entry = Entry(entity);
+        if (entry.State is EntityState.Modified or EntityState.Added)
+            return Task.CompletedTask;
+        return entry.ReloadAsync(cancellationToken);
+    }
+
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
         if (Database.CurrentTransaction is not null)

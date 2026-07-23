@@ -19,6 +19,16 @@ public interface ILedgerService
 
 public sealed class LedgerService(IApplicationDbContext db, ICurrencyService currency) : ILedgerService
 {
+    private readonly HashSet<long> _locked = [];
+
+    private async Task LockAsync(Account account, CancellationToken cancellationToken)
+    {
+        if (account.Id <= 0 || !_locked.Add(account.Id))
+            return;
+        await db.Accounts.FromSqlInterpolated($"SELECT * FROM accounts WHERE id = {account.Id} FOR UPDATE").ToListAsync(cancellationToken);
+        await db.ReloadAsync(account, cancellationToken);
+    }
+
     public async Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
     {
         var (code, isBase) = await ResolveAsync(currencyCode, cancellationToken);
@@ -36,8 +46,11 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
     public async Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
     {
         var (code, _) = await ResolveAsync(currencyCode, cancellationToken);
-        return db.Accounts.Local.FirstOrDefault(a => a.CustomerId == customerId && a.Type == type && a.Currency == code)
+        var account = db.Accounts.Local.FirstOrDefault(a => a.CustomerId == customerId && a.Type == type && a.Currency == code)
             ?? await db.Accounts.FirstOrDefaultAsync(a => a.CustomerId == customerId && a.Type == type && a.Currency == code, cancellationToken);
+        if (account is not null)
+            await LockAsync(account, cancellationToken);
+        return account;
     }
 
     public async Task<Account> SupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
@@ -50,8 +63,11 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
     public async Task<Account?> FindSupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)
     {
         var (code, _) = await ResolveAsync(currencyCode, cancellationToken);
-        return db.Accounts.Local.FirstOrDefault(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code)
+        var account = db.Accounts.Local.FirstOrDefault(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code)
             ?? await db.Accounts.FirstOrDefaultAsync(a => a.SupplierId == supplierId && a.Type == type && a.Currency == code, cancellationToken);
+        if (account is not null)
+            await LockAsync(account, cancellationToken);
+        return account;
     }
 
     public Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId, long? shiftId = null, decimal rate = 1m)
@@ -90,7 +106,10 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
             ?? await db.Accounts.FirstOrDefaultAsync(predicate, cancellationToken);
 
         if (existing is not null)
+        {
+            await LockAsync(existing, cancellationToken);
             return existing;
+        }
 
         var account = factory();
         db.Accounts.Add(account);

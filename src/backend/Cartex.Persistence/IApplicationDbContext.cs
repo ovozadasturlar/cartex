@@ -62,5 +62,7 @@ public interface IApplicationDbContext
 
     Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
 
+    Task ReloadAsync(object entity, CancellationToken cancellationToken = default);
+
     void RunAfterCommit(Action action);
 }
