@@ -40,6 +40,8 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<MobilePermissions>();
+        builder.Services.AddSingleton<AppCapabilities>();
+        builder.Services.AddSingleton<ImageUrlBuilder>();
         builder.Services.AddSingleton<CartStore>();
         builder.Services.AddSingleton<WarehouseContext>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
@@ -72,7 +74,9 @@ public static class MauiProgram
         builder.Services.AddTransient<QueuePage>();
         builder.Services.AddTransient<SalesPage>();
 
-        return builder.Build();
+        var app = builder.Build();
+        Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
+        return app;
     }
 
     private static T Resolve<T>() where T : notnull =>
