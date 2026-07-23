@@ -21,8 +21,9 @@ public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
         var ids = variantIds.Distinct().Where(id => !_cache.ContainsKey((warehouseId, id))).ToList();
         if (ids.Count == 0) return;
 
+        var idArray = ids.ToArray();
         var batches = await db.Stocks
-            .Where(s => s.WarehouseId == warehouseId && ids.Contains(s.VariantId) && s.Quantity > 0)
+            .FromSqlInterpolated($"SELECT * FROM stocks WHERE warehouse_id = {warehouseId} AND variant_id = ANY({idArray}) AND quantity > 0 AND is_deleted = false FOR UPDATE")
             .ToListAsync(cancellationToken);
 
         foreach (var id in ids)
@@ -36,7 +37,7 @@ public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
     {
         if (!_cache.TryGetValue((warehouseId, variantId), out var batches))
             batches = SortBatches(await db.Stocks
-                .Where(s => s.WarehouseId == warehouseId && s.VariantId == variantId && s.Quantity > 0)
+                .FromSqlInterpolated($"SELECT * FROM stocks WHERE warehouse_id = {warehouseId} AND variant_id = {variantId} AND quantity > 0 AND is_deleted = false FOR UPDATE")
                 .ToListAsync(cancellationToken));
 
         var allocations = new List<StockAllocation>();
