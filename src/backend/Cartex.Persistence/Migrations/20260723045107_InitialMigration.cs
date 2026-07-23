@@ -1796,7 +1796,7 @@ namespace Cartex.Persistence.Migrations
                 table: "customers",
                 column: "card_barcode",
                 unique: true,
-                filter: "\"card_barcode\" IS NOT NULL");
+                filter: "\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
 
             migrationBuilder.CreateIndex(
                 name: "ix_customers_phone",
@@ -1870,13 +1870,15 @@ namespace Cartex.Persistence.Migrations
                 name: "ix_permissions_name",
                 table: "permissions",
                 column: "name",
-                unique: true);
+                unique: true,
+                filter: "NOT \"is_deleted\"");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prepacks_label_code",
                 table: "prepacks",
                 column: "label_code",
-                unique: true);
+                unique: true,
+                filter: "NOT \"is_deleted\"");
 
             migrationBuilder.CreateIndex(
                 name: "ix_prepacks_variant_id",
@@ -1992,7 +1994,8 @@ namespace Cartex.Persistence.Migrations
                 name: "ix_roles_name",
                 table: "roles",
                 column: "name",
-                unique: true);
+                unique: true,
+                filter: "NOT \"is_deleted\"");
 
             migrationBuilder.CreateIndex(
                 name: "ix_sale_items_sale_id",
@@ -2234,7 +2237,8 @@ namespace Cartex.Persistence.Migrations
                 name: "ix_users_username",
                 table: "users",
                 column: "username",
-                unique: true);
+                unique: true,
+                filter: "NOT \"is_deleted\"");
 
             migrationBuilder.CreateIndex(
                 name: "ix_warehouses_assigned_user_id",

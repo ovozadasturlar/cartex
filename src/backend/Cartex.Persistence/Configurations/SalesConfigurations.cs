@@ -17,7 +17,7 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.Email).HasMaxLength(120);
         builder.Property(x => x.PreferredLanguage).HasMaxLength(10);
         builder.Property(x => x.CardBarcode).HasMaxLength(60);
-        builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL");
+        builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
         builder.Property(x => x.DiscountPct).HasPrecision(5, 2);
         builder.Property(x => x.CreditLimit).HasPrecision(18, 2);
         builder.HasIndex(x => x.AgentId);

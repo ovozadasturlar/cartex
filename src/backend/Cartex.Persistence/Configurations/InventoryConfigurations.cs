@@ -32,7 +32,7 @@ public class PrepackConfiguration : IEntityTypeConfiguration<Prepack>
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.UnitPrice).HasPrecision(18, 6);
         builder.Property(x => x.LabelCode).HasMaxLength(30).IsRequired();
-        builder.HasIndex(x => x.LabelCode).IsUnique();
+        builder.HasIndex(x => x.LabelCode).IsUnique().HasFilter("NOT \"is_deleted\"");
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.HasIndex(x => new { x.WarehouseId, x.Status });
 

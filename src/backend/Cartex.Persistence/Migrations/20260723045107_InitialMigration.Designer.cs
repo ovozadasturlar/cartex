@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260722201137_InitialMigration")]
+    [Migration("20260723045107_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -830,7 +830,7 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("CardBarcode")
                         .IsUnique()
                         .HasDatabaseName("ix_customers_card_barcode")
-                        .HasFilter("\"card_barcode\" IS NOT NULL");
+                        .HasFilter("\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
 
                     b.HasIndex("Phone")
                         .IsUnique()
@@ -1586,7 +1586,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_permissions_name");
+                        .HasDatabaseName("ix_permissions_name")
+                        .HasFilter("NOT \"is_deleted\"");
 
                     b.ToTable("permissions", (string)null);
                 });
@@ -1671,7 +1672,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("LabelCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_prepacks_label_code");
+                        .HasDatabaseName("ix_prepacks_label_code")
+                        .HasFilter("NOT \"is_deleted\"");
 
                     b.HasIndex("VariantId")
                         .HasDatabaseName("ix_prepacks_variant_id");
@@ -2232,7 +2234,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_roles_name");
+                        .HasDatabaseName("ix_roles_name")
+                        .HasFilter("NOT \"is_deleted\"");
 
                     b.ToTable("roles", (string)null);
                 });
@@ -3479,7 +3482,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("Username")
                         .IsUnique()
-                        .HasDatabaseName("ix_users_username");
+                        .HasDatabaseName("ix_users_username")
+                        .HasFilter("NOT \"is_deleted\"");
 
                     b.ToTable("users", (string)null);
                 });
