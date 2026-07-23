@@ -32,6 +32,8 @@ services:
       Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
       Storage__LocalPath: /data/storage
       DataProtection__KeysPath: /data/keys
+      ForwardedHeaders__Enabled: "true"
+      ForwardedHeaders__ForwardLimit: "2"
     volumes:
       - cartex-storage:/data/storage
       - cartex-keys:/data/keys
@@ -41,8 +43,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    # Faqat loopback: web (nginx) api'ga ichki docker tarmog'i orqali (api:5015) ulanadi.
+    # Internetga to'g'ridan-to'g'ri ochilsa, TLS chetlab o'tilib login/token ochiq HTTP'da ketardi.
     ports:
-      - "5015:5015"
+      - "127.0.0.1:5015:5015"
 
   web:
     image: muqimjon/cartex-web
@@ -52,14 +56,20 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    # Loopback: TLS profillarida (traefik/caddy) reverse-proxy web:80 ga ichki tarmoq orqali yetadi.
+    # Ochiq HTTP portini internetga chiqarmaslik uchun 127.0.0.1 ga bog'landi.
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
     labels:
       - traefik.enable=true
       - traefik.http.routers.cartex-web.rule=Host(`${DOMAIN}`)
       - traefik.http.routers.cartex-web.entrypoints=websecure
       - traefik.http.routers.cartex-web.tls.certresolver=le
       - traefik.http.services.cartex-web.loadbalancer.server.port=80
+      - traefik.http.routers.cartex-web.middlewares=cartex-hsts
+      - traefik.http.middlewares.cartex-hsts.headers.stsSeconds=31536000
+      - traefik.http.middlewares.cartex-hsts.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.cartex-hsts.headers.stsPreload=true
 
   minio:
     image: minio/minio:latest
@@ -139,6 +149,10 @@ services:
       - traefik.http.routers.cartex-pgadmin.entrypoints=websecure
       - traefik.http.routers.cartex-pgadmin.tls.certresolver=le
       - traefik.http.services.cartex-pgadmin.loadbalancer.server.port=80
+      # DB-admin konsoli faqat ruxsat berilgan IP'lardan. Ochiq internetga chiqarmaslik uchun majburiy.
+      # Ataylab hammaga ochish kerak bo'lsa PGADMIN_ALLOW_CIDR=0.0.0.0/0 qo'ying.
+      - traefik.http.routers.cartex-pgadmin.middlewares=cartex-pgadmin-allow
+      - traefik.http.middlewares.cartex-pgadmin-allow.ipallowlist.sourcerange=${PGADMIN_ALLOW_CIDR:?PGADMIN_ALLOW_CIDR .env faylida majburiy (masalan 203.0.113.0/24 yoki ofis/VPN CIDR)}
 
   # backup:
   #   image: muqimjon/zaxira
