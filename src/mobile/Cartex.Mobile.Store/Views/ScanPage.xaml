@@ -24,17 +24,26 @@
                 VerticalOptions="Start" HorizontalOptions="Start" Margin="16,16,0,0"
                 Command="{Binding ToggleSearchCommand}" />
         <Grid VerticalOptions="Start" HorizontalOptions="End" Margin="0,16,16,0">
-            <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="24" Padding="0"
-                    WidthRequest="56" HeightRequest="56" CornerRadius="28"
-                    Command="{Binding OpenCartCommand}" />
-            <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
-                    Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                    InputTransparent="True"
-                    IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
-                <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
-                       TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
-            </Border>
+            <HorizontalStackLayout Spacing="8">
+                <Grid IsVisible="{Binding CanReceiveStock}">
+                    <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="24" Padding="0"
+                            WidthRequest="56" HeightRequest="56" CornerRadius="28"
+                            Command="{Binding OpenSupplyCartCommand}" />
+                </Grid>
+                <Grid>
+                    <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="24" Padding="0"
+                            WidthRequest="56" HeightRequest="56" CornerRadius="28"
+                            Command="{Binding OpenCartCommand}" />
+                    <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                            Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                            InputTransparent="True"
+                            IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                        <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
+                    </Border>
+                </Grid>
+            </HorizontalStackLayout>
         </Grid>
         <Border VerticalOptions="End" Margin="24,0,24,32" Padding="14,10"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
@@ -79,6 +88,8 @@
         <Border Style="{StaticResource Card}" VerticalOptions="End" Margin="12,0,12,16"
                 IsVisible="{Binding OverlayVisible}">
             <VerticalStackLayout Spacing="12">
+                <Image Source="{Binding ImageUrl}" HeightRequest="120" Aspect="AspectFit"
+                       IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
                            VerticalOptions="Center" LineBreakMode="TailTruncation" MaxLines="2"
@@ -105,6 +116,10 @@
                 </Grid>
                 <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
                         Command="{Binding AddToCartCommand}" />
+                <Button Text="{svc:T receive_stock}" Style="{StaticResource BtnOutline}"
+                        Command="{Binding ReceiveStockCommand}" IsVisible="{Binding CanReceiveStock}" />
+                <Button Text="{svc:T edit}" Style="{StaticResource BtnGhost}"
+                        Command="{Binding EditProductCommand}" IsVisible="{Binding CanEditProduct}" />
             </VerticalStackLayout>
         </Border>
     </Grid>

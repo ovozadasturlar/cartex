@@ -43,6 +43,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppCapabilities>();
         builder.Services.AddSingleton<ImageUrlBuilder>();
         builder.Services.AddSingleton<CartStore>();
+        builder.Services.AddSingleton<SupplyCartStore>();
         builder.Services.AddSingleton<WarehouseContext>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
 
@@ -59,6 +60,8 @@ public static class MauiProgram
         builder.Services.AddTransient<CheckoutViewModel>();
         builder.Services.AddTransient<QueueViewModel>();
         builder.Services.AddTransient<SalesViewModel>();
+        builder.Services.AddTransient<ReceiveCartViewModel>();
+        builder.Services.AddTransient<ProductEditViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<PinPage>();
@@ -73,6 +76,8 @@ public static class MauiProgram
         builder.Services.AddTransient<CheckoutPage>();
         builder.Services.AddTransient<QueuePage>();
         builder.Services.AddTransient<SalesPage>();
+        builder.Services.AddTransient<ReceiveCartPage>();
+        builder.Services.AddTransient<ProductEditPage>();
 
         var app = builder.Build();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();

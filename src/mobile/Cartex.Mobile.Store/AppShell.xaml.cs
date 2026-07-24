@@ -10,6 +10,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("cart", typeof(CartPage));
         Routing.RegisterRoute("handoff", typeof(HandoffPage));
         Routing.RegisterRoute("checkout", typeof(CheckoutPage));
+        Routing.RegisterRoute("receive_cart", typeof(ReceiveCartPage));
+        Routing.RegisterRoute("product/edit", typeof(ProductEditPage));
         Routing.RegisterRoute("change-password", typeof(ChangePasswordPage));
         Routing.RegisterRoute("devices", typeof(DevicesPage));
         Routing.RegisterRoute("pin", typeof(PinPage));

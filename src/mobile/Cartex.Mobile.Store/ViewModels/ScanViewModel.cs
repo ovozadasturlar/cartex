@@ -16,6 +16,8 @@ public partial class ScanViewModel : ObservableObject
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
     private readonly CartStore _cart;
+    private readonly SupplyCartStore _supplyCart;
+    private readonly ImageUrlBuilder _images;
 
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
@@ -23,7 +25,10 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private string _productName = "";
     [ObservableProperty] private string _priceText = "";
     [ObservableProperty] private string _stockText = "";
+    [ObservableProperty] private string? _imageUrl;
     [ObservableProperty] private decimal _quantity;
+    [ObservableProperty] private bool _canEditProduct;
+    [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private bool _searchVisible;
     [ObservableProperty] private string _searchText = "";
@@ -37,15 +42,19 @@ public partial class ScanViewModel : ObservableObject
     private DateTime _lastAt;
     private CancellationTokenSource? _searchCts;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
         _warehouse = warehouse;
         _permissions = permissions;
         _cart = cart;
+        _supplyCart = supplyCart;
+        _images = images;
         _cartCount = cart.Count;
         cart.Changed += () => CartCount = _cart.Count;
+        CanEditProduct = permissions.Has("products.edit");
+        CanReceiveStock = permissions.Has("supplies.create") || permissions.Has("supplies.view");
     }
 
     public async Task HandleAsync(string value)
@@ -118,6 +127,7 @@ public partial class ScanViewModel : ObservableObject
             ProductName = product.ProductName;
             PriceText = $"{product.SellingPrice:N0} UZS";
             StockText = $"{Loc.Instance["stock_label"]}{product.OnHand:0.###} {product.UnitName}";
+            ImageUrl = _images.FromKey(product.ImageKey);
             OverlayVisible = true;
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -146,6 +156,23 @@ public partial class ScanViewModel : ObservableObject
         Ui.Toast(Loc.Instance["added_to_cart"]);
         CloseOverlay();
     }
+
+    [RelayCommand]
+    private Task EditProduct() => Shell.Current.GoToAsync($"product/edit?id={_product?.VariantId}");
+
+    [RelayCommand]
+    private void ReceiveStock()
+    {
+        if (_product is null) return;
+        var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == _product.VariantId)?.Quantity ?? 0;
+        _supplyCart.Add(_product);
+        _supplyCart.SetQuantity(_product.VariantId, existing + Quantity);
+        Ui.Toast(Loc.Instance["receive_stock"] + " +");
+        CloseOverlay();
+    }
+
+    [RelayCommand]
+    private Task OpenSupplyCart() => Shell.Current.GoToAsync("receive_cart");
 
     [RelayCommand]
     private void CloseOverlay()
@@ -212,6 +239,7 @@ public partial class ScanViewModel : ObservableObject
         ProductName = p.Name;
         PriceText = $"{p.SellingPrice ?? 0:N0} UZS";
         StockText = $"{Loc.Instance["stock_label"]}{p.OnHand:0.###} {p.UnitName}";
+        ImageUrl = _images.Full(p.ImageUrl);
         SearchVisible = false;
         OverlayVisible = true;
     }
