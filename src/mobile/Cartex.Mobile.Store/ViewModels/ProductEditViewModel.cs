@@ -142,7 +142,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 
             var newId = await _products.CreateAsync(new CreateProductRequest(
                 Name.Trim(),
-                _category?.Id,
+                Category?.Id,
                 unitId,
                 0,
                 _initialBarcode != null ? [new BarcodeInput(_initialBarcode)] : null,
@@ -159,7 +159,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 
         await _products.UpdateAsync(_product.Id, new UpdateProductRequest(
             Name.Trim(),
-            _category?.Id,
+            Category?.Id,
             _product.UnitId,
             _product.MinStock,
             _product.ProductTypeId,
