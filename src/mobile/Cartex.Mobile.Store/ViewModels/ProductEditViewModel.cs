@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
 using Cartex.Mobile.Core;
+using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Storage;
@@ -13,11 +14,15 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IProductsApi _products;
     private readonly ICategoriesApi _categories;
+    private readonly IUnitsApi _units;
     private readonly IStorageApi _storage;
+    private readonly IBarcodesApi _barcodes;
     private readonly ImageUrlBuilder _images;
     private readonly MobilePermissions _permissions;
 
     private long _variantId;
+    private string? _initialBarcode;
+    private bool _isCreate;
     private ProductDto? _product;
     private string? _imageKey;
 
@@ -38,13 +43,17 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     public ProductEditViewModel(
         IProductsApi products,
         ICategoriesApi categories,
+        IUnitsApi units,
         IStorageApi storage,
+        IBarcodesApi barcodes,
         ImageUrlBuilder images,
         MobilePermissions permissions)
     {
         _products = products;
         _categories = categories;
+        _units = units;
         _storage = storage;
+        _barcodes = barcodes;
         _images = images;
         _permissions = permissions;
     }
@@ -53,6 +62,9 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     {
         if (query.TryGetValue("id", out var id))
             _variantId = long.TryParse(Convert.ToString(id), out var parsed) ? parsed : 0;
+        if (query.TryGetValue("barcode", out var b))
+            _initialBarcode = Convert.ToString(b);
+        _isCreate = _variantId == 0;
     }
 
     public async Task AppearAsync()
@@ -60,11 +72,18 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         if (!CanEdit || _product is not null) return;
         await RunAsync(async () =>
         {
-            _product = (await _products.GetAllAsync(variantId: _variantId)).FirstOrDefault()
-                ?? throw new InvalidOperationException(Loc.Instance["err_not_found"]);
-
             foreach (var c in await _categories.GetAllAsync())
                 Categories.Add(c);
+
+            if (_isCreate)
+            {
+                // New product — prefill barcode as code
+                Code = _initialBarcode ?? "";
+                return;
+            }
+
+            _product = (await _products.GetAllAsync(variantId: _variantId)).FirstOrDefault()
+                ?? throw new InvalidOperationException(Loc.Instance["product_not_found"]);
 
             Name = _product.Name;
             Code = _product.Code ?? "";
@@ -110,28 +129,51 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private Task SaveAsync() => RunAsync(async () =>
     {
-        if (_product is null) return;
-        if (string.IsNullOrWhiteSpace(Name)) throw new InvalidOperationException(Loc.Instance["err_name_required"]);
+        if (string.IsNullOrWhiteSpace(Name)) throw new InvalidOperationException(Loc.Instance["err_fill_all"]);
 
         var price = string.IsNullOrWhiteSpace(PriceText) ? (decimal?)null : Money.Parse(PriceText);
+        var codeVal = string.IsNullOrWhiteSpace(Code) ? null : Code.Trim();
+
+        if (_isCreate)
+        {
+            // Get default unit
+            var units = await _units.GetAllAsync();
+            var unitId = units.FirstOrDefault()?.Id ?? 0;
+
+            var newId = await _products.CreateAsync(new CreateProductRequest(
+                Name.Trim(),
+                _category?.Id,
+                unitId,
+                0,
+                _initialBarcode != null ? [new BarcodeInput(_initialBarcode)] : null,
+                ImageKey: _imageKey,
+                Code: codeVal,
+                SellingPrice: price));
+
+            Ui.Toast(Loc.Instance["saved_successfully"]);
+            await Shell.Current.GoToAsync("..");
+            return;
+        }
+
+        if (_product is null) return;
 
         await _products.UpdateAsync(_product.Id, new UpdateProductRequest(
             Name.Trim(),
-            Category?.Id,
+            _category?.Id,
             _product.UnitId,
             _product.MinStock,
             _product.ProductTypeId,
             null,
             _product.Attributes,
             _imageKey,
-            string.IsNullOrWhiteSpace(Code) ? null : Code.Trim(),
+            codeVal,
             _product.IkpuCode,
             _product.VatRate,
             price,
             _product.PriceCurrency,
             _product.ManufacturerId));
 
-        Ui.Toast(Loc.Instance["saved"]);
+        Ui.Toast(Loc.Instance["saved_successfully"]);
         await Shell.Current.GoToAsync("..");
     });
 

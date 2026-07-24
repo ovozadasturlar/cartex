@@ -62,6 +62,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SalesViewModel>();
         builder.Services.AddTransient<ReceiveCartViewModel>();
         builder.Services.AddTransient<ProductEditViewModel>();
+        builder.Services.AddTransient<BarcodeAttachViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<PinPage>();
@@ -78,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SalesPage>();
         builder.Services.AddTransient<ReceiveCartPage>();
         builder.Services.AddTransient<ProductEditPage>();
+        builder.Services.AddTransient<BarcodeAttachPage>();
 
         var app = builder.Build();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();

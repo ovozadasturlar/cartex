@@ -145,5 +145,10 @@
   "sales_today": "Bugungi savdolar",
   "today_total": "Bugungi tushum",
   "sales_empty": "Hozircha savdo yo'q",
-  "search_product": "Mahsulot qidirish..."
+  "search_product": "Mahsulot qidirish...",
+  "add_new": "Yangi qo'shish",
+  "attach_existing": "Mavjudiga biriktirish",
+  "receive_stock": "Kirim qilish",
+  "edit": "Tahrirlash",
+  "saved_successfully": "Muvaffaqiyatli saqlandi"
 }

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Cartex.ApiClient.Api;
 using Cartex.Mobile.Core;
@@ -30,16 +31,17 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _canEditProduct;
     [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private int _cartCount;
+    [ObservableProperty] private int _supplyCartCount;
     [ObservableProperty] private bool _searchVisible;
     [ObservableProperty] private string _searchText = "";
 
-    public System.Collections.ObjectModel.ObservableCollection<SearchRow> SearchResults { get; } = [];
+    public ObservableCollection<SearchRow> SearchResults { get; } = [];
 
     private ProductLookupDto? _product;
     private decimal _step = 1;
     private bool _handled;
     private string? _lastValue;
-    private DateTime _lastAt;
+    private DateTime _lastAt = DateTime.MinValue;
     private CancellationTokenSource? _searchCts;
 
     public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
@@ -52,15 +54,18 @@ public partial class ScanViewModel : ObservableObject
         _supplyCart = supplyCart;
         _images = images;
         _cartCount = cart.Count;
+        _supplyCartCount = supplyCart.Count;
         cart.Changed += () => CartCount = _cart.Count;
+        supplyCart.Changed += () => SupplyCartCount = _supplyCart.Count;
         CanEditProduct = permissions.Has("products.edit");
         CanReceiveStock = permissions.Has("supplies.create") || permissions.Has("supplies.view");
     }
 
     public async Task HandleAsync(string value)
     {
-        if (_handled || OverlayVisible) return;
-        if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 2) return;
+        if (_handled || OverlayVisible || SearchVisible) return;
+        // Debounce: ignore same barcode within 1.5s (not 2s, so closing overlay quickly then scanning again works)
+        if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
         _lastValue = value;
         _lastAt = DateTime.UtcNow;
@@ -77,7 +82,7 @@ public partial class ScanViewModel : ObservableObject
     private async Task ApproveQrAsync(string code)
     {
         var page = Shell.Current.CurrentPage;
-        var confirmed = page is not null && await page.DisplayAlert(
+        var confirmed = page is not null && await page.DisplayAlertAsync(
             Loc.Instance["qr_approve_title"], Loc.Instance["qr_approve_msg"], Loc.Instance["ok"], Loc.Instance["cancel"]);
         if (!confirmed)
         {
@@ -120,7 +125,7 @@ public partial class ScanViewModel : ObservableObject
         }
         try
         {
-            var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: true);
+            var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: false);
             _product = product;
             _step = product.PackQty > 0 ? product.PackQty : 1;
             Quantity = _step;
@@ -132,12 +137,37 @@ public partial class ScanViewModel : ObservableObject
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            await FlashAsync(Loc.Instance["product_not_found"]);
+            // Unknown barcode — ask user what to do
+            await HandleUnknownBarcodeAsync(barcode);
         }
         catch
         {
             await FlashAsync(Loc.Instance["err_no_connection"]);
         }
+    }
+
+    private async Task HandleUnknownBarcodeAsync(string barcode)
+    {
+        var page = Shell.Current.CurrentPage;
+        if (page is null) { Resume(); return; }
+
+        var choice = await page.DisplayActionSheetAsync(
+            Loc.Instance["product_not_found"],
+            Loc.Instance["cancel"],
+            null,
+            Loc.Instance["attach_existing"],
+            Loc.Instance["add_new"]);
+
+        if (choice == Loc.Instance["attach_existing"])
+        {
+            await Shell.Current.GoToAsync($"barcode_attach?barcode={Uri.EscapeDataString(barcode)}");
+        }
+        else if (choice == Loc.Instance["add_new"])
+        {
+            await Shell.Current.GoToAsync($"product/edit?id=0&barcode={Uri.EscapeDataString(barcode)}");
+        }
+
+        Resume();
     }
 
     [RelayCommand]
@@ -167,7 +197,7 @@ public partial class ScanViewModel : ObservableObject
         var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == _product.VariantId)?.Quantity ?? 0;
         _supplyCart.Add(_product);
         _supplyCart.SetQuantity(_product.VariantId, existing + Quantity);
-        Ui.Toast(Loc.Instance["receive_stock"] + " +");
+        Ui.Toast($"{Loc.Instance["receive_stock"]} ✓");
         CloseOverlay();
     }
 
@@ -194,11 +224,16 @@ public partial class ScanViewModel : ObservableObject
             return;
         }
         SearchVisible = !SearchVisible;
-        IsDetecting = !SearchVisible && !OverlayVisible;
         if (!SearchVisible)
         {
             SearchText = "";
             SearchResults.Clear();
+            if (!OverlayVisible)
+                IsDetecting = true;
+        }
+        else
+        {
+            IsDetecting = false;
         }
     }
 
@@ -213,7 +248,7 @@ public partial class ScanViewModel : ObservableObject
     {
         try
         {
-            await Task.Delay(350, ct);
+            await Task.Delay(300, ct);
             if (text.Length < 2)
             {
                 SearchResults.Clear();
@@ -222,7 +257,7 @@ public partial class ScanViewModel : ObservableObject
             var products = await _productsApi.GetAllAsync(search: text);
             if (ct.IsCancellationRequested) return;
             SearchResults.Clear();
-            foreach (var p in products.Where(p => p.IsEnabled).Take(30))
+            foreach (var p in products.Where(p => p.IsEnabled).Take(40))
                 SearchResults.Add(new SearchRow(p));
         }
         catch (OperationCanceledException) { }
@@ -241,7 +276,10 @@ public partial class ScanViewModel : ObservableObject
         StockText = $"{Loc.Instance["stock_label"]}{p.OnHand:0.###} {p.UnitName}";
         ImageUrl = _images.Full(p.ImageUrl);
         SearchVisible = false;
+        SearchText = "";
+        SearchResults.Clear();
         OverlayVisible = true;
+        IsDetecting = false;
     }
 
     private async Task FlashAsync(string message)
@@ -255,7 +293,11 @@ public partial class ScanViewModel : ObservableObject
     {
         Status = Loc.Instance["scan_hint_store"];
         _handled = false;
-        IsDetecting = true;
+        _lastValue = null;
+        _lastAt = DateTime.MinValue;
+        OverlayVisible = false;
+        if (!SearchVisible)
+            IsDetecting = true;
     }
 
     [GeneratedRegex("^[0-9a-f]{32}$")]
@@ -267,4 +309,5 @@ public sealed record SearchRow(ProductDto Product)
     public string Name => Product.Name;
     public string PriceText => $"{Product.SellingPrice ?? 0:N0} UZS";
     public string StockText => $"{Product.OnHand:0.###} {Product.UnitName}";
+    public string? ImageUrl => Product.ImageUrl;
 }

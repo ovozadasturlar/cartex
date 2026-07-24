@@ -145,5 +145,10 @@
   "sales_today": "Today's sales",
   "today_total": "Today's revenue",
   "sales_empty": "No sales yet",
-  "search_product": "Search product..."
+  "search_product": "Search products...",
+  "add_new": "Add new",
+  "attach_existing": "Attach to existing",
+  "receive_stock": "Receive stock",
+  "edit": "Edit",
+  "saved_successfully": "Saved successfully"
 }

@@ -9,42 +9,60 @@
     x:DataType="vm:ScanViewModel"
     Title="{svc:T scan_title}">
     <Grid>
+        <!-- Camera feed -->
         <scanner:CameraView
             x:Name="Reader"
-            BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode"
+            BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
             PauseScanning="{Binding IsDetecting, Mode=OneWay, Converter={StaticResource Invert}}"
             OnDetectionFinished="OnDetectionFinished" />
+
+        <!-- Scan target frame -->
         <Border VerticalOptions="Center" HorizontalOptions="Center"
-                WidthRequest="260" HeightRequest="180"
-                StrokeThickness="3" StrokeShape="RoundRectangle 24"
+                WidthRequest="260" HeightRequest="160"
+                StrokeThickness="3" StrokeShape="RoundRectangle 20"
                 Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                 BackgroundColor="Transparent" />
-        <Button FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="24" Padding="0"
-                WidthRequest="56" HeightRequest="56" CornerRadius="28"
-                VerticalOptions="Start" HorizontalOptions="Start" Margin="16,16,0,0"
+
+        <!-- Top-left: Search button -->
+        <Button FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="22" Padding="0"
+                WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                VerticalOptions="Start" HorizontalOptions="Start" Margin="14,14,0,0"
                 Command="{Binding ToggleSearchCommand}" />
-        <Grid VerticalOptions="Start" HorizontalOptions="End" Margin="0,16,16,0">
-            <HorizontalStackLayout Spacing="8">
-                <Grid IsVisible="{Binding CanReceiveStock}">
-                    <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="24" Padding="0"
-                            WidthRequest="56" HeightRequest="56" CornerRadius="28"
-                            Command="{Binding OpenSupplyCartCommand}" />
-                </Grid>
-                <Grid>
-                    <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="24" Padding="0"
-                            WidthRequest="56" HeightRequest="56" CornerRadius="28"
-                            Command="{Binding OpenCartCommand}" />
-                    <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
-                            Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                            InputTransparent="True"
-                            IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
-                        <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
-                    </Border>
-                </Grid>
-            </HorizontalStackLayout>
-        </Grid>
+
+        <!-- Top-right: Supply cart + Sale cart -->
+        <HorizontalStackLayout VerticalOptions="Start" HorizontalOptions="End"
+                               Margin="0,14,14,0" Spacing="8">
+            <!-- Supply cart button + badge -->
+            <Grid IsVisible="{Binding CanReceiveStock}">
+                <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="22" Padding="0"
+                        WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                        Command="{Binding OpenSupplyCartCommand}" />
+                <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                        Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                        InputTransparent="True"
+                        IsVisible="{Binding SupplyCartCount, Converter={StaticResource Positive}}">
+                    <Label Text="{Binding SupplyCartCount}" FontSize="11" FontAttributes="Bold"
+                           TextColor="White" />
+                </Border>
+            </Grid>
+            <!-- Sale cart button + badge -->
+            <Grid>
+                <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
+                        WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                        Command="{Binding OpenCartCommand}" />
+                <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                        Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                        InputTransparent="True"
+                        IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                    <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
+                </Border>
+            </Grid>
+        </HorizontalStackLayout>
+
+        <!-- Status hint bar -->
         <Border VerticalOptions="End" Margin="24,0,24,32" Padding="14,10"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
                 BackgroundColor="#B3000000"
@@ -52,12 +70,15 @@
             <Label Text="{Binding Status}"
                    TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
         </Border>
-        <Border Style="{StaticResource Card}" Margin="12,16,12,16"
+
+        <!-- Search panel -->
+        <Border Style="{StaticResource Card}" Margin="12,8,12,8"
                 IsVisible="{Binding SearchVisible}">
-            <Grid RowDefinitions="Auto,*" RowSpacing="12">
+            <Grid RowDefinitions="Auto,*" RowSpacing="10">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <Border Style="{StaticResource InputWrap}">
-                        <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}" Text="{Binding SearchText}" />
+                        <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
+                               Text="{Binding SearchText}" />
                     </Border>
                     <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="20"
                             Padding="0" WidthRequest="44" HeightRequest="44" CornerRadius="22"
@@ -65,62 +86,88 @@
                             TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
                             Command="{Binding ToggleSearchCommand}" />
                 </Grid>
-                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}">
+                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}" MaximumHeightRequest="420">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:SearchRow">
-                            <Grid Padding="4,10" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                            <Grid Padding="4,10" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto"
                                   BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding PickResultCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
                                                           CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
-                                <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                <Image Grid.RowSpan="2" Source="{Binding ImageUrl}" WidthRequest="36" HeightRequest="36"
+                                       Aspect="AspectFill" Margin="0,0,10,0"
+                                       IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                <Label Grid.Column="1" Text="{Binding PriceText}" FontAttributes="Bold"
+                                <Label Grid.Column="2" Text="{Binding PriceText}" FontAttributes="Bold"
                                        TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                <Label Grid.Row="1" Text="{Binding StockText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Grid.Row="1" Grid.Column="1" Text="{Binding StockText}"
+                                       Style="{StaticResource MutedLabel}" FontSize="12" />
                             </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
             </Grid>
         </Border>
-        <Border Style="{StaticResource Card}" VerticalOptions="End" Margin="12,0,12,16"
+
+        <!-- Product overlay card — redesigned -->
+        <Border Style="{StaticResource Card}" Padding="0" VerticalOptions="End" Margin="12,0,12,16"
                 IsVisible="{Binding OverlayVisible}">
-            <VerticalStackLayout Spacing="12">
-                <Image Source="{Binding ImageUrl}" HeightRequest="120" Aspect="AspectFit"
-                       IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
-                           VerticalOptions="Center" LineBreakMode="TailTruncation" MaxLines="2"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                    <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="20"
-                            Padding="0" WidthRequest="40" HeightRequest="40" CornerRadius="20"
-                            BackgroundColor="Transparent"
-                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+
+                <!-- Image area with edit pencil overlaid -->
+                <Grid Grid.Row="0" HeightRequest="200" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill"
+                           IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
+                    <!-- Pencil edit button, top-right -->
+                    <Button FontFamily="MDI" Text="{StaticResource IcPencil}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="End" Margin="0,10,10,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Command="{Binding EditProductCommand}"
+                            IsVisible="{Binding CanEditProduct}" />
+                    <!-- Close button, top-left (always visible) -->
+                    <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                            BackgroundColor="#CC000000" TextColor="White"
                             Command="{Binding CloseOverlayCommand}" />
                 </Grid>
-                <Label Text="{Binding PriceText}" Style="{StaticResource StatValue}" />
-                <Label Text="{Binding StockText}" Style="{StaticResource MutedLabel}" />
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+
+                <!-- Product name + price + stock -->
+                <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="4">
+                    <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
+                           LineBreakMode="TailTruncation" MaxLines="2"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Label Text="{Binding PriceText}" Style="{StaticResource StatValue}" FontSize="24" />
+                    <Label Text="{Binding StockText}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+
+                <!-- Quantity control -->
+                <Grid Grid.Row="2" Padding="16,0,16,12" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                     <Button Text="&#x2212;" Style="{StaticResource PinKey}"
                             WidthRequest="52" HeightRequest="52"
                             Command="{Binding DecreaseCommand}" />
                     <Label Grid.Column="1" Text="{Binding Quantity, StringFormat='{0:0.###}'}"
-                           FontSize="22" FontAttributes="Bold"
+                           FontSize="24" FontAttributes="Bold"
                            HorizontalOptions="Center" VerticalOptions="Center"
                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                     <Button Grid.Column="2" Text="+" Style="{StaticResource PinKey}"
                             WidthRequest="52" HeightRequest="52"
                             Command="{Binding IncreaseCommand}" />
                 </Grid>
-                <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
-                        Command="{Binding AddToCartCommand}" />
-                <Button Text="{svc:T receive_stock}" Style="{StaticResource BtnOutline}"
-                        Command="{Binding ReceiveStockCommand}" IsVisible="{Binding CanReceiveStock}" />
-                <Button Text="{svc:T edit}" Style="{StaticResource BtnGhost}"
-                        Command="{Binding EditProductCommand}" IsVisible="{Binding CanEditProduct}" />
-            </VerticalStackLayout>
+
+                <!-- Action buttons -->
+                <VerticalStackLayout Grid.Row="3" Padding="16,0,16,16" Spacing="10">
+                    <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AddToCartCommand}" />
+                    <Button Text="{svc:T receive_stock}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding ReceiveStockCommand}"
+                            IsVisible="{Binding CanReceiveStock}" />
+                </VerticalStackLayout>
+            </Grid>
         </Border>
     </Grid>
 </ContentPage>

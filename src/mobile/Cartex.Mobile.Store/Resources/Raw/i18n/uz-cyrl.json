@@ -145,5 +145,10 @@
   "sales_today": "Бугунги савдолар",
   "today_total": "Бугунги тушум",
   "sales_empty": "Ҳозирча савдо йўқ",
-  "search_product": "Маҳсулот қидириш..."
+  "search_product": "Маҳсулот қидириш...",
+  "add_new": "Янги қўшиш",
+  "attach_existing": "Мавжудига бириктириш",
+  "receive_stock": "Кирим қилиш",
+  "edit": "Таҳрирлаш",
+  "saved_successfully": "Муваффақиятли сақланди"
 }

@@ -145,5 +145,10 @@
   "sales_today": "Продажи за сегодня",
   "today_total": "Выручка за сегодня",
   "sales_empty": "Продаж пока нет",
-  "search_product": "Поиск товара..."
+  "search_product": "Поиск товара...",
+  "add_new": "Добавить новый",
+  "attach_existing": "Привязать к существующему",
+  "receive_stock": "Приёмка товара",
+  "edit": "Редактировать",
+  "saved_successfully": "Успешно сохранено"
 }
