@@ -11,7 +11,9 @@ public sealed partial class CartLine : ObservableObject
     public string UnitName { get; set; } = "";
     public decimal UnitPrice { get; set; }
     [ObservableProperty] private decimal _quantity;
+    [ObservableProperty] private bool _isSwiped;
     public decimal LineTotal => UnitPrice * Quantity;
+    public string? ImageKey { get; set; }
 
     partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
 }
@@ -44,7 +46,8 @@ public sealed class CartStore
                 ProductName = l.ProductName,
                 UnitName = l.UnitName,
                 UnitPrice = l.UnitPrice,
-                Quantity = l.Quantity
+                Quantity = l.Quantity,
+                ImageKey = l.ImageKey
             }));
             CustomerId = draft.CustomerId;
             CustomerName = draft.CustomerName;
@@ -66,7 +69,8 @@ public sealed class CartStore
                 ProductName = product.ProductName,
                 UnitName = product.UnitName,
                 UnitPrice = product.SellingPrice,
-                Quantity = product.PackQty
+                Quantity = product.PackQty,
+                ImageKey = product.ImageKey
             });
         else
             line.Quantity += product.PackQty;
@@ -114,12 +118,12 @@ public sealed class CartStore
     private void Save()
     {
         var draft = new Draft(
-            Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity)).ToList(),
+            Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey)).ToList(),
             CustomerId, CustomerName, Note);
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
         Changed?.Invoke();
     }
 
-    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal UnitPrice, decimal Quantity);
+    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal UnitPrice, decimal Quantity, string? ImageKey);
     private sealed record Draft(List<DraftLine> Lines, long? CustomerId, string? CustomerName, string? Note);
 }

@@ -11,7 +11,7 @@ public sealed class ImageUrlBuilder(SessionStore session)
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             url = session.ServerUrl.TrimEnd('/') + (url.StartsWith('/') ? url : "/" + url);
 
-        if (!thumb)
+        if (!thumb || url.Contains("thumb=true", StringComparison.OrdinalIgnoreCase))
             return url;
 
         return url + (url.Contains('?') ? "&" : "?") + "thumb=true";

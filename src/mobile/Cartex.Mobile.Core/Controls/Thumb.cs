@@ -12,7 +12,7 @@ public sealed class Thumb : ContentView
         BindableProperty.Create(nameof(Radius), typeof(double), typeof(Thumb), 12d, propertyChanged: OnChanged);
 
     public static readonly BindableProperty GlyphProperty =
-        BindableProperty.Create(nameof(Glyph), typeof(string), typeof(Thumb), "7", propertyChanged: OnChanged);
+        BindableProperty.Create(nameof(Glyph), typeof(string), typeof(Thumb), "\U000f03d7", propertyChanged: OnChanged);
 
     public static readonly BindableProperty StretchProperty =
         BindableProperty.Create(nameof(Stretch), typeof(bool), typeof(Thumb), false, propertyChanged: OnChanged);
@@ -24,6 +24,7 @@ public sealed class Thumb : ContentView
     public bool Stretch { get => (bool)GetValue(StretchProperty); set => SetValue(StretchProperty, value); }
 
     public static ImageUrlBuilder? UrlBuilder { get; set; }
+public static string? PublicBaseUrl { get; set; }
 
     private readonly Image _image = new() { Aspect = Aspect.AspectFill };
     private readonly Label _placeholder = new()
@@ -59,9 +60,28 @@ public sealed class Thumb : ContentView
         _placeholder.FontSize = Math.Clamp(Size / 2.8, 16, 48);
         _placeholder.SetAppTheme(Label.TextColorProperty, Color.FromArgb("#9CA3AF"), Color.FromArgb("#6B7280"));
 
-        var full = UrlBuilder?.Full(Source, thumb: true) ?? Source;
-        var valid = Uri.TryCreate(full, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https";
-        _image.Source = valid ? ImageSource.FromUri(uri!) : null;
+        // Resolve image source
+        string? resolvedUrl = null;
+        if (!string.IsNullOrWhiteSpace(Source))
+        {
+            if (Uri.TryCreate(Source, UriKind.Absolute, out var absolute) &&
+                (absolute.Scheme == "http" || absolute.Scheme == "https"))
+            {
+                resolvedUrl = Source;
+            }
+            else if (UrlBuilder != null)
+            {
+                resolvedUrl = UrlBuilder.Full(Source, thumb: true);
+            }
+            else if (!string.IsNullOrWhiteSpace(PublicBaseUrl))
+            {
+                var escaped = Uri.EscapeDataString(Source);
+                resolvedUrl = $"{PublicBaseUrl.TrimEnd('/')}/api/storage/content?key={escaped}";
+            }
+        }
+        var valid = Uri.TryCreate(resolvedUrl, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == "http" || uri.Scheme == "https");
+        _image.Source = valid ? ImageSource.FromUri(uri) : null;
         _image.IsVisible = valid;
     }
 }

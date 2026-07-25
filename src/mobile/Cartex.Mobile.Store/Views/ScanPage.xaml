@@ -6,6 +6,7 @@
     xmlns:scanner="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     x:DataType="vm:ScanViewModel"
     Title="{svc:T scan_title}">
     <Grid>
@@ -13,7 +14,6 @@
         <scanner:CameraView
             x:Name="Reader"
             BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
-            PauseScanning="{Binding IsDetecting, Mode=OneWay, Converter={StaticResource Invert}}"
             OnDetectionFinished="OnDetectionFinished" />
 
         <!-- Scan target frame -->
@@ -95,9 +95,8 @@
                                     <TapGestureRecognizer Command="{Binding PickResultCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
                                                           CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
-                                <Image Grid.RowSpan="2" Source="{Binding ImageUrl}" WidthRequest="36" HeightRequest="36"
-                                       Aspect="AspectFill" Margin="0,0,10,0"
-                                       IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
+                                <ctl:Thumb Grid.RowSpan="2" Source="{Binding ImageUrl}" Size="36" Radius="4"
+                                           Margin="0,0,10,0" IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
                                 <Label Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold"
                                        LineBreakMode="TailTruncation"
                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -119,8 +118,8 @@
 
                 <!-- Image area with edit pencil overlaid -->
                 <Grid Grid.Row="0" HeightRequest="200" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
-                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill"
-                           IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
+                    <ctl:Thumb Source="{Binding ImageUrl}" Size="200" Stretch="True" Radius="0" />
+                    
                     <!-- Pencil edit button, top-right -->
                     <Button FontFamily="MDI" Text="{StaticResource IcPencil}" FontSize="18" Padding="0"
                             WidthRequest="40" HeightRequest="40" CornerRadius="20"

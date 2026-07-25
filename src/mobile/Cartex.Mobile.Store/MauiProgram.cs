@@ -83,6 +83,7 @@ public static class MauiProgram
 
         var app = builder.Build();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
+        Cartex.Mobile.Core.Controls.Thumb.PublicBaseUrl = session.ServerUrl;
         return app;
     }
 

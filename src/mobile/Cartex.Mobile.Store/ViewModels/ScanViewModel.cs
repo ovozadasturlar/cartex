@@ -132,8 +132,8 @@ public partial class ScanViewModel : ObservableObject
             ProductName = product.ProductName;
             PriceText = $"{product.SellingPrice:N0} UZS";
             StockText = $"{Loc.Instance["stock_label"]}{product.OnHand:0.###} {product.UnitName}";
-            ImageUrl = _images.FromKey(product.ImageKey);
             OverlayVisible = true;
+            ImageUrl = _images.FromKey(product.ImageKey);
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -268,18 +268,18 @@ public partial class ScanViewModel : ObservableObject
     private void PickResult(SearchRow row)
     {
         var p = row.Product;
-        _product = new ProductLookupDto(p.DefaultVariantId, p.Name, p.UnitName, 1, p.SellingPrice ?? 0, p.OnHand, p.Dimension ?? "");
+        _product = new ProductLookupDto(p.DefaultVariantId, p.Name, p.UnitName, 1, p.SellingPrice ?? 0, p.OnHand, p.Dimension ?? "", p.ImageKey);
         _step = 1;
         Quantity = 1;
         ProductName = p.Name;
         PriceText = $"{p.SellingPrice ?? 0:N0} UZS";
         StockText = $"{Loc.Instance["stock_label"]}{p.OnHand:0.###} {p.UnitName}";
+        OverlayVisible = true;
+        IsDetecting = false;
         ImageUrl = _images.Full(p.ImageUrl);
         SearchVisible = false;
         SearchText = "";
         SearchResults.Clear();
-        OverlayVisible = true;
-        IsDetecting = false;
     }
 
     private async Task FlashAsync(string message)

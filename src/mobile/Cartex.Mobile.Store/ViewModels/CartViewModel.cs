@@ -4,7 +4,6 @@ using Cartex.ApiClient.Querying;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Customers;
-using Cartex.Shared.Models.Ordering;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,8 +12,6 @@ namespace Cartex.Mobile.Store.ViewModels;
 public partial class CartViewModel : ObservableObject
 {
     private readonly CartStore _cart;
-    private readonly WarehouseContext _warehouse;
-    private readonly IOrderingApi _orderingApi;
     private readonly ICustomersApi _customersApi;
 
     public ObservableCollection<CartLine> Lines { get; } = [];
@@ -26,30 +23,31 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private bool _hasCustomer;
     [ObservableProperty] private string _customerSearch = "";
     [ObservableProperty] private bool _hasCustomers;
-    [ObservableProperty] private string _note = "";
+    
+    // Customer Modal Properties
+    [ObservableProperty] private bool _isCustomerModalOpen;
+    [ObservableProperty] private string _newCustomerName = "";
+    [ObservableProperty] private string _newCustomerPhone = "";
     [ObservableProperty] private bool _isBusy;
 
-    public bool CanSelfSell { get; }
+    // Product Modal Properties
+    [ObservableProperty] private bool _isProductModalOpen;
+    [ObservableProperty] private CartLine? _selectedProduct;
+    [ObservableProperty] private string _selectedProductImage = "";
 
     private CancellationTokenSource? _searchCts;
-    private bool _suppressNote;
+    private readonly ImageUrlBuilder _images;
 
-    public CartViewModel(CartStore cart, WarehouseContext warehouse, IOrderingApi orderingApi,
-        ICustomersApi customersApi, MobilePermissions permissions)
+    public CartViewModel(CartStore cart, ICustomersApi customersApi, ImageUrlBuilder images)
     {
         _cart = cart;
-        _warehouse = warehouse;
-        _orderingApi = orderingApi;
         _customersApi = customersApi;
-        CanSelfSell = permissions.Has("sales.create");
+        _images = images;
     }
 
     public void Appear()
     {
         _cart.Changed += Refresh;
-        _suppressNote = true;
-        Note = _cart.Note;
-        _suppressNote = false;
         Refresh();
     }
 
@@ -67,11 +65,6 @@ public partial class CartViewModel : ObservableObject
         TotalText = $"{_cart.Total:N0} UZS";
         CustomerName = _cart.CustomerName;
         HasCustomer = !string.IsNullOrEmpty(_cart.CustomerName);
-    }
-
-    partial void OnNoteChanged(string value)
-    {
-        if (!_suppressNote) _cart.SetNote(value);
     }
 
     partial void OnCustomerSearchChanged(string value) => _ = SearchCustomersAsync(value);
@@ -107,9 +100,35 @@ public partial class CartViewModel : ObservableObject
     {
         if (line.Quantity > 1) _cart.SetQuantity(line.VariantId, line.Quantity - 1);
     }
+    
+    [RelayCommand]
+    private void DecrementSelected()
+    {
+        if (SelectedProduct is not null)
+            Decrement(SelectedProduct);
+    }
 
     [RelayCommand]
-    private void Remove(CartLine line) => _cart.Remove(line.VariantId);
+    private void IncrementSelected()
+    {
+        if (SelectedProduct is not null)
+            Increment(SelectedProduct);
+    }
+
+    [RelayCommand]
+    private void Remove(CartLine line)
+    {
+        _cart.Remove(line.VariantId);
+        if (SelectedProduct == line)
+            IsProductModalOpen = false;
+    }
+
+    [RelayCommand]
+    private void RemoveSelected()
+    {
+        if (SelectedProduct is not null)
+            Remove(SelectedProduct);
+    }
 
     [RelayCommand]
     private void PickCustomer(CustomerDto customer)
@@ -124,49 +143,58 @@ public partial class CartViewModel : ObservableObject
     private void ClearCustomer() => _cart.SetCustomer(null, null);
 
     [RelayCommand]
-    private Task QueueAsync() => SubmitAsync(false);
+    private void OpenCustomerModal()
+    {
+        NewCustomerName = CustomerSearch;
+        NewCustomerPhone = "";
+        IsCustomerModalOpen = true;
+    }
 
     [RelayCommand]
-    private Task SelfSellAsync() => SubmitAsync(true);
+    private void CloseCustomerModal() => IsCustomerModalOpen = false;
 
-    private async Task SubmitAsync(bool self)
+    [RelayCommand]
+    private async Task SaveCustomerAsync()
     {
-        if (IsBusy) return;
-        if (_cart.Lines.Count == 0)
+        if (string.IsNullOrWhiteSpace(NewCustomerName) || string.IsNullOrWhiteSpace(NewCustomerPhone))
         {
-            Ui.Toast(Loc.Instance["err_no_items"]);
-            return;
-        }
-        if (!await _warehouse.EnsureSelectedAsync())
-        {
-            Ui.Toast(Loc.Instance["warehouse_none"]);
+            Ui.Toast(Loc.Instance["err_fill_all"]);
             return;
         }
         IsBusy = true;
         try
         {
-            var request = new SubmitCartRequest(
-                _warehouse.WarehouseId!.Value,
-                _cart.CustomerId,
-                _cart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
-                Guid.NewGuid().ToString("N"),
-                string.IsNullOrWhiteSpace(_cart.Note) ? null : _cart.Note);
-            var code = await _orderingApi.SubmitAsync(request);
-            _cart.Clear();
-            await Shell.Current.GoToAsync(self ? $"../checkout?code={code}" : $"../handoff?code={code}");
+            var request = new CreateCustomerRequest(NewCustomerName, NewCustomerPhone, null, 0);
+            var id = await _customersApi.CreateAsync(request);
+            _cart.SetCustomer(id, NewCustomerName);
+            IsCustomerModalOpen = false;
+            CustomerSearch = "";
+            HasCustomers = false;
         }
-        catch (Refit.ApiException ex)
-        {
-            await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["error"], ApiErrors.Describe(ex), Loc.Instance["ok"]);
-        }
-        catch
-        {
-            Ui.Toast(Loc.Instance["err_no_connection"]);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
+        finally { IsBusy = false; }
     }
 
+    [RelayCommand]
+    private void OpenProductModal(CartLine line)
+    {
+        SelectedProduct = line;
+        IsProductModalOpen = true;
+        SelectedProductImage = _images.FromKey(line.ImageKey) ?? "";
+    }
+
+    [RelayCommand]
+    private void CloseProductModal() => IsProductModalOpen = false;
+
+    [RelayCommand]
+    private Task NextAsync()
+    {
+        if (_cart.Lines.Count == 0)
+        {
+            Ui.Toast(Loc.Instance["err_no_items"]);
+            return Task.CompletedTask;
+        }
+        return Shell.Current.GoToAsync("checkout");
+    }
 }
+

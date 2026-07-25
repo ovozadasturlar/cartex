@@ -1,10 +1,12 @@
 using Cartex.Mobile.Store.ViewModels;
+using Microsoft.Maui.Controls;
 
 namespace Cartex.Mobile.Store.Views;
 
 public partial class CartPage : ContentPage
 {
     private readonly CartViewModel _vm;
+    private SwipeView? _openSwipeView;
 
     public CartPage(CartViewModel vm)
     {
@@ -22,5 +24,31 @@ public partial class CartPage : ContentPage
     {
         _vm.Disappear();
         base.OnDisappearing();
+    }
+
+    private void OnSwipeStarted(object sender, SwipeStartedEventArgs e)
+    {
+        var swipeView = (SwipeView)sender;
+        if (_openSwipeView != null && _openSwipeView != swipeView)
+        {
+            _openSwipeView.Close();
+            if (_openSwipeView.BindingContext is Services.CartLine oldLine)
+                oldLine.IsSwiped = false;
+        }
+        _openSwipeView = swipeView;
+        
+        if (swipeView.BindingContext is Services.CartLine line)
+            line.IsSwiped = true;
+    }
+
+    private void OnSwipeEnded(object sender, SwipeEndedEventArgs e)
+    {
+        var swipeView = (SwipeView)sender;
+        if (swipeView.BindingContext is Services.CartLine line)
+        {
+            line.IsSwiped = e.IsOpen;
+            if (!e.IsOpen && _openSwipeView == swipeView)
+                _openSwipeView = null;
+        }
     }
 }
