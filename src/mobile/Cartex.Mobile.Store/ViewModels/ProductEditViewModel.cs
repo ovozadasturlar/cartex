@@ -89,7 +89,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             Code = _product.Code ?? "";
             PriceText = _product.SellingPrice?.ToString("0.##") ?? "";
             _imageKey = _product.ImageKey;
-            PreviewUrl = _images.Full(_product.ImageUrl);
+            PreviewUrl = _images.FromKey(_product.ImageKey);
             Category = Categories.FirstOrDefault(c => c.Id == _product.CategoryId);
         });
     }
