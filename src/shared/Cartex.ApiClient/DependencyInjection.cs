@@ -81,7 +81,7 @@ public static class DependencyInjection
     private static void Configure(HttpClient client, string baseUrl, string clientName)
     {
         client.BaseAddress = new Uri(baseUrl);
-        client.Timeout = TimeSpan.FromSeconds(30);
+        client.Timeout = TimeSpan.FromMinutes(5);
         client.DefaultRequestHeaders.Add("X-Client", clientName);
     }
 
