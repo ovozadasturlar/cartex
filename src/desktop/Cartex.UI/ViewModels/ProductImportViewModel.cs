@@ -193,7 +193,7 @@ public partial class ProductImportViewModel : ViewModelBase
             using (_busy.Begin(L["loading"]))
             {
                 var result = await _productsApi.ImportAsync(new ImportProductsRequest(
-                    rows, UpdatePrices, CreateMissingCategories));
+                    rows, UpdatePrices, CreateMissingCategories, IgnoreErrors: true));
 
                 _cache.Invalidate(CacheKeys.ProductLookup);
                 _cache.Invalidate(CacheKeys.Categories);
@@ -204,6 +204,8 @@ public partial class ProductImportViewModel : ViewModelBase
                 _toast.Success(summary);
                 if (result.ImagesFailed > 0)
                     _toast.Warning(string.Format(L["import_images_failed_fmt"], result.ImagesFailed));
+                if (result.FailedRows is { Count: > 0 } failed)
+                    _toast.Warning($"{failed.Count} ta qator import qilinmadi");
                 Imported?.Invoke();
             }
         }

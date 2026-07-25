@@ -37,4 +37,12 @@ public record ProductImportPreviewDto(
     int ExistingCount,
     int ErrorCount);
 
-public record ImportResultDto(int Created, int Existing, int BarcodesGenerated, int ImagesSet, int ImagesFailed);
+public record ImportResultDto(
+    int Created,
+    int Existing,
+    int BarcodesGenerated,
+    int ImagesSet,
+    int ImagesFailed,
+    IReadOnlyCollection<ImportRowError>? FailedRows = null);
+
+public record ImportRowError(int Row, string? Name, IReadOnlyList<string> Errors);

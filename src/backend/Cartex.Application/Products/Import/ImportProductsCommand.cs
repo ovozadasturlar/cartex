@@ -14,7 +14,8 @@ namespace Cartex.Application.Products.Import;
 public record ImportProductsCommand(
     List<ImportRowDto> Rows,
     bool UpdatePrices = false,
-    bool CreateMissingCategories = true) : ICommand<ImportResultDto>;
+    bool CreateMissingCategories = true,
+    bool IgnoreErrors = false) : IRequest<ImportResultDto>;
 
 public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser,
     IRemoteImageFetcher imageFetcher, IObjectStorage storage, IImageProcessor imageProcessor)
@@ -27,7 +28,12 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             [.. request.Rows.Select(r => r with { VariantId = null, Action = ImportRowAction.Create, Errors = [], Warnings = [] })],
             cancellationToken);
 
-        var rows = resolved.Where(r => r.Action != ImportRowAction.Skip).ToList();
+        // IgnoreErrors=true bo'lsa, validatsiya xatosi bor qatorlar ham qoldiriladi
+        // (ular create paytida alohida try-catch orqali boshqariladi)
+        var rows = request.IgnoreErrors
+            ? resolved.ToList()
+            : resolved.Where(r => r.Action != ImportRowAction.Skip).ToList();
+
         if (rows.Count == 0)
             throw new BusinessRuleException("Import uchun yaroqli qator yo'q.");
 
@@ -78,6 +84,11 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
         var variants = new Dictionary<int, long>();
         var newProducts = new Dictionary<int, long>();
 
+        // Har bir "Create" qatorini alohida try-catch ichida bajaramiz.
+        // Bitta qatorda xato bo'lsa — faqat o'sha qator o'tkazib yuboriladi,
+        // boshqa qatorlar importi davom etadi.
+        var rowErrors = new List<ImportRowError>();
+
         foreach (var row in rows)
         {
             if (row.Action == ImportRowAction.Existing)
@@ -86,17 +97,38 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
                 continue;
             }
 
-            newProducts[row.Row] = await sender.Send(new CreateProductCommand(
-                Name: row.Name!.Trim(),
-                CategoryId: await CategoryIdAsync(row.Category),
-                UnitId: UnitId(row.Unit),
-                MinStock: row.MinStock,
-                Barcodes: row.Barcode is { } code ? [new BarcodeInput(code, row.PackQty ?? 1)] : null,
-                Code: row.Sku,
-                IkpuCode: row.Ikpu,
-                VatRate: row.Vat,
-                SellingPrice: row.SellingPrice,
-                PriceCurrency: row.Currency), cancellationToken);
+            // Skip qatorlari (validatsiya xatosi bor) — IgnoreErrors=false bo'lsa bu yerga kelmaydi,
+            // IgnoreErrors=true bo'lsa xatolarni rowErrors ga yozamiz
+            if (row.Action == ImportRowAction.Skip)
+            {
+                rowErrors.Add(new ImportRowError(row.Row, row.Name, row.Errors));
+                continue;
+            }
+
+            try
+            {
+                var productId = await sender.Send(new CreateProductCommand(
+                    Name: row.Name!.Trim(),
+                    CategoryId: await CategoryIdAsync(row.Category),
+                    UnitId: UnitId(row.Unit),
+                    MinStock: row.MinStock,
+                    Barcodes: row.Barcode is { } code ? [new BarcodeInput(code, row.PackQty ?? 1)] : null,
+                    Code: row.Sku,
+                    IkpuCode: row.Ikpu,
+                    VatRate: row.Vat,
+                    SellingPrice: row.SellingPrice,
+                    PriceCurrency: row.Currency), cancellationToken);
+
+                newProducts[row.Row] = productId;
+            }
+            catch (Exception ex)
+            {
+                // Bu qatorda DB xatosi yoki boshqa muammo — o'tkazib yuboramiz
+                var message = ex is BusinessRuleException bre
+                    ? bre.Message
+                    : $"Xato: {ex.Message.Split('\n')[0].Trim()}'";
+                rowErrors.Add(new ImportRowError(row.Row, row.Name, [message]));
+            }
         }
 
         if (newProducts.Count > 0)
@@ -112,7 +144,10 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
                 variants[row] = defaults[productId];
         }
 
-        var attached = rows
+        // Faqat muvaffaqiyatli yaratilgan variantlar bilan ishlaymiz
+        var successRows = rows.Where(r => variants.ContainsKey(r.Row)).ToList();
+
+        var attached = successRows
             .Where(r => r.Action == ImportRowAction.Existing && r.Barcode is not null)
             .Select(r => (VariantId: variants[r.Row], Code: r.Barcode!, PackQty: r.PackQty ?? 1))
             .DistinctBy(b => b.Code)
@@ -124,7 +159,18 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             var known = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).ToListAsync(cancellationToken);
 
             foreach (var barcode in attached.Where(b => !known.Contains(b.Code)))
-                await sender.Send(new CreateBarcodeCommand(barcode.VariantId, barcode.Code, barcode.PackQty), cancellationToken);
+            {
+                try
+                {
+                    await sender.Send(new CreateBarcodeCommand(barcode.VariantId, barcode.Code, barcode.PackQty), cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // Barkod qo'shib bo'lmadi — davom etamiz
+                    var message = ex is BusinessRuleException bre ? bre.Message : ex.Message.Split('\n')[0].Trim();
+                    rowErrors.Add(new ImportRowError(0, null, [$"Barkod {barcode.Code}: {message}"]));
+                }
+            }
         }
 
         var variantIds = variants.Values.Distinct().ToList();
@@ -134,32 +180,41 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        var packByVariant = rows
+        var packByVariant = successRows
+            .Where(r => variants.ContainsKey(r.Row))
             .GroupBy(r => variants[r.Row])
             .ToDictionary(g => g.Key, g => g.Select(r => r.PackQty).FirstOrDefault(p => p > 1) ?? 1);
 
         var generated = 0;
         foreach (var variantId in variantIds.Except(withBarcode))
         {
-            await sender.Send(new GenerateBarcodeCommand(variantId, packByVariant[variantId]), cancellationToken);
-            generated++;
+            try
+            {
+                await sender.Send(new GenerateBarcodeCommand(variantId, packByVariant.GetValueOrDefault(variantId, 1)), cancellationToken);
+                generated++;
+            }
+            catch
+            {
+                // Barcode generation muvaffaqiyatsiz — davom etamiz
+            }
         }
 
         if (request.UpdatePrices)
         {
-            foreach (var row in rows.Where(r => r.Action == ImportRowAction.Existing && r.SellingPrice is not null))
+            foreach (var row in successRows.Where(r => r.Action == ImportRowAction.Existing && r.SellingPrice is not null))
                 await ProductPriceWriter.UpsertAsync(db, variants[row.Row], null, row.SellingPrice!.Value, cancellationToken, row.Currency);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var (imagesSet, imagesFailed) = await AttachImagesAsync(rows, variants, cancellationToken);
+        var (imagesSet, imagesFailed) = await AttachImagesAsync(successRows, variants, cancellationToken);
 
         return new ImportResultDto(
             newProducts.Count,
-            rows.Count(r => r.Action == ImportRowAction.Existing),
+            successRows.Count(r => r.Action == ImportRowAction.Existing),
             generated,
             imagesSet,
-            imagesFailed);
+            imagesFailed,
+            rowErrors.Count > 0 ? rowErrors : null);
     }
 
     private async Task<(int Set, int Failed)> AttachImagesAsync(

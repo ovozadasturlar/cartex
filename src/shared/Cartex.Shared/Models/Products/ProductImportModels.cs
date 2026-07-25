@@ -40,6 +40,15 @@ public record ProductImportPreviewDto(
 public record ImportProductsRequest(
     List<ImportRowDto> Rows,
     bool UpdatePrices = false,
-    bool CreateMissingCategories = true);
+    bool CreateMissingCategories = true,
+    bool IgnoreErrors = false);
 
-public record ImportResultDto(int Created, int Existing, int BarcodesGenerated, int ImagesSet, int ImagesFailed);
+public record ImportResultDto(
+    int Created,
+    int Existing,
+    int BarcodesGenerated,
+    int ImagesSet,
+    int ImagesFailed,
+    IReadOnlyCollection<ImportRowError>? FailedRows = null);
+
+public record ImportRowError(int Row, string? Name, IReadOnlyList<string> Errors);
