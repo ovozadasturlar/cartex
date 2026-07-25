@@ -150,5 +150,15 @@
   "attach_existing": "Mavjudiga biriktirish",
   "receive_stock": "Kirim qilish",
   "edit": "Tahrirlash",
-  "saved_successfully": "Muvaffaqiyatli saqlandi"
+  "saved_successfully": "Muvaffaqiyatli saqlandi",
+  "edit_product": "Mahsulotni tahrirlash",
+  "name": "Nomi",
+  "price": "Narx",
+  "code": "Artikul",
+  "category": "Kategoriya",
+  "take_photo": "Rasm olish",
+  "pick_photo": "Galereyadan tanlash",
+  "image_link": "Rasm havolasi",
+  "apply": "Qo'llash",
+  "image_attached": "Rasm biriktirildi"
 }

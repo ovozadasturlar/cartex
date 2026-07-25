@@ -150,5 +150,15 @@
   "attach_existing": "Мавжудига бириктириш",
   "receive_stock": "Кирим қилиш",
   "edit": "Таҳрирлаш",
-  "saved_successfully": "Муваффақиятли сақланди"
+  "saved_successfully": "Муваффақиятли сақланди",
+  "edit_product": "Маҳсулотни таҳрирлаш",
+  "name": "Номи",
+  "price": "Нарх",
+  "code": "Артикул",
+  "category": "Категория",
+  "take_photo": "Расм олиш",
+  "pick_photo": "Галереядан танлаш",
+  "image_link": "Расм ҳаволаси",
+  "apply": "Қўллаш",
+  "image_attached": "Расм бириктирилди"
 }

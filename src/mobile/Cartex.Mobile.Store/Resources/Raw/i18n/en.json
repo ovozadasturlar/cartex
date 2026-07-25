@@ -150,5 +150,15 @@
   "attach_existing": "Attach to existing",
   "receive_stock": "Receive stock",
   "edit": "Edit",
-  "saved_successfully": "Saved successfully"
+  "saved_successfully": "Saved successfully",
+  "edit_product": "Edit product",
+  "name": "Name",
+  "price": "Price",
+  "code": "Article",
+  "category": "Category",
+  "take_photo": "Take photo",
+  "pick_photo": "Pick from gallery",
+  "image_link": "Image link",
+  "apply": "Apply",
+  "image_attached": "Image attached"
 }
