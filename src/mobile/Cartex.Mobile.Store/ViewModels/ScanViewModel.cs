@@ -133,7 +133,10 @@ public partial class ScanViewModel : ObservableObject
             PriceText = $"{product.SellingPrice:N0} UZS";
             StockText = $"{Loc.Instance["stock_label"]}{product.OnHand:0.###} {product.UnitName}";
             OverlayVisible = true;
-            ImageUrl = _images.FromKey(product.ImageKey);
+            
+            // Show thumbnail directly; if unavailable, fallback to full image
+            var thumbUrl = _images.FromKey(product.ImageKey, thumb: true);
+            ImageUrl = string.IsNullOrWhiteSpace(thumbUrl) ? _images.FromKey(product.ImageKey, thumb: false) : thumbUrl;
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -276,10 +279,14 @@ public partial class ScanViewModel : ObservableObject
         StockText = $"{Loc.Instance["stock_label"]}{p.OnHand:0.###} {p.UnitName}";
         OverlayVisible = true;
         IsDetecting = false;
-        ImageUrl = _images.Full(p.ImageUrl);
+                // Show thumbnail directly; if unavailable, fallback to full image
+            var thumbUrl = _images.FromKey(p.ImageKey, thumb: true);
+            ImageUrl = string.IsNullOrWhiteSpace(thumbUrl) ? _images.FromKey(p.ImageKey, thumb: false) : thumbUrl;
+        
         SearchVisible = false;
         SearchText = "";
         SearchResults.Clear();
+        // Progressive loading removed – images are now set directly in LookupAsync / PickResult
     }
 
     private async Task FlashAsync(string message)

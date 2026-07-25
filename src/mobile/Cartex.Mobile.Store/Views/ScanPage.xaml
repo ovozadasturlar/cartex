@@ -135,6 +135,7 @@
                             Command="{Binding CloseOverlayCommand}" />
                 </Grid>
 
+
                 <!-- Product name + price + stock -->
                 <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="4">
                     <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
