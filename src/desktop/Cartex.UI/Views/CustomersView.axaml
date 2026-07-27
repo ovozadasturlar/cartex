@@ -178,29 +178,29 @@
                     </Border>
                     <StackPanel Grid.Column="4" Spacing="8" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <TextBlock Text="{Binding SelectedCustomer.FullName}" FontSize="20" FontWeight="Bold"
+                            <TextBlock Text="{Binding SelectedCustomerDisplay.FullName}" FontSize="20" FontWeight="Bold"
                                        Foreground="{DynamicResource TextPrimary}" />
-                            <TextBlock Text="{Binding SelectedCustomer.LastName}" FontSize="20" FontWeight="Bold"
+                            <TextBlock Text="{Binding SelectedCustomerDisplay.LastName}" FontSize="20" FontWeight="Bold"
                                        VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="20">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <mi:MaterialIcon Kind="PhoneOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.Phone}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.Phone}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6"
-                                        IsVisible="{Binding SelectedCustomer.Address, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                        IsVisible="{Binding SelectedCustomerDisplay.Address, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                 <mi:MaterialIcon Kind="MapMarkerOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.Address}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.Address}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6"
-                                        IsVisible="{Binding SelectedCustomer.CardBarcode, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                        IsVisible="{Binding SelectedCustomerDisplay.CardBarcode, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                 <mi:MaterialIcon Kind="CardAccountDetailsOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.CardBarcode}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.CardBarcode}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <mi:MaterialIcon Kind="SaleOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.DiscountPct, StringFormat='{}{0}%'}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.DiscountPct, StringFormat='{}{0}%'}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
@@ -246,7 +246,7 @@
                 <Border Grid.Column="1" Background="{DynamicResource SuccessBg}" CornerRadius="12" Padding="18">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding L[bonus]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBlock Text="{Binding SelectedCustomer.CashbackBalance, StringFormat='{}{0:N0}'}"
+                        <TextBlock Text="{Binding SelectedCustomerDisplay.CashbackBalance, StringFormat='{}{0:N0}'}"
                                    FontSize="22" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" />
                     </StackPanel>
                 </Border>
@@ -254,7 +254,7 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBlock Text="{Binding SelectedCustomer.CreditLimit, StringFormat='{}{0:N0}'}"
+                        <TextBlock Text="{Binding SelectedCustomerDisplay.CreditLimit, StringFormat='{}{0:N0}'}"
                                    FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
                     </StackPanel>
                 </Border>

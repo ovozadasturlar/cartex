@@ -128,6 +128,10 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private CategoryDto? _discountCategory;
     [ObservableProperty] private ManufacturerDto? _discountManufacturer;
     [ObservableProperty] private CustomerDto? _discountCustomer;
+    private static readonly CustomerDto EmptyDiscountCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
+    public CustomerDto DiscountCustomerDisplay => DiscountCustomer ?? EmptyDiscountCustomer;
+
+    partial void OnDiscountCustomerChanged(CustomerDto? value) => OnPropertyChanged(nameof(DiscountCustomerDisplay));
     [ObservableProperty] private string _customerSearch = "";
     private CancellationTokenSource? _customerSearchCts;
 

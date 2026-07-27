@@ -1,0 +1,291 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:models="using:Cartex.UI.Models"
+             xmlns:barcodes="using:Cartex.Shared.Models.Barcodes"
+             xmlns:categories="using:Cartex.Shared.Models.Categories"
+             xmlns:loyalty="using:Cartex.Shared.Models.Loyalty"
+             xmlns:products="using:Cartex.Shared.Models.Products"
+             xmlns:units="using:Cartex.Shared.Models.Units"
+             x:Class="Cartex.UI.Views.ProductEditorDialog"
+             x:DataType="vm:ProductsViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.icon-sm">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.icon-sm:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="#30000000" IsVisible="{Binding IsEditOpen}"
+            c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
+        <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="720" MaxHeight="820"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                BoxShadow="0 18 50 0 #33000000" Padding="28"
+                c:FormBehaviors.AutoFocus="True"
+                c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
+                c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
+            <DockPanel LastChildFill="True">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+                    <TextBlock Text="{Binding EditTitle}" Classes="h2" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon-sm" Command="{Binding CancelEditCommand}"
+                            ToolTip.Tip="{Binding L[close]}">
+                        <mi:MaterialIcon Kind="Close" Width="20" Height="20" />
+                    </Button>
+                </Grid>
+
+                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,20,0,0">
+                    <Button Grid.Column="2" Classes="outline" MinWidth="140" HorizontalContentAlignment="Center"
+                            Command="{Binding SaveAndNewCommand}" Content="{Binding L[save_and_new]}" IsVisible="{Binding CanSaveAndNew}" />
+                    <Button Grid.Column="0" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                            Foreground="{DynamicResource DangerBrush}" BorderBrush="{DynamicResource DangerBrush}"
+                            HorizontalContentAlignment="Center" Command="{Binding DeleteProductCommand}" Content="{Binding L[delete]}"
+                            IsVisible="{Binding CanDeleteProduct}" />
+                    <Button Grid.Column="3" Classes="outline" Margin="0,0,10,0" MinWidth="100"
+                            HorizontalContentAlignment="Center" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
+                    <Button Grid.Column="4" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
+                            Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                </Grid>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="156,20,*">
+                            <StackPanel Spacing="10">
+                                <Border Width="156" Height="156" CornerRadius="14" ClipToBounds="True"
+                                        Background="{DynamicResource SidebarItemHover}"
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <Grid>
+                                        <mi:MaterialIcon Kind="ImageOutline" Width="44" Height="44" HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                                        <Image Source="{Binding EditImagePreview}" Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+                                <Button Classes="outline" HorizontalAlignment="Stretch"
+                                        Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="14">
+                                <StackPanel Spacing="6">
+                                    <c:FieldLabel Text="{Binding L[name]}" Required="True" />
+                                    <TextBox x:Name="EditNameBox" Text="{Binding EditName, Mode=TwoWay}" MinHeight="42" />
+                                </StackPanel>
+                                <StackPanel Spacing="6">
+                                    <c:FieldLabel Text="{Binding L[selling_price]}" Required="{Binding IsNew}" />
+                                    <Grid ColumnDefinitions="*,8,Auto">
+                                        <NumericUpDown Value="{Binding EditSellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N2"
+                                                       ShowButtonSpinner="False" MinHeight="42" PlaceholderText="0.00" />
+                                        <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
+                                                  MinHeight="42" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding L[image_url]}" Classes="caption" />
+                                    <Grid ColumnDefinitions="*,8,Auto">
+                                        <TextBox Grid.Column="0" Text="{Binding EditImageUrl}" />
+                                        <Button Grid.Column="2" Classes="outline" VerticalAlignment="Stretch"
+                                                Command="{Binding FetchImageCommand}" CommandParameter="edit" ToolTip.Tip="{Binding L[image_url]}">
+                                            <mi:MaterialIcon Kind="Download" Width="16" Height="16" />
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[product_type]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding ProductTypes}" SelectedItem="{Binding EditProductType}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="products:ProductTypeDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="{Binding L[category]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding EditCategory}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="categories:CategoryDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[manufacturer]}" Classes="caption" />
+                        <Grid ColumnDefinitions="*,6,Auto">
+                            <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding EditManufacturer}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="loyalty:ManufacturerDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding ToggleAddManufacturerCommand}"
+                                    Content="+" MinWidth="36" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,6,Auto" IsVisible="{Binding IsAddingManufacturer}">
+                            <TextBox Text="{Binding NewManufacturerName}" PlaceholderText="{Binding L[manufacturer]}" MinHeight="34" />
+                            <Button Grid.Column="2" Classes="brand" Command="{Binding AddManufacturerCommand}"
+                                    Content="{Binding L[save]}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding L[unit]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding EditUnit}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="units:UnitDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="{Binding L[min_stock]}" Classes="caption" />
+                            <NumericUpDown Value="{Binding EditMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
+                                           ShowButtonSpinner="False" MinHeight="40" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
+                        <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, 4780000000002*6, ..." />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
+                        <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                        <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding EditBarcodeList}">
+                                <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="barcodes:BarcodeDto">
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="7" Padding="10,5" Margin="0,0,0,5"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <TextBlock Text="{Binding Code}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       Text="{Binding PackQty, Converter={x:Static conv:PackQtyConverter.Instance}}" />
+                                            <Button Grid.Column="2" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteEditBarcodeCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto">
+                            <TextBox Grid.Column="0" Text="{Binding EditBarcodeInput, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding AddEditBarcodeCommand}" />
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                            <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1"
+                                           FormatString="0.###" MinHeight="40" Width="120" ToolTip.Tip="{Binding L[pack_size_hint]}" />
+                            <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0" Command="{Binding AddEditBarcodeCommand}">
+                                <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                            </Button>
+                            <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding GenerateEditBarcodeCommand}" Content="{Binding L[generate_barcode]}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">
+                        <TextBlock Text="{Binding L[packs]}" Classes="caption" />
+                        <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding EditPacks}">
+                                <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="products:ProductPackDto">
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="7" Padding="10,5" Margin="0,0,0,5"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}" Text="{Binding Size, StringFormat='{}× {0:0.###}'}" />
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}"
+                                                       Text="{Binding Kind, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=pack}" />
+                                            <Button Grid.Column="3" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.EditPackCommand}" CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Grid.Column="4" Classes="icon-sm" Padding="3"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.DeletePackCommand}" CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Grid ColumnDefinitions="*,8,Auto,8,Auto,8,Auto,8,Auto">
+                            <TextBox Grid.Column="0" Text="{Binding PackName, Mode=TwoWay}" MinHeight="40" PlaceholderText="{Binding L[name]}" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding PackSize, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="0" Increment="1" FormatString="0.###" MinHeight="40" Width="110" ToolTip.Tip="{Binding PackSizeHint}" />
+                            <ComboBox Grid.Column="4" ItemsSource="{Binding PackKinds}" SelectedItem="{Binding SelectedPackKind}"
+                                      MinHeight="40" Width="120" ToolTip.Tip="{Binding L[pack_kind]}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PackKindOption"><TextBlock Text="{Binding Text}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <CheckBox Grid.Column="6" IsChecked="{Binding PackIsDefault}" Content="{Binding L[pack_default]}" VerticalAlignment="Center" />
+                            <Button Grid.Column="8" Classes="outline" MinHeight="40" Padding="12,0"
+                                    Command="{Binding SavePackCommand}" Content="{Binding L[add_pack]}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[sku_code]}" Classes="caption" />
+                        <TextBox Text="{Binding EditCode, Mode=TwoWay}" MinHeight="40" PlaceholderText="P-001" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="{Binding L[ikpu_code]}" Classes="caption" />
+                            <TextBox Text="{Binding EditIkpuCode, Mode=TwoWay}" MinHeight="40" PlaceholderText="00000000" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="6">
+                            <TextBlock Text="{Binding L[vat_rate]}" Classes="caption" />
+                            <NumericUpDown Value="{Binding EditVatRate, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100" FormatString="N2" MinHeight="40" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding HasAttributes}">
+                        <TextBlock Text="{Binding L[attribute_values]}" Classes="caption" />
+                        <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding EditAttributes}">
+                                <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:ProductAttributeVM">
+                                    <StackPanel Spacing="4" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Display}" Classes="caption" />
+                                        <TextBox Text="{Binding TextValue, Mode=TwoWay}" MinHeight="38" IsVisible="{Binding IsText}" />
+                                        <NumericUpDown Value="{Binding NumberValue, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" MinHeight="38" IsVisible="{Binding IsNumber}" />
+                                        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectValue, Mode=TwoWay}"
+                                                  HorizontalAlignment="Stretch" PlaceholderText="—" IsVisible="{Binding IsSelect}" />
+                                        <ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Border>
+</UserControl>

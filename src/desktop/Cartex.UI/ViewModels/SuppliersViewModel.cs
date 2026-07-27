@@ -37,7 +37,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private SupplierDto? _selectedSupplier;
-    [ObservableProperty] private SupplierTotalsDto? _totals;
+    [ObservableProperty] private SupplierTotalsDto _totals = new(0, 0, 0);
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLedgerLoading;
     [ObservableProperty] private bool _isSuppliesLoading;
@@ -65,6 +65,8 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Suppliers.Count == 0;
     public bool HasSelection => SelectedSupplier is not null;
+    private static readonly SupplierDto EmptySupplier = new(0, "", null, 0);
+    public SupplierDto SelectedSupplierDisplay => SelectedSupplier ?? EmptySupplier;
     public bool CanManage => _auth.HasPermission("suppliers.manage");
     public bool CanExport => _auth.HasPermission("reports.export");
     public bool CanViewSupplies => _auth.HasPermission("supplies.view");
@@ -103,7 +105,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         _searchCts?.Cancel();
         SelectedSupplier = null;
         Suppliers.Clear();
-        Totals = null;
+        Totals = new SupplierTotalsDto(0, 0, 0);
         IsEditOpen = false;
         IsRepayOpen = false;
         IsSuppliesTab = false;
@@ -202,6 +204,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     partial void OnSelectedSupplierChanged(SupplierDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedSupplierDisplay));
         OnPropertyChanged(nameof(SelectedInitials));
         OnPropertyChanged(nameof(SelectedIsAdvance));
         OnPropertyChanged(nameof(SelectedPayableAmount));

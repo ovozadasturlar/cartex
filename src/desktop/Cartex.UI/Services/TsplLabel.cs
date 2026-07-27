@@ -10,19 +10,17 @@ namespace Cartex.UI.Services;
 
 public static class TsplLabel
 {
-    public static byte[] Build(string code, string name, int quantity, LabelOptions options)
+    public static byte[] Build(string code, string name, int quantity, LabelOptions options, string? priceText = null)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
         var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
-        var bitmap = Render(code, name, widthDots, heightDots, dotsPerMm, options);
+        using var bitmap = RenderBitmap(code, name, priceText, widthDots, heightDots, dotsPerMm, options);
 
         using var stream = new MemoryStream();
         void Command(string text) => Write(stream, text + "\r\n");
 
         Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
-        // GAPDETECT stores the real measured gap in the printer.  Do not overwrite
-        // that value on every job, otherwise a completed calibration has no effect.
         if (!options.UsePrinterGapCalibration)
             Command($"GAP {Mm(options.GapMm)} mm,0 mm");
         Command("DIRECTION 1");
@@ -31,7 +29,7 @@ public static class TsplLabel
         Command($"SPEED {options.Speed}");
         Command("CLS");
         Write(stream, $"BITMAP 0,0,{widthDots / 8},{heightDots},0,");
-        stream.Write(bitmap);
+        stream.Write(ToMonochrome(bitmap.PeekPixels(), widthDots, heightDots));
         Write(stream, "\r\n");
         Command($"PRINT {Math.Clamp(quantity, 1, 999)},1");
 
@@ -43,14 +41,23 @@ public static class TsplLabel
         using var stream = new MemoryStream();
         void Command(string text) => Write(stream, text + "\r\n");
 
-        // GAPDETECT needs an approximate label size.  Sending the size selected in
-        // Cartex makes calibration independent of the Windows driver's paper setup.
         Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
         Command("DIRECTION 1");
         Command("REFERENCE 0,0");
         Command("GAPDETECT");
         Command("HOME");
         return stream.ToArray();
+    }
+
+    public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options)
+    {
+        var dotsPerMm = options.Dpi / 25.4;
+        var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
+        var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
+        using var bitmap = RenderBitmap(code, name, priceText, widthDots, heightDots, dotsPerMm, options);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     private static string Mm(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
@@ -72,12 +79,12 @@ public static class TsplLabel
         return right >= left ? (left, right) : (0, bitmap.Width - 1);
     }
 
-    private static byte[] Render(string code, string name, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
+    private static SKBitmap RenderBitmap(string code, string name, string? priceText, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
     {
         int Dots(double mm) => (int)Math.Round(mm * dotsPerMm);
 
-        using var surface = SKSurface.Create(new SKImageInfo(widthDots, heightDots, SKColorType.Rgba8888, SKAlphaType.Opaque));
-        var canvas = surface.Canvas;
+        var bitmap = new SKBitmap(new SKImageInfo(widthDots, heightDots, SKColorType.Rgba8888, SKAlphaType.Opaque));
+        using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.White);
 
         var shiftX = Dots(options.ShiftXMm);
@@ -95,24 +102,35 @@ public static class TsplLabel
         var edgeMargin = Dots(2.5);
         var usable = widthDots - sideMargin * 2;
 
-        using var nameFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, heightDots * 0.09f);
-        using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, heightDots * 0.1f);
+        float FontSize(double fraction, double minMm, double maxMm) => Math.Clamp((float)(heightDots * fraction), Dots(minMm), Dots(maxMm));
+        using var nameFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.075, 2.4, 4.4));
+        using var priceFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.13, 3.4, 5.5));
+        using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, FontSize(0.075, 2.4, 3.3));
 
-        var lines = WrapLines(name, nameFont, usable, 2);
+        var lines = WrapLines(name, nameFont, usable, string.IsNullOrWhiteSpace(priceText) ? 2 : 1);
         var nameHeight = lines.Count * nameFont.Spacing;
+        var priceHeight = string.IsNullOrWhiteSpace(priceText) ? 0 : priceFont.Spacing;
         var codeHeight = codeFont.Spacing;
         var spacing = Dots(1);
 
         var contentTop = (float)edgeMargin;
         var contentBottom = heightDots - edgeMargin;
-        var barcodeHeight = (int)Math.Max(Dots(6), contentBottom - contentTop - nameHeight - codeHeight - spacing * 2);
-        var block = nameHeight + spacing + barcodeHeight + spacing + codeHeight;
+        var priceSpacing = priceHeight > 0 ? spacing : 0;
+        var barcodeHeight = (int)Math.Max(Dots(7), contentBottom - contentTop - nameHeight - priceHeight - codeHeight - spacing * 2 - priceSpacing);
+        var block = nameHeight + priceHeight + barcodeHeight + codeHeight + spacing * 2 + priceSpacing;
         var top = contentTop + (contentBottom - contentTop - block) / 2;
 
         foreach (var line in lines)
         {
             canvas.DrawText(line, widthDots / 2f, top + nameFont.Size, SKTextAlign.Center, nameFont, paint);
             top += nameFont.Spacing;
+        }
+
+        if (priceHeight > 0)
+        {
+            top += spacing;
+            canvas.DrawText(priceText!, widthDots / 2f, top + priceFont.Size, SKTextAlign.Center, priceFont, paint);
+            top += priceFont.Spacing;
         }
 
         using var barcode = RenderBarcode(code, usable, barcodeHeight);
@@ -123,9 +141,7 @@ public static class TsplLabel
         canvas.DrawText(code, widthDots / 2f, top + spacing + barcodeHeight + spacing + codeFont.Size, SKTextAlign.Center, codeFont, paint);
         canvas.Flush();
 
-        using var image = surface.Snapshot();
-        using var pixmap = image.PeekPixels();
-        return ToMonochrome(pixmap, widthDots, heightDots);
+        return bitmap;
     }
 
     private static SKBitmap RenderBarcode(string code, int width, int height)

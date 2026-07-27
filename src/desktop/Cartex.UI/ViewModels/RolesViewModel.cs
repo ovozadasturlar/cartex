@@ -17,6 +17,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
     private readonly IExportService _export;
+    private readonly IDialogService _dialog;
 
     private List<PermissionDto> _allPermissions = [];
     private List<RoleDto> _all = [];
@@ -74,7 +75,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     private IReadOnlyList<PageShortcut>? _shortcuts;
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public RolesViewModel(IRolesApi rolesApi, IPermissionsApi permissionsApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export)
+    public RolesViewModel(IRolesApi rolesApi, IPermissionsApi permissionsApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IDialogService dialog)
     {
         _rolesApi = rolesApi;
         _permissionsApi = permissionsApi;
@@ -82,6 +83,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _auth = auth;
         _export = export;
+        _dialog = dialog;
     }
 
     public async Task LoadAsync()
@@ -240,6 +242,21 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
+
+    [RelayCommand]
+    private async Task DeleteAsync(RoleDto role)
+    {
+        if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_role_confirm"], role.Name), L["delete"]))
+            return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _rolesApi.DeleteAsync(role.Id);
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task SaveAsync()

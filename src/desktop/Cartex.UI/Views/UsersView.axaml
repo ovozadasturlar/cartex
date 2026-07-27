@@ -65,12 +65,20 @@
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Classes="icon" Margin="6,0"
-                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
-                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
-                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
-                                                             Foreground="{DynamicResource TextSecondary}" />
-                                        </Button>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Classes="icon" Margin="6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="0,0,6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.DeleteCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[delete]}">
+                                                <mi:MaterialIcon Kind="DeleteOutline" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

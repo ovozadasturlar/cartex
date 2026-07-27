@@ -29,7 +29,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private bool _isReceiptOpen;
     [ObservableProperty] private ReceiptDto? _receipt;
-    [ObservableProperty] private SalesTotalsDto? _totals;
+    [ObservableProperty] private SalesTotalsDto _totals = new(0, 0, 0, 0);
 
     [ObservableProperty] private bool _isReturnOpen;
     [ObservableProperty] private SaleDto? _returningSale;
@@ -64,7 +64,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         ReturningSale = null;
         IsReceiptOpen = false;
         IsReturnOpen = false;
-        Totals = null;
+        Totals = new SalesTotalsDto(0, 0, 0, 0);
         DateFrom = DateTimeOffset.Now.AddDays(-7);
         DateTo = DateTimeOffset.Now;
         Paging.Page = 1;

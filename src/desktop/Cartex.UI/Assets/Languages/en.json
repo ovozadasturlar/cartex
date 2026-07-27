@@ -178,6 +178,9 @@
   "default_min_stock": "Default min stock for new products",
   "default_unit": "Default",
   "delete": "Delete",
+  "delete_product_confirm": "Delete product \"{0}\"?",
+  "delete_user_confirm": "Delete user {0}? This cannot be undone from the user list.",
+  "delete_role_confirm": "Delete role {0}? Assign it to another user first if it is in use.",
   "delete_currency_confirm": "Delete this currency?",
   "description": "Description",
   "dest_order": "Order",
@@ -771,6 +774,8 @@
   "shortcut_scan_focus": "Focus scan box",
   "shortcuts_title": "Keyboard shortcuts",
   "show_out_of_stock": "Show out-of-stock products at the register",
+  "show_unlisted_products": "Show products not yet in the branch assortment",
+  "allow_insufficient_stock_sales": "Allow sales when stock is insufficient",
   "sku_code": "SKU / code",
   "sms": "SMS",
   "sms_delivered": "Delivered",
@@ -888,5 +893,10 @@
   "z_section_cash": "Cash movement",
   "z_section_sales": "Sales",
   "z_section_summary": "Summary",
-  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer"
+  "zreport_printer_hint": "If not set, the Z-report prints on the receipt printer",
+  "print_with_price": "Print with price",
+  "assortment": "Assortment",
+  "catalog_auto": "Auto",
+  "catalog_visible": "Show",
+  "catalog_hidden": "Hide"
 }

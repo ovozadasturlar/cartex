@@ -13,6 +13,8 @@ using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Shifts;
+using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Ordering;
 using Avalonia.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -107,6 +109,8 @@ public partial class CartItem : ObservableObject
 
     [ObservableProperty] private decimal? _available;
 
+    public StockOnHandDto? ProductDetail { get; set; }
+
     partial void OnAvailableChanged(decimal? value) => OnPropertyChanged(nameof(IsOverStock));
 
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
@@ -155,7 +159,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IFeaturesApi _featuresApi;
 
     public BranchContextService Branch { get; }
-    public QuickProductViewModel QuickProduct { get; }
+    public ProductsViewModel ProductEditor { get; }
     public PrepackViewModel Prepack { get; }
 
     [ObservableProperty] private string _searchText = string.Empty;
@@ -192,8 +196,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private long? _lastSupplierId;
     private decimal _lastPurchasePrice;
     private decimal _detailRequestedQty;
+    private static readonly CustomerDto EmptyCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
+    private static readonly StockOnHandDto EmptyDetailProduct = new(0, "", null, null, "", "", 0, 0, null);
+    public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
+    public StockOnHandDto DetailProductDisplay => DetailProduct ?? EmptyDetailProduct;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || QuickProduct.IsOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsEditOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -282,6 +290,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
     public bool IsCartEmpty => CartItems.Count == 0;
     public bool CanOverridePrice => _auth.HasPermission("sales.priceOverride");
+    public bool CanCreateProduct => _auth.HasPermission("products.manage");
+    public bool CanManageProducts => _auth.HasPermission("products.manage");
     [ObservableProperty] private bool _canPrepack;
 
     public decimal CustomerDebt => SelectedCustomer?.DebtBalance ?? 0;
@@ -340,7 +350,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi,
         IProductsApi productsApi, ICategoriesApi categoriesApi, IReceiptApi receiptApi, IBarcodesApi barcodesApi, BranchContextService branch,
-        QuickProductViewModel quickProduct, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, AuthService auth,
+        ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
         IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
         ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi)
@@ -367,9 +377,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _receiptApi = receiptApi;
         _barcodesApi = barcodesApi;
         Branch = branch;
-        QuickProduct = quickProduct;
-        QuickProduct.Created += OnQuickProductCreated;
-        QuickProduct.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuickProductViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
+        ProductEditor = productEditor;
+        ProductEditor.CreatedForSale += OnProductCreatedForSale;
+        ProductEditor.ProductUpdated += productId => _ = RefreshProductAfterEditAsync(productId);
+        ProductEditor.ProductDeleted += OnProductDeleted;
+        ProductEditor.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ProductsViewModel.IsEditOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         Prepack.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(PrepackViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
@@ -404,6 +416,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private void HandleEscape()
     {
+        if (ProductEditor.IsEditOpen) { ProductEditor.CancelEditCommand.Execute(null); return; }
         if (IsQuickRatesOpen) { IsQuickRatesOpen = false; return; }
         if (IsReceiptOpen) { IsReceiptOpen = false; return; }
         if (IsReceiveOpen) { IsReceiveOpen = false; return; }
@@ -417,7 +430,30 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void OnCartItemChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(CartItem.Quantity) or nameof(CartItem.LineTotal))
+        {
             NotifyTotals();
+            _ = SyncActiveCartAsync();
+        }
+    }
+
+    private async Task SyncActiveCartAsync()
+    {
+        if (_activeCartCode is not { } code || CartItems.Count == 0) return;
+        try
+        {
+            await _orderingApi.UpdateItemsAsync(code, new UpdateCartItemsRequest(
+                CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity)).ToList()));
+        }
+        catch { }
+    }
+
+    private async Task CancelActiveCartAsync(string code)
+    {
+        try
+        {
+            await _orderingApi.UpdateItemsAsync(code, new UpdateCartItemsRequest([]));
+        }
+        catch { }
     }
 
     private void LoadHeldSales()
@@ -489,7 +525,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             foreach (var item in cart.Items)
             {
                 var stock = Products.FirstOrDefault(p => p.VariantId == item.VariantId);
-                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity, stock?.Quantity);
+                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity, stock?.Quantity, stock);
             }
 
             if (cart.CustomerId is { } customerId)
@@ -597,6 +633,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task OpenProductEditor()
+    {
+        if (!CanCreateProduct) return;
+        await ProductEditor.OpenCreateForSaleAsync();
     }
 
     [RelayCommand]
@@ -777,6 +820,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     partial void OnSelectedCustomerChanged(CustomerDto? value)
     {
+        OnPropertyChanged(nameof(SelectedCustomerDisplay));
         OnPropertyChanged(nameof(CustomerDebt));
         OnPropertyChanged(nameof(HasCreditLimit));
         OnPropertyChanged(nameof(RemainingCredit));
@@ -787,6 +831,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         NotifyExcess();
         SchedulePreview();
     }
+
+    partial void OnDetailProductChanged(StockOnHandDto? value) => OnPropertyChanged(nameof(DetailProductDisplay));
 
     partial void OnPaidCashChanged(decimal value) => NotifyTotals();
     partial void OnPaidCardChanged(decimal value) => NotifyTotals();
@@ -981,16 +1027,52 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        await QuickProduct.OpenCommand.ExecuteAsync(null);
-        QuickProduct.Barcode = code;
+        if (!CanCreateProduct)
+        {
+            _toast.Warning(L["no_data"]);
+            return;
+        }
+
+        await ProductEditor.OpenCreateForSaleAsync(code);
     }
 
-    private void OnQuickProductCreated(long variantId, string name) =>
-        AddToCart(variantId, name, QuickProduct.SellingPrice ?? 0);
+    private void OnProductCreatedForSale(ProductDto product)
+    {
+        var stock = new StockOnHandDto(
+            product.DefaultVariantId,
+            product.Name,
+            product.CategoryId,
+            product.CategoryName,
+            product.UnitName,
+            product.Dimension ?? string.Empty,
+            0,
+            product.SellingPrice ?? 0,
+            null,
+            product.ImageUrl,
+            null,
+            product.Code,
+            product.Barcodes);
+        var existing = Products.ToList().FindIndex(item => item.VariantId == stock.VariantId);
+        if (existing >= 0) Products[existing] = stock;
+        else Products.Insert(0, stock);
+        AddToCart(stock.VariantId, stock.ProductName, stock.SellingPrice, available: stock.Quantity, detail: stock);
+        _ = LoadProductsAsync();
+    }
+
+    private void OnProductDeleted(long productId, IReadOnlyCollection<long> variantIds)
+    {
+        foreach (var item in CartItems.Where(item => variantIds.Contains(item.VariantId)).ToList())
+            CartItems.Remove(item);
+        foreach (var product in Products.Where(product => variantIds.Contains(product.VariantId)).ToList())
+            Products.Remove(product);
+        if (DetailProduct is { } detail && variantIds.Contains(detail.VariantId))
+            IsProductDetailOpen = false;
+        NotifyTotals();
+    }
 
     [RelayCommand]
     private void AddStockToCart(StockOnHandDto stock) =>
-        AddToCart(stock.VariantId, stock.ProductName, stock.SellingPrice, available: stock.Quantity);
+        AddToCart(stock.VariantId, stock.ProductName, stock.SellingPrice, available: stock.Quantity, detail: stock);
 
     [RelayCommand]
     public void ShowProductDetail(StockOnHandDto product)
@@ -1005,7 +1087,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void ShowCartDetail(CartItem item) =>
-        ShowProductDetail(Products.FirstOrDefault(p => p.VariantId == item.VariantId)
+        ShowProductDetail(item.ProductDetail ?? Products.FirstOrDefault(p => p.VariantId == item.VariantId)
             ?? new StockOnHandDto(item.VariantId, item.ProductName, null, null, string.Empty, string.Empty, item.Available ?? 0, item.UnitPrice, null));
 
     private async Task LoadDetailBarcodesAsync(long variantId)
@@ -1020,6 +1102,55 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CloseProductDetail() => IsProductDetailOpen = false;
+
+    [RelayCommand]
+    private async Task EditDetailProductAsync()
+    {
+        if (!CanManageProducts || DetailProduct is not { } detail) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
+
+        try
+        {
+            ProductDto? product;
+            using (_busy.Begin(L["loading"]))
+                product = (await _productsApi.GetAllAsync(variantId: detail.VariantId)).FirstOrDefault();
+            if (product is null) { _toast.Warning(L["no_data"]); return; }
+            await ProductEditor.OpenEditForSaleAsync(product);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task RefreshProductAfterEditAsync(long productId)
+    {
+        try
+        {
+            var detail = DetailProduct;
+            if (detail is not null)
+            {
+                var product = (await _productsApi.GetAllAsync(variantId: detail.VariantId)).FirstOrDefault(p => p.Id == productId);
+                if (product is not null)
+                {
+                    var updated = detail with
+                    {
+                        ProductName = product.Name,
+                        CategoryId = product.CategoryId,
+                        CategoryName = product.CategoryName,
+                        UnitName = product.UnitName,
+                        SellingPrice = product.SellingPrice ?? detail.SellingPrice,
+                        ImageUrl = product.ImageUrl,
+                        Code = product.Code
+                    };
+                    DetailProduct = updated;
+                    DetailBarcodes = string.Join(", ", product.Barcodes);
+                    foreach (var item in CartItems.Where(item => item.VariantId == updated.VariantId))
+                        item.ProductDetail = updated;
+                }
+            }
+
+            await LoadProductsAsync();
+        }
+        catch { }
+    }
 
     [RelayCommand]
     private void AddDetailToCart()
@@ -1120,7 +1251,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             if (index >= 0) Products[index] = updated;
             DetailProduct = updated;
             foreach (var item in CartItems.Where(c => c.VariantId == updated.VariantId && !c.IsPrepack))
+            {
                 item.Available = updated.Quantity;
+                item.ProductDetail = updated;
+            }
             IsReceiveOpen = false;
             _toast.Success(L["success"]);
         }
@@ -1173,12 +1307,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         await Prepack.OpenAsync(warehouseId);
     }
 
-    private void AddToCart(long variantId, string name, decimal price, decimal quantity = 1, decimal? available = null)
+    private void AddToCart(long variantId, string name, decimal price, decimal quantity = 1, decimal? available = null, StockOnHandDto? detail = null)
     {
         var existing = CartItems.FirstOrDefault(c => c.VariantId == variantId && !c.IsPrepack);
         if (existing is not null)
         {
             if (available is not null) existing.Available = available;
+            existing.ProductDetail ??= detail;
             existing.Quantity += quantity;
             NotifyTotals();
             return;
@@ -1191,7 +1326,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             OriginalPrice = price,
             UnitPrice = price,
             Quantity = quantity,
-            Available = available
+            Available = available,
+            ProductDetail = detail
         });
         NotifyTotals();
     }
@@ -1207,14 +1343,25 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void Decrement(CartItem item)
     {
-        if (item.IsPrepack) { CartItems.Remove(item); NotifyTotals(); return; }
-        if (item.Quantity <= 1) CartItems.Remove(item);
+        if (item.IsPrepack) { RemoveItem(item); return; }
+        if (item.Quantity <= 1) { RemoveItem(item); return; }
         else item.Quantity -= 1;
         NotifyTotals();
     }
 
     [RelayCommand]
-    private void RemoveItem(CartItem item) { CartItems.Remove(item); NotifyTotals(); }
+    private void RemoveItem(CartItem item)
+    {
+        CartItems.Remove(item);
+        NotifyTotals();
+        if (CartItems.Count == 0 && _activeCartCode is { } code)
+        {
+            _activeCartCode = null;
+            _ = CancelActiveCartAsync(code);
+        }
+        else
+            _ = SyncActiveCartAsync();
+    }
 
     [RelayCommand]
     private void PayExact()
@@ -1237,6 +1384,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void ClearCart()
     {
+        if (_activeCartCode is { } activeCode)
+            _ = CancelActiveCartAsync(activeCode);
         CartItems.Clear();
         _activeCartCode = null;
         DebtDueDate = null;

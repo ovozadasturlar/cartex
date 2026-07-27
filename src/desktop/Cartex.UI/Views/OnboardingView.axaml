@@ -91,7 +91,7 @@
                                  HorizontalAlignment="Center" Foreground="{DynamicResource SuccessBrush}" />
                 <TextBlock Text="{Binding L[onboarding_done]}" HorizontalAlignment="Center"
                            TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
-                <TextBlock Text="{Binding SelectedPreset.Title}" HorizontalAlignment="Center" FontWeight="SemiBold"
+                <TextBlock Text="{Binding SelectedPresetTitle}" HorizontalAlignment="Center" FontWeight="SemiBold"
                            Foreground="{DynamicResource BrandPrimaryBrush}" />
             </StackPanel>
 

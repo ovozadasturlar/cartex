@@ -178,6 +178,9 @@
   "default_min_stock": "Мин. остаток для новых товаров",
   "default_unit": "Стандарт",
   "delete": "Удалить",
+  "delete_product_confirm": "Удалить товар «{0}»?",
+  "delete_user_confirm": "Удалить пользователя {0}? Его нельзя будет вернуть из списка пользователей.",
+  "delete_role_confirm": "Удалить роль {0}? Сначала переназначьте её пользователям, если она используется.",
   "delete_currency_confirm": "Удалить эту валюту?",
   "description": "Описание",
   "dest_order": "Заказ",
@@ -771,6 +774,8 @@
   "shortcut_scan_focus": "Фокус на поле сканирования",
   "shortcuts_title": "Горячие клавиши",
   "show_out_of_stock": "Показывать в кассе товары с нулевым остатком",
+  "show_unlisted_products": "Показывать товары, ещё не добавленные в ассортимент филиала",
+  "allow_insufficient_stock_sales": "Разрешить продажу при недостаточном остатке",
   "sku_code": "Артикул / код",
   "sms": "SMS",
   "sms_delivered": "Доставлено",
@@ -888,5 +893,10 @@
   "z_section_cash": "Движение кассы",
   "z_section_sales": "Продажи",
   "z_section_summary": "Итог",
-  "zreport_printer_hint": "Если не выбран, Z-отчёт печатается на принтере чеков"
+  "zreport_printer_hint": "Если не выбран, Z-отчёт печатается на принтере чеков",
+  "print_with_price": "Печать с ценой",
+  "assortment": "Ассортимент",
+  "catalog_auto": "Авто",
+  "catalog_visible": "Показывать",
+  "catalog_hidden": "Скрыть"
 }

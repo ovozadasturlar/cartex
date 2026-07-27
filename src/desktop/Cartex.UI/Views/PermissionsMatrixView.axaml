@@ -4,12 +4,6 @@
              x:Class="Cartex.UI.Views.PermissionsMatrixView"
              x:CompileBindings="False">
 
-    <UserControl.Resources>
-        <ItemsPanelTemplate x:Key="Horizontal">
-            <StackPanel Orientation="Horizontal" />
-        </ItemsPanelTemplate>
-    </UserControl.Resources>
-
     <DockPanel Margin="24">
         <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[permissions_matrix]}"
                       Subtitle="{Binding L[permissions_govern_hint]}" Margin="0,0,0,16" />
@@ -17,75 +11,78 @@
             <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="12">
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <Border Width="260" Padding="6,0">
-                                <TextBlock Text="{Binding L[permissions]}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Bottom" />
-                            </Border>
-                            <Border Width="90" IsVisible="{Binding CanGovern}">
-                                <TextBlock Text="{Binding L[global_col]}" FontWeight="SemiBold" FontSize="12"
-                                           Foreground="{DynamicResource TextSecondary}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Bottom" />
-                            </Border>
-                            <ItemsControl ItemsSource="{Binding Roles}" ItemsPanel="{StaticResource Horizontal}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="96" Padding="4,0">
-                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
-                                                       TextWrapping="Wrap" TextAlignment="Center"
-                                                       Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Bottom" />
+                    <ItemsRepeater ItemsSource="{Binding Rows}" Margin="12">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="2" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <Grid ColumnDefinitions="260,90,Auto" Margin="0,0,0,6" IsVisible="{Binding IsHeader}">
+                                        <Border Width="260" Padding="6,0">
+                                            <TextBlock Text="{Binding $parent[UserControl].DataContext.L[permissions]}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Bottom" />
                                         </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,6" />
-
-                        <ItemsControl ItemsSource="{Binding Groups}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,0,0,10">
-                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13"
-                                                   Foreground="{DynamicResource BrandPrimaryBrush}" Margin="6,4,0,4" />
-                                        <ItemsControl ItemsSource="{Binding Rows}">
-                                            <ItemsControl.ItemTemplate>
+                                        <Border Grid.Column="1" Width="90"
+                                                IsVisible="{Binding $parent[UserControl].DataContext.CanGovern}">
+                                            <TextBlock Text="{Binding $parent[UserControl].DataContext.L[global_col]}" FontWeight="SemiBold" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Bottom" />
+                                        </Border>
+                                        <ItemsRepeater Grid.Column="2" ItemsSource="{Binding $parent[UserControl].DataContext.Roles}">
+                                            <ItemsRepeater.Layout>
+                                                <StackLayout Orientation="Horizontal" />
+                                            </ItemsRepeater.Layout>
+                                            <ItemsRepeater.ItemTemplate>
                                                 <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,1">
-                                                        <Border Width="260" Padding="6,5">
-                                                            <StackPanel Spacing="1">
-                                                                <TextBlock Text="{Binding Name}" FontSize="13"
-                                                                           Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" />
-                                                                <TextBlock Text="{Binding Description}" FontSize="11"
-                                                                           Foreground="{DynamicResource TextSecondary}" />
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <Border Width="90" IsVisible="{Binding CanGovern}">
-                                                            <ToggleSwitch IsChecked="{Binding IsGloballyEnabled}" OnContent="" OffContent=""
-                                                                          HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                          ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[global_disable_warning]}" />
-                                                        </Border>
-                                                        <ItemsControl ItemsSource="{Binding Cells}" ItemsPanel="{StaticResource Horizontal}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <Border Width="96">
-                                                                        <CheckBox IsChecked="{Binding IsAssigned}" IsEnabled="{Binding IsInteractive}"
-                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                                    </Border>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                    <Border Width="96" Padding="4,0">
+                                                        <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" TextAlignment="Center"
+                                                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Bottom" />
+                                                    </Border>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                                            </ItemsRepeater.ItemTemplate>
+                                        </ItemsRepeater>
+                                    </Grid>
+
+                                    <TextBlock Text="{Binding GroupTitle}" IsVisible="{Binding HasGroupTitle}"
+                                               FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource BrandPrimaryBrush}"
+                                               Margin="6,10,0,4" />
+
+                                    <Grid ColumnDefinitions="260,90,Auto" IsVisible="{Binding IsPermission}" Margin="0,1">
+                                        <Border Width="260" Padding="6,5">
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="{Binding Name}" FontSize="13"
+                                                           Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Description}" FontSize="11"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="1" Width="90" IsVisible="{Binding CanGovern}">
+                                            <ToggleSwitch IsChecked="{Binding IsGloballyEnabled}" OnContent="" OffContent=""
+                                                          Command="{Binding ToggleGlobalCommand}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                          ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[global_disable_warning]}" />
+                                        </Border>
+                                        <ItemsRepeater Grid.Column="2" ItemsSource="{Binding Cells}">
+                                            <ItemsRepeater.Layout>
+                                                <StackLayout Orientation="Horizontal" />
+                                            </ItemsRepeater.Layout>
+                                            <ItemsRepeater.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="96">
+                                                        <CheckBox IsChecked="{Binding IsAssigned}" IsEnabled="{Binding IsInteractive}"
+                                                                  Command="{Binding ToggleCommand}"
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsRepeater.ItemTemplate>
+                                        </ItemsRepeater>
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </ScrollViewer>
             </Border>
             <c:EmptyState Icon="ShieldKeyOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />

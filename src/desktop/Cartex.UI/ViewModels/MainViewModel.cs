@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -86,6 +87,7 @@ public partial class MainViewModel : ViewModelBase
         _businessApi = businessApi;
         _featuresApi = featuresApi;
         Branch = branch;
+        Branch.PropertyChanged += OnBranchPropertyChanged;
         Busy = busy;
         Connectivity = connectivity;
         _currentTheme = SettingsService.Instance.Theme;
@@ -97,6 +99,28 @@ public partial class MainViewModel : ViewModelBase
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
         LocalizationManager.Instance.LanguageChanged += _langChangedHandler;
+    }
+
+    private void OnBranchPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(BranchContextService.HasMultipleWarehouses))
+            RefreshMenuVisibility();
+    }
+
+    private void RefreshMenuVisibility()
+    {
+        var filter = NavFilter.Trim();
+        foreach (var section in MenuSections)
+        {
+            var visible = 0;
+            foreach (var item in section.Items)
+            {
+                item.IsVisible = (filter.Length == 0 || item.Title.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    && (item.Key != "transfers" || Branch.HasMultipleWarehouses);
+                if (item.IsVisible) visible++;
+            }
+            section.IsVisible = visible > 0;
+        }
     }
 
     public void Initialize()
@@ -246,17 +270,7 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnNavFilterChanged(string value)
     {
-        var filter = value.Trim();
-        foreach (var section in MenuSections)
-        {
-            var visible = 0;
-            foreach (var item in section.Items)
-            {
-                item.IsVisible = filter.Length == 0 || item.Title.Contains(filter, StringComparison.OrdinalIgnoreCase);
-                if (item.IsVisible) visible++;
-            }
-            section.IsVisible = visible > 0;
-        }
+        RefreshMenuVisibility();
     }
 
     private void OnMenuNavigationRequested(string menuKey)

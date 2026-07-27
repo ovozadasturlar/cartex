@@ -22,6 +22,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
 
     private List<RoleDto> _allRoles = [];
     private List<BranchDto> _allBranches = [];
@@ -54,7 +55,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     private IReadOnlyList<PageShortcut>? _shortcuts;
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
+    public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog)
     {
         _usersApi = usersApi;
         _rolesApi = rolesApi;
@@ -63,6 +64,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _export = export;
         _auth = auth;
+        _dialog = dialog;
         Paging.Attach(LoadUsersAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["username"], "Username"), new(L["date"], "CreatedAt")]);
     }
@@ -202,6 +204,21 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
+
+    [RelayCommand]
+    private async Task DeleteAsync(UserDto user)
+    {
+        if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_user_confirm"], user.Username), L["delete"]))
+            return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _usersApi.DeleteAsync(user.Id);
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task SaveAsync()

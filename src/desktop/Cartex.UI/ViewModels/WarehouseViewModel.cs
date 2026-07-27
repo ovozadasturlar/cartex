@@ -247,6 +247,9 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
         AdjustVm = vm;
     }
 
+    [RelayCommand]
+    private void CloseAdjust() => AdjustVm = null;
+
     private async Task ApplyAdjustAsync(StockOnHandDto item, AdjustStockResult result)
     {
         var warehouseId = Branch.CurrentWarehouseId;

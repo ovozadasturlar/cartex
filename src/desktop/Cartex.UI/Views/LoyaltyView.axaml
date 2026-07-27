@@ -434,7 +434,7 @@
                                 <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding DiscountCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
                                     <Border Background="{DynamicResource InputBg}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                             CornerRadius="6" MinHeight="38" Padding="12,0">
-                                        <TextBlock Text="{Binding DiscountCustomer.FullName}" VerticalAlignment="Center"
+                                        <TextBlock Text="{Binding DiscountCustomerDisplay.FullName}" VerticalAlignment="Center"
                                                    Foreground="{DynamicResource TextPrimary}" />
                                     </Border>
                                     <Button Grid.Column="2" Classes="icon" Command="{Binding ClearDiscountCustomerCommand}" VerticalAlignment="Center">

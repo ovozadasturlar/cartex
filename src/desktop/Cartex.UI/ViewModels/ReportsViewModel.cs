@@ -59,6 +59,10 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _bonusAmount;
     [ObservableProperty] private string _bonusNote = "";
     [ObservableProperty] private CustomerSalesDto? _bonusCustomer;
+    private static readonly CustomerSalesDto EmptyBonusCustomer = new(0, "", 0, 0, 0, DateTime.MinValue);
+    public CustomerSalesDto BonusCustomerDisplay => BonusCustomer ?? EmptyBonusCustomer;
+
+    partial void OnBonusCustomerChanged(CustomerSalesDto? value) => OnPropertyChanged(nameof(BonusCustomerDisplay));
 
     public bool CanGiveBonus => _auth.HasPermission("loyalty.manage");
 

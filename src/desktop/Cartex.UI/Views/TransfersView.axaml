@@ -143,37 +143,37 @@
                     <StackPanel Spacing="10">
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[date]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[from_account]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.FromWarehouse}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.FromWarehouse}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[to_account]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.ToWarehouse}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.ToWarehouse}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[product_name]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.ProductName}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.ProductName}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[quantity]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.Quantity, StringFormat='{}{0:N0}'}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.Quantity, StringFormat='{}{0:N0}'}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[status]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.Status}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.Status}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="{Binding L[user]}" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransfer.UserName}"
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedTransferDisplay.UserName}"
                                        Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" />
                         </Grid>
                     </StackPanel>

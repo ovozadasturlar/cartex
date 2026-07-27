@@ -178,6 +178,9 @@
   "default_min_stock": "Янги маҳсулот учун мин. қолдиқ",
   "default_unit": "Стандарт",
   "delete": "Ўчириш",
+  "delete_product_confirm": "{0} маҳсулотини ўчирмоқчимисиз?",
+  "delete_user_confirm": "{0} фойдаланувчисини ўчиришни тасдиқлайсизми? У фойдаланувчилар рўйхатидан қайта тикланмайди.",
+  "delete_role_confirm": "{0} ролини ўчиришни тасдиқлайсизми? Агар у ишлатилаётган бўлса, аввал фойдаланувчиларга бошқа рол беринг.",
   "delete_currency_confirm": "Бу валюта ўчирилсинми?",
   "description": "Тавсиф",
   "dest_order": "Буюртма",
@@ -771,6 +774,8 @@
   "shortcut_scan_focus": "Скан майдонига фокус",
   "shortcuts_title": "Тезкор тугмалар",
   "show_out_of_stock": "Тугаган маҳсулотлар кассада кўринсин",
+  "show_unlisted_products": "Филиал ассортиментига ҳали кирмаган маҳсулотлар кўринсин",
+  "allow_insufficient_stock_sales": "Қолдиқ етарли бўлмаса ҳам сотишга рухсат бериш",
   "sku_code": "SKU / код",
   "sms": "SMS",
   "sms_delivered": "Етиб борган",
@@ -888,5 +893,10 @@
   "z_section_cash": "Касса ҳаракати",
   "z_section_sales": "Савдо",
   "z_section_summary": "Якун",
-  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади"
+  "zreport_printer_hint": "Танланмаса Z-ҳисобот чек принтеридан чиқади",
+  "print_with_price": "Нарх билан чоп этиш",
+  "assortment": "Ассортимент",
+  "catalog_auto": "Авто",
+  "catalog_visible": "Кўрсатиш",
+  "catalog_hidden": "Яшириш"
 }

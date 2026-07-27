@@ -72,7 +72,7 @@
                     </StackPanel>
                     <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center"
                                       Margin="20,0,0,0"
-                                      DataContext="{Binding $parent[c:Pager].DataContext}" />
+                                      DataContext="{Binding DataContext, RelativeSource={RelativeSource TemplatedParent}}" />
                     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                         <ComboBox ItemsSource="{Binding PageSizes}" SelectedItem="{Binding PageSize}"
                                   MinWidth="76" VerticalAlignment="Center" />

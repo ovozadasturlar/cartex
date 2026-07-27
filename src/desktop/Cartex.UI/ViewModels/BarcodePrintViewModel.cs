@@ -14,8 +14,11 @@ using Cartex.UI.ViewModels.Common;
 
 namespace Cartex.UI.ViewModels;
 
-public sealed record BarcodeChoice(string Code, decimal PackQty, string Display)
+public sealed class BarcodeChoice(string code, decimal packQty, string display)
 {
+    public string Code { get; } = code;
+    public decimal PackQty { get; } = packQty;
+    public string Display { get; } = display;
     public bool IsPack => PackQty > 1;
 }
 
@@ -37,6 +40,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _currentCode;
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
+    [ObservableProperty] private bool _printWithPrice;
 
     public event Action? FocusChipsRequested;
     public event Action? FocusQuantityRequested;
@@ -45,6 +49,10 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public bool HasSelection => SelectedProduct is not null;
     public bool HasBarcodes => BarcodeOptions.Count > 0;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
+    public string PriceText => SelectedProduct?.SellingPrice is { } price ? $"{price:N0} {SelectedProduct.PriceCurrency ?? "UZS"}" : "";
+    public string SelectedProductImageUrl => SelectedProduct?.ImageUrl ?? string.Empty;
+    public string SelectedProductName => SelectedProduct?.Name ?? string.Empty;
+    public string SelectedProductUnitName => SelectedProduct?.UnitName ?? string.Empty;
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
@@ -110,6 +118,10 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     partial void OnSelectedProductChanged(ProductDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(PriceText));
+        OnPropertyChanged(nameof(SelectedProductImageUrl));
+        OnPropertyChanged(nameof(SelectedProductName));
+        OnPropertyChanged(nameof(SelectedProductUnitName));
         _ = LoadBarcodesAsync(value);
     }
 
@@ -150,15 +162,23 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         if (value < 1) Quantity = 1;
     }
 
+    partial void OnPrintWithPriceChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PriceText));
+        UpdatePreview();
+    }
+
     [RelayCommand] private void Increment() => Quantity++;
     [RelayCommand] private void Decrement() { if (Quantity > 1) Quantity--; }
+    [RelayCommand] private void ClearSelection() => SelectedProduct = null;
 
     private void UpdatePreview()
     {
-        if (string.IsNullOrWhiteSpace(CurrentCode)) { Preview = null; return; }
+        if (SelectedProduct is null || string.IsNullOrWhiteSpace(CurrentCode)) { Preview = null; return; }
         try
         {
-            var png = _labels.RenderPng(CurrentCode);
+            var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
+            var png = _labels.RenderLabelPreview(CurrentCode, name, PrintWithPrice ? PriceText : null);
             using var stream = new MemoryStream(png);
             Preview = new Bitmap(stream);
         }
@@ -171,7 +191,8 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         if (SelectedProduct is null || string.IsNullOrWhiteSpace(CurrentCode) || Quantity < 1) { _toast.Warning(L["error"]); return; }
         try
         {
-            _labels.PrintLabels(CurrentCode, SelectedProduct.Name, Quantity, null);
+            var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
+            _labels.PrintLabels(CurrentCode, name, Quantity, null, PrintWithPrice ? PriceText : null);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

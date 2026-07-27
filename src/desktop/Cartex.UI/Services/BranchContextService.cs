@@ -20,6 +20,7 @@ public sealed partial class BranchContextService : ObservableObject
     public long? CurrentBranchId => SelectedBranch?.Id;
     public long? CurrentWarehouseId => SelectedWarehouse?.Id;
     public bool HasMultipleBranches => Branches.Count > 1;
+    public bool HasMultipleWarehouses => Warehouses.Count > 1;
 
     public BranchContextService(IBranchesApi branchesApi, IWarehousesApi warehousesApi)
     {
@@ -49,6 +50,7 @@ public sealed partial class BranchContextService : ObservableObject
     {
         Warehouses.Clear();
         SelectedWarehouse = null;
+        OnPropertyChanged(nameof(HasMultipleWarehouses));
         if (SelectedBranch is null) return;
 
         try
@@ -57,6 +59,7 @@ public sealed partial class BranchContextService : ObservableObject
             foreach (var w in warehouses)
                 Warehouses.Add(w);
             SelectedWarehouse = Warehouses.FirstOrDefault();
+            OnPropertyChanged(nameof(HasMultipleWarehouses));
         }
         catch
         {

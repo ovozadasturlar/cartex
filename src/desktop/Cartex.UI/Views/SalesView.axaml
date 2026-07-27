@@ -105,6 +105,19 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
+        <Style Selector="Button.detail-edit">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="7" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.detail-edit:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+
         <Style Selector="TextBlock.ratedate">
             <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
         </Style>
@@ -153,6 +166,14 @@
                         <mi:MaterialIcon Kind="ViewGridOutline" Width="24" Height="24" IsVisible="{Binding PosListMode}" />
                     </Panel>
                 </ToggleButton>
+                <Button DockPanel.Dock="Right" Classes="outline" Padding="12,0" Margin="8,0,0,0"
+                        Command="{Binding OpenProductEditorCommand}" IsVisible="{Binding CanCreateProduct}"
+                        ToolTip.Tip="{Binding L[add_product]}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[add_product]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" Margin="8,0,0,0"
                             VerticalAlignment="Center" IsVisible="{Binding ShiftRequired}">
                     <Border Background="{DynamicResource SuccessBg}" CornerRadius="8" Padding="10,6"
@@ -264,15 +285,12 @@
             </DockPanel>
 
             <ScrollViewer ScrollChanged="OnProductsScroll">
-                <Panel>
-                    <StackPanel>
-                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+                <Grid RowDefinitions="Auto,Auto">
+                    <ItemsRepeater Grid.Row="0" ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="172" MinItemHeight="218" MinColumnSpacing="0" MinRowSpacing="0" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
                                 <Button Classes="pcard"
                                         Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
@@ -321,11 +339,14 @@
                                     </Grid>
                                 </Button>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
 
-                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding PosListMode}">
-                        <ItemsControl.ItemTemplate>
+                    <ItemsRepeater Grid.Row="0" ItemsSource="{Binding Products}" IsVisible="{Binding PosListMode}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="0" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
                                 <Button Classes="prow"
                                         Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
@@ -357,21 +378,20 @@
                                     </Grid>
                                 </Button>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
 
-                    <Button Classes="outline" HorizontalAlignment="Center" Margin="0,10,0,16" Padding="18,8"
+                    <Button Grid.Row="1" Classes="outline" HorizontalAlignment="Center" Margin="0,10,0,16" Padding="18,8"
                             Command="{Binding LoadMoreProductsCommand}" IsVisible="{Binding HasMoreProducts}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="ChevronDown" Width="16" Height="16" />
                             <TextBlock Text="{Binding L[load_more]}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    </StackPanel>
 
-                    <c:EmptyState Icon="PackageVariant" Title="{Binding L[no_data]}"
+                    <c:EmptyState Grid.Row="0" Icon="PackageVariant" Title="{Binding L[no_data]}"
                                   IsVisible="{Binding !Products.Count}" />
-                </Panel>
+                </Grid>
             </ScrollViewer>
         </DockPanel>
 
@@ -435,14 +455,14 @@
                               IsVisible="{Binding SelectedCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <TextBlock Text="{Binding SelectedCustomer.FullName}" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding SelectedCustomerDisplay.FullName}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextPrimary}" />
-                                    <TextBlock Text="{Binding SelectedCustomer.LastName}" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding SelectedCustomerDisplay.LastName}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextSecondary}" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
-                                               Text="{Binding SelectedCustomer.CashbackBalance, StringFormat='{}{0:N0} 🎁'}" />
+                                               Text="{Binding SelectedCustomerDisplay.CashbackBalance, StringFormat='{}{0:N0} 🎁'}" />
                                     <TextBlock FontSize="11" Foreground="{DynamicResource DangerBrush}"
                                                IsVisible="{Binding CustomerIsDebtor}">
                                         <Run Text="{Binding L[opening_kind_debt]}" />
@@ -996,8 +1016,9 @@
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="0" ClipToBounds="True">
-                <ScrollViewer>
-                    <StackPanel Margin="22" Spacing="12">
+                <Grid>
+                    <ScrollViewer>
+                        <StackPanel Margin="22" Spacing="12">
                         <Grid ColumnDefinitions="Auto,16,*">
                             <Border Width="128" Height="128" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"
                                     Background="{DynamicResource SidebarItemHover}">
@@ -1015,24 +1036,24 @@
                                 </Panel>
                             </Border>
                             <StackPanel Grid.Column="2" Spacing="10">
-                                <TextBlock Text="{Binding DetailProduct.ProductName}" FontSize="17" FontWeight="Bold"
+                                <TextBlock Text="{Binding DetailProductDisplay.ProductName}" FontSize="17" FontWeight="Bold"
                                            TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />
                                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[category]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DetailProduct.CategoryName}" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DetailProductDisplay.CategoryName}" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[unit]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DetailProduct.UnitName}" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DetailProductDisplay.UnitName}" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[on_hand]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DetailProduct.Quantity, StringFormat='{}{0:N0}'}"
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DetailProductDisplay.Quantity, StringFormat='{}{0:N0}'}"
                                                FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding L[selling_price]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DetailProduct.SellingPrice, StringFormat='{}{0:N0}'}"
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DetailProductDisplay.SellingPrice, StringFormat='{}{0:N0}'}"
                                                FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" />
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding L[sku_code]}" Foreground="{DynamicResource TextSecondary}"
-                                               IsVisible="{Binding DetailProduct.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DetailProduct.Code}" Foreground="{DynamicResource TextPrimary}"
+                                               IsVisible="{Binding DetailProductDisplay.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DetailProductDisplay.Code}" Foreground="{DynamicResource TextPrimary}"
                                                FontWeight="SemiBold"
-                                               IsVisible="{Binding DetailProduct.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
+                                               IsVisible="{Binding DetailProductDisplay.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
                                     <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding L[barcode]}" Foreground="{DynamicResource TextSecondary}"
                                                IsVisible="{Binding DetailBarcodes, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
                                     <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding DetailBarcodes}" Foreground="{DynamicResource TextPrimary}"
@@ -1118,8 +1139,14 @@
                                 </StackPanel>
                             </Button>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Button Classes="detail-edit" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
+                            Command="{Binding EditDetailProductCommand}" IsVisible="{Binding CanManageProducts}"
+                            ToolTip.Tip="{Binding L[edit]}">
+                        <mi:MaterialIcon Kind="Pencil" Width="18" Height="18" />
+                    </Button>
+                </Grid>
             </Border>
         </Border>
 
@@ -1197,7 +1224,7 @@
             </Border>
         </Border>
 
-        <views:QuickProductView Grid.ColumnSpan="3" DataContext="{Binding QuickProduct}" />
+        <views:ProductEditorDialog Grid.ColumnSpan="3" DataContext="{Binding ProductEditor}" />
 
         <views:PrepackView Grid.ColumnSpan="3" DataContext="{Binding Prepack}" />
 

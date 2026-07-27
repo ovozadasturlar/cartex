@@ -20,7 +20,7 @@ public partial class AccountsViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<AccountDto> Accounts { get; } = [];
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private AccountsTotalsDto? _totals;
+    [ObservableProperty] private AccountsTotalsDto _totals = new(0, 0);
     [ObservableProperty] private string _searchText = "";
     public bool IsEmpty => Accounts.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");

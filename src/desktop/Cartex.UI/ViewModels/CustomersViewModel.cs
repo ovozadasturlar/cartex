@@ -33,7 +33,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private CustomerDto? _selectedCustomer;
-    [ObservableProperty] private CustomerTotalsDto? _totals;
+    [ObservableProperty] private CustomerTotalsDto _totals = new(0, 0, 0);
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLedgerLoading;
     [ObservableProperty] private bool _isSalesLoading;
@@ -137,6 +137,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Customers.Count == 0;
     public bool HasSelection => SelectedCustomer is not null;
+    private static readonly CustomerDto EmptyCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
+    public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -178,7 +180,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         _searchCts?.Cancel();
         SelectedCustomer = null;
         Customers.Clear();
-        Totals = null;
+        Totals = new CustomerTotalsDto(0, 0, 0);
         IsEditOpen = false;
         IsMessageOpen = false;
         IsRepayOpen = false;
@@ -272,6 +274,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     partial void OnSelectedCustomerChanged(CustomerDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedCustomerDisplay));
         OnPropertyChanged(nameof(SelectedInitials));
         OnPropertyChanged(nameof(CanRepay));
         OnPropertyChanged(nameof(SelectedIsCredit));

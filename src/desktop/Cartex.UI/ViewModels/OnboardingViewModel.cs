@@ -41,6 +41,9 @@ public partial class OnboardingViewModel(IBusinessApi businessApi, IBranchesApi 
     public bool IsStep4 => Step == 4;
     public bool CanBack => Step > 1;
     public bool IsLast => Step == 4;
+    public string SelectedPresetTitle => SelectedPreset?.Title ?? string.Empty;
+
+    partial void OnSelectedPresetChanged(PresetOption? value) => OnPropertyChanged(nameof(SelectedPresetTitle));
 
     partial void OnStepChanged(int value)
     {

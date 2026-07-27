@@ -113,6 +113,14 @@
                                 <TextBlock Text="{Binding L[show_out_of_stock]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOutOfStock}" />
                             </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[show_unlisted_products]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowUnlistedProducts}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[allow_insufficient_stock_sales]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowInsufficientStockSales}" />
+                            </Grid>
                             <TextBlock Text="{Binding L[sales_policy_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>

@@ -207,6 +207,7 @@
 
                         <ComboBox ItemsSource="{Binding Branch.Warehouses}" SelectedItem="{Binding Branch.SelectedWarehouse}"
                                   MinWidth="150" VerticalAlignment="Center"
+                                  IsVisible="{Binding Branch.HasMultipleWarehouses}"
                                   PlaceholderText="{Binding L[warehouse]}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>

@@ -146,12 +146,12 @@
                                                FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedSupplier.Name}" FontSize="20" FontWeight="Bold"
+                                    <TextBlock Text="{Binding SelectedSupplierDisplay.Name}" FontSize="20" FontWeight="Bold"
                                                Foreground="{DynamicResource TextPrimary}" />
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                IsVisible="{Binding SelectedSupplier.Phone, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                                IsVisible="{Binding SelectedSupplierDisplay.Phone, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                         <mi:MaterialIcon Kind="PhoneOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                        <TextBlock Text="{Binding SelectedSupplier.Phone}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Text="{Binding SelectedSupplierDisplay.Phone}" Foreground="{DynamicResource TextSecondary}" />
                                     </StackPanel>
                                 </StackPanel>
                                 </Grid>
@@ -305,13 +305,13 @@
                     <TextBlock Text="{Binding L[payment]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding SelectedSupplier.Name}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SelectedSupplierDisplay.Name}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=supkind}"
-                                       IsVisible="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=haskind}"
+                            <TextBlock Text="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=supkind}"
+                                       IsVisible="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=haskind}"
                                        Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}}"
-                                       Foreground="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=brush}"
+                            <TextBlock Text="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}}"
+                                       Foreground="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=brush}"
                                        FontWeight="SemiBold" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>

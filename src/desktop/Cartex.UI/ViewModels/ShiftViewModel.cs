@@ -44,6 +44,8 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private UserDto? _selectedCashier;
     [ObservableProperty] private string? _baseCurrency;
     [ObservableProperty] private string? _reportMeta;
+    private static readonly CurrentShiftDto EmptyCurrent = new(0, DateTime.MinValue, 0, 0, 0, 0, 0, 0, 0, 0);
+    private static readonly ZReportDto EmptyReport = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public ObservableCollection<ShiftHistoryDto> History { get; } = [];
     public ObservableCollection<ExpenseCategoryDto> ExpenseCategories { get; } = [];
@@ -52,6 +54,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     public bool HasShift => Current is not null;
     public bool NoShift => Current is null;
+    public CurrentShiftDto CurrentDisplay => Current ?? EmptyCurrent;
     public decimal BaseDifference => CountedCash - (Current?.ExpectedCash ?? 0);
 
     public string? ShiftDuration
@@ -67,6 +70,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         }
     }
     public bool HasReport => LastReport is not null;
+    public ZReportDto LastReportDisplay => LastReport ?? EmptyReport;
     public bool CanViewHistory => _auth.HasPermission("shifts.view");
     public bool CanViewAll => _auth.HasPermission("shifts.viewAll");
     public bool CanManageAll => _auth.HasPermission("shifts.manageAll");
@@ -244,6 +248,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     partial void OnCurrentChanged(CurrentShiftDto? value)
     {
+        OnPropertyChanged(nameof(CurrentDisplay));
         OnPropertyChanged(nameof(HasShift));
         OnPropertyChanged(nameof(NoShift));
         OnPropertyChanged(nameof(BaseDifference));
@@ -254,7 +259,11 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     partial void OnCountedCashChanged(decimal value) => OnPropertyChanged(nameof(BaseDifference));
 
-    partial void OnLastReportChanged(ZReportDto? value) => OnPropertyChanged(nameof(HasReport));
+    partial void OnLastReportChanged(ZReportDto? value)
+    {
+        OnPropertyChanged(nameof(HasReport));
+        OnPropertyChanged(nameof(LastReportDisplay));
+    }
 
     [RelayCommand]
     private async Task OpenShiftAsync()

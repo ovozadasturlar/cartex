@@ -204,7 +204,7 @@
         </DockPanel>
 
         <Border Background="#30000000" IsVisible="{Binding IsModalOpen}"
-                c:OverlayBehaviors.DismissCommand="{Binding AdjustVm.CancelCommand}">
+                c:OverlayBehaviors.DismissCommand="{Binding CloseAdjustCommand}">
             <v:AdjustStockDialog DataContext="{Binding AdjustVm}"
                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>

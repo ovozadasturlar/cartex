@@ -178,6 +178,9 @@
   "default_min_stock": "Yangi mahsulot uchun min. qoldiq",
   "default_unit": "Standart",
   "delete": "O'chirish",
+  "delete_product_confirm": "{0} mahsulotini o'chirmoqchimisiz?",
+  "delete_user_confirm": "{0} foydalanuvchisini o'chirishni tasdiqlaysizmi? U foydalanuvchilar ro'yxatidan qayta tiklanmaydi.",
+  "delete_role_confirm": "{0} rolini o'chirishni tasdiqlaysizmi? Agar u ishlatilayotgan bo'lsa, avval foydalanuvchilarga boshqa rol bering.",
   "delete_currency_confirm": "Bu valyuta o'chirilsinmi?",
   "description": "Tavsif",
   "dest_order": "Buyurtma",
@@ -771,6 +774,8 @@
   "shortcut_scan_focus": "Skan maydoniga fokus",
   "shortcuts_title": "Tezkor tugmalar",
   "show_out_of_stock": "Tugagan mahsulotlar kassada ko'rinsin",
+  "show_unlisted_products": "Filial assortimentiga hali kirmagan mahsulotlar ko'rinsin",
+  "allow_insufficient_stock_sales": "Qoldiq yetarli bo'lmasa ham sotishga ruxsat berish",
   "sku_code": "SKU / kod",
   "sms": "SMS",
   "sms_delivered": "Yetib borgan",
@@ -888,5 +893,10 @@
   "z_section_cash": "Kassa harakati",
   "z_section_sales": "Savdo",
   "z_section_summary": "Yakun",
-  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi"
+  "zreport_printer_hint": "Tanlanmasa Z-hisobot chek printeridan chiqadi",
+  "print_with_price": "Narx bilan chop etish",
+  "assortment": "Assortiment",
+  "catalog_auto": "Avto",
+  "catalog_visible": "Ko'rsatish",
+  "catalog_hidden": "Yashirish"
 }
