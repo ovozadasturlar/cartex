@@ -7,6 +7,7 @@ using Cartex.Application.Sales.Commands;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,21 @@ public class ProductVisibilityTests(DatabaseFixture fixture) : DatabaseTest(fixt
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Stocks.Where(s => s.VariantId == variantId && s.WarehouseId == warehouseId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, 0m));
+    }
+
+    private async Task<long> CreateUnstockedVariantAsync()
+    {
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var unitId = await db.Units.Select(x => x.Id).FirstAsync();
+        var variant = new ProductVariant
+        {
+            Product = new Product { Name = $"Omborsiz mahsulot {Guid.NewGuid():N}", UnitId = unitId },
+            IsDefault = true
+        };
+        db.ProductVariants.Add(variant);
+        await db.SaveChangesAsync();
+        return variant.Id;
     }
 
     private async Task<StockOnHandPageDto> OnHandAsync(long warehouseId, bool forSale)
@@ -118,6 +134,21 @@ public class ProductVisibilityTests(DatabaseFixture fixture) : DatabaseTest(fixt
         var item = Assert.Single(shown.Items, i => i.VariantId == variantId);
         Assert.Equal(0m, item.Quantity);
         Assert.Equal(shown.Items.Count, shown.TotalCount);
+    }
+
+    [Fact]
+    public async Task Unstocked_variant_is_shown_when_policy_allows_it()
+    {
+        var (branch1, warehouse1, businessId, adminId, _, _) = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        var variantId = await CreateUnstockedVariantAsync();
+
+        await SetShowOutOfStockAsync(true);
+
+        var shown = await OnHandAsync(warehouse1, forSale: true);
+        var item = Assert.Single(shown.Items, i => i.VariantId == variantId);
+        Assert.Equal(0m, item.Quantity);
+        Assert.Empty(item.Barcodes!);
     }
 
     [Fact]

@@ -7,3 +7,5 @@ public record CartDto(string AggregateCode, string Status, long WarehouseId, lon
 public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName, string WarehouseName, int ItemCount, DateTime CreatedAt, string? CreatedByName, string? Note, decimal EstimatedTotal);
 
 public record UpdateCartStatusRequest(string Status);
+
+public record UpdateCartItemsRequest(List<SubmitCartItemRequest> Items);

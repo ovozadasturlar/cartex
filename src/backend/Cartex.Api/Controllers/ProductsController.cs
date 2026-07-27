@@ -98,6 +98,14 @@ public class ProductsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:long}")]
+    [HasPermission(AppPermissions.Products.Manage)]
+    public async Task<IActionResult> DeleteProduct(long id)
+    {
+        await sender.Send(new DeleteProductCommand(id));
+        return NoContent();
+    }
+
     [HttpPost("price")]
     [HasPermission(AppPermissions.Products.Manage)]
     public async Task<IActionResult> SetPrice(SetProductPriceCommand command)

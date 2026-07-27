@@ -12,7 +12,7 @@ public class CartConfiguration : IEntityTypeConfiguration<Cart>
         builder.Property(x => x.AggregateCode).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.AggregateCode).IsUnique();
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
-        builder.HasIndex(x => new { x.CustomerId, x.IdempotencyKey }).IsUnique()
+        builder.HasIndex(x => x.IdempotencyKey).IsUnique()
             .HasFilter("idempotency_key IS NOT NULL");
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);

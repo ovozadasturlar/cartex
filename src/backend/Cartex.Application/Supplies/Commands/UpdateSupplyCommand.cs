@@ -2,6 +2,7 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Inventory;
 using Cartex.Application.Products;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -28,6 +29,7 @@ public sealed class UpdateSupplyCommandHandler(
     ILedgerService ledger,
     ICurrencyService currency,
     ISettingsService settingsService,
+    IBranchCatalogService branchCatalog,
     IAuditService audit) : IRequestHandler<UpdateSupplyCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateSupplyCommand request, CancellationToken cancellationToken)
@@ -141,6 +143,8 @@ public sealed class UpdateSupplyCommandHandler(
             var supplierDebt = await ledger.SupplierAccountAsync(sid, AccountType.Debt, cancellationToken, supplyCurrency);
             ledger.Post(OperationType.DebtCharge, total, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
         }
+
+        await branchCatalog.ActivateAsync(warehouse.BranchId, request.Items.Select(x => x.VariantId), BranchCatalogActivationSource.Supply, cancellationToken);
 
         audit.Add("supplyedit", "supplies", supply.Id, new { supply.SupplierId, supply.TotalAmount, Lines = request.Items.Count });
         await db.SaveChangesAsync(cancellationToken);

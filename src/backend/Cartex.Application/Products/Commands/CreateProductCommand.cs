@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
+using Cartex.Application.Barcodes;
+using Cartex.Application.Barcodes.Commands;
+using Microsoft.Extensions.Configuration;
 
 namespace Cartex.Application.Products.Commands;
 
@@ -27,7 +30,7 @@ public record CreateProductCommand(
     string? PriceCurrency = null,
     long? ManufacturerId = null) : ICommand<long>;
 
-public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService) : IRequestHandler<CreateProductCommand, long>
+public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration) : IRequestHandler<CreateProductCommand, long>
 {
     public async Task<long> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
@@ -77,9 +80,11 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
                 Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, packQty);
                 db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = packQty });
             }
-
-            await db.SaveChangesAsync(cancellationToken);
         }
+        else
+            db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = GeneratedBarcodeCode.Build(configuration, variant.Id), PackQty = 1 });
+
+        await db.SaveChangesAsync(cancellationToken);
 
         if (request.SellingPrice is { } sellingPrice)
         {

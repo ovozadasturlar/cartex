@@ -42,16 +42,8 @@ public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, ICon
         if (!await db.ProductVariants.AnyAsync(v => v.Id == request.VariantId, cancellationToken))
             throw new NotFoundException("Variant not found.");
 
-        var prefix = configuration["Barcode:Prefix"]?.Trim().TrimEnd('-').ToUpperInvariant();
-        if (string.IsNullOrEmpty(prefix)) prefix = "CTX";
-        if (GeneratedPackCodes.EmbeddedQty($"{prefix}-") is not null)
-            throw new BusinessRuleException("Barcode:Prefix ichida -P<son>- bo'lagi bo'lishi mumkin emas.");
-
         var qty = request.PackQty > 1 ? request.PackQty : 1m;
-        var serial = request.VariantId.ToString("D6");
-        var code = qty > 1
-            ? $"{prefix}-P{qty.ToString("0.###", CultureInfo.InvariantCulture)}-{serial}"
-            : $"{prefix}-{serial}";
+        var code = GeneratedBarcodeCode.Build(configuration, request.VariantId, qty);
 
         var existing = await db.Barcodes.FirstOrDefaultAsync(b => b.Code == code, cancellationToken);
         if (existing is not null)
@@ -64,6 +56,23 @@ public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, ICon
         db.Barcodes.Add(new Barcode { VariantId = request.VariantId, Code = code, PackQty = qty });
         await db.SaveChangesAsync(cancellationToken);
         return code;
+    }
+}
+
+public static class GeneratedBarcodeCode
+{
+    public static string Build(IConfiguration configuration, long variantId, decimal packQty = 1)
+    {
+        var prefix = configuration["Barcode:Prefix"]?.Trim().TrimEnd('-').ToUpperInvariant();
+        if (string.IsNullOrEmpty(prefix)) prefix = "CTX";
+        if (GeneratedPackCodes.EmbeddedQty($"{prefix}-") is not null)
+            throw new BusinessRuleException("Barcode:Prefix ichida -P<son>- bo'lagi bo'lishi mumkin emas.");
+
+        var quantity = packQty > 1 ? packQty : 1m;
+        var serial = variantId.ToString("D6");
+        return quantity > 1
+            ? $"{prefix}-P{quantity.ToString("0.###", CultureInfo.InvariantCulture)}-{serial}"
+            : $"{prefix}-{serial}";
     }
 }
 

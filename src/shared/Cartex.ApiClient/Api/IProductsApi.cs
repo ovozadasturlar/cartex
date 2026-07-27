@@ -35,6 +35,9 @@ public interface IProductsApi
     [Put("/api/products/{id}/state")]
     Task SetStateAsync(long id, [Body] SetProductStateRequest request);
 
+    [Delete("/api/products/{id}")]
+    Task DeleteAsync(long id);
+
     [Post("/api/products/price")]
     Task SetPriceAsync([Body] SetProductPriceRequest request);
 

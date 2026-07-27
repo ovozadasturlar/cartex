@@ -44,6 +44,14 @@ public class OrderingController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("carts/{code}/items")]
+    [HasPermission(AppPermissions.Sales.Create)]
+    public async Task<IActionResult> UpdateItems(string code, UpdateCartItemsRequest request)
+    {
+        await sender.Send(new UpdateCartItemsCommand(code, request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity)).ToList()));
+        return NoContent();
+    }
+
     [HttpPost("carts")]
     [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
     public async Task<ActionResult<string>> Submit(SubmitCartCommand command)

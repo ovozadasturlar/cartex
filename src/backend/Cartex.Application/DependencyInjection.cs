@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IDiscountCalculator, DiscountCalculator>();
 
         services.AddScoped<IStockAllocator, StockAllocator>();
+        services.AddScoped<IBranchCatalogService, BranchCatalogService>();
 
         return services;
     }

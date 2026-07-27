@@ -6,7 +6,7 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false) : ICommand<Unit>;
+public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false) : ICommand<Unit>;
 
 public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateSalesPolicyCommand, Unit>
@@ -23,6 +23,8 @@ public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, I
         cfg.RequireDebtDueDate = request.RequireDebtDueDate;
         cfg.RequireSupplier = request.RequireSupplier;
         cfg.ShowOutOfStock = request.ShowOutOfStock;
+        cfg.ShowUnlistedProducts = request.ShowUnlistedProducts;
+        cfg.AllowInsufficientStockSales = request.AllowInsufficientStockSales;
         audit.Add("settings", "settings", null, new { section = "salesPolicy" });
         await settings.SetAsync(SettingKeys.SalesPolicy, cfg, cancellationToken);
         return Unit.Value;

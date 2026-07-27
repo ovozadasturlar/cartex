@@ -16,4 +16,7 @@ public interface IUsersApi
 
     [Put("/api/users/{id}")]
     Task UpdateAsync(long id, [Body] UpdateUserRequest request);
+
+    [Delete("/api/users/{id}")]
+    Task DeleteAsync(long id);
 }

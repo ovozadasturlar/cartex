@@ -34,6 +34,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<ProductPack> ProductPacks => Set<ProductPack>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<BranchCatalogEntry> BranchCatalogEntries => Set<BranchCatalogEntry>();
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();

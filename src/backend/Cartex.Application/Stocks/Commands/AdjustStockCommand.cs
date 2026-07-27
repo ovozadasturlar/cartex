@@ -1,9 +1,11 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Inventory;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -11,7 +13,7 @@ namespace Cartex.Application.Stocks.Commands;
 
 public record AdjustStockCommand(long WarehouseId, long VariantId, decimal CountedQuantity, string? Reason) : ICommand<Unit>;
 
-public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IAuditService audit)
+public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IBranchCatalogService branchCatalog, IAuditService audit)
     : IRequestHandler<AdjustStockCommand, Unit>
 {
     public async Task<Unit> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
@@ -61,6 +63,8 @@ public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrent
         });
 
         audit.Add("adjust", "stocks", stockId, new { request.WarehouseId, request.VariantId, systemQuantity, request.CountedQuantity, difference, request.Reason });
+
+        await branchCatalog.ActivateAsync(warehouse.BranchId, [request.VariantId], BranchCatalogActivationSource.Adjustment, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

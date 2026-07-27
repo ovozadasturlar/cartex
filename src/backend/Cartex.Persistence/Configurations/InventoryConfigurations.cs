@@ -57,6 +57,7 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.Property(x => x.PurchasePrice).HasPrecision(18, 4);
         builder.HasIndex(x => x.BranchId);
         builder.HasIndex(x => new { x.WarehouseId, x.VariantId });
+        builder.HasIndex(x => new { x.WarehouseId, x.VariantId }).IsUnique().HasFilter("\"is_deficit\" AND NOT \"is_deleted\"");
 
         builder.HasOne<Branch>()
             .WithMany()

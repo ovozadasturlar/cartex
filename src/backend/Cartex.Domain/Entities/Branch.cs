@@ -14,4 +14,5 @@ public class Branch : SoftDeleteEntity
 
     public ICollection<Warehouse> Warehouses { get; set; } = [];
     public ICollection<UserBranch> UserBranches { get; set; } = [];
+    public ICollection<BranchCatalogEntry> CatalogEntries { get; set; } = [];
 }

@@ -22,4 +22,7 @@ public interface IOrderingApi
 
     [Put("/api/ordering/carts/{code}/status")]
     Task UpdateStatusAsync(string code, [Body] UpdateCartStatusRequest request);
+
+    [Put("/api/ordering/carts/{code}/items")]
+    Task UpdateItemsAsync(string code, [Body] UpdateCartItemsRequest request);
 }

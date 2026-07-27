@@ -7,6 +7,7 @@ public static class PermissionDependencies
         [AppPermissions.Users.View] = [AppPermissions.Roles.View, AppPermissions.Branches.View],
         [AppPermissions.Users.Manage] = [AppPermissions.Users.View],
         [AppPermissions.Roles.Manage] = [AppPermissions.Roles.View],
+        [AppPermissions.Products.Manage] = [AppPermissions.Products.View, AppPermissions.Categories.View],
         [AppPermissions.Products.Toggle] = [AppPermissions.Products.View],
         [AppPermissions.Supplies.View] = [AppPermissions.Suppliers.View, AppPermissions.Warehouses.View, AppPermissions.Products.View],
         [AppPermissions.Supplies.Manage] = [AppPermissions.Supplies.View],

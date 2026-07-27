@@ -24,7 +24,7 @@ public interface IAuthApi
     Task<LoginResponse> RefreshAsync([Body] RefreshRequest request);
 
     [Post("/api/auth/logout")]
-    Task LogoutAsync([Body] LogoutRequest request);
+    Task LogoutAsync([Body] LogoutRequest request, CancellationToken cancellationToken = default);
 
     [Post("/api/auth/change-password")]
     Task ChangePasswordAsync([Body] ChangePasswordRequest request);

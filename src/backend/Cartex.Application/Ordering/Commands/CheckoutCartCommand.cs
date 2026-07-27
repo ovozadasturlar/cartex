@@ -14,39 +14,45 @@ public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender
 {
     public async Task<long> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
-        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
-        if (idempotencyKey is not null)
+        var completed = await db.ExecuteInTransactionAsync<(long SaleId, string? CartKind)>(async () =>
         {
-            var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-            var existingSaleId = await db.Sales
-                .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
-                .Select(s => (long?)s.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (existingSaleId is not null)
-                return existingSaleId.Value;
-        }
+            var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+            if (idempotencyKey is not null)
+            {
+                var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+                var existingSaleId = await db.Sales
+                    .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
+                    .Select(s => (long?)s.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (existingSaleId is not null)
+                    return (existingSaleId.Value, CartKind: (string?)null);
+            }
 
-        var cart = await db.Carts
-            .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken)
-            ?? throw new NotFoundException("Cart not found.");
+            var cart = await db.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken)
+                ?? throw new NotFoundException("Cart not found.");
 
-        if (cart.Status is CartStatus.CheckedOut or CartStatus.Cancelled)
-            throw new BusinessRuleException("Savatcha allaqachon yakunlangan yoki bekor qilingan.");
+            if (cart.Status is CartStatus.CheckedOut or CartStatus.Cancelled)
+                throw new BusinessRuleException("Savatcha allaqachon yakunlangan yoki bekor qilingan.");
 
-        var result = await sender.Send(new CreateSaleCommand(
-            cart.WarehouseId,
-            cart.CustomerId,
-            request.PaidCash,
-            request.PaidCard,
-            request.PaidBonus,
-            cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList(),
-            IdempotencyKey: idempotencyKey), cancellationToken);
+            var result = await sender.Send(new CreateSaleCommand(
+                cart.WarehouseId,
+                cart.CustomerId,
+                request.PaidCash,
+                request.PaidCard,
+                request.PaidBonus,
+                cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList(),
+                IdempotencyKey: idempotencyKey), cancellationToken);
 
-        cart.Status = CartStatus.CheckedOut;
-        await db.SaveChangesAsync(cancellationToken);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+            cart.Status = CartStatus.CheckedOut;
+            await db.SaveChangesAsync(cancellationToken);
 
-        return result.SaleId;
+            return (result.SaleId, CartKind: cart.Kind.ToString());
+        }, cancellationToken);
+
+        if (completed.CartKind is not null)
+            await notifier.CartsChangedAsync(completed.CartKind, cancellationToken);
+        return completed.SaleId;
     }
 }

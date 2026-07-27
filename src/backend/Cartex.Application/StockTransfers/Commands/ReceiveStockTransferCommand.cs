@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Inventory;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
@@ -12,7 +13,7 @@ namespace Cartex.Application.StockTransfers.Commands;
 
 public record ReceiveStockTransferCommand(long Id) : ICommand<Unit>;
 
-public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<ReceiveStockTransferCommand, Unit>
+public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IBranchCatalogService branchCatalog) : IRequestHandler<ReceiveStockTransferCommand, Unit>
 {
     public async Task<Unit> Handle(ReceiveStockTransferCommand request, CancellationToken cancellationToken)
     {
@@ -74,6 +75,8 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
                 });
             }
         }
+
+        await branchCatalog.ActivateAsync(toWarehouse.BranchId, [transfer.VariantId], BranchCatalogActivationSource.Transfer, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
 

@@ -21,6 +21,16 @@ public record SalePaymentDto(PaymentMethod Method, string Currency, decimal Amou
 
 public record CreateSaleResult(long SaleId, string ReceiptToken);
 
+file sealed record CatalogPrice(ProductPrice Source, decimal Amount, string Currency, decimal Rate);
+
+file sealed record ResolvedSaleLine(
+    CreateSaleItemDto Item,
+    decimal Quantity,
+    decimal UnitPrice,
+    string Currency,
+    decimal Rate,
+    decimal PriceDiscount);
+
 public record CreateSaleCommand(
     long WarehouseId,
     long? CustomerId,
@@ -42,12 +52,16 @@ public sealed class CreateSaleCommandHandler(
     ILedgerService ledger,
     ICurrencyService currency,
     IStockAllocator stockAllocator,
+    IBranchCatalogService branchCatalog,
     ICashbackCalculator cashbackCalculator,
     IDiscountCalculator discountCalculator,
     ISettingsService settingsService,
     IAuditService audit) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
-    public async Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
+    public Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken) =>
+        db.ExecuteInTransactionAsync(() => HandleCoreAsync(request, cancellationToken), cancellationToken);
+
+    private async Task<CreateSaleResult> HandleCoreAsync(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
 
@@ -61,10 +75,6 @@ public sealed class CreateSaleCommandHandler(
             if (existing is not null)
                 return existing;
         }
-
-        var hasOverride = request.Items.Any(i => i.UnitPrice is not null && i.PrepackId is null);
-        if (hasOverride && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
-            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
@@ -122,34 +132,73 @@ public sealed class CreateSaleCommandHandler(
         foreach (var code in prices.Select(p => p.Currency).Distinct().Where(c => c != baseCode))
             priceRates[code] = await currency.RateAsync(code, cancellationToken);
 
-        (decimal Price, string Currency, decimal Rate) PriceOf(long variantId)
+        CatalogPrice? PriceOf(long variantId)
         {
             var price = prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == warehouse.Id)
-                ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null)
-                ?? throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (VariantId={variantId}).");
+                ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null);
+            if (price is null) return null;
             var rate = price.Currency == baseCode ? 1m : priceRates[price.Currency];
-            return (Math.Round(price.SellingPrice * rate, 2), price.Currency, rate);
+            return new CatalogPrice(price, Math.Round(price.SellingPrice * rate, 2), price.Currency, rate);
         }
 
-        (decimal Quantity, decimal Price, string Currency, decimal Rate) Resolve(CreateSaleItemDto item)
+        var resolvedItems = new List<ResolvedSaleLine>();
+        var priceOverrides = new List<(long VariantId, decimal CatalogPrice, decimal EnteredPrice)>();
+        var priceIncreases = new Dictionary<ProductPrice, CatalogPrice>();
+
+        foreach (var item in request.Items)
         {
             if (item.PrepackId is { } prepackId)
             {
                 var prepack = prepacks[prepackId];
-                return (prepack.Quantity, prepack.UnitPrice, baseCode, 1m);
+                resolvedItems.Add(new ResolvedSaleLine(item, prepack.Quantity, prepack.UnitPrice, baseCode, 1m, 0));
+                continue;
             }
 
-            var (price, priceCurrency, priceRate) = item.UnitPrice is { } overridePrice
-                ? (overridePrice, baseCode, 1m)
-                : PriceOf(item.VariantId);
-            return (item.Quantity, price, priceCurrency, priceRate);
+            var catalogPrice = PriceOf(item.VariantId);
+            if (catalogPrice is null)
+            {
+                if (item.UnitPrice is null)
+                    throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (VariantId={item.VariantId}).");
+
+                var newPrice = await db.ProductPrices.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
+                if (newPrice is null)
+                {
+                    newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
+                    db.ProductPrices.Add(newPrice);
+                }
+                else
+                {
+                    newPrice.IsDeleted = false;
+                    newPrice.SellingPrice = 0;
+                    newPrice.Currency = baseCode;
+                }
+                prices.Add(newPrice);
+                catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
+            }
+
+            var enteredPrice = item.UnitPrice ?? catalogPrice.Amount;
+            var priceDiscount = Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
+            var unitPrice = Math.Max(catalogPrice.Amount, enteredPrice);
+
+            if (item.UnitPrice is not null && enteredPrice != catalogPrice.Amount)
+                priceOverrides.Add((item.VariantId, catalogPrice.Amount, enteredPrice));
+
+            if (enteredPrice > catalogPrice.Amount &&
+                (!priceIncreases.TryGetValue(catalogPrice.Source, out var increase) || enteredPrice > increase.Amount))
+                priceIncreases[catalogPrice.Source] = new CatalogPrice(catalogPrice.Source, enteredPrice, catalogPrice.Currency, catalogPrice.Rate);
+
+            resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice, catalogPrice.Currency, catalogPrice.Rate, priceDiscount));
         }
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
-        var resolvedItems = request.Items.Select(i => (item: i, line: Resolve(i))).ToList();
-        var grossAmount = resolvedItems.Sum(x => x.line.Quantity * x.line.Price);
-        var discountAmount = Math.Clamp(request.DiscountAmount, 0, grossAmount);
+        if (priceOverrides.Count > 0 && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
+
+        var grossAmount = resolvedItems.Sum(x => x.Quantity * x.UnitPrice);
+        var priceDiscountAmount = resolvedItems.Sum(x => x.PriceDiscount);
+        var discountAmount = Math.Clamp(request.DiscountAmount + priceDiscountAmount, 0, grossAmount);
         if (policy.MaxDiscountPercent > 0 && discountAmount > grossAmount * policy.MaxDiscountPercent / 100
             && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
             throw new BusinessRuleException($"Chegirma {policy.MaxDiscountPercent}% dan osha olmaydi.");
@@ -157,7 +206,7 @@ public sealed class CreateSaleCommandHandler(
         if (request.ApplyAutoDiscount)
         {
             var autoApplied = await discountCalculator.CalculateAsync(request.CustomerId,
-                resolvedItems.Select(x => new DiscountCalcLine(x.item.VariantId, x.line.Quantity * x.line.Price)).ToList(),
+                resolvedItems.Select(x => new DiscountCalcLine(x.Item.VariantId, x.Quantity * (x.Item.UnitPrice ?? x.UnitPrice))).ToList(),
                 cancellationToken);
             discountAmount = Math.Clamp(discountAmount + autoApplied.Sum(a => a.Amount), 0, grossAmount);
         }
@@ -288,20 +337,21 @@ public sealed class CreateSaleCommandHandler(
         var cashbackFactor = grossAmount > 0 ? totalAmount / grossAmount : 1m;
         var cashbackLines = new List<CashbackLine>();
 
-        await stockAllocator.PreloadAsync(request.WarehouseId, resolvedItems.Select(x => x.item.VariantId), cancellationToken);
+        await stockAllocator.PreloadAsync(request.WarehouseId, resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
 
-        foreach (var (item, line) in resolvedItems)
+        foreach (var line in resolvedItems)
         {
-            var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, item.VariantId, line.Quantity, cancellationToken);
+            var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId, line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
 
             foreach (var allocation in allocations)
             {
                 sale.Items.Add(new SaleItem
                 {
-                    VariantId = item.VariantId,
+                    VariantId = line.Item.VariantId,
                     StockId = allocation.Batch.Id,
+                    Stock = allocation.Batch,
                     Quantity = allocation.Quantity,
-                    UnitPrice = line.Price,
+                    UnitPrice = line.UnitPrice,
                     PriceCurrency = line.Currency,
                     PriceRate = line.Rate,
                     PurchasePrice = allocation.Batch.PurchasePrice
@@ -310,9 +360,13 @@ public sealed class CreateSaleCommandHandler(
                 allocation.Batch.Quantity -= allocation.Quantity;
             }
 
-            cashbackLines.Add(new CashbackLine(variantProduct[item.VariantId], line.Quantity, line.Price * line.Quantity * cashbackFactor));
+            cashbackLines.Add(new CashbackLine(variantProduct[line.Item.VariantId], line.Quantity, line.UnitPrice * line.Quantity * cashbackFactor));
         }
 
+        foreach (var increase in priceIncreases.Values)
+            increase.Source.SellingPrice = Math.Round(increase.Amount / increase.Rate, 2);
+
+        await branchCatalog.ActivateAsync(warehouse.BranchId, variantIds, BranchCatalogActivationSource.Sale, cancellationToken);
         db.Sales.Add(sale);
 
         await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, cashbackLines, userId, shiftId, cancellationToken);
@@ -320,9 +374,13 @@ public sealed class CreateSaleCommandHandler(
         sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.BranchId, sale.CustomerId, sale.TotalAmount));
         sale.RaiseDomainEvent(new ReceiptMirrorEvent(sale.ReceiptToken));
 
-        if (hasOverride)
+        if (priceOverrides.Count > 0)
             audit.Add("priceOverride", "sales", null,
-                request.Items.Where(i => i.UnitPrice is not null).Select(i => new { i.VariantId, i.UnitPrice }));
+                priceOverrides.Select(x => new { x.VariantId, x.CatalogPrice, x.EnteredPrice }));
+
+        if (priceIncreases.Count > 0)
+            audit.Add("salePriceUp", "product_prices", null,
+                priceIncreases.Values.Select(x => new { x.Source.VariantId, x.Source.WarehouseId, SellingPrice = x.Amount }));
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -411,6 +469,7 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
     {
         RuleFor(x => x.Items).NotEmpty();
         RuleForEach(x => x.Items).Must(i => i.Quantity > 0).WithMessage("Miqdor 0 dan katta bo'lishi kerak.");
+        RuleForEach(x => x.Items).Must(i => i.UnitPrice is null || i.UnitPrice >= 0).WithMessage("Narx manfiy bo'lishi mumkin emas.");
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);

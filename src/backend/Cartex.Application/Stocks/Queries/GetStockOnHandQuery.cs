@@ -1,12 +1,13 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Search;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
-using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Stocks.Queries;
@@ -37,23 +38,46 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
             }
         }
 
-        var query = db.Stocks
+        var stockTotals = db.Stocks
             .Where(s => s.WarehouseId == request.WarehouseId)
             .GroupBy(s => s.VariantId)
-            .Select(g => new { VariantId = g.Key, OnHand = g.Sum(s => s.Quantity), NearestExpiry = g.Min(s => s.ExpiredAt) })
-            .Join(db.ProductVariants, o => o.VariantId, v => v.Id, (o, v) => new
+            .Select(g => new { VariantId = g.Key, OnHand = g.Sum(s => s.Quantity), NearestExpiry = g.Min(s => s.ExpiredAt) });
+
+        var branchId = 0L;
+        var policy = new SalesPolicySettings();
+        long[] activeVariantIds = [];
+        long[] forceVisibleVariantIds = [];
+        long[] forceHiddenVariantIds = [];
+        if (request.ForSale)
+        {
+            branchId = await db.Warehouses
+                .Where(x => x.Id == request.WarehouseId)
+                .Select(x => x.BranchId)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (branchId == 0)
+                throw new NotFoundException("Warehouse not found.");
+            policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+
+            var catalog = await db.BranchCatalogEntries
+                .Where(x => x.BranchId == branchId)
+                .Select(x => new { x.VariantId, x.FirstActivityAt, x.VisibilityOverride })
+                .ToListAsync(cancellationToken);
+            activeVariantIds = catalog.Where(x => x.FirstActivityAt != null).Select(x => x.VariantId).ToArray();
+            forceVisibleVariantIds = catalog.Where(x => x.VisibilityOverride == BranchCatalogVisibilityOverride.ForceVisible).Select(x => x.VariantId).ToArray();
+            forceHiddenVariantIds = catalog.Where(x => x.VisibilityOverride == BranchCatalogVisibilityOverride.ForceHidden).Select(x => x.VariantId).ToArray();
+        }
+
+        var query = db.ProductVariants
+            .Select(v => new
             {
-                o.VariantId,
-                o.OnHand,
-                o.NearestExpiry,
+                VariantId = v.Id,
                 v.ProductId,
                 v.Code,
-                Barcodes = v.Barcodes.Select(b => b.Code).ToList(),
                 ProductName = v.Product.Name,
                 v.Product.CategoryId,
                 v.Product.ManufacturerId,
                 v.Product.IsEnabled,
-                CategoryName = v.Product.Category != null ? v.Product.Category.Name : null,
+                CategoryName = v.Product.Category == null ? null : v.Product.Category!.Name,
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
                 ImageKey = v.ImageKey ?? v.Product.ImageKey,
@@ -65,7 +89,7 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                         .Where(pp => pp.VariantId == v.Id && pp.WarehouseId == null)
                         .Select(pp => (decimal?)pp.SellingPrice)
                         .FirstOrDefault()
-                    ?? 0
+                    ?? 0,
             });
 
         if (subtree is not null)
@@ -75,33 +99,83 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
         }
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            foreach (var token in request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var token in CatalogSearch.Parse(request.Search).Terms)
             {
-                var term = $"%{token}%";
-                query = query.Where(o => EF.Functions.ILike(o.ProductName, term)
-                    || (o.Code != null && EF.Functions.ILike(o.Code, term)));
+                var term = $"%{token.Value}%";
+                query = token.Field switch
+                {
+                    CatalogSearchField.Name => query.Where(o => EF.Functions.ILike(o.ProductName, term)),
+                    CatalogSearchField.Barcode => query.Where(o => db.Barcodes.Any(b => b.VariantId == o.VariantId && EF.Functions.ILike(b.Code, term))),
+                    CatalogSearchField.Code => query.Where(o => o.Code != null && EF.Functions.ILike(o.Code, term)),
+                    CatalogSearchField.Price when token.Price is { } price => query.Where(o => o.Price == price),
+                    CatalogSearchField.Price => query.Where(_ => false),
+                    _ => query.Where(o => EF.Functions.ILike(o.ProductName, term)
+                        || (o.Code != null && EF.Functions.ILike(o.Code, term))
+                        || db.Barcodes.Any(b => b.VariantId == o.VariantId && EF.Functions.ILike(b.Code, term)))
+                };
             }
         }
 
         if (request.ForSale)
         {
-            var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
             query = query.Where(o => o.IsEnabled);
+            if (forceHiddenVariantIds.Length > 0)
+                query = query.Where(o => !forceHiddenVariantIds.Contains(o.VariantId));
+            if (!policy.ShowUnlistedProducts)
+            {
+                var visibleVariantIds = activeVariantIds.Concat(forceVisibleVariantIds).Distinct().ToArray();
+                query = visibleVariantIds.Length == 0
+                    ? query.Where(_ => false)
+                    : query.Where(o => visibleVariantIds.Contains(o.VariantId));
+            }
             if (!policy.ShowOutOfStock)
-                query = query.Where(o => o.OnHand > 0);
+            {
+                var inStockVariantIds = await stockTotals
+                    .Where(x => x.OnHand > 0)
+                    .Select(x => x.VariantId)
+                    .ToArrayAsync(cancellationToken);
+                var visibleVariantIds = inStockVariantIds.Concat(forceVisibleVariantIds).Distinct().ToArray();
+                query = visibleVariantIds.Length == 0
+                    ? query.Where(_ => false)
+                    : query.Where(o => visibleVariantIds.Contains(o.VariantId));
+            }
+        }
+        else
+        {
+            var stockedVariantIds = await stockTotals.Select(x => x.VariantId).ToArrayAsync(cancellationToken);
+            query = stockedVariantIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(o => stockedVariantIds.Contains(o.VariantId));
         }
 
-        var totals = await query
-            .GroupBy(_ => 1)
-            .Select(g => new { Count = g.Count(), Quantity = g.Sum(x => x.OnHand), Value = g.Sum(x => x.OnHand * x.Price) })
-            .FirstOrDefaultAsync(cancellationToken);
-        if (totals is null)
+        var totalCount = await query.CountAsync(cancellationToken);
+        if (totalCount == 0)
             return new StockOnHandPageDto([], 0, 0, 0);
+
+        var totals = await (
+                from stock in stockTotals
+                join product in query on stock.VariantId equals product.VariantId
+                select new { stock.OnHand, product.Price })
+            .GroupBy(_ => 1)
+            .Select(g => new { Quantity = g.Sum(x => x.OnHand), Value = g.Sum(x => x.OnHand * x.Price) })
+            .FirstOrDefaultAsync(cancellationToken);
 
         var ordered = query.OrderBy(o => o.ProductName);
         var page = request.Page <= 0 || request.PageSize <= 0
             ? await ordered.ToListAsync(cancellationToken)
             : await ordered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+
+        var pageVariantIds = page.Select(o => o.VariantId).ToArray();
+        var stockByVariant = await stockTotals
+            .Where(s => pageVariantIds.Contains(s.VariantId))
+            .ToDictionaryAsync(s => s.VariantId, cancellationToken);
+        var barcodeRows = await db.Barcodes
+            .Where(b => pageVariantIds.Contains(b.VariantId))
+            .Select(b => new { b.VariantId, b.Code })
+            .ToListAsync(cancellationToken);
+        var barcodesByVariant = barcodeRows
+            .GroupBy(b => b.VariantId)
+            .ToDictionary(g => g.Key, g => g.Select(b => b.Code).ToList());
 
         var imageKeys = page.Select(o => o.ImageKey).Where(k => k != null).Select(k => k!).Distinct().ToList();
         var imageUrls = await storage.GetUrlsAsync(imageKeys, cancellationToken);
@@ -118,14 +192,16 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
         var items = page
             .Select(o =>
             {
+                var stock = stockByVariant.GetValueOrDefault(o.VariantId);
                 var imageUrl = o.ImageKey != null && imageUrls.TryGetValue(o.ImageKey, out var u) ? u : null;
                 var discountPct = rules is { Count: > 0 }
                     ? DiscountEngine.BestPercent(rules, today, o.ProductId, o.CategoryId, o.ManufacturerId)
                     : null;
-                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), o.OnHand, o.Price, o.NearestExpiry, imageUrl, discountPct, o.Code, o.Barcodes);
+                var barcodes = barcodesByVariant.TryGetValue(o.VariantId, out var values) ? values : [];
+                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes);
             })
             .ToList();
 
-        return new StockOnHandPageDto(items, totals.Count, totals.Quantity, totals.Value);
+        return new StockOnHandPageDto(items, totalCount, totals?.Quantity ?? 0m, totals?.Value ?? 0m);
     }
 }

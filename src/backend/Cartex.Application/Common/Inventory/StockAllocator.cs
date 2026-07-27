@@ -9,7 +9,7 @@ public record StockAllocation(Stock Batch, decimal Quantity);
 public interface IStockAllocator
 {
     Task PreloadAsync(long warehouseId, IEnumerable<long> variantIds, CancellationToken cancellationToken);
-    Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, CancellationToken cancellationToken);
+    Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, bool allowInsufficientStock, CancellationToken cancellationToken);
 }
 
 public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
@@ -33,12 +33,16 @@ public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
     private static List<Stock> SortBatches(IEnumerable<Stock> batches) =>
         [.. batches.OrderBy(s => s.ExpiredAt == null).ThenBy(s => s.ExpiredAt).ThenBy(s => s.CreatedAt)];
 
-    public async Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<StockAllocation>> AllocateAsync(long warehouseId, long variantId, decimal quantity, bool allowInsufficientStock, CancellationToken cancellationToken)
     {
-        if (!_cache.TryGetValue((warehouseId, variantId), out var batches))
+        var key = (warehouseId, variantId);
+        if (!_cache.TryGetValue(key, out var batches))
+        {
             batches = SortBatches(await db.Stocks
                 .FromSqlInterpolated($"SELECT * FROM stocks WHERE warehouse_id = {warehouseId} AND variant_id = {variantId} AND quantity > 0 AND is_deleted = false FOR UPDATE")
                 .ToListAsync(cancellationToken));
+            _cache[key] = batches;
+        }
 
         var allocations = new List<StockAllocation>();
         var remaining = quantity;
@@ -54,8 +58,53 @@ public sealed class StockAllocator(IApplicationDbContext db) : IStockAllocator
         }
 
         if (remaining > 0)
-            throw new BusinessRuleException("Omborda yetarli mahsulot yo'q.");
+        {
+            if (!allowInsufficientStock)
+                throw new BusinessRuleException("Omborda yetarli mahsulot yo'q.");
+            var deficit = await GetDeficitAsync(warehouseId, variantId, cancellationToken);
+            if (!batches.Contains(deficit))
+                batches.Add(deficit);
+            allocations.Add(new StockAllocation(deficit, remaining));
+            remaining = 0;
+        }
 
         return allocations;
+    }
+    private async Task<Stock> GetDeficitAsync(long warehouseId, long variantId, CancellationToken cancellationToken)
+    {
+        var deficit = await db.Stocks
+            .FromSqlInterpolated($"SELECT * FROM stocks WHERE warehouse_id = {warehouseId} AND variant_id = {variantId} AND is_deficit = true AND is_deleted = false FOR UPDATE")
+            .FirstOrDefaultAsync(cancellationToken);
+        if (deficit is not null)
+            return deficit;
+
+        var variant = await db.ProductVariants
+            .FromSqlInterpolated($"SELECT * FROM product_variants WHERE id = {variantId} AND is_deleted = false FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (variant is null)
+            throw new NotFoundException("Product variant not found.");
+
+        deficit = await db.Stocks
+            .FromSqlInterpolated($"SELECT * FROM stocks WHERE warehouse_id = {warehouseId} AND variant_id = {variantId} AND is_deficit = true AND is_deleted = false FOR UPDATE")
+            .FirstOrDefaultAsync(cancellationToken);
+        if (deficit is not null)
+            return deficit;
+
+        var branchId = await db.Warehouses
+            .Where(x => x.Id == warehouseId)
+            .Select(x => x.BranchId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (branchId == 0)
+            throw new NotFoundException("Warehouse not found.");
+
+        deficit = new Stock
+        {
+            BranchId = branchId,
+            WarehouseId = warehouseId,
+            VariantId = variantId,
+            IsDeficit = true
+        };
+        db.Stocks.Add(deficit);
+        return deficit;
     }
 }

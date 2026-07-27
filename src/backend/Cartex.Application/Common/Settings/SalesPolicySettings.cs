@@ -11,4 +11,6 @@ public sealed class SalesPolicySettings
     public bool RequireDebtDueDate { get; set; } = true;
     public bool RequireSupplier { get; set; }
     public bool ShowOutOfStock { get; set; }
+    public bool ShowUnlistedProducts { get; set; } = true;
+    public bool AllowInsufficientStockSales { get; set; }
 }

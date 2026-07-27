@@ -1,6 +1,7 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Search;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -56,14 +57,24 @@ public sealed class GetProductsQueryHandler(
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            foreach (var token in request.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var token in CatalogSearch.Parse(request.Search).Terms)
             {
-                var term = $"%{token}%";
-                query = query.Where(p =>
-                    EF.Functions.ILike(p.Name, term)
-                    || (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
-                    || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))
-                    || p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))));
+                var term = $"%{token.Value}%";
+                query = token.Field switch
+                {
+                    CatalogSearchField.Name => query.Where(p => EF.Functions.ILike(p.Name, term)),
+                    CatalogSearchField.Barcode => query.Where(p => p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term)))),
+                    CatalogSearchField.Code => query.Where(p =>
+                        (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
+                        || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))),
+                    CatalogSearchField.Price when token.Price is { } price => query.Where(p => p.Variants.Any(v => v.Prices.Any(x => x.SellingPrice == price))),
+                    CatalogSearchField.Price => query.Where(_ => false),
+                    _ => query.Where(p =>
+                        EF.Functions.ILike(p.Name, term)
+                        || (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
+                        || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))
+                        || p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))))
+                };
             }
             request.Search = null;
         }
@@ -85,7 +96,13 @@ public sealed class GetProductsQueryHandler(
                     ProductTypeName = p.ProductType != null ? p.ProductType.Name : null,
                     TracksExpiry = p.TracksExpiryOverride ?? (p.ProductType != null && p.ProductType.TracksExpiry),
                     p.Attributes,
-                    p.ImageKey,
+                    // Images can be stored on a variant. Prefer the requested variant's
+                    // image (or the default variant's image for a regular product list),
+                    // and only then fall back to the product-level image.
+                    ImageKey = p.Variants
+                        .Where(v => request.VariantId == null ? v.IsDefault : v.Id == request.VariantId)
+                        .Select(v => v.ImageKey)
+                        .FirstOrDefault() ?? p.ImageKey,
                     p.IkpuCode,
                     p.VatRate,
                     Price = p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => new { pr.SellingPrice, pr.Currency }).FirstOrDefault(),

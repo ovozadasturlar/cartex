@@ -1,6 +1,7 @@
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Inventory;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
@@ -32,7 +33,7 @@ public record CreateSupplyCommand(
     decimal PaidCard = 0,
     string? Currency = null) : ICommand<long>;
 
-public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
+public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IBranchCatalogService branchCatalog, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
 {
     public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
@@ -100,6 +101,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
         }
 
         db.Supplies.Add(supply);
+        await branchCatalog.ActivateAsync(warehouse.BranchId, request.Items.Select(x => x.VariantId), BranchCatalogActivationSource.Supply, cancellationToken);
 
         var totalBase = Math.Round(supply.TotalAmount * supplyRate, 2);
         if (request.PaidCash + request.PaidCard > totalBase)
