@@ -107,12 +107,20 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         }
     }
 
-    public async Task LogoutAsync()
+    public Task LogoutAsync()
     {
         var refresh = session.RefreshToken;
         session.Clear();
         if (!string.IsNullOrEmpty(refresh))
-            try { await authApi.LogoutAsync(new LogoutRequest(refresh)); } catch { }
+            _ = RevokeAsync(refresh);
+        return Task.CompletedTask;
+    }
+
+    private async Task RevokeAsync(string refresh)
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        try { await authApi.LogoutAsync(new LogoutRequest(refresh), cancellation.Token); }
+        catch { }
     }
 
     private static bool IsExpiringSoon(string token)

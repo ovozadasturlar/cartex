@@ -63,7 +63,7 @@ public partial class SecurityViewModel(IBiometricAuth biometric) : ObservableObj
         }
         var disable = Loc.Instance["pin_disable"];
         var change = Loc.Instance["pin_change"];
-        var choice = await page.DisplayActionSheet(Loc.Instance["pin_code"], Loc.Instance["cancel"], null, change, disable);
+        var choice = await page.DisplayActionSheetAsync(Loc.Instance["pin_code"], Loc.Instance["cancel"], null, change, disable);
         if (choice == change)
             await Shell.Current.GoToAsync("pin?setup=1");
         else if (choice == disable)
@@ -87,7 +87,7 @@ public partial class SecurityViewModel(IBiometricAuth biometric) : ObservableObj
     private async Task ChooseLockAfterAsync()
     {
         var names = LockOptions.Select(LockName).ToArray();
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["lock_after"], Loc.Instance["cancel"], null, names);
         var index = Array.IndexOf(names, choice);
         if (index < 0) return;

@@ -50,7 +50,7 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     {
         string[] keys = ["system", "light", "dark"];
         var names = keys.Select(k => Loc.Instance["theme_" + k]).ToArray();
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["theme"], Loc.Instance["cancel"], null, names);
         var index = Array.IndexOf(names, choice);
         if (index < 0) return;
@@ -70,7 +70,7 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -84,7 +84,7 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     private async Task LogoutAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
+        if (!await page.DisplayAlertAsync(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
             return;
         AppLock.Disable();
         await auth.LogoutAsync();

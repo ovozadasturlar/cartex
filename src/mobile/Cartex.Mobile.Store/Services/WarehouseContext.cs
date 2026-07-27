@@ -54,7 +54,7 @@ public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthSer
         var names = candidates.Select(w => w.Name).ToArray();
         var page = Shell.Current?.CurrentPage;
         if (page is null) return false;
-        var choice = await page.DisplayActionSheet(Loc.Instance["warehouse_pick"], Loc.Instance["cancel"], null, names);
+        var choice = await page.DisplayActionSheetAsync(Loc.Instance["warehouse_pick"], Loc.Instance["cancel"], null, names);
         var picked = candidates.FirstOrDefault(w => w.Name == choice);
         if (picked is null) return WarehouseId is not null;
         Set(picked);

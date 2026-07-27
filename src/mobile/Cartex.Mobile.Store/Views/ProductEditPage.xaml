@@ -41,7 +41,16 @@
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{svc:T price}" Style="{StaticResource TxCaption}" />
-                            <Border Style="{StaticResource InputWrap}">
+                            <Grid ColumnDefinitions="*,112" ColumnSpacing="8" IsVisible="{Binding CanChoosePriceCurrency}">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Entry Text="{Binding PriceText}" Keyboard="Numeric" VerticalOptions="Center" />
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding PriceCurrency}"
+                                            ItemDisplayBinding="{Binding Code}" VerticalOptions="Center" />
+                                </Border>
+                            </Grid>
+                            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding CanChoosePriceCurrency, Converter={StaticResource Invert}}">
                                 <Entry Text="{Binding PriceText}" Keyboard="Numeric" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
@@ -60,6 +69,45 @@
                                         ItemDisplayBinding="{Binding Name, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}" IsVisible="{Binding CanManageBarcodes}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{svc:T barcodes}" Style="{StaticResource TxCaption}" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Barcodes}" Spacing="6">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ProductBarcodeRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Padding="4,2">
+                                        <Label Text="{Binding Code}" LineBreakMode="TailTruncation"
+                                               VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Grid.Column="1" Text="{Binding PackQtyText}" Style="{StaticResource MutedLabel}"
+                                               VerticalOptions="Center" />
+                                        <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="16" Padding="0"
+                                                WidthRequest="36" HeightRequest="36" CornerRadius="18"
+                                                Style="{StaticResource BtnOutline}"
+                                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                Command="{Binding DeleteBarcodeCommand, Source={RelativeSource AncestorType={x:Type vm:ProductEditViewModel}}}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8">
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" VerticalOptions="Center" />
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding NewBarcodePackQtyText}" Placeholder="{svc:T pack_qty}" Keyboard="Numeric" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                    WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                    Style="{StaticResource BtnPrimary}"
+                                    Command="{Binding AddBarcodeCommand}" />
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
 

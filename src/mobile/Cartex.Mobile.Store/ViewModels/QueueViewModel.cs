@@ -58,7 +58,7 @@ public partial class QueueViewModel(IOrderingApi orderingApi, MobilePermissions 
     private async Task CancelAsync(QueueRow row)
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["cart_cancel_title"], Loc.Instance["cart_cancel_confirm"], Loc.Instance["yes"], Loc.Instance["no"]))
+        if (!await page.DisplayAlertAsync(Loc.Instance["cart_cancel_title"], Loc.Instance["cart_cancel_confirm"], Loc.Instance["yes"], Loc.Instance["no"]))
             return;
         try
         {

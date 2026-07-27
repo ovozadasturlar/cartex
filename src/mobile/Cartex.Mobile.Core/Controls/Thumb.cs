@@ -2,6 +2,11 @@ namespace Cartex.Mobile.Core.Controls;
 
 public sealed class Thumb : ContentView
 {
+    private static readonly HttpClient ImageClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(20)
+    };
+
     public static readonly BindableProperty SourceProperty =
         BindableProperty.Create(nameof(Source), typeof(string), typeof(Thumb), propertyChanged: OnChanged);
 
@@ -24,7 +29,8 @@ public sealed class Thumb : ContentView
     public bool Stretch { get => (bool)GetValue(StretchProperty); set => SetValue(StretchProperty, value); }
 
     public static ImageUrlBuilder? UrlBuilder { get; set; }
-public static string? PublicBaseUrl { get; set; }
+    public static string? PublicBaseUrl { get; set; }
+    public static Func<CancellationToken, Task<string?>>? AccessTokenProvider { get; set; }
 
     private readonly Image _image = new() { Aspect = Aspect.AspectFill };
     private readonly Label _placeholder = new()
@@ -35,6 +41,7 @@ public static string? PublicBaseUrl { get; set; }
         VerticalOptions = LayoutOptions.Center,
     };
     private readonly Border _border;
+    private long _imageRequestVersion;
 
     public Thumb()
     {
@@ -60,7 +67,12 @@ public static string? PublicBaseUrl { get; set; }
         _placeholder.FontSize = Math.Clamp(Size / 2.8, 16, 48);
         _placeholder.SetAppTheme(Label.TextColorProperty, Color.FromArgb("#9CA3AF"), Color.FromArgb("#6B7280"));
 
-        // Resolve image source
+        var requestVersion = Interlocked.Increment(ref _imageRequestVersion);
+        _image.Source = null;
+        _image.IsVisible = false;
+        _placeholder.IsVisible = true;
+
+        // Resolve image source.
         string? resolvedUrl = null;
         if (!string.IsNullOrWhiteSpace(Source))
         {
@@ -81,7 +93,63 @@ public static string? PublicBaseUrl { get; set; }
         }
         var valid = Uri.TryCreate(resolvedUrl, UriKind.Absolute, out var uri) &&
                     (uri.Scheme == "http" || uri.Scheme == "https");
-        _image.Source = valid ? ImageSource.FromUri(uri) : null;
-        _image.IsVisible = valid;
+        if (valid)
+            _ = LoadImageAsync(uri!, requestVersion);
+    }
+
+    private async Task LoadImageAsync(Uri uri, long requestVersion)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            var token = AccessTokenProvider is null
+                ? null
+                : await AccessTokenProvider(CancellationToken.None);
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            System.Diagnostics.Debug.WriteLine($"CartexThumb GET {uri} (token: {!string.IsNullOrWhiteSpace(token)})");
+            using var response = await ImageClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            System.Diagnostics.Debug.WriteLine($"CartexThumb OK {(int)response.StatusCode}, {bytes.Length} bytes: {uri}");
+            if (requestVersion != Interlocked.Read(ref _imageRequestVersion))
+                return;
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (requestVersion != Interlocked.Read(ref _imageRequestVersion))
+                    return;
+
+                // Loading through the app's HTTP client is reliable on Android for
+                // remote HTTPS images; the platform UriImageSource was silently
+                // failing and leaving the placeholder visible.
+                _image.Source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
+                _image.IsVisible = true;
+                _placeholder.IsVisible = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CartexThumb FAILED {uri}: {ex}");
+            ShowPlaceholder(requestVersion);
+        }
+    }
+
+    private void ShowPlaceholder(long requestVersion)
+    {
+        if (requestVersion != Interlocked.Read(ref _imageRequestVersion))
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (requestVersion != Interlocked.Read(ref _imageRequestVersion))
+                return;
+
+            _image.Source = null;
+            _image.IsVisible = false;
+            _placeholder.IsVisible = true;
+        });
     }
 }

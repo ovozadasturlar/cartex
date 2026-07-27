@@ -36,7 +36,8 @@ public static class MauiProgram
             () => session.AccessToken,
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
             OnUnauthorized,
-            "store");
+            "store",
+            TimeSpan.FromSeconds(20));
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<MobilePermissions>();
@@ -45,6 +46,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<CartStore>();
         builder.Services.AddSingleton<SupplyCartStore>();
         builder.Services.AddSingleton<WarehouseContext>();
+        builder.Services.AddSingleton<OrderingHubService>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
 
         builder.Services.AddTransient<LoginViewModel>();
@@ -58,8 +60,8 @@ public static class MauiProgram
         builder.Services.AddTransient<CartViewModel>();
         builder.Services.AddTransient<HandoffViewModel>();
         builder.Services.AddTransient<CheckoutViewModel>();
-        builder.Services.AddTransient<QueueViewModel>();
-        builder.Services.AddTransient<SalesViewModel>();
+        builder.Services.AddTransient<TradeViewModel>();
+        builder.Services.AddTransient<CustomersViewModel>();
         builder.Services.AddTransient<ReceiveCartViewModel>();
         builder.Services.AddTransient<ProductEditViewModel>();
         builder.Services.AddTransient<BarcodeAttachViewModel>();
@@ -75,8 +77,8 @@ public static class MauiProgram
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<HandoffPage>();
         builder.Services.AddTransient<CheckoutPage>();
-        builder.Services.AddTransient<QueuePage>();
-        builder.Services.AddTransient<SalesPage>();
+        builder.Services.AddTransient<TradePage>();
+        builder.Services.AddTransient<CustomersPage>();
         builder.Services.AddTransient<ReceiveCartPage>();
         builder.Services.AddTransient<ProductEditPage>();
         builder.Services.AddTransient<BarcodeAttachPage>();
@@ -84,6 +86,8 @@ public static class MauiProgram
         var app = builder.Build();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
         Cartex.Mobile.Core.Controls.Thumb.PublicBaseUrl = session.ServerUrl;
+        Cartex.Mobile.Core.Controls.Thumb.AccessTokenProvider =
+            ct => app.Services.GetRequiredService<MobileAuthService>().EnsureFreshTokenAsync(ct);
         return app;
     }
 

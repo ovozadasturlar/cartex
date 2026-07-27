@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
 using Cartex.Mobile.Core;
+using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
@@ -14,6 +17,8 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IProductsApi _products;
     private readonly ICategoriesApi _categories;
+    private readonly IFeaturesApi _features;
+    private readonly IRatesApi _rates;
     private readonly IUnitsApi _units;
     private readonly IStorageApi _storage;
     private readonly IBarcodesApi _barcodes;
@@ -27,22 +32,31 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     private string? _imageKey;
 
     public ObservableCollection<CategoryDto> Categories { get; } = [];
+    public ObservableCollection<CurrencyDto> PriceCurrencies { get; } = [];
+    public ObservableCollection<ProductBarcodeRow> Barcodes { get; } = [];
 
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _priceText = "";
     [ObservableProperty] private string _code = "";
     [ObservableProperty] private string _imageLinkText = "";
     [ObservableProperty] private CategoryDto? _category;
+    [ObservableProperty] private CurrencyDto? _priceCurrency;
     [ObservableProperty] private string? _previewUrl;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _canManageBarcodes;
+    [ObservableProperty] private string _newBarcode = "";
+    [ObservableProperty] private string _newBarcodePackQtyText = "1";
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
 
-    public bool CanEdit => _permissions.Has("products.edit");
+    public bool CanEdit => _permissions.Has("products.manage");
+    public bool CanChoosePriceCurrency => PriceCurrencies.Count > 0;
 
     public ProductEditViewModel(
         IProductsApi products,
         ICategoriesApi categories,
+        IFeaturesApi features,
+        IRatesApi rates,
         IUnitsApi units,
         IStorageApi storage,
         IBarcodesApi barcodes,
@@ -51,6 +65,8 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     {
         _products = products;
         _categories = categories;
+        _features = features;
+        _rates = rates;
         _units = units;
         _storage = storage;
         _barcodes = barcodes;
@@ -65,6 +81,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         if (query.TryGetValue("barcode", out var b))
             _initialBarcode = Convert.ToString(b);
         _isCreate = _variantId == 0;
+        CanManageBarcodes = CanEdit && !_isCreate;
     }
 
     public async Task AppearAsync()
@@ -75,6 +92,14 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             foreach (var c in await _categories.GetAllAsync())
                 Categories.Add(c);
 
+            if (!_isCreate)
+            {
+                _product = (await _products.GetAllAsync(variantId: _variantId)).FirstOrDefault()
+                    ?? throw new InvalidOperationException(Loc.Instance["product_not_found"]);
+            }
+
+            await LoadPriceCurrenciesAsync();
+
             if (_isCreate)
             {
                 // New product — prefill barcode as code
@@ -82,33 +107,101 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
                 return;
             }
 
-            _product = (await _products.GetAllAsync(variantId: _variantId)).FirstOrDefault()
-                ?? throw new InvalidOperationException(Loc.Instance["product_not_found"]);
-
-            Name = _product.Name;
-            Code = _product.Code ?? "";
-            PriceText = _product.SellingPrice?.ToString("0.##") ?? "";
-            _imageKey = _product.ImageKey;
-            PreviewUrl = _images.FromKey(_product.ImageKey);
-            Category = Categories.FirstOrDefault(c => c.Id == _product.CategoryId);
+            var product = _product!;
+            Name = product.Name;
+            Code = product.Code ?? "";
+            PriceText = product.SellingPrice?.ToString("0.##") ?? "";
+            _imageKey = product.ImageKey;
+            PreviewUrl = _images.FromKey(product.ImageKey);
+            Category = Categories.FirstOrDefault(c => c.Id == product.CategoryId);
+            await LoadBarcodesAsync();
         });
     }
 
-    [RelayCommand]
-    private Task TakePhotoAsync() => CaptureAsync(() => MediaPicker.Default.CapturePhotoAsync());
-
-    [RelayCommand]
-    private Task PickPhotoAsync() => CaptureAsync(async () => (await MediaPicker.Default.PickPhotosAsync())?.FirstOrDefault());
-
-    private Task CaptureAsync(Func<Task<FileResult?>> pick) => RunAsync(async () =>
+    private async Task LoadPriceCurrenciesAsync()
     {
-        var file = await pick();
-        if (file is null) return;
+        var enabledFeatures = await _features.GetEnabledAsync();
+        if (!enabledFeatures.Contains("multicurrency", StringComparer.OrdinalIgnoreCase))
+            return;
 
-        await using var stream = await file.OpenReadAsync();
-        var result = await _storage.UploadAsync(new Refit.StreamPart(stream, file.FileName, file.ContentType));
-        ApplyImage(result);
+        foreach (var currency in await _rates.GetCurrenciesAsync())
+        {
+            // Preserve a disabled current value so a non-price edit does not
+            // silently change the product's price currency.
+            if (currency.IsEnabled || string.Equals(currency.Code, _product?.PriceCurrency, StringComparison.OrdinalIgnoreCase))
+                PriceCurrencies.Add(currency);
+        }
+
+        PriceCurrency = PriceCurrencies.FirstOrDefault(c =>
+                            string.Equals(c.Code, _product?.PriceCurrency, StringComparison.OrdinalIgnoreCase))
+                        ?? PriceCurrencies.FirstOrDefault(c => c.IsBase);
+        OnPropertyChanged(nameof(CanChoosePriceCurrency));
+    }
+
+    [RelayCommand]
+    private Task TakePhotoAsync() => RunAsync(async () =>
+    {
+        if (!MediaPicker.Default.IsCaptureSupported)
+        {
+            Ui.Toast(Loc.Instance["camera_capture_unavailable"]);
+            return;
+        }
+
+        // A scanner page may have released the camera only moments before this page opens.
+        await Task.Delay(250);
+        try
+        {
+            var photo = await MediaPicker.Default.CapturePhotoAsync();
+            if (photo is not null)
+                await UploadImageAsync(photo, deleteTemporaryFileAfterUpload: true);
+        }
+        catch (PermissionException ex)
+        {
+            Error = ex.Message;
+            Ui.Toast(Error);
+        }
     });
+
+    [RelayCommand]
+    private Task PickPhotoAsync() => RunAsync(async () =>
+    {
+        var photo = (await MediaPicker.Default.PickPhotosAsync())?.FirstOrDefault();
+        if (photo is not null)
+            await UploadImageAsync(photo);
+    });
+
+    private async Task UploadImageAsync(FileResult file, bool deleteTemporaryFileAfterUpload = false)
+    {
+        var uploaded = false;
+        try
+        {
+            await using var stream = await file.OpenReadAsync();
+            var result = await _storage.UploadAsync(new Refit.StreamPart(stream, file.FileName, file.ContentType));
+            ApplyImage(result);
+            uploaded = true;
+        }
+        finally
+        {
+            if (uploaded && deleteTemporaryFileAfterUpload)
+                DeleteTemporaryCapture(file.FullPath);
+        }
+    }
+
+    private static void DeleteTemporaryCapture(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path))
+            return;
+
+        try
+        {
+            var cacheDirectory = Path.GetFullPath(FileSystem.CacheDirectory);
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.StartsWith(cacheDirectory, StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath))
+                File.Delete(fullPath);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 
     [RelayCommand]
     private Task ApplyLinkAsync() => RunAsync(async () =>
@@ -124,6 +217,43 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         _imageKey = result.Key;
         PreviewUrl = _images.FromKey(result.Key);
         Notice = Loc.Instance["image_attached"];
+    }
+
+    [RelayCommand]
+    private Task AddBarcodeAsync() => RunAsync(async () =>
+    {
+        if (!CanManageBarcodes || _variantId == 0)
+            return;
+
+        var code = NewBarcode.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+            throw new InvalidOperationException(Loc.Instance["err_fill_all"]);
+
+        var packQty = Money.Parse(NewBarcodePackQtyText);
+        if (packQty <= 0)
+            throw new InvalidOperationException(Loc.Instance["barcode_invalid_pack_qty"]);
+
+        await _barcodes.CreateAsync(new CreateBarcodeRequest(_variantId, code, packQty));
+        NewBarcode = "";
+        NewBarcodePackQtyText = "1";
+        await LoadBarcodesAsync();
+    });
+
+    [RelayCommand]
+    private Task DeleteBarcodeAsync(ProductBarcodeRow row) => RunAsync(async () =>
+    {
+        if (!CanManageBarcodes)
+            return;
+
+        await _barcodes.DeleteAsync(row.Id);
+        await LoadBarcodesAsync();
+    });
+
+    private async Task LoadBarcodesAsync()
+    {
+        Barcodes.Clear();
+        foreach (var barcode in await _barcodes.GetByVariantAsync(_variantId))
+            Barcodes.Add(new ProductBarcodeRow(barcode.Id, barcode.Code, barcode.PackQty));
     }
 
     [RelayCommand]
@@ -148,7 +278,8 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
                 _initialBarcode != null ? [new BarcodeInput(_initialBarcode)] : null,
                 ImageKey: _imageKey,
                 Code: codeVal,
-                SellingPrice: price));
+                SellingPrice: price,
+                PriceCurrency: PriceCurrency?.Code));
 
             Ui.Toast(Loc.Instance["saved_successfully"]);
             await Shell.Current.GoToAsync("..");
@@ -170,9 +301,10 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             _product.IkpuCode,
             _product.VatRate,
             price,
-            _product.PriceCurrency,
+            PriceCurrency?.Code ?? _product.PriceCurrency,
             _product.ManufacturerId));
 
+        WeakReferenceMessenger.Default.Send(new ProductChangedMessage(_variantId));
         Ui.Toast(Loc.Instance["saved_successfully"]);
         await Shell.Current.GoToAsync("..");
     });
@@ -190,10 +322,16 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         catch (Exception ex)
         {
             Error = ex.Message;
+            Ui.Toast(Error);
         }
         finally
         {
             IsBusy = false;
         }
     }
+}
+
+public sealed record ProductBarcodeRow(long Id, string Code, decimal PackQty)
+{
+    public string PackQtyText => $"× {PackQty:0.###}";
 }

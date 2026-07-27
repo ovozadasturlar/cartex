@@ -77,16 +77,26 @@
             <Grid RowDefinitions="Auto,*" RowSpacing="10">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <Border Style="{StaticResource InputWrap}">
-                        <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
-                               Text="{Binding SearchText}" />
+                        <Grid ColumnDefinitions="*,36">
+                            <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
+                                   Text="{Binding SearchText}" />
+                            <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
+                                    Padding="0" WidthRequest="36" HeightRequest="36" CornerRadius="18"
+                                    BackgroundColor="Transparent"
+                                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+                                    Command="{Binding ClearSearchCommand}" />
+                        </Grid>
                     </Border>
-                    <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="20"
+                    <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22"
                             Padding="0" WidthRequest="44" HeightRequest="44" CornerRadius="22"
-                            BackgroundColor="Transparent"
-                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
-                            Command="{Binding ToggleSearchCommand}" />
+                            Style="{StaticResource BtnPrimary}"
+                            Command="{Binding CreateProductFromSearchCommand}"
+                            IsVisible="{Binding CanEditProduct}" />
                 </Grid>
-                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}" MaximumHeightRequest="420">
+                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}" MaximumHeightRequest="420"
+                                RemainingItemsThreshold="5"
+                                RemainingItemsThresholdReachedCommand="{Binding LoadMoreResultsCommand}"
+                                IsVisible="{Binding IsSearching, Converter={StaticResource Invert}}">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:SearchRow">
                             <Grid Padding="4,10" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto"
@@ -107,7 +117,14 @@
                             </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
+                    <CollectionView.Footer>
+                        <ActivityIndicator Margin="0,12" IsRunning="{Binding IsLoadingMoreResults}"
+                                           IsVisible="{Binding IsLoadingMoreResults}"
+                                           HorizontalOptions="Center" />
+                    </CollectionView.Footer>
                 </CollectionView>
+                <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
+                                   VerticalOptions="Center" HorizontalOptions="Center" />
             </Grid>
         </Border>
 
@@ -169,5 +186,28 @@
                 </VerticalStackLayout>
             </Grid>
         </Border>
+
+        <!-- Unknown barcode dialog -->
+        <Grid BackgroundColor="#CC000000" IsVisible="{Binding UnknownBarcodeVisible}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseUnknownBarcodeCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="{Binding UnknownBarcode}" FontSize="22" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" LineBreakMode="CharacterWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Button Text="{svc:T attach_existing}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AttachUnknownBarcodeCommand}" />
+                    <Button Text="{svc:T add_new}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CreateProductFromUnknownBarcodeCommand}" />
+                    <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CloseUnknownBarcodeCommand}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
     </Grid>
 </ContentPage>

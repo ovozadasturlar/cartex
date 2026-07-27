@@ -37,8 +37,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private CartDto? _serverCart;
     private decimal _totalAmount;
     private long? _customerId;
-    private readonly string _idempotencyKey = Guid.NewGuid().ToString();
-
     public CheckoutViewModel(IOrderingApi orderingApi, CartStore localCart, WarehouseContext warehouse, MobilePermissions permissions)
     {
         _orderingApi = orderingApi;
@@ -65,7 +63,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
             if (_serverCart is null)
             {
-                await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["checkout"], Loc.Instance["cart_not_found"], Loc.Instance["ok"]);
+                await Shell.Current.CurrentPage.DisplayAlertAsync(Loc.Instance["checkout"], Loc.Instance["cart_not_found"], Loc.Instance["ok"]);
                 await Shell.Current.GoToAsync("..");
                 return;
             }
@@ -131,15 +129,16 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 _warehouse.WarehouseId!.Value,
                 _customerId,
                 _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
-                Guid.NewGuid().ToString("N"),
+                _localCart.EnsureSubmissionIdempotencyKey(),
                 string.IsNullOrWhiteSpace(NoteText) ? null : NoteText);
             
-            await _orderingApi.SubmitAsync(request);
+            var code = await _orderingApi.SubmitAsync(request);
+            _localCart.MarkSubmitted(code);
             _localCart.Clear();
             Ui.Toast(Loc.Instance["send_to_queue"]);
             await Shell.Current.GoToAsync("..");
         }
-        catch (ApiException ex) { await page.DisplayAlert(Loc.Instance["error"], ApiErrors.Describe(ex), Loc.Instance["ok"]); }
+        catch (ApiException ex) { await page.DisplayAlertAsync(Loc.Instance["error"], ApiErrors.Describe(ex), Loc.Instance["ok"]); }
         catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
         finally { IsBusy = false; }
     }
@@ -152,7 +151,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         
         if (_totalAmount - Paid > 0 && _customerId is null)
         {
-            await page.DisplayAlert(Loc.Instance["checkout"], Loc.Instance["err_debt_needs_customer"], Loc.Instance["ok"]);
+            await page.DisplayAlertAsync(Loc.Instance["checkout"], Loc.Instance["err_debt_needs_customer"], Loc.Instance["ok"]);
             return;
         }
         
@@ -170,23 +169,28 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                     return;
                 }
                 
-                var req = new SubmitCartRequest(
-                    _warehouse.WarehouseId!.Value,
-                    _customerId,
-                    _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
-                    Guid.NewGuid().ToString("N"),
-                    string.IsNullOrWhiteSpace(NoteText) ? null : NoteText);
-                
-                codeToCheckout = await _orderingApi.SubmitAsync(req);
-                _localCart.Clear(); // successfully synced to server
+                codeToCheckout = _localCart.SubmittedCartCode ?? "";
+                if (string.IsNullOrEmpty(codeToCheckout))
+                {
+                    var req = new SubmitCartRequest(
+                        _warehouse.WarehouseId!.Value,
+                        _customerId,
+                        _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
+                        _localCart.EnsureSubmissionIdempotencyKey(),
+                        string.IsNullOrWhiteSpace(NoteText) ? null : NoteText);
+                    codeToCheckout = await _orderingApi.SubmitAsync(req);
+                    _localCart.MarkSubmitted(codeToCheckout);
+                }
             }
 
-            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(Parse(CashText), Parse(CardText), Parse(BonusText), _idempotencyKey));
+            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(Parse(CashText), Parse(CardText), Parse(BonusText), _localCart.EnsureCheckoutIdempotencyKey()));
+            if (string.IsNullOrEmpty(_code))
+                _localCart.Clear();
             Ui.Toast(Loc.Instance["sale_done"]);
             await Shell.Current.GoToAsync("..");
         }
-        catch (ApiException ex) { await page.DisplayAlert(Loc.Instance["checkout"], ApiErrors.Describe(ex), Loc.Instance["ok"]); }
-        catch { await page.DisplayAlert(Loc.Instance["checkout"], Loc.Instance["err_no_connection"], Loc.Instance["ok"]); }
+        catch (ApiException ex) { await page.DisplayAlertAsync(Loc.Instance["checkout"], ApiErrors.Describe(ex), Loc.Instance["ok"]); }
+        catch { await page.DisplayAlertAsync(Loc.Instance["checkout"], Loc.Instance["err_no_connection"], Loc.Instance["ok"]); }
         finally { IsBusy = false; }
     }
 

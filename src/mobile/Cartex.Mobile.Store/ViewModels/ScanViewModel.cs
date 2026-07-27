@@ -1,17 +1,21 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Cartex.ApiClient.Api;
+using Cartex.ApiClient.Querying;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
 using Cartex.Shared.Models.Products;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class ScanViewModel : ObservableObject
 {
+    private const int SearchPageSize = 30;
+
     private readonly ISessionsApi _sessionsApi;
     private readonly IProductsApi _productsApi;
     private readonly WarehouseContext _warehouse;
@@ -23,6 +27,8 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
     [ObservableProperty] private bool _overlayVisible;
+    [ObservableProperty] private bool _unknownBarcodeVisible;
+    [ObservableProperty] private string _unknownBarcode = "";
     [ObservableProperty] private string _productName = "";
     [ObservableProperty] private string _priceText = "";
     [ObservableProperty] private string _stockText = "";
@@ -33,6 +39,8 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private int _supplyCartCount;
     [ObservableProperty] private bool _searchVisible;
+    [ObservableProperty] private bool _isSearching;
+    [ObservableProperty] private bool _isLoadingMoreResults;
     [ObservableProperty] private string _searchText = "";
 
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
@@ -43,6 +51,9 @@ public partial class ScanViewModel : ObservableObject
     private string? _lastValue;
     private DateTime _lastAt = DateTime.MinValue;
     private CancellationTokenSource? _searchCts;
+    private string? _activeSearch;
+    private int _loadedSearchPage;
+    private bool _hasMoreSearchResults;
 
     public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
     {
@@ -56,14 +67,15 @@ public partial class ScanViewModel : ObservableObject
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         cart.Changed += () => CartCount = _cart.Count;
-        supplyCart.Changed += () => SupplyCartCount = _supplyCart.Count;
-        CanEditProduct = permissions.Has("products.edit");
-        CanReceiveStock = permissions.Has("supplies.create") || permissions.Has("supplies.view");
+        supplyCart.Changed += OnSupplyCartChanged;
+        WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
+        CanEditProduct = permissions.Has("products.manage");
+        CanReceiveStock = permissions.Has("supplies.manage") || permissions.Has("supplies.view");
     }
 
     public async Task HandleAsync(string value)
     {
-        if (_handled || OverlayVisible || SearchVisible) return;
+        if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchVisible) return;
         // Debounce: ignore same barcode within 1.5s (not 2s, so closing overlay quickly then scanning again works)
         if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
@@ -131,12 +143,10 @@ public partial class ScanViewModel : ObservableObject
             Quantity = _step;
             ProductName = product.ProductName;
             PriceText = $"{product.SellingPrice:N0} UZS";
-            StockText = $"{Loc.Instance["stock_label"]}{product.OnHand:0.###} {product.UnitName}";
+            StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
             OverlayVisible = true;
             
-            // Show thumbnail directly; if unavailable, fallback to full image
-            var thumbUrl = _images.FromKey(product.ImageKey, thumb: true);
-            ImageUrl = string.IsNullOrWhiteSpace(thumbUrl) ? _images.FromKey(product.ImageKey, thumb: false) : thumbUrl;
+            ImageUrl = _images.FromKey(product.ImageKey, thumb: false);
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -149,29 +159,37 @@ public partial class ScanViewModel : ObservableObject
         }
     }
 
-    private async Task HandleUnknownBarcodeAsync(string barcode)
+    private Task HandleUnknownBarcodeAsync(string barcode)
     {
-        var page = Shell.Current.CurrentPage;
-        if (page is null) { Resume(); return; }
+        UnknownBarcode = barcode;
+        UnknownBarcodeVisible = true;
+        return Task.CompletedTask;
+    }
 
-        var choice = await page.DisplayActionSheetAsync(
-            Loc.Instance["product_not_found"],
-            Loc.Instance["cancel"],
-            null,
-            Loc.Instance["attach_existing"],
-            Loc.Instance["add_new"]);
+    [RelayCommand]
+    private async Task AttachUnknownBarcodeAsync()
+    {
+        if (string.IsNullOrEmpty(UnknownBarcode)) return;
 
-        if (choice == Loc.Instance["attach_existing"])
-        {
-            await Shell.Current.GoToAsync($"barcode_attach?barcode={Uri.EscapeDataString(barcode)}");
-        }
-        else if (choice == Loc.Instance["add_new"])
-        {
-            await Shell.Current.GoToAsync($"product/edit?id=0&barcode={Uri.EscapeDataString(barcode)}");
-        }
-
+        var barcode = UnknownBarcode;
+        UnknownBarcodeVisible = false;
+        await Shell.Current.GoToAsync($"barcode_attach?barcode={Uri.EscapeDataString(barcode)}");
         Resume();
     }
+
+    [RelayCommand]
+    private async Task CreateProductFromUnknownBarcodeAsync()
+    {
+        if (string.IsNullOrEmpty(UnknownBarcode)) return;
+
+        var barcode = UnknownBarcode;
+        UnknownBarcodeVisible = false;
+        await Shell.Current.GoToAsync($"product/edit?id=0&barcode={Uri.EscapeDataString(barcode)}");
+        Resume();
+    }
+
+    [RelayCommand]
+    private void CloseUnknownBarcode() => Resume();
 
     [RelayCommand]
     private void Increase() => Quantity += _step;
@@ -229,6 +247,8 @@ public partial class ScanViewModel : ObservableObject
         SearchVisible = !SearchVisible;
         if (!SearchVisible)
         {
+            _searchCts?.Cancel();
+            IsSearching = false;
             SearchText = "";
             SearchResults.Clear();
             if (!OverlayVisible)
@@ -240,31 +260,98 @@ public partial class ScanViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void ClearSearch() => SearchText = "";
+
+    [RelayCommand]
+    private async Task CreateProductFromSearchAsync()
+    {
+        if (!CanEditProduct) return;
+
+        var barcode = SearchText.Trim();
+        SearchVisible = false;
+        SearchText = "";
+        SearchResults.Clear();
+        var route = string.IsNullOrWhiteSpace(barcode)
+            ? "product/edit?id=0"
+            : $"product/edit?id=0&barcode={Uri.EscapeDataString(barcode)}";
+        await Shell.Current.GoToAsync(route);
+        Resume();
+    }
+
     partial void OnSearchTextChanged(string value)
     {
         _searchCts?.Cancel();
+        SearchResults.Clear();
+        _activeSearch = null;
+        _loadedSearchPage = 0;
+        _hasMoreSearchResults = false;
+        IsLoadingMoreResults = false;
+
+        var text = value.Trim();
+        if (text.Length < 2)
+        {
+            IsSearching = false;
+            return;
+        }
+
         var cts = _searchCts = new CancellationTokenSource();
-        _ = SearchAsync(value.Trim(), cts.Token);
+        _activeSearch = text;
+        IsSearching = true;
+        _ = SearchAsync(text, cts, 1);
     }
 
-    private async Task SearchAsync(string text, CancellationToken ct)
+    private async Task SearchAsync(string text, CancellationTokenSource cts, int page)
     {
         try
         {
-            await Task.Delay(300, ct);
-            if (text.Length < 2)
-            {
-                SearchResults.Clear();
-                return;
-            }
-            var products = await _productsApi.GetAllAsync(search: text);
-            if (ct.IsCancellationRequested) return;
-            SearchResults.Clear();
-            foreach (var p in products.Where(p => p.IsEnabled).Take(40))
-                SearchResults.Add(new SearchRow(p));
+            await Task.Delay(200, cts.Token);
+            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(page, SearchPageSize).Search(text).Build());
+            if (cts.IsCancellationRequested) return;
+
+            var products = (response.Content ?? []).ToList();
+            _loadedSearchPage = page;
+            _hasMoreSearchResults = products.Count == SearchPageSize;
+            foreach (var p in products.Where(p => p.IsEnabled))
+                SearchResults.Add(new SearchRow(p, _images));
         }
         catch (OperationCanceledException) { }
         catch { }
+        finally
+        {
+            if (_searchCts == cts)
+                IsSearching = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreResultsAsync()
+    {
+        if (IsSearching || IsLoadingMoreResults || !_hasMoreSearchResults || string.IsNullOrWhiteSpace(_activeSearch) || _searchCts is null)
+            return;
+
+        var cts = _searchCts;
+        var page = _loadedSearchPage + 1;
+        IsLoadingMoreResults = true;
+        try
+        {
+            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(page, SearchPageSize).Search(_activeSearch).Build());
+            if (cts.IsCancellationRequested || _searchCts != cts || _activeSearch is null)
+                return;
+
+            var products = (response.Content ?? []).ToList();
+            _loadedSearchPage = page;
+            _hasMoreSearchResults = products.Count == SearchPageSize;
+            foreach (var p in products.Where(p => p.IsEnabled))
+                SearchResults.Add(new SearchRow(p, _images));
+        }
+        catch (OperationCanceledException) { }
+        catch { }
+        finally
+        {
+            if (_searchCts == cts)
+                IsLoadingMoreResults = false;
+        }
     }
 
     [RelayCommand]
@@ -276,17 +363,29 @@ public partial class ScanViewModel : ObservableObject
         Quantity = 1;
         ProductName = p.Name;
         PriceText = $"{p.SellingPrice ?? 0:N0} UZS";
-        StockText = $"{Loc.Instance["stock_label"]}{p.OnHand:0.###} {p.UnitName}";
+        StockText = StockTextFor(p.OnHand, p.UnitName, p.DefaultVariantId);
         OverlayVisible = true;
         IsDetecting = false;
-                // Show thumbnail directly; if unavailable, fallback to full image
-            var thumbUrl = _images.FromKey(p.ImageKey, thumb: true);
-            ImageUrl = string.IsNullOrWhiteSpace(thumbUrl) ? _images.FromKey(p.ImageKey, thumb: false) : thumbUrl;
+        ImageUrl = _images.FromKey(p.ImageKey, thumb: false);
         
         SearchVisible = false;
         SearchText = "";
         SearchResults.Clear();
         // Progressive loading removed – images are now set directly in LookupAsync / PickResult
+    }
+
+    // Long‑press on a search row to view full product details in a modal
+    [RelayCommand]
+    private void RowLongPress(SearchRow row)
+    {
+        // Navigate to a modal page showing detailed product information.
+        // The page "product/detail" should be implemented to display all fields.
+        if (row?.Product?.DefaultVariantId != null)
+        {
+            var url = $"product/detail?variantId={row.Product.DefaultVariantId}";
+            // Using modal navigation (true) to present as a modal dialog.
+            Shell.Current.GoToAsync(url, true);
+        }
     }
 
     private async Task FlashAsync(string message)
@@ -296,6 +395,42 @@ public partial class ScanViewModel : ObservableObject
         Resume();
     }
 
+    private void OnSupplyCartChanged()
+    {
+        SupplyCartCount = _supplyCart.Count;
+        if (_product is not null)
+            StockText = StockTextFor(_product.OnHand, _product.UnitName, _product.VariantId);
+    }
+
+    private string StockTextFor(decimal onHand, string unitName, long variantId)
+    {
+        var pending = _supplyCart.Lines.FirstOrDefault(x => x.VariantId == variantId)?.Quantity ?? 0;
+        var pendingText = pending > 0 ? $"({pending:0.###})" : "";
+        return $"{Loc.Instance["stock_label"]}{onHand:0.###}{pendingText} {unitName}";
+    }
+
+    private async Task RefreshProductAsync(long variantId)
+    {
+        if (_product?.VariantId != variantId)
+            return;
+
+        try
+        {
+            var updated = (await _productsApi.GetAllAsync(variantId: variantId)).FirstOrDefault();
+            if (updated is null)
+                return;
+
+            _product = new ProductLookupDto(variantId, updated.Name, updated.UnitName, _product.PackQty,
+                updated.SellingPrice ?? _product.SellingPrice, updated.OnHand, updated.Dimension ?? _product.Dimension,
+                updated.ImageKey);
+            ProductName = _product.ProductName;
+            PriceText = $"{_product.SellingPrice:N0} UZS";
+            StockText = StockTextFor(_product.OnHand, _product.UnitName, _product.VariantId);
+            ImageUrl = _images.FromKey(_product.ImageKey, thumb: false);
+        }
+        catch { }
+    }
+
     private void Resume()
     {
         Status = Loc.Instance["scan_hint_store"];
@@ -303,6 +438,8 @@ public partial class ScanViewModel : ObservableObject
         _lastValue = null;
         _lastAt = DateTime.MinValue;
         OverlayVisible = false;
+        UnknownBarcodeVisible = false;
+        UnknownBarcode = "";
         if (!SearchVisible)
             IsDetecting = true;
     }
@@ -311,10 +448,12 @@ public partial class ScanViewModel : ObservableObject
     private static partial Regex HandoffCode();
 }
 
-public sealed record SearchRow(ProductDto Product)
+public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
 {
     public string Name => Product.Name;
     public string PriceText => $"{Product.SellingPrice ?? 0:N0} UZS";
     public string StockText => $"{Product.OnHand:0.###} {Product.UnitName}";
-    public string? ImageUrl => Product.ImageUrl;
+    public string? ImageUrl => Images.FromKey(Product.ImageKey, thumb: true) ?? Images.Full(Product.ImageUrl);
+    // Additional info that helps differentiate products with similar names.
+    public string FullInfo => $"{Product.Name} | {Product.UnitName} | {Product.Dimension ?? ""}";
 }

@@ -26,6 +26,9 @@ public sealed class CartStore
     public long? CustomerId { get; private set; }
     public string? CustomerName { get; private set; }
     public string Note { get; private set; } = "";
+    public string? SubmittedCartCode { get; private set; }
+    public string? SubmissionIdempotencyKey { get; private set; }
+    public string? CheckoutIdempotencyKey { get; private set; }
 
     public event Action? Changed;
 
@@ -52,6 +55,9 @@ public sealed class CartStore
             CustomerId = draft.CustomerId;
             CustomerName = draft.CustomerName;
             Note = draft.Note ?? "";
+            SubmittedCartCode = draft.SubmittedCartCode;
+            SubmissionIdempotencyKey = draft.SubmissionIdempotencyKey;
+            CheckoutIdempotencyKey = draft.CheckoutIdempotencyKey;
         }
         catch
         {
@@ -115,15 +121,48 @@ public sealed class CartStore
         Changed?.Invoke();
     }
 
-    private void Save()
+    public string EnsureSubmissionIdempotencyKey()
     {
+        SubmissionIdempotencyKey ??= Guid.NewGuid().ToString("N");
+        Save(false);
+        return SubmissionIdempotencyKey;
+    }
+
+    public string EnsureCheckoutIdempotencyKey()
+    {
+        CheckoutIdempotencyKey ??= Guid.NewGuid().ToString("N");
+        Save(false);
+        return CheckoutIdempotencyKey;
+    }
+
+    public void MarkSubmitted(string code)
+    {
+        SubmittedCartCode = code;
+        Save(false);
+    }
+
+    private void Save(bool invalidateSubmission = true)
+    {
+        if (invalidateSubmission)
+        {
+            SubmittedCartCode = null;
+            SubmissionIdempotencyKey = null;
+            CheckoutIdempotencyKey = null;
+        }
         var draft = new Draft(
             Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey)).ToList(),
-            CustomerId, CustomerName, Note);
+            CustomerId, CustomerName, Note, SubmittedCartCode, SubmissionIdempotencyKey, CheckoutIdempotencyKey);
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
         Changed?.Invoke();
     }
 
     private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal UnitPrice, decimal Quantity, string? ImageKey);
-    private sealed record Draft(List<DraftLine> Lines, long? CustomerId, string? CustomerName, string? Note);
+    private sealed record Draft(
+        List<DraftLine> Lines,
+        long? CustomerId,
+        string? CustomerName,
+        string? Note,
+        string? SubmittedCartCode = null,
+        string? SubmissionIdempotencyKey = null,
+        string? CheckoutIdempotencyKey = null);
 }

@@ -40,7 +40,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -81,7 +81,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         try
         {
             if (Shell.Current?.CurrentPage is not { } page) return;
-            if (await page.DisplayAlert(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
+            if (await page.DisplayAlertAsync(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
                     Loc.Instance["pin_offer_yes"], Loc.Instance["later"]))
                 await Shell.Current.GoToAsync("pin?setup=1");
         }

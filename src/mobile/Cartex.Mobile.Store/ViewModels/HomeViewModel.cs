@@ -75,7 +75,7 @@ public partial class HomeViewModel(
     private Task OpenCartAsync() => Shell.Current.GoToAsync("cart");
 
     [RelayCommand]
-    private Task OpenQueueAsync() => Shell.Current.GoToAsync("//main/queue");
+    private Task OpenQueueAsync() => Shell.Current.GoToAsync("//main/trade");
 
     [RelayCommand]
     private async Task LogoutAsync()

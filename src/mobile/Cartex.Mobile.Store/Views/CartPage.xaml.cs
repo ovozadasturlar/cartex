@@ -26,9 +26,28 @@ public partial class CartPage : ContentPage
         base.OnDisappearing();
     }
 
-    private void OnSwipeStarted(object sender, SwipeStartedEventArgs e)
+    protected override bool OnBackButtonPressed()
     {
-        var swipeView = (SwipeView)sender;
+        if (_vm.IsProductModalOpen)
+        {
+            _vm.CloseProductModalCommand.Execute(null);
+            return true;
+        }
+
+        if (_vm.IsCustomerModalOpen)
+        {
+            _vm.CloseCustomerModalCommand.Execute(null);
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
+    }
+
+    private void OnSwipeStarted(object? sender, SwipeStartedEventArgs e)
+    {
+        if (sender is not SwipeView swipeView)
+            return;
+
         if (_openSwipeView != null && _openSwipeView != swipeView)
         {
             _openSwipeView.Close();
@@ -41,9 +60,11 @@ public partial class CartPage : ContentPage
             line.IsSwiped = true;
     }
 
-    private void OnSwipeEnded(object sender, SwipeEndedEventArgs e)
+    private void OnSwipeEnded(object? sender, SwipeEndedEventArgs e)
     {
-        var swipeView = (SwipeView)sender;
+        if (sender is not SwipeView swipeView)
+            return;
+
         if (swipeView.BindingContext is Services.CartLine line)
         {
             line.IsSwiped = e.IsOpen;

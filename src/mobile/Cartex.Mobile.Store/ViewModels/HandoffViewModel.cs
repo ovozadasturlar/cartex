@@ -75,7 +75,7 @@ public partial class HandoffViewModel(IOrderingApi orderingApi) : ObservableObje
     private async Task CancelCartAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["cancel_cart"], Loc.Instance["cancel_cart_confirm"],
+        if (!await page.DisplayAlertAsync(Loc.Instance["cancel_cart"], Loc.Instance["cancel_cart_confirm"],
                 Loc.Instance["yes"], Loc.Instance["no"])) return;
         try
         {
@@ -85,7 +85,7 @@ public partial class HandoffViewModel(IOrderingApi orderingApi) : ObservableObje
         }
         catch (Refit.ApiException ex)
         {
-            await page.DisplayAlert(Loc.Instance["error"], ApiErrors.Describe(ex), Loc.Instance["ok"]);
+            await page.DisplayAlertAsync(Loc.Instance["error"], ApiErrors.Describe(ex), Loc.Instance["ok"]);
         }
         catch
         {

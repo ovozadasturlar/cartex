@@ -41,7 +41,7 @@ public partial class App : Application
 		try
 		{
 			if (shell.CurrentPage is { } page)
-				await page.DisplayAlert(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
+				await page.DisplayAlertAsync(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
 		}
 		catch { }
 	});
