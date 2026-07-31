@@ -9,6 +9,8 @@
 .github/
 deploy/agent-data/
 deploy/data/
+deploy/installer/output/
+deploy/installer/publish/
 **/*.user
 **/*.env
 **/appsettings.Production.json

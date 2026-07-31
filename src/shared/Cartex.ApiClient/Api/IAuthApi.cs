@@ -28,4 +28,5 @@ public interface IAuthApi
 
     [Post("/api/auth/change-password")]
     Task ChangePasswordAsync([Body] ChangePasswordRequest request);
+
 }

@@ -161,7 +161,7 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     }
 
     [Fact]
-    public async Task Import_ExistingProduct_AttachesSheetBarcode_InsteadOfGenerating()
+    public async Task Import_LegacyProductWithoutBarcode_AttachesSheetBarcode_InsteadOfGenerating()
     {
         await LoginAsync();
         using var scope = Fixture.CreateScope();
@@ -169,8 +169,13 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         var unitId = await db.Units.Where(u => u.IsDefault).Select(u => u.Id).FirstAsync();
-        await sender.Send(new CreateProductCommand(
+        var productId = await sender.Send(new CreateProductCommand(
             Name: "Barkodsiz mavjud", CategoryId: null, UnitId: unitId, MinStock: null, Barcodes: null));
+        var legacyVariantId = await db.ProductVariants
+            .Where(v => v.ProductId == productId && v.IsDefault)
+            .Select(v => v.Id)
+            .SingleAsync();
+        await db.Barcodes.Where(b => b.VariantId == legacyVariantId).ExecuteDeleteAsync();
 
         await using var file = Sheet(
             ["Nomi", "Barkod"],
@@ -185,11 +190,7 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         Assert.Equal(1, result.Existing);
         Assert.Equal(0, result.BarcodesGenerated);
 
-        var variantId = await db.ProductVariants
-            .Where(v => v.Product.Name == "Barkodsiz mavjud")
-            .Select(v => v.Id)
-            .SingleAsync();
-        var code = await db.Barcodes.Where(b => b.VariantId == variantId).Select(b => b.Code).SingleAsync();
+        var code = await db.Barcodes.Where(b => b.VariantId == legacyVariantId).Select(b => b.Code).SingleAsync();
 
         Assert.Equal("4780000000009", code);
     }

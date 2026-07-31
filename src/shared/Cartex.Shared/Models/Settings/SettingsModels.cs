@@ -11,14 +11,67 @@ public record UpdateEmailSettingsRequest(bool Enabled, string? Host, int Port, b
 public record UpdateSmsSettingsRequest(bool Enabled, string Provider, string? Login, string? Password, string? Sender, string? BaseUrl);
 public record UpdateNotificationSettingsRequest(List<string> Channels, bool CopyToAdmin, string? PublicBaseUrl, string? TelegramFormat = null, string? EmailFormat = null);
 
-public record ReminderSettingsDto(bool Enabled, int MinDaysOverdue, int RepeatEveryDays, decimal MinBalance, int SendHourLocal, List<string> Channels, string? OverdueTemplate = null, string? DueSoonTemplate = null);
+public record ReminderSettingsDto(
+    bool Enabled,
+    int MinDaysOverdue,
+    int RepeatEveryDays,
+    decimal MinBalance,
+    int SendHourLocal,
+    bool NotifyBeforeDue,
+    int DaysBeforeDue,
+    bool NotifyOnDueDate,
+    List<string> Channels,
+    string? OverdueTemplate = null,
+    string? DueSoonTemplate = null,
+    string? DueTodayTemplate = null);
 
-public record UpdateReminderSettingsRequest(bool Enabled, int MinDaysOverdue, int RepeatEveryDays, decimal MinBalance, int SendHourLocal, List<string> Channels, string? OverdueTemplate = null, string? DueSoonTemplate = null);
+public record UpdateReminderSettingsRequest(
+    bool Enabled,
+    int MinDaysOverdue,
+    int RepeatEveryDays,
+    decimal MinBalance,
+    int SendHourLocal,
+    bool NotifyBeforeDue,
+    int DaysBeforeDue,
+    bool NotifyOnDueDate,
+    List<string> Channels,
+    string? OverdueTemplate = null,
+    string? DueSoonTemplate = null,
+    string? DueTodayTemplate = null);
 public record TelegramTestRequest(string? BotToken);
 public record TelegramTestResult(bool Ok, string? BotUsername);
 public record SendTestMessageRequest(string Channel, string? Recipient);
-public record ReceiptSettingsDto(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal");
-public record UpdateReceiptSettingsRequest(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal");
+public record ReceiptSettingsDto(
+    string? HeaderText,
+    string? FooterText,
+    int PaperWidth,
+    string PaperFormat = "Thermal",
+    bool ShowBusinessName = true,
+    bool ShowBranchName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowCashier = true,
+    bool ShowCustomer = true,
+    bool ShowReceiptNumber = true,
+    bool ShowPaymentDetails = true,
+    bool ShowQrCode = true,
+    bool ShowElectronicLink = true,
+    string? PublicReceiptBaseUrl = null);
+public record UpdateReceiptSettingsRequest(
+    string? HeaderText,
+    string? FooterText,
+    int PaperWidth,
+    string PaperFormat = "Thermal",
+    bool ShowBusinessName = true,
+    bool ShowBranchName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowCashier = true,
+    bool ShowCustomer = true,
+    bool ShowReceiptNumber = true,
+    bool ShowPaymentDetails = true,
+    bool ShowQrCode = true,
+    bool ShowElectronicLink = true);
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);

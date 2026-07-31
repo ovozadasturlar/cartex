@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net.Http.Json;
 using Xunit;
 
@@ -68,5 +69,27 @@ public class ReceiptDeliveryTests(CartexApiFactory factory)
             var bytes = await response.Content.ReadAsByteArrayAsync();
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes[..4]));
         }
+    }
+
+    [Fact]
+    public async Task Receipt_print_pages_are_available_without_authentication()
+    {
+        var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
+        await AuthHelper.EnsureOpenShiftAsync(admin);
+        var token = await CreateSaleAsync(admin);
+
+        var anonymous = factory.CreateClient();
+        var response = await anonymous.GetAsync($"/r/{token}/print-pages?size=a5&orientation=portrait");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/zip", response.Content.Headers.ContentType!.MediaType);
+        await using var content = await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken);
+        using var archive = new ZipArchive(content, ZipArchiveMode.Read);
+        var page = Assert.Single(archive.Entries);
+        Assert.EndsWith(".png", page.FullName, StringComparison.OrdinalIgnoreCase);
+        await using var image = page.Open();
+        var signature = new byte[4];
+        await image.ReadExactlyAsync(signature, TestContext.Current.CancellationToken);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47], signature);
     }
 }

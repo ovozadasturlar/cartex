@@ -64,6 +64,7 @@ public static class DependencyInjection
         RegisterAuthorized<IFeaturesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ILicenseApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ISettingsApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<INotificationsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IStorageApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IShiftsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IHardwareKeysApi>(services, settings, baseUrl, clientName, timeout);

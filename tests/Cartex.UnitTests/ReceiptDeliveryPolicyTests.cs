@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Domain.Enums;
 using Cartex.Application.Common.Settings;
 using Xunit;
 

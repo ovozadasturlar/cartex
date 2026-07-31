@@ -13,4 +13,7 @@ public interface ISessionsApi
 
     [Post("/api/auth/qr/approve")]
     Task ApproveQrAsync([Body] ApproveQrLoginRequest request);
+
+    [Get("/api/auth/context")]
+    Task<UserContextDto> GetContextAsync(CancellationToken cancellationToken = default);
 }

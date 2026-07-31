@@ -23,12 +23,6 @@ public interface ISettingsApi
     [Put("/api/settings/sms")]
     Task UpdateSmsAsync([Body] UpdateSmsSettingsRequest request);
 
-    [Get("/api/settings/sms/journal")]
-    Task<List<SmsMessageDto>> GetSmsJournalAsync([Query] int page = 1, [Query] int pageSize = 50);
-
-    [Get("/api/settings/sms/stats")]
-    Task<SmsStatsDto> GetSmsStatsAsync();
-
     [Put("/api/settings/notification")]
     Task UpdateNotificationAsync([Body] UpdateNotificationSettingsRequest request);
 

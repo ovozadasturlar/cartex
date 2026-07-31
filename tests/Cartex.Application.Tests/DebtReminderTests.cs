@@ -33,8 +33,17 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         return customerId;
     }
 
-    private static ReminderSettings Config(int minDays = 0, decimal minBalance = 0, int repeatDays = 7) =>
-        new() { Enabled = true, MinDaysOverdue = minDays, MinBalance = minBalance, RepeatEveryDays = repeatDays };
+    private static ReminderSettings Config(int minDays = 0, decimal minBalance = 0, int repeatDays = 7, int daysBeforeDue = 1) =>
+        new()
+        {
+            Enabled = true,
+            MinDaysOverdue = minDays,
+            MinBalance = minBalance,
+            RepeatEveryDays = repeatDays,
+            NotifyBeforeDue = true,
+            DaysBeforeDue = daysBeforeDue,
+            NotifyOnDueDate = true
+        };
 
     [Fact]
     public async Task Enqueue_writes_outbox_and_log_then_dedups_within_window()
@@ -116,6 +125,33 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Configured_advance_days_controls_pre_due_reminder()
+    {
+        await SeedDebtorAsync(dueDate: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
+
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(daysBeforeDue: 1), DateTime.UtcNow, CancellationToken.None));
+        Assert.Equal(1, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(daysBeforeDue: 2), DateTime.UtcNow, CancellationToken.None));
+        var outbox = await db.NotificationOutbox.OrderByDescending(o => o.Id).FirstAsync();
+        Assert.Contains("debt_due_soon", outbox.Payload);
+    }
+
+    [Fact]
+    public async Task Due_date_day_uses_dedicated_template()
+    {
+        await SeedDebtorAsync(dueDate: DateOnly.FromDateTime(DateTime.UtcNow));
+
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        Assert.Equal(1, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));
+        var outbox = await db.NotificationOutbox.OrderByDescending(o => o.Id).FirstAsync();
+        Assert.Contains("debt_due_today", outbox.Payload);
     }
 
     [Fact]

@@ -17,6 +17,9 @@ public interface IRolesApi
     [Put("/api/roles/{id}/permissions")]
     Task AssignPermissionsAsync(long id, [Body] AssignPermissionsRequest request);
 
+    [Put("/api/roles/{id}/active")]
+    Task SetActiveAsync(long id, [Body] SetRoleActiveRequest request);
+
     [Delete("/api/roles/{id}")]
     Task DeleteAsync(long id);
 }
