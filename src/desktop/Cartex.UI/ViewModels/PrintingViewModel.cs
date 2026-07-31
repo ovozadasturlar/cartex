@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -11,6 +14,26 @@ namespace Cartex.UI.ViewModels;
 public partial class PrintingViewModel : ViewModelBase, ILoadable
 {
     private const decimal ShiftStepMm = 0.5m;
+    private static readonly IBrush ColorInkBrush = Brush.Parse("#1E293B");
+    private static readonly IBrush ColorMutedBrush = Brush.Parse("#64748B");
+    private static readonly IBrush ColorLineBrush = Brush.Parse("#CBD5E1");
+    private static readonly IBrush ColorFaintBrush = Brush.Parse("#F1F5F9");
+    private static readonly IBrush ColorStatusBrush = Brush.Parse("#16A34A");
+    private static readonly IBrush ColorStatusBackgroundBrush = Brush.Parse("#F0FDF4");
+    private static readonly IBrush ColorAccentBrush = Brush.Parse("#2563EB");
+    private static readonly IBrush MonochromeInkBrush = Brush.Parse("#111111");
+    private static readonly IBrush MonochromeMutedBrush = Brush.Parse("#4B4B4B");
+    private static readonly IBrush MonochromeLineBrush = Brush.Parse("#A3A3A3");
+    private static readonly IBrush MonochromeFaintBrush = Brush.Parse("#EEEEEE");
+    private static readonly IBrush MonochromeStatusBackgroundBrush = Brush.Parse("#F3F3F3");
+    private static readonly ZReportDto PreviewZReport = new(
+        1048, 100_000, 1_250_000, 25_000, 50_000, 30_000, 200_000, 75_000, 1_470_000, 1_470_000, 0)
+    {
+        CardSales = 480_000,
+        BonusUsed = 35_000,
+        NewDebtIssued = 90_000,
+        SalesCount = 18
+    };
     private bool _isLoadingLabelSettings;
 
     private sealed record PrinterCalibrationProfile(int Dpi, int Rotation, decimal Density, decimal Speed);
@@ -18,7 +41,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IPrinterService _printer;
     private readonly IToastService _toast;
     private readonly ISettingsApi _settingsApi;
+    private readonly IBusinessApi _businessApi;
     private readonly IBarcodeLabelService _labels;
+    private readonly BranchContextService _branch;
     private readonly AuthService _auth;
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
@@ -39,6 +64,46 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void SelectSection(string key) => SectionKey = key;
+
+    [RelayCommand]
+    private void SelectReceiptMode(string mode) =>
+        ReceiptMode = DocumentPrintLayout.ResolveOutputFormat(mode, DocumentPaperSize);
+
+    [RelayCommand]
+    private void SelectDocumentPaper(string paperSize)
+    {
+        DocumentPaperSize = paperSize == "a5" ? "a5" : "a4";
+        if (IsDocument)
+            ReceiptMode = DocumentPaperSize;
+    }
+
+    [RelayCommand]
+    private void SelectDocumentOrientation(string orientation) =>
+        DocumentOrientation = orientation == "landscape" ? "landscape" : "portrait";
+
+    [RelayCommand]
+    private void SelectPagesPerSheet(string value) =>
+        DocumentPagesPerSheet = int.TryParse(value, out var pages) && pages is 2 or 4 ? pages : 1;
+
+    [RelayCommand]
+    private void SelectZReportMode(string mode) =>
+        ZReportMode = DocumentPrintLayout.ResolveOutputFormat(mode, ZReportDocumentPaperSize);
+
+    [RelayCommand]
+    private void SelectZReportDocumentPaper(string paperSize)
+    {
+        ZReportDocumentPaperSize = paperSize == "a5" ? "a5" : "a4";
+        if (IsZReportDocument)
+            ZReportMode = ZReportDocumentPaperSize;
+    }
+
+    [RelayCommand]
+    private void SelectZReportDocumentOrientation(string orientation) =>
+        ZReportDocumentOrientation = orientation == "landscape" ? "landscape" : "portrait";
+
+    [RelayCommand]
+    private void SelectZReportPagesPerSheet(string value) =>
+        ZReportDocumentPagesPerSheet = int.TryParse(value, out var pages) && pages is 2 or 4 ? pages : 1;
 
     [ObservableProperty] private string? _receiptPrinter;
     [ObservableProperty] private string? _zReportPrinter;
@@ -61,19 +126,361 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
     [ObservableProperty] private string _receiptPaperWidth = "default";
+    [ObservableProperty] private string _documentPaperSize = "a4";
+    [ObservableProperty] private string _documentOrientation = "portrait";
+    [ObservableProperty] private int _documentPagesPerSheet = 1;
+    [ObservableProperty] private string _zReportMode = "thermal";
+    [ObservableProperty] private string _zReportPaperWidth = "default";
+    [ObservableProperty] private string _zReportDocumentPaperSize = "a4";
+    [ObservableProperty] private string _zReportDocumentOrientation = "portrait";
+    [ObservableProperty] private int _zReportDocumentPagesPerSheet = 1;
     [ObservableProperty] private string _headerText = string.Empty;
     [ObservableProperty] private string _footerText = string.Empty;
     [ObservableProperty] private int _businessPaperWidth = 32;
+    [ObservableProperty] private bool _showBusinessName = true;
+    [ObservableProperty] private bool _showBranchName = true;
+    [ObservableProperty] private bool _showAddress = true;
+    [ObservableProperty] private bool _showPhone = true;
+    [ObservableProperty] private bool _showCashier = true;
+    [ObservableProperty] private bool _showCustomer = true;
+    [ObservableProperty] private bool _showReceiptNumber = true;
+    [ObservableProperty] private bool _showPaymentDetails = true;
+    [ObservableProperty] private bool _showQrCode = true;
+    [ObservableProperty] private bool _showElectronicLink = true;
+    [ObservableProperty] private string? _publicReceiptBaseUrl;
+    [ObservableProperty] private string _previewBusinessName = string.Empty;
+    [ObservableProperty] private string _previewBranchName = string.Empty;
+    [ObservableProperty] private string _previewAddress = string.Empty;
+    [ObservableProperty] private string _previewPhone = string.Empty;
+    [ObservableProperty] private string _previewCashierName = "Akmal";
+    [ObservableProperty] private bool _documentPrinterSupportsColor;
+    [ObservableProperty] private bool _zReportPrinterSupportsColor;
+    [ObservableProperty] private Bitmap? _labelPreview;
+    [ObservableProperty] private bool _labelPreviewMayClip;
 
     public bool IsThermal => ReceiptMode == "thermal";
+    public bool IsDocument => !IsThermal;
+    public bool HasPublicReceiptBaseUrl => !string.IsNullOrWhiteSpace(PublicReceiptBaseUrl);
+    public bool CanPreviewQrCode => ShowQrCode && HasPublicReceiptBaseUrl;
+    public bool CanPreviewElectronicLink => ShowElectronicLink && HasPublicReceiptBaseUrl;
+    public string PreviewElectronicReceiptLink => HasPublicReceiptBaseUrl
+        ? $"{PublicReceiptBaseUrl!.TrimEnd('/')}/r/1048"
+        : string.Empty;
+    public bool IsDocumentPaperA4 => DocumentPaperSize == "a4";
+    public bool IsDocumentPaperA5 => DocumentPaperSize == "a5";
+    public bool IsPortrait => DocumentOrientation == "portrait";
+    public bool IsLandscape => DocumentOrientation == "landscape";
+    public bool IsOnePagePerSheet => DocumentPagesPerSheet == 1;
+    public bool IsTwoPagesPerSheet => DocumentPagesPerSheet == 2;
+    public bool IsFourPagesPerSheet => DocumentPagesPerSheet == 4;
+    public bool IsTwoPagesPortrait => IsTwoPagesPerSheet && IsPortrait;
+    public bool IsTwoPagesLandscape => IsTwoPagesPerSheet && IsLandscape;
+    public bool IsReceiptRenderLandscape =>
+        DocumentPrintLayout.GetReceiptOrientation(DocumentOrientation, DocumentPagesPerSheet) == "landscape";
+    public bool IsPreviewColor => IsDocument && DocumentPrinterSupportsColor;
+    public bool IsPreviewMonochrome => !IsPreviewColor;
+    public string PreviewPrinterName =>
+        string.IsNullOrWhiteSpace(IsThermal ? ReceiptPrinter : DocumentPrinter)
+            ? L["printer_not_set"]
+            : (IsThermal ? ReceiptPrinter : DocumentPrinter)!;
+    public IBrush PreviewInkBrush => IsPreviewColor ? ColorInkBrush : MonochromeInkBrush;
+    public IBrush PreviewMutedBrush => IsPreviewColor ? ColorMutedBrush : MonochromeMutedBrush;
+    public IBrush PreviewLineBrush => IsPreviewColor ? ColorLineBrush : MonochromeLineBrush;
+    public IBrush PreviewFaintBrush => IsPreviewColor ? ColorFaintBrush : MonochromeFaintBrush;
+    public IBrush PreviewStatusBrush => IsPreviewColor ? ColorStatusBrush : MonochromeInkBrush;
+    public IBrush PreviewStatusBackgroundBrush =>
+        IsPreviewColor ? ColorStatusBackgroundBrush : MonochromeStatusBackgroundBrush;
+    public double PreviewReceiptPageWidth => IsReceiptRenderLandscape ? 424 : 300;
+    public double PreviewReceiptPageHeight => IsReceiptRenderLandscape ? 300 : 424;
+    public Thickness PreviewReceiptPagePadding => new(28.5);
+    public double PreviewReceiptOnSheetWidth => GetPreviewReceiptOnSheetSize().Width;
+    public double PreviewReceiptOnSheetHeight => GetPreviewReceiptOnSheetSize().Height;
+    public bool IsZReportThermal => ZReportMode == "thermal";
+    public bool IsZReportDocument => !IsZReportThermal;
+    public bool IsZReportDocumentPaperA4 => ZReportDocumentPaperSize == "a4";
+    public bool IsZReportDocumentPaperA5 => ZReportDocumentPaperSize == "a5";
+    public bool IsZReportPortrait => ZReportDocumentOrientation == "portrait";
+    public bool IsZReportLandscape => ZReportDocumentOrientation == "landscape";
+    public bool IsZReportOnePagePerSheet => ZReportDocumentPagesPerSheet == 1;
+    public bool IsZReportTwoPagesPerSheet => ZReportDocumentPagesPerSheet == 2;
+    public bool IsZReportFourPagesPerSheet => ZReportDocumentPagesPerSheet == 4;
+    public bool IsZReportTwoPagesPortrait => IsZReportTwoPagesPerSheet && IsZReportPortrait;
+    public bool IsZReportTwoPagesLandscape => IsZReportTwoPagesPerSheet && IsZReportLandscape;
+    public bool IsZReportRenderLandscape =>
+        DocumentPrintLayout.GetReceiptOrientation(
+            ZReportDocumentOrientation,
+            ZReportDocumentPagesPerSheet) == "landscape";
+    public bool IsZReportPreviewColor => IsZReportDocument && ZReportPrinterSupportsColor;
+    public bool IsZReportPreviewMonochrome => !IsZReportPreviewColor;
+    public IBrush ZReportPreviewInkBrush => IsZReportPreviewColor ? ColorInkBrush : MonochromeInkBrush;
+    public IBrush ZReportPreviewAccentBrush =>
+        IsZReportPreviewColor ? ColorAccentBrush : MonochromeInkBrush;
+    public IBrush ZReportPreviewMutedBrush =>
+        IsZReportPreviewColor ? ColorMutedBrush : MonochromeMutedBrush;
+    public IBrush ZReportPreviewLineBrush =>
+        IsZReportPreviewColor ? ColorLineBrush : MonochromeLineBrush;
+    public IBrush ZReportPreviewFaintBrush =>
+        IsZReportPreviewColor ? ColorFaintBrush : MonochromeFaintBrush;
+    public IBrush ZReportPreviewStatusBrush =>
+        IsZReportPreviewColor ? ColorStatusBrush : MonochromeInkBrush;
+    public IBrush ZReportPreviewStatusBackgroundBrush =>
+        IsZReportPreviewColor ? ColorStatusBackgroundBrush : MonochromeStatusBackgroundBrush;
+    public double LabelPreviewPaperWidth
+    {
+        get
+        {
+            var scale = Math.Min(
+                340d / Math.Max(20, (double)LabelWidthMm),
+                300d / Math.Max(20, (double)LabelHeightMm));
+            return (double)LabelWidthMm * scale;
+        }
+    }
+    public double LabelPreviewPaperHeight
+    {
+        get
+        {
+            var scale = Math.Min(
+                340d / Math.Max(20, (double)LabelWidthMm),
+                300d / Math.Max(20, (double)LabelHeightMm));
+            return (double)LabelHeightMm * scale;
+        }
+    }
+    public string ZReportPreviewText
+    {
+        get
+        {
+            var width = int.TryParse(ZReportPaperWidth, out var parsed) ? parsed : 32;
+            return _printer.FormatZReport(PreviewZReport, width);
+        }
+    }
+    public string ZReportPreviewBodyText
+    {
+        get
+        {
+            var lines = ZReportPreviewText
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Split('\n');
+            var firstSeparator = Array.FindIndex(
+                lines,
+                line => line.Length >= 10 && line.All(character => character == '-'));
+            return string.Join(
+                Environment.NewLine,
+                firstSeparator >= 0 ? lines.Skip(firstSeparator) : lines);
+        }
+    }
+    public string ZReportPreviewDate => DateTime.Now.ToString("dd.MM.yyyy HH:mm");
+    public string ZReportPreviewShiftNumber => $"#{PreviewZReport.ShiftId}";
+    public string ZReportPreviewPeriod =>
+        $"{DateTime.Today.AddHours(8):dd.MM.yyyy HH:mm} — {DateTime.Now:dd.MM.yyyy HH:mm}";
+    public string ZReportPreviewSalesAmount => $"{PreviewZReport.CashSales + PreviewZReport.CardSales:N0}";
+    public string ZReportPreviewExpectedCash => $"{PreviewZReport.ExpectedCash:N0}";
+    public string ZReportPreviewCountedCash => $"{PreviewZReport.CountedCash:N0}";
+    public string ZReportPreviewDifference => $"{PreviewZReport.Difference:N0}";
+    public string ZReportPreviewCashSales => $"{PreviewZReport.CashSales:N0}";
+    public string ZReportPreviewCardSales => $"{PreviewZReport.CardSales:N0}";
+    public string ZReportPreviewBonusUsed => $"{PreviewZReport.BonusUsed:N0}";
+    public string ZReportPreviewDebtIssued => $"{PreviewZReport.NewDebtIssued:N0}";
+    public string ZReportPreviewCashReturns => $"-{PreviewZReport.CashReturns:N0}";
+    public string ZReportPreviewCardReturns => $"-{PreviewZReport.CardReturns:N0}";
+    public string ZReportPreviewSalesCount => $"{PreviewZReport.SalesCount:N0}";
+    public string ZReportPreviewOpeningFloat => $"{PreviewZReport.OpeningFloat:N0}";
+    public string ZReportPreviewPayIn => $"{PreviewZReport.PayIn:N0}";
+    public string ZReportPreviewPayOut => $"-{PreviewZReport.PayOut:N0}";
+    public string ZReportPreviewDebtPayIn => $"{PreviewZReport.DebtPayIn:N0}";
+    public string ZReportPreviewSupplyPayOut => $"-{PreviewZReport.SupplyPayOut:N0}";
+    public double ZReportPreviewPaperWidth => IsZReportThermal
+        ? ZReportPaperWidth switch
+        {
+            "48" => 340,
+            "42" => 300,
+            _ => 240
+        }
+        : IsZReportLandscape
+            ? IsZReportDocumentPaperA5 ? 380 : 430
+            : IsZReportDocumentPaperA5 ? 270 : 310;
+    public double ZReportPreviewPaperHeight => IsZReportThermal
+        ? 520
+        : IsZReportLandscape
+            ? IsZReportDocumentPaperA5 ? 270 : 304
+            : IsZReportDocumentPaperA5 ? 380 : 438;
+    public double ZReportContentPageWidth => IsZReportRenderLandscape ? 424 : 300;
+    public double ZReportContentPageHeight => IsZReportRenderLandscape ? 300 : 424;
+    public double ZReportOnSheetWidth => GetZReportOnSheetSize().Width;
+    public double ZReportOnSheetHeight => GetZReportOnSheetSize().Height;
+    public string ZReportPreviewPrinterName =>
+        !string.IsNullOrWhiteSpace(ZReportPrinter)
+            ? ZReportPrinter
+            : !string.IsNullOrWhiteSpace(IsZReportThermal ? ReceiptPrinter : DocumentPrinter)
+                ? (IsZReportThermal ? ReceiptPrinter : DocumentPrinter)!
+                : L["printer_not_set"];
+    public double PreviewPaperWidth => IsThermal
+        ? 250
+        : IsLandscape
+            ? IsDocumentPaperA5 ? 380 : 430
+            : IsDocumentPaperA5 ? 270 : 310;
+    public double PreviewPaperHeight => IsThermal
+        ? 520
+        : IsLandscape
+            ? IsDocumentPaperA5 ? 270 : 304
+            : IsDocumentPaperA5 ? 380 : 438;
+    public string PreviewFooterText =>
+        string.IsNullOrWhiteSpace(FooterText) ? L["receipt_footer_example"] : FooterText;
 
-    partial void OnReceiptModeChanged(string value) => OnPropertyChanged(nameof(IsThermal));
+    partial void OnReceiptModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsThermal));
+        OnPropertyChanged(nameof(IsDocument));
+        NotifyPreviewColorChanged();
+        NotifyPreviewLayoutChanged();
+    }
+
+    partial void OnReceiptPrinterChanged(string? value)
+    {
+        if (IsThermal)
+            OnPropertyChanged(nameof(PreviewPrinterName));
+        if (IsZReportThermal)
+            RefreshZReportPrinterPreview();
+    }
+
+    partial void OnZReportPrinterChanged(string? value) => RefreshZReportPrinterPreview();
+
+    partial void OnDocumentPrinterChanged(string? value)
+    {
+        DocumentPrinterSupportsColor = _printer.GetPrinterCapabilities(value).SupportsColor;
+        if (IsDocument)
+            OnPropertyChanged(nameof(PreviewPrinterName));
+        if (IsZReportDocument && string.IsNullOrWhiteSpace(ZReportPrinter))
+            RefreshZReportPrinterPreview();
+    }
+
+    partial void OnDocumentPrinterSupportsColorChanged(bool value) => NotifyPreviewColorChanged();
+
+    partial void OnPublicReceiptBaseUrlChanged(string? value)
+    {
+        OnPropertyChanged(nameof(HasPublicReceiptBaseUrl));
+        OnPropertyChanged(nameof(CanPreviewQrCode));
+        OnPropertyChanged(nameof(CanPreviewElectronicLink));
+        OnPropertyChanged(nameof(PreviewElectronicReceiptLink));
+    }
+
+    partial void OnShowQrCodeChanged(bool value) => OnPropertyChanged(nameof(CanPreviewQrCode));
+    partial void OnShowElectronicLinkChanged(bool value) => OnPropertyChanged(nameof(CanPreviewElectronicLink));
+    partial void OnFooterTextChanged(string value) => OnPropertyChanged(nameof(PreviewFooterText));
+
+    partial void OnDocumentPaperSizeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsDocumentPaperA4));
+        OnPropertyChanged(nameof(IsDocumentPaperA5));
+        if (IsDocument && ReceiptMode != value)
+            ReceiptMode = value;
+        NotifyPreviewLayoutChanged();
+    }
+
+    partial void OnDocumentOrientationChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsPortrait));
+        OnPropertyChanged(nameof(IsLandscape));
+        NotifyPreviewLayoutChanged();
+    }
+
+    partial void OnDocumentPagesPerSheetChanged(int value) => NotifyPreviewLayoutChanged();
+
+    partial void OnZReportModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsZReportThermal));
+        OnPropertyChanged(nameof(IsZReportDocument));
+        RefreshZReportPrinterPreview();
+        NotifyZReportPreviewChanged();
+    }
+
+    partial void OnZReportPaperWidthChanged(string value) => NotifyZReportPreviewChanged();
+
+    partial void OnZReportDocumentPaperSizeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsZReportDocumentPaperA4));
+        OnPropertyChanged(nameof(IsZReportDocumentPaperA5));
+        if (IsZReportDocument && ZReportMode != value)
+            ZReportMode = value;
+        NotifyZReportPreviewChanged();
+    }
+
+    partial void OnZReportDocumentOrientationChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsZReportPortrait));
+        OnPropertyChanged(nameof(IsZReportLandscape));
+        NotifyZReportPreviewChanged();
+    }
+
+    partial void OnZReportDocumentPagesPerSheetChanged(int value) => NotifyZReportPreviewChanged();
+
+    partial void OnZReportPrinterSupportsColorChanged(bool value)
+        => NotifyZReportColorChanged();
+
+    private void NotifyZReportColorChanged()
+    {
+        OnPropertyChanged(nameof(IsZReportPreviewColor));
+        OnPropertyChanged(nameof(IsZReportPreviewMonochrome));
+        OnPropertyChanged(nameof(ZReportPreviewInkBrush));
+        OnPropertyChanged(nameof(ZReportPreviewAccentBrush));
+        OnPropertyChanged(nameof(ZReportPreviewMutedBrush));
+        OnPropertyChanged(nameof(ZReportPreviewLineBrush));
+        OnPropertyChanged(nameof(ZReportPreviewFaintBrush));
+        OnPropertyChanged(nameof(ZReportPreviewStatusBrush));
+        OnPropertyChanged(nameof(ZReportPreviewStatusBackgroundBrush));
+    }
+
+    private void NotifyPreviewLayoutChanged()
+    {
+        OnPropertyChanged(nameof(IsOnePagePerSheet));
+        OnPropertyChanged(nameof(IsTwoPagesPerSheet));
+        OnPropertyChanged(nameof(IsFourPagesPerSheet));
+        OnPropertyChanged(nameof(IsTwoPagesPortrait));
+        OnPropertyChanged(nameof(IsTwoPagesLandscape));
+        OnPropertyChanged(nameof(IsReceiptRenderLandscape));
+        OnPropertyChanged(nameof(PreviewPaperWidth));
+        OnPropertyChanged(nameof(PreviewPaperHeight));
+        OnPropertyChanged(nameof(PreviewReceiptPageWidth));
+        OnPropertyChanged(nameof(PreviewReceiptPageHeight));
+        OnPropertyChanged(nameof(PreviewReceiptPagePadding));
+        OnPropertyChanged(nameof(PreviewReceiptOnSheetWidth));
+        OnPropertyChanged(nameof(PreviewReceiptOnSheetHeight));
+    }
+
+    private PrintPageSize GetPreviewReceiptOnSheetSize() =>
+        DocumentPrintLayout.GetPreviewPageSize(
+            DocumentPaperSize,
+            ReceiptMode,
+            DocumentOrientation,
+            DocumentPagesPerSheet,
+            PreviewPaperWidth,
+            PreviewPaperHeight);
+
+    private PrintPageSize GetZReportOnSheetSize() =>
+        DocumentPrintLayout.GetPreviewPageSize(
+            ZReportDocumentPaperSize,
+            ZReportMode,
+            ZReportDocumentOrientation,
+            ZReportDocumentPagesPerSheet,
+            ZReportPreviewPaperWidth,
+            ZReportPreviewPaperHeight);
+
+    private void NotifyPreviewColorChanged()
+    {
+        OnPropertyChanged(nameof(IsPreviewColor));
+        OnPropertyChanged(nameof(IsPreviewMonochrome));
+        OnPropertyChanged(nameof(PreviewPrinterName));
+        OnPropertyChanged(nameof(PreviewInkBrush));
+        OnPropertyChanged(nameof(PreviewMutedBrush));
+        OnPropertyChanged(nameof(PreviewLineBrush));
+        OnPropertyChanged(nameof(PreviewFaintBrush));
+        OnPropertyChanged(nameof(PreviewStatusBrush));
+        OnPropertyChanged(nameof(PreviewStatusBackgroundBrush));
+    }
 
     public string[] LabelPresets { get; } = ["40×30", "58×40", "40×58", "58×60", "custom"];
     public string[] LabelModes { get; } = ["tspl", "pdf"];
     public int[] LabelDpis { get; } = [203, 300];
     public int[] LabelRotations { get; } = [0, 180];
-    public string[] ReceiptModes { get; } = ["thermal", "a5", "a4"];
     public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
     public int[] BusinessPaperWidths { get; } = [32, 42, 48];
     public string[] SendFormats { get; } = ["Thermal", "A5", "A4"];
@@ -87,9 +494,54 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         LabelHeightMm = decimal.Parse(parts[1]);
     }
 
-    partial void OnLabelWidthMmChanged(decimal value) => UseManualGapWhenLabelChanges();
-    partial void OnLabelHeightMmChanged(decimal value) => UseManualGapWhenLabelChanges();
+    partial void OnLabelWidthMmChanged(decimal value)
+    {
+        UseManualGapWhenLabelChanges();
+        RefreshLabelPreview();
+    }
+
+    partial void OnLabelHeightMmChanged(decimal value)
+    {
+        UseManualGapWhenLabelChanges();
+        RefreshLabelPreview();
+    }
+
     partial void OnLabelGapMmChanged(decimal value) => UseManualGapWhenLabelChanges();
+    partial void OnLabelShiftXMmChanged(decimal value) => RefreshLabelPreview();
+    partial void OnLabelShiftYMmChanged(decimal value) => RefreshLabelPreview();
+    partial void OnLabelDpiChanged(int value) => RefreshLabelPreview();
+    partial void OnLabelRotationChanged(int value) => RefreshLabelPreview();
+    private void NotifyZReportPreviewChanged()
+    {
+        OnPropertyChanged(nameof(IsZReportOnePagePerSheet));
+        OnPropertyChanged(nameof(IsZReportTwoPagesPerSheet));
+        OnPropertyChanged(nameof(IsZReportFourPagesPerSheet));
+        OnPropertyChanged(nameof(IsZReportTwoPagesPortrait));
+        OnPropertyChanged(nameof(IsZReportTwoPagesLandscape));
+        OnPropertyChanged(nameof(IsZReportRenderLandscape));
+        OnPropertyChanged(nameof(ZReportPreviewText));
+        OnPropertyChanged(nameof(ZReportPreviewBodyText));
+        OnPropertyChanged(nameof(ZReportPreviewDate));
+        OnPropertyChanged(nameof(ZReportPreviewPaperWidth));
+        OnPropertyChanged(nameof(ZReportPreviewPaperHeight));
+        OnPropertyChanged(nameof(ZReportContentPageWidth));
+        OnPropertyChanged(nameof(ZReportContentPageHeight));
+        OnPropertyChanged(nameof(ZReportOnSheetWidth));
+        OnPropertyChanged(nameof(ZReportOnSheetHeight));
+    }
+
+    private void RefreshZReportPrinterPreview()
+    {
+        var printerName = !string.IsNullOrWhiteSpace(ZReportPrinter)
+            ? ZReportPrinter
+            : IsZReportThermal
+                ? ReceiptPrinter
+                : DocumentPrinter;
+        ZReportPrinterSupportsColor = IsZReportDocument
+            && _printer.GetPrinterCapabilities(printerName).SupportsColor;
+        OnPropertyChanged(nameof(ZReportPreviewPrinterName));
+        NotifyZReportColorChanged();
+    }
 
     private void UseManualGapWhenLabelChanges()
     {
@@ -97,12 +549,62 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             UsePrinterGapCalibration = false;
     }
 
-    public PrintingViewModel(IPrinterService printer, IToastService toast, ISettingsApi settingsApi, IBarcodeLabelService labels, AuthService auth)
+    private void RefreshLabelPreview()
+    {
+        if (_isLoadingLabelSettings)
+            return;
+
+        try
+        {
+            var options = new LabelOptions(
+                (double)LabelWidthMm,
+                (double)LabelHeightMm,
+                (double)LabelGapMm,
+                LabelDpi,
+                (double)LabelShiftXMm,
+                (double)LabelShiftYMm,
+                LabelRotation,
+                (int)LabelDensity,
+                (int)LabelSpeed,
+                UsePrinterGapCalibration);
+            var result = _labels.RenderLabelPreview(
+                "4780000123456",
+                L["receipt_preview_item_one"],
+                "25 000",
+                options);
+            using var stream = new MemoryStream(result.Image);
+            var preview = new Bitmap(stream);
+            var previous = LabelPreview;
+            LabelPreview = preview;
+            previous?.Dispose();
+            LabelPreviewMayClip = result.MayClip;
+            OnPropertyChanged(nameof(LabelPreviewPaperWidth));
+            OnPropertyChanged(nameof(LabelPreviewPaperHeight));
+        }
+        catch
+        {
+            var previous = LabelPreview;
+            LabelPreview = null;
+            previous?.Dispose();
+            LabelPreviewMayClip = false;
+        }
+    }
+
+    public PrintingViewModel(
+        IPrinterService printer,
+        IToastService toast,
+        ISettingsApi settingsApi,
+        IBusinessApi businessApi,
+        IBarcodeLabelService labels,
+        BranchContextService branch,
+        AuthService auth)
     {
         _printer = printer;
         _toast = toast;
         _settingsApi = settingsApi;
+        _businessApi = businessApi;
         _labels = labels;
+        _branch = branch;
         _auth = auth;
     }
 
@@ -126,6 +628,26 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
             ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
             ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
+            DocumentPaperSize = s.DocumentPaperSize == "a5" ? "a5" : "a4";
+            DocumentOrientation = s.DocumentOrientation == "landscape" ? "landscape" : "portrait";
+            DocumentPagesPerSheet = s.DocumentPagesPerSheet is 2 or 4 ? s.DocumentPagesPerSheet : 1;
+            ZReportMode = s.ZReportMode is "a4" or "a5" ? s.ZReportMode : "thermal";
+            ZReportPaperWidth = s.ZReportPaperWidth is 32 or 42 or 48
+                ? s.ZReportPaperWidth.ToString()
+                : ReceiptPaperWidth;
+            ZReportDocumentPaperSize = s.ZReportDocumentPaperSize is "a4" or "a5"
+                ? s.ZReportDocumentPaperSize
+                : DocumentPaperSize;
+            ZReportDocumentOrientation = s.ZReportDocumentOrientation == "landscape"
+                ? "landscape"
+                : "portrait";
+            ZReportDocumentPagesPerSheet = s.ZReportDocumentPagesPerSheet is 2 or 4
+                ? s.ZReportDocumentPagesPerSheet
+                : 1;
+            if (ReceiptMode != "thermal")
+                ReceiptMode = DocumentPaperSize;
+            if (ZReportMode != "thermal")
+                ZReportMode = ZReportDocumentPaperSize;
             var label = LabelSize.Resolve(s);
             LabelWidthMm = (decimal)label.WidthMm;
             LabelHeightMm = (decimal)label.HeightMm;
@@ -144,6 +666,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         {
             _isLoadingLabelSettings = false;
         }
+        RefreshZReportPrinterPreview();
+        NotifyZReportPreviewChanged();
+        RefreshLabelPreview();
 
         try
         {
@@ -152,8 +677,38 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             FooterText = cfg.FooterText ?? string.Empty;
             BusinessPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
             SendFormat = SendFormats.Contains(cfg.PaperFormat) ? cfg.PaperFormat : "Thermal";
+            ShowBusinessName = cfg.ShowBusinessName;
+            ShowBranchName = cfg.ShowBranchName;
+            ShowAddress = cfg.ShowAddress;
+            ShowPhone = cfg.ShowPhone;
+            ShowCashier = cfg.ShowCashier;
+            ShowCustomer = cfg.ShowCustomer;
+            ShowReceiptNumber = cfg.ShowReceiptNumber;
+            ShowPaymentDetails = cfg.ShowPaymentDetails;
+            ShowQrCode = cfg.ShowQrCode;
+            ShowElectronicLink = cfg.ShowElectronicLink;
+            PublicReceiptBaseUrl = cfg.PublicReceiptBaseUrl;
         }
         catch { }
+
+        var currentBranch = _branch.SelectedBranch;
+        PreviewCashierName = _auth.UserInfo?.FullName
+            ?? _auth.UserInfo?.Username
+            ?? "Akmal";
+        PreviewBranchName = currentBranch?.Name ?? L["receipt_preview_branch"];
+        PreviewAddress = currentBranch?.Address ?? L["receipt_preview_address"];
+        PreviewPhone = currentBranch?.Phone ?? "+998 90 123 45 67";
+        try
+        {
+            var business = await _businessApi.GetAsync();
+            PreviewBusinessName = business.Name;
+            PreviewAddress = currentBranch?.Address ?? business.Address ?? PreviewAddress;
+            PreviewPhone = currentBranch?.Phone ?? business.Phone ?? PreviewPhone;
+        }
+        catch
+        {
+            PreviewBusinessName = L["receipt_preview_business"];
+        }
     }
 
     [RelayCommand]
@@ -167,13 +722,38 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
                 string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
                 BusinessPaperWidth,
-                SendFormat));
+                SendFormat,
+                ShowBusinessName,
+                ShowBranchName,
+                ShowAddress,
+                ShowPhone,
+                ShowCashier,
+                ShowCustomer,
+                ShowReceiptNumber,
+                ShowPaymentDetails,
+                ShowQrCode,
+                ShowElectronicLink));
         }
         catch (Exception ex)
         {
             _toast.Error(ApiErrors.Describe(ex));
             return;
         }
+        _printer.ReceiptOptions = new ReceiptPrintOptions(
+            string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
+            string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
+            BusinessPaperWidth,
+            ShowBusinessName,
+            ShowBranchName,
+            ShowAddress,
+            ShowPhone,
+            ShowCashier,
+            ShowCustomer,
+            ShowReceiptNumber,
+            ShowPaymentDetails,
+            ShowQrCode,
+            ShowElectronicLink,
+            PublicReceiptBaseUrl);
         ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Receipt);
         _toast.Success(L["success"]);
     }
@@ -193,10 +773,16 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void TestZPrint()
     {
-        if (string.IsNullOrWhiteSpace(ZReportPrinter) && string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
+        var targetPrinter = !string.IsNullOrWhiteSpace(ZReportPrinter)
+            ? ZReportPrinter
+            : IsZReportThermal
+                ? ReceiptPrinter
+                : DocumentPrinter;
+        if (string.IsNullOrWhiteSpace(targetPrinter)) { _toast.Warning(L["error"]); return; }
         try
         {
-            _printer.PrintZReport(new ZReportDto(0, 100_000, 1_250_000, 0, 50_000, 30_000, 200_000, 0, 1_570_000, 1_570_000, 0));
+            SaveLocalPrinterSettings();
+            _printer.PrintZReport(PreviewZReport);
             _toast.Info(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -279,26 +865,36 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     private void SaveLocalPrinterSettings()
     {
-        _printer.SaveSettings(new PrinterSettings(
-            ReceiptPrinter,
-            ZReportPrinter,
-            BarcodePrinter,
-            DocumentPrinter,
-            AutoPrintReceipt,
-            (double)LabelWidthMm,
-            (double)LabelHeightMm,
-            ReceiptMode,
-            int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
-            (int)Math.Clamp(ReceiptCopies, 1, 5),
-            AutoPrintZReport,
-            LabelMode,
-            (double)LabelGapMm,
-            LabelDpi,
-            (double)LabelShiftXMm,
-            (double)LabelShiftYMm,
-            LabelRotation,
-            (int)LabelDensity,
-            (int)LabelSpeed,
-            UsePrinterGapCalibration));
+        _printer.SaveSettings(new PrinterSettings
+        {
+            ReceiptPrinter = ReceiptPrinter,
+            ZReportPrinter = ZReportPrinter,
+            BarcodePrinter = BarcodePrinter,
+            DocumentPrinter = DocumentPrinter,
+            AutoPrintReceipt = AutoPrintReceipt,
+            LabelWidthMm = (double)LabelWidthMm,
+            LabelHeightMm = (double)LabelHeightMm,
+            ReceiptMode = ReceiptMode,
+            ReceiptPaperWidth = int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
+            ReceiptCopies = (int)Math.Clamp(ReceiptCopies, 1, 5),
+            AutoPrintZReport = AutoPrintZReport,
+            LabelMode = LabelMode,
+            LabelGapMm = (double)LabelGapMm,
+            LabelDpi = LabelDpi,
+            LabelShiftXMm = (double)LabelShiftXMm,
+            LabelShiftYMm = (double)LabelShiftYMm,
+            LabelRotation = LabelRotation,
+            LabelDensity = (int)LabelDensity,
+            LabelSpeed = (int)LabelSpeed,
+            UsePrinterGapCalibration = UsePrinterGapCalibration,
+            DocumentPaperSize = DocumentPaperSize,
+            DocumentOrientation = DocumentOrientation,
+            DocumentPagesPerSheet = DocumentPagesPerSheet,
+            ZReportMode = ZReportMode,
+            ZReportPaperWidth = int.TryParse(ZReportPaperWidth, out var zWidth) ? zWidth : 0,
+            ZReportDocumentPaperSize = ZReportDocumentPaperSize,
+            ZReportDocumentOrientation = ZReportDocumentOrientation,
+            ZReportDocumentPagesPerSheet = ZReportDocumentPagesPerSheet
+        });
     }
 }

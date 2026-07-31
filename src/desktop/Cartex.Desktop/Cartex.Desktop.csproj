@@ -7,6 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,4 +26,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Cartex.UI\Cartex.UI.csproj" />
   </ItemGroup>
+
+  <Target Name="RemoveExternalSingleFilePublishArtifacts"
+          AfterTargets="Publish"
+          Condition="'$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <_SingleFilePublishDebugSymbols Include="$(PublishDir)libHarfBuzzSharp.pdb" />
+      <_SingleFilePublishDebugSymbols Include="$(PublishDir)libSkiaSharp.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_SingleFilePublishDebugSymbols)" />
+    <RemoveDir Directories="$(PublishDir)LatoFont" />
+  </Target>
 </Project>

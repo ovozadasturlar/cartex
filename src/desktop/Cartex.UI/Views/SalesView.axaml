@@ -533,7 +533,7 @@
                                        Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="Auto,*,*,*" Margin="0,2,0,0" IsVisible="{Binding !IsMulticurrency}">
+                        <Grid ColumnDefinitions="Auto,*,*,*" Margin="0,2,0,0" IsVisible="{Binding ShowSingleCurrencyPayments}">
                             <Button Classes="icon" Margin="0,15,4,0" VerticalAlignment="Bottom"
                                     Command="{Binding PayExactCommand}"
                                     ToolTip.Tip="{Binding L[shortcut_pay_exact]}">
@@ -556,7 +556,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding IsMulticurrency}">
+                        <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding ShowMulticurrencyPayments}">
                             <ItemsControl ItemsSource="{Binding PaymentRows}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -681,15 +681,20 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid ColumnDefinitions="Auto,8,*">
+                        <Grid ColumnDefinitions="Auto,8,*,8,*">
                             <Button Grid.Column="0" Classes="outline" MinHeight="50" Padding="14,0"
                                     HorizontalContentAlignment="Center" Command="{Binding HoldSaleCommand}"
-                                    IsEnabled="{Binding !IsCartEmpty}" ToolTip.Tip="{Binding L[hold_sale]}">
+                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
+                                    ToolTip.Tip="{Binding L[hold_sale]}">
                                 <mi:MaterialIcon Kind="PauseCircleOutline" Width="22" Height="22" />
                             </Button>
                             <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    MinHeight="50" FontSize="15" Command="{Binding SendToQueueCommand}"
+                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
+                                    Content="{Binding L[send_to_queue]}" />
+                            <Button Grid.Column="4" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     MinHeight="50" FontSize="17" Command="{Binding CompleteSaleCommand}"
-                                    IsEnabled="{Binding !IsCartEmpty}"
+                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCheckout}"
                                     Content="{Binding L[complete_sale]}" />
                         </Grid>
 

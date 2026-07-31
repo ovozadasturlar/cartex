@@ -31,7 +31,7 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[roles]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[create_role]}" VerticalAlignment="Center" />
@@ -58,6 +58,17 @@
                                                 Header="{Binding [start_page], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" Binding="{Binding Priority}"
                                                 Header="{Binding [priority], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="Auto"
+                                                    Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleSwitch IsChecked="{Binding IsActive, Mode=OneWay}"
+                                                      IsEnabled="{Binding !AccessAll}"
+                                                      Command="{Binding $parent[DataGrid].DataContext.ToggleActiveCommand}"
+                                                      CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="Auto" Binding="{Binding Permissions.Count}"
                                                 Header="{Binding [permissions], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto">
@@ -66,12 +77,14 @@
                                         <StackPanel Orientation="Horizontal">
                                             <Button Classes="icon" Margin="6,0"
                                                     Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanOpenEditor}"
                                                     CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
                                                                  Foreground="{DynamicResource TextSecondary}" />
                                             </Button>
                                             <Button Classes="icon" Margin="0,0,6,0"
                                                     Command="{Binding $parent[DataGrid].DataContext.DeleteCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanDelete}"
                                                     CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[delete]}">
                                                 <mi:MaterialIcon Kind="DeleteOutline" Width="16" Height="16"
                                                                  Foreground="{DynamicResource DangerBrush}" />
@@ -107,7 +120,7 @@
 
                     <Grid ColumnDefinitions="280,*" RowSpacing="0" ColumnSpacing="20">
 
-                        <StackPanel Grid.Column="0" Spacing="12">
+                            <StackPanel Grid.Column="0" Spacing="12" IsEnabled="{Binding CanEditMetadata}">
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                 <TextBox Text="{Binding EditName}" MinHeight="38" />
@@ -146,13 +159,38 @@
                         </StackPanel>
 
                         <Border Grid.Column="1" Background="{DynamicResource AppBg}" CornerRadius="10"
+                                IsEnabled="{Binding CanAssignPermissions}"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="4">
                             <TabControl>
                                 <TabItem Header="{Binding L[permissions]}" FontSize="13">
-                                    <ScrollViewer>
-                                        <ItemsControl ItemsSource="{Binding PermissionGroups}"
-                                                      ItemTemplate="{StaticResource PermGroupTemplate}" Margin="10,4,10,10" />
-                                    </ScrollViewer>
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Top" Margin="10,8,10,4" Padding="10"
+                                                Background="{DynamicResource CardBg}" CornerRadius="8"
+                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding L[permission_presets]}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6" />
+                                                <ItemsControl ItemsSource="{Binding PermissionBundles}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" IsThreeState="True"
+                                                                      Content="{Binding Label}" Margin="4,2"
+                                                                      MinWidth="190" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                        <ScrollViewer>
+                                            <ItemsControl ItemsSource="{Binding PermissionGroups}"
+                                                          ItemTemplate="{StaticResource PermGroupTemplate}" Margin="10,4,10,10" />
+                                        </ScrollViewer>
+                                    </DockPanel>
                                 </TabItem>
                                 <TabItem Header="{Binding L[grantable_permissions]}" FontSize="13"
                                          IsVisible="{Binding ShowGrantableTab}">

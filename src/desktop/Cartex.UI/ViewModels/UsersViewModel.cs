@@ -49,6 +49,9 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Users.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("users.create");
+    public bool CanEdit => _auth.HasPermission("users.edit");
+    public bool CanDelete => _auth.HasPermission("users.delete");
     public string EditTitle => IsNew ? L["create_user"] : L["edit_user"];
     public string PasswordLabel => IsNew ? L["password"] : L["new_password"];
 
@@ -152,7 +155,16 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     {
         EditRoles.Clear();
         foreach (var r in _allRoles)
-            EditRoles.Add(new SelectItem { Id = r.Id, Label = r.Name, IsSelected = selected.Contains(r.Id) });
+        {
+            var isSelected = selected.Contains(r.Id);
+            EditRoles.Add(new SelectItem
+            {
+                Id = r.Id,
+                Label = r.IsActive ? r.Name : $"{r.Name} · {L["inactive"]}",
+                IsSelected = isSelected,
+                IsEnabled = r.IsActive || isSelected
+            });
+        }
     }
 
     private void BuildBranchItems(IReadOnlyCollection<long> selected)
@@ -165,6 +177,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditFullName = "";
@@ -185,6 +198,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(UserDto user)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = user.Id;
         EditFullName = user.FullName;
@@ -208,6 +222,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteAsync(UserDto user)
     {
+        if (!CanDelete) return;
         if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_user_confirm"], user.Username), L["delete"]))
             return;
         try
@@ -232,6 +247,27 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
         var branchIds = EditBranches.Where(b => b.IsSelected).Select(b => b.Id).ToList();
         var defaultBranchId = SelectedDefaultBranch?.Id;
+        var selectedRoles = _allRoles.Where(role => roleIds.Contains(role.Id)).ToList();
+        var requiresBranch = selectedRoles.Any(role => role.RequiresBranch);
+        var canAccessAllBranches = selectedRoles.Any(role =>
+            role.AccessAll || role.Permissions.Contains("branch.viewAll"));
+        if (requiresBranch && branchIds.Count == 0 && !canAccessAllBranches)
+        {
+            _toast.Error(L["branch_required_for_role"]);
+            return;
+        }
+        if (branchIds.Count == 1 && defaultBranchId is null)
+            defaultBranchId = branchIds[0];
+        if (requiresBranch && branchIds.Count > 1 && defaultBranchId is null)
+        {
+            _toast.Error(L["default_branch_required"]);
+            return;
+        }
+        if (defaultBranchId is not null && !canAccessAllBranches && !branchIds.Contains(defaultBranchId.Value))
+        {
+            _toast.Error(L["default_branch_must_be_accessible"]);
+            return;
+        }
         var startPage = SelectedStartPage?.Key;
         var cartDestination = SelectedCartDestination?.Key;
 
@@ -264,6 +300,7 @@ public partial class SelectItem : ObservableObject
 {
     public long Id { get; init; }
     public string Label { get; init; } = "";
+    public bool IsEnabled { get; init; } = true;
     [ObservableProperty] private bool _isSelected;
 }
 

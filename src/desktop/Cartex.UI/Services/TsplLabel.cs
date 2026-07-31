@@ -10,6 +10,8 @@ namespace Cartex.UI.Services;
 
 public static class TsplLabel
 {
+    public record PreviewResult(byte[] Image, bool MayClip);
+
     public static byte[] Build(string code, string name, int quantity, LabelOptions options, string? priceText = null)
     {
         var dotsPerMm = options.Dpi / 25.4;
@@ -50,6 +52,9 @@ public static class TsplLabel
     }
 
     public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options)
+        => RenderPreview(code, name, priceText, options).Image;
+
+    public static PreviewResult RenderPreview(string code, string name, string? priceText, LabelOptions options)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
@@ -57,7 +62,39 @@ public static class TsplLabel
         using var bitmap = RenderBitmap(code, name, priceText, widthDots, heightDots, dotsPerMm, options);
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return data.ToArray();
+        return new PreviewResult(
+            data.ToArray(),
+            InkTouchesEdge(bitmap, Math.Max(1, (int)Math.Round(dotsPerMm * 0.5))));
+    }
+
+    private static bool InkTouchesEdge(SKBitmap bitmap, int inset)
+    {
+        static bool IsInk(SKColor color) =>
+            (color.Red * 299 + color.Green * 587 + color.Blue * 114) / 1000 < 128;
+
+        var right = bitmap.Width - inset;
+        var bottom = bitmap.Height - inset;
+        for (var y = 0; y < bitmap.Height; y++)
+        {
+            for (var x = 0; x < inset; x++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+            for (var x = right; x < bitmap.Width; x++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+        }
+
+        for (var x = inset; x < right; x++)
+        {
+            for (var y = 0; y < inset; y++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+            for (var y = bottom; y < bitmap.Height; y++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+        }
+
+        return false;
     }
 
     private static string Mm(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);

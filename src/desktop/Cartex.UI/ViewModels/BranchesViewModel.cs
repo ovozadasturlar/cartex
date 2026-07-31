@@ -41,6 +41,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     private readonly IBranchesApi _api;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly AuthService _auth;
     private long _editId;
 
     public ObservableCollection<BranchDto> Branches { get; } = [];
@@ -62,17 +63,21 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Branches.Count == 0;
     public bool IsModalOpen => IsEditOpen || IsCatalogOpen;
+    public bool CanCreate => _auth.HasPermission("branches.create");
+    public bool CanEdit => _auth.HasPermission("branches.edit");
+    public bool CanEditCatalog => _auth.HasPermission("products.edit");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
         CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public BranchesViewModel(IBranchesApi api, IToastService toast, IBusyService busy)
+    public BranchesViewModel(IBranchesApi api, IToastService toast, IBusyService busy, AuthService auth)
     {
         _api = api;
         _toast = toast;
         _busy = busy;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -93,6 +98,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -105,6 +111,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(BranchDto branch)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = branch.Id;
         EditName = branch.Name;
@@ -180,6 +187,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
 
     private async Task SetCatalogVisibilityAsync(BranchCatalogRow row, string visibility)
     {
+        if (!CanEditCatalog) return;
         if (row.IsUpdating || row.VisibilityOverride == visibility)
             return;
 
@@ -196,6 +204,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         var address = string.IsNullOrWhiteSpace(EditAddress) ? null : EditAddress.Trim();
         var phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone.Trim();

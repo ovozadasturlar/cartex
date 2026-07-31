@@ -1,62 +1,133 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.RemindersView"
-             x:CompileBindings="False">
-
+             x:DataType="vm:RemindersViewModel"
+             x:CompileBindings="True">
     <ScrollViewer>
-        <StackPanel Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="16">
-            <c:PageHeader Title="{Binding L[debt_reminders]}" />
+        <StackPanel Margin="24" MaxWidth="820" HorizontalAlignment="Left" Spacing="16">
+            <c:PageHeader Title="{Binding L[debt_reminders]}" Subtitle="{Binding L[reminder_page_hint]}" />
 
-            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    c:FormBehaviors.AutoFocus="True"
-                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
-                <StackPanel Spacing="14">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="16">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding L[reminder_enabled]}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,140">
-                        <TextBlock Text="{Binding L[reminder_min_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding MinDaysOverdue, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="365" FormatString="0" MinHeight="36" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,140">
-                        <TextBlock Text="{Binding L[reminder_repeat_days]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding RepeatEveryDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="365" FormatString="0" MinHeight="36" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,140">
-                        <TextBlock Text="{Binding L[reminder_min_balance]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding MinBalance, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="36" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,140">
-                        <TextBlock Text="{Binding L[reminder_send_hour]}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1" Value="{Binding SendHourLocal, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="23" FormatString="0" MinHeight="36" />
-                    </Grid>
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{Binding L[channels]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <StackPanel Orientation="Horizontal" Spacing="18">
-                            <CheckBox IsChecked="{Binding ChannelTelegram}" Content="Telegram" />
-                            <CheckBox IsChecked="{Binding ChannelSms}" Content="SMS" />
-                            <CheckBox IsChecked="{Binding ChannelEmail}" Content="Email" />
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding L[reminder_enabled]}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[reminder_enabled_hint]}" FontSize="12"
+                                       Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" />
                         </StackPanel>
-                    </StackPanel>
-                    <StackPanel Spacing="5">
-                        <TextBlock Text="{Binding L[reminder_template]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBox Text="{Binding OverdueTemplate}" MinHeight="60" AcceptsReturn="True" TextWrapping="Wrap"
-                                 PlaceholderText="Hurmatli {name}! Qarzingiz: {balance} {currency} ({days} kun)" />
-                    </StackPanel>
-                    <StackPanel Spacing="5">
-                        <TextBlock Text="{Binding L[due_soon_template]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBox Text="{Binding DueSoonTemplate}" MinHeight="60" AcceptsReturn="True" TextWrapping="Wrap"
-                                 PlaceholderText="Hurmatli {name}! To'lov muddati: {dueDate}" />
-                    </StackPanel>
-                    <TextBlock Text="{Binding L[template_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                    <Button Classes="brand" HorizontalAlignment="Left" MinWidth="140" HorizontalContentAlignment="Center"
-                            Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanEdit}" />
+                    </Grid>
+
+                    <Separator Background="{DynamicResource BorderBrush}" />
+
+                    <TextBlock Text="{Binding L[schedule]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                    <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
+                        <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <CheckBox IsChecked="{Binding NotifyBeforeDue}" IsEnabled="{Binding CanEdit}"
+                                          Content="{Binding L[notify_before_due]}" />
+                                <Grid ColumnDefinitions="*,120" IsEnabled="{Binding NotifyBeforeDue}">
+                                    <TextBlock Text="{Binding L[days_before_due]}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding DaysBeforeDue}" Minimum="1" Maximum="365"
+                                                   FormatString="0" IsEnabled="{Binding CanEdit}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <CheckBox IsChecked="{Binding NotifyOnDueDate}" IsEnabled="{Binding CanEdit}"
+                                          Content="{Binding L[notify_on_due_date]}" />
+                                <TextBlock Text="{Binding L[notify_on_due_date_hint]}" FontSize="12"
+                                           Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Row="2" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{Binding L[overdue_reminders]}" FontWeight="SemiBold" />
+                                <Grid ColumnDefinitions="*,120">
+                                    <TextBlock Text="{Binding L[reminder_min_days]}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding MinDaysOverdue}" Minimum="0" Maximum="365"
+                                                   FormatString="0" IsEnabled="{Binding CanEdit}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,120">
+                                    <TextBlock Text="{Binding L[reminder_repeat_days]}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding RepeatEveryDays}" Minimum="1" Maximum="365"
+                                                   FormatString="0" IsEnabled="{Binding CanEdit}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="2" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{Binding L[send_conditions]}" FontWeight="SemiBold" />
+                                <Grid ColumnDefinitions="*,120">
+                                    <TextBlock Text="{Binding L[reminder_min_balance]}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding MinBalance}" Minimum="0"
+                                                   FormatString="N0" ShowButtonSpinner="False" IsEnabled="{Binding CanEdit}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,120">
+                                    <TextBlock Text="{Binding L[reminder_send_hour]}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding SendHourLocal}" Minimum="0" Maximum="23"
+                                                   FormatString="0" IsEnabled="{Binding CanEdit}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
             </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding L[delivery_channels]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding L[delivery_channels_hint]}" FontSize="12" Foreground="{DynamicResource TextMuted}" />
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <CheckBox IsChecked="{Binding ChannelTelegram}" Content="Telegram" IsEnabled="{Binding CanEdit}" />
+                        <CheckBox IsChecked="{Binding ChannelSms}" Content="SMS" IsEnabled="{Binding CanEdit}" />
+                        <CheckBox IsChecked="{Binding ChannelEmail}" Content="Email" IsEnabled="{Binding CanEdit}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding L[message_templates]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="{Binding L[template_chip_hint]}" FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <c:TemplateVariableEditor Label="{Binding L[due_soon_template]}"
+                                              Text="{Binding DueSoonTemplate, Mode=TwoWay}"
+                                              PlaceholderText="Hurmatli {name}! To'lov muddati: {dueDate}"
+                                              DragHint="{Binding L[drag_to_message]}"
+                                              IsEnabled="{Binding CanEdit}" />
+                    <c:TemplateVariableEditor Label="{Binding L[due_today_template]}"
+                                              Text="{Binding DueTodayTemplate, Mode=TwoWay}"
+                                              PlaceholderText="Hurmatli {name}! To'lov muddati bugun"
+                                              DragHint="{Binding L[drag_to_message]}"
+                                              IsEnabled="{Binding CanEdit}" />
+                    <c:TemplateVariableEditor Label="{Binding L[reminder_template]}"
+                                              Text="{Binding OverdueTemplate, Mode=TwoWay}"
+                                              PlaceholderText="Hurmatli {name}! Qarzingiz: {balance} {currency} ({days} kun)"
+                                              DragHint="{Binding L[drag_to_message]}"
+                                              IsEnabled="{Binding CanEdit}" />
+                </StackPanel>
+            </Border>
+
+            <Button Classes="brand" HorizontalAlignment="Left" MinWidth="150" HorizontalContentAlignment="Center"
+                    Command="{Binding SaveCommand}" Content="{Binding L[save]}" IsVisible="{Binding CanEdit}" Margin="0,0,0,24" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -58,6 +58,7 @@
                         <NumericUpDown Grid.Column="2" Value="{Binding OpeningFloat, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                        ShowButtonSpinner="False" MinHeight="40" />
                         <Button Grid.Column="4" Classes="brand" MinWidth="160" HorizontalContentAlignment="Center"
+                                IsVisible="{Binding CanOpen}"
                                 Command="{Binding OpenShiftCommand}" Content="{Binding L[open_shift]}" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding CurrencyRows}" IsVisible="{Binding IsMulticurrency}">
@@ -218,6 +219,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <Button Classes="brand" MinWidth="160" HorizontalAlignment="Right" HorizontalContentAlignment="Center"
+                                    IsVisible="{Binding CanClose}"
                                     Command="{Binding CloseShiftCommand}" Content="{Binding L[close_shift]}" />
                         </StackPanel>
                     </Border>

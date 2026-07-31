@@ -7,8 +7,15 @@ namespace Cartex.UI.Services;
 public interface IBarcodeLabelService
 {
     byte[] RenderLabelPreview(string code, string name, string? priceText);
+    LabelPreviewResult RenderLabelPreview(
+        string code,
+        string name,
+        string? priceText,
+        LabelOptions options);
     void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null);
 }
+
+public record LabelPreviewResult(byte[] Image, bool MayClip);
 
 public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabelService
 {
@@ -18,6 +25,19 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
     {
         if (string.IsNullOrWhiteSpace(code)) return [];
         return TsplLabel.RenderPng(code, name, priceText, LabelSize.Resolve(printer.GetSettings()));
+    }
+
+    public LabelPreviewResult RenderLabelPreview(
+        string code,
+        string name,
+        string? priceText,
+        LabelOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return new LabelPreviewResult([], false);
+
+        var result = TsplLabel.RenderPreview(code, name, priceText, options);
+        return new LabelPreviewResult(result.Image, result.MayClip);
     }
 
     public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null)

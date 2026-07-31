@@ -13,7 +13,7 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[transfers]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -71,11 +71,13 @@
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Classes="outline" Margin="6,4" Padding="10,4"
-                                                IsVisible="{Binding Status, Converter={x:Static conv:StringEqualsConverter.Instance}, ConverterParameter=Sent}"
-                                                Command="{Binding $parent[DataGrid].DataContext.ReceiveCommand}"
-                                                CommandParameter="{Binding}"
-                                                Content="{Binding $parent[DataGrid].DataContext.L[receive]}" />
+                                        <Panel IsVisible="{Binding Status, Converter={x:Static conv:StringEqualsConverter.Instance}, ConverterParameter=Sent}">
+                                            <Button Classes="outline" Margin="6,4" Padding="10,4"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanReceive}"
+                                                    Command="{Binding $parent[DataGrid].DataContext.ReceiveCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Content="{Binding $parent[DataGrid].DataContext.L[receive]}" />
+                                        </Panel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

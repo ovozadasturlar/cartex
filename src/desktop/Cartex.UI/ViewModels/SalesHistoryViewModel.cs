@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
 
@@ -18,6 +20,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
+    private readonly IPrinterService _printer;
 
     public ObservableCollection<SaleDto> Sales { get; } = [];
     public PaginationState Paging { get; } = new();
@@ -41,7 +44,14 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Sales.Count == 0;
 
-    public SalesHistoryViewModel(ISalesApi salesApi, IReceiptApi receiptApi, AuthService auth, IToastService toast, IBusyService busy, IExportService export)
+    public SalesHistoryViewModel(
+        ISalesApi salesApi,
+        IReceiptApi receiptApi,
+        AuthService auth,
+        IToastService toast,
+        IBusyService busy,
+        IExportService export,
+        IPrinterService printer)
     {
         _salesApi = salesApi;
         _receiptApi = receiptApi;
@@ -49,6 +59,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         _toast = toast;
         _busy = busy;
         _export = export;
+        _printer = printer;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["total"], "TotalAmount")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
@@ -147,7 +158,47 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     }
 
     private SaleDto? _receiptSale;
-    public bool CanResendReceipt => _auth.HasPermission("customers.message") && _receiptSale?.CustomerName is not null;
+    public bool CanResendReceipt =>
+        _auth.HasPermission("customers.message") && _receiptSale?.CanResendReceipt == true;
+
+    [RelayCommand]
+    private async Task PrintReceiptAsync()
+    {
+        if (Receipt is null) return;
+        try
+        {
+            var printerSettings = _printer.GetSettings();
+            if (printerSettings.ReceiptMode is "a4" or "a5")
+            {
+                var documentFormat = DocumentPrintLayout.ResolveOutputFormat(
+                    "document",
+                    printerSettings.DocumentPaperSize ?? "a4");
+                var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
+                    printerSettings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
+                    printerSettings.DocumentPagesPerSheet);
+                var content = await _receiptApi.GetPrintImagesAsync(
+                    Receipt.ReceiptToken,
+                    documentFormat,
+                    renderOrientation);
+                await using var package = await content.ReadAsStreamAsync();
+                using var archive = new ZipArchive(package, ZipArchiveMode.Read);
+                var pages = new List<byte[]>(archive.Entries.Count);
+                foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
+                {
+                    await using var input = entry.Open();
+                    using var output = new MemoryStream();
+                    await input.CopyToAsync(output);
+                    pages.Add(output.ToArray());
+                }
+                _printer.PrintDocumentImages(pages);
+            }
+            else
+            {
+                _printer.PrintReceipt(Receipt);
+            }
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task ResendReceiptAsync()

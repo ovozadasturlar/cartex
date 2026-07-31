@@ -5,15 +5,62 @@ using System.Text;
 using System.Text.Json;
 using Cartex.Shared.Localization;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.UI.Services;
 
-public record PrinterSettings(string? ReceiptPrinter, string? ZReportPrinter, string? BarcodePrinter, string? DocumentPrinter, bool AutoPrintReceipt, double LabelWidthMm = 0, double LabelHeightMm = 0, string? ReceiptMode = null, int ReceiptPaperWidth = 0, int ReceiptCopies = 1, bool AutoPrintZReport = false, string? LabelMode = null, double LabelGapMm = 0, int LabelDpi = 0, double LabelShiftXMm = 0, double LabelShiftYMm = 0, int LabelRotation = -1, int LabelDensity = 0, int LabelSpeed = 0, bool UsePrinterGapCalibration = false);
+public sealed record PrinterSettings
+{
+    public string? ReceiptPrinter { get; init; }
+    public string? ZReportPrinter { get; init; }
+    public string? BarcodePrinter { get; init; }
+    public string? DocumentPrinter { get; init; }
+    public bool AutoPrintReceipt { get; init; }
+    public double LabelWidthMm { get; init; }
+    public double LabelHeightMm { get; init; }
+    public string? ReceiptMode { get; init; }
+    public int ReceiptPaperWidth { get; init; }
+    public int ReceiptCopies { get; init; } = 1;
+    public bool AutoPrintZReport { get; init; }
+    public string? LabelMode { get; init; }
+    public double LabelGapMm { get; init; }
+    public int LabelDpi { get; init; }
+    public double LabelShiftXMm { get; init; }
+    public double LabelShiftYMm { get; init; }
+    public int LabelRotation { get; init; } = -1;
+    public int LabelDensity { get; init; }
+    public int LabelSpeed { get; init; }
+    public bool UsePrinterGapCalibration { get; init; }
+    public string? DocumentPaperSize { get; init; }
+    public string? DocumentOrientation { get; init; }
+    public int DocumentPagesPerSheet { get; init; } = 1;
+    public string? ZReportMode { get; init; }
+    public int ZReportPaperWidth { get; init; }
+    public string? ZReportDocumentPaperSize { get; init; }
+    public string? ZReportDocumentOrientation { get; init; }
+    public int ZReportDocumentPagesPerSheet { get; init; } = 1;
+}
 
-public record ReceiptPrintOptions(string? HeaderText, string? FooterText, int Width);
+public record ReceiptPrintOptions(
+    string? HeaderText,
+    string? FooterText,
+    int Width,
+    bool ShowBusinessName = true,
+    bool ShowBranchName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowCashier = true,
+    bool ShowCustomer = true,
+    bool ShowReceiptNumber = true,
+    bool ShowPaymentDetails = true,
+    bool ShowQrCode = true,
+    bool ShowElectronicLink = true,
+    string? PublicReceiptBaseUrl = null);
 
 public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed, bool UsePrinterGapCalibration);
+
+public record PrinterCapabilities(bool SupportsColor);
 
 public static class LabelSize
 {
@@ -42,6 +89,7 @@ public static class LabelSize
 public interface IPrinterService
 {
     IReadOnlyList<string> GetInstalledPrinters();
+    PrinterCapabilities GetPrinterCapabilities(string? printerName);
     PrinterSettings GetSettings();
     void SaveSettings(PrinterSettings settings);
     bool AutoPrintEnabled { get; }
@@ -49,18 +97,24 @@ public interface IPrinterService
     ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
     void PrintZReport(ZReportDto report);
+    string FormatZReport(ZReportDto report, int? paperWidth = null);
     void PrintRaw(string? printerName, string text);
     void PrintRawBytes(string? printerName, byte[] data);
     void PrintDocument(string filePath, string? printerName);
+    void PrintDocumentImages(IReadOnlyList<byte[]> imagePages);
 }
 
 public sealed class PrinterService : IPrinterService
 {
+    private readonly AuthService _auth;
+    private readonly BranchContextService _branch;
     private readonly string? _path;
-    private PrinterSettings _settings = new(null, null, null, null, false);
+    private PrinterSettings _settings = new();
 
-    public PrinterService()
+    public PrinterService(AuthService auth, BranchContextService branch)
     {
+        _auth = auth;
+        _branch = branch;
         try
         {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cartex");
@@ -82,7 +136,11 @@ public sealed class PrinterService : IPrinterService
         catch { }
     }
 
-    public bool AutoPrintEnabled => _settings.AutoPrintReceipt && !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter);
+    public bool AutoPrintEnabled =>
+        _settings.AutoPrintReceipt &&
+        (_settings.ReceiptMode is "a4" or "a5"
+            ? !string.IsNullOrWhiteSpace(_settings.DocumentPrinter)
+            : !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter));
 
     public string? BarcodePrinter => _settings.BarcodePrinter;
     public ReceiptPrintOptions? ReceiptOptions { get; set; }
@@ -98,23 +156,103 @@ public sealed class PrinterService : IPrinterService
         catch { return []; }
     }
 
+    public PrinterCapabilities GetPrinterCapabilities(string? printerName) =>
+        new(WindowsImagePrinter.SupportsColor(printerName));
+
     public void PrintReceipt(ReceiptDto receipt)
     {
         var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? new ReceiptPrintOptions(ReceiptOptions?.HeaderText, ReceiptOptions?.FooterText, _settings.ReceiptPaperWidth)
+            ? ReceiptOptions is null
+                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
+                : ReceiptOptions with { Width = _settings.ReceiptPaperWidth }
             : ReceiptOptions;
         var text = FormatReceipt(receipt, opts);
+        var link = opts?.ShowQrCode != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
+            ? $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{receipt.ReceiptToken}"
+            : null;
         for (var i = 0; i < Math.Clamp(_settings.ReceiptCopies, 1, 5); i++)
-            PrintRaw(_settings.ReceiptPrinter, text);
+        {
+            if (link is null)
+                PrintRaw(_settings.ReceiptPrinter, text);
+            else if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter))
+                RawPrinter.Send(_settings.ReceiptPrinter, BuildEscPosReceipt(text, link), "Cartex Receipt");
+        }
     }
 
     public void PrintZReport(ZReportDto r)
     {
-        var w = _settings.ReceiptPaperWidth is 42 or 48 ? _settings.ReceiptPaperWidth : 32;
+        var mode = DocumentPrintLayout.ResolveOutputFormat(
+            _settings.ZReportMode is "a4" or "a5" ? "document" : "thermal",
+            _settings.ZReportDocumentPaperSize ?? "a4");
+        if (mode == "thermal")
+        {
+            var printer = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
+                ? _settings.ReceiptPrinter
+                : _settings.ZReportPrinter;
+            var width = _settings.ZReportPaperWidth is 32 or 42 or 48
+                ? _settings.ZReportPaperWidth
+                : _settings.ReceiptPaperWidth;
+            PrintRaw(printer, FormatZReport(r, width));
+            return;
+        }
+
+        var documentPrinter = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
+            ? _settings.DocumentPrinter
+            : _settings.ZReportPrinter;
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(documentPrinter))
+            return;
+
+        var physicalPaper = _settings.ZReportDocumentPaperSize == "a5" ? "a5" : "a4";
+        var physicalOrientation = _settings.ZReportDocumentOrientation == "landscape"
+            ? "landscape"
+            : "portrait";
+        var pagesPerSheet = _settings.ZReportDocumentPagesPerSheet is 2 or 4
+            ? _settings.ZReportDocumentPagesPerSheet
+            : 1;
+        var reportOrientation = DocumentPrintLayout.GetReceiptOrientation(
+            physicalOrientation,
+            pagesPerSheet);
+        var supportsColor = WindowsImagePrinter.SupportsColor(documentPrinter);
+        var pages = ZReportDocumentRenderer.Render(
+            r,
+            new ZReportDocumentMetadata(
+                _branch.SelectedBranch?.Name ?? LocalizationManager.Instance["z_report"],
+                null,
+                _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username,
+                DateTime.Now),
+            mode,
+            reportOrientation,
+            supportsColor);
+
+        WindowsImagePrinter.Print(
+            documentPrinter,
+            pages,
+            physicalPaper,
+            mode,
+            physicalOrientation,
+            pagesPerSheet,
+            1);
+    }
+
+    public string FormatZReport(ZReportDto r, int? paperWidth = null)
+    {
+        var configuredWidth = paperWidth
+            ?? (_settings.ZReportPaperWidth is 32 or 42 or 48
+                ? _settings.ZReportPaperWidth
+                : _settings.ReceiptPaperWidth);
+        var w = Math.Clamp(configuredWidth <= 0 ? 32 : configuredWidth, 24, 120);
         var l = LocalizationManager.Instance;
         var sb = new StringBuilder();
+        var branchName = _branch.SelectedBranch?.Name;
+        var cashierName = _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username;
+        if (!string.IsNullOrWhiteSpace(branchName))
+            sb.AppendLine(Center(branchName, w));
         sb.AppendLine(Center(l["z_report"], w));
         sb.AppendLine(Center(DateTime.Now.ToString("dd.MM.yyyy HH:mm"), w));
+        if (!string.IsNullOrWhiteSpace(cashierName))
+            sb.AppendLine(Row(l["cashier"], cashierName, w));
+        if (r.ShiftId > 0)
+            sb.AppendLine(Row(l["shift"], $"#{r.ShiftId}", w));
         sb.AppendLine(new string('-', w));
         sb.AppendLine(Center(l["z_section_sales"], w));
         sb.AppendLine(Row(l["cash_sales"], $"{r.CashSales:N0}", w));
@@ -146,7 +284,7 @@ public sealed class PrinterService : IPrinterService
         }
         sb.AppendLine();
         sb.AppendLine();
-        PrintRaw(string.IsNullOrWhiteSpace(_settings.ZReportPrinter) ? _settings.ReceiptPrinter : _settings.ZReportPrinter, sb.ToString());
+        return sb.ToString();
     }
 
     public void PrintRaw(string? printerName, string text)
@@ -164,17 +302,32 @@ public sealed class PrinterService : IPrinterService
     public void PrintDocument(string filePath, string? printerName)
     {
         if (!OperatingSystem.IsWindows()) return;
-        try
-        {
-            var psi = string.IsNullOrWhiteSpace(printerName)
-                ? new ProcessStartInfo(filePath) { Verb = "print", UseShellExecute = true }
-                : new ProcessStartInfo(filePath) { Verb = "printto", Arguments = $"\"{printerName}\"", UseShellExecute = true, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
-            Process.Start(psi);
-        }
-        catch
-        {
-            try { Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true }); } catch { }
-        }
+        var psi = string.IsNullOrWhiteSpace(printerName)
+            ? new ProcessStartInfo(filePath) { Verb = "print", UseShellExecute = true }
+            : new ProcessStartInfo(filePath)
+            {
+                Verb = "printto",
+                Arguments = $"\"{printerName}\"",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+        Process.Start(psi);
+    }
+
+    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(_settings.DocumentPrinter) || imagePages.Count == 0)
+            return;
+
+        WindowsImagePrinter.Print(
+            _settings.DocumentPrinter,
+            imagePages,
+            _settings.DocumentPaperSize is "a5" ? "a5" : "a4",
+            DocumentPrintLayout.ResolveOutputFormat("document", _settings.DocumentPaperSize ?? "a4"),
+            _settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
+            _settings.DocumentPagesPerSheet is 2 or 4 ? _settings.DocumentPagesPerSheet : 1,
+            Math.Clamp(_settings.ReceiptCopies, 1, 5));
     }
 
     private static string FormatReceipt(ReceiptDto r, ReceiptPrintOptions? opts)
@@ -182,13 +335,15 @@ public sealed class PrinterService : IPrinterService
         var w = opts?.Width is 42 or 48 ? opts.Width : 32;
         string T(string key) => ReceiptTexts.Get(key, r.Language);
         var sb = new StringBuilder();
-        sb.AppendLine(Center(r.BusinessName, w));
-        if (!string.IsNullOrWhiteSpace(r.BranchName)) sb.AppendLine(Center(r.BranchName, w));
-        if (!string.IsNullOrWhiteSpace(r.BranchAddress)) sb.AppendLine(Center(r.BranchAddress!, w));
-        if (!string.IsNullOrWhiteSpace(r.BranchPhone)) sb.AppendLine(Center(r.BranchPhone!, w));
+        if (opts?.ShowBusinessName != false) sb.AppendLine(Center(r.BusinessName, w));
+        if (opts?.ShowBranchName != false && !string.IsNullOrWhiteSpace(r.BranchName)) sb.AppendLine(Center(r.BranchName, w));
+        if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(r.BranchAddress)) sb.AppendLine(Center(r.BranchAddress!, w));
+        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(r.BranchPhone)) sb.AppendLine(Center(r.BranchPhone!, w));
         if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
         sb.AppendLine(r.SaleDate.ToString("dd.MM.yyyy HH:mm"));
-        if (!string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"{T("cashier")}: {r.UserName}");
+        if (opts?.ShowReceiptNumber != false) sb.AppendLine($"{T("receipt_no")} {r.SaleId}");
+        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"{T("cashier")}: {r.UserName}");
+        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.AppendLine($"{T("customer")}: {r.CustomerName}");
         sb.AppendLine(new string('-', w));
         foreach (var i in r.Items)
         {
@@ -198,26 +353,49 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(new string('-', w));
         if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));
         sb.AppendLine(Row(T("total"), $"{r.TotalAmount:N0}", w));
-        if (r.Payments.Count > 0)
-            foreach (var p in r.Payments)
-                sb.AppendLine(Row(ReceiptTexts.PaymentLabel(p.Method, r.Language), p.IsForeign ? $"{p.Amount:N2} {p.Currency} ≈ {p.AmountBase:N0}" : $"{p.Amount:N0}", w));
-        else
+        if (opts?.ShowPaymentDetails != false)
         {
-            if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
-            if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
-            if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+            if (r.Payments.Count > 0)
+                foreach (var p in r.Payments)
+                    sb.AppendLine(Row(ReceiptTexts.PaymentLabel(p.Method, r.Language), p.IsForeign ? $"{p.Amount:N2} {p.Currency} ≈ {p.AmountBase:N0}" : $"{p.Amount:N0}", w));
+            else
+            {
+                if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
+                if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
+                if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
+            }
+            if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
+            if (r.CreditAmount > 0) sb.AppendLine(Row(T("credit"), $"{r.CreditAmount:N0}", w));
+            if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
+            if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
         }
-        if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
-        if (r.CreditAmount > 0) sb.AppendLine(Row(T("credit"), $"{r.CreditAmount:N0}", w));
-        if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
-        if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
         sb.AppendLine(new string('-', w));
         sb.AppendLine(Center(T(r.DebtAmount > 0 ? "unpaid" : "paid"), w));
         sb.AppendLine();
         sb.AppendLine(Center(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText, w));
+        if (opts?.ShowElectronicLink != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl))
+            sb.AppendLine($"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{r.ReceiptToken}");
         sb.AppendLine();
         sb.AppendLine();
         return sb.ToString();
+    }
+
+    private static byte[] BuildEscPosReceipt(string text, string qrContent)
+    {
+        var output = new List<byte>(Encoding.UTF8.GetByteCount(text) + qrContent.Length + 64);
+        output.AddRange(Encoding.UTF8.GetBytes(text));
+
+        static void AddCommand(List<byte> bytes, params byte[] command) => bytes.AddRange(command);
+        AddCommand(output, 0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05);
+        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
+
+        var data = Encoding.UTF8.GetBytes(qrContent);
+        var length = data.Length + 3;
+        AddCommand(output, 0x1D, 0x28, 0x6B, (byte)(length & 0xFF), (byte)(length >> 8), 0x31, 0x50, 0x30);
+        output.AddRange(data);
+        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30, 0x0A, 0x0A);
+        return output.ToArray();
     }
 
     private static string Center(string s, int w)
@@ -229,8 +407,14 @@ public sealed class PrinterService : IPrinterService
 
     private static string Row(string left, string right, int w)
     {
-        var space = w - left.Length - right.Length;
-        return space > 0 ? left + new string(' ', space) + right : left + " " + right;
+        if (right.Length >= w)
+            return right[..w];
+
+        var maxLeftLength = w - right.Length - 1;
+        if (left.Length > maxLeftLength)
+            left = left[..maxLeftLength];
+
+        return left + new string(' ', w - left.Length - right.Length) + right;
     }
 }
 

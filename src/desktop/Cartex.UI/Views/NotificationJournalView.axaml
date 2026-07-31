@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.NotificationJournalView"
+             x:DataType="vm:NotificationJournalViewModel"
+             x:CompileBindings="True">
+    <UserControl.Styles>
+        <Style Selector="Border.stat-card">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Width" Value="132" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+    </UserControl.Styles>
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[notification_journal]}" Subtitle="{Binding L[notification_journal_hint]}" Margin="0,0,0,16">
+            <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
+        </c:PageHeader>
+
+        <StackPanel DockPanel.Dock="Top" Spacing="12" Margin="0,0,0,16">
+            <WrapPanel Orientation="Horizontal">
+                <StackPanel Margin="0,0,8,8">
+                    <TextBlock Text="{Binding L[date_from]}" Classes="caption" />
+                    <DatePicker SelectedDate="{Binding DateFrom, Mode=TwoWay}" Width="145" MinHeight="36" />
+                </StackPanel>
+                <StackPanel Margin="0,0,8,8">
+                    <TextBlock Text="{Binding L[date_to]}" Classes="caption" />
+                    <DatePicker SelectedDate="{Binding DateTo, Mode=TwoWay}" Width="145" MinHeight="36" />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding ChannelOptions}" SelectedItem="{Binding SelectedChannel}"
+                          PlaceholderText="{Binding L[channel]}" Width="130" Margin="0,18,8,8" />
+                <ComboBox ItemsSource="{Binding ProviderOptions}" SelectedItem="{Binding SelectedProvider}"
+                          PlaceholderText="{Binding L[provider]}" Width="155" Margin="0,18,8,8" />
+                <ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}"
+                          PlaceholderText="{Binding L[status]}" Width="135" Margin="0,18,8,8" />
+                <ComboBox ItemsSource="{Binding PurposeOptions}" SelectedItem="{Binding SelectedPurpose}"
+                          PlaceholderText="{Binding L[purpose]}" Width="155" Margin="0,18,8,8" />
+                <Button Classes="brand" Command="{Binding RefreshCommand}" Content="{Binding L[apply_filter]}"
+                        Margin="0,18,0,8" />
+            </WrapPanel>
+
+            <WrapPanel Orientation="Horizontal">
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[notifications]}" Classes="caption" /><TextBlock Text="{Binding TotalDeliveries}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[attempts]}" Classes="caption" /><TextBlock Text="{Binding TotalAttempts}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[accepted]}" Classes="caption" /><TextBlock Text="{Binding TotalAccepted}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[delivered]}" Classes="caption" /><TextBlock Text="{Binding TotalDelivered}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[undelivered]}" Classes="caption" /><TextBlock Text="{Binding TotalUndelivered}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[failed]}" Classes="caption" /><TextBlock Text="{Binding TotalFailed}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[skipped]}" Classes="caption" /><TextBlock Text="{Binding TotalSkipped}" Classes="h2" /></StackPanel></Border>
+                <Border Classes="stat-card"><StackPanel><TextBlock Text="{Binding L[billable_units]}" Classes="caption" /><TextBlock Text="{Binding BillableUnits}" Classes="h2" /></StackPanel></Border>
+            </WrapPanel>
+        </StackPanel>
+
+        <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}" />
+        <Panel>
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <DataGrid ItemsSource="{Binding Deliveries}" AutoGenerateColumns="False" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          c:GridDoubleClick.Command="{Binding OpenDetailCommand}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                            Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Channel, Mode=OneWay}"
+                                            Header="{Binding [channel], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding Provider, Mode=OneWay}"
+                                            Header="{Binding [provider], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Status, Mode=OneWay}"
+                                            Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding Purpose, Mode=OneWay}"
+                                            Header="{Binding [purpose], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding CustomerName, Mode=OneWay}"
+                                            Header="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding Recipient, Mode=OneWay}"
+                                            Header="{Binding [recipient], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding AttemptCount, Mode=OneWay}"
+                                            Header="{Binding [attempts], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Units, Mode=OneWay}"
+                                            Header="{Binding [billable_units], Source={x:Static svc:LocalizationManager.Instance}}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <c:EmptyState Icon="BellOffOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
+        </Panel>
+    </DockPanel>
+</UserControl>

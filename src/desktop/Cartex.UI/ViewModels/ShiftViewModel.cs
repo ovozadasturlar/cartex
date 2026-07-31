@@ -73,7 +73,9 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     public ZReportDto LastReportDisplay => LastReport ?? EmptyReport;
     public bool CanViewHistory => _auth.HasPermission("shifts.view");
     public bool CanViewAll => _auth.HasPermission("shifts.viewAll");
-    public bool CanManageAll => _auth.HasPermission("shifts.manageAll");
+    public bool CanOpen => _auth.HasPermission("shifts.open");
+    public bool CanClose => _auth.HasPermission("shifts.close");
+    public bool CanManageAll => _auth.HasPermission("shifts.closeAll");
 
     [ObservableProperty] private bool _isMulticurrency;
     public ObservableCollection<CurrencyCashRow> CurrencyRows { get; } = [];
@@ -123,6 +125,8 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     {
         OnPropertyChanged(nameof(CanViewHistory));
         OnPropertyChanged(nameof(CanViewAll));
+        OnPropertyChanged(nameof(CanOpen));
+        OnPropertyChanged(nameof(CanClose));
         OnPropertyChanged(nameof(CanManageAll));
     }
 
@@ -268,6 +272,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenShiftAsync()
     {
+        if (!CanOpen) return;
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -307,6 +312,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task CloseShiftAsync()
     {
+        if (!CanClose) return;
         if (Current is null) return;
         var diff = CountedCash - Current.ExpectedCash;
         if (diff != 0 && !await _dialog.ConfirmAsync(string.Format(L["close_shift_diff_confirm"], (diff > 0 ? "+" : "") + diff.ToString("N0")), L["close_shift"])) return;

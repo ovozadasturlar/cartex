@@ -119,10 +119,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
     public bool CanSaveAndNew => IsNew && !IsSaleCreate;
-    public bool CanDeleteProduct => !IsNew && _auth.HasPermission("products.manage");
+    public bool CanCreate => _auth.HasPermission("products.create");
+    public bool CanEdit => _auth.HasPermission("products.edit");
+    public bool CanEditCurrent => IsNew ? CanCreate : CanEdit;
+    public bool CanDeleteProduct => !IsNew && _auth.HasPermission("products.delete");
     public bool IsEmpty => Products.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
-    public bool CanImport => _auth.HasPermission("products.manage");
+    public bool CanImport => _auth.HasPermission("products.import");
+    public bool CanCreateBarcode => _auth.HasPermission("barcodes.create");
+    public bool CanDeleteBarcode => _auth.HasPermission("barcodes.delete");
+    public bool CanDeleteVariant => _auth.HasPermission("products.delete");
 
     public ProductImportViewModel Import { get; }
 
@@ -244,6 +250,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task AddEditBarcode()
     {
+        if (!CanCreateBarcode) return;
         var code = EditBarcodeInput.Trim();
         if (code.Length == 0 || _editDefaultVariantId == 0) return;
         try
@@ -272,6 +279,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteEditBarcode(BarcodeDto barcode)
     {
+        if (!CanDeleteBarcode) return;
         try
         {
             await _barcodesApi.DeleteAsync(barcode.Id);
@@ -313,6 +321,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SavePackAsync()
     {
+        if (!(IsNew ? CanCreate : CanEdit)) return;
         var name = PackName.Trim();
         if (_editId == 0 || name.Length == 0 || PackSize <= 0) { _toast.Warning(L["err_fill_all"]); return; }
 
@@ -334,6 +343,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void EditPack(ProductPackDto pack)
     {
+        if (!CanEdit) return;
         _editingPackId = pack.Id;
         PackName = pack.Name;
         PackSize = pack.Size;
@@ -344,6 +354,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeletePackAsync(ProductPackDto pack)
     {
+        if (!CanDeleteVariant) return;
         try
         {
             await _productsApi.DeletePackAsync(pack.Id);
@@ -504,8 +515,13 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanImport));
         OnPropertyChanged(nameof(CanPrintBarcode));
+        OnPropertyChanged(nameof(CanCreateBarcode));
+        OnPropertyChanged(nameof(CanDeleteBarcode));
+        OnPropertyChanged(nameof(CanDeleteVariant));
     }
 
     public async Task LoadAsync()
@@ -515,9 +531,18 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                _suppressReload = true;
-                await LoadEditorReferencesAsync();
-                _suppressReload = false;
+                if (CanCreate || CanEdit)
+                {
+                    _suppressReload = true;
+                    await LoadEditorReferencesAsync();
+                    _suppressReload = false;
+                }
+                else
+                {
+                    FilterCategories.Clear();
+                    FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
+                    FilterCategory = FilterCategories[0];
+                }
                 await LoadProductsAsync();
             }
         }
@@ -608,6 +633,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(EditTitle));
         OnPropertyChanged(nameof(CanSaveAndNew));
         OnPropertyChanged(nameof(CanDeleteProduct));
+        OnPropertyChanged(nameof(CanEditCurrent));
     }
 
     partial void OnIsSaleCreateChanged(bool value) => OnPropertyChanged(nameof(CanSaveAndNew));
@@ -628,6 +654,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private async Task OpenCreateAsync(string? barcode, bool isSaleCreate)
     {
+        if (!CanCreate) return;
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -685,6 +712,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public async Task OpenEditForSaleAsync(ProductDto product)
     {
+        if (!CanEdit) return;
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -793,6 +821,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private async Task<bool> SaveCoreAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return false;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Warning(L["name"]); return false; }
         if (EditUnit is null) { _toast.Warning(L["unit"]); return false; }
         if (IsNew && EditSellingPrice is null) { _toast.Warning(L["selling_price"]); return false; }
@@ -915,6 +944,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenVariantCreate()
     {
+        if (!CanEdit) return;
         IsVariantNew = true;
         _variantEditId = 0;
         VName = string.Empty;
@@ -930,6 +960,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenVariantEdit(VariantDto variant)
     {
+        if (!CanEdit) return;
         IsVariantNew = false;
         _variantEditId = variant.Id;
         VName = variant.Name ?? string.Empty;
@@ -996,6 +1027,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteVariant(VariantDto variant)
     {
+        if (!CanDeleteVariant) return;
         if (variant.IsDefault) { _toast.Warning(L["error"]); return; }
         try
         {

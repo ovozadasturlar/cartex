@@ -3,68 +3,486 @@
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.PrintingView"
-             x:CompileBindings="False">
+             x:DataType="vm:PrintingViewModel"
+             x:CompileBindings="True">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="ThermalReceiptPreview" x:DataType="vm:PrintingViewModel">
+            <Border Width="210" Height="440" Background="White" Padding="14">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding ShowBusinessName}"
+                               Foreground="{Binding PreviewInkBrush}" FontSize="14" FontWeight="Bold" TextAlignment="Center" />
+                    <TextBlock Text="{Binding PreviewBranchName}" IsVisible="{Binding ShowBranchName}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="10" TextAlignment="Center" />
+                    <TextBlock Text="{Binding PreviewAddress}" IsVisible="{Binding ShowAddress}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
+                    <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding ShowPhone}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
+                    <TextBlock Text="{Binding HeaderText}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="29.07.2026 15:30" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                    <TextBlock Text="№ 1048" IsVisible="{Binding ShowReceiptNumber}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                    <TextBlock Text="{Binding L[receipt_preview_cashier]}" IsVisible="{Binding ShowCashier}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                    <TextBlock Text="{Binding L[receipt_preview_customer]}" IsVisible="{Binding ShowCustomer}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
+                    <TextBlock Text="{Binding L[receipt_preview_item_one]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="2 × 12 500" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="25 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_two]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1 × 8 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding L[total]}" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
+                        <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShowPaymentDetails}">
+                        <TextBlock Text="{Binding L[cash]}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                    </Grid>
+                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
+                    <TextBlock Text="{Binding PreviewFooterText}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <mi:MaterialIcon Kind="Qrcode" Width="48" Height="48" HorizontalAlignment="Center"
+                                     Foreground="{Binding PreviewInkBrush}" IsVisible="{Binding CanPreviewQrCode}" />
+                    <TextBlock Text="{Binding PreviewElectronicReceiptLink}" IsVisible="{Binding CanPreviewElectronicLink}"
+                               Foreground="{Binding PreviewMutedBrush}" FontSize="6.5" TextAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DocumentReceiptPreview" x:DataType="vm:PrintingViewModel">
+            <Border Width="{Binding PreviewReceiptPageWidth}" Height="{Binding PreviewReceiptPageHeight}"
+                    Background="White" Padding="{Binding PreviewReceiptPagePadding}">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding ShowBusinessName}"
+                                       Foreground="{Binding PreviewInkBrush}" FontSize="16" FontWeight="Bold" />
+                            <TextBlock Text="{Binding PreviewBranchName}" IsVisible="{Binding ShowBranchName}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                            <TextBlock Text="{Binding PreviewAddress}" IsVisible="{Binding ShowAddress}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding ShowPhone}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="2" HorizontalAlignment="Right">
+                            <TextBlock Text="№ 1048" IsVisible="{Binding ShowReceiptNumber}"
+                                       Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Text="29.07.2026 15:30" Foreground="{Binding PreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Text="{Binding L[receipt_preview_cashier]}" IsVisible="{Binding ShowCashier}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Text="{Binding L[receipt_preview_customer]}" IsVisible="{Binding ShowCustomer}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Spacing="3" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding HeaderText}" Foreground="{Binding PreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
+                        <Border Height="2" Background="{Binding PreviewInkBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0" Spacing="5">
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="№" Foreground="{Binding PreviewInkBrush}" FontSize="7" FontWeight="Bold" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[product]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" FontWeight="Bold" />
+                            <TextBlock Grid.Column="2" Text="{Binding L[quantity]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="{Binding L[price]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="{Binding L[amount]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                        </Grid>
+                        <Border Height="1" Background="{Binding PreviewLineBrush}" />
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="1" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_one]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="2" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="12 500" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="25 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55" Background="{Binding PreviewFaintBrush}">
+                            <TextBlock Text="2" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_two]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Border Height="1" Background="{Binding PreviewLineBrush}" />
+                        <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Right" Width="140">
+                            <TextBlock Text="{Binding L[total]}" Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" />
+                            <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Right" Width="140"
+                              IsVisible="{Binding ShowPaymentDetails}">
+                            <TextBlock Text="{Binding L[cash]}" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                        </Grid>
+                        <Border HorizontalAlignment="Right" Background="{Binding PreviewStatusBackgroundBrush}"
+                                BorderBrush="{Binding PreviewStatusBrush}" BorderThickness="1"
+                                CornerRadius="3" Padding="8,2">
+                            <TextBlock Text="{Binding L[paid]}" Foreground="{Binding PreviewStatusBrush}"
+                                       FontSize="7" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
+                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <StackPanel Spacing="3" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding PreviewFooterText}" Foreground="{Binding PreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding PreviewElectronicReceiptLink}" IsVisible="{Binding CanPreviewElectronicLink}"
+                                       Foreground="{Binding PreviewMutedBrush}" FontSize="6" />
+                        </StackPanel>
+                        <mi:MaterialIcon Grid.Column="1" Kind="Qrcode" Width="38" Height="38"
+                                         Foreground="{Binding PreviewInkBrush}" IsVisible="{Binding CanPreviewQrCode}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DocumentZReportPreview" x:DataType="vm:PrintingViewModel">
+            <Border Width="{Binding ZReportContentPageWidth}"
+                    Height="{Binding ZReportContentPageHeight}"
+                    Background="White" Padding="20">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                    <Grid ColumnDefinitions="4,10,*,Auto">
+                        <Border Background="{Binding ZReportPreviewAccentBrush}" CornerRadius="2" />
+                        <StackPanel Grid.Column="2" Spacing="1">
+                            <TextBlock Text="{Binding PreviewBusinessName}"
+                                       Foreground="{Binding ZReportPreviewInkBrush}"
+                                       FontSize="12" FontWeight="Bold" />
+                            <TextBlock Text="{Binding PreviewBranchName}"
+                                       Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="6" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Right" Spacing="1">
+                            <TextBlock Text="{Binding L[z_report]}" Foreground="{Binding ZReportPreviewAccentBrush}"
+                                       FontSize="10" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Text="{Binding ZReportPreviewShiftNumber}"
+                                       Foreground="{Binding ZReportPreviewMutedBrush}"
+                                       FontSize="6" TextAlignment="Right" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="1" Background="{Binding ZReportPreviewFaintBrush}"
+                            BorderBrush="{Binding ZReportPreviewLineBrush}" BorderThickness="1"
+                            CornerRadius="4" Padding="8,6" Margin="0,9,0,0">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <mi:MaterialIcon Kind="AccountOutline" Width="8" Height="8"
+                                                 Foreground="{Binding ZReportPreviewAccentBrush}" />
+                                <StackPanel Spacing="0">
+                                    <TextBlock Text="{Binding L[cashier]}"
+                                               Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="4.8" />
+                                    <TextBlock Text="{Binding PreviewCashierName}"
+                                               Foreground="{Binding ZReportPreviewInkBrush}"
+                                               FontSize="6" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                <mi:MaterialIcon Kind="CalendarClockOutline" Width="8" Height="8"
+                                                 Foreground="{Binding ZReportPreviewAccentBrush}" />
+                                <StackPanel Spacing="0">
+                                    <TextBlock Text="{Binding ZReportPreviewDate}"
+                                               Foreground="{Binding ZReportPreviewInkBrush}"
+                                               FontSize="6" FontWeight="SemiBold" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding ZReportPreviewPeriod}"
+                                               Foreground="{Binding ZReportPreviewMutedBrush}"
+                                               FontSize="4.5" TextAlignment="Right" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,5,*,5,*,5,*" Margin="0,8,0,0">
+                        <Border Background="{Binding ZReportPreviewFaintBrush}" CornerRadius="4" Padding="6">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[z_section_sales]}"
+                                           Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="4.8" />
+                                <TextBlock Text="{Binding ZReportPreviewSalesAmount}"
+                                           Foreground="{Binding ZReportPreviewInkBrush}"
+                                           FontSize="7" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{Binding ZReportPreviewFaintBrush}" CornerRadius="4" Padding="6">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[expected_cash]}"
+                                           Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="4.8" />
+                                <TextBlock Text="{Binding ZReportPreviewExpectedCash}"
+                                           Foreground="{Binding ZReportPreviewInkBrush}"
+                                           FontSize="7" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Background="{Binding ZReportPreviewFaintBrush}" CornerRadius="4" Padding="6">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[counted_cash]}"
+                                           Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="4.8" />
+                                <TextBlock Text="{Binding ZReportPreviewCountedCash}"
+                                           Foreground="{Binding ZReportPreviewInkBrush}"
+                                           FontSize="7" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="6" Background="{Binding ZReportPreviewStatusBackgroundBrush}"
+                                BorderBrush="{Binding ZReportPreviewStatusBrush}" BorderThickness="1"
+                                CornerRadius="4" Padding="6">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[difference]}"
+                                           Foreground="{Binding ZReportPreviewStatusBrush}" FontSize="4.8" />
+                                <TextBlock Text="{Binding ZReportPreviewDifference}"
+                                           Foreground="{Binding ZReportPreviewStatusBrush}"
+                                           FontSize="7" FontWeight="Bold" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.Row="3" ColumnDefinitions="*,8,*" Margin="0,8,0,0">
+                        <Border BorderBrush="{Binding ZReportPreviewLineBrush}" BorderThickness="1"
+                                CornerRadius="4" Padding="8">
+                            <StackPanel Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Border Width="12" Height="12" Background="{Binding ZReportPreviewFaintBrush}"
+                                            CornerRadius="3">
+                                        <mi:MaterialIcon Kind="ChartLine" Width="7" Height="7"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                         Foreground="{Binding ZReportPreviewAccentBrush}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding L[z_section_sales]}"
+                                               Foreground="{Binding ZReportPreviewInkBrush}"
+                                               FontSize="6.5" FontWeight="Bold" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[cash_sales]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewCashSales}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[card_sales]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewCardSales}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[bonus_used]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewBonusUsed}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[debt_issued]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewDebtIssued}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Border Height="1" Background="{Binding ZReportPreviewLineBrush}" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[cash_returns]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewCashReturns}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[card_returns]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewCardReturns}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[sales_count]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewSalesCount}" Foreground="{Binding ZReportPreviewAccentBrush}" FontSize="5.4" FontWeight="Bold" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" BorderBrush="{Binding ZReportPreviewLineBrush}" BorderThickness="1"
+                                CornerRadius="4" Padding="8">
+                            <StackPanel Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Border Width="12" Height="12" Background="{Binding ZReportPreviewFaintBrush}"
+                                            CornerRadius="3">
+                                        <mi:MaterialIcon Kind="CashRegister" Width="7" Height="7"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                         Foreground="{Binding ZReportPreviewAccentBrush}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding L[z_section_cash]}"
+                                               Foreground="{Binding ZReportPreviewInkBrush}"
+                                               FontSize="6.5" FontWeight="Bold" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[opening_float]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewOpeningFloat}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[pay_in]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewPayIn}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[pay_out]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewPayOut}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[debt_pay_in]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewDebtPayIn}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[supply_pay_out]}" Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="5.2" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewSupplyPayOut}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="SemiBold" />
+                                </Grid>
+                                <Border Height="1" Background="{Binding ZReportPreviewLineBrush}" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding L[z_section_summary]}" Foreground="{Binding ZReportPreviewInkBrush}" FontSize="5.4" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ZReportPreviewCountedCash}" Foreground="{Binding ZReportPreviewAccentBrush}" FontSize="5.7" FontWeight="Bold" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding ZReportPreviewPeriod}"
+                                   Foreground="{Binding ZReportPreviewMutedBrush}" FontSize="4.8"
+                                   VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Background="{Binding ZReportPreviewStatusBackgroundBrush}"
+                                BorderBrush="{Binding ZReportPreviewStatusBrush}" BorderThickness="1"
+                                CornerRadius="3" Padding="7,2">
+                            <TextBlock Text="{Binding L[z_section_summary]}"
+                                       Foreground="{Binding ZReportPreviewStatusBrush}"
+                                       FontSize="5" FontWeight="Bold" />
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
 
     <UserControl.Styles>
-        <Style Selector="Button.subnav">
+        <Style Selector="Button.printtab">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="16,11" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
         </Style>
-        <Style Selector="Button.subnav:pointerover /template/ ContentPresenter">
+        <Style Selector="Button.printtab:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
         </Style>
-        <Style Selector="Button.subnav.active">
-            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        <Style Selector="Button.printtab.active">
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
         </Style>
         <Style Selector="Border.printcard">
             <Setter Property="Background" Value="{DynamicResource CardBg}" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="20" />
+            <Setter Property="Padding" Value="18" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
         <Style Selector="TextBlock.fieldlabel">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
             <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.sectiontitle">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.printchoice">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.printchoice:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.printchoice.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.previewslot">
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style Selector="Border.previewchip">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="Border.previewchip.live">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.previewchiplabel">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </UserControl.Styles>
 
-    <DockPanel Margin="24">
-        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[printing]}" Margin="0,0,0,16" />
+    <Grid Margin="24" RowDefinitions="Auto,Auto,*">
+        <c:PageHeader Grid.Row="0" Title="{Binding L[printing]}" Margin="0,0,0,12" />
 
-        <Grid ColumnDefinitions="220,*">
-            <Border Grid.Column="0" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="8" Margin="0,0,16,0"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
-                <StackPanel Spacing="2">
-                    <Button Classes="subnav" Classes.active="{Binding IsReceiptSection}" Content="{Binding L[print_section_receipt]}"
-                            Command="{Binding SelectSectionCommand}" CommandParameter="receipt" />
-                    <Button Classes="subnav" Classes.active="{Binding IsBarcodeSection}" Content="{Binding L[print_section_barcode]}"
-                            Command="{Binding SelectSectionCommand}" CommandParameter="barcode" />
-                    <Button Classes="subnav" Classes.active="{Binding IsZSection}" Content="{Binding L[print_section_zreport]}"
-                            Command="{Binding SelectSectionCommand}" CommandParameter="zreport" />
-                </StackPanel>
-            </Border>
+        <Border Grid.Row="1" Background="{DynamicResource CardBg}" CornerRadius="10"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <Button Classes="printtab" Classes.active="{Binding IsReceiptSection}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="receipt">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="ReceiptTextOutline" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[print_section_receipt]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="printtab" Classes.active="{Binding IsBarcodeSection}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="barcode">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="BarcodeScan" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[print_section_barcode]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="printtab" Classes.active="{Binding IsZSection}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="zreport">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="ChartBoxOutline" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[print_section_zreport]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
 
-            <ScrollViewer Grid.Column="1">
-                <Panel MaxWidth="640" HorizontalAlignment="Left">
-
-                    <Border Classes="printcard" IsVisible="{Binding IsReceiptSection}">
+        <Grid Grid.Row="2" IsVisible="{Binding IsReceiptSection}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="560" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0">
+                <StackPanel Spacing="12">
+                    <Border Classes="printcard">
                         <StackPanel Spacing="14">
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_mode]}" />
-                                <ComboBox ItemsSource="{Binding ReceiptModes}" SelectedItem="{Binding ReceiptMode}" HorizontalAlignment="Stretch" />
-                                <TextBlock Text="{Binding L[receipt_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[receipt_output_setup]}" />
+                            <StackPanel Spacing="7">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[print_output_type]}" />
+                                <Grid ColumnDefinitions="*,8,*">
+                                    <Button Classes="printchoice" Classes.active="{Binding IsThermal}"
+                                            Command="{Binding SelectReceiptModeCommand}" CommandParameter="thermal">
+                                        <StackPanel Spacing="5">
+                                            <mi:MaterialIcon Kind="ReceiptRollOutline" Width="24" Height="24" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding L[format_thermal]}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsDocument}"
+                                            Command="{Binding SelectReceiptModeCommand}" CommandParameter="document">
+                                        <StackPanel Spacing="5">
+                                            <mi:MaterialIcon Kind="FileDocument" Width="24" Height="24" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding L[format_document]}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Text="{Binding L[receipt_mode_hint]}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
 
-                            <StackPanel Spacing="14" IsVisible="{Binding IsThermal}">
+                            <StackPanel Spacing="12" IsVisible="{Binding IsThermal}">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[printer_receipt]}" />
                                     <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ReceiptPrinter}"
@@ -73,164 +491,834 @@
                                 <Grid ColumnDefinitions="*,12,*">
                                     <StackPanel Spacing="5">
                                         <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width]}" />
-                                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ReceiptPaperWidth}" HorizontalAlignment="Stretch" />
+                                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ReceiptPaperWidth}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="5">
                                         <TextBlock Classes="fieldlabel" Text="{Binding L[print_copies]}" />
-                                        <NumericUpDown Value="{Binding ReceiptCopies, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
+                                        <NumericUpDown Value="{Binding ReceiptCopies, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                       Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Text="{Binding L[receipt_width_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-
                                 <StackPanel Spacing="5" IsVisible="{Binding CanEditReceiptContent}">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
-                                    <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding BusinessPaperWidth}" HorizontalAlignment="Stretch" />
+                                    <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding BusinessPaperWidth}" />
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Spacing="5" IsVisible="{Binding !IsThermal}">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer_document]}" />
-                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding DocumentPrinter}"
-                                          HorizontalAlignment="Stretch" PlaceholderText="—" />
-                                <TextBlock Text="{Binding L[print_document_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                            <StackPanel Spacing="14" IsVisible="{Binding IsDocument}">
+                                <Grid ColumnDefinitions="*,12,120">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[printer_document]}" />
+                                        <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding DocumentPrinter}"
+                                                  HorizontalAlignment="Stretch" PlaceholderText="—" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[print_copies]}" />
+                                        <NumericUpDown Value="{Binding ReceiptCopies, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                       Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Spacing="7">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[document_paper_size]}" />
+                                    <Grid ColumnDefinitions="*,8,*">
+                                        <Button Classes="printchoice" Classes.active="{Binding IsDocumentPaperA4}"
+                                                Command="{Binding SelectDocumentPaperCommand}" CommandParameter="a4">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                                <mi:MaterialIcon Kind="FileDocument" Width="22" Height="22" />
+                                                <TextBlock Text="A4 · 210×297 mm" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsDocumentPaperA5}"
+                                                Command="{Binding SelectDocumentPaperCommand}" CommandParameter="a5">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                                <mi:MaterialIcon Kind="FileDocumentOutline" Width="19" Height="19" />
+                                                <TextBlock Text="A5 · 148×210 mm" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[document_orientation]}" />
+                                    <Grid ColumnDefinitions="*,8,*">
+                                        <Button Classes="printchoice" Classes.active="{Binding IsPortrait}"
+                                                Command="{Binding SelectDocumentOrientationCommand}" CommandParameter="portrait">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                                <mi:MaterialIcon Kind="CropPortrait" Width="23" Height="23" />
+                                                <TextBlock Text="{Binding L[orientation_portrait]}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsLandscape}"
+                                                Command="{Binding SelectDocumentOrientationCommand}" CommandParameter="landscape">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                                <mi:MaterialIcon Kind="CropLandscape" Width="23" Height="23" />
+                                                <TextBlock Text="{Binding L[orientation_landscape]}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[document_pages_per_sheet]}" />
+                                    <Grid ColumnDefinitions="*,8,*,8,*">
+                                        <Button Classes="printchoice" Classes.active="{Binding IsOnePagePerSheet}"
+                                                Command="{Binding SelectPagesPerSheetCommand}" CommandParameter="1">
+                                            <StackPanel Spacing="5">
+                                                <Border Width="26" Height="32" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                        BorderThickness="1.5" CornerRadius="2" HorizontalAlignment="Center">
+                                                    <StackPanel Margin="5" Spacing="3">
+                                                        <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                                        <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                                        <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <TextBlock Text="{Binding L[layout_one_page]}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsTwoPagesPerSheet}"
+                                                Command="{Binding SelectPagesPerSheetCommand}" CommandParameter="2">
+                                            <StackPanel Spacing="5">
+                                                <Grid Width="34" Height="28" ColumnDefinitions="*,*" HorizontalAlignment="Center">
+                                                    <Border BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="1.5" CornerRadius="2,0,0,2" />
+                                                    <Border Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="0,1.5,1.5,1.5" CornerRadius="0,2,2,0" />
+                                                </Grid>
+                                                <TextBlock Text="{Binding L[layout_two_pages]}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="4" Classes="printchoice" Classes.active="{Binding IsFourPagesPerSheet}"
+                                                Command="{Binding SelectPagesPerSheetCommand}" CommandParameter="4">
+                                            <StackPanel Spacing="5">
+                                                <Grid Width="34" Height="28" ColumnDefinitions="*,*" RowDefinitions="*,*" HorizontalAlignment="Center">
+                                                    <Border BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="1.5,1.5,0,0" CornerRadius="2,0,0,0" />
+                                                    <Border Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="1.5,1.5,1.5,0" CornerRadius="0,2,0,0" />
+                                                    <Border Grid.Row="1" BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="1.5" CornerRadius="0,0,0,2" />
+                                                    <Border Grid.Row="1" Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}" BorderThickness="0,1.5,1.5,1.5" CornerRadius="0,0,2,0" />
+                                                </Grid>
+                                                <TextBlock Text="{Binding L[layout_four_pages]}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                                <TextBlock Text="{Binding L[print_document_hint]}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                            <StackPanel Spacing="14" IsVisible="{Binding CanEditReceiptContent}">
-                                <Separator Background="{DynamicResource BorderBrush}" Height="1" />
-
+                    <Border Classes="printcard" IsVisible="{Binding CanEditReceiptContent}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[receipt_content]}" />
+                            <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
                                     <TextBox Text="{Binding HeaderText}" MinHeight="36" />
                                 </StackPanel>
-                                <StackPanel Spacing="5">
+                                <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
                                     <TextBox Text="{Binding FooterText}" MinHeight="36" />
                                 </StackPanel>
-                                <TextBlock Text="{Binding L[receipt_texts_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-
-                                <StackPanel Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[paper_format]}" />
-                                    <ComboBox ItemsSource="{Binding SendFormats}" SelectedItem="{Binding SendFormat}" MinWidth="180" MinHeight="36" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowBusinessName}" />
+                                    <TextBlock Text="{Binding L[receipt_show_business]}" VerticalAlignment="Center" />
                                 </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowBranchName}" />
+                                    <TextBlock Text="{Binding L[receipt_show_branch]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowAddress}" />
+                                    <TextBlock Text="{Binding L[receipt_show_address]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowPhone}" />
+                                    <TextBlock Text="{Binding L[receipt_show_phone]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowCashier}" />
+                                    <TextBlock Text="{Binding L[receipt_show_cashier]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowCustomer}" />
+                                    <TextBlock Text="{Binding L[receipt_show_customer]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowReceiptNumber}" />
+                                    <TextBlock Text="{Binding L[receipt_show_number]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="3" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowPaymentDetails}" />
+                                    <TextBlock Text="{Binding L[receipt_show_payments]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowQrCode}" />
+                                    <TextBlock Text="{Binding L[receipt_show_qr]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowElectronicLink}" />
+                                    <TextBlock Text="{Binding L[receipt_show_link]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                            <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="10"
+                                    IsVisible="{Binding !HasPublicReceiptBaseUrl}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <mi:MaterialIcon Kind="AlertCircleOutline" Width="17" Height="17"
+                                                     Foreground="{DynamicResource WarningBrush}" />
+                                    <TextBlock Text="{Binding L[receipt_public_url_hint]}" Foreground="{DynamicResource WarningBrush}"
+                                               FontSize="11.5" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[paper_format]}" />
+                                <ComboBox ItemsSource="{Binding SendFormats}" SelectedItem="{Binding SendFormat}"
+                                          MinWidth="180" MinHeight="36" />
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                            <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Border Classes="printcard">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <ToggleSwitch IsChecked="{Binding AutoPrintReceipt}" />
                                 <TextBlock Text="{Binding L[printer_auto]}" VerticalAlignment="Center"
                                            Foreground="{DynamicResource TextPrimary}" />
                             </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
-                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                                 <Button Classes="outline" Command="{Binding TestPrintCommand}" Content="{Binding L[printer_test]}"
                                         IsVisible="{Binding IsThermal}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Classes="printcard" IsVisible="{Binding IsBarcodeSection}">
-                        <StackPanel Spacing="14">
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
-                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding BarcodePrinter}"
-                                          HorizontalAlignment="Stretch" PlaceholderText="—" />
-                            </StackPanel>
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
-                                <Grid ColumnDefinitions="*,8,90,8,90">
-                                    <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" HorizontalAlignment="Stretch" />
-                                    <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
-                                    <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
-                                </Grid>
-                            </StackPanel>
-                            <Grid ColumnDefinitions="*,12,*">
-                                <StackPanel Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_mode]}" />
-                                    <ComboBox ItemsSource="{Binding LabelModes}" SelectedItem="{Binding LabelMode}" HorizontalAlignment="Stretch" MinHeight="34" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
-                                    <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34"
-                                                   IsEnabled="{Binding !UsePrinterGapCalibration}" />
-                                </StackPanel>
-                            </Grid>
-                            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UsePrinterGapCalibration}">
-                                <TextBlock Text="{Binding L[label_gap_detected]}" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
-                                <Button Classes="outline" Command="{Binding UseManualLabelGapCommand}" Content="{Binding L[label_use_manual_gap]}" />
-                            </StackPanel>
-                            <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-
-                            <Grid ColumnDefinitions="*,12,*">
-                                <StackPanel Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" c:MoneyInput.Clean="False" MinHeight="34" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
-                                    <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#" c:MoneyInput.Clean="False" MinHeight="34" />
-                                </StackPanel>
-                            </Grid>
-                            <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelLeftCommand}" Content="←" />
-                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelRightCommand}" Content="→" />
-                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelUpCommand}" Content="↑" />
-                                <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelDownCommand}" Content="↓" />
-                                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" Text="0.5 mm" />
-                            </StackPanel>
-
-                            <Grid ColumnDefinitions="*,12,*,12,*,12,*">
-                                <StackPanel Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_rotation]}" />
-                                    <ComboBox ItemsSource="{Binding LabelRotations}" SelectedItem="{Binding LabelRotation}" HorizontalAlignment="Stretch" MinHeight="34" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_dpi]}" />
-                                    <ComboBox ItemsSource="{Binding LabelDpis}" SelectedItem="{Binding LabelDpi}" HorizontalAlignment="Stretch" MinHeight="34" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="4" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" />
-                                    <NumericUpDown Value="{Binding LabelDensity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="6" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" />
-                                    <NumericUpDown Value="{Binding LabelSpeed, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
-                                </StackPanel>
-                            </Grid>
-
-                            <TextBlock Text="{Binding L[label_calibrate_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="10">
                                 <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
-                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                                <Button Classes="outline" Command="{Binding TestLabelPrintCommand}" Content="{Binding L[printer_test]}" />
-                                <Button Classes="outline" Command="{Binding CalibrateLabelCommand}" Content="{Binding L[label_calibrate]}" />
+                                        Command="{Binding SaveCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <mi:MaterialIcon Kind="ContentSave" Width="17" Height="17" />
+                                        <TextBlock Text="{Binding L[save]}" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
                     </Border>
-
-                    <Border Classes="printcard" IsVisible="{Binding IsZSection}">
-                        <StackPanel Spacing="14">
-                            <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
-                                <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ZReportPrinter}"
-                                          HorizontalAlignment="Stretch" PlaceholderText="—" />
-                                <TextBlock Text="{Binding L[zreport_printer_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <ToggleSwitch IsChecked="{Binding AutoPrintZReport}" />
-                                <TextBlock Text="{Binding L[auto_print_zreport]}" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextPrimary}" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
-                                        Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                                <Button Classes="outline" Command="{Binding TestZPrintCommand}" Content="{Binding L[printer_test]}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </Panel>
+                </StackPanel>
             </ScrollViewer>
+
+            <Border Grid.Column="1" Classes="printcard" Padding="16" HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,12">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[print_preview]}" />
+                            <TextBlock Text="{Binding L[print_preview_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="11.5" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding PreviewPrinterName}" Foreground="{DynamicResource TextSecondary}"
+                                       FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding L[preview_zoom_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="10.5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Top">
+                            <Border Classes="previewchip"
+                                    Background="{Binding PreviewStatusBackgroundBrush}"
+                                    BorderBrush="{Binding PreviewStatusBrush}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <mi:MaterialIcon Kind="PrinterOutline" Width="14" Height="14"
+                                                     Foreground="{Binding PreviewStatusBrush}" />
+                                    <TextBlock Text="{Binding L[print_preview_color]}" IsVisible="{Binding IsPreviewColor}"
+                                               Classes="previewchiplabel" Foreground="{Binding PreviewStatusBrush}" />
+                                    <TextBlock Text="{Binding L[print_preview_monochrome]}" IsVisible="{Binding IsPreviewMonochrome}"
+                                               Classes="previewchiplabel" Foreground="{Binding PreviewStatusBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="previewchip live">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <mi:MaterialIcon Kind="EyeOutline" Width="14" Height="14"
+                                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    <TextBlock Text="{Binding L[live]}" Classes="previewchiplabel"
+                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <Border Grid.Row="1" Background="{DynamicResource AppBg}" CornerRadius="10"
+                            MinHeight="560" HorizontalAlignment="Stretch" ClipToBounds="True">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <c:PreviewZoomHost HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                               MinWidth="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                               MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                               ToolTip.Tip="{Binding L[preview_zoom_hint]}">
+                                <Viewbox Width="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                         Height="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                         Stretch="Uniform">
+                                    <Border Padding="22">
+                                        <Grid>
+                                <Border Width="{Binding PreviewPaperWidth}" Height="{Binding PreviewPaperHeight}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        Background="White" BorderBrush="#CBD5E1" BorderThickness="1"
+                                        IsVisible="{Binding IsThermal}">
+                                    <Viewbox Stretch="Uniform" Margin="10">
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ThermalReceiptPreview}" />
+                                    </Viewbox>
+                                </Border>
+
+                                <Border Width="{Binding PreviewPaperWidth}" Height="{Binding PreviewPaperHeight}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        Background="White" BorderBrush="#94A3B8" BorderThickness="1"
+                                        IsVisible="{Binding IsDocument}">
+                                    <Grid>
+                                        <Border Classes="previewslot" IsVisible="{Binding IsOnePagePerSheet}">
+                                            <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                     Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                     Stretch="Uniform">
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                            </Viewbox>
+                                        </Border>
+                                        <Grid ColumnDefinitions="*,*" IsVisible="{Binding IsTwoPagesLandscape}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                        <Grid RowDefinitions="*,*" IsVisible="{Binding IsTwoPagesPortrait}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*" RowDefinitions="*,*" IsVisible="{Binding IsFourPagesPerSheet}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding PreviewReceiptOnSheetWidth}"
+                                                         Height="{Binding PreviewReceiptOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                         Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentReceiptPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                                        </Grid>
+                                    </Border>
+                                </Viewbox>
+                            </c:PreviewZoomHost>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
-    </DockPanel>
+
+        <Grid Grid.Row="2" IsVisible="{Binding IsBarcodeSection}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="560" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0">
+            <Border Classes="printcard">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="5">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
+                        <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding BarcodePrinter}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="—" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
+                        <Grid ColumnDefinitions="*,8,90,8,90">
+                            <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                            <NumericUpDown Grid.Column="4" Value="{Binding LabelHeightMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="20" Maximum="120" FormatString="0" MinHeight="34" />
+                        </Grid>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_mode]}" />
+                            <ComboBox ItemsSource="{Binding LabelModes}" SelectedItem="{Binding LabelMode}" MinHeight="34" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
+                            <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34"
+                                           IsEnabled="{Binding !UsePrinterGapCalibration}" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UsePrinterGapCalibration}">
+                        <TextBlock Text="{Binding L[label_gap_detected]}" Foreground="{DynamicResource BrandPrimaryBrush}" VerticalAlignment="Center" />
+                        <Button Classes="outline" Command="{Binding UseManualLabelGapCommand}" Content="{Binding L[label_use_manual_gap]}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
+                            <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#"
+                                           c:MoneyInput.Clean="False" MinHeight="34" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
+                            <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#"
+                                           c:MoneyInput.Clean="False" MinHeight="34" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding L[label_shift_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelLeftCommand}" Content="←" />
+                        <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelRightCommand}" Content="→" />
+                        <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelUpCommand}" Content="↑" />
+                        <Button Classes="outline" MinWidth="40" Command="{Binding NudgeLabelDownCommand}" Content="↓" />
+                        <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" Text="0.5 mm" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,12,*,12,*,12,*">
+                        <StackPanel Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_rotation]}" />
+                            <ComboBox ItemsSource="{Binding LabelRotations}" SelectedItem="{Binding LabelRotation}" MinHeight="34" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_dpi]}" />
+                            <ComboBox ItemsSource="{Binding LabelDpis}" SelectedItem="{Binding LabelDpi}" MinHeight="34" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" />
+                            <NumericUpDown Value="{Binding LabelDensity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="6" Spacing="5">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" />
+                            <NumericUpDown Value="{Binding LabelSpeed, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding L[label_calibrate_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Classes="brand" MinWidth="130" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                        <Button Classes="outline" Command="{Binding TestLabelPrintCommand}" Content="{Binding L[printer_test]}" />
+                        <Button Classes="outline" Command="{Binding CalibrateLabelCommand}" Content="{Binding L[label_calibrate]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            </ScrollViewer>
+
+            <Border Grid.Column="1" Classes="printcard" Padding="16" HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,12">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[label_preview]}" />
+                            <TextBlock Text="{Binding L[label_preview_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="11.5" TextWrapping="Wrap" />
+                            <TextBlock Foreground="{DynamicResource TextSecondary}" FontSize="11" FontWeight="SemiBold">
+                                <Run Text="{Binding LabelWidthMm}" /><Run Text=" × " />
+                                <Run Text="{Binding LabelHeightMm}" /><Run Text=" mm · " />
+                                <Run Text="{Binding LabelDpi}" /><Run Text=" DPI" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding L[preview_zoom_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="10.5" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Classes="previewchip live">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <mi:MaterialIcon Kind="EyeOutline" Width="14" Height="14"
+                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                <TextBlock Text="{Binding L[live]}" Classes="previewchiplabel"
+                                           Foreground="{DynamicResource BrandPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <Border Grid.Row="1" Background="{DynamicResource AppBg}" CornerRadius="10"
+                            MinHeight="500" HorizontalAlignment="Stretch" ClipToBounds="True">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <c:PreviewZoomHost HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                               MinWidth="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                               MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                               ToolTip.Tip="{Binding L[preview_zoom_hint]}">
+                                <Viewbox Width="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                         Height="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                         Stretch="Uniform">
+                                    <Border Padding="22">
+                                        <StackPanel Spacing="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Grid Width="{Binding LabelPreviewPaperWidth}"
+                                                  Height="{Binding LabelPreviewPaperHeight}">
+                                                <Border Background="White" BorderBrush="#94A3B8" BorderThickness="1">
+                                                    <Image Source="{Binding LabelPreview}" Stretch="Fill" />
+                                                </Border>
+                                                <Border BorderBrush="#DC2626" BorderThickness="2"
+                                                        IsHitTestVisible="False"
+                                                        IsVisible="{Binding LabelPreviewMayClip}" />
+                                            </Grid>
+                                            <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1"
+                                                    CornerRadius="8" Padding="10,8" MaxWidth="380"
+                                                    IsVisible="{Binding LabelPreviewMayClip}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <mi:MaterialIcon Kind="AlertOutline" Width="17" Height="17"
+                                                                     Foreground="#DC2626" VerticalAlignment="Top" />
+                                                    <TextBlock Text="{Binding L[label_preview_clipping]}"
+                                                               Foreground="#991B1B" FontSize="11.5"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+                                            <TextBlock Text="{Binding L[label_preview_hardware_hint]}"
+                                                       Foreground="{DynamicResource TextMuted}" FontSize="11"
+                                                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="380" />
+                                        </StackPanel>
+                                    </Border>
+                                </Viewbox>
+                            </c:PreviewZoomHost>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2" IsVisible="{Binding IsZSection}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="560" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0">
+            <Border Classes="printcard">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="7">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[print_output_type]}" />
+                        <Grid ColumnDefinitions="*,8,*">
+                            <Button Classes="printchoice" Classes.active="{Binding IsZReportThermal}"
+                                    Command="{Binding SelectZReportModeCommand}" CommandParameter="thermal">
+                                <StackPanel Spacing="5">
+                                    <mi:MaterialIcon Kind="ReceiptRollOutline" Width="24" Height="24"
+                                                     HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding L[format_thermal]}" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsZReportDocument}"
+                                    Command="{Binding SelectZReportModeCommand}" CommandParameter="document">
+                                <StackPanel Spacing="5">
+                                    <mi:MaterialIcon Kind="FileDocument" Width="24" Height="24"
+                                                     HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding L[format_document]}" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[printer]}" />
+                        <ComboBox ItemsSource="{Binding Printers}" SelectedItem="{Binding ZReportPrinter}"
+                                  HorizontalAlignment="Stretch" PlaceholderText="—" />
+                        <TextBlock Text="{Binding L[zreport_printer_hint]}" Foreground="{DynamicResource TextMuted}"
+                                   FontSize="11.5" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="5" IsVisible="{Binding IsZReportThermal}">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[zreport_paper_width]}" />
+                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ZReportPaperWidth}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="14" IsVisible="{Binding IsZReportDocument}">
+                        <StackPanel Spacing="7">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[document_paper_size]}" />
+                            <Grid ColumnDefinitions="*,8,*">
+                                <Button Classes="printchoice" Classes.active="{Binding IsZReportDocumentPaperA4}"
+                                        Command="{Binding SelectZReportDocumentPaperCommand}" CommandParameter="a4">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <mi:MaterialIcon Kind="FileDocument" Width="22" Height="22" />
+                                        <TextBlock Text="A4 · 210×297 mm" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsZReportDocumentPaperA5}"
+                                        Command="{Binding SelectZReportDocumentPaperCommand}" CommandParameter="a5">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <mi:MaterialIcon Kind="FileDocumentOutline" Width="19" Height="19" />
+                                        <TextBlock Text="A5 · 148×210 mm" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Spacing="7">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[document_orientation]}" />
+                            <Grid ColumnDefinitions="*,8,*">
+                                <Button Classes="printchoice" Classes.active="{Binding IsZReportPortrait}"
+                                        Command="{Binding SelectZReportDocumentOrientationCommand}" CommandParameter="portrait">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <mi:MaterialIcon Kind="CropPortrait" Width="23" Height="23" />
+                                        <TextBlock Text="{Binding L[orientation_portrait]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsZReportLandscape}"
+                                        Command="{Binding SelectZReportDocumentOrientationCommand}" CommandParameter="landscape">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <mi:MaterialIcon Kind="CropLandscape" Width="23" Height="23" />
+                                        <TextBlock Text="{Binding L[orientation_landscape]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Spacing="7">
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[zreport_pages_per_sheet]}" />
+                            <Grid ColumnDefinitions="*,8,*,8,*">
+                                <Button Classes="printchoice" Classes.active="{Binding IsZReportOnePagePerSheet}"
+                                        Command="{Binding SelectZReportPagesPerSheetCommand}" CommandParameter="1">
+                                    <StackPanel Spacing="5">
+                                        <Border Width="26" Height="32" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                BorderThickness="1.5" CornerRadius="2" HorizontalAlignment="Center">
+                                            <StackPanel Margin="5" Spacing="3">
+                                                <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                                <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                                <Border Height="2" Background="{Binding $parent[Button].Foreground}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock Text="{Binding L[layout_one_page]}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsZReportTwoPagesPerSheet}"
+                                        Command="{Binding SelectZReportPagesPerSheetCommand}" CommandParameter="2">
+                                    <StackPanel Spacing="5">
+                                        <Grid Width="34" Height="28" ColumnDefinitions="*,*" HorizontalAlignment="Center">
+                                            <Border BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="1.5" CornerRadius="2,0,0,2" />
+                                            <Border Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="0,1.5,1.5,1.5" CornerRadius="0,2,2,0" />
+                                        </Grid>
+                                        <TextBlock Text="{Binding L[layout_two_pages]}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="4" Classes="printchoice" Classes.active="{Binding IsZReportFourPagesPerSheet}"
+                                        Command="{Binding SelectZReportPagesPerSheetCommand}" CommandParameter="4">
+                                    <StackPanel Spacing="5">
+                                        <Grid Width="34" Height="28" ColumnDefinitions="*,*" RowDefinitions="*,*"
+                                              HorizontalAlignment="Center">
+                                            <Border BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="1.5,1.5,0,0" CornerRadius="2,0,0,0" />
+                                            <Border Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="1.5,1.5,1.5,0" CornerRadius="0,2,0,0" />
+                                            <Border Grid.Row="1" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="1.5" CornerRadius="0,0,0,2" />
+                                            <Border Grid.Row="1" Grid.Column="1" BorderBrush="{Binding $parent[Button].Foreground}"
+                                                    BorderThickness="0,1.5,1.5,1.5" CornerRadius="0,0,2,0" />
+                                        </Grid>
+                                        <TextBlock Text="{Binding L[layout_four_pages]}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding L[zreport_document_hint]}" Foreground="{DynamicResource TextMuted}"
+                                   FontSize="11.5" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <ToggleSwitch IsChecked="{Binding AutoPrintZReport}" />
+                        <TextBlock Text="{Binding L[auto_print_zreport]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Classes="brand" MinWidth="130" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                        <Button Classes="outline" Command="{Binding TestZPrintCommand}" Content="{Binding L[printer_test]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            </ScrollViewer>
+
+            <Border Grid.Column="1" Classes="printcard" Padding="16" HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,12">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[zreport_preview]}" />
+                            <TextBlock Text="{Binding L[zreport_preview_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="11.5" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding ZReportPreviewPrinterName}" Foreground="{DynamicResource TextSecondary}"
+                                       FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding L[preview_zoom_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="10.5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Top">
+                            <Border Classes="previewchip"
+                                    Background="{Binding ZReportPreviewStatusBackgroundBrush}"
+                                    BorderBrush="{Binding ZReportPreviewStatusBrush}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <mi:MaterialIcon Kind="PrinterOutline" Width="14" Height="14"
+                                                     Foreground="{Binding ZReportPreviewStatusBrush}" />
+                                    <TextBlock Text="{Binding L[print_preview_color]}"
+                                               IsVisible="{Binding IsZReportPreviewColor}"
+                                               Classes="previewchiplabel"
+                                               Foreground="{Binding ZReportPreviewStatusBrush}" />
+                                    <TextBlock Text="{Binding L[print_preview_monochrome]}"
+                                               IsVisible="{Binding IsZReportPreviewMonochrome}"
+                                               Classes="previewchiplabel"
+                                               Foreground="{Binding ZReportPreviewStatusBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="previewchip live">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <mi:MaterialIcon Kind="EyeOutline" Width="14" Height="14"
+                                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    <TextBlock Text="{Binding L[live]}" Classes="previewchiplabel"
+                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <Border Grid.Row="1" Background="{DynamicResource AppBg}" CornerRadius="10"
+                            MinHeight="500" HorizontalAlignment="Stretch" ClipToBounds="True">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <c:PreviewZoomHost HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                               MinWidth="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                               MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                               ToolTip.Tip="{Binding L[preview_zoom_hint]}">
+                                <Viewbox Width="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                         Height="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                         Stretch="Uniform">
+                                    <Border Padding="22">
+                                        <Grid>
+                                <Border Width="{Binding ZReportPreviewPaperWidth}"
+                                        Height="{Binding ZReportPreviewPaperHeight}"
+                                        Background="White" BorderBrush="#94A3B8" BorderThickness="1" Padding="16"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        IsVisible="{Binding IsZReportThermal}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding L[z_report]}" Foreground="{Binding ZReportPreviewInkBrush}"
+                                                   FontSize="13" FontWeight="Bold" TextAlignment="Center" />
+                                        <TextBlock Text="{Binding ZReportPreviewDate}" Foreground="{Binding ZReportPreviewInkBrush}"
+                                                   FontSize="9" TextAlignment="Center" />
+                                        <TextBlock Text="{Binding ZReportPreviewBodyText}" Foreground="{Binding ZReportPreviewInkBrush}"
+                                                   FontFamily="Consolas" FontSize="9.5" TextWrapping="NoWrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Width="{Binding ZReportPreviewPaperWidth}"
+                                        Height="{Binding ZReportPreviewPaperHeight}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        Background="White" BorderBrush="#94A3B8" BorderThickness="1"
+                                        IsVisible="{Binding IsZReportDocument}">
+                                    <Grid>
+                                        <Border Classes="previewslot" IsVisible="{Binding IsZReportOnePagePerSheet}">
+                                            <Viewbox Width="{Binding ZReportOnSheetWidth}"
+                                                     Height="{Binding ZReportOnSheetHeight}"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                <ContentControl Content="{Binding}"
+                                                                ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                            </Viewbox>
+                                        </Border>
+                                        <Grid ColumnDefinitions="*,*" IsVisible="{Binding IsZReportTwoPagesLandscape}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                        <Grid RowDefinitions="*,*" IsVisible="{Binding IsZReportTwoPagesPortrait}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*" RowDefinitions="*,*"
+                                              IsVisible="{Binding IsZReportFourPagesPerSheet}">
+                                            <Border Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Grid.Row="1" Grid.Column="1" Classes="previewslot">
+                                                <Viewbox Width="{Binding ZReportOnSheetWidth}" Height="{Binding ZReportOnSheetHeight}"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}"
+                                                                    ContentTemplate="{StaticResource DocumentZReportPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                                        </Grid>
+                                    </Border>
+                                </Viewbox>
+                            </c:PreviewZoomHost>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>

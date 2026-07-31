@@ -17,7 +17,12 @@ public partial class TariffFeatureVm : ObservableObject
     [ObservableProperty] private bool _isEnabled;
 }
 
-public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesApi featuresApi, IToastService toast, IBusyService busy)
+public partial class TariffFeaturesViewModel(
+    ILicenseApi licenseApi,
+    IFeaturesApi featuresApi,
+    IToastService toast,
+    IBusyService busy,
+    AuthService auth)
     : ViewModelBase, ILoadable
 {
     private Dictionary<string, List<string>> _includedTariffs = [];
@@ -29,6 +34,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
     [ObservableProperty] private bool _isActive;
     [ObservableProperty] private string? _tariff;
     [ObservableProperty] private DateTimeOffset? _expiresAt;
+    public bool CanEdit => auth.HasPermission("features.edit");
 
     public async Task LoadAsync()
     {
@@ -75,6 +81,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (!CanEdit) return;
         try
         {
             using (busy.Begin(L["loading"]))

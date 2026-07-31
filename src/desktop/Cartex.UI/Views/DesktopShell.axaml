@@ -3,7 +3,6 @@
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:controls="using:Cartex.UI.Controls"
-             xmlns:u="https://irihi.tech/ursa"
              x:Class="Cartex.UI.Views.DesktopShell"
              x:CompileBindings="False">
 
@@ -322,7 +321,7 @@
                 </Grid>
             </Border>
 
-            <Panel>
+            <Panel Classes.blurred="{Binding BlurCurrentPage}">
                 <TransitioningContentControl Content="{Binding CurrentPage}"
                                              VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch">
                     <TransitioningContentControl.PageTransition>
@@ -418,8 +417,6 @@
                 Background="#30000000">
             <ContentControl Content="{Binding Onboarding}" />
         </Border>
-
-        <u:OverlayDialogHost Grid.Column="0" Grid.ColumnSpan="2" />
 
     </Grid>
 </UserControl>

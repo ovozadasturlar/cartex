@@ -38,12 +38,14 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [ObservableProperty] private string _newName = "";
     [ObservableProperty] private string? _historyCode;
 
-    public bool CanManageCurrencies => auth.HasPermission("currencies.manage");
-    public bool CanManageRates => auth.HasPermission("rates.manage");
+    public bool CanCreateCurrency => auth.HasPermission("currencies.create");
+    public bool CanEditCurrency => auth.HasPermission("currencies.edit");
+    public bool CanDeleteCurrency => auth.HasPermission("currencies.delete");
+    public bool CanManageRates => auth.HasPermission("rates.edit");
     public bool HasStale => StaleCount > 0;
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
-    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanManageCurrencies
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanCreateCurrency
         ? CrudShortcuts(OpenAddCommand, AddCommand, () => IsAddOpen = false, () => IsAddOpen)
         : [];
 
@@ -82,6 +84,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task SaveRateAsync(CurrencyRow row)
     {
+        if (!CanManageRates) return;
         if (row.NewRate <= 0) { toast.Error(L["error"]); return; }
         try
         {
@@ -98,6 +101,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task ToggleEnabledAsync(CurrencyRow row)
     {
+        if (!CanEditCurrency) return;
         if (row.IsBase) return;
         try
         {
@@ -110,6 +114,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task MakeDefaultAsync(CurrencyRow row)
     {
+        if (!CanEditCurrency) return;
         if (row.IsDefault) return;
         try
         {
@@ -122,6 +127,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task DeleteAsync(CurrencyRow row)
     {
+        if (!CanDeleteCurrency) return;
         if (!await dialog.ConfirmDangerAsync(string.Format(L["currency_delete_confirm"], row.Code), L["delete"])) return;
         try
         {
@@ -135,6 +141,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private void OpenAdd()
     {
+        if (!CanCreateCurrency) return;
         NewCode = "";
         NewName = "";
         IsAddOpen = true;
@@ -146,6 +153,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task AddAsync()
     {
+        if (!CanCreateCurrency) return;
         var code = NewCode.Trim().ToUpperInvariant();
         if (code.Length < 2 || string.IsNullOrWhiteSpace(NewName)) { toast.Warning(L["required_fields_hint"]); return; }
         try

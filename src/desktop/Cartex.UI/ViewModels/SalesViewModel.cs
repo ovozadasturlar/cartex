@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -13,6 +14,7 @@ using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Shifts;
+using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Ordering;
 using Avalonia.Input;
@@ -262,7 +264,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     public ObservableCollection<QuickRateItem> QuickRates { get; } = [];
-    public bool CanManageRates => _auth.HasPermission("rates.manage");
+    public bool CanManageRates => _auth.HasPermission("rates.edit");
     public bool ShowStaleFix => HasStaleRate && CanManageRates;
     public bool ShowStaleHint => HasStaleRate && !CanManageRates;
 
@@ -290,8 +292,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public decimal DebtAmount => TotalPaid < TotalAmount ? TotalAmount - TotalPaid : 0;
     public bool IsCartEmpty => CartItems.Count == 0;
     public bool CanOverridePrice => _auth.HasPermission("sales.priceOverride");
-    public bool CanCreateProduct => _auth.HasPermission("products.manage");
-    public bool CanManageProducts => _auth.HasPermission("products.manage");
+    public bool CanCreateCart => _auth.HasPermission("sales.create");
+    public bool CanCheckout => _auth.HasPermission("sales.checkout");
+    public bool ShowSingleCurrencyPayments => CanCheckout && !IsMulticurrency;
+    public bool ShowMulticurrencyPayments => CanCheckout && IsMulticurrency;
+    public bool CanCreateProduct => _auth.HasPermission("products.create");
+    public bool CanManageProducts => _auth.HasPermission("products.edit");
     [ObservableProperty] private bool _canPrepack;
 
     public decimal CustomerDebt => SelectedCustomer?.DebtBalance ?? 0;
@@ -309,11 +315,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public bool CanCreditExcess => AllowCustomerCredit && SelectedCustomer is not null;
     public bool ExcessToCredit => ChangeAmount > 0 && CanCreditExcess && (_excessOverride ?? true);
-    public bool ShowChange => ChangeAmount > 0 && !ExcessToCredit;
+    public bool ShowChange => CanCheckout && ChangeAmount > 0 && !ExcessToCredit;
     public decimal CreditAmount => ExcessToCredit ? ChangeAmount : 0;
     public bool DebtCoveredByCredit => DebtAmount > 0 && DebtAmount <= Math.Max(0, -CustomerDebt);
-    public bool ShowDebt => DebtAmount > 0;
-    public bool ShowDebtDueDate => DebtAmount > 0 && !DebtCoveredByCredit;
+    public bool ShowDebt => CanCheckout && DebtAmount > 0;
+    public bool ShowDebtDueDate => CanCheckout && DebtAmount > 0 && !DebtCoveredByCredit;
+
+    partial void OnIsMulticurrencyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowSingleCurrencyPayments));
+        OnPropertyChanged(nameof(ShowMulticurrencyPayments));
+    }
 
     public string DebtDisplay
     {
@@ -481,7 +493,21 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
-            _printer.ReceiptOptions = new ReceiptPrintOptions(receipt.HeaderText, receipt.FooterText, receipt.PaperWidth);
+            _printer.ReceiptOptions = new ReceiptPrintOptions(
+                receipt.HeaderText,
+                receipt.FooterText,
+                receipt.PaperWidth,
+                receipt.ShowBusinessName,
+                receipt.ShowBranchName,
+                receipt.ShowAddress,
+                receipt.ShowPhone,
+                receipt.ShowCashier,
+                receipt.ShowCustomer,
+                receipt.ShowReceiptNumber,
+                receipt.ShowPaymentDetails,
+                receipt.ShowQrCode,
+                receipt.ShowElectronicLink,
+                receipt.PublicReceiptBaseUrl);
         }
         catch { }
     }
@@ -525,7 +551,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             foreach (var item in cart.Items)
             {
                 var stock = Products.FirstOrDefault(p => p.VariantId == item.VariantId);
-                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity, stock?.Quantity, stock);
+                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity, stock?.Quantity, stock, enforceCreatePermission: false);
             }
 
             if (cart.CustomerId is { } customerId)
@@ -1161,7 +1187,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task LoadReceiveAccessAsync()
     {
-        if (!_auth.HasPermission("supplies.manage"))
+        if (!_auth.HasPermission("supplies.create"))
         {
             CanReceiveStock = false;
             return;
@@ -1307,8 +1333,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         await Prepack.OpenAsync(warehouseId);
     }
 
-    private void AddToCart(long variantId, string name, decimal price, decimal quantity = 1, decimal? available = null, StockOnHandDto? detail = null)
+    private void AddToCart(
+        long variantId,
+        string name,
+        decimal price,
+        decimal quantity = 1,
+        decimal? available = null,
+        StockOnHandDto? detail = null,
+        bool enforceCreatePermission = true)
     {
+        if (enforceCreatePermission && !CanCreateCart)
+            return;
+
         var existing = CartItems.FirstOrDefault(c => c.VariantId == variantId && !c.IsPrepack);
         if (existing is not null)
         {
@@ -1634,10 +1670,52 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private bool _queueHubWired;
     private string? _saleIdempotencyKey;
+    private string? _queueIdempotencyKey;
+
+    [RelayCommand]
+    private async Task SendToQueueAsync()
+    {
+        if (!CanCreateCart || CartItems.Count == 0)
+        {
+            _toast.Warning(L["no_items"]);
+            return;
+        }
+
+        if (Branch.CurrentWarehouseId is not { } warehouseId)
+        {
+            _toast.Warning(L["select_warehouse"]);
+            return;
+        }
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                if (_activeCartCode is null)
+                {
+                    _queueIdempotencyKey ??= Guid.NewGuid().ToString("N");
+                    await _orderingApi.SubmitAsync(new SubmitCartRequest(
+                        warehouseId,
+                        SelectedCustomer?.Id,
+                        CartItems.Select(item => new SubmitCartItemRequest(item.VariantId, item.Quantity)).ToList(),
+                        _queueIdempotencyKey));
+                }
+            }
+
+            _activeCartCode = null;
+            _queueIdempotencyKey = null;
+            ClearCart();
+            _toast.Success(L["send_to_queue"]);
+            await LoadQueueAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task CompleteSaleAsync()
     {
+        if (!CanCheckout)
+            return;
         if (CartItems.Count == 0) { _toast.Warning(L["no_items"]); return; }
 
         var warehouseId = Branch.CurrentWarehouseId;
@@ -1685,10 +1763,28 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
-
         try
         {
+            if (_activeCartCode is { } queuedCode)
+            {
+                using (_busy.Begin(L["loading"]))
+                {
+                    _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
+                    await _orderingApi.CheckoutAsync(
+                        queuedCode,
+                        new CheckoutCartRequest(PaidCash, PaidCard, PaidBonus, _saleIdempotencyKey));
+                }
+                _activeCartCode = null;
+                ClearCart();
+                _toast.Success(L["sale_completed"]);
+                await Task.WhenAll(LoadProductsAsync(), LoadQueueAsync());
+                return;
+            }
+
+            if (!CanCreateCart)
+                return;
+
+            _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
             CreateSaleResult result;
             using (_busy.Begin(L["loading"]))
             {
@@ -1757,10 +1853,27 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         var settings = _printer.GetSettings();
         if (settings.ReceiptMode is "a4" or "a5")
         {
-            var content = await _receiptApi.GetPdfAsync(CurrentReceipt.ReceiptToken, settings.ReceiptMode);
-            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"cartex-chek-{CurrentReceipt.SaleId}.pdf");
-            await System.IO.File.WriteAllBytesAsync(path, await content.ReadAsByteArrayAsync());
-            _printer.PrintDocument(path, settings.DocumentPrinter);
+            var documentFormat = DocumentPrintLayout.ResolveOutputFormat(
+                "document",
+                settings.DocumentPaperSize ?? "a4");
+            var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
+                settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
+                settings.DocumentPagesPerSheet);
+            var content = await _receiptApi.GetPrintImagesAsync(
+                CurrentReceipt.ReceiptToken,
+                documentFormat,
+                renderOrientation);
+            await using var package = await content.ReadAsStreamAsync();
+            using var archive = new ZipArchive(package, ZipArchiveMode.Read);
+            var pages = new List<byte[]>(archive.Entries.Count);
+            foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
+            {
+                await using var input = entry.Open();
+                using var output = new MemoryStream();
+                await input.CopyToAsync(output);
+                pages.Add(output.ToArray());
+            }
+            _printer.PrintDocumentImages(pages);
         }
         else
             _printer.PrintReceipt(CurrentReceipt);

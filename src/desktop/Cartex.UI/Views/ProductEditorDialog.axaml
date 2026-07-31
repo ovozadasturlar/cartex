@@ -54,7 +54,8 @@
                     <Button Grid.Column="3" Classes="outline" Margin="0,0,10,0" MinWidth="100"
                             HorizontalContentAlignment="Center" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
                     <Button Grid.Column="4" Classes="brand" MinWidth="120" HorizontalContentAlignment="Center"
-                            Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                            Command="{Binding SaveCommand}" Content="{Binding L[save]}"
+                            IsVisible="{Binding CanEditCurrent}" />
                 </Grid>
 
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -176,6 +177,7 @@
                                                        Foreground="{DynamicResource TextMuted}"
                                                        Text="{Binding PackQty, Converter={x:Static conv:PackQtyConverter.Instance}}" />
                                             <Button Grid.Column="2" Classes="icon-sm" Padding="3"
+                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanDeleteBarcode}"
                                                     Command="{Binding $parent[ItemsControl].DataContext.DeleteEditBarcodeCommand}"
                                                     CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
@@ -194,7 +196,8 @@
                             </TextBox>
                             <NumericUpDown Grid.Column="2" Value="{Binding EditBarcodePackQty, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1"
                                            FormatString="0.###" MinHeight="40" Width="120" ToolTip.Tip="{Binding L[pack_size_hint]}" />
-                            <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0" Command="{Binding AddEditBarcodeCommand}">
+                            <Button Grid.Column="4" Classes="outline" MinHeight="40" Padding="12,0"
+                                    IsVisible="{Binding CanCreateBarcode}" Command="{Binding AddEditBarcodeCommand}">
                                 <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             </Button>
                             <Button Grid.Column="6" Classes="outline" MinHeight="40" Padding="12,0"
@@ -218,10 +221,12 @@
                                                        Foreground="{DynamicResource TextSecondary}"
                                                        Text="{Binding Kind, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=pack}" />
                                             <Button Grid.Column="3" Classes="icon-sm" Padding="3"
+                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanEdit}"
                                                     Command="{Binding $parent[ItemsControl].DataContext.EditPackCommand}" CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
                                             </Button>
                                             <Button Grid.Column="4" Classes="icon-sm" Padding="3"
+                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanDeleteVariant}"
                                                     Command="{Binding $parent[ItemsControl].DataContext.DeletePackCommand}" CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
                                             </Button>
@@ -243,6 +248,7 @@
                             </ComboBox>
                             <CheckBox Grid.Column="6" IsChecked="{Binding PackIsDefault}" Content="{Binding L[pack_default]}" VerticalAlignment="Center" />
                             <Button Grid.Column="8" Classes="outline" MinHeight="40" Padding="12,0"
+                                    IsVisible="{Binding CanEditCurrent}"
                                     Command="{Binding SavePackCommand}" Content="{Binding L[add_pack]}" />
                         </Grid>
                     </StackPanel>

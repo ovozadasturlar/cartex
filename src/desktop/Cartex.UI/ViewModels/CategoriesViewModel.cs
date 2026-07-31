@@ -30,6 +30,8 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Categories.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("categories.create");
+    public bool CanEdit => _auth.HasPermission("categories.edit");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
@@ -112,6 +114,7 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -123,6 +126,7 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(CategoryDto category)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = category.Id;
         EditName = category.Name;
@@ -137,6 +141,7 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         try
         {

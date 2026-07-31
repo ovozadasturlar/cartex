@@ -30,7 +30,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     private long _editRuleId;
     private long _editDiscountId;
 
-    public bool CanManage => _auth.HasPermission("loyalty.manage");
+    public bool CanManage => _auth.HasPermission("loyalty.edit");
 
     [ObservableProperty] private string _sectionKey = "discounts";
     public bool IsDiscountSection => SectionKey == "discounts";

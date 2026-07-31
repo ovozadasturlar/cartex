@@ -8,8 +8,7 @@ namespace Cartex.UI.Services;
 
 public sealed partial class BranchContextService : ObservableObject
 {
-    private readonly IBranchesApi _branchesApi;
-    private readonly IWarehousesApi _warehousesApi;
+    private readonly ISessionsApi _sessionsApi;
 
     public ObservableCollection<BranchDto> Branches { get; } = [];
     public ObservableCollection<WarehouseDto> Warehouses { get; } = [];
@@ -20,49 +19,35 @@ public sealed partial class BranchContextService : ObservableObject
     public long? CurrentBranchId => SelectedBranch?.Id;
     public long? CurrentWarehouseId => SelectedWarehouse?.Id;
     public bool HasMultipleBranches => Branches.Count > 1;
-    public bool HasMultipleWarehouses => Warehouses.Count > 1;
+    public bool HasMultipleWarehouses =>
+        SelectedBranch is not null && Warehouses.Count(w => w.BranchId == SelectedBranch.Id) > 1;
 
-    public BranchContextService(IBranchesApi branchesApi, IWarehousesApi warehousesApi)
-    {
-        _branchesApi = branchesApi;
-        _warehousesApi = warehousesApi;
-    }
+    public BranchContextService(ISessionsApi sessionsApi) => _sessionsApi = sessionsApi;
 
     public async Task LoadAsync()
     {
         try
         {
-            var branches = await _branchesApi.GetAllAsync();
+            var context = await _sessionsApi.GetContextAsync();
             Branches.Clear();
-            foreach (var b in branches.Where(b => b.IsActive))
-                Branches.Add(b);
+            foreach (var b in context.Branches.Where(b => b.IsActive))
+                Branches.Add(new BranchDto(b.Id, b.Name, null, null, b.IsActive));
+            Warehouses.Clear();
+            foreach (var w in context.Warehouses)
+                Warehouses.Add(new WarehouseDto(w.Id, w.Name, w.BranchId, w.BranchName));
             OnPropertyChanged(nameof(HasMultipleBranches));
-            SelectedBranch = Branches.FirstOrDefault();
+            SelectedBranch = Branches.FirstOrDefault(b => b.Id == context.DefaultBranchId) ?? Branches.FirstOrDefault();
+            SelectedWarehouse = Warehouses.FirstOrDefault(w => w.BranchId == SelectedBranch?.Id);
+            OnPropertyChanged(nameof(HasMultipleWarehouses));
         }
         catch
         {
         }
     }
 
-    partial void OnSelectedBranchChanged(BranchDto? value) => _ = LoadWarehousesAsync();
-
-    private async Task LoadWarehousesAsync()
+    partial void OnSelectedBranchChanged(BranchDto? value)
     {
-        Warehouses.Clear();
-        SelectedWarehouse = null;
+        SelectedWarehouse = Warehouses.FirstOrDefault(w => w.BranchId == value?.Id);
         OnPropertyChanged(nameof(HasMultipleWarehouses));
-        if (SelectedBranch is null) return;
-
-        try
-        {
-            var warehouses = await _warehousesApi.GetAllAsync(SelectedBranch.Id);
-            foreach (var w in warehouses)
-                Warehouses.Add(w);
-            SelectedWarehouse = Warehouses.FirstOrDefault();
-            OnPropertyChanged(nameof(HasMultipleWarehouses));
-        }
-        catch
-        {
-        }
     }
 }

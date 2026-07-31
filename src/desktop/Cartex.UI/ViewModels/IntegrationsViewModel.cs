@@ -39,24 +39,6 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         OnPropertyChanged(nameof(IsReceipt));
         OnPropertyChanged(nameof(IsStorage));
         OnPropertyChanged(nameof(IsCloudBridge));
-        if (value == "sms") _ = RefreshSmsJournalCommand.ExecuteAsync(null);
-    }
-
-    public ObservableCollection<SmsMessageDto> SmsJournal { get; } = [];
-    [ObservableProperty] private string? _smsStatsText;
-
-    [RelayCommand]
-    private async Task RefreshSmsJournal()
-    {
-        try
-        {
-            var stats = await api.GetSmsStatsAsync();
-            SmsStatsText = $"{L["sms_sent"]}: {stats.Total - stats.Failed} • {L["sms_delivered"]}: {stats.Delivered} • {L["sms_failed"]}: {stats.Failed + stats.Undelivered} • {L["sms_segments"]}: {stats.Segments}";
-            var items = await api.GetSmsJournalAsync();
-            SmsJournal.Clear();
-            foreach (var m in items) SmsJournal.Add(m);
-        }
-        catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

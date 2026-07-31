@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:u="https://irihi.tech/ursa"
              x:Class="Cartex.UI.Views.SettingsHubView"
              x:CompileBindings="False">
 
@@ -80,7 +81,14 @@
             </DockPanel>
         </Border>
 
-        <ContentControl Grid.Column="1" Content="{Binding CurrentSection}" />
+        <Panel Grid.Column="1"
+               ClipToBounds="True">
+            <ContentControl Classes.blurred="{Binding IsDialogOpen}"
+                            Content="{Binding CurrentSection}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch" />
+            <u:OverlayDialogHost />
+        </Panel>
 
     </Grid>
 </UserControl>

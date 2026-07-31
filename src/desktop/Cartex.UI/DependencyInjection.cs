@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddTransient<SuppliersViewModel>();
         services.AddTransient<RatesViewModel>();
         services.AddTransient<RemindersViewModel>();
+        services.AddTransient<NotificationJournalViewModel>();
         services.AddSingleton<OrdersViewModel>();
         services.AddSingleton<PosHandoffService>();
         services.AddTransient<AccountsViewModel>();

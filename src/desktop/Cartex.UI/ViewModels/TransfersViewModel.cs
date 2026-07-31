@@ -69,6 +69,8 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private StockTransfersTotalsDto _totals = new(0, 0);
     public bool IsEmpty => Transfers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("stock_transfers.create");
+    public bool CanReceive => _auth.HasPermission("stock_transfers.receive");
 
     public TransfersViewModel(IStockTransfersApi api, IWarehousesApi warehousesApi, IProductsApi productsApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth, ReferenceCache cache)
     {
@@ -140,6 +142,8 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanReceive));
     }
 
     public async Task LoadAsync()
@@ -204,6 +208,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenCreateAsync()
     {
+        if (!CanCreate) return;
         await EnsureProductCatalogAsync();
         FromWarehouse = WarehouseOptions.FirstOrDefault();
         ToWarehouse = WarehouseOptions.Skip(1).FirstOrDefault() ?? WarehouseOptions.FirstOrDefault();
@@ -220,6 +225,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (!CanCreate) return;
         if (FromWarehouse?.Id is null || ToWarehouse?.Id is null || Product?.Id is null
             || FromWarehouse.Id == ToWarehouse.Id || Quantity <= 0) { _toast.Error(L["error"]); return; }
         try
@@ -236,6 +242,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task ReceiveAsync(StockTransferDto transfer)
     {
+        if (!CanReceive) return;
         try
         {
             using (_busy.Begin(L["loading"]))

@@ -15,7 +15,8 @@ public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, I
     [ObservableProperty] private bool _isEmpty;
     [ObservableProperty] private bool _showAll;
 
-    public bool CanViewAll => auth.HasPermission("users.manage");
+    public bool CanViewAll => auth.HasPermission("devices.viewAll");
+    public bool CanRevoke => auth.HasPermission("devices.revoke");
 
     partial void OnShowAllChanged(bool value) => _ = LoadAsync();
 
@@ -39,7 +40,7 @@ public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, I
     [RelayCommand]
     private async Task RevokeAsync(DeviceRow? session)
     {
-        if (session is null) return;
+        if (!CanRevoke || session is null) return;
         if (!await dialog.ConfirmDangerAsync(L["devices_revoke_confirm"], L["revoke"])) return;
         try
         {

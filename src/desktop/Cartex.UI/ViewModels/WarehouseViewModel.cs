@@ -25,7 +25,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
 
     public BranchContextService Branch { get; }
     public bool CanExport => _auth.HasPermission("reports.export");
-    public bool CanAdjust => _auth.HasPermission("stocks.manage");
+    public bool CanAdjust => _auth.HasPermission("stocks.adjust");
 
     public PaginationState Paging { get; } = new();
 

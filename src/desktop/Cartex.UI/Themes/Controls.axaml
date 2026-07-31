@@ -43,7 +43,8 @@
             <ControlTemplate>
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBox Text="{Binding SearchText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                             PlaceholderText="{TemplateBinding Watermark}" MaxWidth="380" MinHeight="38"
+                             PlaceholderText="{TemplateBinding Watermark}" Width="{TemplateBinding SearchWidth}"
+                             MaxWidth="{TemplateBinding SearchWidth}" MinHeight="38"
                              HorizontalAlignment="Left">
                         <TextBox.InnerLeftContent>
                             <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"

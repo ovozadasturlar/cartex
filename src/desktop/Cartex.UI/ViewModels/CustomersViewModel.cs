@@ -143,11 +143,13 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    public bool CanManage => _auth.HasPermission("customers.manage");
+    public bool CanCreate => _auth.HasPermission("customers.create");
+    public bool CanEdit => _auth.HasPermission("customers.edit");
     public bool CanMessage => _auth.HasPermission("customers.message");
     public bool CanExport => _auth.HasPermission("reports.export");
     public bool CanViewSales => _auth.HasPermission("sales.view");
-    public bool CanRepay => CanManage && (SelectedCustomer?.DebtBalances?.Any(b => b.Amount > 0) ?? false);
+    public bool CanRepay => _auth.HasPermission("customers.receivePayment")
+        && (SelectedCustomer?.DebtBalances?.Any(b => b.Amount > 0) ?? false);
     public bool SelectedIsCredit => SelectedCustomer is { DebtBalance: < 0 };
     public decimal SelectedDebtAmount => Math.Abs(SelectedCustomer?.DebtBalance ?? 0);
 
@@ -213,7 +215,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private void RaisePermissions()
     {
-        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanMessage));
         OnPropertyChanged(nameof(CanExport));
         OnPropertyChanged(nameof(CanViewSales));
@@ -343,6 +346,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenCreateAsync()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditFullName = "";
@@ -368,6 +372,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(CustomerDto customer)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = customer.Id;
         EditFullName = customer.FullName;
@@ -392,6 +397,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditFullName) || string.IsNullOrWhiteSpace(EditPhone)) { _toast.Error(L["required_fields_hint"]); return; }
         var phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone.Trim();
         var email = string.IsNullOrWhiteSpace(EditEmail) ? null : EditEmail.Trim();
@@ -462,6 +468,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenRepay()
     {
+        if (!CanRepay) return;
         if (SelectedCustomer is null) return;
         RepayAmount = 0;
         RepayViaCard = false;
@@ -480,6 +487,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task RepayAsync()
     {
+        if (!_auth.HasPermission("customers.receivePayment")) return;
         if (SelectedCustomer is null || RepayAmount <= 0) { _toast.Error(L["error"]); return; }
         var id = SelectedCustomer.Id;
         try

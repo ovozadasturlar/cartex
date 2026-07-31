@@ -9,10 +9,12 @@ namespace Cartex.UI.ViewModels;
 public partial class SettingsHubViewModel : ViewModelBase, ILoadable
 {
     private readonly AuthService _authService;
+    private readonly IDialogService _dialogService;
 
     [ObservableProperty] private ViewModelBase? _currentSection;
     [ObservableProperty] private MenuItem? _selectedSection;
     [ObservableProperty] private bool _isSidebarCollapsed = SettingsService.Instance.SettingsSidebarCollapsed;
+    [ObservableProperty] private bool _isDialogOpen;
 
     public double SidebarWidth => IsSidebarCollapsed ? 64 : 248;
 
@@ -27,9 +29,10 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<MenuSection> Sections { get; } = [];
 
-    public SettingsHubViewModel(AuthService authService)
+    public SettingsHubViewModel(AuthService authService, IDialogService dialogService)
     {
         _authService = authService;
+        _dialogService = dialogService;
         LocalizationManager.Instance.LanguageChanged += RefreshTitles;
     }
 
@@ -68,6 +71,8 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
     {
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is null) return;
+        if (oldValue is not null)
+            _dialogService.CloseOverlay();
         newValue.IsActive = true;
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         CurrentSection = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);

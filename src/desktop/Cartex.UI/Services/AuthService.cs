@@ -185,7 +185,9 @@ public sealed class AuthService
     }
 
     public bool HasPermission(string permission) =>
-        _permissionSet is not null && (_permissionSet.Contains("*") || _permissionSet.Contains(permission));
+        _permissionSet is not null
+        && (_permissionSet.Contains("*")
+            || permission.Split('|', StringSplitOptions.RemoveEmptyEntries).Any(_permissionSet.Contains));
 
     public IReadOnlyList<string> Roles => UserInfo?.Roles ?? [];
 

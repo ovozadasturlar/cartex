@@ -68,17 +68,17 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[supplies]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="outline" Command="{Binding ImportTemplateCommand}" IsVisible="{Binding CanManage}"
+                    <Button Classes="outline" Command="{Binding ImportTemplateCommand}" IsVisible="{Binding CanImport}"
                             ToolTip.Tip="{Binding L[import_template]}">
                         <mi:MaterialIcon Kind="Download" Width="18" Height="18" />
                     </Button>
-                    <Button Classes="outline" Command="{Binding ImportExcelCommand}" IsVisible="{Binding CanManage}">
+                    <Button Classes="outline" Command="{Binding ImportExcelCommand}" IsVisible="{Binding CanImport}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="FileExcel" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[import_excel]}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />

@@ -64,7 +64,7 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
 
     partial void OnBonusCustomerChanged(CustomerSalesDto? value) => OnPropertyChanged(nameof(BonusCustomerDisplay));
 
-    public bool CanGiveBonus => _auth.HasPermission("loyalty.manage");
+    public bool CanGiveBonus => _auth.HasPermission("loyalty.grantBonus");
 
     public ObservableCollection<ISeries> SalesChartSeries { get; } = [];
     [ObservableProperty] private Axis[] _salesXAxes = [new Axis()];

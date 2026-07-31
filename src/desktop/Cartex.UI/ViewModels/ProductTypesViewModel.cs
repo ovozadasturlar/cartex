@@ -30,6 +30,8 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => ProductTypes.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("product_types.create");
+    public bool CanEdit => _auth.HasPermission("product_types.edit");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
@@ -88,6 +90,7 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -99,6 +102,7 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(ProductTypeDto type)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = type.Id;
         EditName = type.Name;
@@ -120,6 +124,7 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         var schema = AttributeSchemaCodec.SerializeSchema(SchemaFields);
         try

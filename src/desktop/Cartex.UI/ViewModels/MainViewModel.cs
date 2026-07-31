@@ -14,6 +14,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly AuthService _authService;
     private readonly ShortcutService _shortcuts;
     private readonly NavigationService _navigationService;
+    private readonly IDialogService _dialogService;
     private readonly Cartex.ApiClient.Api.IBusinessApi _businessApi;
     private readonly Action _langChangedHandler;
 
@@ -59,11 +60,17 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isDialogOpen;
     public ObservableCollection<ShortcutHelpRow> ShortcutHelpRows { get; } = [];
 
-    public bool IsShellOverlayOpen => IsPaletteOpen || IsShortcutHelpOpen || IsOnboardingOpen || IsDialogOpen;
+    public bool IsShellOverlayOpen => IsPaletteOpen || IsShortcutHelpOpen || IsOnboardingOpen;
+    public bool BlurCurrentPage => IsDialogOpen && CurrentPage is not SettingsHubViewModel;
     partial void OnIsPaletteOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
     partial void OnIsShortcutHelpOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
     partial void OnIsOnboardingOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
-    partial void OnIsDialogOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
+    partial void OnIsDialogOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(BlurCurrentPage));
+        if (CurrentPage is SettingsHubViewModel settings)
+            settings.IsDialogOpen = value;
+    }
 
     [RelayCommand]
     private void ToggleShortcutHelp()
@@ -79,11 +86,12 @@ public partial class MainViewModel : ViewModelBase
         IsShortcutHelpOpen = !IsShortcutHelpOpen;
     }
 
-    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi, ShortcutService shortcuts)
+    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi, ShortcutService shortcuts, IDialogService dialogService)
     {
         _shortcuts = shortcuts;
         _authService = authService;
         _navigationService = navigationService;
+        _dialogService = dialogService;
         _businessApi = businessApi;
         _featuresApi = featuresApi;
         Branch = branch;
@@ -94,7 +102,7 @@ public partial class MainViewModel : ViewModelBase
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
-        if (ServiceLocator.Resolve<IDialogService>() is DialogService dialogs)
+        if (dialogService is DialogService dialogs)
             dialogs.OpenChanged += open => Avalonia.Threading.Dispatcher.UIThread.Post(() => IsDialogOpen = open);
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
@@ -104,7 +112,10 @@ public partial class MainViewModel : ViewModelBase
     private void OnBranchPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(BranchContextService.HasMultipleWarehouses))
+        {
             RefreshMenuVisibility();
+            BuildPalette();
+        }
     }
 
     private void RefreshMenuVisibility()
@@ -144,7 +155,7 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task CheckOnboardingAsync()
     {
-        if (!_authService.HasPermission("business.manage")) return;
+        if (!_authService.HasPermission("business.edit")) return;
         try
         {
             var business = await _businessApi.GetAsync();
@@ -163,6 +174,8 @@ public partial class MainViewModel : ViewModelBase
         _allPaletteItems.Clear();
         foreach (var item in MenuSections.SelectMany(s => s.Items))
         {
+            if (item.Key == "transfers" && !Branch.HasMultipleWarehouses)
+                continue;
             var captured = item;
             _allPaletteItems.Add(new PaletteItem(item.Title, item.Icon, () => SelectedMenuItem = captured));
         }
@@ -236,6 +249,7 @@ public partial class MainViewModel : ViewModelBase
             if (section.Items.Count > 0)
                 MenuSections.Add(section);
         }
+        RefreshMenuVisibility();
     }
 
     private readonly HashSet<string> _enabledFeatures = [];
@@ -282,8 +296,13 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
     {
+        if (oldValue is not null)
+            _dialogService.CloseOverlay();
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         (oldValue as IDisposable)?.Dispose();
+        OnPropertyChanged(nameof(BlurCurrentPage));
+        if (newValue is SettingsHubViewModel settings)
+            settings.IsDialogOpen = IsDialogOpen;
     }
 
     partial void OnSelectedMenuItemChanged(MenuItem? oldValue, MenuItem? newValue)

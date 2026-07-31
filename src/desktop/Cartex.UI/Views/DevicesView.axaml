@@ -42,6 +42,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Classes="icon" Margin="6,0"
+                                            IsVisible="{Binding $parent[DataGrid].DataContext.CanRevoke}"
                                             Command="{Binding $parent[DataGrid].DataContext.RevokeCommand}"
                                             CommandParameter="{Binding}"
                                             ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[revoke]}">

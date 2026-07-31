@@ -15,7 +15,7 @@
                     <TextBox Classes="search" Width="240" VerticalAlignment="Center"
                              PlaceholderText="{Binding L[search]}" Text="{Binding SearchText}" />
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -42,6 +42,7 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Classes="icon" Margin="6,0" HorizontalAlignment="Center"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanToggle}"
                                                 Command="{Binding $parent[DataGrid].DataContext.MakeDefaultCommand}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[make_default]}">
@@ -70,6 +71,7 @@
                                     <DataTemplate>
                                         <Panel Margin="6,0">
                                             <Button Classes="icon" IsVisible="{Binding !IsSystem}"
+                                                    IsEnabled="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                     Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
                                                     CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"

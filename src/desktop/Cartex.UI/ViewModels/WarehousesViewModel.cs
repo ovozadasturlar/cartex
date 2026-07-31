@@ -14,6 +14,7 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
     private readonly IBranchesApi _branchesApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly AuthService _auth;
     private long _editId;
 
     public ObservableCollection<WarehouseDto> Warehouses { get; } = [];
@@ -26,18 +27,21 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _selectedBranch;
 
     public bool IsEmpty => Warehouses.Count == 0;
+    public bool CanCreate => _auth.HasPermission("warehouses.create");
+    public bool CanEdit => _auth.HasPermission("warehouses.edit");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
         CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public WarehousesViewModel(IWarehousesApi api, IBranchesApi branchesApi, IToastService toast, IBusyService busy)
+    public WarehousesViewModel(IWarehousesApi api, IBranchesApi branchesApi, IToastService toast, IBusyService busy, AuthService auth)
     {
         _api = api;
         _branchesApi = branchesApi;
         _toast = toast;
         _busy = busy;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -62,6 +66,7 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -73,6 +78,7 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(WarehouseDto warehouse)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = warehouse.Id;
         EditName = warehouse.Name;
@@ -87,6 +93,7 @@ public partial class WarehousesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName) || SelectedBranch?.Id is null) { _toast.Error(L["error"]); return; }
         try
         {

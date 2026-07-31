@@ -35,7 +35,7 @@
                         </StackPanel>
                     </Button>
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add_product]}" />
@@ -45,7 +45,7 @@
             </c:PageHeader>
 
             <c:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText, Mode=TwoWay}"
-                         Watermark="{Binding L[search]}" Margin="0,0,0,14">
+                         Watermark="{Binding L[search]}" SearchWidth="760" Margin="0,0,0,14">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}"
                               MinWidth="180">
@@ -138,6 +138,7 @@
                                             </Button>
                                             <Button Classes="icon-sm" VerticalAlignment="Center" Margin="4,0"
                                                     Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                     CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
                                                                  Foreground="{DynamicResource TextSecondary}" />
@@ -168,6 +169,7 @@
                             <TextBlock Text="{Binding VariantProductName}" Classes="caption" />
                         </StackPanel>
                         <Button Grid.Column="1" Classes="brand" Command="{Binding OpenVariantCreateCommand}"
+                                IsVisible="{Binding CanEdit}"
                                 Content="{Binding L[add_variant]}" VerticalAlignment="Center" />
                     </Grid>
                     <Button DockPanel.Dock="Bottom" Classes="outline" HorizontalAlignment="Right" Margin="0,14,0,0"
@@ -194,17 +196,20 @@
                                             </StackPanel>
                                             <Button Grid.Column="1" Classes="icon-sm" Margin="4,0"
                                                     Command="{Binding $parent[ItemsControl].DataContext.OpenVariantEditCommand}"
+                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanEdit}"
                                                     CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
                                                                  Foreground="{DynamicResource TextSecondary}" />
                                             </Button>
-                                            <Button Grid.Column="2" Classes="icon-sm" Margin="4,0"
-                                                    IsVisible="{Binding !IsDefault}"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteVariantCommand}"
-                                                    CommandParameter="{Binding}">
-                                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
-                                                                 Foreground="{DynamicResource DangerBrush}" />
-                                            </Button>
+                                            <Panel Grid.Column="2"
+                                                   IsVisible="{Binding $parent[ItemsControl].DataContext.CanDeleteVariant}">
+                                                <Button Classes="icon-sm" Margin="4,0" IsVisible="{Binding !IsDefault}"
+                                                        Command="{Binding $parent[ItemsControl].DataContext.DeleteVariantCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
+                                                                     Foreground="{DynamicResource DangerBrush}" />
+                                                </Button>
+                                            </Panel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

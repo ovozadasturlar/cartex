@@ -599,8 +599,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isDetailOpen;
     [ObservableProperty] private SupplyDetailDto? _detail;
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
-    public bool CanVoid => _auth.HasPermission("supplies.manage");
-    public bool CanPay => _auth.HasPermission("suppliers.manage");
+    public bool CanVoid => _auth.HasPermission("supplies.void");
+    public bool CanPay => _auth.HasPermission("suppliers.pay");
     public bool CanEdit => _auth.HasPermission("supplies.edit");
     public bool DetailCanPay => CanPay && Detail?.SupplierId is not null;
     public string DetailSupplyDate => Detail?.SupplyDate.ToString("dd.MM.yyyy") ?? string.Empty;
@@ -651,7 +651,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Supplies.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
-    public bool CanManage => _auth.HasPermission("supplies.manage");
+    public bool CanCreate => _auth.HasPermission("supplies.create");
+    public bool CanImport => _auth.HasPermission("supplies.import");
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
     public bool HasItems => Items.Count > 0;
 
@@ -949,7 +950,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(DetailCanPay));
         OnPropertyChanged(nameof(CanExport));
-        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanImport));
     }
 
     public async Task LoadAsync()
@@ -995,6 +997,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenCreateAsync()
     {
+        if (!CanCreate) return;
         await Task.WhenAll(EnsureCurrenciesAsync(), EnsureEntryCatalogAsync());
         _editingSupplyId = null;
         OnPropertyChanged(nameof(EditorTitle));
@@ -1135,6 +1138,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task ImportExcelAsync()
     {
+        if (!CanImport) return;
         try
         {
             var picked = await _filePicker.PickSpreadsheetAsync();
@@ -1173,6 +1177,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task ImportTemplateAsync()
     {
+        if (!CanImport) return;
         try
         {
             await using var content = await _api.GetImportTemplateAsync();
@@ -1205,6 +1210,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (_editingSupplyId is null ? !CanCreate : !CanEdit) return;
         if (SelectedWarehouse?.Id is null) { _toast.Warning(L["select_warehouse"]); return; }
         if (Items.Count == 0) { _toast.Warning(L["err_no_items"]); return; }
         if (_supplierRequired && SelectedSupplier?.Id is null) { _toast.Warning(L["err_select_supplier"]); return; }

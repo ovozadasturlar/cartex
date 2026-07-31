@@ -67,7 +67,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     public bool HasSelection => SelectedSupplier is not null;
     private static readonly SupplierDto EmptySupplier = new(0, "", null, 0);
     public SupplierDto SelectedSupplierDisplay => SelectedSupplier ?? EmptySupplier;
-    public bool CanManage => _auth.HasPermission("suppliers.manage");
+    public bool CanCreate => _auth.HasPermission("suppliers.create");
+    public bool CanEdit => _auth.HasPermission("suppliers.edit");
+    public bool CanPay => _auth.HasPermission("suppliers.pay");
     public bool CanExport => _auth.HasPermission("reports.export");
     public bool CanViewSupplies => _auth.HasPermission("supplies.view");
     public bool SelectedIsAdvance => SelectedSupplier is { Payable: < 0 };
@@ -131,7 +133,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private void RaisePermissions()
     {
-        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanEdit));
+        OnPropertyChanged(nameof(CanPay));
         OnPropertyChanged(nameof(CanExport));
         OnPropertyChanged(nameof(CanViewSupplies));
     }
@@ -272,6 +276,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -282,6 +287,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(SupplierDto supplier)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = supplier.Id;
         EditName = supplier.Name;
@@ -295,6 +301,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenRepay()
     {
+        if (!CanPay) return;
         if (SelectedSupplier is null) return;
         RepayAmount = 0;
         RepayModes.Clear();
@@ -316,6 +323,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task RepayAsync()
     {
+        if (!CanPay) return;
         if (SelectedSupplier is null || RepayAmount <= 0) { _toast.Error(L["error"]); return; }
         var id = SelectedSupplier.Id;
         try
@@ -337,6 +345,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         var phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone.Trim();
         try
