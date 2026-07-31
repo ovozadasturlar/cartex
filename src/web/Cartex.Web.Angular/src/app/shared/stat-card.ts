@@ -37,7 +37,7 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class StatCard {
   readonly label = input.required<string>();
-  readonly value = input.required<string>();
+  readonly value = input.required<string | number>();
   readonly hint = input<string>();
   readonly icon = input<string>();
   readonly tone = input<'default' | 'success' | 'danger' | 'warning' | 'info'>('default');
