@@ -118,14 +118,6 @@ public enum PrepackStatus
     Expired
 }
 
-public enum SmsStatus
-{
-    Sent,
-    Failed,
-    Delivered,
-    Undelivered
-}
-
 public enum CartKind
 {
     Queue,

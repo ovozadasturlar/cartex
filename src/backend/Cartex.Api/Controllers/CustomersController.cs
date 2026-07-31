@@ -26,7 +26,7 @@ public class CustomersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Customers.Manage)]
+    [HasPermission(AppPermissions.Customers.Create)]
     public async Task<ActionResult<long>> CreateCustomer(CreateCustomerCommand command)
     {
         var id = await sender.Send(command);
@@ -34,7 +34,7 @@ public class CustomersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Customers.Manage)]
+    [HasPermission(AppPermissions.Customers.Edit)]
     public async Task<IActionResult> UpdateCustomer(long id, UpdateCustomerCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -42,7 +42,7 @@ public class CustomersController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Customers.Manage)]
+    [HasPermission(AppPermissions.Customers.Delete)]
     public async Task<IActionResult> DeleteCustomer(long id)
     {
         await sender.Send(new DeleteCustomerCommand(id));
@@ -90,7 +90,7 @@ public class CustomersController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id}/repay-debt")]
-    [HasPermission(AppPermissions.Customers.Manage)]
+    [HasPermission(AppPermissions.Customers.ReceivePayment)]
     public async Task<IActionResult> RepayDebt(long id, [FromBody] RepayDebtRequest request)
     {
         await sender.Send(new RepayCustomerDebtCommand(id, request.Amount, request.ViaCard, request.DebtCurrency, request.PayCurrency, request.IdempotencyKey));
@@ -98,7 +98,7 @@ public class CustomersController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id}/bonus")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.GrantBonus)]
     public async Task<IActionResult> GiveBonus(long id, [FromBody] GiveCustomerBonusRequest request)
     {
         await sender.Send(new GiveCustomerBonusCommand(id, request.Amount, request.Note));

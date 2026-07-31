@@ -22,7 +22,7 @@ public class CategoriesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Categories.Manage)]
+    [HasPermission(AppPermissions.Categories.Create)]
     public async Task<ActionResult<long>> CreateCategory(CreateCategoryCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +30,7 @@ public class CategoriesController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Categories.Manage)]
+    [HasPermission(AppPermissions.Categories.Edit)]
     public async Task<IActionResult> UpdateCategory(long id, UpdateCategoryCommand command)
     {
         await sender.Send(command with { Id = id });

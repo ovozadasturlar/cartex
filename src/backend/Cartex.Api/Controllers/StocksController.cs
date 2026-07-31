@@ -47,7 +47,7 @@ public class StocksController(ISender sender) : ControllerBase
     }
 
     [HttpPost("adjust")]
-    [HasPermission(AppPermissions.Stocks.Manage)]
+    [HasPermission(AppPermissions.Stocks.Adjust)]
     public async Task<IActionResult> Adjust(AdjustStockCommand command)
     {
         await sender.Send(command);

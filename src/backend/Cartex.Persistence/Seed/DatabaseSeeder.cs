@@ -13,18 +13,81 @@ public static class DatabaseSeeder
     public static readonly string[] SellerPermissions =
     [
         AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View,
-        AppPermissions.Sales.Create, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
-        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
+        AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
+        AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
+        AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
-        AppPermissions.Devices.Manage
+        AppPermissions.Devices.View, AppPermissions.Devices.Revoke
     ];
 
     public static readonly string[] AgentPermissions =
     [
         AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.Create,
-        AppPermissions.Shifts.Manage, AppPermissions.Shifts.View, AppPermissions.Customers.View,
-        AppPermissions.Customers.Manage, AppPermissions.Stocks.View, AppPermissions.StockTransfers.View,
-        AppPermissions.Branches.View, AppPermissions.Warehouses.View, AppPermissions.Devices.Manage
+        AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
+        AppPermissions.Customers.View, AppPermissions.Customers.Create, AppPermissions.Customers.Edit,
+        AppPermissions.Stocks.View, AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Receive,
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Devices.View, AppPermissions.Devices.Revoke
+    ];
+
+    public static readonly string[] SellerAssistantPermissions =
+    [
+        AppPermissions.Sales.Create,
+        AppPermissions.Branches.View,
+        AppPermissions.Warehouses.View
+    ];
+
+    public static readonly string[] CashierPermissions =
+    [
+        AppPermissions.Sales.Checkout, AppPermissions.Sales.View,
+        AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+    ];
+
+    public static readonly string[] AccountantPermissions =
+    [
+        AppPermissions.Accounts.View, AppPermissions.Transactions.View,
+        AppPermissions.Reports.View, AppPermissions.Reports.Export,
+        AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
+        AppPermissions.Shifts.View, AppPermissions.Shifts.ViewAll,
+        AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
+        AppPermissions.Suppliers.View, AppPermissions.Supplies.View,
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+    ];
+
+    public static readonly string[] WarehouseOperatorPermissions =
+    [
+        AppPermissions.Stocks.View, AppPermissions.Stocks.Adjust,
+        AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Create,
+        AppPermissions.StockTransfers.Receive, AppPermissions.StockTransfers.ReceiveAny,
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+    ];
+
+    public static readonly string[] SupplyOperatorPermissions =
+    [
+        AppPermissions.Supplies.View, AppPermissions.Supplies.Create, AppPermissions.Supplies.Edit, AppPermissions.Supplies.Import,
+        AppPermissions.Suppliers.View, AppPermissions.Suppliers.Create, AppPermissions.Suppliers.Edit,
+        AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View
+    ];
+
+    private sealed record DefaultRoleSeed(
+        string Name,
+        string Description,
+        string? StartPage,
+        string? CartDestination,
+        int Level,
+        int Version,
+        string[] Permissions);
+
+    private static readonly DefaultRoleSeed[] DefaultBusinessRoles =
+    [
+        new(AppRoles.Seller, "Sotuvchi — savat va to'lov bilan to'liq savdo", "pos", "queue", AppRoles.SellerLevel, 1, SellerPermissions),
+        new(AppRoles.SellerAssistant, "Sotuvchi yordamchisi — savat yig'adi va navbatga yuboradi", "pos", "queue", AppRoles.SellerAssistantLevel, 1, SellerAssistantPermissions),
+        new(AppRoles.Cashier, "Kassir — navbatdagi savat uchun to'lov qabul qiladi", "pos", "queue", AppRoles.CashierLevel, 1, CashierPermissions),
+        new(AppRoles.Accountant, "Hisobchi — moliya va hisobotlarni faqat ko'radi", "dashboard", null, AppRoles.AccountantLevel, 1, AccountantPermissions),
+        new(AppRoles.WarehouseOperator, "Omborchi — qoldiq va ombor harakatlarini boshqaradi", "warehouse", null, AppRoles.WarehouseOperatorLevel, 1, WarehouseOperatorPermissions),
+        new(AppRoles.SupplyOperator, "Kirim operatori — ta'minot va kirimni boshqaradi", "supplies", null, AppRoles.SupplyOperatorLevel, 1, SupplyOperatorPermissions),
+        new(AppRoles.Agent, "Savdo agenti (mobil)", "pos", "order", AppRoles.AgentLevel, 1, AgentPermissions)
     ];
 
     public static readonly (string Name, string ShortName, UnitDimension Dimension, decimal Factor, bool IsDefault)[] SystemUnits =
@@ -76,28 +139,63 @@ public static class DatabaseSeeder
 
         var permByName = permissions.ToDictionary(p => p.Name, p => p.Id);
 
-        if (permByName.TryGetValue(AppPermissions.Settings.Manage, out var legacyId))
+        var allRoles = await context.Roles
+            .Include(r => r.RolePermissions)
+            .ToListAsync();
+
+        foreach (var (legacyName, replacements) in AppPermissions.LegacyReplacements)
         {
-            string[] replacements = [AppPermissions.Settings.Integrations, AppPermissions.Settings.Receipt, AppPermissions.Settings.Security];
+            if (!permByName.TryGetValue(legacyName, out var legacyId))
+                continue;
+
             var legacyGrants = await context.RolePermissions.Where(rp => rp.PermissionId == legacyId).ToListAsync();
             var roleIds = legacyGrants.Select(rp => rp.RoleId).ToHashSet();
             var pairs = (await context.RolePermissions.Where(rp => roleIds.Contains(rp.RoleId))
                 .Select(rp => new { rp.RoleId, rp.PermissionId }).ToListAsync())
                 .Select(x => (x.RoleId, x.PermissionId)).ToHashSet();
+
             foreach (var roleId in roleIds)
-                foreach (var name in replacements)
+                foreach (var name in PermissionDependencies.Effective(replacements))
                     if (pairs.Add((roleId, permByName[name])))
                         context.RolePermissions.Add(new RolePermission { RoleId = roleId, PermissionId = permByName[name] });
+
             context.RolePermissions.RemoveRange(legacyGrants);
             context.Permissions.Remove(permissions.First(p => p.Id == legacyId));
-            permByName.Remove(AppPermissions.Settings.Manage);
+            permByName.Remove(legacyName);
 
-            var allRoles = await context.Roles.ToListAsync();
-            foreach (var role in allRoles.Where(r => r.GrantablePermissions.Contains(AppPermissions.Settings.Manage)))
-                role.GrantablePermissions = [.. role.GrantablePermissions.Where(p => p != AppPermissions.Settings.Manage).Union(replacements)];
+            foreach (var role in allRoles.Where(r => r.GrantablePermissions.Contains(legacyName)))
+                role.GrantablePermissions =
+                [
+                    .. role.GrantablePermissions.Where(p => p != legacyName),
+                    .. PermissionDependencies.Effective(replacements)
+                ];
 
+            // Persist each legacy replacement before processing the next one so
+            // shared transitive dependencies cannot be inserted twice.
             await context.SaveChangesAsync();
         }
+
+        await context.SaveChangesAsync();
+
+        foreach (var role in allRoles.Where(r => !r.AccessAll))
+        {
+            var currentNames = await context.RolePermissions
+                .Where(rp => rp.RoleId == role.Id)
+                .Select(rp => rp.Permission.Name)
+                .ToListAsync();
+            var effective = PermissionDependencies.Effective(currentNames);
+            var have = (await context.RolePermissions
+                .Where(rp => rp.RoleId == role.Id)
+                .Select(rp => rp.PermissionId)
+                .ToListAsync()).ToHashSet();
+            foreach (var name in effective)
+                if (permByName.TryGetValue(name, out var id) && have.Add(id))
+                    context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = id });
+
+            role.GrantablePermissions =
+                [.. PermissionDependencies.Effective(role.GrantablePermissions).Where(permByName.ContainsKey)];
+        }
+        await context.SaveChangesAsync();
 
         async Task GrantAsync(string roleName, IEnumerable<string> names, string[]? grantable = null)
         {
@@ -106,7 +204,10 @@ public static class DatabaseSeeder
             if (role is null || role.AccessAll)
                 return;
 
-            var have = role.RolePermissions.Select(rp => rp.PermissionId).ToHashSet();
+            var have = (await context.RolePermissions
+                .Where(rp => rp.RoleId == role.Id)
+                .Select(rp => rp.PermissionId)
+                .ToListAsync()).ToHashSet();
             foreach (var name in names)
                 if (permByName.TryGetValue(name, out var pid) && have.Add(pid))
                     context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = pid });
@@ -119,15 +220,39 @@ public static class DatabaseSeeder
             }
         }
 
-        if (!await context.Roles.AnyAsync(r => r.Name == AppRoles.Agent))
+        foreach (var definition in DefaultBusinessRoles)
         {
-            context.Roles.Add(new Role { Name = AppRoles.Agent, Description = "Savdo agenti (mobil)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true });
-            await context.SaveChangesAsync();
+            var role = await context.Roles.FirstOrDefaultAsync(candidate => candidate.Name == definition.Name);
+            if (role is null)
+            {
+                role = new Role
+                {
+                    Name = definition.Name,
+                    Description = definition.Description,
+                    StartPage = definition.StartPage,
+                    CartDestination = definition.CartDestination,
+                    Priority = definition.Level,
+                    Level = definition.Level,
+                    IsSystem = true,
+                    IsActive = true,
+                    TemplateVersion = definition.Version
+                };
+                context.Roles.Add(role);
+                await context.SaveChangesAsync();
+                await GrantAsync(
+                    definition.Name,
+                    PermissionDependencies.Effective(definition.Permissions));
+            }
+            else if (role.IsSystem && role.TemplateVersion < definition.Version)
+            {
+                await GrantAsync(
+                    definition.Name,
+                    PermissionDependencies.Effective(definition.Permissions));
+                role.TemplateVersion = definition.Version;
+            }
         }
 
         await GrantAsync(AppRoles.Admin, AdminGrant, AdminGrant);
-        await GrantAsync(AppRoles.Seller, SellerPermissions);
-        await GrantAsync(AppRoles.Agent, AgentPermissions);
         await context.SaveChangesAsync();
     }
 
@@ -181,7 +306,7 @@ public static class DatabaseSeeder
             return;
 
         var developer = await context.Users.FirstOrDefaultAsync(u => u.Username == "developer");
-        if (developer is not null && verify("developer123", developer.PasswordHash))
+        if (developer is not null && ShouldRestoreSystemPassword(developer.PasswordHash, "developer123", verify))
         {
             developer.PasswordHash = hashPassword(developerPassword);
             await context.SaveChangesAsync();
@@ -194,10 +319,25 @@ public static class DatabaseSeeder
             return;
 
         var admin = await context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-        if (admin is not null && verify("admin123", admin.PasswordHash))
+        if (admin is not null && ShouldRestoreSystemPassword(admin.PasswordHash, "admin123", verify))
         {
             admin.PasswordHash = hashPassword(adminPassword);
             await context.SaveChangesAsync();
+        }
+    }
+
+    // The configured system password may safely recover only a pristine seed
+    // password or a malformed hash. Valid passwords chosen by an administrator
+    // are never replaced during normal application startup.
+    private static bool ShouldRestoreSystemPassword(string passwordHash, string initialPassword, Func<string, string, bool> verify)
+    {
+        try
+        {
+            return verify(initialPassword, passwordHash);
+        }
+        catch (Exception)
+        {
+            return true;
         }
     }
 
@@ -218,10 +358,22 @@ public static class DatabaseSeeder
 
         var developerRole = new Role { Name = AppRoles.Developer, Description = "Vendor / tizim ishlab chiquvchi", StartPage = "dashboard", Priority = AppRoles.DeveloperLevel, Level = AppRoles.DeveloperLevel, IsSystem = true, AccessAll = true };
         var adminRole = new Role { Name = AppRoles.Admin, Description = "Biznes egasi", StartPage = "dashboard", Priority = AppRoles.AdminLevel, Level = AppRoles.AdminLevel, IsSystem = true, GrantablePermissions = [.. AdminGrant] };
-        var sellerRole = new Role { Name = AppRoles.Seller, Description = "Sotuvchi (kassa)", StartPage = "pos", CartDestination = "queue", Priority = AppRoles.SellerLevel, Level = AppRoles.SellerLevel, IsSystem = true };
-        var agentRole = new Role { Name = AppRoles.Agent, Description = "Savdo agenti (mobil)", StartPage = "pos", CartDestination = "order", Priority = AppRoles.AgentLevel, Level = AppRoles.AgentLevel, IsSystem = true };
+        var defaultRoles = DefaultBusinessRoles
+            .Select(definition => new Role
+            {
+                Name = definition.Name,
+                Description = definition.Description,
+                StartPage = definition.StartPage,
+                CartDestination = definition.CartDestination,
+                Priority = definition.Level,
+                Level = definition.Level,
+                IsSystem = true,
+                IsActive = true,
+                TemplateVersion = definition.Version
+            })
+            .ToList();
 
-        await context.Roles.AddRangeAsync(developerRole, adminRole, sellerRole, agentRole);
+        await context.Roles.AddRangeAsync([developerRole, adminRole, .. defaultRoles]);
         await context.SaveChangesAsync();
 
         foreach (var perm in permissions.Where(p => AdminGrant.Contains(p.Name)))
@@ -229,14 +381,12 @@ public static class DatabaseSeeder
             context.RolePermissions.Add(new RolePermission { RoleId = adminRole.Id, PermissionId = perm.Id });
         }
 
-        foreach (var perm in permissions.Where(p => SellerPermissions.Contains(p.Name)))
+        foreach (var definition in DefaultBusinessRoles)
         {
-            context.RolePermissions.Add(new RolePermission { RoleId = sellerRole.Id, PermissionId = perm.Id });
-        }
-
-        foreach (var perm in permissions.Where(p => AgentPermissions.Contains(p.Name)))
-        {
-            context.RolePermissions.Add(new RolePermission { RoleId = agentRole.Id, PermissionId = perm.Id });
+            var role = defaultRoles.First(candidate => candidate.Name == definition.Name);
+            var effective = PermissionDependencies.Effective(definition.Permissions);
+            foreach (var permission in permissions.Where(candidate => effective.Contains(candidate.Name)))
+                context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });
         }
 
         await context.SaveChangesAsync();
@@ -287,7 +437,7 @@ public static class DatabaseSeeder
                 FullName = "Sotuvchi",
                 Username = AppRoles.Seller,
                 PasswordHash = hashPassword("seller123"),
-                UserRoles = [new UserRole { RoleId = sellerRole.Id }],
+                UserRoles = [new UserRole { RoleId = defaultRoles.First(role => role.Name == AppRoles.Seller).Id }],
                 DefaultBranchId = branch.Id,
                 IsActive = true
             };

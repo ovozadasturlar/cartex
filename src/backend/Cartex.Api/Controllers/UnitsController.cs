@@ -14,7 +14,7 @@ namespace Cartex.Api.Controllers;
 public class UnitsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Products.View)]
+    [HasPermission(AppPermissions.Units.View)]
     public async Task<ActionResult<IReadOnlyCollection<UnitDto>>> GetUnits([FromQuery] GetUnitsQuery query)
     {
         var result = await sender.Send(query);
@@ -22,7 +22,7 @@ public class UnitsController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Units.Create)]
     public async Task<ActionResult<long>> CreateUnit(CreateUnitCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +30,7 @@ public class UnitsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Units.Edit)]
     public async Task<IActionResult> UpdateUnit(long id, UpdateUnitCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -38,7 +38,7 @@ public class UnitsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/state")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Units.Toggle)]
     public async Task<IActionResult> SetUnitState(long id, SetUnitStateCommand command)
     {
         await sender.Send(command with { Id = id });

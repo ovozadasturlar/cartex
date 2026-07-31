@@ -11,6 +11,8 @@ public class Role : SoftDeleteEntity
     public int Priority { get; set; }
     public int Level { get; set; }
     public bool IsSystem { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int TemplateVersion { get; set; }
     public bool AccessAll { get; set; }
     public List<string> GrantablePermissions { get; set; } = [];
     public List<string> AssignableRoles { get; set; } = [];

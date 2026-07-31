@@ -44,7 +44,7 @@ public class SuppliesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Supplies.Manage)]
+    [HasPermission(AppPermissions.Supplies.Create)]
     public async Task<ActionResult<long>> CreateSupply(CreateSupplyCommand command)
     {
         var id = await sender.Send(command);
@@ -60,7 +60,7 @@ public class SuppliesController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:long}/attach-payments")]
-    [HasPermission(AppPermissions.Suppliers.Manage)]
+    [HasPermission(AppPermissions.Suppliers.Pay)]
     public async Task<IActionResult> AttachPayments(long id, AttachSupplierPaymentsRequest request)
     {
         await sender.Send(new AttachSupplierPaymentsCommand(id, request.TransactionIds));
@@ -68,7 +68,7 @@ public class SuppliesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Supplies.Manage)]
+    [HasPermission(AppPermissions.Supplies.Void)]
     public async Task<IActionResult> DeleteSupply(long id)
     {
         await sender.Send(new DeleteSupplyCommand(id));
@@ -76,7 +76,7 @@ public class SuppliesController(ISender sender) : ControllerBase
     }
 
     [HttpGet("import/template")]
-    [HasPermission(AppPermissions.Supplies.Manage)]
+    [HasPermission(AppPermissions.Supplies.Import)]
     public async Task<IActionResult> ImportTemplate()
     {
         var content = await sender.Send(new GetSupplyImportTemplateQuery());
@@ -84,7 +84,7 @@ public class SuppliesController(ISender sender) : ControllerBase
     }
 
     [HttpPost("import/preview")]
-    [HasPermission(AppPermissions.Supplies.Manage)]
+    [HasPermission(AppPermissions.Supplies.Import)]
     [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<ActionResult<SupplyImportPreviewDto>> ImportPreview(IFormFile? file)
     {

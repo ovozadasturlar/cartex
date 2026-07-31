@@ -19,7 +19,7 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
         var messageId = Guid.NewGuid().ToString("N");
         var message = new Dictionary<string, object>
         {
-            ["recipient"] = phone,
+            ["recipient"] = phone.Trim().TrimStart('+'),
             ["message-id"] = messageId,
             ["sms"] = new { originator = settings.Sender ?? "", content = new { text } }
         };
@@ -42,6 +42,6 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
         return new SmsSendResult(messageId);
     }
 
-    public Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken) =>
-        Task.FromResult<SmsStatus?>(null);
+    public Task<NotificationDeliveryStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken) =>
+        Task.FromResult<NotificationDeliveryStatus?>(null);
 }

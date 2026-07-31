@@ -92,16 +92,20 @@ export interface SupplyItem {
   productName: string;
   unitName: string;
   quantity: number;
+  unitId: number | null;
   packSize: number;
   purchasePrice: number;
   expiredAt: string | null;
+  entryQuantity: number;
+  entryPrice: number;
 }
 
 export interface SupplyDetail {
   id: number;
   supplyDate: string;
-  supplierId: number;
-  supplierName: string;
+  supplierId: number | null;
+  supplierName: string | null;
+  warehouseId: number;
   warehouseName: string;
   userName: string;
   totalAmount: number;
@@ -110,6 +114,7 @@ export interface SupplyDetail {
   paidTransfer: number;
   paidBank: number;
   currency: string;
+  rate: number;
   items: SupplyItem[];
 }
 
@@ -129,6 +134,14 @@ export interface CreateSupply {
   items: CreateSupplyItem[];
   paidCash: number;
   paidCard: number;
+}
+
+export interface UpdateSupply {
+  supplierId: number | null;
+  warehouseId: number;
+  supplyDate: string;
+  items: CreateSupplyItem[];
+  currency: string | null;
 }
 
 export interface StockTransfer {
@@ -207,6 +220,10 @@ export class InventoryApi {
     return this.http.get<ExpiringStock[]>('/api/stocks/expiring', { params: { withinDays } });
   }
 
+  adjustStock(warehouseId: number, variantId: number, countedQuantity: number, reason: string | null): Observable<void> {
+    return this.http.post<void>('/api/stocks/adjust', { warehouseId, variantId, countedQuantity, reason });
+  }
+
   supplies(q: ListQuery): Observable<Paged<Supply>> {
     return this.http
       .get<Supply[]>('/api/supplies', { params: listParams(q), observe: 'response' })
@@ -227,6 +244,10 @@ export class InventoryApi {
 
   createSupply(body: CreateSupply): Observable<number> {
     return this.http.post<number>('/api/supplies', body);
+  }
+
+  updateSupply(id: number, body: UpdateSupply): Observable<void> {
+    return this.http.put<void>(`/api/supplies/${id}`, body);
   }
 
   voidSupply(id: number): Observable<void> {

@@ -1,10 +1,12 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Enums;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -36,15 +38,23 @@ public record SaleDto(
     string ReceiptToken,
     string? CustomerName,
     string UserName,
-    List<SaleLineDto> Items);
+    List<SaleLineDto> Items,
+    bool CanResendReceipt);
 
 public sealed class GetSalesQueryHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    ISettingsService settings,
     IPagingMetadataWriter writer) : IRequestHandler<GetSalesQuery, IReadOnlyCollection<SaleDto>>
 {
     public async Task<IReadOnlyCollection<SaleDto>> Handle(GetSalesQuery request, CancellationToken cancellationToken)
     {
+        var notificationSettings =
+            await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken);
+        var canSendTelegram = notificationSettings?.Channels.Contains(NotificationChannel.Telegram) == true;
+        var canSendEmail = notificationSettings?.Channels.Contains(NotificationChannel.Email) == true;
+        var canSendSms = notificationSettings?.Channels.Contains(NotificationChannel.Sms) == true;
+
         var query = db.Sales.AsQueryable();
 
         if (!currentUser.HasPermission(AppPermissions.Sales.ViewAll))
@@ -79,7 +89,12 @@ public sealed class GetSalesQueryHandler(
                         i.Variant.Product.Name,
                         i.Quantity,
                         i.ReturnedQuantity,
-                        i.UnitPrice)).ToList()),
+                        i.UnitPrice)).ToList(),
+                    s.Customer != null &&
+                    !s.Customer.NotificationsOptOut &&
+                    ((canSendTelegram && s.Customer.TelegramChatId != null && s.Customer.TelegramChatId != "") ||
+                     (canSendEmail && s.Customer.Email != null && s.Customer.Email != "") ||
+                     (canSendSms && s.Customer.Phone != null && s.Customer.Phone != ""))),
                 writer, cancellationToken);
     }
 }

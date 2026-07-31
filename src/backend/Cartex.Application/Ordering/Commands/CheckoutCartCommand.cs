@@ -43,7 +43,8 @@ public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender
                 request.PaidCard,
                 request.PaidBonus,
                 cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList(),
-                IdempotencyKey: idempotencyKey), cancellationToken);
+                IdempotencyKey: idempotencyKey,
+                FromQueuedCart: true), cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;
             await db.SaveChangesAsync(cancellationToken);

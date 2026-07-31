@@ -69,7 +69,7 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
 
                 if (!request.CreateMissingCategories)
                     return parent;
-                if (!currentUser.HasPermission(AppPermissions.Categories.Manage))
+                if (!currentUser.HasPermission(AppPermissions.Categories.Create))
                     throw new ForbiddenException("Yangi kategoriya yaratish uchun ruxsat yo'q.");
 
                 var created = new Category { Name = segment, ParentId = parent };
@@ -83,6 +83,7 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
 
         var variants = new Dictionary<int, long>();
         var newProducts = new Dictionary<int, long>();
+        var generatedDuringCreate = new HashSet<int>();
 
         // Har bir "Create" qatorini alohida try-catch ichida bajaramiz.
         // Bitta qatorda xato bo'lsa — faqat o'sha qator o'tkazib yuboriladi,
@@ -120,6 +121,8 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
                     PriceCurrency: row.Currency), cancellationToken);
 
                 newProducts[row.Row] = productId;
+                if (string.IsNullOrWhiteSpace(row.Barcode))
+                    generatedDuringCreate.Add(row.Row);
             }
             catch (Exception ex)
             {
@@ -185,7 +188,7 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             .GroupBy(r => variants[r.Row])
             .ToDictionary(g => g.Key, g => g.Select(r => r.PackQty).FirstOrDefault(p => p > 1) ?? 1);
 
-        var generated = 0;
+        var generated = generatedDuringCreate.Count;
         foreach (var variantId in variantIds.Except(withBarcode))
         {
             try

@@ -2,6 +2,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,7 +58,7 @@ public sealed class ResendReceiptCommandHandler(
             };
             if (string.IsNullOrWhiteSpace(recipient))
                 continue;
-            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload), cancellationToken);
+            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload, sale.CustomerId), cancellationToken);
             sent++;
         }
 

@@ -155,6 +155,16 @@ export class OrderingApi {
     return this.http.put<void>(`/api/ordering/carts/${code}/status`, { status });
   }
 
+  submit(body: {
+    warehouseId: number;
+    customerId: number | null;
+    items: { variantId: number; quantity: number }[];
+    idempotencyKey: string;
+    note: string | null;
+  }): Observable<string> {
+    return this.http.post<string>('/api/ordering/carts', body);
+  }
+
   checkout(code: string, paidCash: number, paidCard: number, paidBonus: number): Observable<number> {
     return this.http.post<number>(`/api/ordering/carts/${code}/checkout`, { paidCash, paidCard, paidBonus });
   }

@@ -13,6 +13,8 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.ToTable("roles");
         builder.Property(x => x.Name).HasMaxLength(30).IsRequired();
         builder.Property(x => x.StartPage).HasMaxLength(40);
+        builder.Property(x => x.IsActive).HasDefaultValue(true);
+        builder.Property(x => x.TemplateVersion).HasDefaultValue(0);
         builder.HasIndex(x => x.Name).IsUnique().HasFilter("NOT \"is_deleted\"");
 
         builder.Property(x => x.GrantablePermissions)

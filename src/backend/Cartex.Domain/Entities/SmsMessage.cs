@@ -3,6 +3,7 @@ using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
 
+[Obsolete("Legacy SMS journal retained to preserve historical production data.")]
 public class SmsMessage : AuditableEntity
 {
     public string Phone { get; set; } = null!;

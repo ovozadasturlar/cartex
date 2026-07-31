@@ -30,12 +30,12 @@ public class FeaturesController(ISender sender) : ControllerBase
     }
 
     [HttpGet]
-    [HasPermission(AppPermissions.Features.Manage)]
+    [HasPermission(AppPermissions.Features.View)]
     public async Task<ActionResult<IReadOnlyList<FeatureDto>>> GetFeatures() =>
         Ok(await sender.Send(new GetFeaturesQuery()));
 
     [HttpPut("{code}")]
-    [HasPermission(AppPermissions.Features.Manage)]
+    [HasPermission(AppPermissions.Features.Edit)]
     public async Task<IActionResult> SetFeature(string code, [FromBody] SetFeatureRequest body)
     {
         await sender.Send(new SetFeatureCommand(code, body.IsEnabled));

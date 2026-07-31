@@ -5,6 +5,7 @@ using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SetRoleActiveRequest = Cartex.Shared.Models.Roles.SetRoleActiveRequest;
 
 namespace Cartex.Api.Controllers;
 
@@ -22,7 +23,7 @@ public class RolesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Roles.Manage)]
+    [HasPermission(AppPermissions.Roles.Create)]
     public async Task<ActionResult<long>> CreateRole(CreateRoleCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +31,7 @@ public class RolesController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Roles.Manage)]
+    [HasPermission(AppPermissions.Roles.Edit)]
     public async Task<IActionResult> UpdateRole(long id, UpdateRoleCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -38,15 +39,23 @@ public class RolesController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/permissions")]
-    [HasPermission(AppPermissions.Roles.Manage)]
+    [HasPermission(AppPermissions.Roles.AssignPermissions)]
     public async Task<IActionResult> AssignPermissions(long id, AssignPermissionsCommand command)
     {
         await sender.Send(command with { RoleId = id });
         return NoContent();
     }
 
+    [HttpPut("{id:long}/active")]
+    [HasPermission(AppPermissions.Roles.Edit)]
+    public async Task<IActionResult> SetActive(long id, SetRoleActiveRequest request)
+    {
+        await sender.Send(new SetRoleActiveCommand(id, request.IsActive));
+        return NoContent();
+    }
+
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Roles.Manage)]
+    [HasPermission(AppPermissions.Roles.Delete)]
     public async Task<IActionResult> DeleteRole(long id)
     {
         await sender.Send(new DeleteRoleCommand(id));

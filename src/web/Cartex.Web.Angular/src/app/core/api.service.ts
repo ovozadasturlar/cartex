@@ -83,6 +83,21 @@ export class CustomersApi {
     return this.http.get<Customer>(`/api/customers/${id}`);
   }
 
+  create(body: {
+    fullName: string;
+    lastName: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    cardBarcode: string | null;
+    discountPct: number;
+    creditLimit: number;
+    notificationsOptOut: boolean;
+    openingBalance: number;
+  }): Observable<number> {
+    return this.http.post<number>('/api/customers', body);
+  }
+
   update(id: number, body: {
     fullName: string;
     lastName: string | null;

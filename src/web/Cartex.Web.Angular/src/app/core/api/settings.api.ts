@@ -98,6 +98,21 @@ export interface StorageSettings {
   secretKeyLength: number;
 }
 
+export interface ReminderSettings {
+  enabled: boolean;
+  minDaysOverdue: number;
+  repeatEveryDays: number;
+  minBalance: number;
+  sendHourLocal: number;
+  notifyBeforeDue: boolean;
+  daysBeforeDue: number;
+  notifyOnDueDate: boolean;
+  channels: string[];
+  overdueTemplate: string | null;
+  dueSoonTemplate: string | null;
+  dueTodayTemplate: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LicenseApi {
   private readonly http = inject(HttpClient);
@@ -193,5 +208,13 @@ export class SettingsApi {
 
   updateReceipt(body: ReceiptSettings): Observable<void> {
     return this.http.put<void>('/api/settings/receipt', body);
+  }
+
+  reminder(): Observable<ReminderSettings> {
+    return this.http.get<ReminderSettings>('/api/settings/reminder');
+  }
+
+  updateReminder(body: ReminderSettings): Observable<void> {
+    return this.http.put<void>('/api/settings/reminder', body);
   }
 }

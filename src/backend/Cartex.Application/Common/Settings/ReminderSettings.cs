@@ -7,7 +7,11 @@ public sealed class ReminderSettings
     public int RepeatEveryDays { get; set; } = 7;
     public decimal MinBalance { get; set; }
     public int SendHourLocal { get; set; } = 10;
-    public List<Cartex.Application.Common.Interfaces.NotificationChannel> Channels { get; set; } = [];
+    public bool NotifyBeforeDue { get; set; } = true;
+    public int DaysBeforeDue { get; set; } = 1;
+    public bool NotifyOnDueDate { get; set; } = true;
+    public List<Cartex.Domain.Enums.NotificationChannel> Channels { get; set; } = [];
     public string? OverdueTemplate { get; set; }
     public string? DueSoonTemplate { get; set; }
+    public string? DueTodayTemplate { get; set; }
 }

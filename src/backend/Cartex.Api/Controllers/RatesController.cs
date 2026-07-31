@@ -15,7 +15,7 @@ namespace Cartex.Api.Controllers;
 public class RatesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetCurrent()
     {
         var result = await sender.Send(new GetCurrentRatesQuery());
@@ -23,7 +23,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{code}/history")]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetHistory(string code)
     {
         var result = await sender.Send(new GetRateHistoryQuery(code));
@@ -31,7 +31,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [HasPermission(AppPermissions.Rates.Edit)]
     public async Task<ActionResult<long>> Set(SetExchangeRateCommand command)
     {
         var id = await sender.Send(command);
@@ -39,16 +39,17 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpGet("currencies")]
+    [HasPermission(AppPermissions.Currencies.View)]
     public async Task<ActionResult<IReadOnlyCollection<CurrencyDto>>> GetCurrencies([FromQuery] bool onlyEnabled = false) =>
         Ok(await sender.Send(new GetCurrenciesQuery(onlyEnabled)));
 
     [HttpPost("currencies")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [HasPermission(AppPermissions.Currencies.Create)]
     public async Task<ActionResult<long>> CreateCurrency(CreateCurrencyCommand command) =>
         Ok(await sender.Send(command));
 
     [HttpPut("currencies/{code}")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [HasPermission(AppPermissions.Currencies.Edit)]
     public async Task<IActionResult> UpdateCurrency(string code, UpdateCurrencyCommand command)
     {
         await sender.Send(command with { Code = code });
@@ -56,7 +57,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("currencies/{code}")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [HasPermission(AppPermissions.Currencies.Delete)]
     public async Task<IActionResult> DeleteCurrency(string code)
     {
         await sender.Send(new DeleteCurrencyCommand(code));

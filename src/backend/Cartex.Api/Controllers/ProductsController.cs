@@ -59,7 +59,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("catalog-lookup")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.View)]
     public async Task<ActionResult<ProductCatalogInfo>> CatalogLookup([FromQuery] string barcode)
     {
         var result = await sender.Send(new GetCatalogInfoByBarcodeQuery(barcode));
@@ -67,7 +67,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("variants/{id:long}/price-info")]
-    [HasPermission(AppPermissions.Supplies.Manage)]
+    [HasPermission(AppPermissions.Supplies.Create, AppPermissions.Supplies.Edit)]
     public async Task<ActionResult<VariantPriceInfoDto>> GetVariantPriceInfo(long id, [FromQuery] long warehouseId)
     {
         var result = await sender.Send(new GetVariantPriceInfoQuery(id, warehouseId));
@@ -75,7 +75,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Create)]
     public async Task<ActionResult<long>> CreateProduct(CreateProductCommand command)
     {
         var id = await sender.Send(command);
@@ -83,7 +83,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Edit)]
     public async Task<IActionResult> UpdateProduct(long id, UpdateProductCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -99,7 +99,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Delete)]
     public async Task<IActionResult> DeleteProduct(long id)
     {
         await sender.Send(new DeleteProductCommand(id));
@@ -107,7 +107,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("price")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Edit)]
     public async Task<IActionResult> SetPrice(SetProductPriceCommand command)
     {
         await sender.Send(command);
@@ -115,7 +115,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("import/template")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Import)]
     public async Task<IActionResult> ImportTemplate()
     {
         var content = await sender.Send(new GetImportTemplateQuery());
@@ -123,7 +123,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("import/preview")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Import)]
     [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<ActionResult<ProductImportPreviewDto>> ImportPreview(IFormFile? file, [FromQuery] string? mapping = null)
     {
@@ -138,7 +138,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("import")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Import)]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<ActionResult<ImportResultDto>> Import(ImportProductsCommand command)
     {
@@ -155,7 +155,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{productId:long}/variants")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
     public async Task<ActionResult<long>> CreateVariant(long productId, CreateVariantCommand command)
     {
         var id = await sender.Send(command with { ProductId = productId });
@@ -163,7 +163,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("variants/{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Edit)]
     public async Task<IActionResult> UpdateVariant(long id, UpdateVariantCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -171,7 +171,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("variants/{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Delete)]
     public async Task<IActionResult> DeleteVariant(long id)
     {
         await sender.Send(new DeleteVariantCommand(id));
@@ -187,7 +187,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{productId:long}/packs")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
     public async Task<ActionResult<long>> CreatePack(long productId, CreateProductPackCommand command)
     {
         var id = await sender.Send(command with { ProductId = productId });
@@ -195,7 +195,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("packs/{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Edit)]
     public async Task<IActionResult> UpdatePack(long id, UpdateProductPackCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -203,7 +203,7 @@ public class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("packs/{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Delete)]
     public async Task<IActionResult> DeletePack(long id)
     {
         await sender.Send(new DeleteProductPackCommand(id));

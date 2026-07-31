@@ -26,7 +26,7 @@ public sealed class UpdateCartStatusCommandHandler(IApplicationDbContext db, ICu
         var cart = await db.Carts.FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken)
             ?? throw new NotFoundException("Cart not found.");
 
-        if (!currentUser.HasPermission(AppPermissions.Sales.Create) &&
+        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout) &&
             (request.Status != CartStatus.Cancelled || cart.CreatedBy != currentUser.UserId || cart.Status != CartStatus.Open))
             throw new ForbiddenException("Faqat o'zingiz yig'gan ochiq savatni bekor qila olasiz.");
 

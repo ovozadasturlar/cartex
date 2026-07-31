@@ -1,5 +1,16 @@
 namespace Cartex.Domain.Authorization;
 
+public sealed record PermissionDefinition(
+    string Key,
+    string Description,
+    IReadOnlyList<string> DependsOn,
+    bool RequiresBranch = false);
+
+public sealed record PermissionBundleDefinition(
+    string Key,
+    string Description,
+    IReadOnlyList<string> Permissions);
+
 public static class AppPermissions
 {
     public const string Wildcard = "*";
@@ -7,25 +18,31 @@ public static class AppPermissions
     public static class Branches
     {
         public const string View = "branches.view";
-        public const string Manage = "branches.manage";
+        public const string Create = "branches.create";
+        public const string Edit = "branches.edit";
         public const string ViewAll = "branch.viewAll";
     }
 
     public static class Business
     {
-        public const string Manage = "business.manage";
+        public const string Edit = "business.edit";
     }
 
     public static class Users
     {
         public const string View = "users.view";
-        public const string Manage = "users.manage";
+        public const string Create = "users.create";
+        public const string Edit = "users.edit";
+        public const string Delete = "users.delete";
     }
 
     public static class Roles
     {
         public const string View = "roles.view";
-        public const string Manage = "roles.manage";
+        public const string Create = "roles.create";
+        public const string Edit = "roles.edit";
+        public const string Delete = "roles.delete";
+        public const string AssignPermissions = "roles.assignPermissions";
     }
 
     public static class Permissions
@@ -36,7 +53,10 @@ public static class AppPermissions
     public static class Products
     {
         public const string View = "products.view";
-        public const string Manage = "products.manage";
+        public const string Create = "products.create";
+        public const string Edit = "products.edit";
+        public const string Delete = "products.delete";
+        public const string Import = "products.import";
         public const string PrintBarcode = "products.printBarcode";
         public const string Toggle = "products.toggle";
     }
@@ -44,25 +64,58 @@ public static class AppPermissions
     public static class Categories
     {
         public const string View = "categories.view";
-        public const string Manage = "categories.manage";
+        public const string Create = "categories.create";
+        public const string Edit = "categories.edit";
+    }
+
+    public static class Units
+    {
+        public const string View = "units.view";
+        public const string Create = "units.create";
+        public const string Edit = "units.edit";
+        public const string Toggle = "units.toggle";
+    }
+
+    public static class ProductTypes
+    {
+        public const string View = "product_types.view";
+        public const string Create = "product_types.create";
+        public const string Edit = "product_types.edit";
+    }
+
+    public static class Manufacturers
+    {
+        public const string View = "manufacturers.view";
+        public const string Create = "manufacturers.create";
+        public const string Edit = "manufacturers.edit";
+        public const string Delete = "manufacturers.delete";
+    }
+
+    public static class Barcodes
+    {
+        public const string Create = "barcodes.create";
+        public const string Delete = "barcodes.delete";
     }
 
     public static class Warehouses
     {
         public const string View = "warehouses.view";
-        public const string Manage = "warehouses.manage";
+        public const string Create = "warehouses.create";
+        public const string Edit = "warehouses.edit";
     }
 
     public static class Stocks
     {
         public const string View = "stocks.view";
-        public const string Manage = "stocks.manage";
+        public const string Adjust = "stocks.adjust";
     }
 
     public static class StockTransfers
     {
         public const string View = "stock_transfers.view";
-        public const string Manage = "stock_transfers.manage";
+        public const string Create = "stock_transfers.create";
+        public const string Receive = "stock_transfers.receive";
+        public const string ReceiveAny = "stock_transfers.receiveAny";
     }
 
     public static class Sales
@@ -71,6 +124,7 @@ public static class AppPermissions
         public const string ViewAll = "sales.viewAll";
         public const string Create = "sales.create";
         public const string Pick = "sales.pick";
+        public const string Checkout = "sales.checkout";
         public const string Return = "sales.return";
         public const string Discount = "sales.discount";
         public const string PriceOverride = "sales.priceOverride";
@@ -81,57 +135,74 @@ public static class AppPermissions
 
     public static class Currencies
     {
-        public const string Manage = "currencies.manage";
+        public const string View = "currencies.view";
+        public const string Create = "currencies.create";
+        public const string Edit = "currencies.edit";
+        public const string Delete = "currencies.delete";
     }
 
     public static class Devices
     {
-        public const string Manage = "devices.manage";
+        public const string View = "devices.view";
+        public const string Revoke = "devices.revoke";
+        public const string ViewAll = "devices.viewAll";
     }
 
     public static class Shifts
     {
-        public const string Manage = "shifts.manage";
+        public const string Open = "shifts.open";
+        public const string Close = "shifts.close";
         public const string View = "shifts.view";
         public const string ViewAll = "shifts.viewAll";
-        public const string ManageAll = "shifts.manageAll";
+        public const string CloseAll = "shifts.closeAll";
     }
 
     public static class Supplies
     {
         public const string View = "supplies.view";
-        public const string Manage = "supplies.manage";
+        public const string Create = "supplies.create";
         public const string Edit = "supplies.edit";
+        public const string Void = "supplies.void";
+        public const string Import = "supplies.import";
     }
 
     public static class Customers
     {
         public const string View = "customers.view";
         public const string ViewAll = "customers.viewAll";
-        public const string Manage = "customers.manage";
+        public const string Create = "customers.create";
+        public const string Edit = "customers.edit";
+        public const string Delete = "customers.delete";
+        public const string ReceivePayment = "customers.receivePayment";
         public const string Message = "customers.message";
     }
 
     public static class Suppliers
     {
         public const string View = "suppliers.view";
-        public const string Manage = "suppliers.manage";
+        public const string Create = "suppliers.create";
+        public const string Edit = "suppliers.edit";
+        public const string Pay = "suppliers.pay";
     }
 
     public static class Accounts
     {
         public const string View = "accounts.view";
-        public const string Manage = "accounts.manage";
     }
 
     public static class Rates
     {
-        public const string Manage = "rates.manage";
+        public const string View = "rates.view";
+        public const string Edit = "rates.edit";
     }
 
     public static class Notifications
     {
-        public const string Manage = "notifications.manage";
+        public const string View = "notifications.view";
+        public const string Edit = "notifications.edit";
+        public const string JournalView = "notifications.journal.view";
+        public const string JournalSensitive = "notifications.journal.sensitive";
+        public const string JournalExport = "notifications.journal.export";
     }
 
     public static class Transactions
@@ -142,13 +213,21 @@ public static class AppPermissions
     public static class Loyalty
     {
         public const string View = "loyalty.view";
-        public const string Manage = "loyalty.manage";
+        public const string Edit = "loyalty.edit";
+        public const string GrantBonus = "loyalty.grantBonus";
     }
 
     public static class Reports
     {
         public const string View = "reports.view";
         public const string Export = "reports.export";
+    }
+
+    public static class ExpenseCategories
+    {
+        public const string View = "expense_categories.view";
+        public const string Create = "expense_categories.create";
+        public const string Edit = "expense_categories.edit";
     }
 
     public static class Audit
@@ -158,7 +237,6 @@ public static class AppPermissions
 
     public static class Settings
     {
-        public const string Manage = "settings.manage";
         public const string Integrations = "settings.integrations";
         public const string Receipt = "settings.receipt";
         public const string Security = "settings.security";
@@ -166,79 +244,213 @@ public static class AppPermissions
 
     public static class Features
     {
-        public const string Manage = "features.manage";
+        public const string View = "features.view";
+        public const string Edit = "features.edit";
     }
 
     public static class Keys
     {
-        public const string Manage = "keys.manage";
+        public const string View = "keys.view";
+        public const string Create = "keys.create";
+        public const string Edit = "keys.edit";
+        public const string Revoke = "keys.revoke";
     }
 
-    public static readonly IReadOnlyList<string> DeveloperOnly =
-        [Features.Manage, Keys.Manage, Permissions.Govern];
+    private static PermissionDefinition P(
+        string key,
+        string description,
+        bool branch = false,
+        params string[] dependsOn) =>
+        new(key, description, dependsOn, branch);
 
-    public static readonly IReadOnlyDictionary<string, string> Catalog = new Dictionary<string, string>
-    {
-        [Branches.View] = "View branches",
-        [Branches.Manage] = "Create/edit branches",
-        [Branches.ViewAll] = "Access data of all branches",
-        [Users.View] = "View users",
-        [Users.Manage] = "Create/edit users",
-        [Roles.View] = "View roles",
-        [Roles.Manage] = "Create/edit roles and assign permissions",
-        [Products.View] = "View products",
-        [Products.Manage] = "Create/edit products",
-        [Products.PrintBarcode] = "Generate/print product barcodes",
-        [Products.Toggle] = "Enable/disable products for sale",
-        [Categories.View] = "View categories",
-        [Categories.Manage] = "Create/edit categories",
-        [Warehouses.View] = "View warehouses",
-        [Warehouses.Manage] = "Create/edit warehouses",
-        [Stocks.View] = "View stock",
-        [Stocks.Manage] = "Manage stock",
-        [StockTransfers.View] = "View transfers",
-        [StockTransfers.Manage] = "Create/manage transfers",
-        [Sales.View] = "View sales",
-        [Sales.ViewAll] = "View all sales (not only own)",
-        [Sales.Create] = "Create sales (POS)",
-        [Sales.Pick] = "Collect carts into the queue (picker)",
-        [Sales.Return] = "Return sales",
-        [Sales.Discount] = "Apply discount on sale",
-        [Sales.DiscountOverride] = "Exceed the business discount limit",
-        [Sales.PriceOverride] = "Override item price during sale",
-        [Sales.CashOut] = "Cash withdrawal/expense from register",
-        [Sales.Prepack] = "Create/cancel prepack labels (weighed packs)",
-        [Currencies.Manage] = "Manage currency list (add, enable, disable)",
-        [Devices.Manage] = "View and revoke connected devices",
-        [Shifts.Manage] = "Open/close cash shift",
-        [Shifts.View] = "View shift history",
-        [Shifts.ViewAll] = "View all users' shifts and Z-reports",
-        [Shifts.ManageAll] = "Force-close other users' shifts",
-        [Supplies.View] = "View supplies",
-        [Supplies.Manage] = "Create and void supplies",
-        [Supplies.Edit] = "Edit a saved supply",
-        [Customers.View] = "View customers",
-        [Customers.ViewAll] = "View all customers (not only own)",
-        [Customers.Manage] = "Create/edit customers",
-        [Customers.Message] = "Send messages to customers",
-        [Suppliers.View] = "View suppliers",
-        [Suppliers.Manage] = "Create/edit suppliers",
-        [Accounts.View] = "View accounts",
-        [Accounts.Manage] = "Manage accounts",
-        [Rates.Manage] = "Manage exchange rates",
-        [Notifications.Manage] = "Manage notifications and reminders",
-        [Transactions.View] = "View transactions",
-        [Loyalty.View] = "View loyalty/cashback settings",
-        [Loyalty.Manage] = "Manage loyalty/cashback settings",
-        [Reports.View] = "View reports",
-        [Reports.Export] = "Export data (Excel/PDF/CSV)",
-        [Audit.View] = "View audit logs",
-        [Business.Manage] = "Manage business profile and onboarding",
-        [Settings.Integrations] = "Manage integrations (Telegram, SMS, email, storage, cloud bridge)",
-        [Settings.Receipt] = "Manage receipt settings",
-        [Settings.Security] = "Manage login methods and security settings",
-        [Features.Manage] = "Manage tariff and features (developer)",
-        [Keys.Manage] = "Generate hardware login keys (developer)",
-        [Permissions.Govern] = "Enable/disable global permissions (developer)",
-    };
+    public static readonly IReadOnlyDictionary<string, PermissionDefinition> Definitions =
+        new[]
+        {
+            P(Branches.View, "View branches"),
+            P(Branches.Create, "Create branches", false, Branches.View),
+            P(Branches.Edit, "Edit branches", false, Branches.View),
+            P(Branches.ViewAll, "Access data of all branches"),
+            P(Business.Edit, "Edit business profile and policies"),
+            P(Users.View, "View users", false, Roles.View, Branches.View),
+            P(Users.Create, "Create users", false, Users.View, Roles.View, Branches.View),
+            P(Users.Edit, "Edit users", false, Users.View, Roles.View, Branches.View),
+            P(Users.Delete, "Delete users", false, Users.View),
+            P(Roles.View, "View roles"),
+            P(Roles.Create, "Create roles", false, Roles.View),
+            P(Roles.Edit, "Edit roles", false, Roles.View),
+            P(Roles.Delete, "Delete roles", false, Roles.View),
+            P(Roles.AssignPermissions, "Assign permissions to roles", false, Roles.View),
+            P(Permissions.Govern, "Enable or disable global permissions"),
+            P(Products.View, "View products"),
+            P(Products.Create, "Create products", false, Products.View, Categories.View, Units.View, ProductTypes.View, Manufacturers.View, Rates.View),
+            P(Products.Edit, "Edit products and prices", false, Products.View, Categories.View, Units.View, ProductTypes.View, Manufacturers.View, Rates.View),
+            P(Products.Delete, "Delete products", false, Products.View),
+            P(Products.Import, "Import products", false, Products.Create),
+            P(Products.PrintBarcode, "Generate and print product barcodes", false, Products.View),
+            P(Products.Toggle, "Enable or disable products for sale", false, Products.View),
+            P(Categories.View, "View categories"),
+            P(Categories.Create, "Create categories", false, Categories.View),
+            P(Categories.Edit, "Edit categories", false, Categories.View),
+            P(Units.View, "View units"),
+            P(Units.Create, "Create units", false, Units.View),
+            P(Units.Edit, "Edit units", false, Units.View),
+            P(Units.Toggle, "Enable or disable units", false, Units.View),
+            P(ProductTypes.View, "View product types"),
+            P(ProductTypes.Create, "Create product types", false, ProductTypes.View),
+            P(ProductTypes.Edit, "Edit product types", false, ProductTypes.View),
+            P(Manufacturers.View, "View manufacturers"),
+            P(Manufacturers.Create, "Create manufacturers", false, Manufacturers.View),
+            P(Manufacturers.Edit, "Edit manufacturers", false, Manufacturers.View),
+            P(Manufacturers.Delete, "Delete manufacturers", false, Manufacturers.View),
+            P(Barcodes.Create, "Create product barcodes", false, Products.View),
+            P(Barcodes.Delete, "Delete product barcodes", false, Products.View),
+            P(Warehouses.View, "View warehouses", false, Branches.View),
+            P(Warehouses.Create, "Create warehouses", false, Warehouses.View, Branches.View),
+            P(Warehouses.Edit, "Edit warehouses", false, Warehouses.View, Branches.View),
+            P(Stocks.View, "View stock", true, Products.View, Warehouses.View, Categories.View),
+            P(Stocks.Adjust, "Adjust stock", true, Stocks.View),
+            P(StockTransfers.View, "View stock transfers", true, Warehouses.View),
+            P(StockTransfers.Create, "Create stock transfers", true, StockTransfers.View, Products.View),
+            P(StockTransfers.Receive, "Receive stock transfers", true, StockTransfers.View),
+            P(StockTransfers.ReceiveAny, "Receive transfers into any warehouse", true, StockTransfers.Receive),
+            P(Sales.View, "View sales", true),
+            P(Sales.ViewAll, "View all sales", true, Sales.View),
+            P(Sales.Create, "Create sales", true, Products.View, Stocks.View, Categories.View, Customers.View, Rates.View),
+            P(Sales.Pick, "Pick carts", true, Products.View, Stocks.View),
+            P(Sales.Checkout, "Complete queued carts and accept payments", true, Sales.Pick, Shifts.Open, Customers.View, Rates.View),
+            P(Sales.Return, "Return sales", true, Sales.View),
+            P(Sales.Discount, "Apply sale discount", true, Sales.Create),
+            P(Sales.PriceOverride, "Override sale item price", true, Sales.Create),
+            P(Sales.DiscountOverride, "Exceed discount limit", true, Sales.Discount),
+            P(Sales.CashOut, "Withdraw cash from register", true, Shifts.Open, ExpenseCategories.View),
+            P(Sales.Prepack, "Create or cancel prepack labels", true, Products.View, Stocks.View),
+            P(Currencies.View, "View currencies"),
+            P(Currencies.Create, "Create currencies", false, Currencies.View),
+            P(Currencies.Edit, "Edit currencies", false, Currencies.View),
+            P(Currencies.Delete, "Delete currencies", false, Currencies.View),
+            P(Devices.View, "View own connected devices"),
+            P(Devices.Revoke, "Revoke connected devices", false, Devices.View),
+            P(Devices.ViewAll, "View and revoke all users' devices", false, Devices.View),
+            P(Shifts.Open, "Open cash shift", true, Shifts.View, Rates.View),
+            P(Shifts.Close, "Close own cash shift", true, Shifts.Open),
+            P(Shifts.View, "View own shift history", true),
+            P(Shifts.ViewAll, "View all users' shifts", true, Shifts.View, Users.View),
+            P(Shifts.CloseAll, "Force-close other users' shifts", true, Shifts.Close, Shifts.ViewAll),
+            P(Supplies.View, "View supplies", true, Suppliers.View, Warehouses.View, Products.View),
+            P(Supplies.Create, "Create supplies", true, Supplies.View, Rates.View, Units.View),
+            P(Supplies.Edit, "Edit saved supplies", true, Supplies.View, Rates.View, Units.View),
+            P(Supplies.Void, "Void supplies", true, Supplies.View),
+            P(Supplies.Import, "Import supplies", true, Supplies.Create),
+            P(Customers.View, "View customers", true),
+            P(Customers.ViewAll, "View all customers", true, Customers.View),
+            P(Customers.Create, "Create customers", true, Customers.View, Rates.View),
+            P(Customers.Edit, "Edit customers", true, Customers.View, Rates.View),
+            P(Customers.Delete, "Delete customers", true, Customers.View),
+            P(Customers.ReceivePayment, "Receive customer debt payment", true, Customers.View, Rates.View),
+            P(Customers.Message, "Send messages to customers", true, Customers.View),
+            P(Suppliers.View, "View suppliers", true),
+            P(Suppliers.Create, "Create suppliers", true, Suppliers.View),
+            P(Suppliers.Edit, "Edit suppliers", true, Suppliers.View),
+            P(Suppliers.Pay, "Pay supplier debt and attach payments", true, Suppliers.View, Accounts.View, Rates.View),
+            P(Accounts.View, "View accounts", true),
+            P(Rates.View, "View exchange rates", false, Currencies.View),
+            P(Rates.Edit, "Set exchange rates", false, Rates.View),
+            P(Notifications.View, "View notification and reminder settings"),
+            P(Notifications.Edit, "Edit notification and reminder settings", false, Notifications.View),
+            P(Notifications.JournalView, "View notification delivery journal"),
+            P(Notifications.JournalSensitive, "View notification recipients and content", false, Notifications.JournalView),
+            P(Notifications.JournalExport, "Export notification delivery journal", false, Notifications.JournalView),
+            P(Transactions.View, "View transactions", true),
+            P(Loyalty.View, "View loyalty settings", false, Products.View, Categories.View, Manufacturers.View),
+            P(Loyalty.Edit, "Edit loyalty settings", false, Loyalty.View),
+            P(Loyalty.GrantBonus, "Grant customer bonus", true, Customers.View),
+            P(Reports.View, "View reports", true),
+            P(Reports.Export, "Export data"),
+            P(ExpenseCategories.View, "View expense categories"),
+            P(ExpenseCategories.Create, "Create expense categories", false, ExpenseCategories.View),
+            P(ExpenseCategories.Edit, "Edit expense categories", false, ExpenseCategories.View),
+            P(Audit.View, "View audit logs"),
+            P(Settings.Integrations, "Manage integrations"),
+            P(Settings.Receipt, "Manage receipt settings"),
+            P(Settings.Security, "Manage login and security settings"),
+            P(Features.View, "View tariff and feature state"),
+            P(Features.Edit, "Edit tariff and feature state", false, Features.View),
+            P(Keys.View, "View hardware login keys"),
+            P(Keys.Create, "Create hardware login keys", false, Keys.View),
+            P(Keys.Edit, "Enable or disable hardware login keys", false, Keys.View),
+            P(Keys.Revoke, "Revoke hardware login keys", false, Keys.View),
+        }.ToDictionary(x => x.Key);
+
+    public static readonly IReadOnlyDictionary<string, string> Catalog =
+        Definitions.ToDictionary(x => x.Key, x => x.Value.Description);
+
+    public static readonly IReadOnlyList<string> DeveloperOnly =
+        [Features.View, Features.Edit, Keys.View, Keys.Create, Keys.Edit, Keys.Revoke, Permissions.Govern];
+
+    public static readonly IReadOnlyDictionary<string, PermissionBundleDefinition> Bundles =
+        new[]
+        {
+            new PermissionBundleDefinition("supply_operator", "Kirim operatori",
+                [Supplies.Create, Supplies.Edit]),
+            new PermissionBundleDefinition("cashier", "Sotuvchi / kassir",
+                [Sales.Create, Sales.Checkout, Sales.View, Shifts.Open, Shifts.Close, Sales.Discount]),
+            new PermissionBundleDefinition("inventory_operator", "Omborchi",
+                [Stocks.View, Stocks.Adjust, StockTransfers.View, StockTransfers.Create,
+                    StockTransfers.Receive, StockTransfers.ReceiveAny]),
+            new PermissionBundleDefinition("catalog_editor", "Katalog muharriri",
+                [Products.Create, Products.Edit, Products.Import, Categories.Create, Categories.Edit,
+                    Units.Create, Units.Edit, ProductTypes.Create, ProductTypes.Edit,
+                    Manufacturers.Create, Manufacturers.Edit, Barcodes.Create]),
+            new PermissionBundleDefinition("customer_manager", "Mijozlar menejeri",
+                [Customers.Create, Customers.Edit, Customers.Message, Customers.ReceivePayment]),
+            new PermissionBundleDefinition("supplier_accountant", "Ta'minotchi va to'lovlar",
+                [Suppliers.Create, Suppliers.Edit, Suppliers.Pay, Supplies.View, Accounts.View, Transactions.View]),
+            new PermissionBundleDefinition("accountant", "Hisobchi",
+                [Accounts.View, Transactions.View, Reports.View, Reports.Export,
+                    Customers.ReceivePayment, Suppliers.Pay]),
+            new PermissionBundleDefinition("access_administrator", "Xodimlar va ruxsatlar",
+                [Users.Create, Users.Edit, Users.Delete, Roles.Create, Roles.Edit,
+                    Roles.Delete, Roles.AssignPermissions]),
+        }.ToDictionary(x => x.Key);
+
+    public static readonly IReadOnlyDictionary<string, string[]> LegacyReplacements =
+        new Dictionary<string, string[]>
+        {
+            ["branches.manage"] = [Branches.Create, Branches.Edit],
+            ["business.manage"] = [Business.Edit, ExpenseCategories.View, ExpenseCategories.Create, ExpenseCategories.Edit],
+            ["users.manage"] = [Users.Create, Users.Edit, Users.Delete],
+            ["roles.manage"] = [Roles.Create, Roles.Edit, Roles.Delete, Roles.AssignPermissions],
+            ["products.manage"] =
+            [
+                Products.Create, Products.Edit, Products.Delete, Products.Import,
+                Units.View, Units.Create, Units.Edit, Units.Toggle,
+                ProductTypes.View, ProductTypes.Create, ProductTypes.Edit,
+                Manufacturers.View, Manufacturers.Create, Manufacturers.Edit, Manufacturers.Delete,
+                Barcodes.Create, Barcodes.Delete
+            ],
+            ["sales.manage"] =
+            [
+                Sales.Create, Sales.Pick, Sales.Checkout, Sales.Return,
+                Sales.Discount, Sales.PriceOverride, Sales.DiscountOverride,
+                Sales.CashOut, Sales.Prepack
+            ],
+            ["categories.manage"] = [Categories.Create, Categories.Edit],
+            ["warehouses.manage"] = [Warehouses.Create, Warehouses.Edit],
+            ["stocks.manage"] = [Stocks.Adjust],
+            ["stock_transfers.manage"] = [StockTransfers.Create, StockTransfers.Receive],
+            ["currencies.manage"] = [Currencies.View, Currencies.Create, Currencies.Edit, Currencies.Delete],
+            ["devices.manage"] = [Devices.View, Devices.Revoke],
+            ["shifts.manage"] = [Shifts.Open, Shifts.Close],
+            ["shifts.manageAll"] = [Shifts.CloseAll],
+            ["supplies.manage"] = [Supplies.Create, Supplies.Edit, Supplies.Void, Supplies.Import],
+            ["customers.manage"] = [Customers.Create, Customers.Edit, Customers.Delete, Customers.ReceivePayment],
+            ["suppliers.manage"] = [Suppliers.Create, Suppliers.Edit, Suppliers.Pay],
+            ["accounts.manage"] = [Accounts.View],
+            ["rates.manage"] = [Rates.View, Rates.Edit],
+            ["notifications.manage"] = [Notifications.View, Notifications.Edit],
+            ["loyalty.manage"] = [Loyalty.Edit, Loyalty.GrantBonus],
+            ["features.manage"] = [Features.View, Features.Edit],
+            ["keys.manage"] = [Keys.View, Keys.Create, Keys.Edit, Keys.Revoke],
+            ["settings.manage"] = [Settings.Integrations, Settings.Receipt, Settings.Security],
+        };
 }

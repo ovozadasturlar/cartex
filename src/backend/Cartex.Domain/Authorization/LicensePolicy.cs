@@ -8,9 +8,13 @@ public static class LicensePolicy
         AppPermissions.Products.View,
         AppPermissions.Stocks.View,
         AppPermissions.Customers.View,
-        AppPermissions.Customers.Manage,
+        AppPermissions.Customers.Create,
+        AppPermissions.Customers.Edit,
+        AppPermissions.Customers.ReceivePayment,
         AppPermissions.Supplies.View,
-        AppPermissions.Supplies.Manage,
+        AppPermissions.Supplies.Create,
+        AppPermissions.Supplies.Edit,
+        AppPermissions.Supplies.Void,
         AppPermissions.Branches.ViewAll,
     };
 }

@@ -15,17 +15,17 @@ namespace Cartex.Api.Controllers;
 public class HardwareKeysController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Keys.Manage)]
+    [HasPermission(AppPermissions.Keys.View)]
     public async Task<ActionResult<IReadOnlyList<HardwareKeyDto>>> GetKeys() =>
         Ok(await sender.Send(new GetHardwareKeysQuery()));
 
     [HttpPost]
-    [HasPermission(AppPermissions.Keys.Manage)]
+    [HasPermission(AppPermissions.Keys.Create)]
     public async Task<ActionResult<HardwareKeyResult>> Generate(GenerateHardwareKeyCommand command) =>
         Ok(await sender.Send(command));
 
     [HttpPut("{id:long}/enabled")]
-    [HasPermission(AppPermissions.Keys.Manage)]
+    [HasPermission(AppPermissions.Keys.Edit)]
     public async Task<IActionResult> SetEnabled(long id, [FromBody] SetHardwareKeyEnabledRequest request)
     {
         await sender.Send(new SetHardwareKeyEnabledCommand(id, request.Enabled));
@@ -33,7 +33,7 @@ public class HardwareKeysController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Keys.Manage)]
+    [HasPermission(AppPermissions.Keys.Revoke)]
     public async Task<IActionResult> Revoke(long id)
     {
         await sender.Send(new RevokeHardwareKeyCommand(id));

@@ -24,7 +24,9 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
         if (cart is null)
             return null;
 
-        if (!currentUser.HasPermission(AppPermissions.Sales.Create) && cart.CreatedBy != currentUser.UserId)
+        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout)
+            && !currentUser.HasPermission(AppPermissions.Sales.Create)
+            && cart.CreatedBy != currentUser.UserId)
             return null;
 
         var variantIds = cart.Items.Select(i => i.VariantId).ToList();

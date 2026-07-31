@@ -55,6 +55,9 @@ public interface IApplicationDbContext
     DbSet<RefreshSession> RefreshSessions { get; }
     DbSet<OtpChallenge> OtpChallenges { get; }
     DbSet<CustomerSession> CustomerSessions { get; }
+    DbSet<NotificationDelivery> NotificationDeliveries { get; }
+    DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts { get; }
+    [Obsolete("Legacy SMS journal retained to preserve historical production data.")]
     DbSet<SmsMessage> SmsMessages { get; }
     DbSet<Prepack> Prepacks { get; }
     DbSet<HardwareKey> HardwareKeys { get; }

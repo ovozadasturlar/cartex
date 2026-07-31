@@ -21,6 +21,11 @@ public class PermissionsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("bundles")]
+    [HasPermission(AppPermissions.Roles.View)]
+    public async Task<ActionResult<IReadOnlyList<PermissionBundleDto>>> GetBundles() =>
+        Ok(await sender.Send(new GetPermissionBundlesQuery()));
+
     [HttpPut("{id:long}/toggle")]
     [HasPermission(AppPermissions.Permissions.Govern)]
     public async Task<IActionResult> TogglePermission(long id, [FromBody] TogglePermissionRequest request)

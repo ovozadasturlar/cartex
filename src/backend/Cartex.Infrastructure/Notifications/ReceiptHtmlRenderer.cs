@@ -13,6 +13,9 @@ public static class ReceiptHtmlRenderer
         var sb = new StringBuilder();
         string E(string? s) => WebUtility.HtmlEncode(s ?? "");
         string T(string key) => ReceiptTexts.Get(key, r.Language);
+        var receiptUrl = string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
+            ? null
+            : $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{r.ReceiptToken}";
 
         sb.Append("<!doctype html><html lang=\"uz\"><head><meta charset=\"utf-8\">");
         sb.Append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
@@ -47,6 +50,7 @@ public static class ReceiptHtmlRenderer
         sb.Append(".foot{border-top:1px dashed #cbd5e1;margin-top:16px;padding-top:14px;text-align:center}");
         sb.Append(".thanks{font-size:13px;color:#475569;margin:0 0 10px}");
         sb.Append(".pdf{display:block;background:#166534;color:#fff;text-decoration:none;text-align:center;border-radius:12px;padding:12px;font-size:14px;font-weight:600}");
+        sb.Append(".qr{width:132px;height:132px;display:block;margin:10px auto 6px}.elink{font-size:10px;color:#64748b;word-break:break-all}");
         sb.Append(".token{color:#cbd5e1;font-size:10.5px;margin-top:12px;font-family:ui-monospace,monospace;word-break:break-all}");
         sb.Append("@media(prefers-color-scheme:dark){body{background:#0f172a}.card{background:#1e293b;box-shadow:none}");
         sb.Append(".iname,.isum{color:#e2e8f0}.chip{background:#334155;color:#cbd5e1}.item{border-color:#334155}");
@@ -56,16 +60,18 @@ public static class ReceiptHtmlRenderer
 
         sb.Append("<div class=\"card\"><div class=\"head\">");
         sb.Append("<div class=\"logo\">🧾</div>");
-        sb.Append($"<h1>{E(r.BusinessName)}</h1>");
-        sb.Append($"<p class=\"sub\">{E(r.BranchName)}</p>");
-        if (!string.IsNullOrEmpty(r.BranchAddress)) sb.Append($"<p class=\"sub\">{E(r.BranchAddress)}</p>");
-        if (!string.IsNullOrEmpty(r.BranchPhone)) sb.Append($"<p class=\"sub\">{E(r.BranchPhone)}</p>");
+        if (opts?.ShowBusinessName != false) sb.Append($"<h1>{E(r.BusinessName)}</h1>");
+        if (opts?.ShowBranchName != false) sb.Append($"<p class=\"sub\">{E(r.BranchName)}</p>");
+        if (opts?.ShowAddress != false && !string.IsNullOrEmpty(r.BranchAddress)) sb.Append($"<p class=\"sub\">{E(r.BranchAddress)}</p>");
+        if (opts?.ShowPhone != false && !string.IsNullOrEmpty(r.BranchPhone)) sb.Append($"<p class=\"sub\">{E(r.BranchPhone)}</p>");
         if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.Append($"<p class=\"sub\">{E(opts.HeaderText)}</p>");
         sb.Append("</div>");
 
         sb.Append("<div class=\"meta\">");
         sb.Append($"<span class=\"chip\">{r.SaleDate.ToLocalTime():dd.MM.yyyy HH:mm}</span>");
-        sb.Append($"<span class=\"chip\">{E(r.UserName)}</span>");
+        if (opts?.ShowReceiptNumber != false) sb.Append($"<span class=\"chip\">{E(T("receipt_no"))} {r.SaleId}</span>");
+        if (opts?.ShowCashier != false) sb.Append($"<span class=\"chip\">{E(r.UserName)}</span>");
+        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.Append($"<span class=\"chip\">{E(r.CustomerName)}</span>");
         sb.Append("</div>");
 
         sb.Append("<div class=\"body\">");
@@ -82,25 +88,35 @@ public static class ReceiptHtmlRenderer
         sb.Append($"<div class=\"trow grand\"><span>{T("total")}</span><span>{r.TotalAmount:N0}</span></div>");
         sb.Append("</div>");
 
-        sb.Append("<div class=\"pays\">");
-        if (r.Payments.Count > 0)
-            foreach (var payment in r.Payments)
-                Row(sb, E(ReceiptTexts.PaymentLabel(payment.Method, r.Language)),
-                    payment.IsForeign ? $"{payment.Amount:N2} {E(payment.Currency)} <span class=\"approx\">≈ {payment.AmountBase:N0}</span>" : $"{payment.Amount:N0}");
-        else
+        if (opts?.ShowPaymentDetails != false)
         {
-            if (r.PaidCash > 0) Row(sb, T("cash"), $"{r.PaidCash:N0}");
-            if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
-            if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
+            sb.Append("<div class=\"pays\">");
+            if (r.Payments.Count > 0)
+                foreach (var payment in r.Payments)
+                    Row(sb, E(ReceiptTexts.PaymentLabel(payment.Method, r.Language)),
+                        payment.IsForeign ? $"{payment.Amount:N2} {E(payment.Currency)} <span class=\"approx\">≈ {payment.AmountBase:N0}</span>" : $"{payment.Amount:N0}");
+            else
+            {
+                if (r.PaidCash > 0) Row(sb, T("cash"), $"{r.PaidCash:N0}");
+                if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
+                if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
+            }
+            if (r.ChangeAmount > 0) Row(sb, T("change"), $"{r.ChangeAmount:N0}");
+            if (r.CreditAmount > 0) Row(sb, T("credit"), $"{r.CreditAmount:N0}");
+            if (r.DebtAmount > 0) Row(sb, T("debt"), $"{r.DebtAmount:N0}", "debt");
+            if (r.CashbackEarned > 0) Row(sb, "Cashback", $"+{r.CashbackEarned:N0}", "plus");
+            sb.Append("</div>");
         }
-        if (r.ChangeAmount > 0) Row(sb, T("change"), $"{r.ChangeAmount:N0}");
-        if (r.CreditAmount > 0) Row(sb, T("credit"), $"{r.CreditAmount:N0}");
-        if (r.DebtAmount > 0) Row(sb, T("debt"), $"{r.DebtAmount:N0}", "debt");
-        if (r.CashbackEarned > 0) Row(sb, "Cashback", $"+{r.CashbackEarned:N0}", "plus");
-        sb.Append("</div>");
 
         sb.Append("<div class=\"foot\">");
         sb.Append($"<p class=\"thanks\">{E(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText)}</p>");
+        if (opts?.ShowQrCode != false && receiptUrl is not null)
+        {
+            var qr = Convert.ToBase64String(ReceiptQrCode.RenderPng(receiptUrl));
+            sb.Append($"<img class=\"qr\" alt=\"QR\" src=\"data:image/png;base64,{qr}\">");
+        }
+        if (opts?.ShowElectronicLink != false && receiptUrl is not null)
+            sb.Append($"<p class=\"elink\">{E(receiptUrl)}</p>");
         sb.Append($"<a class=\"pdf\" href=\"/r/{E(r.ReceiptToken)}/pdf\">{T("download_pdf")}</a>");
         sb.Append($"<div class=\"token\">{E(r.ReceiptToken)}</div>");
         sb.Append("</div></div></div></body></html>");

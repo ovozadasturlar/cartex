@@ -22,7 +22,7 @@ public class BarcodesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Barcodes.Create)]
     public async Task<ActionResult<long>> CreateBarcode(CreateBarcodeCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +30,7 @@ public class BarcodesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Barcodes.Delete)]
     public async Task<IActionResult> DeleteBarcode(long id)
     {
         await sender.Send(new DeleteBarcodeCommand(id));

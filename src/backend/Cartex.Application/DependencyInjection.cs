@@ -7,6 +7,7 @@ using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Security;
 using Cartex.Application.Auth;
+using Cartex.Auth.Services;
 
 namespace Cartex.Application;
 
@@ -23,6 +24,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddScoped<AuthTokenBuilder>();
+        services.AddScoped<IActiveRoleValidator, ActiveRoleValidator>();
         services.AddScoped<Store.StoreTokenBuilder>();
 
         services.AddScoped<ILedgerService, LedgerService>();

@@ -11,13 +11,13 @@ public sealed class EmailService(
     ISecretProtector protector,
     ILogger<EmailService> logger) : IEmailService
 {
-    public async Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default, EmailAttachment? attachment = null)
+    public async Task<NotificationProviderResult?> SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default, EmailAttachment? attachment = null)
     {
         var cfg = await settings.GetAsync<EmailSettings>(SettingKeys.Email, cancellationToken);
         if (cfg is null || !cfg.Enabled || string.IsNullOrWhiteSpace(cfg.Host) || string.IsNullOrWhiteSpace(cfg.FromAddress) || string.IsNullOrWhiteSpace(to))
         {
             logger.LogInformation("Email not configured; skipped");
-            return;
+            return null;
         }
 
         using var message = new MailMessage
@@ -35,5 +35,6 @@ public sealed class EmailService(
             client.Credentials = new NetworkCredential(cfg.Username, string.IsNullOrWhiteSpace(cfg.Password) ? "" : protector.Unprotect(cfg.Password));
 
         await client.SendMailAsync(message, cancellationToken);
+        return new NotificationProviderResult(cfg.Host);
     }
 }

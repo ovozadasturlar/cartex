@@ -44,7 +44,8 @@ public record CreateSaleCommand(
     DateOnly? DebtDueDate = null,
     string? IdempotencyKey = null,
     bool ApplyAutoDiscount = true,
-    decimal CreditAmount = 0) : ICommand<CreateSaleResult>;
+    decimal CreditAmount = 0,
+    bool FromQueuedCart = false) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -64,6 +65,10 @@ public sealed class CreateSaleCommandHandler(
     private async Task<CreateSaleResult> HandleCoreAsync(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout))
+            throw new ForbiddenException("Sale checkout permission is required.");
+        if (!request.FromQueuedCart && !currentUser.HasPermission(AppPermissions.Sales.Create))
+            throw new ForbiddenException("Sale creation permission is required.");
 
         var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
         if (idempotencyKey is not null)

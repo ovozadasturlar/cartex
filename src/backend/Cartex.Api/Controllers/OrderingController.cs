@@ -69,7 +69,7 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpPost("carts/{code}/checkout")]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
     {
         var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus, request.IdempotencyKey));

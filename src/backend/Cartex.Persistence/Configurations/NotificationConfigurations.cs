@@ -10,10 +10,50 @@ public class DebtReminderLogConfiguration : IEntityTypeConfiguration<DebtReminde
     {
         builder.ToTable("debt_reminder_log");
         builder.Property(x => x.Balance).HasPrecision(18, 2);
+        builder.Property(x => x.Purpose).HasMaxLength(60);
         builder.HasIndex(x => new { x.CustomerId, x.SentAt });
+        builder.HasIndex(x => new { x.CustomerId, x.Purpose, x.DueDate });
     }
 }
 
+public class NotificationDeliveryConfiguration : IEntityTypeConfiguration<NotificationDelivery>
+{
+    public void Configure(EntityTypeBuilder<NotificationDelivery> builder)
+    {
+        builder.ToTable("notification_deliveries");
+        builder.Property(x => x.Channel).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Purpose).HasMaxLength(60).IsRequired();
+        builder.Property(x => x.Recipient).HasMaxLength(320).IsRequired();
+        builder.Property(x => x.Subject).HasMaxLength(200);
+        builder.Property(x => x.Content).HasMaxLength(4000).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.Channel, x.Status, x.CreatedAt });
+        builder.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class NotificationDeliveryAttemptConfiguration : IEntityTypeConfiguration<NotificationDeliveryAttempt>
+{
+    public void Configure(EntityTypeBuilder<NotificationDeliveryAttempt> builder)
+    {
+        builder.ToTable("notification_delivery_attempts");
+        builder.Property(x => x.Provider).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.ProviderMessageId).HasMaxLength(160);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.ErrorCode).HasMaxLength(80);
+        builder.Property(x => x.ErrorMessage).HasMaxLength(1000);
+        builder.HasIndex(x => new { x.Provider, x.Status, x.StartedAt });
+        builder.HasIndex(x => x.ProviderMessageId);
+        builder.HasIndex(x => new { x.NotificationDeliveryId, x.AttemptNumber }).IsUnique();
+        builder.HasOne(x => x.NotificationDelivery)
+            .WithMany(x => x.Attempts)
+            .HasForeignKey(x => x.NotificationDeliveryId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+[Obsolete("Legacy SMS journal retained to preserve historical production data.")]
 public class SmsMessageConfiguration : IEntityTypeConfiguration<SmsMessage>
 {
     public void Configure(EntityTypeBuilder<SmsMessage> builder)

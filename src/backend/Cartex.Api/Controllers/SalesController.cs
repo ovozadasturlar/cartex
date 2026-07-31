@@ -35,7 +35,7 @@ public class SalesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<CreateSaleResult>> CreateSale(CreateSaleCommand command)
     {
         var result = await sender.Send(command);

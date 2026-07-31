@@ -3,6 +3,7 @@ export interface NavItem {
   icon: string;
   route: string;
   permission: string | null;
+  feature?: string;
 }
 
 export interface NavSection {
@@ -15,15 +16,15 @@ export const NAV_SECTIONS: NavSection[] = [
     labelKey: null,
     items: [
       { labelKey: 'dashboard', icon: 'space_dashboard', route: '/dashboard', permission: 'reports.view' },
-      { labelKey: 'pos', icon: 'point_of_sale', route: '/pos', permission: 'sales.create' },
+      { labelKey: 'pos', icon: 'point_of_sale', route: '/pos', permission: 'sales.create|sales.checkout' },
     ],
   },
   {
     labelKey: 'section_sales',
     items: [
-      { labelKey: 'shift', icon: 'schedule', route: '/shift', permission: 'sales.create' },
+      { labelKey: 'shift', icon: 'schedule', route: '/shift', permission: 'shifts.view' },
       { labelKey: 'sale_history', icon: 'receipt_long', route: '/sales', permission: 'sales.view' },
-      { labelKey: 'orders', icon: 'shopping_basket', route: '/orders', permission: 'sales.view' },
+      { labelKey: 'orders', icon: 'shopping_basket', route: '/orders', permission: 'sales.view|sales.pick|sales.create|sales.checkout', feature: 'ordering' },
       { labelKey: 'customers', icon: 'group', route: '/customers', permission: 'customers.view' },
     ],
   },
@@ -33,6 +34,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { labelKey: 'products', icon: 'inventory_2', route: '/products', permission: 'products.view' },
       { labelKey: 'inventory', icon: 'warehouse', route: '/warehouse', permission: 'stocks.view' },
       { labelKey: 'supplies', icon: 'local_shipping', route: '/supplies', permission: 'supplies.view' },
+      { labelKey: 'barcode_print', icon: 'barcode_reader', route: '/barcode-print', permission: 'products.printBarcode' },
       { labelKey: 'transfers', icon: 'swap_horiz', route: '/transfers', permission: 'stock_transfers.view' },
     ],
   },
@@ -50,19 +52,19 @@ export const SETTINGS_SECTIONS: NavSection[] = [
   {
     labelKey: 'section_catalog',
     items: [
-      { labelKey: 'categories', icon: 'category', route: '/settings/categories', permission: 'categories.manage' },
-      { labelKey: 'units', icon: 'straighten', route: '/settings/units', permission: 'products.manage' },
-      { labelKey: 'product_types', icon: 'style', route: '/settings/product-types', permission: 'products.manage' },
-      { labelKey: 'manufacturers', icon: 'factory', route: '/settings/manufacturers', permission: 'products.manage' },
+      { labelKey: 'categories', icon: 'category', route: '/settings/categories', permission: 'categories.view' },
+      { labelKey: 'units', icon: 'straighten', route: '/settings/units', permission: 'units.view' },
+      { labelKey: 'product_types', icon: 'style', route: '/settings/product-types', permission: 'product_types.view' },
+      { labelKey: 'manufacturers', icon: 'factory', route: '/settings/manufacturers', permission: 'manufacturers.view' },
     ],
   },
   {
     labelKey: 'settings_org',
     items: [
-      { labelKey: 'business', icon: 'store', route: '/settings/business', permission: 'business.manage' },
-      { labelKey: 'branch', icon: 'apartment', route: '/settings/branches', permission: 'branches.manage' },
-      { labelKey: 'warehouse', icon: 'home_storage', route: '/settings/warehouses', permission: 'warehouses.manage' },
-      { labelKey: 'suppliers', icon: 'contact_phone', route: '/settings/suppliers', permission: 'suppliers.manage' },
+      { labelKey: 'business', icon: 'store', route: '/settings/business', permission: 'business.edit' },
+      { labelKey: 'branch', icon: 'apartment', route: '/settings/branches', permission: 'branches.view' },
+      { labelKey: 'warehouse', icon: 'home_storage', route: '/settings/warehouses', permission: 'warehouses.view' },
+      { labelKey: 'suppliers', icon: 'contact_phone', route: '/settings/suppliers', permission: 'suppliers.view' },
     ],
   },
   {
@@ -70,30 +72,34 @@ export const SETTINGS_SECTIONS: NavSection[] = [
     items: [
       { labelKey: 'users', icon: 'manage_accounts', route: '/settings/users', permission: 'users.view' },
       { labelKey: 'roles', icon: 'shield_person', route: '/settings/roles', permission: 'roles.view' },
+      { labelKey: 'permissions_matrix', icon: 'admin_panel_settings', route: '/settings/permissions-matrix', permission: 'roles.assignPermissions' },
     ],
   },
   {
     labelKey: 'settings_system',
     items: [
       { labelKey: 'loyalty', icon: 'loyalty', route: '/settings/loyalty', permission: 'loyalty.view' },
-      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'business.manage' },
+      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'expense_categories.view' },
       { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'settings.receipt' },
-      { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.manage' },
+      { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.view' },
       { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
+      { labelKey: 'reminders', icon: 'notifications_active', route: '/settings/reminders', permission: 'notifications.view' },
+      { labelKey: 'notification_journal', icon: 'mark_email_read', route: '/settings/notification-journal', permission: 'notifications.journal.view' },
+      { labelKey: 'devices', icon: 'devices', route: '/settings/devices', permission: 'devices.view' },
     ],
   },
   {
     labelKey: 'settings_developer',
     items: [
-      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'features.manage' },
+      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'features.view' },
       { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.integrations' },
+      { labelKey: 'hardware_keys', icon: 'usb', route: '/settings/hardware-keys', permission: 'keys.view' },
     ],
   },
   {
     labelKey: 'section_account',
     items: [
       { labelKey: 'security', icon: 'lock', route: '/settings/security', permission: null },
-      { labelKey: 'devices', icon: 'devices', route: '/settings/devices', permission: 'devices.manage' },
     ],
   },
 ];

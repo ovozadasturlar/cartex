@@ -13,6 +13,7 @@ export interface CatalogProduct {
   barcodes: string[];
   productTypeId: number | null;
   manufacturerId: number | null;
+  isEnabled: boolean;
   attributes: string | null;
   imageKey: string | null;
   code: string | null;
@@ -163,6 +164,14 @@ export class ProductsCatalogApi {
 
   update(id: number, r: SaveProductRequest): Observable<void> {
     return this.http.put<void>(`/api/products/${id}`, r);
+  }
+
+  setState(id: number, isEnabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/products/${id}/state`, { isEnabled });
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/products/${id}`);
   }
 
   previewImport(file: File, mapping?: string): Observable<ImportPreview> {

@@ -19,6 +19,7 @@
     <PackageReference Include="Minio" Version="7.0.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
   <ItemGroup>

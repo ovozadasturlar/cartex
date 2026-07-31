@@ -15,7 +15,7 @@ namespace Cartex.Api.Controllers;
 public class ShiftsController(ISender sender) : ControllerBase
 {
     [HttpGet("current")]
-    [HasPermission(AppPermissions.Shifts.Manage)]
+    [HasPermission(AppPermissions.Shifts.Open, AppPermissions.Shifts.Close)]
     public async Task<ActionResult<CurrentShiftDto>> GetCurrent()
     {
         var result = await sender.Send(new GetCurrentShiftQuery());
@@ -39,7 +39,7 @@ public class ShiftsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("open")]
-    [HasPermission(AppPermissions.Shifts.Manage)]
+    [HasPermission(AppPermissions.Shifts.Open)]
     public async Task<ActionResult<long>> Open(OpenShiftCommand command)
     {
         var id = await sender.Send(command);
@@ -47,7 +47,7 @@ public class ShiftsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:long}/close")]
-    [HasPermission(AppPermissions.Shifts.Manage)]
+    [HasPermission(AppPermissions.Shifts.Close)]
     public async Task<ActionResult<ZReportDto>> Close(long id, CloseShiftCommand command)
     {
         var report = await sender.Send(command with { ShiftId = id });

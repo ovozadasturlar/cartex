@@ -6,7 +6,21 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateReceiptSettingsCommand(string? HeaderText, string? FooterText, int PaperWidth, string PaperFormat = "Thermal") : ICommand<Unit>;
+public record UpdateReceiptSettingsCommand(
+    string? HeaderText,
+    string? FooterText,
+    int PaperWidth,
+    string PaperFormat = "Thermal",
+    bool ShowBusinessName = true,
+    bool ShowBranchName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowCashier = true,
+    bool ShowCustomer = true,
+    bool ShowReceiptNumber = true,
+    bool ShowPaymentDetails = true,
+    bool ShowQrCode = true,
+    bool ShowElectronicLink = true) : ICommand<Unit>;
 
 public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateReceiptSettingsCommand, Unit>
@@ -18,7 +32,17 @@ public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService setting
             HeaderText = string.IsNullOrWhiteSpace(request.HeaderText) ? null : request.HeaderText.Trim(),
             FooterText = string.IsNullOrWhiteSpace(request.FooterText) ? null : request.FooterText.Trim(),
             PaperWidth = request.PaperWidth,
-            PaperFormat = request.PaperFormat
+            PaperFormat = request.PaperFormat,
+            ShowBusinessName = request.ShowBusinessName,
+            ShowBranchName = request.ShowBranchName,
+            ShowAddress = request.ShowAddress,
+            ShowPhone = request.ShowPhone,
+            ShowCashier = request.ShowCashier,
+            ShowCustomer = request.ShowCustomer,
+            ShowReceiptNumber = request.ShowReceiptNumber,
+            ShowPaymentDetails = request.ShowPaymentDetails,
+            ShowQrCode = request.ShowQrCode,
+            ShowElectronicLink = request.ShowElectronicLink
         };
         audit.Add("settings", "settings", null, new { section = "receipt" });
         await settings.SetAsync(SettingKeys.Receipt, cfg, cancellationToken);

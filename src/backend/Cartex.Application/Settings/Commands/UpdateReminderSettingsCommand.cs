@@ -1,11 +1,24 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
+using Cartex.Domain.Enums;
 using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateReminderSettingsCommand(bool Enabled, int MinDaysOverdue, int RepeatEveryDays, decimal MinBalance, int SendHourLocal, List<string> Channels, string? OverdueTemplate = null, string? DueSoonTemplate = null) : ICommand<Unit>;
+public record UpdateReminderSettingsCommand(
+    bool Enabled,
+    int MinDaysOverdue,
+    int RepeatEveryDays,
+    decimal MinBalance,
+    int SendHourLocal,
+    bool NotifyBeforeDue,
+    int DaysBeforeDue,
+    bool NotifyOnDueDate,
+    List<string> Channels,
+    string? OverdueTemplate = null,
+    string? DueSoonTemplate = null,
+    string? DueTodayTemplate = null) : ICommand<Unit>;
 
 public sealed class UpdateReminderSettingsCommandHandler(ISettingsService settings)
     : IRequestHandler<UpdateReminderSettingsCommand, Unit>
@@ -19,8 +32,12 @@ public sealed class UpdateReminderSettingsCommandHandler(ISettingsService settin
             RepeatEveryDays = request.RepeatEveryDays,
             MinBalance = request.MinBalance,
             SendHourLocal = request.SendHourLocal,
+            NotifyBeforeDue = request.NotifyBeforeDue,
+            DaysBeforeDue = request.DaysBeforeDue,
+            NotifyOnDueDate = request.NotifyOnDueDate,
             OverdueTemplate = string.IsNullOrWhiteSpace(request.OverdueTemplate) ? null : request.OverdueTemplate.Trim(),
             DueSoonTemplate = string.IsNullOrWhiteSpace(request.DueSoonTemplate) ? null : request.DueSoonTemplate.Trim(),
+            DueTodayTemplate = string.IsNullOrWhiteSpace(request.DueTodayTemplate) ? null : request.DueTodayTemplate.Trim(),
             Channels = request.Channels
                 .Select(c => Enum.TryParse<NotificationChannel>(c, true, out var parsed) ? parsed : (NotificationChannel?)null)
                 .Where(c => c is not null)
@@ -42,7 +59,9 @@ public sealed class UpdateReminderSettingsCommandValidator : AbstractValidator<U
         RuleFor(x => x.RepeatEveryDays).InclusiveBetween(1, 365);
         RuleFor(x => x.MinBalance).GreaterThanOrEqualTo(0);
         RuleFor(x => x.SendHourLocal).InclusiveBetween(0, 23);
+        RuleFor(x => x.DaysBeforeDue).InclusiveBetween(1, 365);
         RuleFor(x => x.OverdueTemplate).MaximumLength(500);
         RuleFor(x => x.DueSoonTemplate).MaximumLength(500);
+        RuleFor(x => x.DueTodayTemplate).MaximumLength(500);
     }
 }

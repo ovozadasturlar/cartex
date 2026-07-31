@@ -15,7 +15,7 @@ public sealed class RevokeSessionCommandHandler(IApplicationDbContext db, ICurre
     public async Task<Unit> Handle(RevokeSessionCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-        var canManageAll = currentUser.HasPermission(AppPermissions.Users.Manage);
+        var canManageAll = currentUser.HasPermission(AppPermissions.Devices.ViewAll);
         var now = DateTime.UtcNow;
         var target = await db.RefreshSessions
             .Where(s => s.Id == request.Id && (canManageAll || s.UserId == userId) && s.RevokedAt == null)

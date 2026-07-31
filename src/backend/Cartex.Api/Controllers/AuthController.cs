@@ -72,13 +72,18 @@ public class AuthController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [Authorize]
+    [HttpGet("context")]
+    public async Task<ActionResult<UserContextDto>> Context() =>
+        Ok(await sender.Send(new GetUserContextQuery()));
+
     [HttpGet("sessions")]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.View)]
     public async Task<ActionResult<IReadOnlyList<DeviceSessionDto>>> Sessions([FromQuery] bool all = false) =>
         Ok(await sender.Send(new GetSessionsQuery(all)));
 
     [HttpDelete("sessions/{id:long}")]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.Revoke)]
     public async Task<IActionResult> RevokeSession(long id)
     {
         await sender.Send(new RevokeSessionCommand(id));

@@ -15,7 +15,7 @@ namespace Cartex.Api.Controllers;
 public class OfflineCacheController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.View)]
     public async Task<ActionResult<OfflineCacheStateDto>> GetState()
     {
         var state = await sender.Send(new GetOfflineCacheStateQuery());
@@ -23,7 +23,7 @@ public class OfflineCacheController(ISender sender) : ControllerBase
     }
 
     [HttpPost("claim")]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.Revoke)]
     public async Task<IActionResult> Claim(ClaimOfflineCacheCommand command)
     {
         await sender.Send(command);
@@ -31,7 +31,7 @@ public class OfflineCacheController(ISender sender) : ControllerBase
     }
 
     [HttpPost("release")]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.Revoke)]
     public async Task<IActionResult> Release()
     {
         await sender.Send(new ReleaseOfflineCacheCommand());

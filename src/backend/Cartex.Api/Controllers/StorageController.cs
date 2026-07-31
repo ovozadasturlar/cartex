@@ -19,7 +19,7 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/webp", "image/gif" };
 
     [HttpPost("upload")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
     public async Task<IActionResult> Upload(IFormFile file)
     {
         if (file is null || file.Length == 0)
@@ -42,7 +42,7 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
     }
 
     [HttpPost("from-url")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
     public async Task<IActionResult> UploadFromUrl(ImageUrlRequest request)
     {
         var ct = HttpContext.RequestAborted;

@@ -68,6 +68,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<CustomerSession> CustomerSessions => Set<CustomerSession>();
+    public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+    public DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts => Set<NotificationDeliveryAttempt>();
+    [Obsolete("Legacy SMS journal retained to preserve historical production data.")]
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<Prepack> Prepacks => Set<Prepack>();
     public DbSet<HardwareKey> HardwareKeys => Set<HardwareKey>();

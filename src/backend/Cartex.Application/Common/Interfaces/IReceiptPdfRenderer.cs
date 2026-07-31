@@ -7,4 +7,5 @@ public interface IReceiptPdfRenderer
 {
     byte[] Render(ReceiptDto receipt, ReceiptSettings? settings = null);
     byte[] RenderDocument(ReceiptDto receipt, ReceiptSettings? settings = null, bool a4 = false);
+    IReadOnlyList<byte[]> RenderDocumentImages(ReceiptDto receipt, ReceiptSettings? settings = null, bool a4 = false, bool landscape = false);
 }

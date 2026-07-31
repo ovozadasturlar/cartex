@@ -13,7 +13,7 @@ namespace Cartex.Api.Controllers;
 public class ManufacturersController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Products.View)]
+    [HasPermission(AppPermissions.Manufacturers.View)]
     public async Task<ActionResult<IReadOnlyCollection<ManufacturerDto>>> GetManufacturers()
     {
         var result = await sender.Send(new GetManufacturersQuery());
@@ -21,7 +21,7 @@ public class ManufacturersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Manufacturers.Create)]
     public async Task<ActionResult<long>> CreateManufacturer(CreateManufacturerCommand command)
     {
         var id = await sender.Send(command);
@@ -29,7 +29,7 @@ public class ManufacturersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Manufacturers.Edit)]
     public async Task<IActionResult> UpdateManufacturer(long id, UpdateManufacturerCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -37,7 +37,7 @@ public class ManufacturersController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Manufacturers.Delete)]
     public async Task<IActionResult> DeleteManufacturer(long id)
     {
         await sender.Send(new DeleteManufacturerCommand(id));

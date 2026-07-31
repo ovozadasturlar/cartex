@@ -38,7 +38,7 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
         return new SmsSendResult(id);
     }
 
-    public async Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken)
+    public async Task<NotificationDeliveryStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken)
     {
         var baseUrl = BaseUrl(settings);
         var client = httpClientFactory.CreateClient();
@@ -56,8 +56,8 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
 
         return statusProp.GetString()?.ToUpperInvariant() switch
         {
-            "DELIVRD" => SmsStatus.Delivered,
-            "UNDELIV" or "REJECTD" or "EXPIRED" or "DELETED" => SmsStatus.Undelivered,
+            "DELIVRD" => NotificationDeliveryStatus.Delivered,
+            "UNDELIV" or "REJECTD" or "EXPIRED" or "DELETED" => NotificationDeliveryStatus.Undelivered,
             _ => null
         };
     }

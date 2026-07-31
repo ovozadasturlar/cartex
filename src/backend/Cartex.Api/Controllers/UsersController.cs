@@ -22,7 +22,7 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Users.Manage)]
+    [HasPermission(AppPermissions.Users.Create)]
     public async Task<ActionResult<long>> CreateUser(CreateUserCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +30,7 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Users.Manage)]
+    [HasPermission(AppPermissions.Users.Edit)]
     public async Task<IActionResult> UpdateUser(long id, UpdateUserCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -38,7 +38,7 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Users.Manage)]
+    [HasPermission(AppPermissions.Users.Delete)]
     public async Task<IActionResult> DeleteUser(long id)
     {
         await sender.Send(new DeleteUserCommand(id));

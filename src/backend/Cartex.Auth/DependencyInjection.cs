@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace Cartex.Auth;
 
@@ -51,6 +52,28 @@ public static class DependencyInjection
                     if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
                         context.Token = accessToken;
                     return Task.CompletedTask;
+                },
+                OnTokenValidated = async context =>
+                {
+                    var userIdValue = context.Principal?.FindFirst("userId")?.Value;
+                    if (!long.TryParse(userIdValue, out var userId))
+                    {
+                        context.Fail("User identity is missing.");
+                        return;
+                    }
+
+                    var tokenRoles = context.Principal!
+                        .FindAll(ClaimTypes.Role)
+                        .Select(claim => claim.Value)
+                        .ToList();
+                    var authorizationStamp = context.Principal.FindFirst("authorizationStamp")?.Value;
+                    var validator = context.HttpContext.RequestServices.GetRequiredService<IActiveRoleValidator>();
+                    if (!await validator.IsValidAsync(
+                            userId,
+                            tokenRoles,
+                            authorizationStamp,
+                            context.HttpContext.RequestAborted))
+                        context.Fail("User roles are inactive or have changed.");
                 }
             };
         })

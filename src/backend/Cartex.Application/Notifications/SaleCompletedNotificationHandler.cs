@@ -2,6 +2,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Events;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,7 @@ public sealed class SaleCompletedNotificationHandler(
         {
             if (string.IsNullOrWhiteSpace(recipient))
                 return;
-            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload), cancellationToken);
+            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload, sale.CustomerId), cancellationToken);
         }
 
         foreach (var channel in config.Channels.Distinct())

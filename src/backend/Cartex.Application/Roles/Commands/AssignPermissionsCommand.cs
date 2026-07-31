@@ -4,6 +4,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Security;
+using FluentValidation;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -19,27 +20,31 @@ public sealed class AssignPermissionsCommandHandler(IApplicationDbContext db, IA
             ?? throw new NotFoundException("Role not found.");
 
         await accessControl.EnsureCanManageRoleAsync(role, cancellationToken);
-        await accessControl.EnsureCanGrantAsync(request.PermissionIds, cancellationToken);
+
+        var requested = await db.Permissions
+            .Where(p => request.PermissionIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.Name })
+            .ToListAsync(cancellationToken);
+
+        if (requested.Count != request.PermissionIds.Distinct().Count())
+            throw new ValidationException("One or more permissions do not exist.");
+
+        var effectiveNames = PermissionDependencies.Effective(requested.Select(p => p.Name));
+        var effectivePermissionIds = await db.Permissions
+            .Where(p => effectiveNames.Contains(p.Name) && p.IsEnabled)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+        if (effectivePermissionIds.Count != effectiveNames.Count)
+            throw new ValidationException("A required permission is disabled or missing.");
+
+        await accessControl.EnsureCanGrantAsync(effectivePermissionIds, cancellationToken);
 
         var existing = await db.RolePermissions
             .Where(rp => rp.RoleId == request.RoleId)
             .ToListAsync(cancellationToken);
-
         db.RolePermissions.RemoveRange(existing);
 
-        var requestedNames = await db.Permissions
-            .Where(p => request.PermissionIds.Contains(p.Id))
-            .Select(p => p.Name)
-            .ToListAsync(cancellationToken);
-
-        var requiredNames = requestedNames.Concat(PermissionDependencies.RequiredFor(requestedNames)).ToHashSet();
-
-        var enabledPermissionIds = await db.Permissions
-            .Where(p => requiredNames.Contains(p.Name) && p.IsEnabled)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        foreach (var permissionId in enabledPermissionIds)
+        foreach (var permissionId in effectivePermissionIds)
         {
             db.RolePermissions.Add(new RolePermission
             {
@@ -48,6 +53,7 @@ public sealed class AssignPermissionsCommandHandler(IApplicationDbContext db, IA
             });
         }
 
+        role.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

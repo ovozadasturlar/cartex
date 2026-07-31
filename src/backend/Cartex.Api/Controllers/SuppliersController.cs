@@ -39,7 +39,7 @@ public class SuppliersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Suppliers.Manage)]
+    [HasPermission(AppPermissions.Suppliers.Create)]
     public async Task<ActionResult<long>> CreateSupplier(CreateSupplierCommand command)
     {
         var id = await sender.Send(command);
@@ -47,7 +47,7 @@ public class SuppliersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Suppliers.Manage)]
+    [HasPermission(AppPermissions.Suppliers.Edit)]
     public async Task<IActionResult> UpdateSupplier(long id, UpdateSupplierCommand command)
     {
         await sender.Send(command with { Id = id });
@@ -55,7 +55,7 @@ public class SuppliersController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:long}/pay-debt")]
-    [HasPermission(AppPermissions.Suppliers.Manage)]
+    [HasPermission(AppPermissions.Suppliers.Pay)]
     public async Task<IActionResult> PayDebt(long id, PaySupplierDebtCommand command)
     {
         await sender.Send(command with { SupplierId = id });
@@ -63,7 +63,7 @@ public class SuppliersController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{id:long}/payments")]
-    [HasPermission(AppPermissions.Suppliers.Manage)]
+    [HasPermission(AppPermissions.Suppliers.Pay)]
     public async Task<ActionResult<IReadOnlyCollection<SupplierPaymentDto>>> GetPayments(long id, [FromQuery] DateOnly date)
     {
         var result = await sender.Send(new GetSupplierPaymentsQuery(id, date));

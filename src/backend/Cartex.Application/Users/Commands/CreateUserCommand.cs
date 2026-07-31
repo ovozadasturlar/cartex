@@ -4,6 +4,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Auth.Services;
 using Cartex.Application.Common.Security;
+using Cartex.Domain.Common;
 
 namespace Cartex.Application.Users.Commands;
 
@@ -15,18 +16,21 @@ public sealed class CreateUserCommandHandler(
     IApplicationDbContext db,
     IPasswordHasher passwordHasher,
     IAccessControlService accessControl,
-    IAuditService audit) : IRequestHandler<CreateUserCommand, long>
+    IAuditService audit,
+    ICurrentUser currentUser) : IRequestHandler<CreateUserCommand, long>
 {
     public async Task<long> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         await accessControl.EnsureCanAssignRolesAsync(request.RoleIds, cancellationToken);
+        var defaultBranchId = await UserBranchScopePolicy.ValidateAsync(
+            db, currentUser, request.RoleIds, request.BranchIds, request.DefaultBranchId, cancellationToken);
 
         var user = new User
         {
             FullName = request.FullName,
             Username = request.Username,
             PasswordHash = passwordHasher.Hash(request.Password),
-            DefaultBranchId = request.DefaultBranchId,
+            DefaultBranchId = defaultBranchId,
             StartPage = request.StartPage,
             CartDestination = request.CartDestination,
             UserRoles = [.. request.RoleIds.Distinct().Select(id => new UserRole { RoleId = id })],

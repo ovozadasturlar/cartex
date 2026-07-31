@@ -1003,6 +1003,16 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("days_overdue");
 
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("purpose");
+
                     b.Property<DateTime>("SentAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("sent_at");
@@ -1012,6 +1022,9 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("CustomerId", "SentAt")
                         .HasDatabaseName("ix_debt_reminder_log_customer_id_sent_at");
+
+                    b.HasIndex("CustomerId", "Purpose", "DueDate")
+                        .HasDatabaseName("ix_debt_reminder_log_customer_id_purpose_due_date");
 
                     b.ToTable("debt_reminder_log", (string)null);
                 });
@@ -1497,6 +1510,165 @@ namespace Cartex.Persistence.Migrations
                         .HasFilter("NOT \"is_deleted\"");
 
                     b.ToTable("manufacturers", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_at");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long?>("CustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("subject");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_deliveries");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_notification_deliveries_created_at");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_notification_deliveries_customer_id");
+
+                    b.HasIndex("Channel", "Status", "CreatedAt")
+                        .HasDatabaseName("ix_notification_deliveries_channel_status_created_at");
+
+                    b.ToTable("notification_deliveries", (string)null);
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDeliveryAttempt", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_at");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_number");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("error_code");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<long>("NotificationDeliveryId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("notification_delivery_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("provider_message_id");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("integer")
+                        .HasColumnName("units");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_delivery_attempts");
+
+                    b.HasIndex("ProviderMessageId")
+                        .HasDatabaseName("ix_notification_delivery_attempts_provider_message_id");
+
+                    b.HasIndex("NotificationDeliveryId", "AttemptNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notification_delivery_attempts_notification_delivery_id_att");
+
+                    b.HasIndex("Provider", "Status", "StartedAt")
+                        .HasDatabaseName("ix_notification_delivery_attempts_provider_status_started_at");
+
+                    b.ToTable("notification_delivery_attempts", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.NotificationOutbox", b =>
@@ -2271,6 +2443,12 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("grantable_permissions")
                         .HasDefaultValueSql("'[]'::jsonb");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -2297,6 +2475,12 @@ namespace Cartex.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("start_page");
+
+                    b.Property<int>("TemplateVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("template_version");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -3901,6 +4085,29 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Branch");
                 });
 
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_notification_deliveries_customers_customer_id");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDeliveryAttempt", b =>
+                {
+                    b.HasOne("Cartex.Domain.Entities.NotificationDelivery", "NotificationDelivery")
+                        .WithMany("Attempts")
+                        .HasForeignKey("NotificationDeliveryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notification_delivery_attempts_notification_deliveries_noti");
+
+                    b.Navigation("NotificationDelivery");
+                });
+
             modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
@@ -4500,6 +4707,11 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.LoyaltyProgram", b =>
                 {
                     b.Navigation("Rules");
+                });
+
+            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
+                {
+                    b.Navigation("Attempts");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>

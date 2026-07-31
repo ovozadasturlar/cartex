@@ -21,7 +21,7 @@ public sealed class CloseShiftCommandHandler(IApplicationDbContext db, ICurrentU
             s => s.Id == request.ShiftId && s.BranchId == currentUser.DefaultBranchId, cancellationToken)
             ?? throw new NotFoundException("Shift not found.");
 
-        if (shift.UserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.Shifts.ManageAll))
+        if (shift.UserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.Shifts.CloseAll))
             throw new ForbiddenException("Boshqa kassirning smenasini yopishga ruxsat yo'q.");
 
         if (shift.Status != ShiftStatus.Open)

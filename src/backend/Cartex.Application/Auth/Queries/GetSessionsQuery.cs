@@ -16,7 +16,7 @@ public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUs
     public async Task<IReadOnlyList<DeviceSessionDto>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-        var all = request.All && currentUser.HasPermission(AppPermissions.Users.Manage);
+        var all = request.All && currentUser.HasPermission(AppPermissions.Devices.ViewAll);
         var now = DateTime.UtcNow;
         var sessions = await db.RefreshSessions
             .Where(s => (all || s.UserId == userId) && s.RevokedAt == null && s.ExpiresAt > now)

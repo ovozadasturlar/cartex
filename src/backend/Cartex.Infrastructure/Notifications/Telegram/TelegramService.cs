@@ -12,13 +12,13 @@ public sealed class TelegramService(
     ISecretProtector protector,
     ILogger<TelegramService> logger) : ITelegramService
 {
-    public async Task SendMessageAsync(string chatId, string text, CancellationToken cancellationToken = default)
+    public async Task<NotificationProviderResult?> SendMessageAsync(string chatId, string text, CancellationToken cancellationToken = default)
     {
         var cfg = await settings.GetAsync<TelegramSettings>(SettingKeys.Telegram, cancellationToken);
         if (cfg is null || !cfg.Enabled || string.IsNullOrWhiteSpace(cfg.BotToken) || string.IsNullOrWhiteSpace(chatId))
         {
             logger.LogInformation("Telegram not configured; skipped");
-            return;
+            return null;
         }
 
         var token = protector.Unprotect(cfg.BotToken);
@@ -28,16 +28,16 @@ public sealed class TelegramService(
             new { chat_id = chatId, text },
             cancellationToken);
 
-        await EnsureOkAsync(response, cancellationToken);
+        return new NotificationProviderResult("api.telegram.org", await EnsureOkAsync(response, cancellationToken));
     }
 
-    public async Task SendDocumentAsync(string chatId, byte[] content, string fileName, string? caption, CancellationToken cancellationToken = default)
+    public async Task<NotificationProviderResult?> SendDocumentAsync(string chatId, byte[] content, string fileName, string? caption, CancellationToken cancellationToken = default)
     {
         var cfg = await settings.GetAsync<TelegramSettings>(SettingKeys.Telegram, cancellationToken);
         if (cfg is null || !cfg.Enabled || string.IsNullOrWhiteSpace(cfg.BotToken) || string.IsNullOrWhiteSpace(chatId))
         {
             logger.LogInformation("Telegram not configured; skipped");
-            return;
+            return null;
         }
 
         var token = protector.Unprotect(cfg.BotToken);
@@ -51,18 +51,31 @@ public sealed class TelegramService(
             form.Add(new StringContent(caption), "caption");
 
         var response = await client.PostAsync($"https://api.telegram.org/bot{token}/sendDocument", form, cancellationToken);
-        await EnsureOkAsync(response, cancellationToken);
+        return new NotificationProviderResult("api.telegram.org", await EnsureOkAsync(response, cancellationToken));
     }
 
-    private async Task EnsureOkAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<string?> EnsureOkAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        if (response.IsSuccessStatusCode)
-            return;
-
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (response.IsSuccessStatusCode)
+            return TryMessageId(body);
+
         var description = TryDescription(body) ?? response.StatusCode.ToString();
         logger.LogWarning("Telegram send failed: {Description}", description);
         throw new InvalidOperationException($"Telegram: {description}");
+    }
+
+    private static string? TryMessageId(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.TryGetProperty("result", out var result)
+                && result.TryGetProperty("message_id", out var id)
+                ? id.GetInt64().ToString()
+                : null;
+        }
+        catch { return null; }
     }
 
     private static string? TryDescription(string body)

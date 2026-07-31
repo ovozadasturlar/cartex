@@ -111,7 +111,13 @@ public sealed class AuthTokenBuilder(
 
     private async Task<(string Token, string Role)> BuildAccessAsync(User user, CancellationToken cancellationToken)
     {
-        var roles = user.UserRoles.Select(ur => ur.Role).OrderByDescending(r => r.Priority).ToList();
+        var roles = user.UserRoles
+            .Select(ur => ur.Role)
+            .Where(role => role.IsActive)
+            .OrderByDescending(role => role.Priority)
+            .ToList();
+        if (roles.Count == 0)
+            throw new ForbiddenException("User has no active role.");
         var roleNames = roles.Select(r => r.Name).ToList();
 
         var permissions = roles.Any(r => r.AccessAll)
@@ -145,6 +151,7 @@ public sealed class AuthTokenBuilder(
 
         var token = jwtTokenGenerator.GenerateToken(
             user.Id, user.Username, user.FullName, roleNames, startPage, permissions,
+            RoleAuthorizationStamp.Create(roles),
             businessId, branchIds, user.DefaultBranchId);
 
         return (token, roleNames.FirstOrDefault() ?? "");

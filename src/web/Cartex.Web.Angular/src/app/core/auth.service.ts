@@ -117,7 +117,10 @@ export class AuthService {
 
   hasPermission(permission: string): boolean {
     const user = this.user();
-    return !!user && (user.permissions.includes('*') || user.permissions.includes(permission));
+    return !!user && (
+      user.permissions.includes('*')
+      || permission.split('|').some((candidate) => user.permissions.includes(candidate))
+    );
   }
 
   logout(): void {

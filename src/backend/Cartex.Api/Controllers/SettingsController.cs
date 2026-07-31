@@ -7,9 +7,6 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-using SmsMessageDto = Cartex.Application.Settings.Queries.SmsMessageDto;
-using SmsStatsDto = Cartex.Application.Settings.Queries.SmsStatsDto;
-
 namespace Cartex.Api.Controllers;
 
 [ApiController]
@@ -62,16 +59,6 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("sms/journal")]
-    [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<IReadOnlyCollection<SmsMessageDto>>> GetSmsJournal([FromQuery] GetSmsJournalQuery query) =>
-        Ok(await sender.Send(query));
-
-    [HttpGet("sms/stats")]
-    [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<SmsStatsDto>> GetSmsStats([FromQuery] GetSmsStatsQuery query) =>
-        Ok(await sender.Send(query));
-
     [HttpPut("notification")]
     [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateNotification(UpdateNotificationSettingsCommand command)
@@ -119,7 +106,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("sales-policy")]
-    [HasPermission(AppPermissions.Business.Manage)]
+    [HasPermission(AppPermissions.Business.Edit)]
     public async Task<IActionResult> UpdateSalesPolicy(UpdateSalesPolicyCommand command)
     {
         await sender.Send(command);
@@ -175,7 +162,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("reminder")]
-    [HasPermission(AppPermissions.Notifications.Manage)]
+    [HasPermission(AppPermissions.Notifications.View)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.ReminderSettingsDto>> GetReminder()
     {
         var result = await sender.Send(new GetReminderSettingsQuery());
@@ -183,7 +170,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("reminder")]
-    [HasPermission(AppPermissions.Notifications.Manage)]
+    [HasPermission(AppPermissions.Notifications.Edit)]
     public async Task<IActionResult> UpdateReminder(UpdateReminderSettingsCommand command)
     {
         await sender.Send(command);

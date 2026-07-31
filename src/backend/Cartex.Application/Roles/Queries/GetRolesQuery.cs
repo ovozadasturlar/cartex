@@ -5,12 +5,16 @@ using Cartex.Application.Common.Security;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Domain.Authorization;
 
 namespace Cartex.Application.Roles.Queries;
 
 public record GetRolesQuery : FilteringRequest, IRequest<IReadOnlyCollection<RoleDto>>;
 
-public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles, string? CartDestination);
+public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool IsActive, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles, string? CartDestination)
+{
+    public bool RequiresBranch { get; init; }
+}
 
 public sealed class GetRolesQueryHandler(
     IApplicationDbContext db,
@@ -34,7 +38,7 @@ public sealed class GetRolesQueryHandler(
         if (!ctx.AccessAll)
             query = query.Where(r => !r.AccessAll && r.Level <= ctx.Level);
 
-        return await query
+        var roles = await query
             .ToPagedListAsync(request,
                 r => new RoleDto(
                     r.Id,
@@ -43,6 +47,7 @@ public sealed class GetRolesQueryHandler(
                     r.StartPage,
                     r.Priority,
                     r.IsSystem,
+                    r.IsActive,
                     r.AccessAll,
                     r.RolePermissions
                         .Where(rp => rp.Permission.IsEnabled)
@@ -52,5 +57,12 @@ public sealed class GetRolesQueryHandler(
                     r.AssignableRoles,
                     r.CartDestination),
                 writer, cancellationToken);
+
+        return roles.Select(role => role with
+        {
+            RequiresBranch = role.AccessAll || role.Permissions.Any(name =>
+                AppPermissions.Definitions.TryGetValue(name, out var definition)
+                && definition.RequiresBranch)
+        }).ToList();
     }
 }

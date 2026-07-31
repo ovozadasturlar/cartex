@@ -27,7 +27,8 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
         var toWarehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == transfer.ToWarehouseId, cancellationToken)
             ?? throw new NotFoundException("Target warehouse not found.");
 
-        if (toWarehouse.AssignedUserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.StockTransfers.Manage))
+        if (toWarehouse.AssignedUserId != currentUser.UserId
+            && !currentUser.HasPermission(AppPermissions.StockTransfers.ReceiveAny))
             throw new ForbiddenException("Bu yuk xatini qabul qilishga ruxsat yo'q.");
 
         transfer.Status = TransferStatus.Received;
