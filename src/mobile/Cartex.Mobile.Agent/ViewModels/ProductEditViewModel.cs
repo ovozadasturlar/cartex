@@ -67,7 +67,8 @@ public partial class ProductEditViewModel(
     private Task TakePhotoAsync() => CaptureAsync(() => MediaPicker.Default.CapturePhotoAsync());
 
     [RelayCommand]
-    private Task PickPhotoAsync() => CaptureAsync(() => MediaPicker.Default.PickPhotoAsync());
+    private Task PickPhotoAsync() => CaptureAsync(async () =>
+        (await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions { SelectionLimit = 1 })).FirstOrDefault());
 
     private Task CaptureAsync(Func<Task<FileResult?>> pick) => RunAsync(async () =>
     {

@@ -42,7 +42,7 @@ public partial class BarcodeAttachViewModel : ObservableObject, IQueryAttributab
         _barcodes = barcodes;
         _images = images;
         _permissions = permissions;
-        CanEditProduct = permissions.Has("products.manage");
+        CanEditProduct = permissions.Has("barcodes.create");
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)

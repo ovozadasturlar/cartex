@@ -49,7 +49,9 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
 
-    public bool CanEdit => _permissions.Has("products.manage");
+    public bool CanEdit => _permissions.Has(_isCreate ? "products.create" : "products.edit");
+    public bool CanCreateBarcode => _permissions.Has("barcodes.create") && !_isCreate;
+    public bool CanDeleteBarcode => _permissions.Has("barcodes.delete") && !_isCreate;
     public bool CanChoosePriceCurrency => PriceCurrencies.Count > 0;
 
     public ProductEditViewModel(
@@ -81,7 +83,10 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         if (query.TryGetValue("barcode", out var b))
             _initialBarcode = Convert.ToString(b);
         _isCreate = _variantId == 0;
-        CanManageBarcodes = CanEdit && !_isCreate;
+        OnPropertyChanged(nameof(CanEdit));
+        OnPropertyChanged(nameof(CanCreateBarcode));
+        OnPropertyChanged(nameof(CanDeleteBarcode));
+        CanManageBarcodes = CanCreateBarcode || CanDeleteBarcode;
     }
 
     public async Task AppearAsync()
@@ -222,7 +227,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private Task AddBarcodeAsync() => RunAsync(async () =>
     {
-        if (!CanManageBarcodes || _variantId == 0)
+        if (!CanCreateBarcode || _variantId == 0)
             return;
 
         var code = NewBarcode.Trim();
@@ -242,7 +247,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private Task DeleteBarcodeAsync(ProductBarcodeRow row) => RunAsync(async () =>
     {
-        if (!CanManageBarcodes)
+        if (!CanDeleteBarcode)
             return;
 
         await _barcodes.DeleteAsync(row.Id);

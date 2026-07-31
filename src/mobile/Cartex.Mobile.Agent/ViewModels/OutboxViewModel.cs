@@ -42,7 +42,7 @@ public partial class OutboxViewModel(AgentDb db, SyncService sync, SessionStore 
     [RelayCommand]
     private async Task DeleteAsync(OutboxRow row)
     {
-        var ok = await Shell.Current.CurrentPage.DisplayAlert(Loc.Instance["delete_title"],
+        var ok = await Shell.Current.CurrentPage.DisplayAlertAsync(Loc.Instance["delete_title"],
             Loc.Instance["delete_msg"], Loc.Instance["yes"], Loc.Instance["no"]);
         if (!ok) return;
         await sync.DeleteAsync(row.Item);

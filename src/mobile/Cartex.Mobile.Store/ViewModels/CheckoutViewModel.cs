@@ -43,7 +43,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         _localCart = localCart;
         _warehouse = warehouse;
         _permissions = permissions;
-        CanSelfSell = _permissions.Has("sales.create");
+        CanSelfSell = _permissions.Has("sales.checkout");
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)

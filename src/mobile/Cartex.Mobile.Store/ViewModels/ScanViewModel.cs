@@ -69,8 +69,8 @@ public partial class ScanViewModel : ObservableObject
         cart.Changed += () => CartCount = _cart.Count;
         supplyCart.Changed += OnSupplyCartChanged;
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
-        CanEditProduct = permissions.Has("products.manage");
-        CanReceiveStock = permissions.Has("supplies.manage") || permissions.Has("supplies.view");
+        CanEditProduct = permissions.Has("products.edit");
+        CanReceiveStock = permissions.Has("supplies.create");
     }
 
     public async Task HandleAsync(string value)
@@ -120,7 +120,7 @@ public partial class ScanViewModel : ObservableObject
 
     private async Task OpenHandoffAsync(string code)
     {
-        if (_permissions.Has("sales.create"))
+        if (_permissions.HasAny("sales.create", "sales.checkout"))
             await Shell.Current.GoToAsync($"checkout?code={code}");
         else
             Ui.Toast(Loc.Instance["err_forbidden"]);

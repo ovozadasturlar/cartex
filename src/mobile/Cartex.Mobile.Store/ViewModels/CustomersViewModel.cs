@@ -48,7 +48,7 @@ public partial class CustomersViewModel(
     public async Task AppearAsync()
     {
         HasAccess = permissions.Has("customers.view");
-        CanReceivePayment = permissions.Has("customers.manage");
+        CanReceivePayment = permissions.Has("customers.receivePayment");
         if (!HasAccess) return;
 
         try { BaseCurrency = (await businessApi.GetAsync()).Currency; }

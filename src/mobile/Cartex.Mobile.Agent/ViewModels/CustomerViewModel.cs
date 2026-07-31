@@ -145,7 +145,7 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
     {
         if (IsBusy) return;
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["delete_customer"], Loc.Instance["delete_customer_confirm"],
+        if (!await page.DisplayAlertAsync(Loc.Instance["delete_customer"], Loc.Instance["delete_customer_confirm"],
                 Loc.Instance["delete_customer"], Loc.Instance["cancel"]))
             return;
         IsBusy = true;

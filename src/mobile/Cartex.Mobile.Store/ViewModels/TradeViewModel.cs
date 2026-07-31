@@ -109,7 +109,7 @@ public partial class TradeViewModel(
 
     [RelayCommand]
     private Task EditQueueAsync(TradeQueueRow row) =>
-        row.Cart.Status == "Open" && permissions.Has("sales.create")
+        row.Cart.Status == "Open" && permissions.HasAny("sales.create", "sales.checkout")
             ? Shell.Current.GoToAsync($"checkout?code={row.Cart.AggregateCode}")
             : Task.CompletedTask;
 

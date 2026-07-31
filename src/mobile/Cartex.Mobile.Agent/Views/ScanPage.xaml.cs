@@ -19,7 +19,7 @@ public partial class ScanPage : ContentPage
         base.OnAppearing();
         if (!await Methods.AskForRequiredPermissionAsync())
         {
-            await DisplayAlert(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
+            await DisplayAlertAsync(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
             await Shell.Current.GoToAsync("..");
             return;
         }

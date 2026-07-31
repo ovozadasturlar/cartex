@@ -88,6 +88,7 @@
                                         <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="16" Padding="0"
                                                 WidthRequest="36" HeightRequest="36" CornerRadius="18"
                                                 Style="{StaticResource BtnOutline}"
+                                                IsVisible="{Binding CanDeleteBarcode, Source={RelativeSource AncestorType={x:Type vm:ProductEditViewModel}}}"
                                                 TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                                                 Command="{Binding DeleteBarcodeCommand, Source={RelativeSource AncestorType={x:Type vm:ProductEditViewModel}}}"
                                                 CommandParameter="{Binding .}" />
@@ -96,7 +97,7 @@
                             </BindableLayout.ItemTemplate>
                         </VerticalStackLayout>
 
-                        <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8">
+                        <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8" IsVisible="{Binding CanCreateBarcode}">
                             <Border Style="{StaticResource InputWrap}">
                                 <Entry Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" VerticalOptions="Center" />
                             </Border>

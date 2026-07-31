@@ -48,7 +48,7 @@ public partial class QueueViewModel(IOrderingApi orderingApi, MobilePermissions 
     [RelayCommand]
     private async Task OpenAsync(QueueRow row)
     {
-        if (permissions.Has("sales.create") && row.Cart.Status is "Open" or "Confirmed")
+        if (permissions.HasAny("sales.create", "sales.checkout") && row.Cart.Status is "Open" or "Confirmed")
             await Shell.Current.GoToAsync($"checkout?code={row.Cart.AggregateCode}");
         else
             await Shell.Current.GoToAsync($"handoff?code={row.Cart.AggregateCode}");
