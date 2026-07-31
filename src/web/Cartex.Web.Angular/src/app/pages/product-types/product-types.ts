@@ -37,7 +37,9 @@ export class ProductTypes implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('product_types.create');
+  readonly canEdit = this.auth.hasPermission('product_types.edit');
   readonly loading = signal(true);
   readonly all = signal<ProductType[]>([]);
   readonly search = signal('');
@@ -52,11 +54,12 @@ export class ProductTypes implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.openDialog(null);
   }
 
   openEdit(type: ProductType): void {
-    if (this.canManage) this.openDialog(type);
+    if (this.canEdit) this.openDialog(type);
   }
 
   private openDialog(type: ProductType | null): void {

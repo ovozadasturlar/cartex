@@ -46,7 +46,7 @@ export class License implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
 
-  readonly canFeatures = inject(AuthService).hasPermission('features.manage');
+  readonly canFeatures = inject(AuthService).hasPermission('features.edit');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly status = signal<LicenseStatus | null>(null);
@@ -85,6 +85,7 @@ export class License implements OnInit {
   }
 
   onTariffChange(value: string): void {
+    if (!this.canFeatures) return;
     const options = this.options();
     if (!options) return;
     this.rows.update((all) =>
@@ -96,11 +97,12 @@ export class License implements OnInit {
   }
 
   toggle(code: string, value: boolean): void {
+    if (!this.canFeatures) return;
     this.rows.update((all) => all.map((r) => (r.code === code ? { ...r, isEnabled: value } : r)));
   }
 
   async save(message: string): Promise<void> {
-    if (!this.tariff) return;
+    if (!this.canFeatures || !this.tariff) return;
     this.busy.set(true);
     try {
       const codes = this.rows().filter((r) => r.isEnabled).map((r) => r.code);
@@ -111,10 +113,8 @@ export class License implements OnInit {
           enabledFeatures: JSON.stringify(codes),
         }),
       );
-      if (this.canFeatures) {
-        for (const r of this.rows()) {
-          await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
-        }
+      for (const r of this.rows()) {
+        await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
       }
       this.status.set(await lastValueFrom(this.api.get()));
       this.notify.success(message);

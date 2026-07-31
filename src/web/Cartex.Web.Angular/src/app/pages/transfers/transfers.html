@@ -1,6 +1,6 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('transfers')" [subtitle]="t('transfers_subtitle')">
-    @if (canManage) {
+    @if (canCreate) {
       <button matButton="filled" (click)="openCreate()">
         <mat-icon>add</mat-icon>
         {{ t('new_transfer') }}
@@ -58,7 +58,7 @@
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let x" class="num">
-                  @if (canManage && x.status === 'Sent') {
+                  @if (canReceive && x.status === 'Sent') {
                     <button matButton [disabled]="busy()" (click)="receive(x)">
                       <mat-icon>call_received</mat-icon>
                       {{ t('receive') }}

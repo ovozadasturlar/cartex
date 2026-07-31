@@ -87,7 +87,9 @@ const CLIENT_APPS: Record<string, string> = {
                 <span class="meta">{{ app(s) }}</span>
                 <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
               </div>
-              <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+              @if (canRevoke) {
+                <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+              }
             </div>
           }
         </div>
@@ -123,7 +125,9 @@ const CLIENT_APPS: Record<string, string> = {
                   <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
                 </div>
                 @if (editGroup() !== g.username) {
-                  <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+                  @if (canRevoke) {
+                    <button matButton class="danger" (click)="revoke(s, t)">{{ t('device_revoke') }}</button>
+                  }
                 }
               </div>
             }
@@ -227,7 +231,8 @@ export class Devices implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly auth = inject(AuthService);
 
-  readonly canViewAll = this.auth.hasPermission('users.manage');
+  readonly canViewAll = this.auth.hasPermission('devices.viewAll');
+  readonly canRevoke = this.auth.hasPermission('devices.revoke');
   readonly loading = signal(true);
   readonly sessions = signal<DeviceSession[]>([]);
   readonly editGroup = signal<string | null>(null);
@@ -283,6 +288,7 @@ export class Devices implements OnInit {
   }
 
   async revoke(s: DeviceSession, t: (key: string) => string): Promise<void> {
+    if (!this.canRevoke) return;
     if (!confirm(t('device_revoke_confirm').replace('{0}', s.deviceName ?? ''))) return;
     try {
       await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${s.id}`));

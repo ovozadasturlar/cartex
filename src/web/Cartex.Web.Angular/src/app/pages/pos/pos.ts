@@ -87,8 +87,10 @@ export class Pos implements OnInit {
   readonly tiles = signal<StockOnHand[]>([]);
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
-  readonly canOpenShift = this.auth.hasPermission('shifts.manage');
+  readonly canOpenShift = this.auth.hasPermission('shifts.open');
   readonly canOverridePrice = this.auth.hasPermission('sales.priceOverride');
+  readonly canCreateCart = this.auth.hasPermission('sales.create');
+  readonly canCheckout = this.auth.hasPermission('sales.checkout');
   readonly queue = signal<CartListItem[]>([]);
   private queueAvailable = this.auth.hasPermission('sales.view');
   private activeQueueCode: string | null = null;
@@ -308,6 +310,7 @@ export class Pos implements OnInit {
   }
 
   addTile(t: StockOnHand): void {
+    if (!this.canCreateCart) return;
     this.addLine({
       variantId: t.variantId,
       name: t.productName,
@@ -424,6 +427,21 @@ export class Pos implements OnInit {
     }
     this.paying.set(true);
     try {
+      if (this.activeQueueCode) {
+        await lastValueFrom(this.orderingApi.checkout(
+          this.activeQueueCode,
+          this.cash(),
+          this.card(),
+          this.bonus(),
+        ));
+        this.activeQueueCode = null;
+        this.state.clearAll();
+        this.reset();
+        this.notify.success(t('sale_completed'));
+        this.focusScan();
+        return;
+      }
+
       const payload = {
         warehouseId,
         customerId: this.customer()?.id ?? null,
@@ -463,6 +481,31 @@ export class Pos implements OnInit {
     }
   }
 
+  async sendToQueue(): Promise<void> {
+    const warehouseId = this.warehouseId();
+    if (!this.canCreateCart || !warehouseId || !this.cart().length || this.paying()) return;
+    this.paying.set(true);
+    try {
+      if (!this.activeQueueCode) {
+        await lastValueFrom(this.orderingApi.submit({
+          warehouseId,
+          customerId: this.customer()?.id ?? null,
+          items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
+          idempotencyKey: newUuid(),
+          note: null,
+        }));
+      }
+      this.activeQueueCode = null;
+      this.state.clearAll();
+      this.notify.success(this.transloco.translate('send_to_queue'));
+      this.focusScan();
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.paying.set(false);
+    }
+  }
+
   async loadMore(): Promise<void> {
     this.page += 1;
     await this.loadTiles(true);
@@ -482,6 +525,7 @@ export class Pos implements OnInit {
   }
 
   private addLine(line: CartLine): void {
+    if (!this.canCreateCart) return;
     this.cart.update((cart) => {
       const existing = cart.find((l) => l.variantId === line.variantId);
       if (existing) return cart.map((l) => (l === existing ? { ...l, qty: l.qty + line.qty } : l));

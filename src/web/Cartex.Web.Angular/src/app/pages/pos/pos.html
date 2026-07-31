@@ -62,7 +62,7 @@
           @if (viewMode() === 'grid') {
             <div class="tiles">
               @for (p of tiles(); track p.variantId) {
-                <button class="tile" (click)="addTile(p)">
+                <button class="tile" [disabled]="!canCreateCart" (click)="addTile(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
                       <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
@@ -89,7 +89,7 @@
           } @else {
             <div class="rows">
               @for (p of tiles(); track p.variantId) {
-                <button class="prow" (click)="addTile(p)">
+                <button class="prow" [disabled]="!canCreateCart" (click)="addTile(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
                       <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
@@ -256,7 +256,7 @@
             <span class="cx-money">{{ total() | cxMoney }}</span>
           </div>
 
-          <div class="pay-grid">
+          <div class="pay-grid" [hidden]="!canCheckout">
             <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
               <mat-icon>functions</mat-icon>
             </button>
@@ -274,7 +274,7 @@
             </label>
           </div>
 
-          @if (change() > 0 || debt() > 0) {
+          @if (canCheckout && (change() > 0 || debt() > 0)) {
             <div class="due">
               @if (change() > 0) {
                 <span class="chg cx-money">{{ change() | cxMoney }}</span>
@@ -285,13 +285,13 @@
             </div>
           }
 
-          @if (debt() > 0) {
+          @if (canCheckout && debt() > 0) {
             <label class="due-date">
               <span>{{ t('debt_due_date') }}</span>
               <input type="date" [min]="minDueDate" [value]="dueDate()" [class.missing]="dueDateMissing()" (change)="onDueDate($event)" />
             </label>
           }
-          @if (overCreditLimit()) {
+          @if (canCheckout && overCreditLimit()) {
             <div class="warn-box">
               <mat-icon>warning_amber</mat-icon>
               <span>{{ t('credit_limit_exceeded') }}</span>
@@ -303,9 +303,16 @@
                   [matTooltip]="t('hold_sale')" (click)="holdSale()">
             <mat-icon>pause</mat-icon>
           </button>
-          <button matButton="filled" class="pay-btn" [disabled]="paying()" (click)="pay()">
-            {{ t('complete_sale') }}
-          </button>
+          @if (canCreateCart) {
+            <button matButton="outlined" class="pay-btn" [disabled]="!cart().length || paying()" (click)="sendToQueue()">
+              {{ t('send_to_queue') }}
+            </button>
+          }
+          @if (canCheckout) {
+            <button matButton="filled" class="pay-btn" [disabled]="!cart().length || paying()" (click)="pay()">
+              {{ t('complete_sale') }}
+            </button>
+          }
           </div>
         </div>
       </div>

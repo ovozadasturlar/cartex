@@ -55,7 +55,8 @@ export class Transfers implements OnInit {
   readonly paged = signal<Paged<StockTransfer> | null>(null);
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly canManage = this.auth.hasPermission('stock_transfers.manage');
+  readonly canCreate = this.auth.hasPermission('stock_transfers.create');
+  readonly canReceive = this.auth.hasPermission('stock_transfers.receive');
   readonly cols = ['date', 'product', 'qty', 'from', 'to', 'status', 'user', 'actions'];
 
   async ngOnInit(): Promise<void> {
@@ -74,11 +75,13 @@ export class Transfers implements OnInit {
   }
 
   async openCreate(): Promise<void> {
+    if (!this.canCreate) return;
     const ref = this.dialog.open(TransferCreateDialog, { width: '480px', maxWidth: '94vw', autoFocus: false });
     if (await lastValueFrom(ref.afterClosed())) this.load();
   }
 
   async receive(row: StockTransfer): Promise<void> {
+    if (!this.canReceive) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.api.receiveTransfer(row.id));

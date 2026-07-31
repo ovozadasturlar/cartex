@@ -10,6 +10,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { ExpenseCategoriesApi, ExpenseCategory } from '../../core/api/finance.api';
+import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -32,7 +33,10 @@ export class ExpenseCategories implements OnInit {
   private readonly api = inject(ExpenseCategoriesApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
 
+  readonly canCreate = this.auth.hasPermission('expense_categories.create');
+  readonly canEdit = this.auth.hasPermission('expense_categories.edit');
   readonly loading = signal(true);
   readonly categories = signal<ExpenseCategory[]>([]);
   readonly columns = ['name', 'actions'];
@@ -43,6 +47,7 @@ export class ExpenseCategories implements OnInit {
   }
 
   open(category?: ExpenseCategory): void {
+    if (category ? !this.canEdit : !this.canCreate) return;
     this.dialog
       .open(ExpenseCategoryDialog, { data: category ?? null, width: '420px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()

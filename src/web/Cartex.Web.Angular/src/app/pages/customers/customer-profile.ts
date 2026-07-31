@@ -59,7 +59,9 @@ export class CustomerProfile implements OnInit {
   private readonly money = new CxMoneyPipe();
   private readonly id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
-  readonly canManage = this.auth.hasPermission('customers.manage');
+  readonly canEdit = this.auth.hasPermission('customers.edit');
+  readonly canDelete = this.auth.hasPermission('customers.delete');
+  readonly canRepay = this.auth.hasPermission('customers.receivePayment');
   readonly canViewSales = this.auth.hasPermission('sales.view');
   readonly loading = signal(true);
   readonly customer = signal<Customer | null>(null);
@@ -137,6 +139,7 @@ export class CustomerProfile implements OnInit {
   }
 
   async edit(): Promise<void> {
+    if (!this.canEdit) return;
     const saved = await lastValueFrom(
       this.dialog
         .open(CustomerEditDialog, { data: this.customer(), width: '560px', maxWidth: '94vw', autoFocus: false })
@@ -146,6 +149,7 @@ export class CustomerProfile implements OnInit {
   }
 
   async repay(): Promise<void> {
+    if (!this.canRepay) return;
     const done = await lastValueFrom(
       this.dialog.open(RepayDebtDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
     );
@@ -156,6 +160,7 @@ export class CustomerProfile implements OnInit {
   }
 
   async remove(): Promise<void> {
+    if (!this.canDelete) return;
     const ok = await lastValueFrom(
       this.dialog.open(ConfirmDialog, { data: 'delete_confirm', width: '380px' }).afterClosed(),
     );
@@ -220,7 +225,7 @@ export class CustomerProfile implements OnInit {
   template: `
     <div class="edit-dlg" *transloco="let t">
       <div class="head">
-        <h2>{{ t('edit') }}</h2>
+        <h2>{{ isNew ? t('new_customer') : t('edit') }}</h2>
         <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
       </div>
       <div mat-dialog-content class="form">
@@ -237,7 +242,7 @@ export class CustomerProfile implements OnInit {
         <div class="pair">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('phone') }}</mat-label>
-            <input matInput [(ngModel)]="phone" required />
+            <input matInput [(ngModel)]="phone" />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('email') }}</mat-label>
@@ -267,7 +272,7 @@ export class CustomerProfile implements OnInit {
       </div>
       <div mat-dialog-actions align="end">
         <button matButton mat-dialog-close>{{ t('cancel') }}</button>
-        <button matButton="filled" [disabled]="!fullName.trim() || !phone.trim() || busy()" (click)="save(t('success'))">
+        <button matButton="filled" [disabled]="!fullName.trim() || busy()" (click)="save(t('success'))">
           {{ t('save') }}
         </button>
       </div>
@@ -278,34 +283,37 @@ export class CustomerEditDialog {
   private readonly api = inject(CustomersApi);
   private readonly notify = inject(NotifyService);
   private readonly ref = inject(MatDialogRef<CustomerEditDialog>);
-  private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
+  private readonly customer = inject<Customer | null>(MAT_DIALOG_DATA);
 
   readonly busy = signal(false);
-  fullName = this.customer.fullName;
-  lastName = this.customer.lastName ?? '';
-  phone = this.customer.phone ?? '';
-  email = this.customer.email ?? '';
-  address = this.customer.address ?? '';
-  cardBarcode = this.customer.cardBarcode ?? '';
-  discountPct = this.customer.discountPct;
-  creditLimit = this.customer.creditLimit;
+  readonly isNew = this.customer === null;
+  fullName = this.customer?.fullName ?? '';
+  lastName = this.customer?.lastName ?? '';
+  phone = this.customer?.phone ?? '';
+  email = this.customer?.email ?? '';
+  address = this.customer?.address ?? '';
+  cardBarcode = this.customer?.cardBarcode ?? '';
+  discountPct = this.customer?.discountPct ?? 0;
+  creditLimit = this.customer?.creditLimit ?? 0;
 
   async save(message: string): Promise<void> {
     this.busy.set(true);
     try {
-      await lastValueFrom(
-        this.api.update(this.customer.id, {
+      const body = {
           fullName: this.fullName.trim(),
           lastName: this.lastName.trim() || null,
-          phone: this.phone.trim(),
+          phone: this.phone.trim() || null,
           email: this.email.trim() || null,
           address: this.address.trim() || null,
           cardBarcode: this.cardBarcode.trim() || null,
           discountPct: this.discountPct || 0,
           creditLimit: this.creditLimit || 0,
-          notificationsOptOut: this.customer.notificationsOptOut,
-        }),
-      );
+          notificationsOptOut: this.customer?.notificationsOptOut ?? false,
+      };
+      if (this.customer)
+        await lastValueFrom(this.api.update(this.customer.id, { ...body, phone: body.phone ?? '' }));
+      else
+        await lastValueFrom(this.api.create({ ...body, openingBalance: 0 }));
       this.notify.success(message);
       this.ref.close(true);
     } catch (e) {

@@ -1,0 +1,90 @@
+<div *transloco="let t">
+  <cx-page-header [title]="t('barcode_print')" [subtitle]="t('perm_products.printBarcode')" />
+
+  <div class="layout">
+    <section class="cx-card catalog">
+      <div class="search">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('search') }}</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="search" (keydown.enter)="searchNow()" [placeholder]="t('search_product_hint')" />
+        </mat-form-field>
+        <button matButton="outlined" (click)="searchNow()">{{ t('search') }}</button>
+      </div>
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (paged().items.length) {
+        <div class="products">
+          @for (product of paged().items; track product.id) {
+            <button class="product" [class.selected]="selected()?.id === product.id" (click)="choose(product)">
+              @if (product.imageUrl) {
+                <img [src]="product.imageUrl" alt="" />
+              } @else {
+                <span class="image-placeholder"><mat-icon>inventory_2</mat-icon></span>
+              }
+              <span class="meta">
+                <strong>{{ product.name }}</strong>
+                <small>{{ product.code || product.categoryName || '—' }}</small>
+              </span>
+              <span class="price cx-money">
+                @if (product.sellingPrice != null) {
+                  {{ product.sellingPrice | cxMoney }} {{ product.priceCurrency || 'UZS' }}
+                }
+              </span>
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          }
+        </div>
+        <cx-paging-bar [meta]="paged().meta" (changed)="onPage($event)" />
+      } @else if (!loading()) {
+        <cx-empty-state icon="inventory_2" [message]="t('no_data')" />
+      }
+    </section>
+
+    <aside class="cx-card composer">
+      @if (selected(); as product) {
+        <div class="selected-head">
+          <div>
+            <span>{{ t('product') }}</span>
+            <h2>{{ product.name }}</h2>
+          </div>
+          <button matIconButton (click)="clear()"><mat-icon>close</mat-icon></button>
+        </div>
+
+        @if (barcodeLoading()) {
+          <mat-progress-bar mode="indeterminate" />
+        } @else if (barcodes().length) {
+          <div class="barcode-options">
+            @for (barcode of barcodes(); track barcode.id) {
+              <button [class.active]="selectedBarcode()?.id === barcode.id" (click)="selectBarcode(barcode)">
+                <span class="cx-money">{{ barcode.code }}</span>
+                <small>{{ barcode.packQty > 1 ? '× ' + barcode.packQty : t('barcode_single') }}</small>
+              </button>
+            }
+          </div>
+          <div class="preview">
+            <svg #barcodePreview></svg>
+            @if (printWithPrice && product.sellingPrice != null) {
+              <strong class="cx-money">{{ product.sellingPrice | cxMoney }} {{ product.priceCurrency || 'UZS' }}</strong>
+            }
+          </div>
+          <div class="controls">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('quantity') }}</mat-label>
+              <input matInput type="number" min="1" max="500" [(ngModel)]="quantity" />
+            </mat-form-field>
+            <mat-checkbox [(ngModel)]="printWithPrice">{{ t('print_with_price') }}</mat-checkbox>
+          </div>
+          <button class="print" matButton="filled" [disabled]="!selectedBarcode()" (click)="print()">
+            <mat-icon>print</mat-icon>{{ t('print') }}
+          </button>
+        } @else {
+          <cx-empty-state icon="barcode_reader" [message]="t('no_data')" />
+        }
+      } @else {
+        <cx-empty-state icon="touch_app" [message]="t('err_select_product')" />
+      }
+    </aside>
+  </div>
+</div>

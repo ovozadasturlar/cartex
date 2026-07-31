@@ -5,8 +5,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CatalogProduct, ProductsCatalogApi, ProductsTotals } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
@@ -28,6 +29,7 @@ import { ProductImportDialog } from './product-import-dialog';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSlideToggleModule,
     MatTableModule,
     TranslocoModule,
     CxMoneyPipe,
@@ -43,15 +45,21 @@ export class Products implements OnInit, OnDestroy {
   private readonly api = inject(ProductsCatalogApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('products.create');
+  readonly canEdit = this.auth.hasPermission('products.edit');
+  readonly canImport = this.auth.hasPermission('products.import');
+  readonly canDelete = this.auth.hasPermission('products.delete');
+  readonly canToggle = this.auth.hasPermission('products.toggle');
   readonly loading = signal(true);
   readonly totals = signal<ProductsTotals | null>(null);
   readonly paged = signal<Paged<CatalogProduct>>({
     items: [],
     meta: { totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
   });
-  readonly columns = ['image', 'name', 'code', 'barcode', 'unit', 'price', 'stock'];
+  readonly columns = ['image', 'name', 'code', 'barcode', 'unit', 'price', 'stock', 'active', ...(this.canDelete ? ['actions'] : [])];
 
   private search = '';
   private page = 1;
@@ -82,10 +90,12 @@ export class Products implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.openDialog(null);
   }
 
   openImport(): void {
+    if (!this.canImport) return;
     this.dialog
       .open(ProductImportDialog, { width: '1000px', maxWidth: '96vw', autoFocus: false })
       .afterClosed()
@@ -95,7 +105,32 @@ export class Products implements OnInit, OnDestroy {
   }
 
   openEdit(product: CatalogProduct): void {
-    if (this.canManage) this.openDialog(product);
+    if (this.canEdit) this.openDialog(product);
+  }
+
+  async setActive(product: CatalogProduct, isEnabled: boolean): Promise<void> {
+    if (!this.canToggle || product.isEnabled === isEnabled) return;
+    try {
+      await lastValueFrom(this.api.setState(product.id, isEnabled));
+      this.paged.update((paged) => ({
+        ...paged,
+        items: paged.items.map((item) => item.id === product.id ? { ...item, isEnabled } : item),
+      }));
+    } catch (error) {
+      this.notify.error(error);
+      this.load();
+    }
+  }
+
+  async remove(product: CatalogProduct): Promise<void> {
+    if (!this.canDelete || !window.confirm(this.transloco.translate('delete_product_confirm').replace('{0}', product.name))) return;
+    try {
+      await lastValueFrom(this.api.delete(product.id));
+      await this.load();
+      this.notify.success(this.transloco.translate('success'));
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   private openDialog(product: CatalogProduct | null): void {

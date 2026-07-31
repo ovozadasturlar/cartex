@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import {
@@ -55,6 +55,10 @@ export class SupplyCreate implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  readonly editId = Number(this.route.snapshot.paramMap.get('id')) || null;
+  readonly isEdit = this.editId !== null;
+  private editCurrency: string | null = null;
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -134,6 +138,23 @@ export class SupplyCreate implements OnInit {
       this.units.set(units.filter((u) => u.isEnabled));
       if (warehouses.length === 1) this.warehouseId.set(warehouses[0].id);
       if (policy) this.requireSupplier.set(policy.requireSupplier);
+      if (this.editId) {
+        const detail = await lastValueFrom(this.api.supplyDetail(this.editId));
+        this.supplierId.set(detail.supplierId);
+        this.warehouseId.set(detail.warehouseId);
+        this.supplyDate = detail.supplyDate.slice(0, 10);
+        this.editCurrency = detail.currency;
+        this.items.set(detail.items.map((item) => ({
+          variantId: item.variantId,
+          productName: item.productName,
+          quantity: item.entryQuantity > 0 ? item.entryQuantity : item.quantity,
+          unitId: item.unitId,
+          unitName: item.unitName,
+          purchasePrice: item.entryPrice > 0 ? item.entryPrice : item.purchasePrice,
+          sellingPrice: null,
+          expiredAt: item.expiredAt?.slice(0, 10) ?? null,
+        })));
+      }
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -233,17 +254,26 @@ export class SupplyCreate implements OnInit {
         unitId: i.unitId,
         sellingPrice: i.sellingPrice,
       }));
-      await lastValueFrom(
-        this.api.createSupply({
+      const body = {
           supplierId,
           warehouseId,
           supplyDate: this.supplyDate,
           items,
           paidCash: supplierId === null ? 0 : this.paidCash,
           paidCard: supplierId === null ? 0 : this.paidCard,
-        }),
-      );
-      if (supplierId !== null && this.payOldDebt > 0) {
+      };
+      if (this.editId) {
+        await lastValueFrom(this.api.updateSupply(this.editId, {
+          supplierId,
+          warehouseId,
+          supplyDate: this.supplyDate,
+          items,
+          currency: this.editCurrency,
+        }));
+      } else {
+        await lastValueFrom(this.api.createSupply(body));
+      }
+      if (!this.editId && supplierId !== null && this.payOldDebt > 0) {
         try {
           await lastValueFrom(this.api.paySupplierDebt(supplierId, this.payOldDebt, 'Cash', newUuid()));
         } catch {

@@ -68,7 +68,7 @@ export class Supplies implements OnInit {
   readonly supplierId = signal<number | null>(null);
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly canManage = this.auth.hasPermission('supplies.manage');
+  readonly canCreate = this.auth.hasPermission('supplies.create');
   readonly cols = ['date', 'supplier', 'warehouse', 'total', 'user'];
 
   fromDate = isoDay(new Date(Date.now() - 29 * 86_400_000));
@@ -103,6 +103,7 @@ export class Supplies implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.router.navigate(['/supplies/new']);
   }
 
@@ -168,12 +169,14 @@ export class SupplyDetailDialog implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject(MatDialogRef<SupplyDetailDialog>);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly id = inject<number>(MAT_DIALOG_DATA);
 
   readonly loading = signal(true);
   readonly voiding = signal(false);
   readonly detail = signal<SupplyDetail | null>(null);
-  readonly canVoid = this.auth.hasPermission('supplies.manage');
+  readonly canVoid = this.auth.hasPermission('supplies.void');
+  readonly canEdit = this.auth.hasPermission('supplies.edit');
   readonly cols = ['name', 'qty', 'unit', 'price', 'total', 'expiry'];
 
   async ngOnInit(): Promise<void> {
@@ -190,7 +193,14 @@ export class SupplyDetailDialog implements OnInit {
     return Math.max(0, d.totalAmount - d.paidCash - d.paidCard - d.paidTransfer - d.paidBank);
   }
 
+  editSupply(): void {
+    if (!this.canEdit) return;
+    this.ref.close();
+    this.router.navigate(['/supplies', this.id, 'edit']);
+  }
+
   async voidSupply(): Promise<void> {
+    if (!this.canVoid) return;
     const confirmRef = this.dialog.open(ConfirmDialog, {
       data: { title: this.transloco.translate('supply_void'), message: this.transloco.translate('supply_void_confirm') },
       width: '400px',

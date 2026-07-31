@@ -13,6 +13,20 @@ import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
 
+export function buildReceiptSettingsRequest(settings: {
+  headerText: string;
+  footerText: string;
+  paperWidth: number;
+  paperFormat: string;
+}) {
+  return {
+    headerText: settings.headerText.trim() || null,
+    footerText: settings.footerText.trim() || null,
+    paperWidth: settings.paperWidth,
+    paperFormat: settings.paperFormat,
+  };
+}
+
 @Component({
   selector: 'app-receipt-settings',
   imports: [
@@ -61,12 +75,7 @@ export class ReceiptSettings implements OnInit {
     this.busy.set(true);
     try {
       await lastValueFrom(
-        this.api.updateReceipt({
-          headerText: this.headerText.trim() || null,
-          footerText: this.footerText.trim() || null,
-          paperWidth: this.paperWidth,
-          paperFormat: this.paperFormat,
-        }),
+        this.api.updateReceipt(buildReceiptSettingsRequest(this)),
       );
       this.notify.success(message);
     } catch (e) {

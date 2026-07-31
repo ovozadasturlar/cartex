@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,6 +12,7 @@ import { Router } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { Subject, debounceTime, distinctUntilChanged, lastValueFrom } from 'rxjs';
 import { CustomersApi } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { CxMoneyPipe } from '../../core/format';
 import { Customer, CustomerTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
@@ -18,11 +21,13 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { CustomerEditDialog } from './customer-profile';
 
 @Component({
   selector: 'app-customers',
   imports: [
     FormsModule,
+    MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -42,6 +47,8 @@ export class Customers implements OnInit {
   private readonly api = inject(CustomersApi);
   private readonly notify = inject(NotifyService);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
   private readonly search$ = new Subject<string>();
 
   readonly loading = signal(true);
@@ -49,6 +56,7 @@ export class Customers implements OnInit {
   readonly totals = signal<CustomerTotals | null>(null);
   readonly paged = signal<Paged<Customer> | null>(null);
   readonly cols = ['name', 'phone', 'debt', 'bonus', 'discount', 'credit'];
+  readonly canCreate = this.auth.hasPermission('customers.create');
 
   search = '';
   private page = 1;
@@ -95,6 +103,16 @@ export class Customers implements OnInit {
 
   open(c: Customer): void {
     this.router.navigate(['/customers', c.id]);
+  }
+
+  openCreate(): void {
+    if (!this.canCreate) return;
+    this.dialog
+      .open(CustomerEditDialog, { data: null, width: '560px', maxWidth: '94vw', autoFocus: false })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) this.reload();
+      });
   }
 
   private async reload(): Promise<void> {

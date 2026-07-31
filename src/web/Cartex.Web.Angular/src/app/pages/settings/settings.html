@@ -1,28 +1,43 @@
 <div class="settings" *transloco="let t">
-  <aside class="settings-nav" [class.collapsed]="collapsed()">
-    <div class="nav-head">
-      @if (!collapsed()) {
-        <h2>{{ t('settings') }}</h2>
-      }
-      <button type="button" class="burger" (click)="toggle()">
-        <mat-icon>menu</mat-icon>
-      </button>
+  @if (isPhone()) {
+    <div class="settings-mobile-nav">
+      <div class="mobile-title"><mat-icon>settings</mat-icon><strong>{{ t('settings') }}</strong></div>
+      <select (change)="navigate($event)" [attr.aria-label]="t('settings')">
+        @for (section of sections; track section.labelKey) {
+          <optgroup [label]="t(section.labelKey!)">
+            @for (item of section.items; track item.route) {
+              <option [value]="item.route" [selected]="item.route === currentRoute()">{{ t(item.labelKey) }}</option>
+            }
+          </optgroup>
+        }
+      </select>
     </div>
-    @for (section of sections; track section.labelKey) {
-      @if (!collapsed()) {
-        <div class="section-label">{{ t(section.labelKey!) }}</div>
+  } @else {
+    <aside class="settings-nav" [class.collapsed]="compact()">
+      <div class="nav-head">
+        @if (!compact()) {
+          <h2>{{ t('settings') }}</h2>
+        }
+        <button type="button" class="burger" (click)="toggle()">
+          <mat-icon>menu</mat-icon>
+        </button>
+      </div>
+      @for (section of sections; track section.labelKey) {
+        @if (!compact()) {
+          <div class="section-label">{{ t(section.labelKey!) }}</div>
+        }
+        @for (item of section.items; track item.route) {
+          <a class="nav-item" [routerLink]="item.route" routerLinkActive="active"
+             [matTooltip]="t(item.labelKey)" matTooltipPosition="right" [matTooltipDisabled]="!compact()">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            @if (!compact()) {
+              <span>{{ t(item.labelKey) }}</span>
+            }
+          </a>
+        }
       }
-      @for (item of section.items; track item.route) {
-        <a class="nav-item" [routerLink]="item.route" routerLinkActive="active"
-           [matTooltip]="t(item.labelKey)" matTooltipPosition="right" [matTooltipDisabled]="!collapsed()">
-          <mat-icon>{{ item.icon }}</mat-icon>
-          @if (!collapsed()) {
-            <span>{{ t(item.labelKey) }}</span>
-          }
-        </a>
-      }
-    }
-  </aside>
+    </aside>
+  }
   <div class="settings-content">
     <router-outlet />
   </div>

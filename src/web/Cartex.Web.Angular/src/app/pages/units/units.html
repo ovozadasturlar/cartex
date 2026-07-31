@@ -16,7 +16,7 @@
         <div class="group-head">
           <h3>{{ t('dimension_' + group.dimension.toLowerCase()) }}</h3>
           <span class="count">{{ group.units.length }}</span>
-          @if (canManage) {
+          @if (canCreate) {
             <button matIconButton class="add" [matTooltip]="t('add')" (click)="openCreate(group.dimension)">
               <mat-icon>add</mat-icon>
             </button>
@@ -25,7 +25,7 @@
         @if (group.units.length) {
           <div class="rows">
             @for (u of group.units; track u.id) {
-              <div class="row" [class.off]="!u.isEnabled" [class.clickable]="canManage && !u.isSystem" (click)="openEdit(u)">
+              <div class="row" [class.off]="!u.isEnabled" [class.clickable]="canEdit && !u.isSystem" (click)="openEdit(u)">
                 <div class="info">
                   <span class="strong">{{ u.name }}</span>
                   <span class="meta">
@@ -41,7 +41,7 @@
                 @if (u.isDefault) {
                   <span class="cx-chip ok">{{ t('default') }}</span>
                 }
-                @if (canManage) {
+                @if (canToggle) {
                   <button matIconButton [matTooltip]="t('make_default')" [disabled]="u.isDefault || !u.isEnabled"
                           (click)="makeDefault(u, $event)">
                     <mat-icon>{{ u.isDefault ? 'star' : 'star_outline' }}</mat-icon>

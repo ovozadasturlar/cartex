@@ -11,6 +11,10 @@ table {
   min-width: 640px;
 }
 
+.mobile-role-list {
+  display: none;
+}
+
 .num {
   text-align: right;
 }
@@ -85,4 +89,81 @@ table {
   font-weight: 700;
   color: var(--cx-text-2);
   margin-bottom: 4px;
+}
+
+@media (width <= 699px) {
+  .scroll {
+    display: none;
+  }
+
+  .cx-table-card {
+    border: 0;
+    background: transparent;
+  }
+
+  .mobile-role-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-role {
+    padding: 14px;
+    border: 1px solid var(--cx-border);
+    border-radius: 12px;
+    background: var(--cx-card);
+
+    &.clickable {
+      cursor: pointer;
+    }
+
+    p {
+      margin: 8px 0 12px;
+      color: var(--cx-text-2);
+      line-height: 1.4;
+    }
+
+    footer,
+    .mobile-role-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mobile-role-head {
+      justify-content: space-between;
+
+      > div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+    }
+
+    footer {
+      color: var(--cx-text-2);
+      font-size: 12px;
+
+      b {
+        margin-left: 3px;
+        color: var(--cx-text-1);
+      }
+
+      button {
+        margin-left: auto;
+      }
+    }
+  }
+
+  .row {
+    flex-direction: column;
+
+    .prio {
+      width: 100%;
+    }
+  }
+
+  .perm-groups {
+    grid-template-columns: 1fr;
+  }
 }

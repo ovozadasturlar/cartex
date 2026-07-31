@@ -47,8 +47,10 @@ export class Rates implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
 
-  readonly canManageCurrencies = this.auth.hasPermission('currencies.manage');
-  readonly canManageRates = this.auth.hasPermission('rates.manage');
+  readonly canCreateCurrency = this.auth.hasPermission('currencies.create');
+  readonly canEditCurrency = this.auth.hasPermission('currencies.edit');
+  readonly canDeleteCurrency = this.auth.hasPermission('currencies.delete');
+  readonly canManageRates = this.auth.hasPermission('rates.edit');
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly currencies = signal<Currency[]>([]);
@@ -84,6 +86,7 @@ export class Rates implements OnInit {
   }
 
   async toggle(currency: Currency, event: MatSlideToggleChange): Promise<void> {
+    if (!this.canEditCurrency) return;
     try {
       await lastValueFrom(this.api.updateCurrency(currency.code, event.checked, currency.isDefault));
     } catch (e) {
@@ -94,7 +97,7 @@ export class Rates implements OnInit {
 
   async makeDefault(currency: Currency, event: Event): Promise<void> {
     event.stopPropagation();
-    if (currency.isDefault) return;
+    if (!this.canEditCurrency || currency.isDefault) return;
     try {
       await lastValueFrom(this.api.updateCurrency(currency.code, true, true));
       await this.reload();
@@ -104,6 +107,7 @@ export class Rates implements OnInit {
   }
 
   async saveRate(currency: Currency): Promise<void> {
+    if (!this.canManageRates) return;
     const rate = this.drafts[currency.code];
     if (!rate || rate <= 0) return;
     this.saving.set(true);
@@ -122,6 +126,7 @@ export class Rates implements OnInit {
 
   remove(currency: Currency, event: Event): void {
     event.stopPropagation();
+    if (!this.canDeleteCurrency) return;
     this.dialog
       .open(ConfirmDialog, { data: 'delete_currency_confirm', width: '380px', autoFocus: false })
       .afterClosed()
@@ -138,6 +143,7 @@ export class Rates implements OnInit {
   }
 
   openAdd(): void {
+    if (!this.canCreateCurrency) return;
     this.dialog
       .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()

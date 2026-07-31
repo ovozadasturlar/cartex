@@ -42,13 +42,17 @@ export class Users implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
   private readonly search$ = new Subject<string>();
 
-  readonly canManage = inject(AuthService).hasPermission('users.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('users.create');
+  readonly canEdit = this.auth.hasPermission('users.edit');
+  readonly canDelete = this.auth.hasPermission('users.delete');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly paged = signal<Paged<AdminUser> | null>(null);
-  readonly cols = ['username', 'name', 'roles', 'branch', 'status'];
+  readonly cols = ['username', 'name', 'roles', 'branch', 'status', ...(this.canDelete ? ['actions'] : [])];
 
   private roles: Role[] = [];
   private branches: Branch[] = [];
@@ -94,7 +98,7 @@ export class Users implements OnInit {
   }
 
   open(user: AdminUser | null): void {
-    if (!this.canManage) return;
+    if (user ? !this.canEdit : !this.canCreate) return;
     this.dialog
       .open(UserDialog, {
         data: { user, roles: this.roles, branches: this.branches },
@@ -104,6 +108,18 @@ export class Users implements OnInit {
       })
       .afterClosed()
       .subscribe((saved) => saved && this.reload());
+  }
+
+  async remove(user: AdminUser): Promise<void> {
+    if (!this.canDelete) return;
+    if (!window.confirm(this.transloco.translate('delete_confirm'))) return;
+    try {
+      await lastValueFrom(this.api.deleteUser(user.id));
+      await this.reload();
+      this.notify.success(this.transloco.translate('success'));
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   private async reload(): Promise<void> {
@@ -164,7 +180,11 @@ export class Users implements OnInit {
           <mat-label>{{ t('roles') }}</mat-label>
           <mat-select [(ngModel)]="roleIds" multiple>
             @for (r of data.roles; track r.id) {
-              <mat-option [value]="r.id">{{ r.name }}</mat-option>
+              <mat-option
+                [value]="r.id"
+                [disabled]="!r.isActive && !roleIds.includes(r.id)">
+                {{ r.name }}{{ r.isActive ? '' : ' · ' + t('inactive') }}
+              </mat-option>
             }
           </mat-select>
         </mat-form-field>

@@ -74,7 +74,7 @@ export class Loyalty implements OnInit {
   readonly stats = signal<LoyaltyStats | null>(null);
   readonly discounts = signal<DiscountRule[]>([]);
   readonly rules = signal<CashbackRule[]>([]);
-  readonly canManage = this.auth.hasPermission('loyalty.manage');
+  readonly canManage = this.auth.hasPermission('loyalty.edit');
   readonly discountCols = ['name', 'scope', 'value', 'condition', 'period', 'status', ...(this.canManage ? ['actions'] : [])];
   readonly ruleCols = ['scope', 'method', 'value', 'priority', ...(this.canManage ? ['actions'] : [])];
   readonly roundings = [0, 1, 100, 1000];

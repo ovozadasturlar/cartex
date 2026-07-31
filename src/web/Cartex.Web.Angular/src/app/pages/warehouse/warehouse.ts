@@ -1,5 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,7 +13,9 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import {
   CategoryOption, ExpiringStock, InventoryApi, LowStock, StockOnHandPage, WarehouseOption,
+  StockOnHand,
 } from '../../core/api/inventory.api';
+import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PagingMeta } from '../../core/paging';
@@ -23,6 +28,7 @@ import { StatCard } from '../../shared/stat-card';
   selector: 'app-warehouse',
   imports: [
     MatButtonToggleModule,
+    MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -43,6 +49,8 @@ import { StatCard } from '../../shared/stat-card';
 export class Warehouse implements OnInit {
   private readonly api = inject(InventoryApi);
   private readonly notify = inject(NotifyService);
+  private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
@@ -58,6 +66,7 @@ export class Warehouse implements OnInit {
   readonly categoryId = signal<number | null>(null);
   readonly page = signal(1);
   readonly pageSize = signal(20);
+  readonly canAdjust = this.auth.hasPermission('stocks.adjust');
 
   readonly onHandMeta = computed<PagingMeta>(() => ({
     totalCount: this.onHand()?.totalCount ?? 0,
@@ -121,6 +130,17 @@ export class Warehouse implements OnInit {
     this.load();
   }
 
+  openAdjustment(stock: StockOnHand): void {
+    const warehouseId = this.warehouseId();
+    if (!this.canAdjust || !warehouseId) return;
+    this.dialog.open(StockAdjustmentDialog, {
+      data: { stock, warehouseId },
+      width: '430px',
+      maxWidth: '94vw',
+      autoFocus: false,
+    }).afterClosed().subscribe((changed) => changed && this.load());
+  }
+
   private async load(): Promise<void> {
     const warehouseId = this.warehouseId();
     if (!warehouseId) return;
@@ -146,6 +166,69 @@ export class Warehouse implements OnInit {
     } catch (e) {
       this.notify.error(e);
     } finally {
+      this.busy.set(false);
+    }
+  }
+}
+
+@Component({
+  selector: 'app-stock-adjustment-dialog',
+  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoModule],
+  template: `
+    <div class="adjust-dialog" *transloco="let t">
+      <header>
+        <div><h2>{{ t('stock_count') }}</h2><p>{{ data.stock.productName }}</p></div>
+        <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
+      </header>
+      <mat-dialog-content>
+        <div class="system-quantity">
+          <span>{{ t('system_quantity') }}</span>
+          <strong>{{ data.stock.quantity }} {{ data.stock.unitName }}</strong>
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('quantity') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="countedQuantity" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('reason') }}</mat-label>
+          <textarea matInput rows="3" maxlength="500" [(ngModel)]="reason"></textarea>
+        </mat-form-field>
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+        <button matButton="filled" [disabled]="busy() || countedQuantity < 0" (click)="save()">{{ t('save') }}</button>
+      </mat-dialog-actions>
+    </div>
+  `,
+  styles: `
+    header { display:flex; justify-content:space-between; align-items:flex-start; padding:20px 22px 5px; }
+    h2 { margin:0; font-size:19px; } p { margin:3px 0 0; color:var(--cx-text-2); }
+    mat-dialog-content { display:flex; flex-direction:column; gap:12px; padding-top:12px !important; }
+    .system-quantity { display:flex; justify-content:space-between; padding:12px; border-radius:8px; background:var(--cx-app-bg); }
+  `,
+})
+export class StockAdjustmentDialog {
+  private readonly api = inject(InventoryApi);
+  private readonly notify = inject(NotifyService);
+  private readonly ref = inject(MatDialogRef<StockAdjustmentDialog>);
+  readonly data = inject<{ stock: StockOnHand; warehouseId: number }>(MAT_DIALOG_DATA);
+  readonly busy = signal(false);
+  countedQuantity = this.data.stock.quantity;
+  reason = '';
+
+  async save(): Promise<void> {
+    if (this.countedQuantity < 0) return;
+    this.busy.set(true);
+    try {
+      await lastValueFrom(this.api.adjustStock(
+        this.data.warehouseId,
+        this.data.stock.variantId,
+        this.countedQuantity,
+        this.reason.trim() || null,
+      ));
+      this.ref.close(true);
+    } catch (error) {
+      this.notify.error(error);
       this.busy.set(false);
     }
   }

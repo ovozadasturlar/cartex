@@ -32,17 +32,23 @@
           }
         </div>
       </div>
-      @if (canManage) {
+      @if (canEdit || canDelete || canRepay) {
         <div class="actions">
-          <button matButton="filled" (click)="repay()">
-            <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
-          </button>
-          <button matButton="outlined" (click)="edit()">
-            <mat-icon>edit</mat-icon>{{ t('edit') }}
-          </button>
-          <button matIconButton class="del" [title]="t('delete')" (click)="remove()">
-            <mat-icon>delete</mat-icon>
-          </button>
+          @if (canRepay) {
+            <button matButton="filled" (click)="repay()">
+              <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
+            </button>
+          }
+          @if (canEdit) {
+            <button matButton="outlined" (click)="edit()">
+              <mat-icon>edit</mat-icon>{{ t('edit') }}
+            </button>
+          }
+          @if (canDelete) {
+            <button matIconButton class="del" [title]="t('delete')" (click)="remove()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
         </div>
       }
     </div>

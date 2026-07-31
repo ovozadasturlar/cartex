@@ -5,6 +5,7 @@
     <mat-progress-bar mode="indeterminate" />
   } @else {
     <div class="stack">
+      @if (canSecurity) {
       <div class="cx-card form">
         @if (busy() || uploading()) {
           <mat-progress-bar mode="indeterminate" />
@@ -141,20 +142,20 @@
 
       <div class="cx-card form">
         <h3>{{ t('login_methods') }}</h3>
-        <mat-slide-toggle [(ngModel)]="keyEnabled" [disabled]="!canManage">
+        <mat-slide-toggle [(ngModel)]="keyEnabled" [disabled]="!canSecurity">
           {{ t('login_with_key') }}
         </mat-slide-toggle>
-        <mat-slide-toggle [(ngModel)]="qrEnabled" [disabled]="!canManage">
+        <mat-slide-toggle [(ngModel)]="qrEnabled" [disabled]="!canSecurity">
           {{ t('login_with_qr') }}
         </mat-slide-toggle>
         @if (qrEnabled) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="currency">
             <mat-label>{{ t('qr_refresh_seconds') }}</mat-label>
-            <input matInput type="number" min="30" max="600" [(ngModel)]="qrRefreshSeconds" [disabled]="!canManage" />
+            <input matInput type="number" min="30" max="600" [(ngModel)]="qrRefreshSeconds" [disabled]="!canSecurity" />
           </mat-form-field>
         }
         <p class="hint">{{ t('login_methods_hint') }}</p>
-        @if (canManage) {
+        @if (canSecurity) {
           <div class="actions">
             <button matButton="filled" [disabled]="busy()" (click)="saveLoginMethods(t('success'))">
               <mat-icon>save</mat-icon>
@@ -163,6 +164,7 @@
           </div>
         }
       </div>
+      }
     </div>
   }
 </ng-container>

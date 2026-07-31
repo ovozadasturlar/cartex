@@ -46,8 +46,9 @@ export class BusinessSettings implements OnInit {
   readonly uploading = signal(false);
   readonly multicurrency = signal(false);
   readonly logoPreview = signal<string | null>(null);
-  readonly canManage = this.auth.hasPermission('business.manage');
-  readonly canFeatures = this.auth.hasPermission('features.manage');
+  readonly canManage = this.auth.hasPermission('business.edit');
+  readonly canFeatures = this.auth.hasPermission('features.edit');
+  readonly canSecurity = this.auth.hasPermission('settings.security');
 
   readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
 
@@ -90,13 +91,15 @@ export class BusinessSettings implements OnInit {
       this.showOutOfStock = policy.showOutOfStock;
       this.policyLoaded = true;
     } catch {}
-    try {
-      const login = await lastValueFrom(this.settings.loginMethods());
-      this.qrEnabled = login.qrEnabled;
-      this.qrRefreshSeconds = login.qrRefreshSeconds;
-      this.keyEnabled = login.keyEnabled;
-      this.loginLoaded = true;
-    } catch {}
+    if (this.canSecurity) {
+      try {
+        const login = await lastValueFrom(this.settings.loginMethods());
+        this.qrEnabled = login.qrEnabled;
+        this.qrRefreshSeconds = login.qrRefreshSeconds;
+        this.keyEnabled = login.keyEnabled;
+        this.loginLoaded = true;
+      } catch {}
+    }
     try {
       this.apply(await lastValueFrom(this.api.get()));
     } catch (e) {
@@ -172,7 +175,7 @@ export class BusinessSettings implements OnInit {
   }
 
   async saveLoginMethods(message: string): Promise<void> {
-    if (!this.loginLoaded) return;
+    if (!this.canSecurity || !this.loginLoaded) return;
     this.busy.set(true);
     try {
       await lastValueFrom(

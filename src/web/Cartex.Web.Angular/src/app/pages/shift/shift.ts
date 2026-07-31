@@ -93,10 +93,11 @@ export class Shift implements OnInit {
   readonly baseCurrency = signal<string | null>(null);
   readonly multicurrency = signal(false);
   readonly currencies = signal<string[]>([]);
-  readonly canManage = this.auth.hasPermission('shifts.manage');
+  readonly canOpen = this.auth.hasPermission('shifts.open');
+  readonly canClose = this.auth.hasPermission('shifts.close');
   readonly canViewHistory = this.auth.hasPermission('shifts.view');
   readonly canViewAll = this.auth.hasPermission('shifts.viewAll');
-  readonly canManageAll = this.auth.hasPermission('shifts.manageAll');
+  readonly canManageAll = this.auth.hasPermission('shifts.closeAll');
   readonly canCashOut = this.auth.hasPermission('sales.cashout');
   readonly cols = ['cashier', 'opened', 'closed', 'float', 'counted', 'status', 'actions'];
 
@@ -143,11 +144,13 @@ export class Shift implements OnInit {
   }
 
   async open(): Promise<void> {
+    if (!this.canOpen) return;
     const opened = await lastValueFrom(this.dialog.open(OpenShiftDialog, { width: '400px', maxWidth: '88vw' }).afterClosed());
     if (opened) this.load();
   }
 
   async close(): Promise<void> {
+    if (!this.canClose) return;
     const shift = this.shift();
     if (!shift) return;
     const data: CloseShiftData = {
@@ -233,7 +236,7 @@ export class Shift implements OnInit {
   }
 
   private async loadCurrent(): Promise<void> {
-    if (!this.canManage) return;
+    if (!this.canOpen && !this.canClose) return;
     try {
       this.shift.set(await lastValueFrom(this.api.currentShift()));
     } catch (e) {

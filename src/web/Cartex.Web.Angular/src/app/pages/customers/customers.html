@@ -1,5 +1,9 @@
 <ng-container *transloco="let t">
-  <cx-page-header [title]="t('customers')" [subtitle]="t('customers_subtitle')" />
+  <cx-page-header [title]="t('customers')" [subtitle]="t('customers_subtitle')">
+    @if (canCreate) {
+      <button matButton="filled" (click)="openCreate()"><mat-icon>person_add</mat-icon>{{ t('new_customer') }}</button>
+    }
+  </cx-page-header>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />

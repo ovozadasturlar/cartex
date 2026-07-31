@@ -37,7 +37,9 @@ export class Categories implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('categories.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('categories.create');
+  readonly canEdit = this.auth.hasPermission('categories.edit');
   readonly loading = signal(true);
   readonly all = signal<Category[]>([]);
   readonly search = signal('');
@@ -52,11 +54,12 @@ export class Categories implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.openDialog(null);
   }
 
   openEdit(category: Category): void {
-    if (this.canManage) this.openDialog(category);
+    if (this.canEdit) this.openDialog(category);
   }
 
   private openDialog(category: Category | null): void {

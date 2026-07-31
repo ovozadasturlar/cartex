@@ -1,6 +1,6 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('supplies')" [subtitle]="t('supplies_subtitle')">
-    @if (canManage) {
+    @if (canCreate) {
       <button matButton="filled" (click)="openCreate()">
         <mat-icon>add</mat-icon>
         {{ t('new_supply') }}

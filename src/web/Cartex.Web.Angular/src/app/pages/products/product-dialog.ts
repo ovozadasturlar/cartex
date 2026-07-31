@@ -14,6 +14,7 @@ import {
   CategoriesApi, Manufacturer, ManufacturersApi, ProductType, ProductTypesApi,
   ProductsCatalogApi, StorageApi, Unit, UnitsApi,
 } from '../../core/api/catalog.api';
+import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 
 @Component({
@@ -138,29 +139,33 @@ import { NotifyService } from '../../core/notify.service';
               <div class="brow">
                 <span class="cx-money code">{{ b.code }}</span>
                 <span class="cx-chip">x{{ b.packQty }}</span>
-                <button mat-icon-button type="button" (click)="removeBarcode(b)">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                @if (!product || canDeleteBarcode) {
+                  <button mat-icon-button type="button" (click)="removeBarcode(b)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
               </div>
             }
-            <div class="badd">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
-                <mat-label>{{ t('barcode') }}</mat-label>
-                <input matInput [(ngModel)]="newCode" (keydown.enter)="addBarcode()" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qty">
-                <mat-label>{{ t('pack_size') }}</mat-label>
-                <input matInput type="number" min="1" [(ngModel)]="newPackQty" />
-              </mat-form-field>
-              <button mat-stroked-button type="button" [disabled]="busy() || !newCode.trim()" (click)="addBarcode()">
-                {{ t('add') }}
-              </button>
-              @if (product) {
-                <button mat-stroked-button type="button" [disabled]="busy()" (click)="generateBarcode()">
-                  {{ t('generate_barcode') }}
+            @if (!product || canCreateBarcode) {
+              <div class="badd">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
+                  <mat-label>{{ t('barcode') }}</mat-label>
+                  <input matInput [(ngModel)]="newCode" (keydown.enter)="addBarcode()" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qty">
+                  <mat-label>{{ t('pack_size') }}</mat-label>
+                  <input matInput type="number" min="1" [(ngModel)]="newPackQty" />
+                </mat-form-field>
+                <button mat-stroked-button type="button" [disabled]="busy() || !newCode.trim()" (click)="addBarcode()">
+                  {{ t('add') }}
                 </button>
-              }
-            </div>
+                @if (product) {
+                  <button mat-stroked-button type="button" [disabled]="busy()" (click)="generateBarcode()">
+                    {{ t('generate_barcode') }}
+                  </button>
+                }
+              </div>
+            }
           </div>
         }
       </div>
@@ -185,8 +190,11 @@ export class ProductDialog implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject<MatDialogRef<ProductDialog>>(MatDialogRef);
+  private readonly auth = inject(AuthService);
 
   readonly product = inject<CatalogProduct | null>(MAT_DIALOG_DATA);
+  readonly canCreateBarcode = this.auth.hasPermission('barcodes.create');
+  readonly canDeleteBarcode = this.auth.hasPermission('barcodes.delete');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly uploading = signal(false);
@@ -286,6 +294,7 @@ export class ProductDialog implements OnInit {
   }
 
   async addBarcode(): Promise<void> {
+    if (this.product && !this.canCreateBarcode) return;
     const code = this.newCode.trim();
     if (!code) return;
     const packQty = this.newPackQty > 0 ? this.newPackQty : 1;
@@ -307,7 +316,7 @@ export class ProductDialog implements OnInit {
   }
 
   async generateBarcode(): Promise<void> {
-    if (!this.product) return;
+    if (!this.product || !this.canCreateBarcode) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.barcodesApi.generate(this.product.defaultVariantId, this.newPackQty > 0 ? this.newPackQty : 1));
@@ -325,6 +334,7 @@ export class ProductDialog implements OnInit {
       this.barcodes.update((list) => list.filter((x) => x.id !== b.id));
       return;
     }
+    if (!this.canDeleteBarcode) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.barcodesApi.delete(b.id));

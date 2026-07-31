@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { InventoryApi, Supplier, SupplierTotals } from '../../core/api/inventory.api';
+import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { LedgerEntry } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
@@ -43,6 +44,7 @@ export class Suppliers implements OnInit {
   private readonly api = inject(InventoryApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
@@ -53,6 +55,9 @@ export class Suppliers implements OnInit {
   readonly page = signal(1);
   readonly pageSize = signal(20);
   readonly cols = ['name', 'phone', 'payable', 'actions'];
+  readonly canCreate = this.auth.hasPermission('suppliers.create');
+  readonly canEdit = this.auth.hasPermission('suppliers.edit');
+  readonly canPay = this.auth.hasPermission('suppliers.pay');
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.load(), this.loadTotals()]);
@@ -75,6 +80,7 @@ export class Suppliers implements OnInit {
   }
 
   async openEdit(supplier?: Supplier): Promise<void> {
+    if (supplier ? !this.canEdit : !this.canCreate) return;
     const ref = this.dialog.open(SupplierEditDialog, {
       data: supplier ?? null,
       width: '420px',
@@ -88,6 +94,7 @@ export class Suppliers implements OnInit {
   }
 
   async openPayDebt(supplier: Supplier): Promise<void> {
+    if (!this.canPay) return;
     const ref = this.dialog.open(SupplierPayDebtDialog, {
       data: supplier,
       width: '420px',

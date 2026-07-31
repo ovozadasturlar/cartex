@@ -1,6 +1,6 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('orders')" [subtitle]="t('orders_subtitle')">
-    @if (enabled()) {
+    @if (enabled() && canViewLoad) {
       <button matButton="outlined" (click)="openLoad()">
         <mat-icon>local_shipping</mat-icon>
         {{ t('load_list') }}

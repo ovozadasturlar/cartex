@@ -1,12 +1,12 @@
 <div *transloco="let t">
   <cx-page-header [title]="t('shift')" [subtitle]="t('shift_subtitle')">
-    @if (canManage && !loading()) {
-      @if (shift()) {
+    @if (!loading()) {
+      @if (shift() && canClose) {
         <button matButton="outlined" (click)="close()">
           <mat-icon>lock</mat-icon>
           {{ t('close_shift') }}
         </button>
-      } @else {
+      } @else if (!shift() && canOpen) {
         <button matButton="filled" (click)="open()">
           <mat-icon>play_arrow</mat-icon>
           {{ t('open_shift') }}

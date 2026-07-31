@@ -1,9 +1,60 @@
 .login-wrap {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
   background: var(--cx-app-bg);
   padding: 16px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.login-preferences {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-lang,
+.language-code {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--cx-surface-2);
+  color: var(--cx-text-1);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.language-code {
+  min-width: 30px;
+  height: 22px;
+  margin-right: 10px;
+}
+
+@media (width <= 520px) {
+  .login-wrap {
+    align-items: center;
+    padding: 14px 14px 70px;
+  }
+
+  .login-card {
+    width: calc(100vw - 28px);
+    max-width: 430px;
+    padding: 28px 22px;
+    border-radius: 14px;
+  }
+
+  .brand h1 {
+    font-size: 24px;
+  }
 }
 
 .login-card {
@@ -100,4 +151,11 @@ form {
   width: 232px;
   margin: 10px auto 0;
   border-radius: 4px;
+}
+
+@media (width <= 520px) {
+  .login-card {
+    width: calc(100vw - 28px);
+    max-width: 430px;
+  }
 }

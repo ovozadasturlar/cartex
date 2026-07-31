@@ -63,7 +63,8 @@ export class Orders implements OnInit, OnDestroy {
   readonly status = signal('Open');
   readonly statuses = ['', 'Open', 'Confirmed', 'Ready', 'CheckedOut', 'Cancelled'];
   readonly cols = ['code', 'customer', 'warehouse', 'items', 'date', 'status'];
-  readonly canManage = this.auth.hasPermission('sales.create');
+  readonly canManage = this.auth.hasPermission('sales.pick|sales.create|sales.checkout');
+  readonly canViewLoad = this.auth.hasPermission('sales.view');
 
   async ngOnInit(): Promise<void> {
     document.addEventListener('visibilitychange', this.refresh);
@@ -107,6 +108,7 @@ export class Orders implements OnInit, OnDestroy {
   }
 
   openLoad(): void {
+    if (!this.canViewLoad) return;
     this.dialog.open(LoadDialog, { data: this.status() || undefined, width: '520px', maxWidth: '94vw', autoFocus: false });
   }
 
@@ -203,16 +205,16 @@ export class Orders implements OnInit, OnDestroy {
               <mat-icon>point_of_sale</mat-icon>{{ t('complete_sale') }}
             </button>
           } @else {
-            @if (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready') {
+            @if (canPick && (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready')) {
               <button matButton class="danger" [disabled]="busy()" (click)="cancelOrder(t('success'))">{{ t('cancel') }}</button>
             }
-            @if (c.status === 'Open') {
+            @if (canCheckout && c.status === 'Open') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Confirmed', t('success'))">{{ t('confirm') }}</button>
             }
-            @if (c.status === 'Confirmed') {
+            @if (canCheckout && c.status === 'Confirmed') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Ready', t('success'))">{{ t('order_ready') }}</button>
             }
-            @if (c.status === 'Confirmed' || c.status === 'Ready') {
+            @if (canCheckout && (c.status === 'Confirmed' || c.status === 'Ready')) {
               <button matButton="filled" [disabled]="busy()" (click)="startCheckout()">
                 <mat-icon>point_of_sale</mat-icon>{{ t('checkout') }}
               </button>
@@ -228,12 +230,15 @@ export class OrderDialog implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly ref = inject(MatDialogRef<OrderDialog>);
+  private readonly auth = inject(AuthService);
 
   readonly code = inject<string>(MAT_DIALOG_DATA);
   readonly cart = signal<Cart | null>(null);
   readonly busy = signal(true);
   readonly paying = signal(false);
   readonly cols = ['name', 'qty', 'price', 'total'];
+  readonly canPick = this.auth.hasPermission('sales.pick|sales.create|sales.checkout');
+  readonly canCheckout = this.auth.hasPermission('sales.checkout');
 
   paidCash = 0;
   paidCard = 0;
@@ -251,6 +256,7 @@ export class OrderDialog implements OnInit {
   }
 
   startCheckout(): void {
+    if (!this.canCheckout) return;
     this.paidCash = this.cart()?.total ?? 0;
     this.paidCard = 0;
     this.paidBonus = 0;
@@ -258,6 +264,7 @@ export class OrderDialog implements OnInit {
   }
 
   async setStatus(status: string, message: string): Promise<void> {
+    if (!this.canPick || (status !== 'Cancelled' && !this.canCheckout)) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.api.updateStatus(this.code, status));
@@ -270,6 +277,7 @@ export class OrderDialog implements OnInit {
   }
 
   cancelOrder(message: string): void {
+    if (!this.canPick) return;
     this.dialog
       .open(ConfirmDialog, { data: 'order_cancel_confirm', width: '380px' })
       .afterClosed()
@@ -277,6 +285,7 @@ export class OrderDialog implements OnInit {
   }
 
   async checkout(message: string): Promise<void> {
+    if (!this.canCheckout) return;
     this.busy.set(true);
     try {
       const saleId = await lastValueFrom(

@@ -12,6 +12,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { AdminApi, AdminWarehouse, Branch } from '../../core/api/admin.api';
+import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -34,7 +35,10 @@ export class Warehouses implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
 
+  readonly canCreate = this.auth.hasPermission('warehouses.create');
+  readonly canEdit = this.auth.hasPermission('warehouses.edit');
   readonly loading = signal(true);
   readonly warehouses = signal<AdminWarehouse[]>([]);
   readonly cols = ['name', 'branch', 'online'];
@@ -57,6 +61,7 @@ export class Warehouses implements OnInit {
   }
 
   open(warehouse: AdminWarehouse | null): void {
+    if (warehouse ? !this.canEdit : !this.canCreate) return;
     this.dialog
       .open(WarehouseDialog, {
         data: { warehouse, branches: this.branches },

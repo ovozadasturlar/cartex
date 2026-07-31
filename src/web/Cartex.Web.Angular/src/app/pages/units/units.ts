@@ -37,7 +37,10 @@ export class Units implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('units.create');
+  readonly canEdit = this.auth.hasPermission('units.edit');
+  readonly canToggle = this.auth.hasPermission('units.toggle');
   readonly loading = signal(true);
   readonly all = signal<Unit[]>([]);
   readonly search = signal('');
@@ -55,14 +58,16 @@ export class Units implements OnInit {
   }
 
   openCreate(dimension?: string): void {
+    if (!this.canCreate) return;
     this.openDialog(null, dimension);
   }
 
   openEdit(unit: Unit): void {
-    if (this.canManage && !unit.isSystem) this.openDialog(unit);
+    if (this.canEdit && !unit.isSystem) this.openDialog(unit);
   }
 
   async toggleEnabled(unit: Unit, event: MatSlideToggleChange): Promise<void> {
+    if (!this.canToggle) return;
     try {
       await lastValueFrom(this.api.setState(unit.id, event.checked, unit.isDefault));
       await this.load();
@@ -73,7 +78,7 @@ export class Units implements OnInit {
 
   async makeDefault(unit: Unit, event: Event): Promise<void> {
     event.stopPropagation();
-    if (unit.isDefault) return;
+    if (!this.canToggle || unit.isDefault) return;
     try {
       await lastValueFrom(this.api.setState(unit.id, true, true));
       await this.load();

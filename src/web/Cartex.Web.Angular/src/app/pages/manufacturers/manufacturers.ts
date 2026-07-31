@@ -36,7 +36,10 @@ export class Manufacturers implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('manufacturers.create');
+  readonly canEdit = this.auth.hasPermission('manufacturers.edit');
+  readonly canDelete = this.auth.hasPermission('manufacturers.delete');
   readonly loading = signal(true);
   readonly all = signal<Manufacturer[]>([]);
   readonly search = signal('');
@@ -51,15 +54,17 @@ export class Manufacturers implements OnInit {
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.openDialog(null);
   }
 
   openEdit(manufacturer: Manufacturer): void {
-    if (this.canManage) this.openDialog(manufacturer);
+    if (this.canEdit) this.openDialog(manufacturer);
   }
 
   remove(manufacturer: Manufacturer, event: Event): void {
     event.stopPropagation();
+    if (!this.canDelete) return;
     this.dialog
       .open(ConfirmDialog, { data: manufacturer.name, width: '360px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
