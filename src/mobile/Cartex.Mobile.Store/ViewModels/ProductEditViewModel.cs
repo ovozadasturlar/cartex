@@ -126,13 +126,11 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     private async Task LoadPriceCurrenciesAsync()
     {
         var enabledFeatures = await _features.GetEnabledAsync();
-        if (!enabledFeatures.Contains("multicurrency", StringComparer.OrdinalIgnoreCase))
+        if (!enabledFeatures.Contains("multicurrency_pricing", StringComparer.OrdinalIgnoreCase))
             return;
 
         foreach (var currency in await _rates.GetCurrenciesAsync())
         {
-            // Preserve a disabled current value so a non-price edit does not
-            // silently change the product's price currency.
             if (currency.IsEnabled || string.Equals(currency.Code, _product?.PriceCurrency, StringComparison.OrdinalIgnoreCase))
                 PriceCurrencies.Add(currency);
         }
@@ -271,7 +269,6 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 
         if (_isCreate)
         {
-            // Get default unit
             var units = await _units.GetAllAsync();
             var unitId = units.FirstOrDefault()?.Id ?? 0;
 
