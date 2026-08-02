@@ -19,6 +19,7 @@ import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
 import { ProductDialog } from './product-dialog';
+import { ProductImageDialog } from './product-image-dialog';
 import { ProductImportDialog } from './product-import-dialog';
 
 @Component({
@@ -65,6 +66,8 @@ export class Products implements OnInit, OnDestroy {
   private search = '';
   private page = 1;
   private pageSize = 20;
+  private minPrice?: number;
+  private maxPrice?: number;
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
@@ -93,6 +96,27 @@ export class Products implements OnInit, OnDestroy {
   openCreate(): void {
     if (!this.canCreate) return;
     this.openDialog(null);
+  }
+
+  onPriceFilter(min: string, max: string): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.minPrice = min === '' ? undefined : Number(min);
+      this.maxPrice = max === '' ? undefined : Number(max);
+      this.page = 1;
+      this.load();
+    }, 350);
+  }
+
+  openImage(product: CatalogProduct, event: Event): void {
+    event.stopPropagation();
+    if (!product.imageUrl) return;
+    this.dialog.open(ProductImageDialog, {
+      data: { name: product.name, url: product.imageUrl },
+      width: '900px',
+      maxWidth: '94vw',
+      autoFocus: false,
+    });
   }
 
   openImport(): void {
@@ -148,8 +172,15 @@ export class Products implements OnInit, OnDestroy {
     try {
       const search = this.search || undefined;
       const [totals, paged] = await Promise.all([
-        lastValueFrom(this.api.totals(search)),
-        lastValueFrom(this.api.list({ page: this.page, pageSize: this.pageSize, search, sortBy: 'Name' })),
+        lastValueFrom(this.api.totals(search, this.minPrice, this.maxPrice)),
+        lastValueFrom(this.api.list({
+          page: this.page,
+          pageSize: this.pageSize,
+          search,
+          minPrice: this.minPrice,
+          maxPrice: this.maxPrice,
+          sortBy: 'Name',
+        })),
       ]);
       this.totals.set(totals);
       this.paged.set(paged);

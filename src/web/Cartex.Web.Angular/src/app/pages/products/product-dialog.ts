@@ -2,10 +2,11 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -18,6 +19,7 @@ import {
 } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
+import { downloadProductImage, ProductImageDialog } from './product-image-dialog';
 
 @Component({
   selector: 'app-product-dialog',
@@ -29,6 +31,7 @@ import { NotifyService } from '../../core/notify.service';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatMenuModule,
     MatProgressBarModule,
     MatSelectModule,
     MatTooltipModule,
@@ -133,11 +136,23 @@ import { NotifyService } from '../../core/notify.service';
           </div>
 
           <div class="image-row">
-            @if (preview()) {
-              <img class="thumb lg" [src]="preview()" alt="" />
-            } @else {
-              <div class="thumb lg ph"><mat-icon>image</mat-icon></div>
-            }
+            <div class="image-box">
+              @if (preview()) {
+                <button type="button" class="image-preview" (click)="openImage()">
+                  <img class="thumb lg" [src]="preview()" alt="" />
+                </button>
+                <button mat-icon-button type="button" class="image-menu-button" [matMenuTriggerFor]="imageMenu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #imageMenu="matMenu">
+                  <button mat-menu-item type="button" (click)="downloadImage()"><mat-icon>download</mat-icon>{{ t('download') }}</button>
+                  <button mat-menu-item type="button" (click)="file.click()"><mat-icon>upload</mat-icon>{{ t('replace_image') }}</button>
+                  <button mat-menu-item type="button" (click)="removeImage()"><mat-icon>delete_outline</mat-icon>{{ t('remove_image') }}</button>
+                </mat-menu>
+              } @else {
+                <div class="thumb lg ph"><mat-icon>image</mat-icon></div>
+              }
+            </div>
             <button mat-stroked-button type="button" [disabled]="uploading()" (click)="file.click()">
               <mat-icon>upload</mat-icon>{{ t('choose_image') }}
             </button>
@@ -209,6 +224,7 @@ export class ProductDialog implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject<MatDialogRef<ProductDialog>>(MatDialogRef);
+  private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
 
   readonly product = inject<CatalogProduct | null>(MAT_DIALOG_DATA);
@@ -316,6 +332,32 @@ export class ProductDialog implements OnInit {
     } finally {
       this.uploading.set(false);
     }
+  }
+
+  openImage(): void {
+    const url = this.preview();
+    if (!url) return;
+    this.dialog.open(ProductImageDialog, {
+      data: { name: this.name, url },
+      width: '900px',
+      maxWidth: '94vw',
+      autoFocus: false,
+    });
+  }
+
+  async downloadImage(): Promise<void> {
+    const url = this.preview();
+    if (!url) return;
+    try {
+      await downloadProductImage(url, this.name);
+    } catch (error) {
+      this.notify.error(error);
+    }
+  }
+
+  removeImage(): void {
+    this.imageKey = null;
+    this.preview.set(null);
   }
 
   async fetchFromUrl(): Promise<void> {

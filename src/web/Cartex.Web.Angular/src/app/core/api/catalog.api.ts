@@ -161,9 +161,13 @@ export class ProductsCatalogApi {
       .pipe(map(toPaged));
   }
 
-  totals(search?: string): Observable<ProductsTotals> {
+  totals(search?: string, minPrice?: number, maxPrice?: number): Observable<ProductsTotals> {
     return this.http.get<ProductsTotals>('/api/products/totals', {
-      params: search ? { Search: search } : {},
+      params: {
+        ...(search ? { Search: search } : {}),
+        ...(minPrice !== undefined ? { MinPrice: minPrice } : {}),
+        ...(maxPrice !== undefined ? { MaxPrice: maxPrice } : {}),
+      },
     });
   }
 
