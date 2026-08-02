@@ -59,7 +59,7 @@
         }
       </div>
       <span class="spacer"></span>
-      @if (canPickWarehouse && wh.warehouses().length) {
+      @if (canPickWarehouse && wh.warehouses().length > 1) {
         <select class="wh-select" (change)="onWarehouse($event)">
           @for (w of wh.warehouses(); track w.id) {
             <option [value]="w.id" [selected]="w.id === wh.selectedWarehouseId()">{{ w.name }}</option>

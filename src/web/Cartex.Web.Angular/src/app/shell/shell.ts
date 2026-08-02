@@ -63,7 +63,8 @@ export class Shell {
     ...s,
     items: s.items.filter((i) =>
       (i.permission === null || this.auth.hasPermission(i.permission))
-      && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)),
+      && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)
+      && (!i.requiresMultipleWarehouses || this.wh.warehouses().length > 1)),
   })).filter((s) => s.items.length > 0));
   readonly canOpenSettings = SETTINGS_SECTIONS.some((s) =>
     s.items.some((i) => i.permission === null || this.auth.hasPermission(i.permission)),
@@ -77,7 +78,8 @@ export class Shell {
     .flatMap((section) => section.items)
     .filter((item) =>
       (!item.permission || this.auth.hasPermission(item.permission))
-      && (!item.feature || this.enabledFeatures()?.has(item.feature) !== false)));
+      && (!item.feature || this.enabledFeatures()?.has(item.feature) !== false)
+      && (!item.requiresMultipleWarehouses || this.wh.warehouses().length > 1)));
   readonly searchResults = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
     return query

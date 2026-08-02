@@ -4,6 +4,7 @@ export interface NavItem {
   route: string;
   permission: string | null;
   feature?: string;
+  requiresMultipleWarehouses?: boolean;
 }
 
 export interface NavSection {
@@ -35,7 +36,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { labelKey: 'inventory', icon: 'warehouse', route: '/warehouse', permission: 'stocks.view' },
       { labelKey: 'supplies', icon: 'local_shipping', route: '/supplies', permission: 'supplies.view' },
       { labelKey: 'barcode_print', icon: 'barcode_reader', route: '/barcode-print', permission: 'products.printBarcode' },
-      { labelKey: 'transfers', icon: 'swap_horiz', route: '/transfers', permission: 'stock_transfers.view' },
+      { labelKey: 'transfers', icon: 'swap_horiz', route: '/transfers', permission: 'stock_transfers.view', requiresMultipleWarehouses: true },
     ],
   },
   {
