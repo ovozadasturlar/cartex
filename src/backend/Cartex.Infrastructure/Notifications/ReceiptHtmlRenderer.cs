@@ -13,10 +13,6 @@ public static class ReceiptHtmlRenderer
         var sb = new StringBuilder();
         string E(string? s) => WebUtility.HtmlEncode(s ?? "");
         string T(string key) => ReceiptTexts.Get(key, r.Language);
-        var receiptUrl = string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
-            ? null
-            : $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{r.ReceiptToken}";
-
         sb.Append("<!doctype html><html lang=\"uz\"><head><meta charset=\"utf-8\">");
         sb.Append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
         sb.Append($"<title>{E(r.BusinessName)} — chek</title>");
@@ -50,12 +46,10 @@ public static class ReceiptHtmlRenderer
         sb.Append(".foot{border-top:1px dashed #cbd5e1;margin-top:16px;padding-top:14px;text-align:center}");
         sb.Append(".thanks{font-size:13px;color:#475569;margin:0 0 10px}");
         sb.Append(".pdf{display:block;background:#166534;color:#fff;text-decoration:none;text-align:center;border-radius:12px;padding:12px;font-size:14px;font-weight:600}");
-        sb.Append(".qr{width:132px;height:132px;display:block;margin:10px auto 6px}.elink{font-size:10px;color:#64748b;word-break:break-all}");
-        sb.Append(".token{color:#cbd5e1;font-size:10.5px;margin-top:12px;font-family:ui-monospace,monospace;word-break:break-all}");
         sb.Append("@media(prefers-color-scheme:dark){body{background:#0f172a}.card{background:#1e293b;box-shadow:none}");
         sb.Append(".iname,.isum{color:#e2e8f0}.chip{background:#334155;color:#cbd5e1}.item{border-color:#334155}");
         sb.Append(".totals{background:#14261d}.grand{color:#4ade80}.trow{color:#94a3b8}.prow{color:#cbd5e1}.approx{color:#64748b}");
-        sb.Append(".foot{border-color:#475569}.thanks{color:#94a3b8}.token{color:#475569}}");
+        sb.Append(".foot{border-color:#475569}.thanks{color:#94a3b8}}");
         sb.Append("</style></head><body>");
 
         sb.Append("<div class=\"card\"><div class=\"head\">");
@@ -110,15 +104,7 @@ public static class ReceiptHtmlRenderer
 
         sb.Append("<div class=\"foot\">");
         sb.Append($"<p class=\"thanks\">{E(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText)}</p>");
-        if (opts?.ShowQrCode != false && receiptUrl is not null)
-        {
-            var qr = Convert.ToBase64String(ReceiptQrCode.RenderPng(receiptUrl));
-            sb.Append($"<img class=\"qr\" alt=\"QR\" src=\"data:image/png;base64,{qr}\">");
-        }
-        if (opts?.ShowElectronicLink != false && receiptUrl is not null)
-            sb.Append($"<p class=\"elink\">{E(receiptUrl)}</p>");
         sb.Append($"<a class=\"pdf\" href=\"/r/{E(r.ReceiptToken)}/pdf\">{T("download_pdf")}</a>");
-        sb.Append($"<div class=\"token\">{E(r.ReceiptToken)}</div>");
         sb.Append("</div></div></div></body></html>");
         return sb.ToString();
 
