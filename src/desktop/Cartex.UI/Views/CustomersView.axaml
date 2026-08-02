@@ -314,7 +314,7 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
+                        <ProgressBar IsIndeterminate="{Binding IsLedgerLoading}" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
                     </Panel>
                 </Border>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
@@ -336,13 +336,13 @@
                                                     Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}" />
                             </DataGrid.Columns>
                         </DataGrid>
-                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSalesLoading}" Height="3" VerticalAlignment="Top" />
+                        <ProgressBar IsIndeterminate="{Binding IsSalesLoading}" IsVisible="{Binding IsSalesLoading}" Height="3" VerticalAlignment="Top" />
                     </Panel>
                 </Border>
             </Panel>
         </DockPanel>
 
-        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
+        <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">

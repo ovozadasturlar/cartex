@@ -13,7 +13,7 @@
 
             <TextBlock Text="{Binding WelcomeMessage}" Classes="title" />
 
-            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+            <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
                          Height="4" Margin="0,0,0,4" />
 
             <TextBlock Text="{Binding L[quick_actions]}" Classes="subtitle" Margin="0,12,0,0" />

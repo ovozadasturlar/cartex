@@ -233,7 +233,7 @@
                                         </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
+                                <ProgressBar IsIndeterminate="{Binding IsLedgerLoading}" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
                               </Panel>
                             </Border>
                             <Border Grid.Row="4" Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
@@ -253,7 +253,7 @@
                                                             Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSuppliesLoading}" Height="3" VerticalAlignment="Top" />
+                                <ProgressBar IsIndeterminate="{Binding IsSuppliesLoading}" IsVisible="{Binding IsSuppliesLoading}" Height="3" VerticalAlignment="Top" />
                               </Panel>
                             </Border>
                             <c:Pager Grid.Row="5" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding !IsSuppliesTab}" />
@@ -264,7 +264,7 @@
             </Grid>
         </DockPanel>
 
-        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
+        <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">

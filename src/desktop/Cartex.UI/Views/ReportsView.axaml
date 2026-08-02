@@ -25,7 +25,7 @@
                     Margin="16,0,0,0" MinHeight="36" Command="{Binding LoadReportCommand}" />
         </Grid>
 
-        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
                      Height="4" Margin="0,0,0,8" />
 
         <TabControl SelectedIndex="{Binding SelectedTabIndex}">

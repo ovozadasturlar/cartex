@@ -329,7 +329,7 @@
                     </TransitioningContentControl.PageTransition>
                 </TransitioningContentControl>
 
-                <ProgressBar IsVisible="{Binding Busy.IsPageBusy}" IsIndeterminate="True"
+                <ProgressBar IsVisible="{Binding Busy.IsPageBusy}" IsIndeterminate="{Binding Busy.IsPageBusy}"
                              VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="3"
                              MinWidth="0" CornerRadius="0" IsHitTestVisible="False" />
 
@@ -338,7 +338,7 @@
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Spacing="14" HorizontalAlignment="Center">
-                            <ProgressBar IsIndeterminate="True" Width="190" />
+                            <ProgressBar IsIndeterminate="{Binding Busy.IsBusy}" Width="190" />
                             <TextBlock Text="{Binding Busy.Message}" Foreground="{DynamicResource TextSecondary}"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
