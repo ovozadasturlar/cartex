@@ -12,6 +12,7 @@ public partial class CurrencyRow(CurrencyDto dto, bool isStale) : ObservableObje
 {
     public string Code { get; } = dto.Code;
     public string Name { get; } = dto.Name;
+    public string Symbol { get; } = dto.Symbol;
     public bool IsSystem { get; } = dto.IsSystem;
     public bool IsBase { get; } = dto.IsBase;
     public bool IsCustom { get; } = !dto.IsSystem && !dto.IsBase;
@@ -36,7 +37,12 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [ObservableProperty] private bool _isAddOpen;
     [ObservableProperty] private string _newCode = "";
     [ObservableProperty] private string _newName = "";
+    [ObservableProperty] private string _newSymbol = "";
+    [ObservableProperty] private string _newSymbolPosition = "Suffix";
+    [ObservableProperty] private int _newDecimalDigits = 2;
     [ObservableProperty] private string? _historyCode;
+
+    public IReadOnlyList<string> SymbolPositions { get; } = ["Prefix", "Suffix"];
 
     public bool CanCreateCurrency => auth.HasPermission("currencies.create");
     public bool CanEditCurrency => auth.HasPermission("currencies.edit");
@@ -144,6 +150,9 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
         if (!CanCreateCurrency) return;
         NewCode = "";
         NewName = "";
+        NewSymbol = "";
+        NewSymbolPosition = "Suffix";
+        NewDecimalDigits = 2;
         IsAddOpen = true;
     }
 
@@ -159,7 +168,12 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
         try
         {
             using (busy.Begin(L["loading"]))
-                await api.CreateCurrencyAsync(new CreateCurrencyRequest(code, NewName.Trim()));
+                await api.CreateCurrencyAsync(new CreateCurrencyRequest(
+                    code,
+                    NewName.Trim(),
+                    NewSymbol.Trim(),
+                    NewSymbolPosition,
+                    Math.Clamp(NewDecimalDigits, 0, 4)));
             IsAddOpen = false;
             toast.Success(L["success"]);
             await LoadAsync();

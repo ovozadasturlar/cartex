@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -27,6 +28,7 @@ import { PageHeader } from '../../shared/page-header';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     MatProgressBarModule,
     MatSlideToggleModule,
     MatTableModule,
@@ -176,6 +178,7 @@ export class Rates implements OnInit {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     TranslocoModule,
   ],
   styleUrl: './rates.scss',
@@ -194,6 +197,21 @@ export class Rates implements OnInit {
           <mat-label>{{ t('name') }}</mat-label>
           <input matInput [(ngModel)]="name" />
         </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('currency_symbol') }}</mat-label>
+          <input matInput maxlength="8" [(ngModel)]="symbol" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('currency_symbol_position') }}</mat-label>
+          <mat-select [(ngModel)]="symbolPosition">
+            <mat-option value="Prefix">{{ t('currency_prefix') }}</mat-option>
+            <mat-option value="Suffix">{{ t('currency_suffix') }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('decimal_digits') }}</mat-label>
+          <input matInput type="number" min="0" max="4" [(ngModel)]="decimalDigits" />
+        </mat-form-field>
       </div>
       <div mat-dialog-actions align="end">
         <button mat-button mat-dialog-close>{{ t('cancel') }}</button>
@@ -211,6 +229,9 @@ export class CurrencyDialog {
   readonly busy = signal(false);
   code = '';
   name = '';
+  symbol = '';
+  symbolPosition: 'Prefix' | 'Suffix' = 'Suffix';
+  decimalDigits = 2;
 
   get valid(): boolean {
     return /^[A-Za-z]{3}$/.test(this.code.trim()) && !!this.name.trim();
@@ -220,7 +241,13 @@ export class CurrencyDialog {
     if (!this.valid) return;
     this.busy.set(true);
     try {
-      await lastValueFrom(this.api.createCurrency(this.code.trim().toUpperCase(), this.name.trim()));
+      await lastValueFrom(this.api.createCurrency(
+        this.code.trim().toUpperCase(),
+        this.name.trim(),
+        this.symbol.trim(),
+        this.symbolPosition,
+        Math.max(0, Math.min(4, Math.round(this.decimalDigits))),
+      ));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

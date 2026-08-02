@@ -263,10 +263,43 @@ public static class DatabaseSeeder
             return;
 
         var existing = await context.Currencies.ToListAsync();
-        (string Code, string Name)[] system = [(business.Currency, ""), ("USD", "AQSH dollari"), ("EUR", "Yevro"), ("RUB", "Rossiya rubli")];
+        var system = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [business.Currency] = "",
+            ["USD"] = "AQSH dollari",
+            ["EUR"] = "Yevro",
+            ["RUB"] = "Rossiya rubli"
+        };
+
+        static (string Symbol, string Position, int Digits) Metadata(string code) => code switch
+        {
+            "UZS" => ("so'm", "Suffix", 0),
+            "USD" => ("$", "Prefix", 2),
+            "EUR" => ("€", "Prefix", 2),
+            "RUB" => ("₽", "Suffix", 2),
+            "KZT" => ("₸", "Suffix", 2),
+            "TRY" => ("₺", "Prefix", 2),
+            "CNY" => ("¥", "Prefix", 2),
+            _ => (code, "Suffix", 2)
+        };
+
         foreach (var (code, name) in system)
-            if (existing.All(c => c.Code != code))
-                context.Currencies.Add(new Currency { Code = code, Name = name, IsSystem = true, IsDefault = code == business.Currency });
+        {
+            var currency = existing.FirstOrDefault(c => c.Code == code);
+            if (currency is null)
+            {
+                currency = new Currency { Code = code, Name = name, IsSystem = true };
+                context.Currencies.Add(currency);
+                existing.Add(currency);
+            }
+            if (string.IsNullOrWhiteSpace(currency.Symbol))
+            {
+                var metadata = Metadata(code);
+                currency.Symbol = metadata.Symbol;
+                currency.SymbolPosition = metadata.Position;
+                currency.DecimalDigits = metadata.Digits;
+            }
+        }
 
         foreach (var currency in existing)
             currency.IsDefault = currency.Code == business.Currency;

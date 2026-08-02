@@ -25,4 +25,7 @@ public record ProductDto(
     bool IsEnabled = true,
     long? CategoryId = null,
     long UnitId = 0,
-    bool AllowsAmountEntry = false);
+    bool AllowsAmountEntry = false,
+    string? PriceSymbol = null,
+    string? PriceSymbolPosition = null,
+    int? PriceDecimalDigits = null);

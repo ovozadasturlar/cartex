@@ -10,7 +10,7 @@ import { TranslocoModule } from '@jsverse/transloco';
 import JsBarcode from 'jsbarcode';
 import { lastValueFrom } from 'rxjs';
 import { Barcode, BarcodesApi, CatalogProduct, ProductsCatalogApi } from '../../core/api/catalog.api';
-import { CxMoneyPipe } from '../../core/format';
+import { CxCurrencyPipe, formatCurrency } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
@@ -28,7 +28,7 @@ import { PagingBar } from '../../shared/paging-bar';
     MatInputModule,
     MatProgressBarModule,
     TranslocoModule,
-    CxMoneyPipe,
+    CxCurrencyPipe,
     EmptyState,
     PageHeader,
     PagingBar,
@@ -129,7 +129,7 @@ export class BarcodePrint implements OnInit {
     const safe = (value: string) =>
       value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
     const price = this.printWithPrice && product.sellingPrice != null
-      ? `<strong>${safe(product.sellingPrice.toLocaleString())} ${safe(product.priceCurrency || 'UZS')}</strong>`
+      ? `<strong>${safe(formatCurrency(product.sellingPrice, product.priceCurrency, product.priceSymbol, product.priceSymbolPosition, product.priceDecimalDigits))}</strong>`
       : '';
     const pack = barcode.packQty > 1 ? `<small>× ${barcode.packQty}</small>` : '';
     const labels = Array.from({ length: count }, () => `

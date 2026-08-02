@@ -25,6 +25,9 @@ export interface CatalogProduct {
   priceCurrency: string | null;
   dimension: string | null;
   allowsAmountEntry: boolean;
+  priceSymbol: string | null;
+  priceSymbolPosition: string | null;
+  priceDecimalDigits: number | null;
 }
 
 export interface BarcodeInput {

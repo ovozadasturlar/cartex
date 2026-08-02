@@ -11,6 +11,7 @@ using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
@@ -908,7 +909,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             line.ProductName,
             string.IsNullOrEmpty(line.StockingUnitName) ? line.UnitName : line.StockingUnitName,
             null,
-            line.SellingPrice is { } price ? $"{price:N0} UZS" : string.Empty));
+            line.SellingPrice is { } price ? CurrencyCatalog.Format(price, SupplyCurrency ?? _baseCurrency) : string.Empty));
         _ = SetPrintImageUrlAsync(line.VariantId, line.ImageKey);
     }
 

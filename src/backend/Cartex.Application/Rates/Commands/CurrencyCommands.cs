@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Rates.Commands;
 
-public record CreateCurrencyCommand(string Code, string Name) : ICommand<long>;
+public record CreateCurrencyCommand(string Code, string Name, string Symbol = "", string SymbolPosition = "Suffix", int DecimalDigits = 2) : ICommand<long>;
 
 public sealed class CreateCurrencyCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateCurrencyCommand, long>
 {
@@ -18,7 +18,14 @@ public sealed class CreateCurrencyCommandHandler(IApplicationDbContext db) : IRe
         if (await db.Currencies.AnyAsync(c => c.Code == code, cancellationToken))
             throw new BusinessRuleException("Bu valyuta allaqachon mavjud.");
 
-        var currency = new Currency { Code = code, Name = request.Name.Trim() };
+        var currency = new Currency
+        {
+            Code = code,
+            Name = request.Name.Trim(),
+            Symbol = request.Symbol.Trim(),
+            SymbolPosition = request.SymbolPosition,
+            DecimalDigits = request.DecimalDigits
+        };
         db.Currencies.Add(currency);
         await db.SaveChangesAsync(cancellationToken);
         return currency.Id;
@@ -31,10 +38,13 @@ public sealed class CreateCurrencyCommandValidator : AbstractValidator<CreateCur
     {
         RuleFor(x => x.Code).NotEmpty().Length(3).Matches("^[A-Za-z]{3}$");
         RuleFor(x => x.Name).MaximumLength(40);
+        RuleFor(x => x.Symbol).MaximumLength(8);
+        RuleFor(x => x.SymbolPosition).Must(x => x is "Prefix" or "Suffix");
+        RuleFor(x => x.DecimalDigits).InclusiveBetween(0, 4);
     }
 }
 
-public record UpdateCurrencyCommand(string Code, bool IsEnabled, bool IsDefault) : ICommand<Unit>;
+public record UpdateCurrencyCommand(string Code, bool IsEnabled, bool IsDefault, string? Symbol = null, string? SymbolPosition = null, int? DecimalDigits = null) : ICommand<Unit>;
 
 public sealed class UpdateCurrencyCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateCurrencyCommand, Unit>
 {
@@ -59,9 +69,22 @@ public sealed class UpdateCurrencyCommandHandler(IApplicationDbContext db) : IRe
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDefault, false), cancellationToken);
         }
         currency.IsDefault = request.IsDefault && request.IsEnabled;
+        if (request.Symbol is not null) currency.Symbol = request.Symbol.Trim();
+        if (request.SymbolPosition is not null) currency.SymbolPosition = request.SymbolPosition;
+        if (request.DecimalDigits is not null) currency.DecimalDigits = request.DecimalDigits.Value;
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
+    }
+}
+
+public sealed class UpdateCurrencyCommandValidator : AbstractValidator<UpdateCurrencyCommand>
+{
+    public UpdateCurrencyCommandValidator()
+    {
+        RuleFor(x => x.Symbol).MaximumLength(8);
+        RuleFor(x => x.SymbolPosition).Must(x => x is null or "Prefix" or "Suffix");
+        RuleFor(x => x.DecimalDigits).InclusiveBetween(0, 4).When(x => x.DecimalDigits is not null);
     }
 }
 

@@ -105,6 +105,8 @@
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Symbol}" Foreground="{DynamicResource TextMuted}"
+                                                           VerticalAlignment="Center" />
                                                 <Border Classes="tag" IsVisible="{Binding IsBase}">
                                                     <TextBlock Text="{Binding $parent[UserControl].DataContext.L[currency_base]}" />
                                                 </Border>
@@ -229,6 +231,27 @@
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding NewName}" MinHeight="38" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[currency_symbol]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding NewSymbol}" MinHeight="38" MaxLength="8" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="5">
+                            <TextBlock Text="{Binding L[currency_symbol_position]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <ComboBox ItemsSource="{Binding SymbolPositions}" SelectedItem="{Binding NewSymbolPosition}" MinHeight="38">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[decimal_digits]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <NumericUpDown Value="{Binding NewDecimalDigits}" Minimum="0" Maximum="4" Increment="1"
+                                       ShowButtonSpinner="True" MinHeight="38" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
                         <Button Classes="outline" Command="{Binding CancelAddCommand}" Content="{Binding L[cancel]}" />

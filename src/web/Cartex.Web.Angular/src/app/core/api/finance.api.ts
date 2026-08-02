@@ -56,6 +56,9 @@ export interface Currency {
   isBase: boolean;
   rate: number | null;
   rateAt: string | null;
+  symbol: string;
+  symbolPosition: string;
+  decimalDigits: number;
 }
 
 export interface ExpenseCategory {
@@ -119,8 +122,8 @@ export class RatesApi {
     });
   }
 
-  createCurrency(code: string, name: string): Observable<void> {
-    return this.http.post<void>('/api/rates/currencies', { code, name });
+  createCurrency(code: string, name: string, symbol: string, symbolPosition: string, decimalDigits: number): Observable<void> {
+    return this.http.post<void>('/api/rates/currencies', { code, name, symbol, symbolPosition, decimalDigits });
   }
 
   updateCurrency(code: string, isEnabled: boolean, isDefault: boolean): Observable<void> {

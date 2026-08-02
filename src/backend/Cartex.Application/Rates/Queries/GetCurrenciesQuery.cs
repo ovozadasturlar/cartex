@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Rates.Queries;
 
-public record CurrencyDto(string Code, string Name, bool IsSystem, bool IsEnabled, bool IsDefault, bool IsBase, decimal? Rate, DateTime? RateAt);
+public record CurrencyDto(string Code, string Name, bool IsSystem, bool IsEnabled, bool IsDefault, bool IsBase, decimal? Rate, DateTime? RateAt, string Symbol, string SymbolPosition, int DecimalDigits);
 
 public record GetCurrenciesQuery(bool OnlyEnabled = false) : IRequest<IReadOnlyCollection<CurrencyDto>>;
 
@@ -29,7 +29,7 @@ public sealed class GetCurrenciesQueryHandler(IApplicationDbContext db) : IReque
         {
             var rate = rateByCode.GetValueOrDefault(c.Code);
             return new CurrencyDto(c.Code, c.Name, c.IsSystem, c.IsEnabled, c.IsDefault, c.Code == baseCurrency,
-                c.Code == baseCurrency ? 1m : rate?.Rate, rate?.EffectiveAt);
+                c.Code == baseCurrency ? 1m : rate?.Rate, rate?.EffectiveAt, c.Symbol, c.SymbolPosition, c.DecimalDigits);
         }).ToList();
     }
 }

@@ -11,7 +11,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CatalogProduct, ProductsCatalogApi, ProductsTotals } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
-import { CxMoneyPipe } from '../../core/format';
+import { CxCurrencyPipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
@@ -33,6 +33,7 @@ import { ProductImportDialog } from './product-import-dialog';
     MatTableModule,
     TranslocoModule,
     CxMoneyPipe,
+    CxCurrencyPipe,
     EmptyState,
     PageHeader,
     PagingBar,

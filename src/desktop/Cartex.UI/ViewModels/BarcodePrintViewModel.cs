@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Paging;
 using Cartex.ApiClient.Querying;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -49,7 +50,9 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public bool HasSelection => SelectedProduct is not null;
     public bool HasBarcodes => BarcodeOptions.Count > 0;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
-    public string PriceText => SelectedProduct?.SellingPrice is { } price ? $"{price:N0} {SelectedProduct.PriceCurrency ?? "UZS"}" : "";
+    public string PriceText => SelectedProduct?.SellingPrice is { } price
+        ? CurrencyCatalog.Format(price, SelectedProduct.PriceCurrency, SelectedProduct.PriceSymbol, SelectedProduct.PriceSymbolPosition, SelectedProduct.PriceDecimalDigits)
+        : "";
     public string SelectedProductImageUrl => SelectedProduct?.ImageUrl ?? string.Empty;
     public string SelectedProductName => SelectedProduct?.Name ?? string.Empty;
     public string SelectedProductUnitName => SelectedProduct?.UnitName ?? string.Empty;

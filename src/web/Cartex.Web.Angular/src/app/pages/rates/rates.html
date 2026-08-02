@@ -35,7 +35,7 @@
                 <span class="cx-chip warn">{{ t('default') }}</span>
               }
             </span>
-            <span class="meta">{{ c.name }}</span>
+            <span class="meta">{{ c.name }} · {{ c.symbol || c.code }}</span>
           </div>
           <div class="rate">
             @if (c.rate != null) {

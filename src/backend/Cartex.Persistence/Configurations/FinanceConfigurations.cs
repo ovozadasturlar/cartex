@@ -127,6 +127,9 @@ public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
         builder.ToTable("currencies");
         builder.Property(x => x.Code).HasMaxLength(3).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(40);
+        builder.Property(x => x.Symbol).HasMaxLength(8).HasDefaultValue("");
+        builder.Property(x => x.SymbolPosition).HasMaxLength(8).HasDefaultValue("Suffix");
+        builder.Property(x => x.DecimalDigits).HasDefaultValue(2);
         builder.HasIndex(x => x.Code).IsUnique();
     }
 }

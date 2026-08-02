@@ -9,6 +9,36 @@ export class CxMoneyPipe implements PipeTransform {
   }
 }
 
+const currencyDefaults: Record<string, { symbol: string; position: 'Prefix' | 'Suffix'; digits: number }> = {
+  UZS: { symbol: "so'm", position: 'Suffix', digits: 0 },
+  USD: { symbol: '$', position: 'Prefix', digits: 2 },
+  EUR: { symbol: '€', position: 'Prefix', digits: 2 },
+  RUB: { symbol: '₽', position: 'Suffix', digits: 2 },
+  KZT: { symbol: '₸', position: 'Suffix', digits: 2 },
+  TRY: { symbol: '₺', position: 'Prefix', digits: 2 },
+  CNY: { symbol: '¥', position: 'Prefix', digits: 2 },
+};
+
+export function formatCurrency(value: number, code?: string | null, symbol?: string | null, position?: string | null, digits?: number | null): string {
+  const normalized = (code || 'UZS').toUpperCase();
+  const fallback = currencyDefaults[normalized] ?? { symbol: normalized, position: 'Suffix' as const, digits: 2 };
+  const resolvedSymbol = symbol?.trim() || fallback.symbol;
+  const resolvedPosition = position === 'Prefix' || position === 'Suffix' ? position : fallback.position;
+  const resolvedDigits = Math.max(0, Math.min(4, digits ?? fallback.digits));
+  const number = new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: resolvedDigits,
+    maximumFractionDigits: resolvedDigits,
+  }).format(value);
+  return resolvedPosition === 'Prefix' ? `${resolvedSymbol}${number}` : `${number} ${resolvedSymbol}`;
+}
+
+@Pipe({ name: 'cxCurrency' })
+export class CxCurrencyPipe implements PipeTransform {
+  transform(value: number | null | undefined, code?: string | null, symbol?: string | null, position?: string | null, digits?: number | null): string {
+    return value === null || value === undefined ? '—' : formatCurrency(value, code, symbol, position, digits);
+  }
+}
+
 @Pipe({ name: 'cxDate' })
 export class CxDatePipe implements PipeTransform {
   transform(value: string | null | undefined, withTime = true): string {

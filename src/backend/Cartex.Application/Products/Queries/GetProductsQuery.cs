@@ -40,7 +40,10 @@ public record ProductDto(
     bool IsEnabled = true,
     long? CategoryId = null,
     long UnitId = 0,
-    bool AllowsAmountEntry = false);
+    bool AllowsAmountEntry = false,
+    string? PriceSymbol = null,
+    string? PriceSymbolPosition = null,
+    int? PriceDecimalDigits = null);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -101,7 +104,14 @@ public sealed class GetProductsQueryHandler(
                         .FirstOrDefault() ?? p.ImageKey,
                     p.IkpuCode,
                     p.VatRate,
-                    Price = p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => new { pr.SellingPrice, pr.Currency }).FirstOrDefault(),
+                    Price = p.Variants.Where(v => v.IsDefault).SelectMany(v => v.Prices).Where(pr => pr.WarehouseId == null).Select(pr => new
+                    {
+                        pr.SellingPrice,
+                        pr.Currency,
+                        Symbol = db.Currencies.Where(c => c.Code == pr.Currency).Select(c => c.Symbol).FirstOrDefault(),
+                        SymbolPosition = db.Currencies.Where(c => c.Code == pr.Currency).Select(c => c.SymbolPosition).FirstOrDefault(),
+                        DecimalDigits = db.Currencies.Where(c => c.Code == pr.Currency).Select(c => (int?)c.DecimalDigits).FirstOrDefault()
+                    }).FirstOrDefault(),
                     OnHand = p.Variants.SelectMany(v => v.Stocks).Sum(s => s.Quantity),
                     Dimension = p.Unit.Dimension.ToString(),
                     p.ManufacturerId,
@@ -136,7 +146,10 @@ public sealed class GetProductsQueryHandler(
                 r.IsEnabled,
                 r.CategoryId,
                 r.UnitId,
-                r.Dimension != nameof(Cartex.Domain.Enums.UnitDimension.Count) && r.AmountEntryEnabled != false))
+                r.Dimension != nameof(Cartex.Domain.Enums.UnitDimension.Count) && r.AmountEntryEnabled != false,
+                r.Price?.Symbol,
+                r.Price?.SymbolPosition,
+                r.Price?.DecimalDigits))
             .ToList();
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();

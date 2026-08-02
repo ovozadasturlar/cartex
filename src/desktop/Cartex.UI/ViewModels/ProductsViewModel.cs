@@ -13,6 +13,7 @@ using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Storage;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Units;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -453,7 +454,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             product.Name,
             product.UnitName,
             ImageUrl.Absolute(product.ImageUrl),
-            product.SellingPrice is { } price ? $"{price:N0} {product.PriceCurrency ?? "UZS"}" : string.Empty));
+            product.SellingPrice is { } price
+                ? CurrencyCatalog.Format(price, product.PriceCurrency, product.PriceSymbol, product.PriceSymbolPosition, product.PriceDecimalDigits)
+                : string.Empty));
     }
 
     [RelayCommand]
