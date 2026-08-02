@@ -1,10 +1,8 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
-using Cartex.Application.Common.Search;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Products.Queries;
@@ -13,6 +11,8 @@ public record GetProductsQuery : FilteringRequest, IRequest<IReadOnlyCollection<
 {
     public long? CategoryId { get; set; }
     public long? VariantId { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
 }
 
 public record ProductDto(
@@ -60,26 +60,9 @@ public sealed class GetProductsQueryHandler(
         if (request.VariantId is { } variantId)
             query = query.Where(p => p.Variants.Any(v => v.Id == variantId));
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var terms = CatalogSearch.Parse(request.Search).Terms.OrderByDescending(t => t.Value.Length).ToList();
-            for (var index = 0; index < terms.Count; index++)
-            {
-                query = ApplySearch(query, terms[index]);
-                if (index == terms.Count - 1)
-                    break;
-
-                var narrowedIds = await query.Select(p => p.Id).ToArrayAsync(cancellationToken);
-                if (narrowedIds.Length == 0)
-                {
-                    query = query.Where(_ => false);
-                    break;
-                }
-
-                query = db.Products.AsNoTracking().Where(p => narrowedIds.Contains(p.Id));
-            }
-            request.Search = null;
-        }
+        query = ProductCatalogSearch.Apply(query, request.Search);
+        query = ProductCatalogSearch.ApplyPriceRange(query, request.MinPrice, request.MaxPrice);
+        request.Search = null;
 
         var rows = await query
             .ToPagedListAsync(request,
@@ -162,23 +145,4 @@ public sealed class GetProductsQueryHandler(
             .ToList();
     }
 
-    private static IQueryable<Product> ApplySearch(IQueryable<Product> query, CatalogSearchTerm token)
-    {
-        var term = $"%{token.Value}%";
-        return token.Field switch
-        {
-            CatalogSearchField.Name => query.Where(p => EF.Functions.ILike(p.Name, term)),
-            CatalogSearchField.Barcode => query.Where(p => p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term)))),
-            CatalogSearchField.Code => query.Where(p =>
-                (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
-                || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))),
-            CatalogSearchField.Price when token.Price is { } price => query.Where(p => p.Variants.Any(v => v.Prices.Any(x => x.SellingPrice == price))),
-            CatalogSearchField.Price => query.Where(_ => false),
-            _ => query.Where(p =>
-                EF.Functions.ILike(p.Name, term)
-                || (p.IkpuCode != null && EF.Functions.ILike(p.IkpuCode, term))
-                || p.Variants.Any(v => v.Code != null && EF.Functions.ILike(v.Code, term))
-                || p.Variants.Any(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))))
-        };
-    }
 }
