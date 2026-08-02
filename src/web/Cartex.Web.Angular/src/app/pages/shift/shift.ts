@@ -263,8 +263,8 @@ export class Shift implements OnInit {
     try {
       const business = await lastValueFrom(this.businessApi.get());
       this.baseCurrency.set(business.currency);
-      this.multicurrency.set(business.multicurrency);
-      if (business.multicurrency) {
+      this.multicurrency.set(business.salesMulticurrency);
+      if (business.salesMulticurrency) {
         const currencies = await lastValueFrom(this.ratesApi.currencies(true));
         this.currencies.set(currencies.filter((c) => !c.isBase).map((c) => c.code).sort());
       }
@@ -330,7 +330,7 @@ export class OpenShiftDialog implements OnInit {
     try {
       const business = await lastValueFrom(this.businessApi.get());
       this.base.set(business.currency);
-      if (!business.multicurrency) return;
+      if (!business.salesMulticurrency) return;
       const currencies = await lastValueFrom(this.ratesApi.currencies(true));
       this.rows.set(
         currencies

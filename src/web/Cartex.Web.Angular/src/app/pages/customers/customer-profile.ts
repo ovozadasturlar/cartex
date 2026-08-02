@@ -389,7 +389,7 @@ export class RepayDebtDialog implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const business = await lastValueFrom(this.ratesApi.business());
-      if (!business.multicurrency) return;
+      if (!business.salesMulticurrency) return;
       const currencies = await lastValueFrom(this.ratesApi.currencies(true));
       this.payCurrencies.set(
         [...currencies].sort((a, b) => Number(b.isBase) - Number(a.isBase)).map((c) => c.code),

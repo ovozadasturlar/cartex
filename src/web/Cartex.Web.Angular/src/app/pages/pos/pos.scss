@@ -433,6 +433,22 @@
   }
 
   .sum { font-size: 13px; font-weight: 600; }
+
+  .sum-edit {
+    width: 88px;
+    height: 28px;
+    padding: 0 6px;
+    border: 1px solid var(--cx-border);
+    border-radius: 6px;
+    background: none;
+    color: var(--cx-text-1);
+    text-align: right;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    &:focus { outline: none; border-color: var(--cx-brand); }
+  }
 }
 
 .qty-box {
@@ -642,6 +658,12 @@
   }
 
   .pay-btn { flex: 1; }
+
+  .send-queue { display: none; }
+
+  @media (max-width: 600px) {
+    .send-queue { display: inline-flex; }
+  }
 }
 
 .queue-btn {

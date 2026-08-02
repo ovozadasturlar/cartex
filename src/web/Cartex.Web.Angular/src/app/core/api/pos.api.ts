@@ -21,6 +21,9 @@ export interface StockOnHand {
   imageUrl: string | null;
   code: string | null;
   discountPct: number | null;
+  dimension: string;
+  allowsAmountEntry: boolean;
+  quantityStep: number;
 }
 
 export interface StockOnHandPage {
@@ -35,6 +38,9 @@ export interface ProductLookup {
   packQty: number;
   sellingPrice: number;
   onHand: number;
+  dimension: string;
+  allowsAmountEntry: boolean;
+  quantityStep: number;
 }
 
 export interface CreateSalePayload {

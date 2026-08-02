@@ -220,7 +220,13 @@
                 <button (click)="changeQty(line, 1)"><mat-icon>add</mat-icon></button>
               </div>
               <div class="line-end">
-                <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+                @if (line.allowsAmountEntry) {
+                  <input class="sum-edit" type="text" inputmode="numeric" cxMoneyInput
+                         [ngModel]="line.price * line.qty" (ngModelChange)="onLineAmount(line, $event)"
+                         [matTooltip]="t('amount_entry_sale_hint')" />
+                } @else {
+                  <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+                }
                 <button class="del" (click)="remove(line)"><mat-icon>close</mat-icon></button>
               </div>
             </div>
@@ -304,7 +310,7 @@
             <mat-icon>pause</mat-icon>
           </button>
           @if (canCreateCart) {
-            <button matButton="outlined" class="pay-btn" [disabled]="!cart().length || paying()" (click)="sendToQueue()">
+            <button matButton="outlined" class="pay-btn send-queue" [disabled]="!cart().length || paying()" (click)="sendToQueue()">
               {{ t('send_to_queue') }}
             </button>
           }

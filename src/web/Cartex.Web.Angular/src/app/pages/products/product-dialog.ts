@@ -1,12 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import {
@@ -22,12 +24,14 @@ import { NotifyService } from '../../core/notify.service';
   imports: [
     FormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
     MatSelectModule,
+    MatTooltipModule,
     TranslocoModule,
   ],
   styleUrl: './products.scss',
@@ -55,14 +59,33 @@ import { NotifyService } from '../../core/notify.service';
                 }
               </mat-select>
             </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('unit') }}</mat-label>
-              <mat-select [(ngModel)]="unitId">
-                @for (u of units(); track u.id) {
-                  <mat-option [value]="u.id">{{ u.name }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <div class="unit-row span2">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('unit_group') }}</mat-label>
+                <mat-select [ngModel]="unitDimension" (ngModelChange)="onDimensionChange($event)">
+                  @for (dimension of dimensions; track dimension) {
+                    <mat-option [value]="dimension">{{ t('dimension_' + dimension.toLowerCase()) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('unit') }}</mat-label>
+                <mat-select [(ngModel)]="unitId">
+                  @for (u of filteredUnits; track u.id) {
+                    <mat-option [value]="u.id">{{ u.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('min_stock') }}</mat-label>
+                <input matInput type="number" min="0" [(ngModel)]="minStock" />
+              </mat-form-field>
+            </div>
+            @if (canConfigureAmountEntry) {
+              <mat-checkbox class="span2" [(ngModel)]="amountEntryEnabled" [matTooltip]="t('amount_entry_sale_hint')">
+                {{ t('amount_entry_sale') }}
+              </mat-checkbox>
+            }
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('product_type') }}</mat-label>
               <mat-select [(ngModel)]="productTypeId">
@@ -84,10 +107,6 @@ import { NotifyService } from '../../core/notify.service';
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('code') }}</mat-label>
               <input matInput [(ngModel)]="code" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ t('min_stock') }}</mat-label>
-              <input matInput type="number" min="0" [(ngModel)]="minStock" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('selling_price') }}</mat-label>
@@ -211,6 +230,8 @@ export class ProductDialog implements OnInit {
   name = this.product?.name ?? '';
   categoryId: number | null = null;
   unitId: number | null = null;
+  unitDimension = this.product?.dimension ?? 'Count';
+  readonly dimensions = ['Count', 'Weight', 'Volume', 'Length'];
   productTypeId = this.product?.productTypeId ?? null;
   manufacturerId = this.product?.manufacturerId ?? null;
   code = this.product?.code ?? '';
@@ -219,11 +240,28 @@ export class ProductDialog implements OnInit {
   minStock = this.product?.minStock ?? 0;
   sellingPrice = this.product?.sellingPrice ?? null;
   priceCurrency: string | null = this.product?.priceCurrency ?? null;
+  amountEntryEnabled = this.product?.allowsAmountEntry ?? true;
   newCode = '';
   newPackQty = 1;
 
   private imageKey = this.product?.imageKey ?? null;
   private localId = -1;
+  private originalDimension = this.product?.dimension ?? 'Count';
+
+  get filteredUnits(): Unit[] {
+    return this.units().filter((unit) => unit.dimension === this.unitDimension);
+  }
+
+  get canConfigureAmountEntry(): boolean {
+    return this.unitDimension !== 'Count';
+  }
+
+  onDimensionChange(dimension: string): void {
+    this.unitDimension = dimension;
+    const units = this.filteredUnits;
+    this.unitId = units.find((unit) => unit.isDefault)?.id ?? units[0]?.id ?? null;
+    if (dimension === 'Count') this.amountEntryEnabled = false;
+  }
 
   async ngOnInit(): Promise<void> {
     try {
@@ -238,9 +276,9 @@ export class ProductDialog implements OnInit {
       this.units.set(units.filter((u) => u.isEnabled || u.name === this.product?.unitName));
       this.productTypes.set(types);
       this.manufacturers.set(manufacturers);
-      this.multicurrency.set(business.multicurrency);
+      this.multicurrency.set(business.pricingMulticurrency);
       const currencies = [business.currency];
-      if (business.multicurrency) {
+      if (business.pricingMulticurrency) {
         const rates = await lastValueFrom(this.businessApi.rateCodes());
         currencies.push(...rates.map((r) => r.code).sort());
       }
@@ -248,7 +286,10 @@ export class ProductDialog implements OnInit {
       this.priceCurrency ??= business.currency;
       if (this.product) {
         this.categoryId = categories.find((c) => c.name === this.product!.categoryName)?.id ?? null;
-        this.unitId = units.find((u) => u.name === this.product!.unitName)?.id ?? null;
+        const currentUnit = units.find((u) => u.name === this.product!.unitName);
+        this.unitDimension = currentUnit?.dimension ?? this.product.dimension ?? 'Count';
+        this.originalDimension = this.unitDimension;
+        this.unitId = currentUnit?.id ?? null;
         this.barcodes.set(await lastValueFrom(this.barcodesApi.byVariant(this.product.defaultVariantId)));
       } else {
         this.unitId = units.find((u) => u.isDefault && u.dimension === 'Count')?.id
@@ -348,6 +389,8 @@ export class ProductDialog implements OnInit {
 
   async save(): Promise<void> {
     if (!this.name.trim() || !this.unitId) return;
+    const dimensionChanged = !!this.product && this.unitDimension !== this.originalDimension;
+    if (dimensionChanged && !window.confirm(this.transloco.translate('unit_dimension_change_confirm'))) return;
     this.busy.set(true);
     try {
       const body = {
@@ -364,6 +407,8 @@ export class ProductDialog implements OnInit {
         sellingPrice: this.sellingPrice,
         priceCurrency: this.multicurrency() ? this.priceCurrency : null,
         manufacturerId: this.manufacturerId,
+        amountEntryEnabled: this.canConfigureAmountEntry && this.amountEntryEnabled,
+        confirmUnitDimensionChange: dimensionChanged,
       };
       if (this.product) {
         await lastValueFrom(this.api.update(this.product.id, body));

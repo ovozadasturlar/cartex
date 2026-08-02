@@ -115,6 +115,8 @@ export interface Business {
   address: string | null;
   logoImageKey: string | null;
   multicurrency: boolean;
+  pricingMulticurrency: boolean;
+  salesMulticurrency: boolean;
   telegram: string | null;
   website: string | null;
 }

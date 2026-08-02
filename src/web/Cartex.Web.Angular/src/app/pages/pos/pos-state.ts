@@ -9,6 +9,8 @@ export interface CartLine {
   originalPrice: number;
   qty: number;
   available: number;
+  allowsAmountEntry: boolean;
+  quantityStep: number;
 }
 
 export interface HeldSale {

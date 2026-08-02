@@ -44,7 +44,8 @@ export class BusinessSettings implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly uploading = signal(false);
-  readonly multicurrency = signal(false);
+  readonly pricingMulticurrency = signal(false);
+  readonly salesMulticurrency = signal(false);
   readonly logoPreview = signal<string | null>(null);
   readonly canManage = this.auth.hasPermission('business.edit');
   readonly canFeatures = this.auth.hasPermission('features.edit');
@@ -193,14 +194,15 @@ export class BusinessSettings implements OnInit {
     }
   }
 
-  async toggleMulticurrency(value: boolean, message: string): Promise<void> {
-    this.multicurrency.set(value);
+  async toggleMulticurrency(feature: 'multicurrency_pricing' | 'multicurrency_sales', value: boolean, message: string): Promise<void> {
+    const target = feature === 'multicurrency_pricing' ? this.pricingMulticurrency : this.salesMulticurrency;
+    target.set(value);
     this.busy.set(true);
     try {
-      await lastValueFrom(this.features.set('multicurrency', value));
+      await lastValueFrom(this.features.set(feature, value));
       this.notify.success(message);
     } catch (e) {
-      this.multicurrency.set(!value);
+      target.set(!value);
       this.notify.error(e);
     } finally {
       this.busy.set(false);
@@ -217,6 +219,7 @@ export class BusinessSettings implements OnInit {
     this.address = b.address ?? '';
     this.logoImageKey = b.logoImageKey;
     if (b.logoImageKey) this.logoPreview.set(`/api/storage/content?key=${encodeURIComponent(b.logoImageKey)}`);
-    this.multicurrency.set(b.multicurrency);
+    this.pricingMulticurrency.set(b.pricingMulticurrency);
+    this.salesMulticurrency.set(b.salesMulticurrency);
   }
 }

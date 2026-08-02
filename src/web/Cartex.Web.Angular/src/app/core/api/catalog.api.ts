@@ -23,6 +23,8 @@ export interface CatalogProduct {
   onHand: number;
   imageUrl: string | null;
   priceCurrency: string | null;
+  dimension: string | null;
+  allowsAmountEntry: boolean;
 }
 
 export interface BarcodeInput {
@@ -45,6 +47,8 @@ export interface SaveProductRequest {
   sellingPrice: number | null;
   priceCurrency: string | null;
   manufacturerId: number | null;
+  amountEntryEnabled: boolean;
+  confirmUnitDimensionChange?: boolean;
 }
 
 export interface ProductsTotals {
@@ -140,6 +144,8 @@ export interface Barcode {
 export interface BusinessInfo {
   currency: string;
   multicurrency: boolean;
+  pricingMulticurrency: boolean;
+  salesMulticurrency: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

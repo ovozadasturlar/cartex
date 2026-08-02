@@ -75,15 +75,19 @@ export class Pos implements OnInit {
   readonly categoryRows = computed(() => {
     const all = this.categories();
     const rows: { parent: number | null; items: Category[] }[] = [
-      { parent: null, items: all.filter((c) => c.parentId === null) },
+      { parent: null, items: this.sortCategories(all.filter((c) => c.parentId === null)) },
     ];
     for (const id of this.categoryPath()) {
-      const children = all.filter((c) => c.parentId === id);
+      const children = this.sortCategories(all.filter((c) => c.parentId === id));
       if (!children.length) break;
       rows.push({ parent: id, items: children });
     }
     return rows;
   });
+
+  private sortCategories(items: Category[]): Category[] {
+    return [...items].sort((a, b) => a.name.localeCompare(b.name, 'uz', { sensitivity: 'base' }));
+  }
   readonly tiles = signal<StockOnHand[]>([]);
   readonly totalCount = signal(0);
   readonly shift = signal<CurrentShift | null>(null);
@@ -221,6 +225,8 @@ export class Pos implements OnInit {
         originalPrice: i.unitPrice,
         qty: i.quantity,
         available: Number.MAX_SAFE_INTEGER,
+        allowsAmountEntry: false,
+        quantityStep: 1,
       })));
       if (cart.customerId) {
         try {
@@ -304,9 +310,28 @@ export class Pos implements OnInit {
         this.reset();
       }
     } catch {
-      this.search = code;
-      this.reset();
+      input.value = '';
+      this.playScanError();
+      this.notify.error(this.transloco.translate('barcode_not_found'));
+      this.focusScan();
     }
+  }
+
+  private playScanError(): void {
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.08, context.currentTime);
+    gain.connect(context.destination);
+    for (let i = 0; i < 3; i++) {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(900, context.currentTime);
+      oscillator.connect(gain);
+      const start = context.currentTime + i * 0.12;
+      oscillator.start(start);
+      oscillator.stop(start + 0.07);
+    }
+    setTimeout(() => void context.close(), 450);
   }
 
   addTile(t: StockOnHand): void {
@@ -319,6 +344,8 @@ export class Pos implements OnInit {
       originalPrice: t.sellingPrice,
       qty: 1,
       available: t.quantity,
+      allowsAmountEntry: t.allowsAmountEntry,
+      quantityStep: t.quantityStep,
     });
   }
 
@@ -327,7 +354,7 @@ export class Pos implements OnInit {
   }
 
   changeQty(line: CartLine, delta: number): void {
-    this.setQty(line, line.qty + delta);
+    this.setQty(line, line.qty + delta * line.quantityStep);
   }
 
   onQtyInput(line: CartLine, e: Event): void {
@@ -346,6 +373,13 @@ export class Pos implements OnInit {
 
   onPrice(line: CartLine, v: number): void {
     if (v > 0) this.cart.update((c) => c.map((l) => (l === line ? { ...l, price: v } : l)));
+  }
+
+  onLineAmount(line: CartLine, value: number): void {
+    if (!line.allowsAmountEntry || line.price <= 0 || value <= 0) return;
+    const step = line.quantityStep > 0 ? line.quantityStep : 0.001;
+    const qty = Math.floor((value / line.price + 1e-9) / step) * step;
+    if (qty > 0) this.setQty(line, Number(qty.toFixed(6)));
   }
 
   onDiscountPercent(v: number): void {
@@ -521,6 +555,8 @@ export class Pos implements OnInit {
       originalPrice: p.sellingPrice,
       qty,
       available: p.onHand,
+      allowsAmountEntry: p.allowsAmountEntry,
+      quantityStep: p.quantityStep,
     });
   }
 
@@ -538,7 +574,9 @@ export class Pos implements OnInit {
       this.remove(line);
       return;
     }
-    this.cart.update((c) => c.map((l) => (l === line ? { ...l, qty } : l)));
+    const step = line.quantityStep > 0 ? line.quantityStep : 1;
+    const normalized = Math.floor((qty + 1e-9) / step) * step;
+    this.cart.update((c) => c.map((l) => (l === line ? { ...l, qty: Number(normalized.toFixed(6)) } : l)));
   }
 
   private reset(): void {

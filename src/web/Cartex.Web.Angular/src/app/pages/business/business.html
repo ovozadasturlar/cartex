@@ -66,12 +66,22 @@
 
         <div class="feature-row">
           <mat-slide-toggle
-            [checked]="multicurrency()"
+            [checked]="pricingMulticurrency()"
             [disabled]="!canFeatures || busy()"
-            (change)="toggleMulticurrency($event.checked, t('success'))">
-            {{ t('multicurrency') }}
+            (change)="toggleMulticurrency('multicurrency_pricing', $event.checked, t('success'))">
+            {{ t('multicurrency_pricing') }}
           </mat-slide-toggle>
-          <p class="hint">{{ t('multicurrency_hint') }}</p>
+          <p class="hint">{{ t('multicurrency_pricing_hint') }}</p>
+        </div>
+
+        <div class="feature-row">
+          <mat-slide-toggle
+            [checked]="salesMulticurrency()"
+            [disabled]="!canFeatures || busy()"
+            (change)="toggleMulticurrency('multicurrency_sales', $event.checked, t('success'))">
+            {{ t('multicurrency_sales') }}
+          </mat-slide-toggle>
+          <p class="hint">{{ t('multicurrency_sales_hint') }}</p>
         </div>
 
         @if (canManage) {

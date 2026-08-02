@@ -43,6 +43,8 @@ export interface Rate {
 export interface RatesBusiness {
   currency: string;
   multicurrency: boolean;
+  pricingMulticurrency: boolean;
+  salesMulticurrency: boolean;
 }
 
 export interface Currency {
