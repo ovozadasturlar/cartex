@@ -79,7 +79,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.SalesMulticurrency;
             PayCurrencies.Clear();
             PayCurrencies.Add(_baseCurrency);
             _rates.Clear();
@@ -190,6 +190,14 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         IsSalesTab = false;
         SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsMessageOpen = false;
+        IsRepayOpen = false;
+        IsProfileOpen = false;
     }
 
     [RelayCommand]

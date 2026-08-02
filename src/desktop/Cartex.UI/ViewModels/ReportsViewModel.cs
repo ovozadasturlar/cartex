@@ -66,6 +66,8 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
 
     public bool CanGiveBonus => _auth.HasPermission("loyalty.grantBonus");
 
+    public override void OnNavigatedFrom() => IsBonusOpen = false;
+
     public ObservableCollection<ISeries> SalesChartSeries { get; } = [];
     [ObservableProperty] private Axis[] _salesXAxes = [new Axis()];
     [ObservableProperty] private Axis[] _salesYAxes = [new Axis { MinLimit = 0 }];

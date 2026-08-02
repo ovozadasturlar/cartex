@@ -35,5 +35,9 @@ public abstract class ViewModelBase : ObservableObject
         new(Key.F2, KeyModifiers.None, "shortcut_save", () => save.Execute(null), isEditOpen, WorksInText: true),
         new(Key.Escape, KeyModifiers.None, "shortcut_close", close, isEditOpen, WorksInText: true),
     ];
+
+    public virtual void OnNavigatedFrom()
+    {
+    }
 }
 

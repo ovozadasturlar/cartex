@@ -297,7 +297,10 @@ public partial class MainViewModel : ViewModelBase
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
     {
         if (oldValue is not null)
+        {
+            oldValue.OnNavigatedFrom();
             _dialogService.CloseOverlay();
+        }
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         (oldValue as IDisposable)?.Dispose();
         OnPropertyChanged(nameof(BlurCurrentPage));

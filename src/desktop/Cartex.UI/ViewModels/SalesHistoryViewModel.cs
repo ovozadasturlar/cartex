@@ -82,6 +82,12 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    public override void OnNavigatedFrom()
+    {
+        IsReceiptOpen = false;
+        IsReturnOpen = false;
+    }
+
     [RelayCommand]
     private async Task Export(string format)
     {

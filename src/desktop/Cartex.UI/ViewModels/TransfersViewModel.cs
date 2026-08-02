@@ -100,6 +100,12 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsDetailOpen = false;
+    }
+
     private async Task LoadTransfersAsync()
     {
         try

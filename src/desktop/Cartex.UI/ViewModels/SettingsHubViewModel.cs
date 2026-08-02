@@ -72,7 +72,10 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is null) return;
         if (oldValue is not null)
+        {
+            CurrentSection?.OnNavigatedFrom();
             _dialogService.CloseOverlay();
+        }
         newValue.IsActive = true;
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         CurrentSection = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
@@ -96,5 +99,11 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
     {
         var item = Sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Key == key);
         if (item is not null) SelectedSection = item;
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        CurrentSection?.OnNavigatedFrom();
+        _dialogService.CloseOverlay();
     }
 }
