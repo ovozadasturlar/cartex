@@ -108,6 +108,8 @@ public partial class CartItem : ObservableObject
     public decimal OriginalPrice { get; set; }
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity = 1;
+    public bool AllowsAmountEntry { get; init; }
+    public decimal QuantityStep { get; init; } = 1;
 
     [ObservableProperty] private decimal? _available;
 
@@ -117,15 +119,34 @@ public partial class CartItem : ObservableObject
 
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
     public decimal LineTotal => UnitPrice * Quantity;
+    public decimal AmountInput
+    {
+        get => LineTotal;
+        set
+        {
+            if (!AllowsAmountEntry || UnitPrice <= 0 || value <= 0) return;
+            if (Math.Abs(value - LineTotal) < 0.005m) return;
+            var step = QuantityStep > 0 ? QuantityStep : 0.001m;
+            var quantity = Math.Floor(value / UnitPrice / step) * step;
+            if (quantity <= 0 || quantity == Quantity) return;
+            Quantity = quantity;
+            OnPropertyChanged();
+        }
+    }
     public bool IsOverStock => Available is { } a && Quantity > a;
 
     partial void OnQuantityChanged(decimal value)
     {
         OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(AmountInput));
         OnPropertyChanged(nameof(IsOverStock));
     }
 
-    partial void OnUnitPriceChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+    partial void OnUnitPriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(AmountInput));
+    }
 }
 
 public partial class CategoryChip(long? id, string name) : ObservableObject
@@ -152,6 +173,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IHeldSaleStore _heldStore;
     private readonly IPrinterService _printer;
     private readonly IScannedCodeParser _scannedCodeParser;
+    private readonly IScanFeedbackService _scanFeedback;
     private readonly AuthService _auth;
 
     private readonly List<CategoryDto> _allCategories = [];
@@ -362,7 +384,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi,
         IProductsApi productsApi, ICategoriesApi categoriesApi, IReceiptApi receiptApi, IBarcodesApi barcodesApi, BranchContextService branch,
-        ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, AuthService auth,
+        ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, IScanFeedbackService scanFeedback, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
         IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
         ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi)
@@ -400,6 +422,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _heldStore = heldStore;
         _printer = printer;
         _scannedCodeParser = scannedCodeParser;
+        _scanFeedback = scanFeedback;
         _auth = auth;
 
         CartItems.CollectionChanged += (_, e) =>
@@ -437,6 +460,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (IsHeldPanelOpen) { IsHeldPanelOpen = false; return; }
         if (IsQueuePanelOpen) { IsQueuePanelOpen = false; return; }
         ClearCart();
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        ProductEditor.OnNavigatedFrom();
+        Prepack.IsOpen = false;
+        IsQuickRatesOpen = false;
+        IsReceiptOpen = false;
+        IsReceiveOpen = false;
+        IsProductDetailOpen = false;
+        IsCustomerPanelOpen = false;
+        IsHeldPanelOpen = false;
+        IsQueuePanelOpen = false;
     }
 
     private void OnCartItemChanged(object? sender, PropertyChangedEventArgs e)
@@ -582,7 +618,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.SalesMulticurrency;
             if (!IsMulticurrency) return;
 
             var currencies = await _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
@@ -970,7 +1006,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
 
         SearchText = string.Empty;
-        var visibleProducts = Products.ToList();
 
         if (code.Length == 32 && code.All(char.IsAsciiHexDigit))
         {
@@ -988,7 +1023,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 var qty = scanned.Type == ScannedCodeType.Weighted && scanned.Weight is { } w
                     ? w
                     : cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
-                AddToCart(cachedProduct.VariantId, cachedProduct.ProductName, cachedProduct.SellingPrice, qty, cachedProduct.Quantity);
+                AddToCart(cachedProduct.VariantId, cachedProduct.ProductName, cachedProduct.SellingPrice, qty, cachedProduct.Quantity,
+                    allowsAmountEntry: cachedProduct.AllowsAmountEntry, quantityStep: cachedProduct.QuantityStep);
                 return;
             }
             if (await Offline.GetCustomerByCardAsync(code) is { } cachedCustomer)
@@ -997,7 +1033,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _toast.Success(cachedCustomer.FullName);
                 return;
             }
-            _toast.Warning(L["offline_pos_limited"]);
+            _scanFeedback.Error();
+            _toast.Warning(L["barcode_not_found"]);
             return;
         }
 
@@ -1007,7 +1044,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             var quantity = scanned.Type == ScannedCodeType.Weighted && scanned.Weight is { } weight
                 ? weight
                 : product.PackQty > 1 ? product.PackQty : 1;
-            AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand);
+            AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand,
+                allowsAmountEntry: product.AllowsAmountEntry, quantityStep: product.QuantityStep);
             return;
         }
         catch (ApiException)
@@ -1046,20 +1084,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
         }
 
-        if (visibleProducts.Count > 0)
-        {
-            var first = visibleProducts[0];
-            AddToCart(first.VariantId, first.ProductName, first.SellingPrice, available: first.Quantity);
-            return;
-        }
-
-        if (!CanCreateProduct)
-        {
-            _toast.Warning(L["no_data"]);
-            return;
-        }
-
-        await ProductEditor.OpenCreateForSaleAsync(code);
+        _scanFeedback.Error();
+        _toast.Warning(L["barcode_not_found"]);
     }
 
     private void OnProductCreatedForSale(ProductDto product)
@@ -1340,6 +1366,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         decimal quantity = 1,
         decimal? available = null,
         StockOnHandDto? detail = null,
+        bool allowsAmountEntry = false,
+        decimal quantityStep = 1,
         bool enforceCreatePermission = true)
     {
         if (enforceCreatePermission && !CanCreateCart)
@@ -1363,7 +1391,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             UnitPrice = price,
             Quantity = quantity,
             Available = available,
-            ProductDetail = detail
+            ProductDetail = detail,
+            AllowsAmountEntry = detail?.AllowsAmountEntry ?? allowsAmountEntry,
+            QuantityStep = detail?.QuantityStep ?? quantityStep
         });
         NotifyTotals();
     }
@@ -1372,7 +1402,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void Increment(CartItem item)
     {
         if (item.IsPrepack) return;
-        item.Quantity += 1;
+        item.Quantity += item.QuantityStep;
         NotifyTotals();
     }
 
@@ -1380,8 +1410,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void Decrement(CartItem item)
     {
         if (item.IsPrepack) { RemoveItem(item); return; }
-        if (item.Quantity <= 1) { RemoveItem(item); return; }
-        else item.Quantity -= 1;
+        if (item.Quantity <= item.QuantityStep) { RemoveItem(item); return; }
+        else item.Quantity -= item.QuantityStep;
         NotifyTotals();
     }
 
@@ -1576,7 +1606,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
         var seq = HeldSales.Select(HoldNumber).DefaultIfEmpty(0).Max() + 1;
         var label = $"#{seq} · {TotalAmount:N0}";
-        var items = CartItems.Select(c => new CartItem { VariantId = c.VariantId, PrepackId = c.PrepackId, ProductName = c.ProductName, OriginalPrice = c.OriginalPrice, UnitPrice = c.UnitPrice, Quantity = c.Quantity, Available = c.Available }).ToList();
+        var items = CartItems.Select(c => new CartItem { VariantId = c.VariantId, PrepackId = c.PrepackId, ProductName = c.ProductName, OriginalPrice = c.OriginalPrice, UnitPrice = c.UnitPrice, Quantity = c.Quantity, Available = c.Available, AllowsAmountEntry = c.AllowsAmountEntry, QuantityStep = c.QuantityStep }).ToList();
         HeldSales.Add(new HeldSale(label, items, PaidCash, PaidCard, PaidBonus, SelectedCustomer, DateTime.Now));
         _heldStore.Save(HeldSales);
         ClearCart();

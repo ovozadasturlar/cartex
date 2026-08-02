@@ -121,7 +121,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             PayCurrencies.Clear();
             PayCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)

@@ -48,7 +48,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isSaleCreate;
     [ObservableProperty] private string _editName = string.Empty;
     [ObservableProperty] private CategoryDto? _editCategory;
+    [ObservableProperty] private string _editDimension = "Count";
     [ObservableProperty] private UnitDto? _editUnit;
+    [ObservableProperty] private bool _editAmountEntryEnabled;
     [ObservableProperty] private ProductTypeDto? _editProductType;
     [ObservableProperty] private decimal _editMinStock;
     [ObservableProperty] private ManufacturerDto? _editManufacturer;
@@ -87,6 +89,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _editImageUrl;
 
     private long _editId;
+    private string _originalDimension = "Count";
 
     private string? _pendingAttributeValues;
 
@@ -114,11 +117,33 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ObservableCollection<CategoryDto> FilterCategories { get; } = [];
     public ObservableCollection<UnitDto> Units { get; } = [];
     private readonly List<UnitDto> _allUnits = [];
+    public string[] DimensionOptions { get; } = ["Count", "Weight", "Volume", "Length"];
     public ObservableCollection<ProductTypeDto> ProductTypes { get; } = [];
     public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
 
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
     public bool CanSaveAndNew => IsNew && !IsSaleCreate;
+    public bool CanConfigureAmountEntry => EditUnit?.Dimension is not null and not "Count";
+
+    partial void OnEditDimensionChanged(string value) => ApplyUnitFilter(value, EditUnit?.Id);
+
+    partial void OnEditUnitChanged(UnitDto? value)
+    {
+        OnPropertyChanged(nameof(CanConfigureAmountEntry));
+        if (value?.Dimension == "Count") EditAmountEntryEnabled = false;
+        else if (IsNew) EditAmountEntryEnabled = true;
+    }
+
+    private void ApplyUnitFilter(string dimension, long? preferredUnitId = null)
+    {
+        var preferred = _allUnits.FirstOrDefault(unit => unit.Id == preferredUnitId && unit.Dimension == dimension);
+        Units.Clear();
+        foreach (var unit in _allUnits.Where(unit => unit.Dimension == dimension && (unit.IsEnabled || unit.Id == preferredUnitId)))
+            Units.Add(unit);
+        EditUnit = preferred
+            ?? Units.FirstOrDefault(unit => unit.IsDefault)
+            ?? Units.FirstOrDefault();
+    }
     public bool CanCreate => _auth.HasPermission("products.create");
     public bool CanEdit => _auth.HasPermission("products.edit");
     public bool CanEditCurrent => IsNew ? CanCreate : CanEdit;
@@ -187,6 +212,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsVariantsOpen = false;
+        IsVariantEditOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
+        IsAddingManufacturer = false;
+        Import.IsOpen = false;
+    }
+
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
     private readonly ISettingsApi _settingsApi;
@@ -204,7 +239,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             PriceCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)
                 foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
@@ -572,8 +607,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         var units = await unitsTask;
         _allUnits.Clear();
         _allUnits.AddRange(units);
-        Units.Clear();
-        foreach (var unit in units.Where(unit => unit.IsEnabled)) Units.Add(unit);
+        ApplyUnitFilter(EditDimension, EditUnit?.Id);
 
         var types = await typesTask;
         ProductTypes.Clear();
@@ -681,7 +715,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editId = 0;
         EditName = string.Empty;
         EditCategory = null;
-        EditUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
+        _originalDimension = "Count";
+        EditDimension = "Count";
+        ApplyUnitFilter(EditDimension);
         _pendingAttributeValues = null;
         EditProductType = null;
         EditManufacturer = null;
@@ -694,6 +730,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditVatRate = null;
         EditSellingPrice = null;
         EditPriceCurrency = _baseCurrency;
+        EditAmountEntryEnabled = CanConfigureAmountEntry;
         EditImageKey = null;
         EditImagePreview = null;
         EditImageUrl = null;
@@ -739,12 +776,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _editId = product.Id;
         EditName = product.Name;
         EditCategory = Categories.FirstOrDefault(c => c.Name == product.CategoryName);
-        EditUnit = Units.FirstOrDefault(u => u.Name == product.UnitName);
-        if (EditUnit is null && _allUnits.FirstOrDefault(u => u.Name == product.UnitName) is { } disabledUnit)
-        {
-            Units.Add(disabledUnit);
-            EditUnit = disabledUnit;
-        }
+        var currentUnit = _allUnits.FirstOrDefault(u => u.Id == product.UnitId)
+            ?? _allUnits.FirstOrDefault(u => u.Name == product.UnitName);
+        _originalDimension = currentUnit?.Dimension ?? product.Dimension ?? "Count";
+        EditDimension = _originalDimension;
+        ApplyUnitFilter(EditDimension, currentUnit?.Id);
         _pendingAttributeValues = product.Attributes;
         EditProductType = null;
         EditProductType = ProductTypes.FirstOrDefault(t => t.Id == product.ProductTypeId);
@@ -756,6 +792,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditVatRate = product.VatRate;
         EditSellingPrice = product.SellingPrice;
         EditPriceCurrency = product.PriceCurrency ?? _baseCurrency;
+        EditAmountEntryEnabled = product.AllowsAmountEntry;
         EditImageKey = product.ImageKey;
         EditImagePreview = null;
         EditImageUrl = null;
@@ -826,6 +863,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (EditUnit is null) { _toast.Warning(L["unit"]); return false; }
         if (IsNew && EditSellingPrice is null) { _toast.Warning(L["selling_price"]); return false; }
 
+        var dimensionChanged = !IsNew && EditDimension != _originalDimension;
+        if (dimensionChanged && !await _dialog.ConfirmDangerAsync(L["unit_dimension_change_confirm"], L["unit_group"]))
+            return false;
+
         var attributes = EditProductType is null ? null : AttributeSchemaCodec.SerializeValues(EditAttributes);
 
         try
@@ -844,7 +885,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
                         PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
-                        ManufacturerId: EditManufacturer?.Id);
+                        ManufacturerId: EditManufacturer?.Id,
+                        AmountEntryEnabled: CanConfigureAmountEntry && EditAmountEntryEnabled);
                     var productId = await _productsApi.CreateAsync(request);
                     if (IsSaleCreate)
                     {
@@ -864,7 +906,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
                         PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
-                        ManufacturerId: EditManufacturer?.Id);
+                        ManufacturerId: EditManufacturer?.Id,
+                        AmountEntryEnabled: CanConfigureAmountEntry && EditAmountEntryEnabled,
+                        ConfirmUnitDimensionChange: dimensionChanged);
                     await _productsApi.UpdateAsync(_editId, request);
                     ProductUpdated?.Invoke(_editId);
                 }

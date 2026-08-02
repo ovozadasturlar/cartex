@@ -11,6 +11,8 @@ public class OfflineProduct
     public string UnitName { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal SellingPrice { get; set; }
+    public bool AllowsAmountEntry { get; set; }
+    public decimal QuantityStep { get; set; } = 1;
 }
 
 public class OfflineBarcode

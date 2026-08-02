@@ -72,7 +72,9 @@ public sealed class OfflineSyncService(IOfflineCacheApi offlineApi, ISalesApi sa
                 CategoryName = p.CategoryName,
                 UnitName = p.UnitName,
                 Quantity = p.Quantity,
-                SellingPrice = p.SellingPrice
+                SellingPrice = p.SellingPrice,
+                AllowsAmountEntry = p.AllowsAmountEntry,
+                QuantityStep = p.QuantityStep
             }),
             snapshot.Barcodes.Select(b => new OfflineBarcode { Code = b.Code, VariantId = b.VariantId, PackQty = b.PackQty }),
             snapshot.Customers.Select(c => new OfflineCustomer

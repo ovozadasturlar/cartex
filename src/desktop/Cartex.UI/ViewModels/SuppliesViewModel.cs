@@ -150,7 +150,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             var selected = SupplyCurrency;
             Currencies.Clear();
             Currencies.Add(_baseCurrency);
@@ -729,6 +729,15 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         BarcodePrint.CancelCommand.Execute(null);
         SelectedSupplier = null;
         SelectedWarehouse = null;
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsPaymentOpen = false;
+        IsDetailOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
+        QuickProduct.IsOpen = false;
     }
 
     private async Task LoadSuppliesAsync()

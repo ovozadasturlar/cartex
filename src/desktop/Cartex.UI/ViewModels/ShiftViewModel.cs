@@ -121,6 +121,8 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         CountedCash = 0;
     }
 
+    public override void OnNavigatedFrom() => IsReportOpen = false;
+
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanViewHistory));
@@ -154,7 +156,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             BaseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.SalesMulticurrency;
             CurrencyRows.Clear();
             if (!IsMulticurrency) return;
 

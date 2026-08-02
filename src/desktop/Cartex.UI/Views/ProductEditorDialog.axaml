@@ -141,8 +141,19 @@
                         </Grid>
                     </StackPanel>
 
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,12,*,12,*">
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="{Binding L[unit_group]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding DimensionOptions}" SelectedItem="{Binding EditDimension}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock Text="{Binding Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=dimension}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="6">
                             <TextBlock Text="{Binding L[unit]}" Classes="caption" />
                             <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding EditUnit}"
                                       HorizontalAlignment="Stretch" PlaceholderText="—">
@@ -151,12 +162,17 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="6">
+                        <StackPanel Grid.Column="4" Spacing="6">
                             <TextBlock Text="{Binding L[min_stock]}" Classes="caption" />
                             <NumericUpDown Value="{Binding EditMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                            ShowButtonSpinner="False" MinHeight="40" />
                         </StackPanel>
                     </Grid>
+
+                    <ToggleSwitch IsVisible="{Binding CanConfigureAmountEntry}"
+                                  IsChecked="{Binding EditAmountEntryEnabled}"
+                                  Content="{Binding L[amount_entry_sale]}"
+                                  ToolTip.Tip="{Binding L[amount_entry_sale_hint]}" />
 
                     <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[barcode]}" Classes="caption" />

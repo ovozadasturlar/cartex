@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddSingleton<IPrinterService, PrinterService>();
         services.AddSingleton<IBarcodeLabelService, BarcodeLabelService>();
         services.AddSingleton<IScannedCodeParser, ScannedCodeParser>();
+        services.AddSingleton<IScanFeedbackService, ScanFeedbackService>();
         services.AddSingleton<ShortcutService>();
         services.AddSingleton<ReferenceCache>(sp =>
         {

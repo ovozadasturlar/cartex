@@ -681,7 +681,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid ColumnDefinitions="Auto,8,*,8,*">
+                        <Grid ColumnDefinitions="Auto,8,*">
                             <Button Grid.Column="0" Classes="outline" MinHeight="50" Padding="14,0"
                                     HorizontalContentAlignment="Center" Command="{Binding HoldSaleCommand}"
                                     IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
@@ -689,10 +689,6 @@
                                 <mi:MaterialIcon Kind="PauseCircleOutline" Width="22" Height="22" />
                             </Button>
                             <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                    MinHeight="50" FontSize="15" Command="{Binding SendToQueueCommand}"
-                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
-                                    Content="{Binding L[send_to_queue]}" />
-                            <Button Grid.Column="4" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     MinHeight="50" FontSize="17" Command="{Binding CompleteSaleCommand}"
                                     IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCheckout}"
                                     Content="{Binding L[complete_sale]}" />
@@ -737,10 +733,16 @@
                                                     <mi:MaterialIcon Kind="Plus" Width="14" Height="14" />
                                                 </Button>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="64">
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="76">
                                                 <TextBlock Text="{Binding LineTotal, StringFormat='{}{0:N0}'}"
                                                            FontWeight="SemiBold" TextAlignment="Right"
+                                                           IsVisible="{Binding !AllowsAmountEntry}"
                                                            Foreground="{DynamicResource TextPrimary}" />
+                                                <NumericUpDown Value="{Binding AmountInput, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                               Minimum="0" FormatString="N0" ShowButtonSpinner="False"
+                                                               MinWidth="76" MinHeight="30" TextAlignment="Right"
+                                                               IsVisible="{Binding AllowsAmountEntry}"
+                                                               ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[amount_entry_sale_hint]}" />
                                                 <Button Background="Transparent" BorderThickness="0" Padding="2"
                                                         HorizontalAlignment="Right" Cursor="Hand"
                                                         Command="{Binding $parent[UserControl].DataContext.RemoveItemCommand}"
