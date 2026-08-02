@@ -55,7 +55,7 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
             return;
         }
 
-        var image = TsplLabel.RenderPng(code, name, priceText, options);
+        var image = TsplLabel.RenderPrintPng(code, name, priceText, options);
         var document = Document.Create(container =>
         {
             for (var i = 0; i < quantity; i++)

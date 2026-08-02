@@ -54,7 +54,13 @@ public static class TsplLabel
     public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options)
         => RenderPreview(code, name, priceText, options).Image;
 
+    public static byte[] RenderPrintPng(string code, string name, string? priceText, LabelOptions options)
+        => RenderImage(code, name, priceText, options).Image;
+
     public static PreviewResult RenderPreview(string code, string name, string? priceText, LabelOptions options)
+        => RenderImage(code, name, priceText, options with { Rotation = 0 });
+
+    private static PreviewResult RenderImage(string code, string name, string? priceText, LabelOptions options)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
@@ -144,7 +150,7 @@ public static class TsplLabel
         using var priceFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.13, 3.4, 5.5));
         using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, FontSize(0.075, 2.4, 3.3));
 
-        var lines = WrapLines(name, nameFont, usable, string.IsNullOrWhiteSpace(priceText) ? 2 : 1);
+        var lines = WrapLines(name, nameFont, usable, 2);
         var nameHeight = lines.Count * nameFont.Spacing;
         var priceHeight = string.IsNullOrWhiteSpace(priceText) ? 0 : priceFont.Spacing;
         var codeHeight = codeFont.Spacing;
