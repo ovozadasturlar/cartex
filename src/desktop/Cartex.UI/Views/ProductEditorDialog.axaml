@@ -24,8 +24,15 @@
         <Style Selector="Button.icon-sm:pointerover">
             <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
         </Style>
+        <Style Selector="Border.image-host Border.image-menu">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.image-host:pointerover Border.image-menu">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
     </UserControl.Styles>
 
+    <Panel>
     <Border Background="#30000000" IsVisible="{Binding IsEditOpen}"
             c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
         <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="720" MaxHeight="820"
@@ -62,13 +69,38 @@
                     <StackPanel Spacing="16">
                         <Grid ColumnDefinitions="156,20,*">
                             <StackPanel Spacing="10">
-                                <Border Width="156" Height="156" CornerRadius="14" ClipToBounds="True"
+                                <Border Classes="image-host" Width="156" Height="156" CornerRadius="14" ClipToBounds="True"
                                         Background="{DynamicResource SidebarItemHover}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <Grid>
-                                        <mi:MaterialIcon Kind="ImageOutline" Width="44" Height="44" HorizontalAlignment="Center"
-                                                         VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
-                                        <Image Source="{Binding EditImagePreview}" Stretch="UniformToFill" />
+                                        <Button Background="Transparent" BorderThickness="0" Padding="0"
+                                                Command="{Binding OpenEditImageCommand}">
+                                            <Grid>
+                                                <mi:MaterialIcon Kind="ImageOutline" Width="44" Height="44" HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                                                <Image Source="{Binding EditImagePreview}" Stretch="UniformToFill" />
+                                            </Grid>
+                                        </Button>
+                                        <Border Classes="image-menu" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Width="72" Height="58" CornerRadius="0,13,0,18">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                                    <GradientStop Color="#00182433" Offset="0" />
+                                                    <GradientStop Color="#D9182433" Offset="1" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Button Classes="icon-sm" Foreground="White" HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top" Margin="0,5,5,0">
+                                                <Button.Flyout>
+                                                    <MenuFlyout>
+                                                        <MenuItem Header="{Binding L[download]}" Command="{Binding DownloadEditImageCommand}" />
+                                                        <MenuItem Header="{Binding L[replace_image]}" Command="{Binding PickImageCommand}" />
+                                                        <MenuItem Header="{Binding L[remove_image]}" Command="{Binding RemoveEditImageCommand}" />
+                                                    </MenuFlyout>
+                                                </Button.Flyout>
+                                                <mi:MaterialIcon Kind="DotsVertical" Width="18" Height="18" Foreground="White" />
+                                            </Button>
+                                        </Border>
                                     </Grid>
                                 </Border>
                                 <Button Classes="outline" HorizontalAlignment="Stretch"
@@ -310,4 +342,43 @@
             </DockPanel>
         </Border>
     </Border>
+    <Border Background="#66000000" IsVisible="{Binding IsImageViewerOpen}"
+            c:OverlayBehaviors.DismissCommand="{Binding CloseImageViewerCommand}">
+        <Border Background="{DynamicResource CardBg}" CornerRadius="16" MaxWidth="900" MaxHeight="760"
+                Margin="32" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" BoxShadow="0 18 50 0 #55000000">
+            <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                <Grid ColumnDefinitions="*,Auto,8,Auto,8,Auto,8,Auto">
+                    <TextBlock Text="{Binding ImageViewerTitle}" Classes="h2" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="1" Classes="outline" Command="{Binding DownloadImageViewerCommand}"
+                            IsEnabled="{Binding HasImageViewerImage}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <mi:MaterialIcon Kind="Download" Width="17" Height="17" />
+                            <TextBlock Text="{Binding L[download]}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="3" Classes="outline" Command="{Binding ReplaceImageViewerCommand}"
+                            IsVisible="{Binding CanEditViewerImage}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <mi:MaterialIcon Kind="ImageSyncOutline" Width="17" Height="17" />
+                            <TextBlock Text="{Binding L[replace_image]}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="5" Classes="outline" Command="{Binding RemoveImageViewerCommand}"
+                            IsVisible="{Binding CanEditViewerImage}" Foreground="{DynamicResource DangerBrush}">
+                        <mi:MaterialIcon Kind="TrashCanOutline" Width="17" Height="17" />
+                    </Button>
+                    <Button Grid.Column="7" Classes="icon-sm" Command="{Binding CloseImageViewerCommand}">
+                        <mi:MaterialIcon Kind="Close" Width="20" Height="20" />
+                    </Button>
+                </Grid>
+                <Border Grid.Row="1" Background="{DynamicResource AppBg}" CornerRadius="12" ClipToBounds="True"
+                        MinWidth="360" MinHeight="280" MaxWidth="860" MaxHeight="680">
+                    <Image Source="{Binding ImageViewerImage}" Stretch="Uniform" />
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+    </Panel>
 </UserControl>

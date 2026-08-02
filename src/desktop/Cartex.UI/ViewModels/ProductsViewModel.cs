@@ -44,6 +44,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private CategoryDto? _filterCategory;
+    [ObservableProperty] private decimal? _filterMinPrice;
+    [ObservableProperty] private decimal? _filterMaxPrice;
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
     [ObservableProperty] private bool _isSaleCreate;
@@ -88,6 +90,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _editImageKey;
     [ObservableProperty] private Bitmap? _editImagePreview;
     [ObservableProperty] private string? _editImageUrl;
+    [ObservableProperty] private bool _isImageViewerOpen;
+    [ObservableProperty] private Bitmap? _imageViewerImage;
+    [ObservableProperty] private string _imageViewerTitle = string.Empty;
+    private bool _imageViewerEditsCurrent;
 
     private long _editId;
     private string _originalDimension = "Count";
@@ -198,6 +204,8 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _suppressReload = true;
         SearchText = string.Empty;
         FilterCategory = null;
+        FilterMinPrice = null;
+        FilterMaxPrice = null;
         _suppressReload = false;
         Products.Clear();
         PriceCurrencies.Clear();
@@ -208,6 +216,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         IsVariantEditOpen = false;
         BarcodePrint.CancelCommand.Execute(null);
         IsAddingManufacturer = false;
+        CloseImageViewer();
         Import.IsOpen = false;
         Paging.Page = 1;
         OnPropertyChanged(nameof(IsEmpty));
@@ -220,6 +229,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         IsVariantEditOpen = false;
         BarcodePrint.CancelCommand.Execute(null);
         IsAddingManufacturer = false;
+        CloseImageViewer();
         Import.IsOpen = false;
     }
 
@@ -412,7 +422,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public BarcodeLabelSession BarcodePrint { get; }
     public bool IsPrintOpen => BarcodePrint.IsOpen;
-    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || Import.IsOpen;
+    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || IsImageViewerOpen || Import.IsOpen;
     partial void OnIsEditOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(IsModalOpen));
@@ -424,6 +434,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
     partial void OnIsVariantsOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsVariantEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsImageViewerOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnImageViewerImageChanged(Bitmap? value) => OnPropertyChanged(nameof(HasImageViewerImage));
+    public bool HasImageViewerImage => ImageViewerImage is not null;
+    public bool CanEditViewerImage => _imageViewerEditsCurrent && CanEditCurrent;
     private void OnBarcodePrintChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(BarcodeLabelSession.IsOpen)) return;
@@ -496,6 +510,112 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             return new Bitmap(new MemoryStream(bytes));
         }
         catch { return null; }
+    }
+
+    public async Task OpenImageViewerAsync(string? imageUrl, string title)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl)) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                var bytes = await _imageClient.GetByteArrayAsync(ImageUrl.Absolute(imageUrl));
+                ImageViewerImage = new Bitmap(new MemoryStream(bytes));
+            }
+            ImageViewerTitle = title;
+            _imageViewerEditsCurrent = false;
+            OnPropertyChanged(nameof(CanEditViewerImage));
+            IsImageViewerOpen = true;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task OpenProductImage(ProductDto product)
+    {
+        if (string.IsNullOrWhiteSpace(product.ImageKey)) return;
+        ImageViewerImage = await LoadBitmapAsync(product.ImageKey);
+        if (ImageViewerImage is null) return;
+        ImageViewerTitle = product.Name;
+        _imageViewerEditsCurrent = false;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+        IsImageViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditImage()
+    {
+        if (EditImagePreview is null) return;
+        ImageViewerImage = EditImagePreview;
+        ImageViewerTitle = EditName;
+        _imageViewerEditsCurrent = true;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+        IsImageViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseImageViewer()
+    {
+        IsImageViewerOpen = false;
+        ImageViewerImage = null;
+        ImageViewerTitle = string.Empty;
+        _imageViewerEditsCurrent = false;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+    }
+
+    [RelayCommand]
+    private async Task DownloadImageViewerAsync()
+        => await SaveImageAsync(ImageViewerImage, ImageViewerTitle);
+
+    [RelayCommand]
+    private async Task DownloadEditImageAsync()
+        => await SaveImageAsync(EditImagePreview, EditName);
+
+    private async Task SaveImageAsync(Bitmap? image, string title)
+    {
+        if (image is null) return;
+        try
+        {
+            var name = string.Concat(title.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character));
+            await using var target = await _filePicker.SaveFileAsync(string.IsNullOrWhiteSpace(name) ? "product" : name, "png");
+            if (target is null) return;
+            image.Save(target);
+            await target.FlushAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task ReplaceImageViewerAsync()
+    {
+        if (!CanEditViewerImage) return;
+        try
+        {
+            var uploaded = await UploadPickedImageAsync();
+            if (uploaded is null) return;
+            EditImageKey = uploaded.Value.Key;
+            EditImagePreview = uploaded.Value.Preview;
+            ImageViewerImage = uploaded.Value.Preview;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void RemoveImageViewer()
+    {
+        if (!CanEditViewerImage) return;
+        EditImageKey = null;
+        EditImagePreview = null;
+        CloseImageViewer();
+    }
+
+    [RelayCommand]
+    private void RemoveEditImage()
+    {
+        if (!CanEditCurrent) return;
+        EditImageKey = null;
+        EditImagePreview = null;
     }
 
     private async Task<(string Key, Bitmap? Preview)?> UploadPickedImageAsync()
@@ -634,8 +754,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 .Sort(Paging.SortBy, Paging.Descending)
                 .Search(search)
                 .With("categoryId", categoryId)
+                .With("minPrice", FilterMinPrice)
+                .With("maxPrice", FilterMaxPrice)
                 .Build());
-            var totalsTask = _productsApi.GetTotalsAsync(search, categoryId);
+            var totalsTask = _productsApi.GetTotalsAsync(search, categoryId, FilterMinPrice, FilterMaxPrice);
             var paged = (await pagedTask).ToPaged();
             Products.Clear();
             foreach (var p in paged.Items) Products.Add(p);
@@ -665,6 +787,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     partial void OnFilterCategoryChanged(CategoryDto? value) { if (_suppressReload) return; Paging.Page = 1; _ = LoadProductsAsync(); }
+    partial void OnFilterMinPriceChanged(decimal? value) => ScheduleFilterReload();
+    partial void OnFilterMaxPriceChanged(decimal? value) => ScheduleFilterReload();
+
+    private void ScheduleFilterReload()
+    {
+        if (_suppressReload) return;
+        _searchCts?.Cancel();
+        var cts = _searchCts = new CancellationTokenSource();
+        _ = DebouncedSearchAsync(cts.Token);
+    }
     partial void OnIsNewChanged(bool value)
     {
         OnPropertyChanged(nameof(EditTitle));

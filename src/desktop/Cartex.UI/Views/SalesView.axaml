@@ -1027,21 +1027,23 @@
                     <ScrollViewer>
                         <StackPanel Margin="22" Spacing="12">
                         <Grid ColumnDefinitions="Auto,16,*">
-                            <Border Width="128" Height="128" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"
-                                    Background="{DynamicResource SidebarItemHover}">
-                                <Panel>
-                                    <mi:MaterialIcon Kind="PackageVariantClosed" Width="40" Height="40"
-                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                     Foreground="{DynamicResource TextMuted}" />
-                                    <ContentControl Content="{Binding DetailProduct}">
-                                        <ContentControl.ContentTemplate>
-                                            <DataTemplate>
-                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
-                                            </DataTemplate>
-                                        </ContentControl.ContentTemplate>
-                                    </ContentControl>
-                                </Panel>
-                            </Border>
+                            <Button Width="128" Height="128" Padding="0" BorderThickness="0" Background="Transparent"
+                                    VerticalAlignment="Top" Command="{Binding OpenDetailImageCommand}">
+                                <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource SidebarItemHover}">
+                                    <Panel>
+                                        <mi:MaterialIcon Kind="PackageVariantClosed" Width="40" Height="40"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource TextMuted}" />
+                                        <ContentControl Content="{Binding DetailProduct}">
+                                            <ContentControl.ContentTemplate>
+                                                <DataTemplate>
+                                                    <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
+                                                </DataTemplate>
+                                            </ContentControl.ContentTemplate>
+                                        </ContentControl>
+                                    </Panel>
+                                </Border>
+                            </Button>
                             <StackPanel Grid.Column="2" Spacing="10">
                                 <TextBlock Text="{Binding DetailProductDisplay.ProductName}" FontSize="17" FontWeight="Bold"
                                            TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />

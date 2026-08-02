@@ -12,7 +12,7 @@ public interface IProductsApi
     Task<IApiResponse<List<ProductDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/products/totals")]
-    Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null);
+    Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null, [Query] decimal? minPrice = null, [Query] decimal? maxPrice = null);
 
     [Get("/api/products/category-counts")]
     Task<List<CategoryCountDto>> GetCategoryCountsAsync();

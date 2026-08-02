@@ -45,8 +45,12 @@
             </c:PageHeader>
 
             <c:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText, Mode=TwoWay}"
-                         Watermark="{Binding L[search]}" SearchWidth="760" Margin="0,0,0,14">
+                         Watermark="{Binding L[search]}" SearchWidth="380" Margin="0,0,0,14">
                 <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding FilterMinPrice}" Minimum="0" ShowButtonSpinner="False"
+                                   MinWidth="112" PlaceholderText="{Binding L[price_from]}" />
+                    <NumericUpDown Value="{Binding FilterMaxPrice}" Minimum="0" ShowButtonSpinner="False"
+                                   MinWidth="112" PlaceholderText="{Binding L[price_to]}" />
                     <ComboBox ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}"
                               MinWidth="180">
                         <ComboBox.ItemTemplate>
@@ -82,14 +86,18 @@
                             <DataGridTemplateColumn Width="50">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border Width="34" Height="34" CornerRadius="7" Margin="8,4" ClipToBounds="True"
-                                                Background="{DynamicResource AppBg}" VerticalAlignment="Center">
-                                            <Panel>
-                                                <mi:MaterialIcon Kind="ImageOutline" Width="16" Height="16"
-                                                                 Foreground="{DynamicResource TextMuted}" />
-                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ThumbImageUrlConverter.Instance}}" Stretch="UniformToFill" />
-                                            </Panel>
-                                        </Border>
+                                        <Button Width="34" Height="34" Margin="8,4" Padding="0" BorderThickness="0"
+                                                Background="Transparent" VerticalAlignment="Center"
+                                                Command="{Binding $parent[DataGrid].DataContext.OpenProductImageCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Border CornerRadius="7" ClipToBounds="True" Background="{DynamicResource AppBg}">
+                                                <Panel>
+                                                    <mi:MaterialIcon Kind="ImageOutline" Width="16" Height="16"
+                                                                     Foreground="{DynamicResource TextMuted}" />
+                                                    <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ThumbImageUrlConverter.Instance}}" Stretch="UniformToFill" />
+                                                </Panel>
+                                            </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

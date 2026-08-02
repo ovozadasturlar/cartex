@@ -226,7 +226,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public StockOnHandDto DetailProductDisplay => DetailProduct ?? EmptyDetailProduct;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsEditOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsModalOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -416,7 +416,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         ProductEditor.CreatedForSale += OnProductCreatedForSale;
         ProductEditor.ProductUpdated += productId => _ = RefreshProductAfterEditAsync(productId);
         ProductEditor.ProductDeleted += OnProductDeleted;
-        ProductEditor.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ProductsViewModel.IsEditOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
+        ProductEditor.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ProductsViewModel.IsModalOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         Prepack.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(PrepackViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
@@ -1169,6 +1169,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CloseProductDetail() => IsProductDetailOpen = false;
+
+    [RelayCommand]
+    private Task OpenDetailImage() => DetailProduct is { } product
+        ? ProductEditor.OpenImageViewerAsync(product.ImageUrl, product.ProductName)
+        : Task.CompletedTask;
 
     [RelayCommand]
     private async Task EditDetailProductAsync()
