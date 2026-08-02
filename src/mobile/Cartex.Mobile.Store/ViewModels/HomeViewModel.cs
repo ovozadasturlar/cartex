@@ -46,13 +46,18 @@ public partial class HomeViewModel(
         Error = null;
         try
         {
-            if (ShowQueue)
-                OpenCarts = (await ordering.GetAllAsync("Open", warehouse.WarehouseId)).Count;
+            var queueTask = ShowQueue
+                ? ordering.GetAllAsync("Open", warehouse.WarehouseId)
+                : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
+            var totalsTask = ShowStats
+                ? sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1))
+                : Task.FromResult(new Cartex.Shared.Models.Sales.SalesTotalsDto(0, 0, 0, 0));
+            await Task.WhenAll(queueTask, totalsTask);
+            if (ShowQueue) OpenCarts = queueTask.Result.Count;
             if (ShowStats)
             {
-                var totals = await sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1));
-                TodayCount = totals.Count;
-                TodayTotal = totals.TotalAmount.ToString("N0");
+                TodayCount = totalsTask.Result.Count;
+                TodayTotal = totalsTask.Result.TotalAmount.ToString("N0");
             }
         }
         catch

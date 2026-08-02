@@ -22,7 +22,7 @@ public partial class TradeViewModel(
     public ObservableCollection<TradeSaleRow> Sales { get; } = [];
     public ObservableCollection<QueueStatusChip> QueueStatuses { get; } =
     [
-        new("Open", Loc.Instance["queue_open"]),
+        new("Open", Loc.Instance["queue_open"]) { IsSelected = true },
         new("Confirmed", Loc.Instance["queue_confirmed"]),
         new("CheckedOut", Loc.Instance["queue_sold"]),
         new("Cancelled", Loc.Instance["queue_cancelled"])
@@ -38,6 +38,7 @@ public partial class TradeViewModel(
     [ObservableProperty] private int _todayCount;
     [ObservableProperty] private string _todayTotal = "0";
     private bool _hubWired;
+    private DateTime _lastLoadedAt;
 
     public bool IsQueue => Section == "queue";
     public bool IsSales => Section == "sales";
@@ -52,12 +53,13 @@ public partial class TradeViewModel(
             orderingHub.CartsChanged += OnCartsChanged;
             orderingHub.Resynced += OnHubResynced;
         }
-        await orderingHub.EnsureStartedAsync();
+        _ = orderingHub.EnsureStartedAsync();
         HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
         if (!HasQueueAccess && HasSalesAccess)
             Section = "sales";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
+        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(5)) return;
         await LoadAsync();
     }
 
@@ -145,6 +147,7 @@ public partial class TradeViewModel(
                 await LoadQueueCoreAsync();
             else
                 await LoadSalesCoreAsync();
+            _lastLoadedAt = DateTime.UtcNow;
         }
         catch
         {
