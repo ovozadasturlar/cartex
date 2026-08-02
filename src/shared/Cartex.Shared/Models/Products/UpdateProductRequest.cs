@@ -14,4 +14,6 @@ public record UpdateProductRequest(
     decimal? VatRate = null,
     decimal? SellingPrice = null,
     string? PriceCurrency = null,
-    long? ManufacturerId = null);
+    long? ManufacturerId = null,
+    bool? AmountEntryEnabled = null,
+    bool ConfirmUnitDimensionChange = false);

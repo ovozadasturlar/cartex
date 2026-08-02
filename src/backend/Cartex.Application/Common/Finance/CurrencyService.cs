@@ -9,8 +9,10 @@ public interface ICurrencyService
 {
     Task<string> BaseAsync(CancellationToken cancellationToken);
     Task<decimal> RateAsync(string code, CancellationToken cancellationToken);
-    Task<bool> IsMulticurrencyAsync(CancellationToken cancellationToken);
-    Task EnsureAllowedAsync(string? code, CancellationToken cancellationToken);
+    Task<bool> IsPricingMulticurrencyAsync(CancellationToken cancellationToken);
+    Task<bool> IsSalesMulticurrencyAsync(CancellationToken cancellationToken);
+    Task EnsurePricingAllowedAsync(string? code, CancellationToken cancellationToken);
+    Task EnsureSalesAllowedAsync(string? code, CancellationToken cancellationToken);
 }
 
 public sealed class CurrencyService(IApplicationDbContext db, IFeatureStateProvider features) : ICurrencyService
@@ -34,18 +36,28 @@ public sealed class CurrencyService(IApplicationDbContext db, IFeatureStateProvi
         return rate ?? throw new BusinessRuleException($"Kurs kiritilmagan: {code}");
     }
 
-    public Task<bool> IsMulticurrencyAsync(CancellationToken cancellationToken) =>
-        features.IsEnabledAsync(FeatureCatalog.Multicurrency, cancellationToken);
+    public Task<bool> IsPricingMulticurrencyAsync(CancellationToken cancellationToken) =>
+        features.IsEnabledAsync(FeatureCatalog.PricingMulticurrency, cancellationToken);
 
-    public async Task EnsureAllowedAsync(string? code, CancellationToken cancellationToken)
+    public Task<bool> IsSalesMulticurrencyAsync(CancellationToken cancellationToken) =>
+        features.IsEnabledAsync(FeatureCatalog.SalesMulticurrency, cancellationToken);
+
+    public Task EnsurePricingAllowedAsync(string? code, CancellationToken cancellationToken) =>
+        EnsureAllowedAsync(code, FeatureCatalog.PricingMulticurrency, cancellationToken);
+
+    public Task EnsureSalesAllowedAsync(string? code, CancellationToken cancellationToken) =>
+        EnsureAllowedAsync(code, FeatureCatalog.SalesMulticurrency, cancellationToken);
+
+    private async Task EnsureAllowedAsync(string? code, string feature, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(code) || string.Equals(code, await BaseAsync(cancellationToken), StringComparison.OrdinalIgnoreCase))
             return;
-        if (!await IsMulticurrencyAsync(cancellationToken))
+        if (!await features.IsEnabledAsync(feature, cancellationToken))
             throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
 
         var normalized = code.Trim().ToUpperInvariant();
         if (!await db.Currencies.AnyAsync(c => c.Code == normalized && c.IsEnabled, cancellationToken))
             throw new BusinessRuleException($"Valyuta faol emas: {normalized}");
+        await RateAsync(normalized, cancellationToken);
     }
 }

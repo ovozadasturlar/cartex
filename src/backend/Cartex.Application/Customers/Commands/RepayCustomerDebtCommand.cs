@@ -34,8 +34,8 @@ public sealed class RepayCustomerDebtCommandHandler(
         var debtCurrency = request.DebtCurrency ?? baseCode;
         var payCurrency = request.PayCurrency ?? debtCurrency;
 
-        if ((debtCurrency != baseCode || payCurrency != baseCode) && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+        await currency.EnsureSalesAllowedAsync(debtCurrency, cancellationToken);
+        await currency.EnsureSalesAllowedAsync(payCurrency, cancellationToken);
 
         if (request.ViaCard && payCurrency != baseCode)
             throw new BusinessRuleException("Karta to'lovi faqat bazaviy valyutada.");

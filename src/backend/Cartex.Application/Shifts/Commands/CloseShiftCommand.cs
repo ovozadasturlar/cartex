@@ -36,7 +36,7 @@ public sealed class CloseShiftCommandHandler(IApplicationDbContext db, ICurrentU
             var row = cashRows.FirstOrDefault(c => c.Currency == counted.Currency);
             if (row is null)
             {
-                await currency.EnsureAllowedAsync(counted.Currency, cancellationToken);
+                await currency.EnsureSalesAllowedAsync(counted.Currency, cancellationToken);
                 row = new ShiftCash { ShiftId = shift.Id, Currency = counted.Currency };
                 db.ShiftCashes.Add(row);
                 cashRows.Add(row);

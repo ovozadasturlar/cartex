@@ -24,4 +24,5 @@ public record ProductDto(
     long? ManufacturerId = null,
     bool IsEnabled = true,
     long? CategoryId = null,
-    long UnitId = 0);
+    long UnitId = 0,
+    bool AllowsAmountEntry = false);

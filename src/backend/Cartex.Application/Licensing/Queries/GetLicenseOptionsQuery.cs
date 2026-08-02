@@ -14,7 +14,7 @@ public sealed class GetLicenseOptionsQueryHandler : IRequestHandler<GetLicenseOp
     public Task<LicenseOptions> Handle(GetLicenseOptionsQuery request, CancellationToken cancellationToken)
     {
         var tariffs = TariffCatalog.Map.Keys.ToList();
-        var features = FeatureCatalog.AllCodes.Select(code => new LicenseFeatureOption(
+        var features = FeatureCatalog.ConfigurableCodes.Select(code => new LicenseFeatureOption(
             code,
             FeatureCatalog.Names[code],
             tariffs.Where(t => TariffCatalog.Map[t].Contains(code)).ToList(),

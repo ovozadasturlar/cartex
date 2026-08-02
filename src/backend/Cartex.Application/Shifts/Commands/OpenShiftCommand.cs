@@ -24,7 +24,7 @@ public sealed class OpenShiftCommandHandler(IApplicationDbContext db, ICurrentUs
         {
             if (string.Equals(row.Currency, baseCode, StringComparison.OrdinalIgnoreCase))
                 throw new BusinessRuleException("Bazaviy valyuta alohida qatorda yuborilmaydi.");
-            await currency.EnsureAllowedAsync(row.Currency, cancellationToken);
+            await currency.EnsureSalesAllowedAsync(row.Currency, cancellationToken);
         }
 
         var hasOpen = await db.Shifts.AnyAsync(s => s.UserId == userId && s.BranchId == branchId && s.Status == ShiftStatus.Open, cancellationToken);

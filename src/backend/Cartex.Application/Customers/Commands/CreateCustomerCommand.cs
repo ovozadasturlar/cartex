@@ -45,7 +45,7 @@ public sealed class CreateCustomerCommandHandler(
             var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
             var baseCode = await currency.BaseAsync(cancellationToken);
             var code = string.IsNullOrWhiteSpace(request.OpeningCurrency) ? baseCode : request.OpeningCurrency.Trim().ToUpperInvariant();
-            await currency.EnsureAllowedAsync(code, cancellationToken);
+            await currency.EnsureSalesAllowedAsync(code, cancellationToken);
 
             var rate = code == baseCode ? 1m : await currency.RateAsync(code, cancellationToken);
             var debt = await ledger.CustomerAccountAsync(customer.Id, AccountType.Debt, cancellationToken, code);

@@ -19,6 +19,7 @@ public class Product : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public decimal MinStock { get; set; }
     public bool? TracksExpiryOverride { get; set; }
+    public bool? AmountEntryEnabled { get; set; }
     public string? Attributes { get; set; }
     public string? IkpuCode { get; set; }
     public decimal? VatRate { get; set; }

@@ -19,9 +19,14 @@ public sealed class LicenseService(IApplicationDbContext db, IMemoryCache cache)
             return cached;
 
         var license = await db.LicenseStates.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var enabled = Parse(license?.EnabledFeatures);
         var status = license is null
             ? new LicenseStatus(false, TariffCatalog.Free, null, [])
-            : new LicenseStatus(license.ExpiresAt is null || license.ExpiresAt > DateTime.UtcNow, license.Tariff, license.ExpiresAt, Parse(license.EnabledFeatures)?.ToList() ?? []);
+            : new LicenseStatus(
+                license.ExpiresAt is null || license.ExpiresAt > DateTime.UtcNow,
+                license.Tariff,
+                license.ExpiresAt,
+                enabled is null ? [] : FeatureCatalog.Normalize(enabled).ToList());
 
         cache.Set(CacheKey, status, TimeSpan.FromSeconds(60));
         return status;
@@ -51,7 +56,10 @@ public sealed class LicenseService(IApplicationDbContext db, IMemoryCache cache)
     private static IReadOnlySet<string> Resolve(LicenseState? license)
     {
         if (license is null) return TariffCatalog.FeaturesFor(TariffCatalog.Free);
-        return Parse(license.EnabledFeatures) ?? TariffCatalog.FeaturesFor(license.Tariff);
+        var configured = Parse(license.EnabledFeatures);
+        return configured is null
+            ? TariffCatalog.FeaturesFor(license.Tariff)
+            : FeatureCatalog.Normalize(configured);
     }
 
     private static IReadOnlySet<string>? Parse(string? json)

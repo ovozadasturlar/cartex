@@ -11,7 +11,7 @@ public sealed class SetProductPriceCommandHandler(IApplicationDbContext db, ICur
 {
     public async Task<Unit> Handle(SetProductPriceCommand request, CancellationToken cancellationToken)
     {
-        await currency.EnsureAllowedAsync(request.Currency, cancellationToken);
+        await currency.EnsurePricingAllowedAsync(request.Currency, cancellationToken);
         await ProductPriceWriter.UpsertAsync(db, request.VariantId, request.WarehouseId, request.SellingPrice, cancellationToken, request.Currency);
         audit.Add("setPrice", "product_prices", request.VariantId, new { request.VariantId, request.WarehouseId, request.SellingPrice, request.Currency });
         await db.SaveChangesAsync(cancellationToken);

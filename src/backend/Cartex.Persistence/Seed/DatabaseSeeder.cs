@@ -262,11 +262,15 @@ public static class DatabaseSeeder
         if (business is null)
             return;
 
-        var existing = await context.Currencies.Select(c => c.Code).ToListAsync();
+        var existing = await context.Currencies.ToListAsync();
         (string Code, string Name)[] system = [(business.Currency, ""), ("USD", "AQSH dollari"), ("EUR", "Yevro"), ("RUB", "Rossiya rubli")];
         foreach (var (code, name) in system)
-            if (!existing.Contains(code))
-                context.Currencies.Add(new Currency { Code = code, Name = name, IsSystem = true, IsDefault = code == "USD" });
+            if (existing.All(c => c.Code != code))
+                context.Currencies.Add(new Currency { Code = code, Name = name, IsSystem = true, IsDefault = code == business.Currency });
+
+        foreach (var currency in existing)
+            currency.IsDefault = currency.Code == business.Currency;
+
         await context.SaveChangesAsync();
     }
 
@@ -284,10 +288,19 @@ public static class DatabaseSeeder
         if (!await context.Roles.AnyAsync())
             return;
 
-        var existing = (await context.Features.Select(f => f.Code).ToListAsync()).ToHashSet();
+        var featureRows = await context.Features.ToListAsync();
+        var existing = featureRows.Select(f => f.Code).ToHashSet();
+        var legacyMulticurrency = featureRows.FirstOrDefault(f => f.Code == FeatureCatalog.Multicurrency)?.IsEnabled == true;
         var missing = FeatureCatalog.Names
             .Where(kv => !existing.Contains(kv.Key))
-            .Select(kv => new Feature { Code = kv.Key, Name = kv.Value, IsEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key) })
+            .Select(kv => new Feature
+            {
+                Code = kv.Key,
+                Name = kv.Value,
+                IsEnabled = kv.Key is FeatureCatalog.PricingMulticurrency or FeatureCatalog.SalesMulticurrency
+                    ? legacyMulticurrency
+                    : !FeatureCatalog.DefaultDisabled.Contains(kv.Key)
+            })
             .ToList();
 
         var stale = await context.Features.Where(f => !FeatureCatalog.AllCodes.Contains(f.Code)).ToListAsync();

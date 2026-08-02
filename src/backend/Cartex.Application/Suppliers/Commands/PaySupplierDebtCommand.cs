@@ -45,8 +45,8 @@ public sealed class PaySupplierDebtCommandHandler(
         var debtCurrency = request.DebtCurrency ?? baseCode;
         var payCurrency = request.PayCurrency ?? debtCurrency;
 
-        if ((debtCurrency != baseCode || payCurrency != baseCode) && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+        await currency.EnsurePricingAllowedAsync(debtCurrency, cancellationToken);
+        await currency.EnsurePricingAllowedAsync(payCurrency, cancellationToken);
 
         if (request.Method != AccountType.Cash && payCurrency != baseCode)
             throw new BusinessRuleException("Naqd bo'lmagan to'lov faqat bazaviy valyutada.");

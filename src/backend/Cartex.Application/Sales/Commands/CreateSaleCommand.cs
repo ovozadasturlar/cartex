@@ -91,8 +91,19 @@ public sealed class CreateSaleCommandHandler(
         var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
         var variants = await db.ProductVariants
             .Where(v => variantIds.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId, v.Product.IsEnabled, ProductName = v.Product.Name })
+            .Select(v => new { v.Id, v.ProductId, v.Product.IsEnabled, ProductName = v.Product.Name, v.Product.Unit.Dimension })
             .ToListAsync(cancellationToken);
+
+        if (variants.Count != variantIds.Count)
+            throw new BusinessRuleException("Mahsulot topilmadi.");
+
+        foreach (var item in request.Items.Where(item => item.PrepackId is null))
+        {
+            var variant = variants.First(v => v.Id == item.VariantId);
+            var precision = variant.Dimension == UnitDimension.Count ? 0 : 3;
+            if (item.Quantity != Math.Round(item.Quantity, precision))
+                throw new BusinessRuleException($"\"{variant.ProductName}\" miqdori o'lchov birligiga mos emas.");
+        }
 
         if (variants.FirstOrDefault(v => !v.IsEnabled) is { } blocked)
             throw new BusinessRuleException($"\"{blocked.ProductName}\" savdo uchun yopilgan.");
@@ -224,7 +235,7 @@ public sealed class CreateSaleCommandHandler(
         if (request.Payments is { Count: > 0 } rows)
         {
             if ((rows.Any(r => r.Currency != baseCode) || (request.DebtCurrency is not null && request.DebtCurrency != baseCode))
-                && !await currency.IsMulticurrencyAsync(cancellationToken))
+                && !await currency.IsSalesMulticurrencyAsync(cancellationToken))
                 throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
 
             if (rows.Any(r => r.Method == PaymentMethod.Bonus && r.Currency != baseCode))
@@ -232,6 +243,7 @@ public sealed class CreateSaleCommandHandler(
 
             foreach (var row in rows.Where(r => r.Amount > 0))
             {
+                await currency.EnsureSalesAllowedAsync(row.Currency, cancellationToken);
                 var rate = await currency.RateAsync(row.Currency, cancellationToken);
                 payments.Add(new SalePayment
                 {
@@ -295,6 +307,7 @@ public sealed class CreateSaleCommandHandler(
         }
 
         var debtCurrency = debtAmount > 0 ? request.DebtCurrency ?? baseCode : baseCode;
+        await currency.EnsureSalesAllowedAsync(debtCurrency, cancellationToken);
         var debtRate = debtCurrency == baseCode ? 1m : await currency.RateAsync(debtCurrency, cancellationToken);
 
         if (debtAmount > 0 && request.CustomerId is not null)

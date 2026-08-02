@@ -1,5 +1,6 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Loyalty;
+using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Common.Search;
 using Cartex.Persistence;
@@ -15,11 +16,16 @@ namespace Cartex.Application.Stocks.Queries;
 public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
     : IRequest<StockOnHandPageDto>;
 
-public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null);
+public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null, bool AllowsAmountEntry = false, decimal QuantityStep = 1);
 
 public record StockOnHandPageDto(IReadOnlyCollection<StockOnHandDto> Items, int TotalCount, decimal TotalQuantity, decimal TotalValue);
 
-public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObjectStorage storage, IFeatureStateProvider features, ISettingsService settings) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
+public sealed class GetStockOnHandQueryHandler(
+    IApplicationDbContext db,
+    IObjectStorage storage,
+    IFeatureStateProvider features,
+    ISettingsService settings,
+    ICurrencyService currency) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
 {
     public async Task<StockOnHandPageDto> Handle(GetStockOnHandQuery request, CancellationToken cancellationToken)
     {
@@ -67,7 +73,41 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
             forceHiddenVariantIds = catalog.Where(x => x.VisibilityOverride == BranchCatalogVisibilityOverride.ForceHidden).Select(x => x.VariantId).ToArray();
         }
 
-        var query = db.ProductVariants
+        var baseCurrency = await currency.BaseAsync(cancellationToken);
+        var priceCurrencies = await db.ProductPrices
+            .Where(p => p.WarehouseId == request.WarehouseId || p.WarehouseId == null)
+            .Select(p => p.Currency)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        foreach (var code in priceCurrencies.Where(code => code != baseCurrency))
+            await currency.RateAsync(code, cancellationToken);
+
+        var variantQuery = db.ProductVariants.AsNoTracking();
+
+        if (subtree is not null)
+        {
+            var ids = subtree.ToList();
+            variantQuery = variantQuery.Where(v => v.Product.CategoryId != null && ids.Contains(v.Product.CategoryId.Value));
+        }
+
+        var search = CatalogSearch.Parse(request.Search);
+        if (search.Terms.Count > 0 && search.Terms.All(t => t.Field != CatalogSearchField.Price))
+        {
+            var terms = search.Terms.OrderByDescending(t => t.Value.Length).ToList();
+            for (var index = 0; index < terms.Count; index++)
+            {
+                variantQuery = ApplySearch(variantQuery, terms[index]);
+                if (index == terms.Count - 1)
+                    break;
+
+                var narrowedIds = await variantQuery.Select(v => v.Id).ToArrayAsync(cancellationToken);
+                if (narrowedIds.Length == 0)
+                    return new StockOnHandPageDto([], 0, 0, 0);
+                variantQuery = db.ProductVariants.AsNoTracking().Where(v => narrowedIds.Contains(v.Id));
+            }
+        }
+
+        var query = variantQuery
             .Select(v => new
             {
                 VariantId = v.Id,
@@ -80,26 +120,24 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                 CategoryName = v.Product.Category == null ? null : v.Product.Category!.Name,
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
+                v.Product.AmountEntryEnabled,
                 ImageKey = v.ImageKey ?? v.Product.ImageKey,
                 Price = db.ProductPrices
-                        .Where(pp => pp.VariantId == v.Id && pp.WarehouseId == request.WarehouseId)
-                        .Select(pp => (decimal?)pp.SellingPrice)
-                        .FirstOrDefault()
-                    ?? db.ProductPrices
-                        .Where(pp => pp.VariantId == v.Id && pp.WarehouseId == null)
-                        .Select(pp => (decimal?)pp.SellingPrice)
-                        .FirstOrDefault()
-                    ?? 0,
+                    .Where(pp => pp.VariantId == v.Id && (pp.WarehouseId == request.WarehouseId || pp.WarehouseId == null))
+                    .OrderByDescending(pp => pp.WarehouseId == request.WarehouseId)
+                    .Select(pp => Math.Round(pp.SellingPrice * (pp.Currency == baseCurrency
+                        ? 1m
+                        : db.ExchangeRates
+                            .Where(rate => rate.Code == pp.Currency)
+                            .OrderByDescending(rate => rate.EffectiveAt)
+                            .Select(rate => rate.Rate)
+                            .First()), 2))
+                    .FirstOrDefault(),
             });
 
-        if (subtree is not null)
+        if (search.Terms.Any(t => t.Field == CatalogSearchField.Price))
         {
-            var ids = subtree.ToList();
-            query = query.Where(o => o.CategoryId != null && ids.Contains(o.CategoryId.Value));
-        }
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            foreach (var token in CatalogSearch.Parse(request.Search).Terms)
+            foreach (var token in search.Terms)
             {
                 var term = $"%{token.Value}%";
                 query = token.Field switch
@@ -198,10 +236,25 @@ public sealed class GetStockOnHandQueryHandler(IApplicationDbContext db, IObject
                     ? DiscountEngine.BestPercent(rules, today, o.ProductId, o.CategoryId, o.ManufacturerId)
                     : null;
                 var barcodes = barcodesByVariant.TryGetValue(o.VariantId, out var values) ? values : [];
-                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes);
+                var allowsAmountEntry = o.Dimension != UnitDimension.Count && o.AmountEntryEnabled != false;
+                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes, allowsAmountEntry, allowsAmountEntry ? 0.001m : 1m);
             })
             .ToList();
 
         return new StockOnHandPageDto(items, totalCount, totals?.Quantity ?? 0m, totals?.Value ?? 0m);
+    }
+
+    private static IQueryable<ProductVariant> ApplySearch(IQueryable<ProductVariant> query, CatalogSearchTerm token)
+    {
+        var term = $"%{token.Value}%";
+        return token.Field switch
+        {
+            CatalogSearchField.Name => query.Where(v => EF.Functions.ILike(v.Product.Name, term)),
+            CatalogSearchField.Barcode => query.Where(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))),
+            CatalogSearchField.Code => query.Where(v => v.Code != null && EF.Functions.ILike(v.Code, term)),
+            _ => query.Where(v => EF.Functions.ILike(v.Product.Name, term)
+                || (v.Code != null && EF.Functions.ILike(v.Code, term))
+                || v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term)))
+        };
     }
 }

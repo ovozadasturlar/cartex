@@ -71,8 +71,7 @@ public sealed class UpdateSupplyCommandHandler(
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var supplyCurrency = request.Currency ?? baseCode;
-        if (supplyCurrency != baseCode && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+        await currency.EnsurePricingAllowedAsync(supplyCurrency, cancellationToken);
         var supplyRate = supplyCurrency == baseCode ? 1m : await currency.RateAsync(supplyCurrency, cancellationToken);
 
         var resolver = await SupplyLineResolver.LoadAsync(db, request.Items, cancellationToken);

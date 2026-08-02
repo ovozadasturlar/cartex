@@ -28,7 +28,8 @@ public record CreateProductCommand(
     decimal? VatRate = null,
     decimal? SellingPrice = null,
     string? PriceCurrency = null,
-    long? ManufacturerId = null) : ICommand<long>;
+    long? ManufacturerId = null,
+    bool? AmountEntryEnabled = null) : ICommand<long>;
 
 public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration) : IRequestHandler<CreateProductCommand, long>
 {
@@ -55,7 +56,8 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             Attributes = request.Attributes,
             ImageKey = request.ImageKey,
             IkpuCode = request.IkpuCode,
-            VatRate = request.VatRate
+            VatRate = request.VatRate,
+            AmountEntryEnabled = request.AmountEntryEnabled
         };
 
         db.Products.Add(product);
@@ -88,7 +90,7 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
 
         if (request.SellingPrice is { } sellingPrice)
         {
-            await currency.EnsureAllowedAsync(request.PriceCurrency, cancellationToken);
+            await currency.EnsurePricingAllowedAsync(request.PriceCurrency, cancellationToken);
             await ProductPriceWriter.UpsertAsync(db, variant.Id, null, sellingPrice, cancellationToken, request.PriceCurrency);
             await db.SaveChangesAsync(cancellationToken);
         }

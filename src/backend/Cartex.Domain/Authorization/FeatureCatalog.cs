@@ -9,6 +9,8 @@ public static class FeatureCatalog
     public const string Suppliers = "suppliers";
     public const string Accounts = "accounts";
     public const string Multicurrency = "multicurrency";
+    public const string PricingMulticurrency = "multicurrency_pricing";
+    public const string SalesMulticurrency = "multicurrency_sales";
     public const string Audit = "audit";
     public const string Ordering = "ordering";
     public const string Prepack = "prepack";
@@ -26,6 +28,8 @@ public static class FeatureCatalog
         [Accounts] = [AppPermissions.Accounts.View, AppPermissions.Transactions.View],
         [Multicurrency] = [AppPermissions.Rates.View, AppPermissions.Rates.Edit, AppPermissions.Currencies.View,
             AppPermissions.Currencies.Create, AppPermissions.Currencies.Edit, AppPermissions.Currencies.Delete],
+        [PricingMulticurrency] = [],
+        [SalesMulticurrency] = [],
         [Audit] = [AppPermissions.Audit.View],
         [Ordering] = [],
         [Prepack] = [AppPermissions.Sales.Prepack],
@@ -43,6 +47,8 @@ public static class FeatureCatalog
         [Suppliers] = "Yetkazib beruvchilar",
         [Accounts] = "Moliya",
         [Multicurrency] = "Ko'p valyuta",
+        [PricingMulticurrency] = "Narxlash va kirim uchun ko'p valyuta",
+        [SalesMulticurrency] = "Savdo va to'lov uchun ko'p valyuta",
         [Audit] = "Audit jurnali",
         [Ordering] = "Onlayn buyurtma",
         [Prepack] = "Qadoqlash (tarozi)",
@@ -53,7 +59,30 @@ public static class FeatureCatalog
 
     public static readonly IReadOnlyList<string> AllCodes = [.. Names.Keys];
 
-    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string> { Ordering, Multicurrency, Agents, Store, OfflineCache };
+    public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string>
+    {
+        Ordering, Multicurrency, PricingMulticurrency, SalesMulticurrency, Agents, Store, OfflineCache
+    };
+
+    public static readonly IReadOnlyList<string> ConfigurableCodes = [.. AllCodes.Where(code => code != Multicurrency)];
+
+    public static IReadOnlySet<string> Normalize(IEnumerable<string> codes)
+    {
+        var normalized = codes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var hasPricing = normalized.Contains(PricingMulticurrency);
+        var hasSales = normalized.Contains(SalesMulticurrency);
+
+        if (normalized.Contains(Multicurrency) && !hasPricing && !hasSales)
+        {
+            normalized.Add(PricingMulticurrency);
+            normalized.Add(SalesMulticurrency);
+        }
+
+        if (normalized.Contains(PricingMulticurrency) || normalized.Contains(SalesMulticurrency))
+            normalized.Add(Multicurrency);
+
+        return normalized;
+    }
 
     public static IReadOnlySet<string> PermissionsFor(IEnumerable<string> codes) =>
         codes.SelectMany(c => Map.TryGetValue(c, out var p) ? p : []).ToHashSet();
