@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-	<!-- Include runtimes for every Android device architecture so deployment never reuses an emulator-only APK. -->
 	<RuntimeIdentifiers>android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
-    <!-- BarcodeScanning.Native.Maui 3.0.6 intentionally bundles ML Kit native libraries that are also
-         supplied by its current Xamarin bindings. The package author confirms XA4301 is safe here. -->
     <NoWarn>$(NoWarn);XA4301</NoWarn>
   </PropertyGroup>
 

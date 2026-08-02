@@ -107,7 +107,6 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 
             if (_isCreate)
             {
-                // New product — prefill barcode as code
                 Code = _initialBarcode ?? "";
                 return;
             }
@@ -150,7 +149,6 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
-        // A scanner page may have released the camera only moments before this page opens.
         await Task.Delay(250);
         try
         {
