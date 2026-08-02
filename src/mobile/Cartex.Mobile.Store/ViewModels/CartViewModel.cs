@@ -24,13 +24,11 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private string _customerSearch = "";
     [ObservableProperty] private bool _hasCustomers;
     
-    // Customer Modal Properties
     [ObservableProperty] private bool _isCustomerModalOpen;
     [ObservableProperty] private string _newCustomerName = "";
     [ObservableProperty] private string _newCustomerPhone = "";
     [ObservableProperty] private bool _isBusy;
 
-    // Product Modal Properties
     [ObservableProperty] private bool _isProductModalOpen;
     [ObservableProperty] private CartLine? _selectedProduct;
     [ObservableProperty] private string _selectedProductImage = "";
@@ -93,12 +91,12 @@ public partial class CartViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Increment(CartLine line) => _cart.SetQuantity(line.VariantId, line.Quantity + 1);
+    private void Increment(CartLine line) => _cart.SetQuantity(line.VariantId, line.Quantity + line.QuantityStep);
 
     [RelayCommand]
     private void Decrement(CartLine line)
     {
-        if (line.Quantity > 1) _cart.SetQuantity(line.VariantId, line.Quantity - 1);
+        if (line.Quantity > line.QuantityStep) _cart.SetQuantity(line.VariantId, line.Quantity - line.QuantityStep);
     }
     
     [RelayCommand]
@@ -197,4 +195,3 @@ public partial class CartViewModel : ObservableObject
         return Shell.Current.GoToAsync("checkout");
     }
 }
-

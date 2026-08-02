@@ -12,6 +12,7 @@ public sealed partial class CartLine : ObservableObject
     public decimal UnitPrice { get; set; }
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private bool _isSwiped;
+    public decimal QuantityStep { get; set; } = 1;
     public decimal LineTotal => UnitPrice * Quantity;
     public string? ImageKey { get; set; }
 
@@ -50,6 +51,7 @@ public sealed class CartStore
                 UnitName = l.UnitName,
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
+                QuantityStep = l.QuantityStep > 0 ? l.QuantityStep : 1,
                 ImageKey = l.ImageKey
             }));
             CustomerId = draft.CustomerId;
@@ -76,6 +78,7 @@ public sealed class CartStore
                 UnitName = product.UnitName,
                 UnitPrice = product.SellingPrice,
                 Quantity = product.PackQty,
+                QuantityStep = product.PackQty > 1 ? product.PackQty : product.QuantityStep,
                 ImageKey = product.ImageKey
             });
         else
@@ -150,13 +153,13 @@ public sealed class CartStore
             CheckoutIdempotencyKey = null;
         }
         var draft = new Draft(
-            Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey)).ToList(),
+            Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey, l.QuantityStep)).ToList(),
             CustomerId, CustomerName, Note, SubmittedCartCode, SubmissionIdempotencyKey, CheckoutIdempotencyKey);
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
         Changed?.Invoke();
     }
 
-    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal UnitPrice, decimal Quantity, string? ImageKey);
+    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal UnitPrice, decimal Quantity, string? ImageKey, decimal QuantityStep = 1);
     private sealed record Draft(
         List<DraftLine> Lines,
         long? CustomerId,

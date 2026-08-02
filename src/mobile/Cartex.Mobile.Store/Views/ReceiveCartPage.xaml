@@ -6,49 +6,78 @@
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:services="clr-namespace:Cartex.Mobile.Store.Services"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     x:DataType="vm:ReceiveCartViewModel"
     Title="{svc:T receive_stock}">
     <Grid RowDefinitions="*,Auto">
-        <ScrollView>
-            <VerticalStackLayout Padding="16" Spacing="12">
+        <CollectionView ItemsSource="{Binding Lines}" Margin="16,10" ItemsLayout="VerticalList" SelectionMode="None">
+            <CollectionView.EmptyView>
                 <Label Text="{svc:T cart_empty}" Style="{StaticResource MutedLabel}" FontSize="15"
-                       HorizontalOptions="Center" Margin="0,40" IsVisible="{Binding IsEmpty}" />
-                <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Lines}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="services:SupplyCartLine">
-                            <Border Style="{StaticResource Card}" Padding="14,10">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="10" RowSpacing="6">
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{Binding ProductName}" FontAttributes="Bold" FontSize="14"
+                       HorizontalOptions="Center" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="services:SupplyCartLine">
+                    <SwipeView Margin="0,0,0,8" SwipeStarted="OnSwipeStarted" SwipeEnded="OnSwipeEnded">
+                        <SwipeView.LeftItems>
+                            <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
+                                <SwipeItemView Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
+                                    <Border WidthRequest="58" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}">
+                                        <Label Text="{StaticResource IcDelete}" FontFamily="MDI" FontSize="22"
+                                               HorizontalOptions="Center" VerticalOptions="Center" TextColor="White" />
+                                    </Border>
+                                </SwipeItemView>
+                            </SwipeItems>
+                        </SwipeView.LeftItems>
+                        <SwipeView.RightItems>
+                            <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
+                                <SwipeItemView Command="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
+                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}">
+                                        <Label Text="+" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                    </Border>
+                                </SwipeItemView>
+                                <SwipeItemView>
+                                    <Border WidthRequest="64" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                                        <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" FontSize="16" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        <Label Text="{Binding UnitName}" Style="{StaticResource MutedLabel}" FontSize="12" />
-                                    </VerticalStackLayout>
-                                    <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="16"
-                                            WidthRequest="36" HeightRequest="40" CornerRadius="10" Padding="0"
-                                            BackgroundColor="Transparent"
-                                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
-                                            Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
-                                            CommandParameter="{Binding .}" />
-                                    <HorizontalStackLayout Grid.Row="1" Spacing="4">
-                                        <Button Text="−" FontSize="18" WidthRequest="40" HeightRequest="40" CornerRadius="10" Padding="0"
-                                                Style="{StaticResource BtnOutline}" BorderWidth="1"
-                                                Command="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
-                                                CommandParameter="{Binding .}" />
-                                        <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" WidthRequest="56"
-                                               HorizontalTextAlignment="Center" VerticalOptions="Center" FontSize="15" FontAttributes="Bold"
+                                    </Border>
+                                </SwipeItemView>
+                                <SwipeItemView Command="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
+                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                        <Label Text="−" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        <Button Text="+" FontSize="18" WidthRequest="40" HeightRequest="40" CornerRadius="10" Padding="0"
-                                                Style="{StaticResource BtnOutline}" BorderWidth="1"
-                                                Command="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
-                                                CommandParameter="{Binding .}" />
-                                    </HorizontalStackLayout>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </VerticalStackLayout>
-        </ScrollView>
+                                    </Border>
+                                </SwipeItemView>
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+                        <Border Style="{StaticResource Card}" Padding="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <ctl:Thumb Source="{Binding ImageKey}" Size="40" Radius="8" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="{Binding ProductName}" FontAttributes="Bold" FontSize="14" LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{Binding UnitName}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="2" Text="{Binding Quantity, StringFormat='{0:0.###}'}"
+                                       VerticalOptions="Center" FontSize="15" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsSwiped}" Value="True">
+                                            <Setter Property="Opacity" Value="0" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+                        </Border>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
         <Border Grid.Row="1" StrokeThickness="1" Padding="16,12"
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">

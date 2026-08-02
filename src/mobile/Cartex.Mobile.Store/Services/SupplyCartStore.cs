@@ -9,7 +9,10 @@ public sealed partial class SupplyCartLine : ObservableObject
     public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
     public string UnitName { get; set; } = "";
+    public string? ImageKey { get; set; }
+    public decimal QuantityStep { get; set; } = 1;
     [ObservableProperty] private decimal _quantity;
+    [ObservableProperty] private bool _isSwiped;
 }
 
 public sealed class SupplyCartStore
@@ -35,7 +38,9 @@ public sealed class SupplyCartStore
                 VariantId = l.VariantId,
                 ProductName = l.ProductName,
                 UnitName = l.UnitName,
-                Quantity = l.Quantity
+                Quantity = l.Quantity,
+                ImageKey = l.ImageKey,
+                QuantityStep = l.QuantityStep > 0 ? l.QuantityStep : 1
             }));
         }
         catch
@@ -53,7 +58,9 @@ public sealed class SupplyCartStore
                 VariantId = product.VariantId,
                 ProductName = product.ProductName,
                 UnitName = product.UnitName,
-                Quantity = product.PackQty
+                Quantity = product.PackQty,
+                ImageKey = product.ImageKey,
+                QuantityStep = product.PackQty > 1 ? product.PackQty : product.QuantityStep
             });
         else
             line.Quantity += product.PackQty;
@@ -84,10 +91,10 @@ public sealed class SupplyCartStore
 
     private void Save()
     {
-        var draft = Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity)).ToList();
+        var draft = Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey, l.QuantityStep)).ToList();
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
         Changed?.Invoke();
     }
 
-    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity);
+    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity, string? ImageKey = null, decimal QuantityStep = 1);
 }

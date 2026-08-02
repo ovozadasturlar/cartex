@@ -46,12 +46,12 @@ public partial class ReceiveCartViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Increment(SupplyCartLine line) => _cart.SetQuantity(line.VariantId, line.Quantity + 1);
+    private void Increment(SupplyCartLine line) => _cart.SetQuantity(line.VariantId, line.Quantity + line.QuantityStep);
 
     [RelayCommand]
     private void Decrement(SupplyCartLine line)
     {
-        if (line.Quantity > 1) _cart.SetQuantity(line.VariantId, line.Quantity - 1);
+        if (line.Quantity > line.QuantityStep) _cart.SetQuantity(line.VariantId, line.Quantity - line.QuantityStep);
     }
 
     [RelayCommand]
