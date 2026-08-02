@@ -98,6 +98,7 @@ public partial class MainViewModel : ViewModelBase
         Branch.PropertyChanged += OnBranchPropertyChanged;
         Busy = busy;
         Connectivity = connectivity;
+        Connectivity.PropertyChanged += OnConnectivityPropertyChanged;
         _currentTheme = SettingsService.Instance.Theme;
         _currentLanguage = SettingsService.Instance.Language;
 
@@ -115,6 +116,20 @@ public partial class MainViewModel : ViewModelBase
         {
             RefreshMenuVisibility();
             BuildPalette();
+        }
+    }
+
+    private async void OnConnectivityPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ConnectivityService.IsOnline) || !Connectivity.IsOnline) return;
+        try
+        {
+            await Branch.LoadAsync();
+            if (CurrentPage is ILoadable loadable)
+                await loadable.LoadAsync();
+        }
+        catch
+        {
         }
     }
 

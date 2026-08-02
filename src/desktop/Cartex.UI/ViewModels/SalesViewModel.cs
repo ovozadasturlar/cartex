@@ -174,6 +174,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IPrinterService _printer;
     private readonly IScannedCodeParser _scannedCodeParser;
     private readonly IScanFeedbackService _scanFeedback;
+    private readonly ConnectivityService _connectivity;
     private readonly AuthService _auth;
 
     private readonly List<CategoryDto> _allCategories = [];
@@ -423,6 +424,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _printer = printer;
         _scannedCodeParser = scannedCodeParser;
         _scanFeedback = scanFeedback;
+        _connectivity = ServiceLocator.Resolve<ConnectivityService>();
         _auth = auth;
 
         CartItems.CollectionChanged += (_, e) =>
@@ -444,6 +446,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [
         new(Key.F2, KeyModifiers.None, "shortcut_scan_focus", () => ScanFocusRequested?.Invoke(), WorksInText: true),
         new(Key.F4, KeyModifiers.None, "shortcut_pay_exact", () => PayExactCommand.Execute(null), WorksInText: true),
+        new(Key.F5, KeyModifiers.None, "refresh", () => RefreshProductsCommand.Execute(null), WorksInText: true),
         new(Key.F6, KeyModifiers.None, "shortcut_hold", () => HoldSaleCommand.Execute(null), WorksInText: true),
         new(Key.F9, KeyModifiers.None, "shortcut_complete", () => CompleteSaleCommand.Execute(null), WorksInText: true),
         new(Key.Escape, KeyModifiers.None, "shortcut_close_clear", HandleEscape, WorksInText: true),
@@ -550,6 +553,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
+        if (Branch.CurrentWarehouseId is null && _connectivity.IsOnline)
+            await Branch.LoadAsync();
+
         var policyTask = LoadClientPolicyAsync();
         await Task.WhenAll(
             policyTask,
@@ -936,6 +942,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!token.IsCancellationRequested) await LoadProductsAsync();
     }
     private Task LoadProductsAsync() => LoadProductsPageAsync(reset: true);
+
+    [RelayCommand]
+    private async Task RefreshProductsAsync()
+    {
+        if (Branch.CurrentWarehouseId is null && _connectivity.IsOnline)
+            await Branch.LoadAsync();
+        await LoadCategoriesAsync();
+        await LoadProductsAsync();
+    }
 
     private static bool IsOfflineMode =>
         ServiceLocator.Resolve<OfflineSyncService>().IsEnabled &&
