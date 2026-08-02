@@ -8,7 +8,7 @@ namespace Cartex.UI.ViewModels;
 
 public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, IToastService toast, IBusyService busy, AuthService auth) : ViewModelBase, ILoadable
 {
-    public record DeviceRow(long Id, string Device, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username);
+    public record DeviceRow(long Id, string Device, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username, bool IsOfflineHolder);
 
     public ObservableCollection<DeviceRow> Sessions { get; } = [];
 
@@ -30,7 +30,7 @@ public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, I
                 Sessions.Clear();
                 foreach (var s in list)
                     Sessions.Add(new DeviceRow(s.Id, string.IsNullOrWhiteSpace(s.DeviceName) ? L["devices_unknown"] : s.DeviceName!,
-                        s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.Username));
+                        s.CreatedAt, s.LastUsedAt, s.ExpiresAt, s.Username, s.IsOfflineHolder));
             }
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
@@ -41,11 +41,12 @@ public partial class DevicesViewModel(ISessionsApi api, IDialogService dialog, I
     private async Task RevokeAsync(DeviceRow? session)
     {
         if (!CanRevoke || session is null) return;
-        if (!await dialog.ConfirmDangerAsync(L["devices_revoke_confirm"], L["revoke"])) return;
+        var confirmation = session.IsOfflineHolder ? L["devices_revoke_offline_confirm"] : L["devices_revoke_confirm"];
+        if (!await dialog.ConfirmDangerAsync(confirmation, L["revoke"])) return;
         try
         {
             using (busy.Begin(L["loading"]))
-                await api.RevokeSessionAsync(session.Id);
+                await api.RevokeSessionAsync(session.Id, session.IsOfflineHolder);
             Sessions.Remove(session);
             IsEmpty = Sessions.Count == 0;
             toast.Success(L["success"]);

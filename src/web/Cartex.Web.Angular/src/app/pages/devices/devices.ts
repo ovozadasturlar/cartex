@@ -19,6 +19,7 @@ interface DeviceSession {
   lastUsedAt: string;
   client: string | null;
   username: string | null;
+  isOfflineHolder: boolean;
 }
 
 interface UserGroup {
@@ -60,6 +61,7 @@ const CLIENT_APPS: Record<string, string> = {
             <div class="dico me"><mat-icon>{{ icon(me) }}</mat-icon></div>
             <div class="info">
               <span class="name">{{ me.deviceName || t('device_unknown') }}</span>
+              @if (me.isOfflineHolder) { <span class="offline-badge">{{ t('offline_cache') }}</span> }
               <span class="meta">{{ app(me) }}</span>
               <span class="meta">{{ t('last_active') }}{{ me.lastUsedAt | cxDate }}</span>
             </div>
@@ -84,6 +86,7 @@ const CLIENT_APPS: Record<string, string> = {
               <div class="dico" [class.phone]="isPhone(s)"><mat-icon>{{ icon(s) }}</mat-icon></div>
               <div class="info">
                 <span class="name">{{ s.deviceName || t('device_unknown') }}</span>
+                @if (s.isOfflineHolder) { <span class="offline-badge">{{ t('offline_cache') }}</span> }
                 <span class="meta">{{ app(s) }}</span>
                 <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
               </div>
@@ -121,6 +124,7 @@ const CLIENT_APPS: Record<string, string> = {
                 <div class="dico" [class.phone]="isPhone(s)"><mat-icon>{{ icon(s) }}</mat-icon></div>
                 <div class="info">
                   <span class="name">{{ s.deviceName || t('device_unknown') }}</span>
+                  @if (s.isOfflineHolder) { <span class="offline-badge">{{ t('offline_cache') }}</span> }
                   <span class="meta">{{ app(s) }}</span>
                   <span class="meta">{{ t('last_active') }}{{ s.lastUsedAt | cxDate }}</span>
                 </div>
@@ -204,6 +208,15 @@ const CLIENT_APPS: Record<string, string> = {
     .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
     .name { font-weight: 600; font-size: 14px; }
     .meta { font-size: 12px; color: var(--cx-text-3); }
+    .offline-badge {
+      align-self: flex-start;
+      padding: 2px 7px;
+      border-radius: 9px;
+      background: var(--cx-warning-soft);
+      color: var(--cx-warning);
+      font-size: 10.5px;
+      font-weight: 700;
+    }
     .danger { --mat-button-text-label-text-color: var(--cx-danger); }
     .term-row {
       display: flex;
@@ -289,9 +302,12 @@ export class Devices implements OnInit {
 
   async revoke(s: DeviceSession, t: (key: string) => string): Promise<void> {
     if (!this.canRevoke) return;
-    if (!confirm(t('device_revoke_confirm').replace('{0}', s.deviceName ?? ''))) return;
+    const message = s.isOfflineHolder
+      ? t('devices_revoke_offline_confirm')
+      : t('device_revoke_confirm').replace('{0}', s.deviceName ?? '');
+    if (!confirm(message)) return;
     try {
-      await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${s.id}`));
+      await lastValueFrom(this.http.delete<void>(this.revokeUrl(s)));
       this.notify.success(this.transloco.translate('device_revoked'));
       await this.load();
     } catch (e) {
@@ -312,10 +328,15 @@ export class Devices implements OnInit {
   }
 
   async revokeSelected(t: (key: string) => string): Promise<void> {
-    if (!confirm(t('revoke_selected_confirm'))) return;
+    const rows = this.sessions().filter((s) => this.selected().has(s.id));
+    const message = rows.some((s) => s.isOfflineHolder)
+      ? t('devices_revoke_offline_confirm')
+      : t('revoke_selected_confirm');
+    if (!confirm(message)) return;
     for (const id of this.selected()) {
+      const session = rows.find((s) => s.id === id);
       try {
-        await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${id}`));
+        if (session) await lastValueFrom(this.http.delete<void>(this.revokeUrl(session)));
       } catch {}
     }
     this.notify.success(this.transloco.translate('device_revoked'));
@@ -325,14 +346,21 @@ export class Devices implements OnInit {
   }
 
   async terminateOthers(t: (key: string) => string): Promise<void> {
-    if (!confirm(t('terminate_all_confirm'))) return;
+    const message = this.myOthers().some((s) => s.isOfflineHolder)
+      ? t('devices_revoke_offline_confirm')
+      : t('terminate_all_confirm');
+    if (!confirm(message)) return;
     for (const s of this.myOthers()) {
       try {
-        await lastValueFrom(this.http.delete<void>(`/api/auth/sessions/${s.id}`));
+        await lastValueFrom(this.http.delete<void>(this.revokeUrl(s)));
       } catch {}
     }
     this.notify.success(this.transloco.translate('device_revoked'));
     await this.load();
+  }
+
+  private revokeUrl(session: DeviceSession): string {
+    return `/api/auth/sessions/${session.id}${session.isOfflineHolder ? '?releaseOffline=true' : ''}`;
   }
 
   private async load(): Promise<void> {

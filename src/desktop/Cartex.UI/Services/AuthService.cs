@@ -17,6 +17,7 @@ public sealed class AuthService
     private bool _persist;
 
     public string DeviceName { get; } = Environment.MachineName;
+    public string DeviceId => SettingsService.Instance.DeviceId;
 
     public AuthService(IAuthApi authApi, ITokenStore tokenStore)
     {
@@ -43,14 +44,14 @@ public sealed class AuthService
 
     public async Task<LoginResponse> LoginAsync(string username, string password, bool rememberMe)
     {
-        var response = await _authApi.LoginAsync(new LoginRequest(username, password, DeviceName));
+        var response = await _authApi.LoginAsync(new LoginRequest(username, password, DeviceName, DeviceId));
         Apply(response, rememberMe);
         return response;
     }
 
     public async Task<LoginResponse> LoginWithKeyAsync(string keyContent, string serial)
     {
-        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, $"{DeviceName} · USB kalit"));
+        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, $"{DeviceName} · USB kalit", DeviceId));
         Apply(response, true);
         return response;
     }
@@ -65,7 +66,7 @@ public sealed class AuthService
 
     public async Task<LoginResponse?> TryQrPollAsync(string code, CancellationToken cancellationToken)
     {
-        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR"), cancellationToken);
+        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR", DeviceId), cancellationToken);
         if (response.Content is null) return null;
         Apply(response.Content, true);
         return response.Content;
@@ -110,7 +111,7 @@ public sealed class AuthService
             if (_token is not null && !IsExpiringSoon(_token)) return _token;
             var refresh = _refreshToken;
             if (string.IsNullOrEmpty(refresh)) return _token;
-            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
             Apply(response, _persist);
             return _token;
         }
@@ -139,7 +140,7 @@ public sealed class AuthService
         await _refreshLock.WaitAsync();
         try
         {
-            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
             Apply(response, _persist);
         }
         catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)

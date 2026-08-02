@@ -34,17 +34,17 @@ public sealed class AuthTokenBuilder(
     public Task<User?> LoadUserByIdAsync(long id, CancellationToken cancellationToken) =>
         UsersWithGraph().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-    public async Task<LoginResponse> IssueAsync(User user, string? deviceName, CancellationToken cancellationToken)
+    public async Task<LoginResponse> IssueAsync(User user, string? deviceName, string? deviceId, CancellationToken cancellationToken)
     {
         var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
         var now = DateTime.UtcNow;
-        var refreshToken = CreateSession(user.Id, deviceName, now, out _);
-        audit.Add("login", "auth", user.Id, new { user.Username, Device = deviceName }, asUserId: user.Id);
+        var refreshToken = CreateSession(user.Id, deviceName, deviceId, now, out _);
+        audit.Add("login", "auth", user.Id, new { user.Username, Device = deviceName, DeviceId = deviceId }, asUserId: user.Id);
         await db.SaveChangesAsync(cancellationToken);
         return new LoginResponse(accessToken, refreshToken, user.FullName, role);
     }
 
-    public async Task<LoginResponse?> RotateAsync(string rawRefresh, string? deviceName, CancellationToken cancellationToken)
+    public async Task<LoginResponse?> RotateAsync(string rawRefresh, string? deviceName, string? deviceId, CancellationToken cancellationToken)
     {
         var hash = RefreshTokens.Hash(rawRefresh);
         var session = await db.RefreshSessions.AsNoTracking().FirstOrDefaultAsync(s => s.TokenHash == hash, cancellationToken);
@@ -79,20 +79,20 @@ public sealed class AuthTokenBuilder(
         if (claimed == 0) return null;
 
         var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
-        AddSession(user.Id, deviceName ?? session.DeviceName, newRaw, newHash, now, session.FamilyCreatedAt);
+        AddSession(user.Id, deviceName ?? session.DeviceName, deviceId ?? session.DeviceId, newRaw, newHash, now, session.FamilyCreatedAt);
         await db.SaveChangesAsync(cancellationToken);
         return new LoginResponse(accessToken, newRaw, user.FullName, role);
     }
 
-    private string CreateSession(long userId, string? deviceName, DateTime now, out string hash)
+    private string CreateSession(long userId, string? deviceName, string? deviceId, DateTime now, out string hash)
     {
         var raw = RefreshTokens.Generate();
         hash = RefreshTokens.Hash(raw);
-        AddSession(userId, deviceName, raw, hash, now, now);
+        AddSession(userId, deviceName, deviceId, raw, hash, now, now);
         return raw;
     }
 
-    private void AddSession(long userId, string? deviceName, string raw, string hash, DateTime now, DateTime familyCreatedAt)
+    private void AddSession(long userId, string? deviceName, string? deviceId, string raw, string hash, DateTime now, DateTime familyCreatedAt)
     {
         var absolute = familyCreatedAt.AddDays(AbsoluteLifetimeDays);
         var expires = now.AddDays(RefreshLifetimeDays);
@@ -100,6 +100,7 @@ public sealed class AuthTokenBuilder(
         {
             UserId = userId,
             TokenHash = hash,
+            DeviceId = string.IsNullOrWhiteSpace(deviceId) ? null : deviceId.Trim(),
             DeviceName = string.IsNullOrWhiteSpace(deviceName) ? null : deviceName.Trim(),
             Client = currentUser.Client,
             CreatedAt = now,

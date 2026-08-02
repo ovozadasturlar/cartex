@@ -64,7 +64,7 @@
                                Foreground="{DynamicResource TextMuted}" />
                     <TextBlock Text="{Binding OfflineHolderText}" FontSize="12.5"
                                Foreground="{DynamicResource TextSecondary}" />
-                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding !OfflineEnabled}">
+                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding CanEnableOffline}">
                         <ComboBox MinWidth="220" ItemsSource="{Binding OfflineWarehouses}"
                                   SelectedItem="{Binding SelectedOfflineWarehouse}"
                                   PlaceholderText="{Binding L[offline_cache_warehouse]}">
@@ -76,6 +76,9 @@
                         </ComboBox>
                         <Button Classes="brand" Command="{Binding ToggleOfflineCommand}" Content="{Binding L[offline_cache_enable]}" />
                     </StackPanel>
+                    <Button Classes="danger" Command="{Binding ReleaseRemoteOfflineCommand}"
+                            Content="{Binding L[offline_cache_release_remote]}" IsVisible="{Binding OfflineAssignedElsewhere}"
+                            HorizontalAlignment="Left" />
                     <StackPanel Spacing="10" IsVisible="{Binding OfflineEnabled}">
                         <TextBlock Text="{Binding OfflineSyncText}" FontSize="12.5"
                                    Foreground="{DynamicResource TextSecondary}" />

@@ -17,7 +17,7 @@ public record GetLoginMethodsQuery : IRequest<LoginMethodsDto>;
 
 public record ApproveQrLoginCommand(string Code) : ICommand<Unit>;
 
-public record PollQrLoginCommand(string Code, string? DeviceName = null) : IRequest<LoginResponse?>;
+public record PollQrLoginCommand(string Code, string? DeviceName = null, string? DeviceId = null) : IRequest<LoginResponse?>;
 
 public sealed class GetLoginMethodsQueryHandler(ISettingsService settings) : IRequestHandler<GetLoginMethodsQuery, LoginMethodsDto>
 {
@@ -81,6 +81,6 @@ public sealed class PollQrLoginCommandHandler(
         var user = await tokenBuilder.LoadUserByIdAsync(userId.Value, cancellationToken);
         if (user is null || !user.IsActive) return null;
 
-        return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
+        return await tokenBuilder.IssueAsync(user, request.DeviceName, request.DeviceId, cancellationToken);
     }
 }

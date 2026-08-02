@@ -8,6 +8,7 @@ public class RefreshSession : BaseEntity
     public User User { get; set; } = null!;
 
     public string TokenHash { get; set; } = null!;
+    public string? DeviceId { get; set; }
     public string? DeviceName { get; set; }
     public string? Client { get; set; }
 

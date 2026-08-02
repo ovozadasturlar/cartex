@@ -9,7 +9,7 @@ using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesApi warehousesApi, OfflineSyncService offlineSync, IToastService toast)
+public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesApi warehousesApi, OfflineSyncService offlineSync, IToastService toast, IDialogService dialog)
     : ViewModelBase, ILoadable
 {
     [ObservableProperty] private string _apiUrl = SettingsService.Instance.ApiBaseUrl;
@@ -20,6 +20,9 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
     [ObservableProperty] private string? _offlineHolderText;
     [ObservableProperty] private string? _offlineSyncText;
     [ObservableProperty] private WarehouseDto? _selectedOfflineWarehouse;
+    [ObservableProperty] private bool _offlineAssignedElsewhere;
+
+    public bool CanEnableOffline => !OfflineEnabled && !OfflineAssignedElsewhere;
 
     public ObservableCollection<WarehouseDto> OfflineWarehouses { get; } = [];
 
@@ -68,11 +71,32 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
 
     private void ApplyState(OfflineCacheStateDto state)
     {
+        OfflineAssignedElsewhere = state.DeviceId is not null && state.DeviceId != SettingsService.Instance.DeviceId;
+        OnPropertyChanged(nameof(CanEnableOffline));
         OfflineHolderText = state.DeviceId is null
             ? L["offline_cache_free"]
             : state.DeviceId == SettingsService.Instance.DeviceId
                 ? L["offline_cache_this"]
                 : $"{L["offline_cache_holder"]}: {state.DeviceName}";
+    }
+
+    partial void OnOfflineEnabledChanged(bool value) => OnPropertyChanged(nameof(CanEnableOffline));
+
+    [RelayCommand]
+    private async Task ReleaseRemoteOfflineAsync()
+    {
+        if (!OfflineAssignedElsewhere) return;
+        if (!await dialog.ConfirmDangerAsync(L["offline_cache_remote_release_confirm"], L["disconnect"])) return;
+        try
+        {
+            await offlineApi.ReleaseAsync();
+            toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            toast.Error(ApiErrors.Describe(ex));
+        }
     }
 
     private async Task RefreshSyncTextAsync()

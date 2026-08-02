@@ -32,6 +32,17 @@
                                             Header="{Binding [device], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="Auto" Binding="{Binding Username}"
                                             Header="{Binding [username], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTemplateColumn Width="Auto" Header="Offline">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border IsVisible="{Binding IsOfflineHolder}" Background="{DynamicResource WarningBg}"
+                                            CornerRadius="10" Padding="8,3">
+                                        <TextBlock Text="{Binding $parent[DataGrid].DataContext.L[offline_cache]}"
+                                                   FontSize="11" Foreground="{DynamicResource WarningBrush}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Width="Auto" Binding="{Binding LastUsedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                             Header="{Binding [last_used], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"

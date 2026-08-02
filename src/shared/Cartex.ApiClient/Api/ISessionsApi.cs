@@ -9,7 +9,7 @@ public interface ISessionsApi
     Task<IReadOnlyList<DeviceSessionDto>> GetSessionsAsync([Query] bool all = false);
 
     [Delete("/api/auth/sessions/{id}")]
-    Task RevokeSessionAsync(long id);
+    Task RevokeSessionAsync(long id, [Query] bool releaseOffline = false);
 
     [Post("/api/auth/qr/approve")]
     Task ApproveQrAsync([Body] ApproveQrLoginRequest request);

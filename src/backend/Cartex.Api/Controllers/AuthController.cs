@@ -84,9 +84,9 @@ public class AuthController(ISender sender) : ControllerBase
 
     [HttpDelete("sessions/{id:long}")]
     [HasPermission(AppPermissions.Devices.Revoke)]
-    public async Task<IActionResult> RevokeSession(long id)
+    public async Task<IActionResult> RevokeSession(long id, [FromQuery] bool releaseOffline = false)
     {
-        await sender.Send(new RevokeSessionCommand(id));
+        await sender.Send(new RevokeSessionCommand(id, releaseOffline));
         return NoContent();
     }
 }

@@ -1,6 +1,6 @@
 namespace Cartex.Shared.Models.Auth;
 
-public record LoginWithKeyRequest(string KeyContent, string Serial, string? DeviceName = null);
+public record LoginWithKeyRequest(string KeyContent, string Serial, string? DeviceName = null, string? DeviceId = null);
 
 public record GenerateHardwareKeyRequest(long UserId, string Serial);
 
