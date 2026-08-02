@@ -25,6 +25,7 @@
   "err_session_expired": "Сессия истекла — войдите заново",
   "err_forbidden": "Нет доступа или модуль не включён",
   "err_server_fmt": "Ошибка сервера ({0})",
+  "currency_rate_required": "Перед использованием товара укажите курс валюты",
   "session_ended_title": "Сеанс завершён",
   "session_ended_msg": "Этот сеанс был завершён. Войдите заново.",
   "pin_offer_title": "PIN-код",

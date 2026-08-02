@@ -25,6 +25,7 @@
   "err_session_expired": "Сессия тугаган — қайта киринг",
   "err_forbidden": "Рухсат йўқ ёки модул ёқилмаган",
   "err_server_fmt": "Сервер хатоси ({0})",
+  "currency_rate_required": "Маҳсулотни ишлатишдан олдин валюта курсини киритинг",
   "session_ended_title": "Сессия якунланди",
   "session_ended_msg": "Ушбу сессия тугатилди. Қайта киринг.",
   "pin_offer_title": "PIN код",

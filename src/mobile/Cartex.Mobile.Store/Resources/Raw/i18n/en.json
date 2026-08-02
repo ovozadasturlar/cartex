@@ -25,6 +25,7 @@
   "err_session_expired": "Session expired — sign in again",
   "err_forbidden": "No permission or module not enabled",
   "err_server_fmt": "Server error ({0})",
+  "currency_rate_required": "Set the exchange rate before using this product",
   "session_ended_title": "Session ended",
   "session_ended_msg": "This session was ended. Please sign in again.",
   "pin_offer_title": "PIN code",

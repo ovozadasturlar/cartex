@@ -10,29 +10,24 @@
     x:DataType="vm:ScanViewModel"
     Title="{svc:T scan_title}">
     <Grid>
-        <!-- Camera feed -->
         <scanner:CameraView
             x:Name="Reader"
             BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
             OnDetectionFinished="OnDetectionFinished" />
 
-        <!-- Scan target frame -->
         <Border VerticalOptions="Center" HorizontalOptions="Center"
                 WidthRequest="260" HeightRequest="160"
                 StrokeThickness="3" StrokeShape="RoundRectangle 20"
                 Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                 BackgroundColor="Transparent" />
 
-        <!-- Top-left: Search button -->
         <Button FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="22" Padding="0"
                 WidthRequest="52" HeightRequest="52" CornerRadius="26"
                 VerticalOptions="Start" HorizontalOptions="Start" Margin="14,14,0,0"
                 Command="{Binding ToggleSearchCommand}" />
 
-        <!-- Top-right: Supply cart + Sale cart -->
         <HorizontalStackLayout VerticalOptions="Start" HorizontalOptions="End"
                                Margin="0,14,14,0" Spacing="8">
-            <!-- Supply cart button + badge -->
             <Grid IsVisible="{Binding CanReceiveStock}">
                 <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="22" Padding="0"
                         WidthRequest="52" HeightRequest="52" CornerRadius="26"
@@ -46,7 +41,6 @@
                            TextColor="White" />
                 </Border>
             </Grid>
-            <!-- Sale cart button + badge -->
             <Grid>
                 <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
                         WidthRequest="52" HeightRequest="52" CornerRadius="26"
@@ -62,7 +56,6 @@
             </Grid>
         </HorizontalStackLayout>
 
-        <!-- Status hint bar -->
         <Border VerticalOptions="End" Margin="24,0,24,32" Padding="14,10"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
                 BackgroundColor="#B3000000"
@@ -71,7 +64,6 @@
                    TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
         </Border>
 
-        <!-- Search panel -->
         <Border Style="{StaticResource Card}" Margin="12,8,12,8"
                 IsVisible="{Binding SearchVisible}">
             <Grid RowDefinitions="Auto,*" RowSpacing="10">
@@ -128,23 +120,19 @@
             </Grid>
         </Border>
 
-        <!-- Product overlay card — redesigned -->
         <Border Style="{StaticResource Card}" Padding="0" VerticalOptions="End" Margin="12,0,12,16"
                 IsVisible="{Binding OverlayVisible}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto">
 
-                <!-- Image area with edit pencil overlaid -->
                 <Grid Grid.Row="0" HeightRequest="200" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
                     <ctl:Thumb Source="{Binding ImageUrl}" Size="200" Stretch="True" Radius="0" />
                     
-                    <!-- Pencil edit button, top-right -->
                     <Button FontFamily="MDI" Text="{StaticResource IcPencil}" FontSize="18" Padding="0"
                             WidthRequest="40" HeightRequest="40" CornerRadius="20"
                             VerticalOptions="Start" HorizontalOptions="End" Margin="0,10,10,0"
                             BackgroundColor="#CC000000" TextColor="White"
                             Command="{Binding EditProductCommand}"
                             IsVisible="{Binding CanEditProduct}" />
-                    <!-- Close button, top-left (always visible) -->
                     <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
                             WidthRequest="40" HeightRequest="40" CornerRadius="20"
                             VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
@@ -153,7 +141,6 @@
                 </Grid>
 
 
-                <!-- Product name + price + stock -->
                 <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="4">
                     <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
                            LineBreakMode="TailTruncation" MaxLines="2"
@@ -162,7 +149,6 @@
                     <Label Text="{Binding StockText}" Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
 
-                <!-- Quantity control -->
                 <Grid Grid.Row="2" Padding="16,0,16,12" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                     <Button Text="&#x2212;" Style="{StaticResource PinKey}"
                             WidthRequest="52" HeightRequest="52"
@@ -176,7 +162,6 @@
                             Command="{Binding IncreaseCommand}" />
                 </Grid>
 
-                <!-- Action buttons -->
                 <VerticalStackLayout Grid.Row="3" Padding="16,0,16,16" Spacing="10">
                     <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
                             Command="{Binding AddToCartCommand}" />
@@ -187,7 +172,6 @@
             </Grid>
         </Border>
 
-        <!-- Unknown barcode dialog -->
         <Grid BackgroundColor="#CC000000" IsVisible="{Binding UnknownBarcodeVisible}">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseUnknownBarcodeCommand}" />

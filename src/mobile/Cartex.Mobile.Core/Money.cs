@@ -1,4 +1,5 @@
 using System.Globalization;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Mobile.Core;
 
@@ -10,6 +11,9 @@ public static class Money
 
     public static string Text(decimal amount, string? currency) =>
         string.IsNullOrEmpty(currency) ? Text(amount) : $"{Text(amount)} {currency}";
+
+    public static string Currency(decimal amount, string? currency, string? symbol = null, string? position = null, int? decimalDigits = null) =>
+        CurrencyCatalog.Format(amount, currency, symbol, position, decimalDigits);
 
     public static string Quantity(decimal value) =>
         value == Math.Truncate(value) ? value.ToString("N0", Format) : value.ToString("0.###", CultureInfo.InvariantCulture);

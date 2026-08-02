@@ -25,6 +25,7 @@
   "err_session_expired": "Sessiya tugagan — qayta kiring",
   "err_forbidden": "Ruxsat yo'q yoki modul yoqilmagan",
   "err_server_fmt": "Server xatosi ({0})",
+  "currency_rate_required": "Mahsulotni ishlatishdan oldin valyuta kursini kiriting",
   "session_ended_title": "Sessiya yakunlandi",
   "session_ended_msg": "Ushbu sessiya tugatildi. Qayta kiring.",
   "pin_offer_title": "PIN kod",

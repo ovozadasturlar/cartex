@@ -28,6 +28,7 @@ public partial class ScanPage : ContentPage
 
         _cameraCts?.Cancel();
         _cameraCts = new CancellationTokenSource();
+        await _vm.RefreshVisibleProductAsync();
         await RestartCameraAsync(_cameraCts.Token);
     }
 
@@ -58,7 +59,6 @@ public partial class ScanPage : ContentPage
             return true;
         }
 
-        // Scanner is the root of this flow: do not close the app from here.
         return true;
     }
 

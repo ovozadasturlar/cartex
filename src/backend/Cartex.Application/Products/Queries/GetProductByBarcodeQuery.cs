@@ -7,7 +7,21 @@ namespace Cartex.Application.Products.Queries;
 
 public record GetProductByBarcodeQuery(string Code, long WarehouseId, bool ForSale = false) : IRequest<ProductLookupDto?>;
 
-public record ProductLookupDto(long VariantId, string ProductName, string UnitName, decimal PackQty, decimal SellingPrice, decimal OnHand, string Dimension, string? ImageKey = null, bool AllowsAmountEntry = false, decimal QuantityStep = 1);
+public record ProductLookupDto(
+    long VariantId,
+    string ProductName,
+    string UnitName,
+    decimal PackQty,
+    decimal SellingPrice,
+    decimal OnHand,
+    string Dimension,
+    string? ImageKey = null,
+    bool AllowsAmountEntry = false,
+    decimal QuantityStep = 1,
+    decimal? OriginalSellingPrice = null,
+    string? PriceCurrency = null,
+    string? BaseCurrency = null,
+    decimal ConversionRate = 1);
 
 public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<GetProductByBarcodeQuery, ProductLookupDto?>
 {
@@ -33,15 +47,30 @@ public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, IC
         var price = prices.FirstOrDefault(p => p.WarehouseId == request.WarehouseId)
             ?? prices.FirstOrDefault(p => p.WarehouseId == null);
         var baseCurrency = await currency.BaseAsync(cancellationToken);
-        var sellingPrice = price is null
-            ? 0
-            : Math.Round(price.SellingPrice * (price.Currency == baseCurrency ? 1m : await currency.RateAsync(price.Currency, cancellationToken)), 2);
+        var rate = price is null || price.Currency == baseCurrency
+            ? 1m
+            : await currency.RateAsync(price.Currency, cancellationToken);
+        var sellingPrice = price is null ? 0 : Math.Round(price.SellingPrice * rate, 2);
 
         var onHand = await db.Stocks
             .Where(s => s.VariantId == barcode.VariantId && s.WarehouseId == request.WarehouseId)
             .SumAsync(s => (decimal?)s.Quantity, cancellationToken) ?? 0;
 
         var allowsAmountEntry = barcode.Dimension != UnitDimension.Count && barcode.AmountEntryEnabled != false;
-        return new ProductLookupDto(barcode.VariantId, barcode.ProductName, barcode.UnitName, barcode.PackQty, sellingPrice, onHand, barcode.Dimension.ToString(), barcode.ImageKey, allowsAmountEntry, allowsAmountEntry ? 0.001m : 1m);
+        return new ProductLookupDto(
+            barcode.VariantId,
+            barcode.ProductName,
+            barcode.UnitName,
+            barcode.PackQty,
+            sellingPrice,
+            onHand,
+            barcode.Dimension.ToString(),
+            barcode.ImageKey,
+            allowsAmountEntry,
+            allowsAmountEntry ? 0.001m : 1m,
+            price?.SellingPrice,
+            price?.Currency ?? baseCurrency,
+            baseCurrency,
+            rate);
     }
 }

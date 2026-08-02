@@ -6,6 +6,7 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
 using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Rates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -18,6 +19,7 @@ public partial class ScanViewModel : ObservableObject
 
     private readonly ISessionsApi _sessionsApi;
     private readonly IProductsApi _productsApi;
+    private readonly IRatesApi _ratesApi;
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
     private readonly CartStore _cart;
@@ -54,11 +56,13 @@ public partial class ScanViewModel : ObservableObject
     private string? _activeSearch;
     private int _loadedSearchPage;
     private bool _hasMoreSearchResults;
+    private IReadOnlyList<CurrencyDto>? _currencies;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
+        _ratesApi = ratesApi;
         _warehouse = warehouse;
         _permissions = permissions;
         _cart = cart;
@@ -76,7 +80,6 @@ public partial class ScanViewModel : ObservableObject
     public async Task HandleAsync(string value)
     {
         if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchVisible) return;
-        // Debounce: ignore same barcode within 1.5s (not 2s, so closing overlay quickly then scanning again works)
         if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
         _lastValue = value;
@@ -142,7 +145,7 @@ public partial class ScanViewModel : ObservableObject
             _step = product.PackQty > 0 ? product.PackQty : 1;
             Quantity = _step;
             ProductName = product.ProductName;
-            PriceText = $"{product.SellingPrice:N0} UZS";
+            PriceText = FormatPrice(product);
             StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
             OverlayVisible = true;
             
@@ -150,8 +153,11 @@ public partial class ScanViewModel : ObservableObject
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            // Unknown barcode — ask user what to do
             await HandleUnknownBarcodeAsync(barcode);
+        }
+        catch (Refit.ApiException ex)
+        {
+            await FlashAsync(ApiErrors.Describe(ex));
         }
         catch
         {
@@ -355,14 +361,22 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PickResult(SearchRow row)
+    private async Task PickResultAsync(SearchRow row)
     {
         var p = row.Product;
-        _product = new ProductLookupDto(p.DefaultVariantId, p.Name, p.UnitName, 1, p.SellingPrice ?? 0, p.OnHand, p.Dimension ?? "", p.ImageKey);
+        try
+        {
+            _product = await BuildLookupAsync(p, 1);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Ui.Toast(ex.Message);
+            return;
+        }
         _step = 1;
         Quantity = 1;
         ProductName = p.Name;
-        PriceText = $"{p.SellingPrice ?? 0:N0} UZS";
+        PriceText = FormatPrice(_product);
         StockText = StockTextFor(p.OnHand, p.UnitName, p.DefaultVariantId);
         OverlayVisible = true;
         IsDetecting = false;
@@ -371,21 +385,6 @@ public partial class ScanViewModel : ObservableObject
         SearchVisible = false;
         SearchText = "";
         SearchResults.Clear();
-        // Progressive loading removed – images are now set directly in LookupAsync / PickResult
-    }
-
-    // Long‑press on a search row to view full product details in a modal
-    [RelayCommand]
-    private void RowLongPress(SearchRow row)
-    {
-        // Navigate to a modal page showing detailed product information.
-        // The page "product/detail" should be implemented to display all fields.
-        if (row?.Product?.DefaultVariantId != null)
-        {
-            var url = $"product/detail?variantId={row.Product.DefaultVariantId}";
-            // Using modal navigation (true) to present as a modal dialog.
-            Shell.Current.GoToAsync(url, true);
-        }
     }
 
     private async Task FlashAsync(string message)
@@ -420,15 +419,57 @@ public partial class ScanViewModel : ObservableObject
             if (updated is null)
                 return;
 
-            _product = new ProductLookupDto(variantId, updated.Name, updated.UnitName, _product.PackQty,
-                updated.SellingPrice ?? _product.SellingPrice, updated.OnHand, updated.Dimension ?? _product.Dimension,
-                updated.ImageKey);
+            _product = await BuildLookupAsync(updated, _product.PackQty);
             ProductName = _product.ProductName;
-            PriceText = $"{_product.SellingPrice:N0} UZS";
+            PriceText = FormatPrice(_product);
             StockText = StockTextFor(_product.OnHand, _product.UnitName, _product.VariantId);
             ImageUrl = _images.FromKey(_product.ImageKey, thumb: false);
         }
         catch { }
+    }
+
+    public Task RefreshVisibleProductAsync() => _product is { } product
+        ? RefreshProductAsync(product.VariantId)
+        : Task.CompletedTask;
+
+    private async Task<ProductLookupDto> BuildLookupAsync(ProductDto product, decimal packQty)
+    {
+        _currencies ??= await _ratesApi.GetCurrenciesAsync();
+        var baseCurrency = _currencies.FirstOrDefault(currency => currency.IsBase)?.Code ?? "UZS";
+        var priceCurrency = product.PriceCurrency ?? baseCurrency;
+        var isBase = string.Equals(priceCurrency, baseCurrency, StringComparison.OrdinalIgnoreCase);
+        var rate = isBase
+            ? 1m
+            : _currencies.FirstOrDefault(currency => string.Equals(currency.Code, priceCurrency, StringComparison.OrdinalIgnoreCase))?.Rate
+              ?? throw new InvalidOperationException(Loc.Instance["currency_rate_required"]);
+        var originalPrice = product.SellingPrice ?? 0;
+        var basePrice = Math.Round(originalPrice * rate, 2);
+        var step = product.AllowsAmountEntry ? 0.001m : 1m;
+        return new ProductLookupDto(
+            product.DefaultVariantId,
+            product.Name,
+            product.UnitName,
+            packQty,
+            basePrice,
+            product.OnHand,
+            product.Dimension ?? "",
+            product.ImageKey,
+            product.AllowsAmountEntry,
+            step,
+            originalPrice,
+            priceCurrency,
+            baseCurrency,
+            rate);
+    }
+
+    private static string FormatPrice(ProductLookupDto product)
+    {
+        var baseCurrency = product.BaseCurrency ?? "UZS";
+        var priceCurrency = product.PriceCurrency ?? baseCurrency;
+        var original = Money.Currency(product.OriginalSellingPrice ?? product.SellingPrice, priceCurrency);
+        return string.Equals(priceCurrency, baseCurrency, StringComparison.OrdinalIgnoreCase)
+            ? original
+            : $"{original} ≈ {Money.Currency(product.SellingPrice, baseCurrency)}";
     }
 
     private void Resume()
@@ -451,9 +492,13 @@ public partial class ScanViewModel : ObservableObject
 public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
 {
     public string Name => Product.Name;
-    public string PriceText => $"{Product.SellingPrice ?? 0:N0} UZS";
+    public string PriceText => Money.Currency(
+        Product.SellingPrice ?? 0,
+        Product.PriceCurrency,
+        Product.PriceSymbol,
+        Product.PriceSymbolPosition,
+        Product.PriceDecimalDigits);
     public string StockText => $"{Product.OnHand:0.###} {Product.UnitName}";
     public string? ImageUrl => Images.FromKey(Product.ImageKey, thumb: true) ?? Images.Full(Product.ImageUrl);
-    // Additional info that helps differentiate products with similar names.
     public string FullInfo => $"{Product.Name} | {Product.UnitName} | {Product.Dimension ?? ""}";
 }
