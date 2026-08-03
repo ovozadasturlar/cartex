@@ -2,6 +2,10 @@
 **/obj/
 **/node_modules/
 **/dist/
+**/publish-ready/
+**/logs/
+**/backups/
+**/*.log
 **/.angular/
 **/.vs/
 **/.idea/
