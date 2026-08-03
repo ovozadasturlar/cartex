@@ -8,7 +8,8 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-    public string DeviceName { get; } = DeviceInfo.Current.Name is { Length: > 0 } name ? name : DeviceInfo.Current.Model;
+    public string DeviceName => MobileDeviceIdentity.DeviceName;
+    public string DeviceId => MobileDeviceIdentity.DeviceId;
 
     public string FullName => Preferences.Get("user_fullname", "");
     public string Role => Preferences.Get("user_role", "");
@@ -32,7 +33,7 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     public async Task LoginAsync(string username, string password)
     {
-        var response = await authApi.LoginAsync(new LoginRequest(username, password, DeviceName));
+        var response = await authApi.LoginAsync(new LoginRequest(username, password, DeviceName, DeviceId));
         Preferences.Set("user_fullname", response.FullName);
         Preferences.Set("user_role", response.Role);
         await session.SaveAsync(response.Token, response.RefreshToken);
@@ -56,7 +57,7 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         await _refreshLock.WaitAsync();
         try
         {
-            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
             await session.SaveAsync(response.Token, response.RefreshToken);
         }
         catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
@@ -87,7 +88,7 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
             if (token is not null && !IsExpiringSoon(token)) return token;
             var refresh = session.RefreshToken;
             if (string.IsNullOrEmpty(refresh)) return token;
-            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
             await session.SaveAsync(response.Token, response.RefreshToken);
             return response.Token;
         }

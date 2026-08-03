@@ -6,6 +6,8 @@ using Cartex.Shared.Models.Ordering;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
+using Cartex.Shared.Models.Printing;
+using System.Text.Json;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
@@ -15,6 +17,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private readonly CartStore _localCart;
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
+    private readonly IPrintingApi _printingApi;
+    private readonly MobileAuthService _auth;
 
     public ObservableCollection<CheckoutLine> Items { get; } = [];
 
@@ -37,12 +41,14 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private CartDto? _serverCart;
     private decimal _totalAmount;
     private long? _customerId;
-    public CheckoutViewModel(IOrderingApi orderingApi, CartStore localCart, WarehouseContext warehouse, MobilePermissions permissions)
+    public CheckoutViewModel(IOrderingApi orderingApi, CartStore localCart, WarehouseContext warehouse, MobilePermissions permissions, IPrintingApi printingApi, MobileAuthService auth)
     {
         _orderingApi = orderingApi;
         _localCart = localCart;
         _warehouse = warehouse;
         _permissions = permissions;
+        _printingApi = printingApi;
+        _auth = auth;
         CanSelfSell = _permissions.Has("sales.checkout");
     }
 
@@ -183,7 +189,27 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 }
             }
 
-            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(Parse(CashText), Parse(CardText), Parse(BonusText), _localCart.EnsureCheckoutIdempotencyKey()));
+            var saleId = await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(Parse(CashText), Parse(CardText), Parse(BonusText), _localCart.EnsureCheckoutIdempotencyKey()));
+            if (_permissions.Has("printing.remote.use") && _permissions.Has("printing.receipts.print")
+                && _auth.DefaultBranchId is long branchId)
+            {
+                try
+                {
+                    await _printingApi.CreateJobAsync(new CreatePrintJobRequest(
+                        branchId,
+                        PrintJobKind.Receipt,
+                        "sale",
+                        saleId.ToString(),
+                        JsonSerializer.SerializeToElement(new { saleId }),
+                        IdempotencyKey: $"receipt-sale:{saleId}:mobile",
+                        DeviceId: _auth.DeviceId,
+                        DeviceName: _auth.DeviceName));
+                }
+                catch (ApiException)
+                {
+                    Ui.Toast(Loc.Instance["error"]);
+                }
+            }
             if (string.IsNullOrEmpty(_code))
                 _localCart.Clear();
             Ui.Toast(Loc.Instance["sale_done"]);

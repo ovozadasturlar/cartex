@@ -37,7 +37,9 @@ public static class MauiProgram
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
             OnUnauthorized,
             "store",
-            TimeSpan.FromSeconds(20));
+            TimeSpan.FromSeconds(20),
+            () => MobileDeviceIdentity.DeviceId,
+            () => MobileDeviceIdentity.DeviceName);
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<MobilePermissions>();
