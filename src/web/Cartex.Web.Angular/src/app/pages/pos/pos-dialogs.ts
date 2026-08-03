@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +15,7 @@ import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { Customer, Receipt } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-customer-picker-dialog',
@@ -359,8 +361,31 @@ export class CustomerPickerDialog implements OnInit {
 })
 export class PosReceiptDialog {
   readonly receipt = inject<Receipt>(MAT_DIALOG_DATA);
+  private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private readonly notify = inject(NotifyService);
 
-  print(): void {
+  async print(): Promise<void> {
+    if (this.auth.hasPermission('printing.remote.use') && this.auth.hasPermission('printing.receipts.print')) {
+      try {
+        const context = await lastValueFrom(this.http.get<{ defaultBranchId: number; branches: { id: number }[] }>('/api/auth/context'));
+        const branchId = context.defaultBranchId || context.branches[0]?.id;
+        if (branchId) {
+          await lastValueFrom(this.http.post('/api/printing/jobs', {
+            branchId,
+            kind: 'Receipt',
+            sourceType: 'receipt_token',
+            sourceId: this.receipt.receiptToken,
+            payload: { receiptToken: this.receipt.receiptToken },
+            copies: 1,
+            idempotencyKey: `receipt:${this.receipt.receiptToken}:web`,
+          }));
+          return;
+        }
+      } catch (error) {
+        this.notify.error(error);
+      }
+    }
     window.open('/r/' + this.receipt.receiptToken, '_blank');
   }
 }

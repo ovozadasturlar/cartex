@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { webDeviceId, webDeviceName } from './device-identity';
 
 interface LoginResponse {
   token: string;
@@ -81,7 +82,7 @@ export class AuthService {
 
   async login(username: string, password: string, rememberMe: boolean): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<LoginResponse>('/api/auth/login', { username, password, deviceName: 'Web' }),
+      this.http.post<LoginResponse>('/api/auth/login', { username, password, deviceName: webDeviceName(), deviceId: webDeviceId() }),
     );
     this.apply(res, rememberMe);
   }
@@ -96,7 +97,7 @@ export class AuthService {
 
   async pollQr(code: string): Promise<boolean> {
     const res = await firstValueFrom(
-      this.http.post<LoginResponse | null>('/api/auth/qr/poll', { code, deviceName: 'Web' }),
+      this.http.post<LoginResponse | null>('/api/auth/qr/poll', { code, deviceName: webDeviceName(), deviceId: webDeviceId() }),
     );
     if (!res) return false;
     this.apply(res, false);
@@ -138,7 +139,7 @@ export class AuthService {
   private async doRefresh(): Promise<string | null> {
     try {
       const res = await firstValueFrom(
-        this.http.post<LoginResponse>('/api/auth/refresh', { refreshToken: this.refreshToken, deviceName: 'Web' }),
+        this.http.post<LoginResponse>('/api/auth/refresh', { refreshToken: this.refreshToken, deviceName: webDeviceName(), deviceId: webDeviceId() }),
       );
       this.apply(res, this.persist);
     } catch (e) {
