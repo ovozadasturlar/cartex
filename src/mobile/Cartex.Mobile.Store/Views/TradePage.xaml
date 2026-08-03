@@ -26,7 +26,7 @@
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Padding="16,12,16,0">
-        <Grid ColumnDefinitions="*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+        <Grid ColumnDefinitions="*,*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
             <Button Text="{svc:T queue}" Style="{StaticResource Section}" Command="{Binding ShowQueueCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsQueue}" Value="True">
@@ -39,6 +39,16 @@
             <Button Grid.Column="1" Text="{svc:T sales}" Style="{StaticResource Section}" Command="{Binding ShowSalesCommand}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsSales}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Button Grid.Column="2" Text="{svc:T z_reports}" Style="{StaticResource Section}" Command="{Binding ShowZReportsCommand}"
+                    IsVisible="{Binding HasZReportAccess}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsZReports}" Value="True">
                         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
                         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         <Setter Property="FontAttributes" Value="Bold" />
@@ -144,7 +154,7 @@
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TradeSaleRow">
                                     <Border Style="{StaticResource Card}" Padding="14,12">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
                                             <VerticalStackLayout Spacing="3">
                                                 <Label Text="{Binding SubLine}" Style="{StaticResource MutedLabel}" FontSize="13" />
                                                 <HorizontalStackLayout Spacing="6">
@@ -154,6 +164,14 @@
                                             </VerticalStackLayout>
                                             <Label Grid.Column="1" Text="{Binding Total}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center"
                                                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPrinter}" FontSize="18" Padding="0"
+                                                    WidthRequest="38" HeightRequest="38" MinimumHeightRequest="38" CornerRadius="19"
+                                                    Command="{Binding ReprintSaleCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                    CommandParameter="{Binding .}" IsVisible="{Binding CanPrint}" />
+                                            <Button Grid.Column="3" FontFamily="MDI" Text="{StaticResource IcSend}" FontSize="18" Padding="0"
+                                                    WidthRequest="38" HeightRequest="38" MinimumHeightRequest="38" CornerRadius="19"
+                                                    Command="{Binding ResendSaleCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                    CommandParameter="{Binding .}" IsVisible="{Binding CanResend}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -161,6 +179,28 @@
                         </VerticalStackLayout>
                         <Label Text="{svc:T queue_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center"
                                IsVisible="{Binding IsSalesEmpty}" Margin="0,40" />
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <ScrollView IsVisible="{Binding IsZReports}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,16">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TradeShiftRow">
+                                <Border Style="{StaticResource Card}" Padding="14,12">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="3">
+                                            <Label Text="{Binding UserName}" FontAttributes="Bold" FontSize="15"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                            <Label Text="{Binding DateText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPrinter}" FontSize="18" Padding="0"
+                                                WidthRequest="42" HeightRequest="42" CornerRadius="21"
+                                                Command="{Binding PrintZReportCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
                 </ScrollView>
 

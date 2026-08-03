@@ -43,6 +43,11 @@ public partial class ScanPage : ContentPage
     {
         if (_vm.OverlayVisible)
         {
+            if (_vm.IsBarcodeMode)
+            {
+                _vm.BackToProductCommand.Execute(null);
+                return true;
+            }
             _vm.CloseOverlayCommand.Execute(null);
             return true;
         }
@@ -67,6 +72,30 @@ public partial class ScanPage : ContentPage
         var value = e.BarcodeResults.FirstOrDefault()?.RawValue;
         if (string.IsNullOrEmpty(value)) return;
         MainThread.BeginInvokeOnMainThread(() => _ = _vm.HandleAsync(value));
+    }
+
+    private async void OnProductActionToggleClicked(object? sender, EventArgs e)
+    {
+        if (_vm.ProductActionsExpanded)
+        {
+            await Task.WhenAll(ProductActionMenu.FadeToAsync(0, 140), ProductActionMenu.TranslateToAsync(0, -12, 140, Easing.CubicIn));
+            ProductActionMenu.IsVisible = false;
+            _vm.ProductActionsExpanded = false;
+            return;
+        }
+
+        ProductActionMenu.IsVisible = true;
+        ProductActionMenu.Opacity = 0;
+        ProductActionMenu.TranslationY = -12;
+        _vm.ProductActionsExpanded = true;
+        await Task.WhenAll(ProductActionMenu.FadeToAsync(1, 170), ProductActionMenu.TranslateToAsync(0, 0, 170, Easing.CubicOut));
+    }
+
+    private async void OnBarcodeActionClicked(object? sender, EventArgs e)
+    {
+        if (!ProductActionMenu.IsVisible) return;
+        await Task.WhenAll(ProductActionMenu.FadeToAsync(0, 120), ProductActionMenu.TranslateToAsync(0, -12, 120, Easing.CubicIn));
+        ProductActionMenu.IsVisible = false;
     }
 
     private async Task RestartCameraAsync(CancellationToken cancellationToken)

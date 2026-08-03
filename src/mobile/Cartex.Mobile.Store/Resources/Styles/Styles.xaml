@@ -39,6 +39,12 @@
     <x:String x:Key="IcStore">&#xF04DC;</x:String>
     <x:String x:Key="IcCheckPlain">&#xF012C;</x:String>
     <x:String x:Key="IcPencil">&#xF03EB;</x:String>
+    <x:String x:Key="IcDotsVertical">&#xF01D9;</x:String>
+    <x:String x:Key="IcChevronUp">&#xF0143;</x:String>
+    <x:String x:Key="IcBarcode">&#xF0071;</x:String>
+    <x:String x:Key="IcPrinter">&#xF042A;</x:String>
+    <x:String x:Key="IcArrowLeft">&#xF004D;</x:String>
+    <x:String x:Key="IcSend">&#xF048A;</x:String>
 
     <Style x:Key="Icon" TargetType="Label">
         <Setter Property="FontFamily" Value="MDI" />

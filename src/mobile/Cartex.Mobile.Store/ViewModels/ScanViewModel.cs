@@ -5,6 +5,7 @@ using Cartex.ApiClient.Querying;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
+using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Rates;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,11 +21,13 @@ public partial class ScanViewModel : ObservableObject
     private readonly ISessionsApi _sessionsApi;
     private readonly IProductsApi _productsApi;
     private readonly IRatesApi _ratesApi;
+    private readonly IBarcodesApi _barcodesApi;
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
     private readonly CartStore _cart;
     private readonly SupplyCartStore _supplyCart;
     private readonly ImageUrlBuilder _images;
+    private readonly MobilePrintDispatcher _printDispatcher;
 
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
@@ -44,8 +47,17 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _isSearching;
     [ObservableProperty] private bool _isLoadingMoreResults;
     [ObservableProperty] private string _searchText = "";
+    [ObservableProperty] private bool _productActionsExpanded;
+    [ObservableProperty] private bool _isBarcodeMode;
+    [ObservableProperty] private bool _isPrintingBarcode;
+    [ObservableProperty] private BarcodeChoice? _selectedBarcode;
+    [ObservableProperty] private int _printCopies = 1;
 
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
+    public ObservableCollection<BarcodeChoice> BarcodeChoices { get; } = [];
+    public bool CanPrintBarcode => _printDispatcher.CanPrintBarcode;
+    public bool HasProductActions => CanEditProduct || CanPrintBarcode;
+    public string PrintTotalText => $"{Loc.Instance["total"]}: {PrintCopies}";
 
     private ProductLookupDto? _product;
     private decimal _step = 1;
@@ -57,17 +69,21 @@ public partial class ScanViewModel : ObservableObject
     private int _loadedSearchPage;
     private bool _hasMoreSearchResults;
     private IReadOnlyList<CurrencyDto>? _currencies;
+    private string? _activeBarcode;
+    private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
         _ratesApi = ratesApi;
+        _barcodesApi = barcodesApi;
         _warehouse = warehouse;
         _permissions = permissions;
         _cart = cart;
         _supplyCart = supplyCart;
         _images = images;
+        _printDispatcher = printDispatcher;
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         cart.Changed += () => CartCount = _cart.Count;
@@ -142,6 +158,8 @@ public partial class ScanViewModel : ObservableObject
         {
             var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: false);
             _product = product;
+            _activeBarcode = barcode;
+            _productSku = null;
             _step = product.PackQty > 0 ? product.PackQty : 1;
             Quantity = _step;
             ProductName = product.ProductName;
@@ -215,7 +233,75 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task EditProduct() => Shell.Current.GoToAsync($"product/edit?id={_product?.VariantId}");
+    private async Task EditProductAsync()
+    {
+        var variantId = _product?.VariantId;
+        if (variantId is null) return;
+        CloseOverlay();
+        await Shell.Current.GoToAsync($"product/edit?id={variantId}");
+    }
+
+    [RelayCommand]
+    private async Task OpenBarcodePrintAsync()
+    {
+        if (_product is null || !CanPrintBarcode) return;
+        try
+        {
+            var barcodes = await _barcodesApi.GetByVariantAsync(_product.VariantId);
+            BarcodeChoices.Clear();
+            foreach (var barcode in barcodes)
+                BarcodeChoices.Add(new BarcodeChoice(barcode));
+            SelectedBarcode = BarcodeChoices.FirstOrDefault(x => x.Code == _activeBarcode) ?? BarcodeChoices.FirstOrDefault();
+            PrintCopies = 1;
+            ProductActionsExpanded = false;
+            IsBarcodeMode = true;
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is Refit.ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+    }
+
+    [RelayCommand]
+    private void BackToProduct()
+    {
+        IsBarcodeMode = false;
+        ProductActionsExpanded = false;
+    }
+
+    [RelayCommand]
+    private void SelectBarcode(BarcodeChoice choice) => SelectedBarcode = choice;
+
+    [RelayCommand]
+    private void IncreasePrintCopies() => PrintCopies = Math.Min(500, PrintCopies + 1);
+
+    [RelayCommand]
+    private void DecreasePrintCopies() => PrintCopies = Math.Max(1, PrintCopies - 1);
+
+    [RelayCommand]
+    private async Task PrintBarcodeAsync()
+    {
+        if (_product is null || SelectedBarcode is null || IsPrintingBarcode) return;
+        IsPrintingBarcode = true;
+        try
+        {
+            await _printDispatcher.PrintBarcodeAsync(
+                SelectedBarcode.Code,
+                ProductName,
+                PrintCopies,
+                PriceText,
+                _productSku);
+            Ui.Toast(Loc.Instance["print_sent"]);
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is Refit.ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+        finally
+        {
+            IsPrintingBarcode = false;
+        }
+    }
 
     [RelayCommand]
     private void ReceiveStock()
@@ -235,6 +321,9 @@ public partial class ScanViewModel : ObservableObject
     private void CloseOverlay()
     {
         OverlayVisible = false;
+        IsBarcodeMode = false;
+        ProductActionsExpanded = false;
+        BarcodeChoices.Clear();
         _product = null;
         Resume();
     }
@@ -374,6 +463,8 @@ public partial class ScanViewModel : ObservableObject
             return;
         }
         _step = 1;
+        _activeBarcode = p.Barcodes.FirstOrDefault();
+        _productSku = p.Code;
         Quantity = 1;
         ProductName = p.Name;
         PriceText = FormatPrice(_product);
@@ -479,6 +570,9 @@ public partial class ScanViewModel : ObservableObject
         _lastValue = null;
         _lastAt = DateTime.MinValue;
         OverlayVisible = false;
+        IsBarcodeMode = false;
+        ProductActionsExpanded = false;
+        BarcodeChoices.Clear();
         UnknownBarcodeVisible = false;
         UnknownBarcode = "";
         if (!SearchVisible)
@@ -487,6 +581,8 @@ public partial class ScanViewModel : ObservableObject
 
     [GeneratedRegex("^[0-9a-f]{32}$")]
     private static partial Regex HandoffCode();
+
+    partial void OnPrintCopiesChanged(int value) => OnPropertyChanged(nameof(PrintTotalText));
 }
 
 public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
@@ -501,4 +597,11 @@ public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
     public string StockText => $"{Product.OnHand:0.###} {Product.UnitName}";
     public string? ImageUrl => Images.FromKey(Product.ImageKey, thumb: true) ?? Images.Full(Product.ImageUrl);
     public string FullInfo => $"{Product.Name} | {Product.UnitName} | {Product.Dimension ?? ""}";
+}
+
+public sealed partial class BarcodeChoice(BarcodeDto barcode) : ObservableObject
+{
+    public string Code => barcode.Code;
+    public decimal PackQty => barcode.PackQty;
+    public string PackText => $"×{barcode.PackQty:0.###}";
 }

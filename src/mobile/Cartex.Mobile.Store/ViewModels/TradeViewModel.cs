@@ -5,6 +5,7 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Ordering;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Shifts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
@@ -14,12 +15,15 @@ namespace Cartex.Mobile.Store.ViewModels;
 public partial class TradeViewModel(
     IOrderingApi orderingApi,
     ISalesApi salesApi,
+    IShiftsApi shiftsApi,
     MobilePermissions permissions,
     WarehouseContext warehouse,
-    OrderingHubService orderingHub) : ObservableObject
+    OrderingHubService orderingHub,
+    MobilePrintDispatcher printDispatcher) : ObservableObject
 {
     public ObservableCollection<TradeQueueRow> Carts { get; } = [];
     public ObservableCollection<TradeSaleRow> Sales { get; } = [];
+    public ObservableCollection<TradeShiftRow> Shifts { get; } = [];
     public ObservableCollection<QueueStatusChip> QueueStatuses { get; } =
     [
         new("Open", Loc.Instance["queue_open"]) { IsSelected = true },
@@ -32,6 +36,7 @@ public partial class TradeViewModel(
     [ObservableProperty] private string _selectedStatus = "Open";
     [ObservableProperty] private bool _hasQueueAccess = true;
     [ObservableProperty] private bool _hasSalesAccess = true;
+    [ObservableProperty] private bool _hasZReportAccess;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string? _error;
@@ -42,8 +47,10 @@ public partial class TradeViewModel(
 
     public bool IsQueue => Section == "queue";
     public bool IsSales => Section == "sales";
+    public bool IsZReports => Section == "zreports";
     public bool IsQueueEmpty => Carts.Count == 0;
     public bool IsSalesEmpty => Sales.Count == 0;
+    public bool IsZReportsEmpty => Shifts.Count == 0;
 
     public async Task AppearAsync()
     {
@@ -56,6 +63,7 @@ public partial class TradeViewModel(
         _ = orderingHub.EnsureStartedAsync();
         HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
+        HasZReportAccess = permissions.HasAny("shifts.view", "shifts.viewAll") && printDispatcher.CanPrintZReport;
         if (!HasQueueAccess && HasSalesAccess)
             Section = "sales";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
@@ -79,6 +87,7 @@ public partial class TradeViewModel(
     {
         OnPropertyChanged(nameof(IsQueue));
         OnPropertyChanged(nameof(IsSales));
+        OnPropertyChanged(nameof(IsZReports));
         _ = LoadAsync();
     }
 
@@ -87,6 +96,51 @@ public partial class TradeViewModel(
 
     [RelayCommand]
     private void ShowSales() => Section = "sales";
+
+    [RelayCommand]
+    private void ShowZReports() => Section = "zreports";
+
+    [RelayCommand]
+    private async Task ReprintSaleAsync(TradeSaleRow row)
+    {
+        try
+        {
+            await printDispatcher.ReprintReceiptAsync(row.Sale);
+            Ui.Toast(Loc.Instance["print_sent"]);
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResendSaleAsync(TradeSaleRow row)
+    {
+        try
+        {
+            await salesApi.ResendReceiptAsync(row.Sale.Id);
+            Ui.Toast(Loc.Instance["receipt_resent"]);
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+    }
+
+    [RelayCommand]
+    private async Task PrintZReportAsync(TradeShiftRow row)
+    {
+        try
+        {
+            await printDispatcher.PrintZReportAsync(row.Shift.Id);
+            Ui.Toast(Loc.Instance["print_sent"]);
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+    }
 
     [RelayCommand]
     private async Task SelectQueueStatusAsync(QueueStatusChip chip)
@@ -137,7 +191,7 @@ public partial class TradeViewModel(
     private async Task LoadAsync()
     {
         if (IsBusy) return;
-        if (IsQueue && !HasQueueAccess || IsSales && !HasSalesAccess) return;
+        if (IsQueue && !HasQueueAccess || IsSales && !HasSalesAccess || IsZReports && !HasZReportAccess) return;
 
         IsBusy = true;
         Error = null;
@@ -145,8 +199,10 @@ public partial class TradeViewModel(
         {
             if (IsQueue)
                 await LoadQueueCoreAsync();
-            else
+            else if (IsSales)
                 await LoadSalesCoreAsync();
+            else
+                await LoadZReportsCoreAsync();
             _lastLoadedAt = DateTime.UtcNow;
         }
         catch
@@ -191,8 +247,17 @@ public partial class TradeViewModel(
         TodayTotal = totals.TotalAmount.ToString("N0");
         Sales.Clear();
         foreach (var sale in list)
-            Sales.Add(new TradeSaleRow(sale));
+            Sales.Add(new TradeSaleRow(sale, printDispatcher.CanReprintReceipt, sale.CanResendReceipt));
         OnPropertyChanged(nameof(IsSalesEmpty));
+    }
+
+    private async Task LoadZReportsCoreAsync()
+    {
+        var response = await shiftsApi.GetHistoryAsync(1, 30);
+        Shifts.Clear();
+        foreach (var shift in response.Content?.Where(x => !x.IsOpen) ?? [])
+            Shifts.Add(new TradeShiftRow(shift));
+        OnPropertyChanged(nameof(IsZReportsEmpty));
     }
 
     private void SetSelectedStatus(QueueStatusChip selected)
@@ -223,11 +288,17 @@ public sealed record TradeQueueRow(CartListDto Cart)
     public bool CanEdit => Cart.Status == "Open";
 }
 
-public sealed record TradeSaleRow(SaleDto Sale)
+public sealed record TradeSaleRow(SaleDto Sale, bool CanPrint, bool CanResend)
 {
     private DateTime Local => Sale.SaleDate.Kind == DateTimeKind.Utc ? Sale.SaleDate.ToLocalTime() : Sale.SaleDate;
     public string Total => Sale.TotalAmount.ToString("N0") + " UZS";
     public string SubLine => Local.ToString("dd.MM HH:mm") + (string.IsNullOrEmpty(Sale.CustomerName) ? "" : "  •  " + Sale.CustomerName);
     public bool HasCash => Sale.PaidCash > 0;
     public bool HasCard => Sale.PaidCard > 0;
+}
+
+public sealed record TradeShiftRow(ShiftHistoryDto Shift)
+{
+    public string UserName => Shift.UserName;
+    public string DateText => Shift.OpenedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
 }
