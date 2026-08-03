@@ -48,6 +48,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IPrintingApi _printingApi;
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
+    public bool CanEditLabelContent => _auth.HasPermission("settings.barcodeLabel");
 
     public ObservableCollection<string> Printers { get; } = [];
 
@@ -130,6 +131,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _labelCurrencyCase = "original";
     [ObservableProperty] private string _labelNameLines = "2";
     [ObservableProperty] private bool _labelDefaultWithPrice;
+    [ObservableProperty] private bool _labelAllowPriceOverride = true;
     [ObservableProperty] private bool _labelShowSku;
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
@@ -656,6 +658,20 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
             ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
             ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
+            HeaderText = s.ReceiptHeaderText ?? string.Empty;
+            FooterText = s.ReceiptFooterText ?? string.Empty;
+            BusinessPaperWidth = s.ReceiptContentWidth is 42 or 48 ? s.ReceiptContentWidth : 32;
+            ShowBusinessName = s.ReceiptShowBusinessName;
+            ShowBranchName = s.ReceiptShowBranchName;
+            ShowAddress = s.ReceiptShowAddress;
+            ShowPhone = s.ReceiptShowPhone;
+            ShowCashier = s.ReceiptShowCashier;
+            ShowCustomer = s.ReceiptShowCustomer;
+            ShowReceiptNumber = s.ReceiptShowNumber;
+            ShowPaymentDetails = s.ReceiptShowPaymentDetails;
+            ShowQrCode = s.ReceiptShowQrCode;
+            ShowElectronicLink = s.ReceiptShowElectronicLink;
+            PublicReceiptBaseUrl = s.ReceiptPublicBaseUrl;
             DocumentPaperSize = s.DocumentPaperSize == "a5" ? "a5" : "a4";
             DocumentOrientation = s.DocumentOrientation == "landscape" ? "landscape" : "portrait";
             DocumentPagesPerSheet = s.DocumentPagesPerSheet is 2 or 4 ? s.DocumentPagesPerSheet : 1;
@@ -692,6 +708,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelCurrencyCase = s.LabelCurrencyCase is "upper" or "lower" ? s.LabelCurrencyCase : "original";
             LabelNameLines = s.LabelNameLines is 1 or 2 ? s.LabelNameLines.ToString() : "all";
             LabelDefaultWithPrice = s.LabelDefaultWithPrice;
+            LabelAllowPriceOverride = s.LabelAllowPriceOverride;
             LabelShowSku = s.LabelShowSku;
             SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
         }
@@ -702,6 +719,20 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         RefreshZReportPrinterPreview();
         NotifyZReportPreviewChanged();
         RefreshLabelPreview();
+
+        try
+        {
+            var labelSettings = await _settingsApi.GetBarcodeLabelAsync();
+            LabelDefaultWithPrice = labelSettings.DefaultWithPrice;
+            LabelAllowPriceOverride = labelSettings.AllowPriceOverride;
+            LabelShowSku = labelSettings.ShowSku;
+            LabelNameLines = labelSettings.NameLines is 1 or 2 ? labelSettings.NameLines.ToString() : "all";
+            LabelCurrencyDisplay = labelSettings.CurrencyDisplay == "code" ? "code" : "symbol";
+            LabelCurrencyCase = labelSettings.CurrencyCase is "upper" or "lower" ? labelSettings.CurrencyCase : "original";
+            SaveLocalPrinterSettings();
+            RefreshLabelPreview();
+        }
+        catch { }
 
         try
         {
@@ -723,6 +754,23 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             PublicReceiptBaseUrl = cfg.PublicReceiptBaseUrl;
         }
         catch { }
+
+        _printer.ReceiptOptions = new ReceiptPrintOptions(
+            string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
+            string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
+            BusinessPaperWidth,
+            ShowBusinessName,
+            ShowBranchName,
+            ShowAddress,
+            ShowPhone,
+            ShowCashier,
+            ShowCustomer,
+            ShowReceiptNumber,
+            ShowPaymentDetails,
+            ShowQrCode,
+            ShowElectronicLink,
+            PublicReceiptBaseUrl);
+        SaveLocalPrinterSettings();
 
         var currentBranch = _branch.SelectedBranch;
         PreviewCashierName = _auth.UserInfo?.FullName
@@ -750,6 +798,22 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private async Task SaveAsync()
     {
         SaveLocalPrinterSettings();
+        if (CanEditLabelContent)
+        try
+        {
+            await _settingsApi.UpdateBarcodeLabelAsync(new UpdateBarcodeLabelSettingsRequest(
+                LabelDefaultWithPrice,
+                LabelAllowPriceOverride,
+                LabelShowSku,
+                int.TryParse(LabelNameLines, out var labelNameLines) ? labelNameLines : 0,
+                LabelCurrencyDisplay,
+                LabelCurrencyCase));
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
         if (CanEditReceiptContent)
         try
         {
@@ -914,6 +978,20 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ReceiptMode = ReceiptMode,
             ReceiptPaperWidth = int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
             ReceiptCopies = (int)Math.Clamp(ReceiptCopies, 1, 5),
+            ReceiptHeaderText = string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
+            ReceiptFooterText = string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
+            ReceiptContentWidth = BusinessPaperWidth,
+            ReceiptShowBusinessName = ShowBusinessName,
+            ReceiptShowBranchName = ShowBranchName,
+            ReceiptShowAddress = ShowAddress,
+            ReceiptShowPhone = ShowPhone,
+            ReceiptShowCashier = ShowCashier,
+            ReceiptShowCustomer = ShowCustomer,
+            ReceiptShowNumber = ShowReceiptNumber,
+            ReceiptShowPaymentDetails = ShowPaymentDetails,
+            ReceiptShowQrCode = ShowQrCode,
+            ReceiptShowElectronicLink = ShowElectronicLink,
+            ReceiptPublicBaseUrl = PublicReceiptBaseUrl,
             AutoPrintZReport = AutoPrintZReport,
             LabelMode = LabelMode,
             LabelGapMm = (double)LabelGapMm,
@@ -928,6 +1006,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelCurrencyCase = LabelCurrencyCase,
             LabelNameLines = int.TryParse(LabelNameLines, out var nameLines) ? nameLines : 0,
             LabelDefaultWithPrice = LabelDefaultWithPrice,
+            LabelAllowPriceOverride = LabelAllowPriceOverride,
             LabelShowSku = LabelShowSku,
             DocumentPaperSize = DocumentPaperSize,
             DocumentOrientation = DocumentOrientation,

@@ -285,7 +285,8 @@ public sealed class PrintHostService
             return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies);
         }
         var receipt = await _receiptApi.GetAsync(token);
-        return () => _printer.PrintReceipt(receipt, job.PrinterSystemName, job.Copies);
+        var receiptOptions = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
+        return () => _printer.PrintReceipt(receipt, job.PrinterSystemName, job.Copies, receiptOptions);
     }
 
     private Action PrepareBarcode(AssignedPrintJobDto job)
@@ -294,8 +295,15 @@ public sealed class PrintHostService
         var name = Text(job.Payload, "name") ?? throw new InvalidOperationException("Product name is required.");
         var priceText = Text(job.Payload, "priceText");
         var withPrice = Boolean(job.Payload, "withPrice") ?? _printer.GetSettings().LabelDefaultWithPrice;
+        var settings = _printer.GetSettings();
+        var localOptions = LabelSize.Resolve(settings);
+        var options = localOptions with
+        {
+            NameLines = (int)Math.Clamp(Number(job.Payload, "nameLines") ?? localOptions.NameLines, 0, 2),
+            ShowSku = Boolean(job.Payload, "showSku") ?? localOptions.ShowSku
+        };
         return () => _labels.PrintLabels(code, name, job.Copies, job.PrinterSystemName,
-            withPrice ? priceText : null, Text(job.Payload, "sku"));
+            withPrice ? priceText : null, Text(job.Payload, "sku"), options);
     }
 
     private async Task<Action> PrepareZReportAsync(AssignedPrintJobDto job)
@@ -346,6 +354,27 @@ public sealed class PrintHostService
         payload.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
             ? value.GetBoolean()
             : null;
+
+    private static ReceiptPrintOptions? ReceiptOptions(JsonElement payload, ReceiptPrintOptions? fallback)
+    {
+        if (!payload.TryGetProperty("receiptSettings", out var settings) || settings.ValueKind != JsonValueKind.Object)
+            return fallback;
+        return new ReceiptPrintOptions(
+            Text(settings, "headerText"),
+            Text(settings, "footerText"),
+            (int)Math.Clamp(Number(settings, "paperWidth") ?? fallback?.Width ?? 32, 24, 120),
+            Boolean(settings, "showBusinessName") ?? true,
+            Boolean(settings, "showBranchName") ?? true,
+            Boolean(settings, "showAddress") ?? true,
+            Boolean(settings, "showPhone") ?? true,
+            Boolean(settings, "showCashier") ?? true,
+            Boolean(settings, "showCustomer") ?? true,
+            Boolean(settings, "showReceiptNumber") ?? true,
+            Boolean(settings, "showPaymentDetails") ?? true,
+            Boolean(settings, "showQrCode") ?? true,
+            Boolean(settings, "showElectronicLink") ?? true,
+            Text(settings, "publicReceiptBaseUrl"));
+    }
 
     private void BranchChanged(object? sender, PropertyChangedEventArgs args)
     {

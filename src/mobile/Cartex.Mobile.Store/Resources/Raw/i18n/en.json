@@ -115,6 +115,7 @@
   "note_placeholder": "Note (optional)",
   "total": "Total",
   "print": "Print",
+  "print_with_price": "Print with price",
   "print_sent": "Print job sent",
   "receipt_resent": "Receipt resent",
   "z_reports": "Z reports",

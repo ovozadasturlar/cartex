@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -275,6 +276,7 @@ public sealed class CreatePrintJobCommandValidator : AbstractValidator<CreatePri
 public sealed class CreatePrintJobCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    ISettingsService settings,
     PrintRoutingService routing,
     IPrintJobNotifier notifier) : IRequestHandler<CreatePrintJobCommand, PrintJobDto>
 {
@@ -295,7 +297,7 @@ public sealed class CreatePrintJobCommandHandler(
 
         var kind = (DomainJobKind)request.Kind;
         var payloadJson = await PrintingPayloadValidator.ValidateAsync(
-            db, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
+            db, settings, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
         var policy = await routing.GetOrCreatePolicyAsync(request.BranchId, kind, cancellationToken);
         if (!policy.IsEnabled) throw new BusinessRuleException("Printing is disabled for this print type.");
         if (request.Copies < 1 || request.Copies > policy.MaxCopies)
@@ -358,6 +360,7 @@ internal static class PrintingPayloadValidator
 {
     public static async Task<string> ValidateAsync(
         IApplicationDbContext db,
+        ISettingsService settings,
         long branchId,
         DomainJobKind kind,
         string sourceId,
@@ -367,15 +370,21 @@ internal static class PrintingPayloadValidator
         if (payload.GetRawText().Length > 32768) throw new BusinessRuleException("Print payload is too large.");
         return kind switch
         {
-            DomainJobKind.Receipt => await ReceiptAsync(db, branchId, sourceId, payload, cancellationToken),
-            DomainJobKind.BarcodeLabel => await BarcodeAsync(db, payload, cancellationToken),
+            DomainJobKind.Receipt => await ReceiptAsync(db, settings, branchId, sourceId, payload, cancellationToken),
+            DomainJobKind.BarcodeLabel => await BarcodeAsync(db, settings, payload, cancellationToken),
             DomainJobKind.ZReport => await ZReportAsync(db, branchId, sourceId, payload, cancellationToken),
             DomainJobKind.Document => await DocumentAsync(db, branchId, payload, cancellationToken),
             _ => throw new BusinessRuleException("Unsupported print payload.")
         };
     }
 
-    private static async Task<string> ReceiptAsync(IApplicationDbContext db, long branchId, string sourceId, JsonElement payload, CancellationToken cancellationToken)
+    private static async Task<string> ReceiptAsync(
+        IApplicationDbContext db,
+        ISettingsService settings,
+        long branchId,
+        string sourceId,
+        JsonElement payload,
+        CancellationToken cancellationToken)
     {
         var token = Text(payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(token))
@@ -389,10 +398,32 @@ internal static class PrintingPayloadValidator
             token = null;
         }
         if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException("Receipt not found.");
-        return JsonSerializer.Serialize(new { receiptToken = token });
+        var configured = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken) ?? new();
+        var notification = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken);
+        return JsonSerializer.Serialize(new
+        {
+            receiptToken = token,
+            receiptSettings = new
+            {
+                configured.HeaderText,
+                configured.FooterText,
+                configured.PaperWidth,
+                configured.ShowBusinessName,
+                configured.ShowBranchName,
+                configured.ShowAddress,
+                configured.ShowPhone,
+                configured.ShowCashier,
+                configured.ShowCustomer,
+                configured.ShowReceiptNumber,
+                configured.ShowPaymentDetails,
+                configured.ShowQrCode,
+                configured.ShowElectronicLink,
+                PublicReceiptBaseUrl = notification?.PublicBaseUrl
+            }
+        });
     }
 
-    private static async Task<string> BarcodeAsync(IApplicationDbContext db, JsonElement payload, CancellationToken cancellationToken)
+    private static async Task<string> BarcodeAsync(IApplicationDbContext db, ISettingsService settings, JsonElement payload, CancellationToken cancellationToken)
     {
         var code = Required(payload, "code", 128);
         var name = Required(payload, "name", 300);
@@ -400,9 +431,24 @@ internal static class PrintingPayloadValidator
             throw new NotFoundException("Barcode not found.");
         var priceText = Text(payload, "priceText");
         var sku = Text(payload, "sku");
-        var withPrice = Boolean(payload, "withPrice");
+        var configured = await settings.GetAsync<BarcodeLabelSettings>(SettingKeys.BarcodeLabel, cancellationToken) ?? new();
+        var requestedWithPrice = Boolean(payload, "withPrice");
+        var withPrice = configured.AllowPriceOverride && requestedWithPrice is not null
+            ? requestedWithPrice.Value
+            : configured.DefaultWithPrice;
         if (priceText?.Length > 80 || sku?.Length > 80) throw new BusinessRuleException("Invalid barcode label payload.");
-        return JsonSerializer.Serialize(new { code, name, priceText, sku, withPrice });
+        return JsonSerializer.Serialize(new
+        {
+            code,
+            name,
+            priceText,
+            sku,
+            withPrice,
+            showSku = configured.ShowSku,
+            nameLines = configured.NameLines,
+            currencyDisplay = configured.CurrencyDisplay,
+            currencyCase = configured.CurrencyCase
+        });
     }
 
     private static async Task<string> ZReportAsync(IApplicationDbContext db, long branchId, string sourceId, JsonElement payload, CancellationToken cancellationToken)

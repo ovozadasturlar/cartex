@@ -6,6 +6,7 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Rates;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,6 +29,7 @@ public partial class ScanViewModel : ObservableObject
     private readonly SupplyCartStore _supplyCart;
     private readonly ImageUrlBuilder _images;
     private readonly MobilePrintDispatcher _printDispatcher;
+    private readonly BarcodeLabelSettingsCache _labelSettings;
 
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
@@ -52,6 +54,8 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _isPrintingBarcode;
     [ObservableProperty] private BarcodeChoice? _selectedBarcode;
     [ObservableProperty] private int _printCopies = 1;
+    [ObservableProperty] private bool _printWithPrice;
+    [ObservableProperty] private bool _canOverridePrintPrice = true;
 
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
     public ObservableCollection<BarcodeChoice> BarcodeChoices { get; } = [];
@@ -72,7 +76,7 @@ public partial class ScanViewModel : ObservableObject
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
@@ -84,6 +88,7 @@ public partial class ScanViewModel : ObservableObject
         _supplyCart = supplyCart;
         _images = images;
         _printDispatcher = printDispatcher;
+        _labelSettings = labelSettings;
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         cart.Changed += () => CartCount = _cart.Count;
@@ -248,11 +253,14 @@ public partial class ScanViewModel : ObservableObject
         try
         {
             var barcodes = await _barcodesApi.GetByVariantAsync(_product.VariantId);
+            var settings = await _labelSettings.RefreshAsync();
             BarcodeChoices.Clear();
             foreach (var barcode in barcodes)
                 BarcodeChoices.Add(new BarcodeChoice(barcode));
             SelectedBarcode = BarcodeChoices.FirstOrDefault(x => x.Code == _activeBarcode) ?? BarcodeChoices.FirstOrDefault();
             PrintCopies = 1;
+            PrintWithPrice = settings.DefaultWithPrice;
+            CanOverridePrintPrice = settings.AllowPriceOverride;
             ProductActionsExpanded = false;
             IsBarcodeMode = true;
         }
@@ -289,8 +297,9 @@ public partial class ScanViewModel : ObservableObject
                 SelectedBarcode.Code,
                 ProductName,
                 PrintCopies,
-                PriceText,
-                _productSku);
+                FormatLabelPrice(_product, _labelSettings.Current),
+                _productSku,
+                PrintWithPrice);
             Ui.Toast(Loc.Instance["print_sent"]);
         }
         catch (Exception ex)
@@ -561,6 +570,23 @@ public partial class ScanViewModel : ObservableObject
         return string.Equals(priceCurrency, baseCurrency, StringComparison.OrdinalIgnoreCase)
             ? original
             : $"{original} ≈ {Money.Currency(product.SellingPrice, baseCurrency)}";
+    }
+
+    private static string FormatLabelPrice(ProductLookupDto product, Cartex.Shared.Models.Settings.BarcodeLabelSettingsDto settings)
+    {
+        var code = product.PriceCurrency ?? product.BaseCurrency ?? "UZS";
+        var metadata = CurrencyCatalog.Resolve(code);
+        var token = settings.CurrencyDisplay == "code" ? metadata.Code : metadata.Symbol;
+        token = settings.CurrencyCase switch
+        {
+            "upper" => token.ToUpperInvariant(),
+            "lower" => token.ToLowerInvariant(),
+            _ => token
+        };
+        var amount = product.OriginalSellingPrice ?? product.SellingPrice;
+        var number = amount.ToString($"N{metadata.DecimalDigits}");
+        var position = settings.CurrencyDisplay == "code" ? "Suffix" : metadata.SymbolPosition;
+        return position == "Prefix" ? $"{token}{number}" : $"{number} {token}";
     }
 
     private void Resume()

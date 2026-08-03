@@ -50,6 +50,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<WarehouseContext>();
         builder.Services.AddSingleton<OrderingHubService>();
         builder.Services.AddSingleton<MobilePrintDispatcher>();
+        builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
 
         builder.Services.AddTransient<LoginViewModel>();

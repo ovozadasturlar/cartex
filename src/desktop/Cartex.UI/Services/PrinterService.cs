@@ -22,6 +22,20 @@ public sealed record PrinterSettings
     public string? ReceiptMode { get; init; }
     public int ReceiptPaperWidth { get; init; }
     public int ReceiptCopies { get; init; } = 1;
+    public string? ReceiptHeaderText { get; init; }
+    public string? ReceiptFooterText { get; init; }
+    public int ReceiptContentWidth { get; init; } = 32;
+    public bool ReceiptShowBusinessName { get; init; } = true;
+    public bool ReceiptShowBranchName { get; init; } = true;
+    public bool ReceiptShowAddress { get; init; } = true;
+    public bool ReceiptShowPhone { get; init; } = true;
+    public bool ReceiptShowCashier { get; init; } = true;
+    public bool ReceiptShowCustomer { get; init; } = true;
+    public bool ReceiptShowNumber { get; init; } = true;
+    public bool ReceiptShowPaymentDetails { get; init; } = true;
+    public bool ReceiptShowQrCode { get; init; } = true;
+    public bool ReceiptShowElectronicLink { get; init; } = true;
+    public string? ReceiptPublicBaseUrl { get; init; }
     public bool AutoPrintZReport { get; init; }
     public string? LabelMode { get; init; }
     public double LabelGapMm { get; init; }
@@ -36,6 +50,7 @@ public sealed record PrinterSettings
     public string? LabelCurrencyCase { get; init; }
     public int LabelNameLines { get; init; } = 2;
     public bool LabelDefaultWithPrice { get; init; }
+    public bool LabelAllowPriceOverride { get; init; } = true;
     public bool LabelShowSku { get; init; }
     public string? DocumentPaperSize { get; init; }
     public string? DocumentOrientation { get; init; }
@@ -116,6 +131,7 @@ public interface IPrinterService
     ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies);
+    void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options);
     void PrintZReport(ZReportDto report);
     void PrintZReport(ZReportDto report, string printerName, int copies);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
@@ -144,6 +160,21 @@ public sealed class PrinterService : IPrinterService
             _path = Path.Combine(dir, "printing.json");
             if (File.Exists(_path))
                 _settings = JsonSerializer.Deserialize<PrinterSettings>(File.ReadAllText(_path)) ?? _settings;
+            ReceiptOptions = new ReceiptPrintOptions(
+                _settings.ReceiptHeaderText,
+                _settings.ReceiptFooterText,
+                _settings.ReceiptContentWidth is 42 or 48 ? _settings.ReceiptContentWidth : 32,
+                _settings.ReceiptShowBusinessName,
+                _settings.ReceiptShowBranchName,
+                _settings.ReceiptShowAddress,
+                _settings.ReceiptShowPhone,
+                _settings.ReceiptShowCashier,
+                _settings.ReceiptShowCustomer,
+                _settings.ReceiptShowNumber,
+                _settings.ReceiptShowPaymentDetails,
+                _settings.ReceiptShowQrCode,
+                _settings.ReceiptShowElectronicLink,
+                _settings.ReceiptPublicBaseUrl);
         }
         catch { _path = null; }
     }
@@ -154,7 +185,12 @@ public sealed class PrinterService : IPrinterService
     {
         _settings = settings;
         if (_path is null) return;
-        try { File.WriteAllText(_path, JsonSerializer.Serialize(settings)); }
+        try
+        {
+            var temporaryPath = $"{_path}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings));
+            File.Move(temporaryPath, _path, true);
+        }
         catch { }
     }
 
@@ -185,12 +221,15 @@ public sealed class PrinterService : IPrinterService
         PrintReceipt(receipt, _settings.ReceiptPrinter ?? "", _settings.ReceiptCopies);
 
     public void PrintReceipt(ReceiptDto receipt, string printerName, int copies)
+        => PrintReceipt(receipt, printerName, copies, ReceiptOptions);
+
+    public void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options)
     {
         var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? ReceiptOptions is null
+            ? options is null
                 ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
-                : ReceiptOptions with { Width = _settings.ReceiptPaperWidth }
-            : ReceiptOptions;
+                : options with { Width = _settings.ReceiptPaperWidth }
+            : options;
         var text = FormatReceipt(receipt, opts);
         var link = opts?.ShowQrCode != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
             ? $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{receipt.ReceiptToken}"

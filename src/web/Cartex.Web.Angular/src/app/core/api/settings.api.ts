@@ -98,6 +98,15 @@ export interface StorageSettings {
   secretKeyLength: number;
 }
 
+export interface BarcodeLabelSettings {
+  defaultWithPrice: boolean;
+  allowPriceOverride: boolean;
+  showSku: boolean;
+  nameLines: number;
+  currencyDisplay: 'symbol' | 'code';
+  currencyCase: 'original' | 'upper' | 'lower';
+}
+
 export interface ReminderSettings {
   enabled: boolean;
   minDaysOverdue: number;
@@ -208,6 +217,14 @@ export class SettingsApi {
 
   updateReceipt(body: ReceiptSettings): Observable<void> {
     return this.http.put<void>('/api/settings/receipt', body);
+  }
+
+  barcodeLabel(): Observable<BarcodeLabelSettings> {
+    return this.http.get<BarcodeLabelSettings>('/api/settings/barcode-label');
+  }
+
+  updateBarcodeLabel(body: BarcodeLabelSettings): Observable<void> {
+    return this.http.put<void>('/api/settings/barcode-label', body);
   }
 
   reminder(): Observable<ReminderSettings> {

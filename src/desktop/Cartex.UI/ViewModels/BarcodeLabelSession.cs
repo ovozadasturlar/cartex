@@ -48,6 +48,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
     [ObservableProperty] private BarcodeLabelChoice? _selectedBarcode;
 
     public bool HasManyBarcodes => Barcodes.Count > 1;
+    public bool CanOverridePrice => printer.GetSettings().LabelAllowPriceOverride;
 
     public event Action? FocusBarcodesRequested;
     public event Action? FocusQuantityRequested;
@@ -68,6 +69,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
             printer.GetSettings());
         Quantity = 1;
         PrintWithPrice = printer.GetSettings().LabelDefaultWithPrice;
+        OnPropertyChanged(nameof(CanOverridePrice));
         Code = null;
         Preview = null;
         SelectedBarcode = null;

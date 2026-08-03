@@ -239,6 +239,7 @@ public static class AppPermissions
     {
         public const string Integrations = "settings.integrations";
         public const string Receipt = "settings.receipt";
+        public const string BarcodeLabel = "settings.barcodeLabel";
         public const string Security = "settings.security";
     }
 
@@ -393,6 +394,7 @@ public static class AppPermissions
             P(Audit.View, "View audit logs"),
             P(Settings.Integrations, "Manage integrations"),
             P(Settings.Receipt, "Manage receipt settings"),
+            P(Settings.BarcodeLabel, "Manage barcode label content settings"),
             P(Settings.Security, "Manage login and security settings"),
             P(Printing.ReceiptPrint, "Print sales receipts", true, Sales.View),
             P(Printing.ReceiptReprint, "Reprint sales receipts", true, Printing.ReceiptPrint),
@@ -489,6 +491,6 @@ public static class AppPermissions
             ["loyalty.manage"] = [Loyalty.Edit, Loyalty.GrantBonus],
             ["features.manage"] = [Features.View, Features.Edit],
             ["keys.manage"] = [Keys.View, Keys.Create, Keys.Edit, Keys.Revoke],
-            ["settings.manage"] = [Settings.Integrations, Settings.Receipt, Settings.Security],
+            ["settings.manage"] = [Settings.Integrations, Settings.Receipt, Settings.BarcodeLabel, Settings.Security],
         };
 }

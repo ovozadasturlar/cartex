@@ -82,6 +82,18 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("barcode-label")]
+    public async Task<ActionResult<BarcodeLabelSettingsDto>> GetBarcodeLabel() =>
+        Ok(await sender.Send(new GetBarcodeLabelSettingsQuery()));
+
+    [HttpPut("barcode-label")]
+    [HasPermission(AppPermissions.Settings.BarcodeLabel)]
+    public async Task<IActionResult> UpdateBarcodeLabel(UpdateBarcodeLabelSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("login-methods")]
     [HasPermission(AppPermissions.Settings.Security)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.LoginMethodsSettingsDto>> GetLoginMethods()

@@ -1111,5 +1111,6 @@
   "label_name_2": "2 строки",
   "label_name_all": "Полностью",
   "label_default_with_price": "Показывать цену по умолчанию",
-  "label_show_sku": "Показывать SKU при наличии"
+  "label_show_sku": "Показывать SKU при наличии",
+  "label_allow_price_override": "Разрешить менять показ цены при печати"
 }

@@ -224,6 +224,12 @@
                     </ScrollView>
                     <Label Text="{Binding SelectedBarcode.Code}" HorizontalTextAlignment="Center"
                            Style="{StaticResource MutedLabel}" />
+                    <Grid ColumnDefinitions="*,Auto" Padding="2,0">
+                        <Label Text="{svc:T print_with_price}" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Switch Grid.Column="1" IsToggled="{Binding PrintWithPrice}"
+                                IsEnabled="{Binding CanOverridePrintPrice}" />
+                    </Grid>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <Button Text="&#x2212;" Style="{StaticResource PinKey}" WidthRequest="52" HeightRequest="52"
                                 Command="{Binding DecreasePrintCopiesCommand}" />

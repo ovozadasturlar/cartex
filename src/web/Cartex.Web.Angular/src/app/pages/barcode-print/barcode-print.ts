@@ -13,6 +13,7 @@ import { Barcode, BarcodesApi, CatalogProduct, ProductsCatalogApi } from '../../
 import { CxCurrencyPipe, formatCurrency } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { RemotePrintService } from '../../core/remote-print.service';
+import { BarcodeLabelSettings, SettingsApi } from '../../core/api/settings.api';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -42,6 +43,7 @@ export class BarcodePrint implements OnInit {
   private readonly barcodesApi = inject(BarcodesApi);
   private readonly notify = inject(NotifyService);
   private readonly remotePrint = inject(RemotePrintService);
+  private readonly settingsApi = inject(SettingsApi);
   private readonly preview = viewChild<ElementRef<SVGSVGElement>>('barcodePreview');
 
   readonly loading = signal(true);
@@ -57,6 +59,15 @@ export class BarcodePrint implements OnInit {
   search = '';
   quantity = 1;
   printWithPrice = false;
+  allowPriceOverride = true;
+  private labelSettings: BarcodeLabelSettings = {
+    defaultWithPrice: false,
+    allowPriceOverride: true,
+    showSku: false,
+    nameLines: 2,
+    currencyDisplay: 'symbol',
+    currencyCase: 'original',
+  };
   private page = 1;
   private pageSize = 20;
 
@@ -80,8 +91,33 @@ export class BarcodePrint implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.readCachedSettings();
+    try {
+      this.labelSettings = await lastValueFrom(this.settingsApi.barcodeLabel());
+      localStorage.setItem('cartex.barcodeLabelSettings', JSON.stringify(this.labelSettings));
+    } catch {}
+    this.printWithPrice = this.labelSettings.defaultWithPrice;
+    this.allowPriceOverride = this.labelSettings.allowPriceOverride;
     this.load();
+  }
+
+  labelPrice(product: CatalogProduct): string {
+    if (product.sellingPrice == null) return '';
+    let symbol = this.labelSettings.currencyDisplay === 'code'
+      ? product.priceCurrency ?? 'UZS'
+      : product.priceSymbol;
+    if (symbol) {
+      if (this.labelSettings.currencyCase === 'upper') symbol = symbol.toUpperCase();
+      if (this.labelSettings.currencyCase === 'lower') symbol = symbol.toLowerCase();
+    }
+    return formatCurrency(
+      product.sellingPrice,
+      product.priceCurrency,
+      symbol,
+      this.labelSettings.currencyDisplay === 'code' ? 'Suffix' : product.priceSymbolPosition,
+      product.priceDecimalDigits,
+    );
   }
 
   searchNow(): void {
@@ -138,7 +174,7 @@ export class BarcodePrint implements OnInit {
           code: barcode.code,
           name: product.name,
           priceText: this.printWithPrice && product.sellingPrice != null
-            ? formatCurrency(product.sellingPrice, product.priceCurrency, product.priceSymbol, product.priceSymbolPosition, product.priceDecimalDigits)
+            ? this.labelPrice(product)
             : null,
           withPrice: this.printWithPrice,
           sku: product.code,
@@ -154,7 +190,7 @@ export class BarcodePrint implements OnInit {
     const safe = (value: string) =>
       value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
     const price = this.printWithPrice && product.sellingPrice != null
-      ? `<strong>${safe(formatCurrency(product.sellingPrice, product.priceCurrency, product.priceSymbol, product.priceSymbolPosition, product.priceDecimalDigits))}</strong>`
+      ? `<strong>${safe(this.labelPrice(product))}</strong>`
       : '';
     const pack = barcode.packQty > 1 ? `<small>× ${barcode.packQty}</small>` : '';
     const labels = Array.from({ length: count }, () => `
@@ -193,5 +229,12 @@ export class BarcodePrint implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private readCachedSettings(): void {
+    try {
+      const cached = localStorage.getItem('cartex.barcodeLabelSettings');
+      if (cached) this.labelSettings = { ...this.labelSettings, ...JSON.parse(cached) };
+    } catch {}
   }
 }

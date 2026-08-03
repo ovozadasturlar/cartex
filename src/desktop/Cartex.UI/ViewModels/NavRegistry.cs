@@ -60,7 +60,7 @@ public static class NavRegistry
         new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.view"),
         new("system", "reminders", MaterialIconKind.BellRingOutline, typeof(RemindersViewModel), "notifications.view"),
         new("system", "notification_journal", MaterialIconKind.MessageBadgeOutline, typeof(NotificationJournalViewModel), "notifications.journal.view"),
-        new("system", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "settings.receipt|printing.routes.view"),
+        new("system", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "settings.receipt|settings.barcodeLabel|printing.routes.view"),
         new("system", "devices", MaterialIconKind.Devices, typeof(DevicesViewModel), "devices.view"),
         new("system", "app_settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null),
         new("developer", "tariff_features", MaterialIconKind.KeyVariant, typeof(TariffFeaturesViewModel), "features.view"),

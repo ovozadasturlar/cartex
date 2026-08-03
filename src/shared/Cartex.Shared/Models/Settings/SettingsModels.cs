@@ -72,6 +72,20 @@ public record UpdateReceiptSettingsRequest(
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
     bool ShowElectronicLink = true);
+public record BarcodeLabelSettingsDto(
+    bool DefaultWithPrice = false,
+    bool AllowPriceOverride = true,
+    bool ShowSku = false,
+    int NameLines = 2,
+    string CurrencyDisplay = "symbol",
+    string CurrencyCase = "original");
+public record UpdateBarcodeLabelSettingsRequest(
+    bool DefaultWithPrice,
+    bool AllowPriceOverride,
+    bool ShowSku,
+    int NameLines,
+    string CurrencyDisplay,
+    string CurrencyCase);
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);

@@ -1111,5 +1111,6 @@
   "label_name_2": "2 lines",
   "label_name_all": "Full",
   "label_default_with_price": "Show price by default",
-  "label_show_sku": "Show SKU when available"
+  "label_show_sku": "Show SKU when available",
+  "label_allow_price_override": "Allow changing price visibility when printing"
 }

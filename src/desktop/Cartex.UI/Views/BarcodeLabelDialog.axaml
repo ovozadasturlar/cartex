@@ -79,7 +79,7 @@
                     <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding [print_with_price], Source={x:Static svc:LocalizationManager.Instance}}"
                                    FontSize="12" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
-                        <ToggleSwitch IsChecked="{Binding PrintWithPrice}" VerticalAlignment="Center" />
+                        <ToggleSwitch IsChecked="{Binding PrintWithPrice}" IsEnabled="{Binding CanOverridePrice}" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <Image Grid.Row="8" Source="{Binding Preview}" Height="128" HorizontalAlignment="Center"

@@ -50,6 +50,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public bool HasCode => !string.IsNullOrWhiteSpace(CurrentCode);
     public bool HasSelection => SelectedProduct is not null;
     public bool HasBarcodes => BarcodeOptions.Count > 0;
+    public bool CanOverridePrice => _printer.GetSettings().LabelAllowPriceOverride;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
     public string PriceText => SelectedProduct?.SellingPrice is { } price
         ? BarcodeLabelFormatting.FormatPrice(
@@ -91,6 +92,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public Task LoadAsync()
     {
         PrintWithPrice = _printer.GetSettings().LabelDefaultWithPrice;
+        OnPropertyChanged(nameof(CanOverridePrice));
         OnPropertyChanged(nameof(PrinterInfo));
         return SearchAsync();
     }

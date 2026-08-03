@@ -66,7 +66,7 @@
           <div class="preview">
             <svg #barcodePreview></svg>
             @if (printWithPrice && product.sellingPrice != null) {
-              <strong class="cx-money">{{ product.sellingPrice | cxCurrency:product.priceCurrency:product.priceSymbol:product.priceSymbolPosition:product.priceDecimalDigits }}</strong>
+              <strong class="cx-money">{{ labelPrice(product) }}</strong>
             }
           </div>
           <div class="controls">
@@ -74,7 +74,7 @@
               <mat-label>{{ t('quantity') }}</mat-label>
               <input matInput type="number" min="1" max="500" [(ngModel)]="quantity" />
             </mat-form-field>
-            <mat-checkbox [(ngModel)]="printWithPrice">{{ t('print_with_price') }}</mat-checkbox>
+            <mat-checkbox [(ngModel)]="printWithPrice" [disabled]="!allowPriceOverride">{{ t('print_with_price') }}</mat-checkbox>
           </div>
           <button class="print" matButton="filled" [disabled]="!selectedBarcode()" (click)="print()">
             <mat-icon>print</mat-icon>{{ t('print') }}

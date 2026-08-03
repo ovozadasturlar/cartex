@@ -1111,5 +1111,6 @@
   "label_name_2": "2 қатор",
   "label_name_all": "Тўлиқ",
   "label_default_with_price": "Нархни стандарт кўрсатиш",
-  "label_show_sku": "SKU мавжуд бўлса кўрсатиш"
+  "label_show_sku": "SKU мавжуд бўлса кўрсатиш",
+  "label_allow_price_override": "Чоп этишда нарх ҳолатини ўзгартириш"
 }

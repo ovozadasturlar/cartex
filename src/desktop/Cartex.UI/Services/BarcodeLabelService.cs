@@ -13,7 +13,7 @@ public interface IBarcodeLabelService
         string? priceText,
         LabelOptions options,
         string? sku = null);
-    void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null);
+    void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null, LabelOptions? options = null);
 }
 
 public record LabelPreviewResult(byte[] Image, bool MayClip);
@@ -42,22 +42,22 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
         return new LabelPreviewResult(result.Image, result.MayClip);
     }
 
-    public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null)
+    public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null, LabelOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(code) || quantity < 1) return;
 
         var settings = printer.GetSettings();
-        var options = LabelSize.Resolve(settings);
-        var (width, height) = (options.WidthMm, options.HeightMm);
+        var effectiveOptions = options ?? LabelSize.Resolve(settings);
+        var (width, height) = (effectiveOptions.WidthMm, effectiveOptions.HeightMm);
         var target = printerName ?? printer.BarcodePrinter;
 
         if (!string.Equals(settings.LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
         {
-            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options, priceText, sku));
+            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, effectiveOptions, priceText, sku));
             return;
         }
 
-        var image = TsplLabel.RenderPrintPng(code, name, priceText, options, sku);
+        var image = TsplLabel.RenderPrintPng(code, name, priceText, effectiveOptions, sku);
         var document = Document.Create(container =>
         {
             for (var i = 0; i < quantity; i++)

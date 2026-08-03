@@ -32,6 +32,12 @@ public interface ISettingsApi
     [Put("/api/settings/receipt")]
     Task UpdateReceiptAsync([Body] UpdateReceiptSettingsRequest request);
 
+    [Get("/api/settings/barcode-label")]
+    Task<BarcodeLabelSettingsDto> GetBarcodeLabelAsync();
+
+    [Put("/api/settings/barcode-label")]
+    Task UpdateBarcodeLabelAsync([Body] UpdateBarcodeLabelSettingsRequest request);
+
     [Get("/api/settings/sales-policy")]
     Task<SalesPolicyDto> GetSalesPolicyAsync();
 
