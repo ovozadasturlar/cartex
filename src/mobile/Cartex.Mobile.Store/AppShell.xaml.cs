@@ -1,4 +1,5 @@
 using Cartex.Mobile.Store.Views;
+using Cartex.Mobile.Store.Services;
 
 namespace Cartex.Mobile.Store;
 
@@ -19,9 +20,16 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("security", typeof(SecurityPage));
     }
 
+    protected override void OnNavigating(ShellNavigatingEventArgs args)
+    {
+        KeyboardDismissal.Hide();
+        base.OnNavigating(args);
+    }
+
     protected override void OnNavigated(ShellNavigatedEventArgs args)
     {
         base.OnNavigated(args);
+        Dispatcher.Dispatch(KeyboardDismissal.HideWhenInputIsNotFocused);
         if (args.Source is ShellNavigationSource.ShellSectionChanged or ShellNavigationSource.ShellItemChanged or ShellNavigationSource.ShellContentChanged
             && Navigation.NavigationStack.Count > 1)
             Dispatcher.Dispatch(async () => await Navigation.PopToRootAsync(false));

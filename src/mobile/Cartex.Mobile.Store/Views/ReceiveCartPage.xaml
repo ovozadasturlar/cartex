@@ -21,7 +21,7 @@
                         <SwipeView.LeftItems>
                             <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
                                 <SwipeItemView Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
-                                    <Border WidthRequest="58" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    <Border WidthRequest="58" StrokeThickness="0"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}">
                                         <Label Text="{StaticResource IcDelete}" FontFamily="MDI" FontSize="22"
                                                HorizontalOptions="Center" VerticalOptions="Center" TextColor="White" />
@@ -32,23 +32,23 @@
                         <SwipeView.RightItems>
                             <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
                                 <SwipeItemView Command="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
-                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    <Border WidthRequest="52" StrokeThickness="0"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}">
                                         <Label Text="+" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                                     </Border>
                                 </SwipeItemView>
                                 <SwipeItemView>
-                                    <Border WidthRequest="64" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                                    <Border WidthRequest="64" StrokeThickness="0"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}">
                                         <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" FontSize="16" FontAttributes="Bold"
                                                HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                     </Border>
                                 </SwipeItemView>
                                 <SwipeItemView Command="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
-                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                    <Border WidthRequest="52" StrokeThickness="0"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}">
                                         <Label Text="−" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                     </Border>

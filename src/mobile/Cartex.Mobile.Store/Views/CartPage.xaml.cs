@@ -1,4 +1,5 @@
 using Cartex.Mobile.Store.ViewModels;
+using Cartex.Mobile.Store.Services;
 using Microsoft.Maui.Controls;
 
 namespace Cartex.Mobile.Store.Views;
@@ -12,6 +13,11 @@ public partial class CartPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _vm = vm;
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CartViewModel.IsCustomerModalOpen) && !_vm.IsCustomerModalOpen)
+                KeyboardDismissal.Hide();
+        };
     }
 
     protected override void OnAppearing()
@@ -22,6 +28,7 @@ public partial class CartPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        KeyboardDismissal.Hide();
         _vm.Disappear();
         base.OnDisappearing();
     }

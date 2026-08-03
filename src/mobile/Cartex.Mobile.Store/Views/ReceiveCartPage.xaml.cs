@@ -1,4 +1,5 @@
 using Cartex.Mobile.Store.ViewModels;
+using Cartex.Mobile.Store.Services;
 
 namespace Cartex.Mobile.Store.Views;
 
@@ -21,6 +22,7 @@ public partial class ReceiveCartPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        KeyboardDismissal.Hide();
         base.OnDisappearing();
         _vm.Disappear();
     }
