@@ -17,6 +17,7 @@ import { CurrentShift, PosApi, ShiftHistory, ZReport } from '../../core/api/pos.
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -596,6 +597,8 @@ export class CloseShiftDialog {
   `,
 })
 export class ZReportDialog {
+  private readonly remotePrint = inject(RemotePrintService);
+  private readonly notify = inject(NotifyService);
   readonly data = inject<ZReportData>(MAT_DIALOG_DATA);
   readonly r = this.data.report;
   readonly signed = signed;
@@ -616,7 +619,22 @@ export class ZReportDialog {
     { key: 'supply_pay_out', value: this.r.supplyPayOut },
   ];
 
-  print(): void {
+  async print(): Promise<void> {
+    try {
+      const queued = await this.remotePrint.send({
+        kind: 'ZReport',
+        permission: 'printing.z_reports.print',
+        sourceType: 'shift',
+        sourceId: String(this.r.shiftId),
+        payload: { shiftId: this.r.shiftId },
+        isReprint: true,
+        reason: 'web_reprint',
+      });
+      if (queued) return;
+    } catch (error) {
+      this.notify.error(error);
+      return;
+    }
     document.body.classList.add('zr-printing');
     window.print();
     document.body.classList.remove('zr-printing');

@@ -1,4 +1,7 @@
 {
+  "print": "Печать",
+  "receipt_resent": "Чек отправлен повторно",
+  "resend_receipt": "Отправить повторно",
   "account": "Счёт",
   "accounts_subtitle": "Баланс касс и счетов",
   "all_card": "Всё картой",

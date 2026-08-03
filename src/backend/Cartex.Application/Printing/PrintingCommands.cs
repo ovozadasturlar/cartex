@@ -400,8 +400,9 @@ internal static class PrintingPayloadValidator
             throw new NotFoundException("Barcode not found.");
         var priceText = Text(payload, "priceText");
         var sku = Text(payload, "sku");
+        var withPrice = Boolean(payload, "withPrice");
         if (priceText?.Length > 80 || sku?.Length > 80) throw new BusinessRuleException("Invalid barcode label payload.");
-        return JsonSerializer.Serialize(new { code, name, priceText, sku });
+        return JsonSerializer.Serialize(new { code, name, priceText, sku, withPrice });
     }
 
     private static async Task<string> ZReportAsync(IApplicationDbContext db, long branchId, string sourceId, JsonElement payload, CancellationToken cancellationToken)
@@ -433,6 +434,11 @@ internal static class PrintingPayloadValidator
 
     private static long? Number(JsonElement payload, string name) =>
         payload.TryGetProperty(name, out var value) && value.TryGetInt64(out var number) ? number : null;
+
+    private static bool? Boolean(JsonElement payload, string name) =>
+        payload.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 }
 
 public record AcceptPrintJobCommand(long JobId, PrintJobLeaseRequest Request) : ICommand<Unit>;

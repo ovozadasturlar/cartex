@@ -1,4 +1,7 @@
 {
+  "print": "Print",
+  "receipt_resent": "Receipt resent",
+  "resend_receipt": "Resend",
   "account": "Account",
   "accounts_subtitle": "Cash and account balances",
   "all_card": "All card",

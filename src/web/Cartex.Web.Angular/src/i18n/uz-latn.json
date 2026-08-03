@@ -1,4 +1,7 @@
 {
+  "print": "Chop etish",
+  "receipt_resent": "Chek qayta yuborildi",
+  "resend_receipt": "Qayta yuborish",
   "account": "Hisob",
   "accounts_subtitle": "Kassa va hisoblar balansi",
   "all_card": "Hammasi karta",

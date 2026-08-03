@@ -12,6 +12,7 @@ import { lastValueFrom } from 'rxjs';
 import { Barcode, BarcodesApi, CatalogProduct, ProductsCatalogApi } from '../../core/api/catalog.api';
 import { CxCurrencyPipe, formatCurrency } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -40,6 +41,7 @@ export class BarcodePrint implements OnInit {
   private readonly productsApi = inject(ProductsCatalogApi);
   private readonly barcodesApi = inject(BarcodesApi);
   private readonly notify = inject(NotifyService);
+  private readonly remotePrint = inject(RemotePrintService);
   private readonly preview = viewChild<ElementRef<SVGSVGElement>>('barcodePreview');
 
   readonly loading = signal(true);
@@ -119,12 +121,35 @@ export class BarcodePrint implements OnInit {
     this.selectedBarcode.set(null);
   }
 
-  print(): void {
+  async print(): Promise<void> {
     const product = this.selected();
     const barcode = this.selectedBarcode();
     const svg = this.preview()?.nativeElement.outerHTML;
     const count = Math.max(1, Math.min(500, Math.trunc(this.quantity || 1)));
     if (!product || !barcode || !svg) return;
+
+    try {
+      const queued = await this.remotePrint.send({
+        kind: 'BarcodeLabel',
+        permission: 'printing.barcodes.print',
+        sourceType: 'barcode',
+        sourceId: barcode.code,
+        payload: {
+          code: barcode.code,
+          name: product.name,
+          priceText: this.printWithPrice && product.sellingPrice != null
+            ? formatCurrency(product.sellingPrice, product.priceCurrency, product.priceSymbol, product.priceSymbolPosition, product.priceDecimalDigits)
+            : null,
+          withPrice: this.printWithPrice,
+          sku: product.code,
+        },
+        copies: count,
+      });
+      if (queued) return;
+    } catch (error) {
+      this.notify.error(error);
+      return;
+    }
 
     const safe = (value: string) =>
       value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');

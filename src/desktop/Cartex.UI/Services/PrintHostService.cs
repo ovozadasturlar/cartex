@@ -292,8 +292,10 @@ public sealed class PrintHostService
     {
         var code = Text(job.Payload, "code") ?? throw new InvalidOperationException("Barcode is required.");
         var name = Text(job.Payload, "name") ?? throw new InvalidOperationException("Product name is required.");
+        var priceText = Text(job.Payload, "priceText");
+        var withPrice = Boolean(job.Payload, "withPrice") ?? _printer.GetSettings().LabelDefaultWithPrice;
         return () => _labels.PrintLabels(code, name, job.Copies, job.PrinterSystemName,
-            Text(job.Payload, "priceText"), Text(job.Payload, "sku"));
+            withPrice ? priceText : null, Text(job.Payload, "sku"));
     }
 
     private async Task<Action> PrepareZReportAsync(AssignedPrintJobDto job)
@@ -339,6 +341,11 @@ public sealed class PrintHostService
 
     private static long? Number(JsonElement payload, string name) =>
         payload.TryGetProperty(name, out var value) && value.TryGetInt64(out var number) ? number : null;
+
+    private static bool? Boolean(JsonElement payload, string name) =>
+        payload.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 
     private void BranchChanged(object? sender, PropertyChangedEventArgs args)
     {

@@ -15,6 +15,7 @@ import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, utcRange } from '../../core/format';
 import { Receipt, Sale, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -220,6 +221,10 @@ export class Sales implements OnInit {
         </p>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
+        <button matButton [disabled]="printing()" (click)="print()">
+          <mat-icon>print</mat-icon>
+          {{ t('print') }}
+        </button>
         <button matButton (click)="openLink()">
           <mat-icon>open_in_new</mat-icon>
           {{ t('open_receipt') }}
@@ -282,8 +287,30 @@ export class Sales implements OnInit {
 export class ReceiptDialog {
   private readonly api = inject(SalesApi);
   private readonly notify = inject(NotifyService);
+  private readonly remotePrint = inject(RemotePrintService);
   readonly data = inject<{ receipt: Receipt; saleId: number }>(MAT_DIALOG_DATA);
   readonly resending = signal(false);
+  readonly printing = signal(false);
+
+  async print(): Promise<void> {
+    this.printing.set(true);
+    try {
+      const queued = await this.remotePrint.send({
+        kind: 'Receipt',
+        permission: 'printing.receipts.reprint',
+        sourceType: 'sale',
+        sourceId: String(this.data.saleId),
+        payload: { receiptToken: this.data.receipt.receiptToken },
+        isReprint: true,
+        reason: 'web_reprint',
+      });
+      if (!queued) this.openLink();
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.printing.set(false);
+    }
+  }
 
   openLink(): void {
     window.open('/r/' + this.data.receipt.receiptToken, '_blank');
