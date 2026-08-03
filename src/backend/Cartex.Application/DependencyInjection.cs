@@ -8,6 +8,7 @@ using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Security;
 using Cartex.Application.Auth;
 using Cartex.Auth.Services;
+using Cartex.Application.Printing;
 
 namespace Cartex.Application;
 
@@ -37,6 +38,7 @@ public static class DependencyInjection
 
         services.AddScoped<IStockAllocator, StockAllocator>();
         services.AddScoped<IBranchCatalogService, BranchCatalogService>();
+        services.AddScoped<PrintRoutingService>();
 
         return services;
     }

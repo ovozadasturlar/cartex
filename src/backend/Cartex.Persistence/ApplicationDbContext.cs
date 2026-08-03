@@ -74,6 +74,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<Prepack> Prepacks => Set<Prepack>();
     public DbSet<HardwareKey> HardwareKeys => Set<HardwareKey>();
+    public DbSet<PrintNode> PrintNodes => Set<PrintNode>();
+    public DbSet<PrinterEndpoint> PrinterEndpoints => Set<PrinterEndpoint>();
+    public DbSet<PrintRoutingPolicy> PrintRoutingPolicies => Set<PrintRoutingPolicy>();
+    public DbSet<PrintRouteTarget> PrintRouteTargets => Set<PrintRouteTarget>();
+    public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
+    public DbSet<PrintAttempt> PrintAttempts => Set<PrintAttempt>();
 
     private readonly List<Action> _afterCommit = [];
 

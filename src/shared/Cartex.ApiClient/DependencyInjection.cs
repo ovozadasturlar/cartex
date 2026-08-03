@@ -9,7 +9,7 @@ namespace Cartex.ApiClient;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Func<CancellationToken, Task<string?>>? refreshAsync = null, Action? onUnauthorized = null, string clientName = "desktop", TimeSpan? timeout = null)
+    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Func<CancellationToken, Task<string?>>? refreshAsync = null, Action? onUnauthorized = null, string clientName = "desktop", TimeSpan? timeout = null, Func<string?>? deviceIdProvider = null, Func<string?>? deviceNameProvider = null)
     {
         var settings = new RefitSettings
         {
@@ -23,22 +23,25 @@ public static class DependencyInjection
         services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, onUnauthorized));
         services.AddTransient<NoContentHandler>();
         services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
+        services.AddTransient(_ => new DeviceMetadataHandler(deviceIdProvider, deviceNameProvider));
         services.AddSingleton<PageRequestScope>();
         services.AddTransient<PageRequestScopeHandler>();
 
         var baseUrl = baseUrlProvider();
 
         services.AddRefitClient<IAuthApi>(settings)
-            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout))
+            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider))
             .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<DeviceMetadataHandler>()
             .AddHttpMessageHandler<NoContentHandler>();
 
         services.AddRefitClient<IReceiptApi>(settings)
-            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout))
+            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider))
             .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<DeviceMetadataHandler>()
             .AddHttpMessageHandler<NoContentHandler>();
 
-        RegisterAuthorized<IBranchesApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IBranchesApi>(services, settings, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider);
         RegisterAuthorized<IUsersApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IRolesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IPermissionsApi>(services, settings, baseUrl, clientName, timeout);
@@ -75,21 +78,27 @@ public static class DependencyInjection
         RegisterAuthorized<IAgentApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IOfflineCacheApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IManufacturersApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IPrintingApi>(services, settings, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider);
 
         return services;
     }
 
-    private static void Configure(HttpClient client, string baseUrl, string clientName, TimeSpan? timeout)
+    private static void Configure(HttpClient client, string baseUrl, string clientName, TimeSpan? timeout, Func<string?>? deviceIdProvider = null, Func<string?>? deviceNameProvider = null)
     {
         client.BaseAddress = new Uri(baseUrl);
         client.Timeout = timeout ?? TimeSpan.FromMinutes(5);
         client.DefaultRequestHeaders.Add("X-Client", clientName);
+        var deviceId = deviceIdProvider?.Invoke();
+        var deviceName = deviceNameProvider?.Invoke();
+        if (!string.IsNullOrWhiteSpace(deviceId)) client.DefaultRequestHeaders.TryAddWithoutValidation("X-Device-Id", deviceId);
+        if (!string.IsNullOrWhiteSpace(deviceName)) client.DefaultRequestHeaders.TryAddWithoutValidation("X-Device-Name", deviceName);
     }
 
-    private static void RegisterAuthorized<T>(IServiceCollection services, RefitSettings settings, string baseUrl, string clientName, TimeSpan? timeout) where T : class =>
+    private static void RegisterAuthorized<T>(IServiceCollection services, RefitSettings settings, string baseUrl, string clientName, TimeSpan? timeout, Func<string?>? deviceIdProvider = null, Func<string?>? deviceNameProvider = null) where T : class =>
         services.AddRefitClient<T>(settings)
-            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout))
+            .ConfigureHttpClient(c => Configure(c, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider))
             .AddHttpMessageHandler<BaseAddressHandler>()
+            .AddHttpMessageHandler<DeviceMetadataHandler>()
             .AddHttpMessageHandler<PageRequestScopeHandler>()
             .AddHttpMessageHandler<AuthTokenHandler>()
             .AddHttpMessageHandler<NoContentHandler>();

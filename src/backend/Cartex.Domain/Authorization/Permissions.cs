@@ -242,6 +242,27 @@ public static class AppPermissions
         public const string Security = "settings.security";
     }
 
+    public static class Printing
+    {
+        public const string ReceiptPrint = "printing.receipts.print";
+        public const string ReceiptReprint = "printing.receipts.reprint";
+        public const string BarcodePrint = "printing.barcodes.print";
+        public const string ZReportPrint = "printing.z_reports.print";
+        public const string DocumentPrint = "printing.documents.print";
+        public const string RemoteUse = "printing.remote.use";
+        public const string Host = "printing.host";
+        public const string JobsViewOwn = "printing.jobs.viewOwn";
+        public const string JobsViewBranch = "printing.jobs.viewBranch";
+        public const string JobsRetry = "printing.jobs.retry";
+        public const string JobsCancel = "printing.jobs.cancel";
+        public const string NodesView = "printing.nodes.view";
+        public const string NodesManage = "printing.nodes.manage";
+        public const string RoutesView = "printing.routes.view";
+        public const string RoutesEdit = "printing.routes.edit";
+        public const string AuditView = "printing.audit.view";
+        public const string AuditExport = "printing.audit.export";
+    }
+
     public static class Features
     {
         public const string View = "features.view";
@@ -373,6 +394,23 @@ public static class AppPermissions
             P(Settings.Integrations, "Manage integrations"),
             P(Settings.Receipt, "Manage receipt settings"),
             P(Settings.Security, "Manage login and security settings"),
+            P(Printing.ReceiptPrint, "Print sales receipts", true, Sales.View),
+            P(Printing.ReceiptReprint, "Reprint sales receipts", true, Printing.ReceiptPrint),
+            P(Printing.BarcodePrint, "Print product barcode labels", true, Products.PrintBarcode),
+            P(Printing.ZReportPrint, "Print shift Z reports", true, Shifts.View),
+            P(Printing.DocumentPrint, "Print business documents", true),
+            P(Printing.RemoteUse, "Send print jobs to network printers", true),
+            P(Printing.Host, "Run a trusted print host", true),
+            P(Printing.JobsViewOwn, "View own print jobs", true),
+            P(Printing.JobsViewBranch, "View branch print jobs", true, Printing.JobsViewOwn),
+            P(Printing.JobsRetry, "Retry print jobs", true, Printing.JobsViewBranch),
+            P(Printing.JobsCancel, "Cancel print jobs", true, Printing.JobsViewBranch),
+            P(Printing.NodesView, "View printing devices", true),
+            P(Printing.NodesManage, "Trust and manage printing devices", true, Printing.NodesView),
+            P(Printing.RoutesView, "View printer routing", true, Printing.NodesView),
+            P(Printing.RoutesEdit, "Configure printer routing", true, Printing.RoutesView, Printing.NodesManage),
+            P(Printing.AuditView, "View print audit trail", true, Printing.JobsViewBranch),
+            P(Printing.AuditExport, "Export print audit trail", true, Printing.AuditView),
             P(Features.View, "View tariff and feature state"),
             P(Features.Edit, "Edit tariff and feature state", false, Features.View),
             P(Keys.View, "View hardware login keys"),

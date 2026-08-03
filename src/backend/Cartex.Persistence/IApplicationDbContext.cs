@@ -61,6 +61,12 @@ public interface IApplicationDbContext
     DbSet<SmsMessage> SmsMessages { get; }
     DbSet<Prepack> Prepacks { get; }
     DbSet<HardwareKey> HardwareKeys { get; }
+    DbSet<PrintNode> PrintNodes { get; }
+    DbSet<PrinterEndpoint> PrinterEndpoints { get; }
+    DbSet<PrintRoutingPolicy> PrintRoutingPolicies { get; }
+    DbSet<PrintRouteTarget> PrintRouteTargets { get; }
+    DbSet<PrintJob> PrintJobs { get; }
+    DbSet<PrintAttempt> PrintAttempts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

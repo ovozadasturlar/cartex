@@ -17,7 +17,9 @@ public static class DatabaseSeeder
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
-        AppPermissions.Devices.View, AppPermissions.Devices.Revoke
+        AppPermissions.Devices.View, AppPermissions.Devices.Revoke,
+        AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ZReportPrint,
+        AppPermissions.Printing.RemoteUse, AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
     ];
 
     public static readonly string[] AgentPermissions =
@@ -27,7 +29,8 @@ public static class DatabaseSeeder
         AppPermissions.Customers.View, AppPermissions.Customers.Create, AppPermissions.Customers.Edit,
         AppPermissions.Stocks.View, AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Receive,
         AppPermissions.Branches.View, AppPermissions.Warehouses.View,
-        AppPermissions.Devices.View, AppPermissions.Devices.Revoke
+        AppPermissions.Devices.View, AppPermissions.Devices.Revoke,
+        AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.RemoteUse, AppPermissions.Printing.JobsViewOwn
     ];
 
     public static readonly string[] SellerAssistantPermissions =
@@ -41,7 +44,10 @@ public static class DatabaseSeeder
     [
         AppPermissions.Sales.Checkout, AppPermissions.Sales.View,
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
-        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ReceiptReprint,
+        AppPermissions.Printing.ZReportPrint, AppPermissions.Printing.RemoteUse,
+        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
     ];
 
     public static readonly string[] AccountantPermissions =
@@ -52,7 +58,9 @@ public static class DatabaseSeeder
         AppPermissions.Shifts.View, AppPermissions.Shifts.ViewAll,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Suppliers.View, AppPermissions.Supplies.View,
-        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Printing.DocumentPrint, AppPermissions.Printing.RemoteUse,
+        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
     ];
 
     public static readonly string[] WarehouseOperatorPermissions =
@@ -60,14 +68,18 @@ public static class DatabaseSeeder
         AppPermissions.Stocks.View, AppPermissions.Stocks.Adjust,
         AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Create,
         AppPermissions.StockTransfers.Receive, AppPermissions.StockTransfers.ReceiveAny,
-        AppPermissions.Branches.View, AppPermissions.Warehouses.View
+        AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Printing.BarcodePrint, AppPermissions.Printing.RemoteUse,
+        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
     ];
 
     public static readonly string[] SupplyOperatorPermissions =
     [
         AppPermissions.Supplies.View, AppPermissions.Supplies.Create, AppPermissions.Supplies.Edit, AppPermissions.Supplies.Import,
         AppPermissions.Suppliers.View, AppPermissions.Suppliers.Create, AppPermissions.Suppliers.Edit,
-        AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View
+        AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
+        AppPermissions.Printing.BarcodePrint, AppPermissions.Printing.RemoteUse,
+        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
     ];
 
     private sealed record DefaultRoleSeed(
@@ -81,13 +93,13 @@ public static class DatabaseSeeder
 
     private static readonly DefaultRoleSeed[] DefaultBusinessRoles =
     [
-        new(AppRoles.Seller, "Sotuvchi — savat va to'lov bilan to'liq savdo", "pos", "queue", AppRoles.SellerLevel, 1, SellerPermissions),
+        new(AppRoles.Seller, "Sotuvchi — savat va to'lov bilan to'liq savdo", "pos", "queue", AppRoles.SellerLevel, 2, SellerPermissions),
         new(AppRoles.SellerAssistant, "Sotuvchi yordamchisi — savat yig'adi va navbatga yuboradi", "pos", "queue", AppRoles.SellerAssistantLevel, 1, SellerAssistantPermissions),
-        new(AppRoles.Cashier, "Kassir — navbatdagi savat uchun to'lov qabul qiladi", "pos", "queue", AppRoles.CashierLevel, 1, CashierPermissions),
-        new(AppRoles.Accountant, "Hisobchi — moliya va hisobotlarni faqat ko'radi", "dashboard", null, AppRoles.AccountantLevel, 1, AccountantPermissions),
-        new(AppRoles.WarehouseOperator, "Omborchi — qoldiq va ombor harakatlarini boshqaradi", "warehouse", null, AppRoles.WarehouseOperatorLevel, 1, WarehouseOperatorPermissions),
-        new(AppRoles.SupplyOperator, "Kirim operatori — ta'minot va kirimni boshqaradi", "supplies", null, AppRoles.SupplyOperatorLevel, 1, SupplyOperatorPermissions),
-        new(AppRoles.Agent, "Savdo agenti (mobil)", "pos", "order", AppRoles.AgentLevel, 1, AgentPermissions)
+        new(AppRoles.Cashier, "Kassir — navbatdagi savat uchun to'lov qabul qiladi", "pos", "queue", AppRoles.CashierLevel, 2, CashierPermissions),
+        new(AppRoles.Accountant, "Hisobchi — moliya va hisobotlarni faqat ko'radi", "dashboard", null, AppRoles.AccountantLevel, 2, AccountantPermissions),
+        new(AppRoles.WarehouseOperator, "Omborchi — qoldiq va ombor harakatlarini boshqaradi", "warehouse", null, AppRoles.WarehouseOperatorLevel, 2, WarehouseOperatorPermissions),
+        new(AppRoles.SupplyOperator, "Kirim operatori — ta'minot va kirimni boshqaradi", "supplies", null, AppRoles.SupplyOperatorLevel, 2, SupplyOperatorPermissions),
+        new(AppRoles.Agent, "Savdo agenti (mobil)", "pos", "order", AppRoles.AgentLevel, 2, AgentPermissions)
     ];
 
     public static readonly (string Name, string ShortName, UnitDimension Dimension, decimal Factor, bool IsDefault)[] SystemUnits =

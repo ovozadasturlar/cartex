@@ -17,6 +17,7 @@ public static class FeatureCatalog
     public const string Agents = "agents";
     public const string Store = "store";
     public const string OfflineCache = "offline_cache";
+    public const string RemotePrinting = "remote_printing";
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
     {
@@ -36,6 +37,13 @@ public static class FeatureCatalog
         [Agents] = [],
         [Store] = [AppPermissions.Sales.Pick],
         [OfflineCache] = [],
+        [RemotePrinting] = [AppPermissions.Printing.RemoteUse,
+            AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn,
+            AppPermissions.Printing.JobsViewBranch, AppPermissions.Printing.JobsRetry,
+            AppPermissions.Printing.JobsCancel, AppPermissions.Printing.NodesView,
+            AppPermissions.Printing.NodesManage, AppPermissions.Printing.RoutesView,
+            AppPermissions.Printing.RoutesEdit, AppPermissions.Printing.AuditView,
+            AppPermissions.Printing.AuditExport],
     };
 
     public static readonly IReadOnlyDictionary<string, string> Names = new Dictionary<string, string>
@@ -55,13 +63,14 @@ public static class FeatureCatalog
         [Agents] = "Agentlar (mobil savdo)",
         [Store] = "Do'kon xodimi ilovasi",
         [OfflineCache] = "Oflayn kassa (bitta qurilma)",
+        [RemotePrinting] = "Tarmoq orqali chop etish",
     };
 
     public static readonly IReadOnlyList<string> AllCodes = [.. Names.Keys];
 
     public static readonly IReadOnlySet<string> DefaultDisabled = new HashSet<string>
     {
-        Ordering, Multicurrency, PricingMulticurrency, SalesMulticurrency, Agents, Store, OfflineCache
+        Ordering, Multicurrency, PricingMulticurrency, SalesMulticurrency, Agents, Store, OfflineCache, RemotePrinting
     };
 
     public static readonly IReadOnlyList<string> ConfigurableCodes = [.. AllCodes.Where(code => code != Multicurrency)];

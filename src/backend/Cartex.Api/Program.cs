@@ -39,7 +39,9 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
+builder.Services.AddSingleton<IPrintJobNotifier, SignalRCPrintJobNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
+builder.Services.AddHostedService<PrintJobRecoveryService>();
 
 builder.Services.AddSignalR();
 
@@ -75,6 +77,7 @@ if (trustProxyHeaders)
 
 var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 10);
 var publicPerMinute = builder.Configuration.GetValue("RateLimiting:PublicPerMinute", 60);
+var printingPerMinute = builder.Configuration.GetValue("RateLimiting:PrintingPerMinute", 60);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -89,6 +92,11 @@ builder.Services.AddRateLimiter(options =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = publicPerMinute, Window = TimeSpan.FromMinutes(1) }));
+
+    options.AddPolicy("printing", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            $"{context.User.FindFirst("userId")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{context.Request.Headers["X-Device-Id"]}",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = printingPerMinute, Window = TimeSpan.FromMinutes(1) }));
 });
 
 builder.Services.AddOpenApi(options =>
@@ -170,6 +178,7 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 app.MapHub<OrderingHub>("/hubs/ordering");
+app.MapHub<PrintingHub>("/hubs/printing");
 
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 

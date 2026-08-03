@@ -23,6 +23,11 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
     public long? UserId => GetLong("userId");
     public long? BusinessId => GetLong("businessId");
     public long? DefaultBranchId => GetLong("defaultBranchId");
+    public string? DeviceId => User?.FindFirst("deviceId")?.Value ?? Header("X-Device-Id", 64);
+    public string? DeviceName => Header("X-Device-Name", 200);
+    public string? IpAddress => accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+    public string? UserAgent => Header("User-Agent", 500);
+    public string? CorrelationId => accessor.HttpContext?.TraceIdentifier;
 
     public IReadOnlyCollection<long> BranchIds =>
         User?.FindAll("branchId").Select(c => long.Parse(c.Value)).ToArray() ?? [];
@@ -37,5 +42,12 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
     {
         var value = User?.FindFirst(claimType)?.Value;
         return long.TryParse(value, out var result) ? result : null;
+    }
+
+    private string? Header(string name, int maxLength)
+    {
+        var value = accessor.HttpContext?.Request.Headers[name].ToString().Trim();
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return value.Length <= maxLength ? value : value[..maxLength];
     }
 }

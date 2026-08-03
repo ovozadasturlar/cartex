@@ -36,7 +36,7 @@ public sealed class AuthTokenBuilder(
 
     public async Task<LoginResponse> IssueAsync(User user, string? deviceName, string? deviceId, CancellationToken cancellationToken)
     {
-        var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
+        var (accessToken, role) = await BuildAccessAsync(user, deviceId, cancellationToken);
         var now = DateTime.UtcNow;
         var refreshToken = CreateSession(user.Id, deviceName, deviceId, now, out _);
         audit.Add("login", "auth", user.Id, new { user.Username, Device = deviceName, DeviceId = deviceId }, asUserId: user.Id);
@@ -78,7 +78,8 @@ public sealed class AuthTokenBuilder(
                 .SetProperty(x => x.ReplacedByHash, newHash), cancellationToken);
         if (claimed == 0) return null;
 
-        var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
+        var resolvedDeviceId = deviceId ?? session.DeviceId;
+        var (accessToken, role) = await BuildAccessAsync(user, resolvedDeviceId, cancellationToken);
         AddSession(user.Id, deviceName ?? session.DeviceName, deviceId ?? session.DeviceId, newRaw, newHash, now, session.FamilyCreatedAt);
         await db.SaveChangesAsync(cancellationToken);
         return new LoginResponse(accessToken, newRaw, user.FullName, role);
@@ -110,7 +111,7 @@ public sealed class AuthTokenBuilder(
         });
     }
 
-    private async Task<(string Token, string Role)> BuildAccessAsync(User user, CancellationToken cancellationToken)
+    private async Task<(string Token, string Role)> BuildAccessAsync(User user, string? deviceId, CancellationToken cancellationToken)
     {
         var roles = user.UserRoles
             .Select(ur => ur.Role)
@@ -153,7 +154,7 @@ public sealed class AuthTokenBuilder(
         var token = jwtTokenGenerator.GenerateToken(
             user.Id, user.Username, user.FullName, roleNames, startPage, permissions,
             RoleAuthorizationStamp.Create(roles),
-            businessId, branchIds, user.DefaultBranchId);
+            businessId, branchIds, user.DefaultBranchId, deviceId);
 
         return (token, roleNames.FirstOrDefault() ?? "");
     }
