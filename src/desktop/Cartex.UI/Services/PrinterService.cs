@@ -32,6 +32,11 @@ public sealed record PrinterSettings
     public int LabelDensity { get; init; }
     public int LabelSpeed { get; init; }
     public bool UsePrinterGapCalibration { get; init; }
+    public string? LabelCurrencyDisplay { get; init; }
+    public string? LabelCurrencyCase { get; init; }
+    public int LabelNameLines { get; init; } = 2;
+    public bool LabelDefaultWithPrice { get; init; }
+    public bool LabelShowSku { get; init; }
     public string? DocumentPaperSize { get; init; }
     public string? DocumentOrientation { get; init; }
     public int DocumentPagesPerSheet { get; init; } = 1;
@@ -58,7 +63,19 @@ public record ReceiptPrintOptions(
     bool ShowElectronicLink = true,
     string? PublicReceiptBaseUrl = null);
 
-public record LabelOptions(double WidthMm, double HeightMm, double GapMm, int Dpi, double ShiftXMm, double ShiftYMm, int Rotation, int Density, int Speed, bool UsePrinterGapCalibration);
+public record LabelOptions(
+    double WidthMm,
+    double HeightMm,
+    double GapMm,
+    int Dpi,
+    double ShiftXMm,
+    double ShiftYMm,
+    int Rotation,
+    int Density,
+    int Speed,
+    bool UsePrinterGapCalibration,
+    int NameLines = 2,
+    bool ShowSku = false);
 
 public record PrinterCapabilities(bool SupportsColor);
 
@@ -82,7 +99,9 @@ public static class LabelSize
             s.LabelRotation is 0 or 180 ? s.LabelRotation : 180,
             s.LabelDensity is >= 1 and <= 15 ? s.LabelDensity : 8,
             s.LabelSpeed is >= 1 and <= 6 ? s.LabelSpeed : 4,
-            s.UsePrinterGapCalibration);
+            s.UsePrinterGapCalibration,
+            s.LabelNameLines is 1 or 2 ? s.LabelNameLines : 0,
+            s.LabelShowSku);
     }
 }
 

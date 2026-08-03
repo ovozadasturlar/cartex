@@ -17,9 +17,19 @@ public sealed class BarcodeLabelChoice(string code, decimal packQty, string labe
     public bool IsPack => PackQty > 1;
 }
 
-public sealed record BarcodeLabelTarget(long VariantId, string ProductName, string UnitName, string? ImageUrl, string PriceText);
+public sealed record BarcodeLabelTarget(
+    long VariantId,
+    string ProductName,
+    string UnitName,
+    string? ImageUrl,
+    string? Sku,
+    decimal? Price,
+    string? CurrencyCode,
+    string? CurrencySymbol = null,
+    string? CurrencySymbolPosition = null,
+    int? CurrencyDecimalDigits = null);
 
-public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabelService labels, IToastService toast) : ObservableObject
+public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast) : ObservableObject
 {
     private long _variantId;
 
@@ -30,6 +40,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
     [ObservableProperty] private string _unitName = string.Empty;
     [ObservableProperty] private string? _imageUrl;
     [ObservableProperty] private string _priceText = string.Empty;
+    [ObservableProperty] private string? _sku;
     [ObservableProperty] private string? _code;
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
@@ -47,9 +58,16 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
         ProductName = target.ProductName;
         UnitName = target.UnitName;
         ImageUrl = target.ImageUrl;
-        PriceText = target.PriceText;
+        Sku = target.Sku;
+        PriceText = BarcodeLabelFormatting.FormatPrice(
+            target.Price,
+            target.CurrencyCode,
+            target.CurrencySymbol,
+            target.CurrencySymbolPosition,
+            target.CurrencyDecimalDigits,
+            printer.GetSettings());
         Quantity = 1;
-        PrintWithPrice = false;
+        PrintWithPrice = printer.GetSettings().LabelDefaultWithPrice;
         Code = null;
         Preview = null;
         SelectedBarcode = null;
@@ -107,7 +125,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
         var name = barcode.IsPack ? $"{ProductName} {barcode.Label}" : ProductName;
         try
         {
-            using var stream = new MemoryStream(labels.RenderLabelPreview(barcode.Code, name, PrintWithPrice ? PriceText : null));
+            using var stream = new MemoryStream(labels.RenderLabelPreview(barcode.Code, name, PrintWithPrice ? PriceText : null, Sku));
             Preview = new Bitmap(stream);
         }
         catch
@@ -141,7 +159,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{ProductName} {barcode.Label}" : ProductName;
-            labels.PrintLabels(Code, name, Quantity, null, PrintWithPrice ? PriceText : null);
+            labels.PrintLabels(Code, name, Quantity, null, PrintWithPrice ? PriceText : null, Sku);
             IsOpen = false;
             toast.Success(LocalizationManager.Instance["success"]);
         }

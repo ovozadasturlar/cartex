@@ -12,12 +12,12 @@ public static class TsplLabel
 {
     public record PreviewResult(byte[] Image, bool MayClip);
 
-    public static byte[] Build(string code, string name, int quantity, LabelOptions options, string? priceText = null)
+    public static byte[] Build(string code, string name, int quantity, LabelOptions options, string? priceText = null, string? sku = null)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
         var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
-        using var bitmap = RenderBitmap(code, name, priceText, widthDots, heightDots, dotsPerMm, options);
+        using var bitmap = RenderBitmap(code, name, priceText, sku, widthDots, heightDots, dotsPerMm, options);
 
         using var stream = new MemoryStream();
         void Command(string text) => Write(stream, text + "\r\n");
@@ -51,21 +51,21 @@ public static class TsplLabel
         return stream.ToArray();
     }
 
-    public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options)
-        => RenderPreview(code, name, priceText, options).Image;
+    public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderPreview(code, name, priceText, options, sku).Image;
 
-    public static byte[] RenderPrintPng(string code, string name, string? priceText, LabelOptions options)
-        => RenderImage(code, name, priceText, options).Image;
+    public static byte[] RenderPrintPng(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderImage(code, name, priceText, options, sku).Image;
 
-    public static PreviewResult RenderPreview(string code, string name, string? priceText, LabelOptions options)
-        => RenderImage(code, name, priceText, options with { Rotation = 0 });
+    public static PreviewResult RenderPreview(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderImage(code, name, priceText, options with { Rotation = 0 }, sku);
 
-    private static PreviewResult RenderImage(string code, string name, string? priceText, LabelOptions options)
+    private static PreviewResult RenderImage(string code, string name, string? priceText, LabelOptions options, string? sku)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
         var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
-        using var bitmap = RenderBitmap(code, name, priceText, widthDots, heightDots, dotsPerMm, options);
+        using var bitmap = RenderBitmap(code, name, priceText, sku, widthDots, heightDots, dotsPerMm, options);
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         return new PreviewResult(
@@ -122,7 +122,7 @@ public static class TsplLabel
         return right >= left ? (left, right) : (0, bitmap.Width - 1);
     }
 
-    private static SKBitmap RenderBitmap(string code, string name, string? priceText, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
+    private static SKBitmap RenderBitmap(string code, string name, string? priceText, string? sku, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
     {
         int Dots(double mm) => (int)Math.Round(mm * dotsPerMm);
 
@@ -150,23 +150,37 @@ public static class TsplLabel
         using var priceFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.13, 3.4, 5.5));
         using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, FontSize(0.075, 2.4, 3.3));
 
-        var lines = WrapLines(name, nameFont, usable, 2);
-        var nameHeight = lines.Count * nameFont.Spacing;
+        var showSku = options.ShowSku && !string.IsNullOrWhiteSpace(sku);
         var priceHeight = string.IsNullOrWhiteSpace(priceText) ? 0 : priceFont.Spacing;
+        var skuHeight = showSku ? codeFont.Spacing : 0;
         var codeHeight = codeFont.Spacing;
         var spacing = Dots(1);
-
         var contentTop = (float)edgeMargin;
         var contentBottom = heightDots - edgeMargin;
+        var reservedHeight = priceHeight + skuHeight + codeHeight + Dots(7) + spacing * 2;
+        if (priceHeight > 0) reservedHeight += spacing;
+        if (skuHeight > 0) reservedHeight += spacing;
+        var fittingNameLines = Math.Max(1, (int)Math.Floor((contentBottom - contentTop - reservedHeight) / nameFont.Spacing));
+        var requestedNameLines = options.NameLines <= 0 ? fittingNameLines : Math.Min(options.NameLines, fittingNameLines);
+        var lines = WrapLines(name, nameFont, usable, requestedNameLines);
+        var nameHeight = lines.Count * nameFont.Spacing;
         var priceSpacing = priceHeight > 0 ? spacing : 0;
-        var barcodeHeight = (int)Math.Max(Dots(7), contentBottom - contentTop - nameHeight - priceHeight - codeHeight - spacing * 2 - priceSpacing);
-        var block = nameHeight + priceHeight + barcodeHeight + codeHeight + spacing * 2 + priceSpacing;
+        var skuSpacing = skuHeight > 0 ? spacing : 0;
+        var barcodeHeight = (int)Math.Max(Dots(7), contentBottom - contentTop - nameHeight - priceHeight - skuHeight - codeHeight - spacing * 2 - priceSpacing - skuSpacing);
+        var block = nameHeight + priceHeight + skuHeight + barcodeHeight + codeHeight + spacing * 2 + priceSpacing + skuSpacing;
         var top = contentTop + (contentBottom - contentTop - block) / 2;
 
         foreach (var line in lines)
         {
             canvas.DrawText(line, widthDots / 2f, top + nameFont.Size, SKTextAlign.Center, nameFont, paint);
             top += nameFont.Spacing;
+        }
+
+        if (showSku)
+        {
+            top += spacing;
+            canvas.DrawText($"SKU: {sku!.Trim()}", widthDots / 2f, top + codeFont.Size, SKTextAlign.Center, codeFont, paint);
+            top += codeFont.Spacing;
         }
 
         if (priceHeight > 0)

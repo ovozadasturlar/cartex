@@ -51,7 +51,13 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public bool HasBarcodes => BarcodeOptions.Count > 0;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
     public string PriceText => SelectedProduct?.SellingPrice is { } price
-        ? CurrencyCatalog.Format(price, SelectedProduct.PriceCurrency, SelectedProduct.PriceSymbol, SelectedProduct.PriceSymbolPosition, SelectedProduct.PriceDecimalDigits)
+        ? BarcodeLabelFormatting.FormatPrice(
+            price,
+            SelectedProduct.PriceCurrency,
+            SelectedProduct.PriceSymbol,
+            SelectedProduct.PriceSymbolPosition,
+            SelectedProduct.PriceDecimalDigits,
+            _printer.GetSettings())
         : "";
     public string SelectedProductImageUrl => SelectedProduct?.ImageUrl ?? string.Empty;
     public string SelectedProductName => SelectedProduct?.Name ?? string.Empty;
@@ -76,6 +82,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 
     public Task LoadAsync()
     {
+        PrintWithPrice = _printer.GetSettings().LabelDefaultWithPrice;
         OnPropertyChanged(nameof(PrinterInfo));
         return SearchAsync();
     }
@@ -181,7 +188,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
-            var png = _labels.RenderLabelPreview(CurrentCode, name, PrintWithPrice ? PriceText : null);
+            var png = _labels.RenderLabelPreview(CurrentCode, name, PrintWithPrice ? PriceText : null, SelectedProduct.Code);
             using var stream = new MemoryStream(png);
             Preview = new Bitmap(stream);
         }
@@ -195,7 +202,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
-            _labels.PrintLabels(CurrentCode, name, Quantity, null, PrintWithPrice ? PriceText : null);
+            _labels.PrintLabels(CurrentCode, name, Quantity, null, PrintWithPrice ? PriceText : null, SelectedProduct.Code);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

@@ -893,6 +893,51 @@
                         <Button Classes="outline" Command="{Binding UseManualLabelGapCommand}" Content="{Binding L[label_use_manual_gap]}" />
                     </StackPanel>
                     <TextBlock Text="{Binding L[label_mode_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
+                    <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="10" Padding="12">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="sectiontitle" Text="{Binding L[label_content_defaults]}" />
+                                <TextBlock Text="{Binding L[label_content_defaults_hint]}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,12,*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_display]}" />
+                                    <ComboBox ItemsSource="{Binding LabelCurrencyDisplays}" SelectedItem="{Binding LabelCurrencyDisplay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=label_currency}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_case]}" />
+                                    <ComboBox ItemsSource="{Binding LabelCurrencyCases}" SelectedItem="{Binding LabelCurrencyCase}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=label_case}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="4" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_name_lines]}" />
+                                    <ComboBox ItemsSource="{Binding LabelNameLineOptions}" SelectedItem="{Binding LabelNameLines}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=label_name}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,12,*">
+                                <ToggleSwitch Content="{Binding L[label_default_with_price]}" IsChecked="{Binding LabelDefaultWithPrice}" />
+                                <ToggleSwitch Grid.Column="2" Content="{Binding L[label_show_sku]}" IsChecked="{Binding LabelShowSku}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Spacing="5">
                             <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />

@@ -1096,5 +1096,20 @@
   "new_value": "Янги қиймат",
   "perm_notifications.journal.view": "Хабарномалар етказилиш журналини кўриш",
   "perm_notifications.journal.sensitive": "Қабул қилувчи ва хабар матнини кўриш",
-  "perm_notifications.journal.export": "Хабарномалар журналини экспорт қилиш"
+  "perm_notifications.journal.export": "Хабарномалар журналини экспорт қилиш",
+  "label_content_defaults": "Этикетка таркиби",
+  "label_content_defaults_hint": "Баркод ойнаси очилганда ва чоп этишда ишлатиладиган стандарт кўриниш",
+  "label_currency_display": "Валюта кўриниши",
+  "label_currency_symbol": "Белги",
+  "label_currency_code": "Код",
+  "label_currency_case": "Ҳарф регистри",
+  "label_case_original": "Асл ҳолат",
+  "label_case_upper": "Катта ҳарф",
+  "label_case_lower": "Кичик ҳарф",
+  "label_name_lines": "Маҳсулот номи",
+  "label_name_1": "1 қатор",
+  "label_name_2": "2 қатор",
+  "label_name_all": "Тўлиқ",
+  "label_default_with_price": "Нархни стандарт кўрсатиш",
+  "label_show_sku": "SKU мавжуд бўлса кўрсатиш"
 }

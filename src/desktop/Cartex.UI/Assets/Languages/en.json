@@ -1096,5 +1096,20 @@
   "new_value": "New value",
   "perm_notifications.journal.view": "View notification delivery journal",
   "perm_notifications.journal.sensitive": "View notification recipients and content",
-  "perm_notifications.journal.export": "Export notification journal"
+  "perm_notifications.journal.export": "Export notification journal",
+  "label_content_defaults": "Label content",
+  "label_content_defaults_hint": "Default appearance used when opening the barcode dialog and printing",
+  "label_currency_display": "Currency display",
+  "label_currency_symbol": "Symbol",
+  "label_currency_code": "Code",
+  "label_currency_case": "Letter case",
+  "label_case_original": "Original",
+  "label_case_upper": "Uppercase",
+  "label_case_lower": "Lowercase",
+  "label_name_lines": "Product name",
+  "label_name_1": "1 line",
+  "label_name_2": "2 lines",
+  "label_name_all": "Full",
+  "label_default_with_price": "Show price by default",
+  "label_show_sku": "Show SKU when available"
 }

@@ -1096,5 +1096,20 @@
   "new_value": "Yangi qiymat",
   "perm_notifications.journal.view": "Xabarnomalar yetkazilish jurnalini ko'rish",
   "perm_notifications.journal.sensitive": "Qabul qiluvchi va xabar matnini ko'rish",
-  "perm_notifications.journal.export": "Xabarnomalar jurnalini eksport qilish"
+  "perm_notifications.journal.export": "Xabarnomalar jurnalini eksport qilish",
+  "label_content_defaults": "Etiketka tarkibi",
+  "label_content_defaults_hint": "Barkod oynasi ochilganda va chop etishda ishlatiladigan standart ko'rinish",
+  "label_currency_display": "Valyuta ko'rinishi",
+  "label_currency_symbol": "Belgi",
+  "label_currency_code": "Kod",
+  "label_currency_case": "Harf registri",
+  "label_case_original": "Asl holat",
+  "label_case_upper": "Katta harf",
+  "label_case_lower": "Kichik harf",
+  "label_name_lines": "Mahsulot nomi",
+  "label_name_1": "1 qator",
+  "label_name_2": "2 qator",
+  "label_name_all": "To'liq",
+  "label_default_with_price": "Narxni standart ko'rsatish",
+  "label_show_sku": "SKU mavjud bo'lsa ko'rsatish"
 }

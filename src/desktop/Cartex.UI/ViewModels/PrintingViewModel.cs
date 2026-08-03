@@ -123,6 +123,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _labelDensity = 8;
     [ObservableProperty] private decimal _labelSpeed = 4;
     [ObservableProperty] private bool _usePrinterGapCalibration;
+    [ObservableProperty] private string _labelCurrencyDisplay = "symbol";
+    [ObservableProperty] private string _labelCurrencyCase = "original";
+    [ObservableProperty] private string _labelNameLines = "2";
+    [ObservableProperty] private bool _labelDefaultWithPrice;
+    [ObservableProperty] private bool _labelShowSku;
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
     [ObservableProperty] private string _receiptPaperWidth = "default";
@@ -481,6 +486,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public string[] LabelModes { get; } = ["tspl", "pdf"];
     public int[] LabelDpis { get; } = [203, 300];
     public int[] LabelRotations { get; } = [0, 180];
+    public string[] LabelCurrencyDisplays { get; } = ["symbol", "code"];
+    public string[] LabelCurrencyCases { get; } = ["original", "upper", "lower"];
+    public string[] LabelNameLineOptions { get; } = ["1", "2", "all"];
     public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
     public int[] BusinessPaperWidths { get; } = [32, 42, 48];
     public string[] SendFormats { get; } = ["Thermal", "A5", "A4"];
@@ -511,6 +519,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     partial void OnLabelShiftYMmChanged(decimal value) => RefreshLabelPreview();
     partial void OnLabelDpiChanged(int value) => RefreshLabelPreview();
     partial void OnLabelRotationChanged(int value) => RefreshLabelPreview();
+    partial void OnLabelCurrencyDisplayChanged(string value) => RefreshLabelPreview();
+    partial void OnLabelCurrencyCaseChanged(string value) => RefreshLabelPreview();
+    partial void OnLabelNameLinesChanged(string value) => RefreshLabelPreview();
+    partial void OnLabelDefaultWithPriceChanged(bool value) => RefreshLabelPreview();
+    partial void OnLabelShowSkuChanged(bool value) => RefreshLabelPreview();
     private void NotifyZReportPreviewChanged()
     {
         OnPropertyChanged(nameof(IsZReportOnePagePerSheet));
@@ -566,12 +579,22 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 LabelRotation,
                 (int)LabelDensity,
                 (int)LabelSpeed,
-                UsePrinterGapCalibration);
+                UsePrinterGapCalibration,
+                int.TryParse(LabelNameLines, out var nameLines) ? nameLines : 0,
+                LabelShowSku);
+            var templateSettings = new PrinterSettings
+            {
+                LabelCurrencyDisplay = LabelCurrencyDisplay,
+                LabelCurrencyCase = LabelCurrencyCase
+            };
             var result = _labels.RenderLabelPreview(
                 "4780000123456",
                 L["receipt_preview_item_one"],
-                "25 000",
-                options);
+                LabelDefaultWithPrice
+                    ? BarcodeLabelFormatting.FormatPrice(25_000, "UZS", null, null, null, templateSettings)
+                    : null,
+                options,
+                "CTX-001");
             using var stream = new MemoryStream(result.Image);
             var preview = new Bitmap(stream);
             var previous = LabelPreview;
@@ -660,6 +683,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelSpeed = label.Speed;
             LabelMode = s.LabelMode == "pdf" ? "pdf" : "tspl";
             UsePrinterGapCalibration = label.UsePrinterGapCalibration;
+            LabelCurrencyDisplay = s.LabelCurrencyDisplay == "code" ? "code" : "symbol";
+            LabelCurrencyCase = s.LabelCurrencyCase is "upper" or "lower" ? s.LabelCurrencyCase : "original";
+            LabelNameLines = s.LabelNameLines is 1 or 2 ? s.LabelNameLines.ToString() : "all";
+            LabelDefaultWithPrice = s.LabelDefaultWithPrice;
+            LabelShowSku = s.LabelShowSku;
             SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
         }
         finally
@@ -795,7 +823,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         try
         {
             SaveLocalPrinterSettings();
-            _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter);
+            var settings = _printer.GetSettings();
+            var price = settings.LabelDefaultWithPrice
+                ? BarcodeLabelFormatting.FormatPrice(25_000, "UZS", null, null, null, settings)
+                : null;
+            _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter, price, "CTX-001");
             _toast.Info(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -827,8 +859,6 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         var name = BarcodePrinter;
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        // The Windows spooler cannot query a label printer's sensor values.  Known
-        // printer models can still supply their fixed hardware settings here.
         PrinterCalibrationProfile? profile = name.Contains("GP-3120TUD", StringComparison.OrdinalIgnoreCase)
             ? new PrinterCalibrationProfile(Dpi: 203, Rotation: 180, Density: 8, Speed: 3)
             : null;
@@ -887,6 +917,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelDensity = (int)LabelDensity,
             LabelSpeed = (int)LabelSpeed,
             UsePrinterGapCalibration = UsePrinterGapCalibration,
+            LabelCurrencyDisplay = LabelCurrencyDisplay,
+            LabelCurrencyCase = LabelCurrencyCase,
+            LabelNameLines = int.TryParse(LabelNameLines, out var nameLines) ? nameLines : 0,
+            LabelDefaultWithPrice = LabelDefaultWithPrice,
+            LabelShowSku = LabelShowSku,
             DocumentPaperSize = DocumentPaperSize,
             DocumentOrientation = DocumentOrientation,
             DocumentPagesPerSheet = DocumentPagesPerSheet,

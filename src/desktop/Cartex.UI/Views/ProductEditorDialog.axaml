@@ -67,9 +67,9 @@
 
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="16">
-                        <Grid ColumnDefinitions="156,20,*">
-                            <StackPanel Spacing="10">
-                                <Border Classes="image-host" Width="156" Height="156" CornerRadius="14" ClipToBounds="True"
+                        <Grid ColumnDefinitions="206,20,*">
+                            <StackPanel>
+                                <Border Classes="image-host" Width="206" Height="206" CornerRadius="14" ClipToBounds="True"
                                         Background="{DynamicResource SidebarItemHover}"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <Grid>
@@ -82,7 +82,7 @@
                                             </Grid>
                                         </Button>
                                         <Border Classes="image-menu" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                Width="72" Height="58" CornerRadius="0,13,0,18">
+                                                Width="112" Height="100" CornerRadius="0,13,0,28">
                                             <Border.Background>
                                                 <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
                                                     <GradientStop Color="#00182433" Offset="0" />
@@ -103,8 +103,6 @@
                                         </Border>
                                     </Grid>
                                 </Border>
-                                <Button Classes="outline" HorizontalAlignment="Stretch"
-                                        Command="{Binding PickImageCommand}" Content="{Binding L[choose_image]}" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="14">
                                 <StackPanel Spacing="6">

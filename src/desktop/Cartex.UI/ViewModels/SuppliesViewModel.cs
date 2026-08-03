@@ -702,7 +702,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _storageApi = storageApi;
         _labels = labels;
         _printer = printer;
-        BarcodePrint = new BarcodeLabelSession(barcodesApi, labels, toast);
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, labels, printer, toast);
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
@@ -909,7 +909,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             line.ProductName,
             string.IsNullOrEmpty(line.StockingUnitName) ? line.UnitName : line.StockingUnitName,
             null,
-            line.SellingPrice is { } price ? CurrencyCatalog.Format(price, SupplyCurrency ?? _baseCurrency) : string.Empty));
+            null,
+            line.SellingPrice,
+            SupplyCurrency ?? _baseCurrency));
         _ = SetPrintImageUrlAsync(line.VariantId, line.ImageKey);
     }
 

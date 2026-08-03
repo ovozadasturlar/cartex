@@ -1096,5 +1096,20 @@
   "new_value": "Новое значение",
   "perm_notifications.journal.view": "Просмотр журнала доставки уведомлений",
   "perm_notifications.journal.sensitive": "Просмотр получателей и текста сообщений",
-  "perm_notifications.journal.export": "Экспорт журнала уведомлений"
+  "perm_notifications.journal.export": "Экспорт журнала уведомлений",
+  "label_content_defaults": "Содержимое этикетки",
+  "label_content_defaults_hint": "Стандартный вид при открытии окна штрихкода и печати",
+  "label_currency_display": "Вид валюты",
+  "label_currency_symbol": "Символ",
+  "label_currency_code": "Код",
+  "label_currency_case": "Регистр букв",
+  "label_case_original": "Исходный",
+  "label_case_upper": "Верхний",
+  "label_case_lower": "Нижний",
+  "label_name_lines": "Название товара",
+  "label_name_1": "1 строка",
+  "label_name_2": "2 строки",
+  "label_name_all": "Полностью",
+  "label_default_with_price": "Показывать цену по умолчанию",
+  "label_show_sku": "Показывать SKU при наличии"
 }

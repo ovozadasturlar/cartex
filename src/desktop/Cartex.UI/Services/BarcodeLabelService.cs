@@ -6,13 +6,14 @@ namespace Cartex.UI.Services;
 
 public interface IBarcodeLabelService
 {
-    byte[] RenderLabelPreview(string code, string name, string? priceText);
+    byte[] RenderLabelPreview(string code, string name, string? priceText, string? sku = null);
     LabelPreviewResult RenderLabelPreview(
         string code,
         string name,
         string? priceText,
-        LabelOptions options);
-    void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null);
+        LabelOptions options,
+        string? sku = null);
+    void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null);
 }
 
 public record LabelPreviewResult(byte[] Image, bool MayClip);
@@ -21,26 +22,27 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
 {
     static BarcodeLabelService() => QuestPDF.Settings.License = LicenseType.Community;
 
-    public byte[] RenderLabelPreview(string code, string name, string? priceText)
+    public byte[] RenderLabelPreview(string code, string name, string? priceText, string? sku = null)
     {
         if (string.IsNullOrWhiteSpace(code)) return [];
-        return TsplLabel.RenderPng(code, name, priceText, LabelSize.Resolve(printer.GetSettings()));
+        return TsplLabel.RenderPng(code, name, priceText, LabelSize.Resolve(printer.GetSettings()), sku);
     }
 
     public LabelPreviewResult RenderLabelPreview(
         string code,
         string name,
         string? priceText,
-        LabelOptions options)
+        LabelOptions options,
+        string? sku = null)
     {
         if (string.IsNullOrWhiteSpace(code))
             return new LabelPreviewResult([], false);
 
-        var result = TsplLabel.RenderPreview(code, name, priceText, options);
+        var result = TsplLabel.RenderPreview(code, name, priceText, options, sku);
         return new LabelPreviewResult(result.Image, result.MayClip);
     }
 
-    public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null)
+    public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null)
     {
         if (string.IsNullOrWhiteSpace(code) || quantity < 1) return;
 
@@ -51,11 +53,11 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
 
         if (!string.Equals(settings.LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
         {
-            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options, priceText));
+            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options, priceText, sku));
             return;
         }
 
-        var image = TsplLabel.RenderPrintPng(code, name, priceText, options);
+        var image = TsplLabel.RenderPrintPng(code, name, priceText, options, sku);
         var document = Document.Create(container =>
         {
             for (var i = 0; i < quantity; i++)
