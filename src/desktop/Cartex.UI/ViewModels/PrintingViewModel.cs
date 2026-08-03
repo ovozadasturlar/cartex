@@ -45,6 +45,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IBarcodeLabelService _labels;
     private readonly BranchContextService _branch;
     private readonly AuthService _auth;
+    private readonly IPrintingApi _printingApi;
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
 
@@ -54,12 +55,14 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public bool IsReceiptSection => SectionKey == "receipt";
     public bool IsBarcodeSection => SectionKey == "barcode";
     public bool IsZSection => SectionKey == "zreport";
+    public bool IsNetworkSection => SectionKey == "network";
 
     partial void OnSectionKeyChanged(string value)
     {
         OnPropertyChanged(nameof(IsReceiptSection));
         OnPropertyChanged(nameof(IsBarcodeSection));
         OnPropertyChanged(nameof(IsZSection));
+        OnPropertyChanged(nameof(IsNetworkSection));
     }
 
     [RelayCommand]
@@ -620,7 +623,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         IBusinessApi businessApi,
         IBarcodeLabelService labels,
         BranchContextService branch,
-        AuthService auth)
+        AuthService auth,
+        IPrintingApi printingApi)
     {
         _printer = printer;
         _toast = toast;
@@ -629,6 +633,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _labels = labels;
         _branch = branch;
         _auth = auth;
+        _printingApi = printingApi;
     }
 
     public async Task LoadAsync()
@@ -737,6 +742,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         {
             PreviewBusinessName = L["receipt_preview_business"];
         }
+
+        await LoadNetworkPrintingAsync();
     }
 
     [RelayCommand]

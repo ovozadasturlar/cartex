@@ -21,6 +21,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly IPrinterService _printer;
+    private readonly PrintDispatchService _printDispatch;
 
     public ObservableCollection<SaleDto> Sales { get; } = [];
     public PaginationState Paging { get; } = new();
@@ -51,7 +52,8 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         IToastService toast,
         IBusyService busy,
         IExportService export,
-        IPrinterService printer)
+        IPrinterService printer,
+        PrintDispatchService printDispatch)
     {
         _salesApi = salesApi;
         _receiptApi = receiptApi;
@@ -60,6 +62,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _export = export;
         _printer = printer;
+        _printDispatch = printDispatch;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["total"], "TotalAmount")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
@@ -170,9 +173,10 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task PrintReceiptAsync()
     {
-        if (Receipt is null) return;
+        if (Receipt is null || !_auth.HasPermission("printing.receipts.reprint")) return;
         try
         {
+            if (await _printDispatch.TryReceiptAsync(Receipt, true)) return;
             var printerSettings = _printer.GetSettings();
             if (printerSettings.ReceiptMode is "a4" or "a5")
             {

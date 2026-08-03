@@ -115,12 +115,15 @@ public interface IPrinterService
     string? BarcodePrinter { get; }
     ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
+    void PrintReceipt(ReceiptDto receipt, string printerName, int copies);
     void PrintZReport(ZReportDto report);
+    void PrintZReport(ZReportDto report, string printerName, int copies);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
     void PrintRaw(string? printerName, string text);
     void PrintRawBytes(string? printerName, byte[] data);
     void PrintDocument(string filePath, string? printerName);
     void PrintDocumentImages(IReadOnlyList<byte[]> imagePages);
+    void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies);
 }
 
 public sealed class PrinterService : IPrinterService
@@ -178,7 +181,10 @@ public sealed class PrinterService : IPrinterService
     public PrinterCapabilities GetPrinterCapabilities(string? printerName) =>
         new(WindowsImagePrinter.SupportsColor(printerName));
 
-    public void PrintReceipt(ReceiptDto receipt)
+    public void PrintReceipt(ReceiptDto receipt) =>
+        PrintReceipt(receipt, _settings.ReceiptPrinter ?? "", _settings.ReceiptCopies);
+
+    public void PrintReceipt(ReceiptDto receipt, string printerName, int copies)
     {
         var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
             ? ReceiptOptions is null
@@ -189,36 +195,39 @@ public sealed class PrinterService : IPrinterService
         var link = opts?.ShowQrCode != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
             ? $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{receipt.ReceiptToken}"
             : null;
-        for (var i = 0; i < Math.Clamp(_settings.ReceiptCopies, 1, 5); i++)
+        for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
             if (link is null)
-                PrintRaw(_settings.ReceiptPrinter, text);
-            else if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter))
-                RawPrinter.Send(_settings.ReceiptPrinter, BuildEscPosReceipt(text, link), "Cartex Receipt");
+                PrintRaw(printerName, text);
+            else if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
+                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link), "Cartex Receipt");
         }
     }
 
     public void PrintZReport(ZReportDto r)
+    {
+        var configured = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
+            ? (_settings.ZReportMode is "a4" or "a5" ? _settings.DocumentPrinter : _settings.ReceiptPrinter)
+            : _settings.ZReportPrinter;
+        PrintZReport(r, configured ?? "", 1);
+    }
+
+    public void PrintZReport(ZReportDto r, string printerName, int copies)
     {
         var mode = DocumentPrintLayout.ResolveOutputFormat(
             _settings.ZReportMode is "a4" or "a5" ? "document" : "thermal",
             _settings.ZReportDocumentPaperSize ?? "a4");
         if (mode == "thermal")
         {
-            var printer = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
-                ? _settings.ReceiptPrinter
-                : _settings.ZReportPrinter;
             var width = _settings.ZReportPaperWidth is 32 or 42 or 48
                 ? _settings.ZReportPaperWidth
                 : _settings.ReceiptPaperWidth;
-            PrintRaw(printer, FormatZReport(r, width));
+            for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
+                PrintRaw(printerName, FormatZReport(r, width));
             return;
         }
 
-        var documentPrinter = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
-            ? _settings.DocumentPrinter
-            : _settings.ZReportPrinter;
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(documentPrinter))
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
             return;
 
         var physicalPaper = _settings.ZReportDocumentPaperSize == "a5" ? "a5" : "a4";
@@ -231,7 +240,7 @@ public sealed class PrinterService : IPrinterService
         var reportOrientation = DocumentPrintLayout.GetReceiptOrientation(
             physicalOrientation,
             pagesPerSheet);
-        var supportsColor = WindowsImagePrinter.SupportsColor(documentPrinter);
+        var supportsColor = WindowsImagePrinter.SupportsColor(printerName);
         var pages = ZReportDocumentRenderer.Render(
             r,
             new ZReportDocumentMetadata(
@@ -244,13 +253,13 @@ public sealed class PrinterService : IPrinterService
             supportsColor);
 
         WindowsImagePrinter.Print(
-            documentPrinter,
+            printerName,
             pages,
             physicalPaper,
             mode,
             physicalOrientation,
             pagesPerSheet,
-            1);
+            Math.Clamp(copies, 1, 100));
     }
 
     public string FormatZReport(ZReportDto r, int? paperWidth = null)
@@ -334,19 +343,22 @@ public sealed class PrinterService : IPrinterService
         Process.Start(psi);
     }
 
-    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages)
+    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages) =>
+        PrintDocumentImages(imagePages, _settings.DocumentPrinter ?? "", _settings.ReceiptCopies);
+
+    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies)
     {
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(_settings.DocumentPrinter) || imagePages.Count == 0)
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || imagePages.Count == 0)
             return;
 
         WindowsImagePrinter.Print(
-            _settings.DocumentPrinter,
+            printerName,
             imagePages,
             _settings.DocumentPaperSize is "a5" ? "a5" : "a4",
             DocumentPrintLayout.ResolveOutputFormat("document", _settings.DocumentPaperSize ?? "a4"),
             _settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
             _settings.DocumentPagesPerSheet is 2 or 4 ? _settings.DocumentPagesPerSheet : 1,
-            Math.Clamp(_settings.ReceiptCopies, 1, 5));
+            Math.Clamp(copies, 1, 100));
     }
 
     private static string FormatReceipt(ReceiptDto r, ReceiptPrintOptions? opts)

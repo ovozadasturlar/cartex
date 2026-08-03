@@ -29,6 +29,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private readonly IBarcodesApi _barcodesApi;
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
+    private readonly PrintDispatchService _dispatch;
     private readonly IToastService _toast;
 
     public PaginationState Paging { get; } = new();
@@ -70,12 +71,19 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         new(Key.Enter, KeyModifiers.Control, "shortcut_print", () => PrintCommand.Execute(null), () => HasCode, WorksInText: true),
     ];
 
-    public BarcodePrintViewModel(IProductsApi productsApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast)
+    public BarcodePrintViewModel(
+        IProductsApi productsApi,
+        IBarcodesApi barcodesApi,
+        IBarcodeLabelService labels,
+        IPrinterService printer,
+        PrintDispatchService dispatch,
+        IToastService toast)
     {
         _productsApi = productsApi;
         _barcodesApi = barcodesApi;
         _labels = labels;
         _printer = printer;
+        _dispatch = dispatch;
         _toast = toast;
         Paging.Attach(LoadProductsAsync);
     }
@@ -196,13 +204,15 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand(CanExecute = nameof(HasCode))]
-    private void Print()
+    private async Task PrintAsync()
     {
         if (SelectedProduct is null || string.IsNullOrWhiteSpace(CurrentCode) || Quantity < 1) { _toast.Warning(L["error"]); return; }
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
-            _labels.PrintLabels(CurrentCode, name, Quantity, null, PrintWithPrice ? PriceText : null, SelectedProduct.Code);
+            var price = PrintWithPrice ? PriceText : null;
+            if (!await _dispatch.TryBarcodeAsync(CurrentCode, name, Quantity, price, SelectedProduct.Code))
+                _labels.PrintLabels(CurrentCode, name, Quantity, null, price, SelectedProduct.Code);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

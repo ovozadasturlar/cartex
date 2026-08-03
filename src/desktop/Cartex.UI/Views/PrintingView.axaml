@@ -4,6 +4,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:print="using:Cartex.Shared.Models.Printing"
              x:Class="Cartex.UI.Views.PrintingView"
              x:DataType="vm:PrintingViewModel"
              x:CompileBindings="True">
@@ -445,6 +446,14 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="ChartBoxOutline" Width="18" Height="18" />
                         <TextBlock Text="{Binding L[print_section_zreport]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="printtab" Classes.active="{Binding IsNetworkSection}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="network"
+                        IsVisible="{Binding CanViewPrintNetwork}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="PrinterWireless" Width="18" Height="18" />
+                        <TextBlock Text="Tarmoq printerlari" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -1363,6 +1372,152 @@
                         </ScrollViewer>
                     </Border>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2" IsVisible="{Binding IsNetworkSection}" ColumnDefinitions="420,16,*">
+            <Border Grid.Column="0" Classes="printcard">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="sectiontitle" Text="Print qurilmalari" />
+                        <TextBlock Text="Har bir kompyuter va undagi printerlar alohida endpoint sifatida ro‘yxatdan o‘tadi."
+                                   Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="12" />
+                    </StackPanel>
+                    <Border Grid.Row="1" Margin="0,12" Padding="10" CornerRadius="8"
+                            Background="{DynamicResource SidebarItemActive}" IsVisible="{Binding !NetworkAvailable}">
+                        <TextBlock Text="Tarmoq orqali chop etish imkoniyati yoqilmagan yoki ruxsat mavjud emas."
+                                   TextWrapping="Wrap" />
+                    </Border>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding NetworkNodes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NetworkPrintNodeItem">
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <StackPanel Spacing="9">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding DeviceId}" FontSize="10"
+                                                               Foreground="{DynamicResource TextSecondary}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="*,Auto,16,Auto">
+                                                <TextBlock Text="Faol" VerticalAlignment="Center" />
+                                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" />
+                                                <TextBlock Grid.Column="2" />
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="Ishonchli" VerticalAlignment="Center" />
+                                                    <ToggleSwitch IsChecked="{Binding IsTrusted}" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Endpoints}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="print:PrinterEndpointDto">
+                                                        <Grid ColumnDefinitions="*,Auto" Margin="8,3,0,0">
+                                                            <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Capabilities}" FontSize="11"
+                                                                       Foreground="{DynamicResource TextSecondary}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Button Grid.Row="3" Classes="primary" Margin="0,12,0,0"
+                            Content="Qurilmalarni saqlash" Command="{Binding SaveNetworkNodesCommand}"
+                            IsVisible="{Binding CanManagePrintNodes}" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Classes="printcard">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="14">
+                        <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" />
+                        <Grid ColumnDefinitions="*,12,*">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="fieldlabel" Text="Print turi" />
+                                <ComboBox ItemsSource="{Binding NetworkKinds}" SelectedItem="{Binding SelectedNetworkKind}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="6">
+                                <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
+                                <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingMode}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Bu print turi faol" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkPolicyEnabled}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Ro‘yxatdagi printer ishlamasa mos printerni avtomatik izlash"
+                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkAllowFallback}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Faqat ishonchli qurilmalardan foydalanish" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkRequireTrusted}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,12,*">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="fieldlabel" Text="Muvaffaqiyatli printer rejimi" />
+                                <ComboBox ItemsSource="{Binding NetworkStickyModes}" SelectedItem="{Binding NetworkStickyMode}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="6">
+                                <TextBlock Classes="fieldlabel" Text="Standart bo‘lib turish vaqti (daqiqa)" />
+                                <NumericUpDown Value="{Binding NetworkStickyMinutes}" Minimum="0" Maximum="43200" Increment="0.5" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,10,*,10,*,10,*">
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="Maks. nusxa" />
+                                <NumericUpDown Value="{Binding NetworkMaxCopies}" Minimum="1" Maximum="100" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="Vazifa / daqiqa" />
+                                <NumericUpDown Value="{Binding NetworkMaxJobsPerMinute}" Minimum="1" Maximum="1000" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="Nusxa / daqiqa" />
+                                <NumericUpDown Value="{Binding NetworkMaxCopiesPerMinute}" Minimum="1" Maximum="5000" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="6" Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="Kutish (soniya)" />
+                                <NumericUpDown Value="{Binding NetworkAssignmentTimeoutSeconds}" Minimum="5" Maximum="300" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="fieldlabel" Text="Printerlar prioriteti" />
+                        <ItemsControl ItemsSource="{Binding NetworkEndpoints}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NetworkRouteEndpointItem">
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="10" Margin="0,0,0,7">
+                                        <Grid ColumnDefinitions="Auto,*,110,90,Auto">
+                                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Margin="10,0">
+                                                <TextBlock Text="{Binding PrinterName}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding DeviceName}" FontSize="11"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" />
+                                            <NumericUpDown Grid.Column="3" Value="{Binding Priority}" Minimum="1" Maximum="1000"
+                                                           IsEnabled="{Binding IsSelected}" />
+                                            <ToggleSwitch Grid.Column="4" IsChecked="{Binding IsEnabled}"
+                                                          IsEnabled="{Binding IsSelected}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Classes="primary" Content="Yo‘naltirishni saqlash"
+                                Command="{Binding SaveNetworkRouteCommand}" IsVisible="{Binding CanEditPrintRoutes}" />
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
     </Grid>

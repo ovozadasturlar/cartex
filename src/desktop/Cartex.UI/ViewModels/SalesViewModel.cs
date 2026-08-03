@@ -172,6 +172,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IHeldSaleStore _heldStore;
     private readonly IPrinterService _printer;
+    private readonly PrintDispatchService _printDispatch;
     private readonly IScannedCodeParser _scannedCodeParser;
     private readonly IScanFeedbackService _scanFeedback;
     private readonly ConnectivityService _connectivity;
@@ -388,9 +389,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, IScanFeedbackService scanFeedback, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
         IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
-        ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi)
+        ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi,
+        PrintDispatchService printDispatch)
     {
         _shiftsApi = shiftsApi;
+        _printDispatch = printDispatch;
         _cache = cache;
         _suppliersApi = suppliersApi;
         _suppliesApi = suppliesApi;
@@ -1888,7 +1891,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task PrintReceipt()
     {
-        if (CurrentReceipt is null) return;
+        if (CurrentReceipt is null || !_auth.HasPermission("printing.receipts.print")) return;
         try
         {
             await PrintCurrentReceiptAsync();
@@ -1900,6 +1903,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private async Task PrintCurrentReceiptAsync()
     {
         if (CurrentReceipt is null) return;
+        if (await _printDispatch.TryReceiptAsync(CurrentReceipt, false)) return;
         var settings = _printer.GetSettings();
         if (settings.ReceiptMode is "a4" or "a5")
         {

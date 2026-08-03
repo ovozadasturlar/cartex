@@ -15,12 +15,18 @@ public static class DependencyInjection
             () => SettingsService.Instance.ApiBaseUrl,
             () => ServiceLocator.Resolve<AuthService>().Token,
             ct => ServiceLocator.Resolve<AuthService>().EnsureFreshTokenAsync(ct),
-            OnUnauthorized);
+            OnUnauthorized,
+            deviceIdProvider: () => SettingsService.Instance.DeviceId,
+            deviceNameProvider: () => Environment.MachineName);
 
         services.AddSingleton<NavigationService>();
         services.AddSingleton<BranchContextService>();
         services.AddSingleton<ConnectivityService>();
         services.AddSingleton<QueueHubService>();
+        services.AddSingleton<PrintHostJournal>();
+        services.AddSingleton<PrintHostCredentialStore>();
+        services.AddSingleton<PrintHostService>();
+        services.AddSingleton<PrintDispatchService>();
         services.AddSingleton<OfflineStore>();
         services.AddSingleton<OfflineSyncService>();
         services.AddSingleton(LocalizationManager.Instance);

@@ -1,0 +1,364 @@
+using System.ComponentModel;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Printing;
+using Cartex.Shared.Models.Settings;
+using Microsoft.AspNetCore.SignalR.Client;
+
+namespace Cartex.UI.Services;
+
+public sealed class PrintHostService
+{
+    private readonly IPrintingApi _printingApi;
+    private readonly IReceiptApi _receiptApi;
+    private readonly IShiftsApi _shiftsApi;
+    private readonly IPrinterService _printer;
+    private readonly IBarcodeLabelService _labels;
+    private readonly AuthService _auth;
+    private readonly BranchContextService _branch;
+    private readonly PrintHostJournal _journal;
+    private readonly PrintHostCredentialStore _credentialStore;
+    private readonly SemaphoreSlim _startLock = new(1, 1);
+    private readonly SemaphoreSlim _processLock = new(1, 1);
+    private CancellationTokenSource? _lifetime;
+    private HubConnection? _connection;
+    private long? _registeredBranchId;
+    private string? _hostToken;
+
+    public PrintHostService(
+        IPrintingApi printingApi,
+        IReceiptApi receiptApi,
+        IShiftsApi shiftsApi,
+        IPrinterService printer,
+        IBarcodeLabelService labels,
+        AuthService auth,
+        BranchContextService branch,
+        PrintHostJournal journal,
+        PrintHostCredentialStore credentialStore)
+    {
+        _printingApi = printingApi;
+        _receiptApi = receiptApi;
+        _shiftsApi = shiftsApi;
+        _printer = printer;
+        _labels = labels;
+        _auth = auth;
+        _branch = branch;
+        _journal = journal;
+        _credentialStore = credentialStore;
+        _hostToken = credentialStore.Load();
+        _auth.LoggedOut += () => _ = StopAsync();
+        _branch.PropertyChanged += BranchChanged;
+    }
+
+    public async Task StartAsync()
+    {
+        if (!_auth.HasPermission("printing.host")) return;
+        await _startLock.WaitAsync();
+        try
+        {
+            if (_lifetime is not null) return;
+            _lifetime = new CancellationTokenSource();
+            _ = RunAsync(_lifetime.Token);
+        }
+        finally
+        {
+            _startLock.Release();
+        }
+    }
+
+    private async Task RunAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (_branch.CurrentBranchId is null)
+                {
+                    await Task.Delay(1000, cancellationToken);
+                    continue;
+                }
+                await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken);
+                await EnsureHubAsync(cancellationToken);
+                await ProcessAssignedAsync(cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+        }
+    }
+
+    private async Task RegisterAsync(long branchId, CancellationToken cancellationToken)
+    {
+        var endpoints = BuildEndpoints();
+        if (_registeredBranchId != branchId)
+        {
+            var result = await _printingApi.RegisterNodeAsync(new RegisterPrintNodeRequest(
+                _auth.DeviceId,
+                _auth.DeviceName,
+                branchId,
+                typeof(PrintHostService).Assembly.GetName().Version?.ToString(),
+                true,
+                endpoints,
+                _hostToken), cancellationToken);
+            if (!string.IsNullOrWhiteSpace(result.HostToken))
+            {
+                _hostToken = result.HostToken;
+                _credentialStore.Save(result.HostToken);
+            }
+            _registeredBranchId = branchId;
+            return;
+        }
+        await _printingApi.HeartbeatAsync(new PrintNodeHeartbeatRequest(
+            _auth.DeviceId,
+            endpoints,
+            _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
+    }
+
+    private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
+    {
+        var settings = _printer.GetSettings();
+        var installed = _printer.GetInstalledPrinters().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
+        Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
+        Add(endpoints, settings.DocumentPrinter, PrintCapability.Document);
+        Add(endpoints,
+            settings.ReceiptMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter,
+            PrintCapability.Receipt);
+        Add(endpoints,
+            string.IsNullOrWhiteSpace(settings.ZReportPrinter)
+                ? settings.ZReportMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter
+                : settings.ZReportPrinter,
+            PrintCapability.ZReport);
+
+        return endpoints.Select(x => new PrinterEndpointRegistration(
+            StableKey(x.Key),
+            x.Key,
+            x.Key,
+            x.Value,
+            installed.Contains(x.Key) ? PrinterEndpointStatus.Ready : PrinterEndpointStatus.Offline,
+            JsonSerializer.Serialize(new { configured = true }))).ToList();
+    }
+
+    private static void Add(IDictionary<string, PrintCapability> endpoints, string? printer, PrintCapability capability)
+    {
+        if (string.IsNullOrWhiteSpace(printer)) return;
+        endpoints[printer] = endpoints.TryGetValue(printer, out var current) ? current | capability : capability;
+    }
+
+    private static string StableKey(string printerName)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(printerName.Trim().ToUpperInvariant()));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private async Task EnsureHubAsync(CancellationToken cancellationToken)
+    {
+        if (_connection is null)
+        {
+            _connection = new HubConnectionBuilder()
+                .WithUrl(SettingsService.Instance.ApiBaseUrl.TrimEnd('/') + "/hubs/printing", options =>
+                {
+                    options.AccessTokenProvider = () => _auth.EnsureFreshTokenAsync(CancellationToken.None);
+                    options.Headers["X-Client"] = "desktop";
+                    options.Headers["X-Device-Id"] = _auth.DeviceId;
+                    options.Headers["X-Device-Name"] = _auth.DeviceName;
+                })
+                .WithAutomaticReconnect()
+                .Build();
+            _connection.On<long>("PrintJobAvailable", jobId =>
+            {
+                _ = ProcessAssignedAsync(CancellationToken.None);
+            });
+            _connection.Reconnected += async _ =>
+            {
+                await _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken);
+                await ProcessAssignedAsync(CancellationToken.None);
+            };
+        }
+        if (_connection.State == HubConnectionState.Disconnected)
+        {
+            await _connection.StartAsync(cancellationToken);
+            await _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken, cancellationToken);
+        }
+    }
+
+    private async Task ProcessAssignedAsync(CancellationToken cancellationToken)
+    {
+        if (!_processLock.Wait(0)) return;
+        try
+        {
+            var jobs = await _printingApi.GetAssignedAsync(_auth.DeviceId, _hostToken!, cancellationToken);
+            foreach (var job in jobs)
+                await ProcessAsync(job, cancellationToken);
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _processLock.Release();
+        }
+    }
+
+    private async Task ProcessAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
+    {
+        var lease = new PrintJobLeaseRequest(_auth.DeviceId, job.LeaseToken, _hostToken!);
+        var journalState = await _journal.GetStateAsync(job.Id);
+        if (journalState == PrintHostJournalState.Completed)
+        {
+            await _printingApi.AcceptAsync(job.Id, lease, cancellationToken);
+            await _printingApi.SubmittedAsync(job.Id, new PrintJobSubmittedRequest(_auth.DeviceId, job.LeaseToken, _hostToken!, null), cancellationToken);
+            await _printingApi.CompleteAsync(job.Id, lease, cancellationToken);
+            return;
+        }
+        if (journalState == PrintHostJournalState.Started)
+        {
+            await _printingApi.AcceptAsync(job.Id, lease, cancellationToken);
+            await _printingApi.FailAsync(job.Id, new PrintJobFailedRequest(
+                _auth.DeviceId,
+                job.LeaseToken,
+                _hostToken!,
+                "local_print_result_unknown",
+                "The desktop process stopped after printing started.",
+                true), cancellationToken);
+            return;
+        }
+        var printingStarted = false;
+        try
+        {
+            await _printingApi.AcceptAsync(job.Id, lease, cancellationToken);
+            var execute = await PrepareAsync(job, cancellationToken);
+            await _journal.MarkStartedAsync(job.Id);
+            printingStarted = true;
+            await _printingApi.SubmittedAsync(job.Id, new PrintJobSubmittedRequest(_auth.DeviceId, job.LeaseToken, _hostToken!, null), cancellationToken);
+            execute();
+            await _journal.MarkCompletedAsync(job.Id);
+            await _printingApi.CompleteAsync(job.Id, lease, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            if (await _journal.GetStateAsync(job.Id) == PrintHostJournalState.Completed) return;
+            try
+            {
+                await _printingApi.FailAsync(job.Id, new PrintJobFailedRequest(
+                    _auth.DeviceId,
+                    job.LeaseToken,
+                    _hostToken!,
+                    "desktop_print_failed",
+                    exception.Message,
+                    printingStarted), cancellationToken);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private Task<Action> PrepareAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
+    {
+        return job.Kind switch
+        {
+            PrintJobKind.Receipt => PrepareReceiptAsync(job, cancellationToken),
+            PrintJobKind.BarcodeLabel => Task.FromResult(PrepareBarcode(job)),
+            PrintJobKind.ZReport => PrepareZReportAsync(job),
+            PrintJobKind.Document => PrepareDocumentAsync(job, cancellationToken),
+            _ => throw new InvalidOperationException("Unsupported print type.")
+        };
+    }
+
+    private async Task<Action> PrepareReceiptAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
+    {
+        var token = Text(job.Payload, "receiptToken") ?? job.SourceId;
+        var settings = _printer.GetSettings();
+        if (settings.ReceiptMode is "a4" or "a5")
+        {
+            var pages = await LoadReceiptDocumentAsync(token, cancellationToken);
+            return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies);
+        }
+        var receipt = await _receiptApi.GetAsync(token);
+        return () => _printer.PrintReceipt(receipt, job.PrinterSystemName, job.Copies);
+    }
+
+    private Action PrepareBarcode(AssignedPrintJobDto job)
+    {
+        var code = Text(job.Payload, "code") ?? throw new InvalidOperationException("Barcode is required.");
+        var name = Text(job.Payload, "name") ?? throw new InvalidOperationException("Product name is required.");
+        return () => _labels.PrintLabels(code, name, job.Copies, job.PrinterSystemName,
+            Text(job.Payload, "priceText"), Text(job.Payload, "sku"));
+    }
+
+    private async Task<Action> PrepareZReportAsync(AssignedPrintJobDto job)
+    {
+        var value = Number(job.Payload, "shiftId") ?? (long.TryParse(job.SourceId, out var id) ? id : 0);
+        if (value <= 0) throw new InvalidOperationException("Shift is required.");
+        var report = await _shiftsApi.GetReportAsync(value);
+        return () => _printer.PrintZReport(report, job.PrinterSystemName, job.Copies);
+    }
+
+    private async Task<Action> PrepareDocumentAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
+    {
+        var receiptToken = Text(job.Payload, "receiptToken");
+        if (string.IsNullOrWhiteSpace(receiptToken))
+            throw new InvalidOperationException("Unsupported document source.");
+        var pages = await LoadReceiptDocumentAsync(receiptToken, cancellationToken);
+        return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies);
+    }
+
+    private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(string token, CancellationToken cancellationToken)
+    {
+        var settings = _printer.GetSettings();
+        var format = DocumentPrintLayout.ResolveOutputFormat("document", settings.DocumentPaperSize ?? "a4");
+        var orientation = DocumentPrintLayout.GetReceiptOrientation(
+            settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
+            settings.DocumentPagesPerSheet);
+        var content = await _receiptApi.GetPrintImagesAsync(token, format, orientation);
+        await using var package = await content.ReadAsStreamAsync(cancellationToken);
+        using var archive = new ZipArchive(package, ZipArchiveMode.Read);
+        var pages = new List<byte[]>(archive.Entries.Count);
+        foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
+        {
+            await using var input = entry.Open();
+            using var output = new MemoryStream();
+            await input.CopyToAsync(output, cancellationToken);
+            pages.Add(output.ToArray());
+        }
+        return pages;
+    }
+
+    private static string? Text(JsonElement payload, string name) =>
+        payload.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static long? Number(JsonElement payload, string name) =>
+        payload.TryGetProperty(name, out var value) && value.TryGetInt64(out var number) ? number : null;
+
+    private void BranchChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(BranchContextService.SelectedBranch)) return;
+        _registeredBranchId = null;
+        _ = ProcessAssignedAsync(CancellationToken.None);
+    }
+
+    private async Task StopAsync()
+    {
+        await _startLock.WaitAsync();
+        var lifetime = _lifetime;
+        var connection = _connection;
+        _lifetime = null;
+        _connection = null;
+        _registeredBranchId = null;
+        _startLock.Release();
+        lifetime?.Cancel();
+        lifetime?.Dispose();
+        if (connection is null) return;
+        try { await connection.DisposeAsync(); } catch { }
+    }
+}

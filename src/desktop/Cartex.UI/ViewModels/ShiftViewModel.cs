@@ -82,12 +82,14 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
     private readonly ReferenceCache _cache;
+    private readonly PrintDispatchService _printDispatch;
 
-    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IUsersApi usersApi, IToastService toast, IBusyService busy, IDialogService dialog, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
+    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IUsersApi usersApi, IToastService toast, IBusyService busy, IDialogService dialog, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, PrintDispatchService printDispatch)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _cache = cache;
+        _printDispatch = printDispatch;
         _api = api;
         _expenseApi = expenseApi;
         _usersApi = usersApi;
@@ -335,17 +337,22 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
         var printer = ServiceLocator.Resolve<IPrinterService>();
         if (!printer.GetSettings().AutoPrintZReport || LastReport is null) return;
-        try { printer.PrintZReport(LastReport); }
+        try
+        {
+            if (!await _printDispatch.TryZReportAsync(LastReport, false))
+                printer.PrintZReport(LastReport);
+        }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
-    private void PrintReport()
+    private async Task PrintReport()
     {
-        if (LastReport is null) return;
+        if (LastReport is null || !_auth.HasPermission("printing.z_reports.print")) return;
         try
         {
-            ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
+            if (!await _printDispatch.TryZReportAsync(LastReport, true))
+                ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
             _toast.Info(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
