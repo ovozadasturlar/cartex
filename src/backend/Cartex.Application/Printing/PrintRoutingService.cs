@@ -42,16 +42,16 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
                 && x.PrintNode.IsEnabled
                 && x.PrintNode.HostEnabled
                 && x.PrintNode.LastSeenAt >= onlineAfter
-                && (!policy.RequireTrustedNode || x.PrintNode.IsTrusted)
                 && (x.Capabilities & capability) == capability
                 && (x.Status == PrinterEndpointStatus.Ready || x.Status == PrinterEndpointStatus.Busy))
             .ToListAsync(cancellationToken);
 
         var attempted = await db.PrintAttempts
             .Where(x => x.PrintJobId == job.Id)
-            .Select(x => x.PrinterEndpointId)
+            .Select(x => new { x.PrinterEndpointId, FailedAt = x.CompletedAt ?? x.StartedAt })
             .ToListAsync(cancellationToken);
-        endpoints.RemoveAll(x => attempted.Contains(x.Id));
+        endpoints.RemoveAll(endpoint => attempted.Any(attempt => attempt.PrinterEndpointId == endpoint.Id
+            && (endpoint.LastSeenAt ?? DateTime.MinValue) <= attempt.FailedAt));
 
         var endpoint = SelectEndpoint(job, policy, endpoints);
         if (endpoint is null) return false;
@@ -135,4 +135,3 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
     };
 
 }
-

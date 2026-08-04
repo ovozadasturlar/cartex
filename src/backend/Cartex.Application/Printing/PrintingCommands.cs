@@ -68,7 +68,9 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
                 CredentialHash = PrintingCredential.Hash(issuedToken),
                 CredentialIssuedAt = now,
                 BranchId = request.BranchId,
-                Name = request.DeviceName
+                Name = request.DeviceName,
+                IsEnabled = false,
+                IsTrusted = false
             };
             db.PrintNodes.Add(node);
         }
@@ -149,7 +151,7 @@ public sealed class SetPrintNodeStateCommandHandler(IApplicationDbContext db, IC
             ?? throw new NotFoundException("Print node not found.");
         PrintingGuard.EnsureBranch(currentUser, node.BranchId);
         node.IsEnabled = command.Request.IsEnabled;
-        node.IsTrusted = command.Request.IsTrusted;
+        node.IsTrusted = command.Request.IsEnabled;
         if (!node.IsEnabled) node.Status = DomainNodeStatus.Offline;
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
@@ -169,7 +171,7 @@ public sealed class SetPrintRequesterDeviceTrustCommandHandler(
             ?? throw new NotFoundException("Print requester device not found.");
         PrintingGuard.EnsureBranch(currentUser, device.BranchId);
         device.IsTrusted = command.Request.IsTrusted;
-        audit.Add(device.IsTrusted ? "printRequesterTrust" : "printRequesterUntrust", "print_requester_devices",
+        audit.Add(device.IsTrusted ? "print.allow" : "print.block", "print_requester_devices",
             device.Id, new { device.DeviceId, device.Name, device.Client });
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
@@ -363,7 +365,7 @@ public sealed class CreatePrintJobCommandHandler(
             requesterDevice.LastIpAddress = currentUser.IpAddress;
         }
 
-        var trustedRequester = !policy.RequireTrustedRequesterDevice || requesterDevice?.IsTrusted == true;
+        var trustedRequester = requesterDevice?.IsTrusted == true;
         var originNodeId = string.IsNullOrWhiteSpace(deviceId)
             ? null
             : await db.PrintNodes.Where(x => x.DeviceId == deviceId && x.BranchId == request.BranchId)
@@ -391,8 +393,8 @@ public sealed class CreatePrintJobCommandHandler(
         if (!trustedRequester)
         {
             job.Status = DomainJobStatus.Rejected;
-            job.ErrorCode = "UNTRUSTED_REQUEST_DEVICE";
-            job.ErrorMessage = "This device is not trusted to send print jobs.";
+            job.ErrorCode = "REQUEST_DEVICE_NOT_APPROVED";
+            job.ErrorMessage = "This device is not approved to send print jobs.";
             db.PrintJobs.Add(job);
             await db.SaveChangesAsync(cancellationToken);
             return PrintingMapper.Job(job);

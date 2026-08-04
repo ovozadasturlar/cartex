@@ -126,7 +126,6 @@ public sealed class PrintHostService
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
     {
         var settings = _printer.GetSettings();
-        var installed = _printer.GetInstalledPrinters().ToHashSet(StringComparer.OrdinalIgnoreCase);
         var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
         Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
         Add(endpoints, settings.DocumentPrinter, PrintCapability.Document);
@@ -144,7 +143,7 @@ public sealed class PrintHostService
             x.Key,
             x.Key,
             x.Value,
-            installed.Contains(x.Key) ? PrinterEndpointStatus.Ready : PrinterEndpointStatus.Offline,
+            _printer.GetPrinterStatus(x.Key),
             JsonSerializer.Serialize(new { configured = true }))).ToList();
     }
 
@@ -232,6 +231,18 @@ public sealed class PrintHostService
                 true), cancellationToken);
             return;
         }
+        var printerStatus = _printer.GetPrinterStatus(job.PrinterSystemName);
+        if (printerStatus is not (PrinterEndpointStatus.Ready or PrinterEndpointStatus.Busy))
+        {
+            await _printingApi.FailAsync(job.Id, new PrintJobFailedRequest(
+                _auth.DeviceId,
+                job.LeaseToken,
+                _hostToken!,
+                "printer_unavailable",
+                $"Printer '{job.PrinterDisplayName}' is {printerStatus}.",
+                false), cancellationToken);
+            return;
+        }
         var printingStarted = false;
         try
         {
@@ -239,8 +250,8 @@ public sealed class PrintHostService
             var execute = await PrepareAsync(job, cancellationToken);
             await _journal.MarkStartedAsync(job.Id);
             printingStarted = true;
-            await _printingApi.SubmittedAsync(job.Id, new PrintJobSubmittedRequest(_auth.DeviceId, job.LeaseToken, _hostToken!, null), cancellationToken);
             execute();
+            await _printingApi.SubmittedAsync(job.Id, new PrintJobSubmittedRequest(_auth.DeviceId, job.LeaseToken, _hostToken!, null), cancellationToken);
             await _journal.MarkCompletedAsync(job.Id);
             await _printingApi.CompleteAsync(job.Id, lease, cancellationToken);
         }

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Cartex.Shared.Localization;
+using Cartex.Shared.Models.Printing;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Shifts;
@@ -124,6 +125,7 @@ public static class LabelSize
 public interface IPrinterService
 {
     IReadOnlyList<string> GetInstalledPrinters();
+    PrinterEndpointStatus GetPrinterStatus(string? printerName);
     PrinterCapabilities GetPrinterCapabilities(string? printerName);
     PrinterSettings GetSettings();
     void SaveSettings(PrinterSettings settings);
@@ -226,6 +228,8 @@ public sealed class PrinterService : IPrinterService
         }
         catch { return []; }
     }
+
+    public PrinterEndpointStatus GetPrinterStatus(string? printerName) => WindowsPrinterHealth.GetStatus(printerName);
 
     public PrinterCapabilities GetPrinterCapabilities(string? printerName) =>
         new(WindowsImagePrinter.SupportsColor(printerName));
@@ -501,6 +505,97 @@ public sealed class PrinterService : IPrinterService
     }
 }
 
+internal static class WindowsPrinterHealth
+{
+    private const uint PrinterStatusError = 0x00000002;
+    private const uint PrinterStatusPaperJam = 0x00000008;
+    private const uint PrinterStatusPaperOut = 0x00000010;
+    private const uint PrinterStatusPaperProblem = 0x00000040;
+    private const uint PrinterStatusOffline = 0x00000080;
+    private const uint PrinterStatusBusy = 0x00000200;
+    private const uint PrinterStatusPrinting = 0x00000400;
+    private const uint PrinterStatusOutputBinFull = 0x00000800;
+    private const uint PrinterStatusNotAvailable = 0x00001000;
+    private const uint PrinterStatusProcessing = 0x00004000;
+    private const uint PrinterStatusNoToner = 0x00040000;
+    private const uint PrinterStatusUserIntervention = 0x00100000;
+    private const uint PrinterStatusDoorOpen = 0x00400000;
+    private const uint PrinterAttributeWorkOffline = 0x00000400;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PrinterInfo2
+    {
+        public IntPtr ServerName;
+        public IntPtr PrinterName;
+        public IntPtr ShareName;
+        public IntPtr PortName;
+        public IntPtr DriverName;
+        public IntPtr Comment;
+        public IntPtr Location;
+        public IntPtr DevMode;
+        public IntPtr SeparatorFile;
+        public IntPtr PrintProcessor;
+        public IntPtr DataType;
+        public IntPtr Parameters;
+        public IntPtr SecurityDescriptor;
+        public uint Attributes;
+        public uint Priority;
+        public uint DefaultPriority;
+        public uint StartTime;
+        public uint UntilTime;
+        public uint Status;
+        public uint Jobs;
+        public uint AveragePagesPerMinute;
+    }
+
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool OpenPrinter(string printerName, out IntPtr printer, IntPtr defaults);
+
+    [DllImport("winspool.drv", SetLastError = true)]
+    private static extern bool GetPrinter(IntPtr printer, uint level, IntPtr buffer, uint size, out uint needed);
+
+    [DllImport("winspool.drv", SetLastError = true)]
+    private static extern bool ClosePrinter(IntPtr printer);
+
+    public static PrinterEndpointStatus GetStatus(string? printerName)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
+            return PrinterEndpointStatus.Offline;
+        if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
+            return PrinterEndpointStatus.Offline;
+        try
+        {
+            GetPrinter(printer, 2, IntPtr.Zero, 0, out var needed);
+            if (needed == 0) return PrinterEndpointStatus.Error;
+            var buffer = Marshal.AllocHGlobal((int)needed);
+            try
+            {
+                if (!GetPrinter(printer, 2, buffer, needed, out _))
+                    return PrinterEndpointStatus.Error;
+                var info = Marshal.PtrToStructure<PrinterInfo2>(buffer);
+                if ((info.Attributes & PrinterAttributeWorkOffline) != 0
+                    || (info.Status & (PrinterStatusOffline | PrinterStatusNotAvailable)) != 0)
+                    return PrinterEndpointStatus.Offline;
+                if ((info.Status & (PrinterStatusError | PrinterStatusPaperJam | PrinterStatusPaperOut
+                    | PrinterStatusPaperProblem | PrinterStatusOutputBinFull | PrinterStatusNoToner
+                    | PrinterStatusUserIntervention | PrinterStatusDoorOpen)) != 0)
+                    return PrinterEndpointStatus.Error;
+                if ((info.Status & (PrinterStatusBusy | PrinterStatusPrinting | PrinterStatusProcessing)) != 0)
+                    return PrinterEndpointStatus.Busy;
+                return PrinterEndpointStatus.Ready;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        finally
+        {
+            ClosePrinter(printer);
+        }
+    }
+}
+
 internal static class RawPrinter
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -548,9 +643,12 @@ internal static class RawPrinter
                     throw new InvalidOperationException($"StartDocPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
                 try
                 {
-                    if (!StartPagePrinter(hPrinter)) return;
-                    WritePrinter(hPrinter, unmanaged, bytes.Length, out _);
-                    EndPagePrinter(hPrinter);
+                    if (!StartPagePrinter(hPrinter))
+                        throw new InvalidOperationException($"StartPagePrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
+                    if (!WritePrinter(hPrinter, unmanaged, bytes.Length, out var written) || written != bytes.Length)
+                        throw new InvalidOperationException($"WritePrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
+                    if (!EndPagePrinter(hPrinter))
+                        throw new InvalidOperationException($"EndPagePrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
                 }
                 finally { EndDocPrinter(hPrinter); }
             }

@@ -31,6 +31,7 @@ interface PrintNode {
   status: string;
   lastSeenAt: string | null;
   endpoints: PrinterEndpoint[];
+  originalIsEnabled?: boolean;
 }
 
 interface PrintRequesterDevice {
@@ -41,6 +42,7 @@ interface PrintRequesterDevice {
   isTrusted: boolean;
   lastSeenAt: string;
   lastUsername: string | null;
+  originalIsTrusted?: boolean;
 }
 
 interface RouteTarget {
@@ -101,30 +103,38 @@ interface PrintJob {
       <div class="layout" [class.jobs-only]="!canViewRoutes">
         @if (canViewRoutes) {
         <section class="cx-card panel">
-          <div class="head"><h3>Print qurilmalari</h3><mat-icon>devices</mat-icon></div>
-          @for (node of nodes(); track node.id) {
-            <article class="node">
-              <div class="node-title"><strong>{{ node.name }}</strong><span>{{ node.status }}</span></div>
-              <small>{{ node.deviceId }}</small>
-              <div class="toggles">
-                <mat-slide-toggle [(ngModel)]="node.isEnabled" [disabled]="!canManageNodes">Faol</mat-slide-toggle>
-                <mat-slide-toggle [(ngModel)]="node.isTrusted" [disabled]="!canManageNodes">Ishonchli</mat-slide-toggle>
-              </div>
-              @for (endpoint of node.endpoints; track endpoint.id) {
-                <div class="endpoint"><span>{{ endpoint.displayName }}</span><small>{{ endpoint.capabilities }} · {{ endpoint.status }}</small></div>
-              }
-            </article>
-          }
-          <div class="requesters-title"><strong>Print so‘rovi qurilmalari</strong><small>Telefon, web va desktop</small></div>
-          @for (device of requesterDevices(); track device.id) {
-            <article class="node requester">
-              <div class="node-title"><strong>{{ device.name }}</strong><mat-slide-toggle [(ngModel)]="device.isTrusted" [disabled]="!canManageNodes">Ishonchli</mat-slide-toggle></div>
-              <small>{{ device.lastUsername }} · {{ device.client }} · {{ device.lastSeenAt | date:'dd.MM.yyyy HH:mm' }}</small>
-            </article>
-          }
-          @if (!nodes().length && !loading()) { <p class="muted">Hali print-host ro‘yxatdan o‘tmagan.</p> }
-          @if (canManageNodes) {
-            <button matButton="filled" (click)="saveNodes()"><mat-icon>save</mat-icon>Qurilmalarni saqlash</button>
+          <div class="head"><h3>Tarmoq qurilmalari</h3><mat-icon>devices</mat-icon></div>
+          <div class="kind-tabs device-tabs">
+            <button type="button" [class.active]="deviceTab === 'hosts'" (click)="deviceTab = 'hosts'">Printerlar</button>
+            <button type="button" [class.active]="deviceTab === 'requesters'" (click)="deviceTab = 'requesters'">So‘rov qurilmalari</button>
+          </div>
+          @if (deviceTab === 'hosts') {
+            <p class="muted device-note">Faol qurilmalardagi mos printerlargina yo‘naltirishda qatnashadi.</p>
+            @for (node of nodes(); track node.id) {
+              <article class="node">
+                <div class="node-title"><strong>{{ node.name }}</strong><span>{{ node.status }}</span></div>
+                <small>{{ node.deviceId }}</small>
+                <mat-slide-toggle [(ngModel)]="node.isEnabled" [disabled]="!canManageNodes" title="O‘chirilsa bu kompyuterdagi printerlar yo‘naltirishda ishlatilmaydi">Faol</mat-slide-toggle>
+                @for (endpoint of node.endpoints; track endpoint.id) {
+                  <div class="endpoint"><span>{{ endpoint.displayName }}</span><small>{{ endpoint.capabilities }} · {{ endpoint.status }}</small></div>
+                }
+              </article>
+            }
+            @if (!nodes().length && !loading()) { <p class="muted">Hali print-host ro‘yxatdan o‘tmagan.</p> }
+            @if (canManageNodes) {
+              <button matButton="filled" (click)="saveHosts()"><mat-icon>save</mat-icon>Printerlarni saqlash</button>
+            }
+          } @else {
+            <p class="muted device-note">Faqat ruxsat berilgan telefon, web va desktop qurilmalardan print so‘rovi qabul qilinadi.</p>
+            @for (device of requesterDevices(); track device.id) {
+              <article class="node requester">
+                <div class="node-title"><strong>{{ device.name }}</strong><mat-slide-toggle [(ngModel)]="device.isTrusted" [disabled]="!canManageNodes" title="Yoqilsa ushbu qurilmadan kelgan masofaviy print so‘rovlari qabul qilinadi">Printga ruxsat</mat-slide-toggle></div>
+                <small>{{ device.lastUsername }} · {{ device.client }} · {{ device.lastSeenAt | date:'dd.MM.yyyy HH:mm' }}</small>
+              </article>
+            }
+            @if (canManageNodes) {
+              <button matButton="filled" (click)="saveRequesters()"><mat-icon>save</mat-icon>Ruxsatlarni saqlash</button>
+            }
           }
         </section>
         }
@@ -141,8 +151,6 @@ interface PrintJob {
           <div class="switches">
             <mat-slide-toggle [(ngModel)]="policy.isEnabled">Bu print turi faol</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.allowFallback">Mos printerga avtomatik o‘tish</mat-slide-toggle>
-            <mat-slide-toggle [(ngModel)]="policy.requireTrustedNode">Faqat ishonchli qurilmalar</mat-slide-toggle>
-            <mat-slide-toggle [(ngModel)]="policy.requireTrustedRequesterDevice">Faqat ishonchli qurilmalardan so‘rov</mat-slide-toggle>
           </div>
           <div class="fields two">
             <label title="Oxirgi muvaffaqiyatli printer qachongacha birinchi tanlanishini boshqaradi">Muvaffaqiyatli printer rejimi<select [(ngModel)]="policy.stickyMode">@for (item of stickyModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
@@ -208,6 +216,8 @@ interface PrintJob {
     .choice div { flex: 1; display: flex; min-width: 0; flex-direction: column; }
     .grip { cursor: grab; color: var(--cx-text-3); font-size: 21px; user-select: none; } .choice.dragging { opacity: .55; }
     .kind-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--cx-border); }
+    .device-tabs { grid-template-columns: repeat(2, 1fr); }
+    .device-note { margin: 0; font-size: 12px; }
     .kind-tabs button { min-height: 42px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--cx-text-2); cursor: pointer; }
     .kind-tabs button:hover { background: var(--cx-surface-2); }
     .kind-tabs button.active { border-bottom-color: var(--cx-brand); color: var(--cx-brand); }
@@ -243,6 +253,7 @@ export class Printing implements OnInit {
   private policies: RoutingPolicy[] = [];
   private branchId = 0;
   kind = 'Receipt';
+  deviceTab: 'hosts' | 'requesters' = 'hosts';
   stickyMinutes = 10;
   policy: RoutingPolicy = this.defaultPolicy();
   draggedChoice: EndpointChoice | null = null;
@@ -258,8 +269,8 @@ export class Printing implements OnInit {
           lastValueFrom(this.http.get<PrintRequesterDevice[]>('/api/printing/requesters', { params: { branchId: this.branchId } })),
           lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
         ]);
-        this.nodes.set(nodes);
-        this.requesterDevices.set(requesterDevices);
+        this.nodes.set(nodes.map((node) => ({ ...node, originalIsEnabled: node.isEnabled })));
+        this.requesterDevices.set(requesterDevices.map((device) => ({ ...device, originalIsTrusted: device.isTrusted })));
         this.policies = policies;
         this.applyPolicy();
       }
@@ -319,12 +330,22 @@ export class Printing implements OnInit {
     catch (error) { this.notify.error(error); }
   }
 
-  async saveNodes(): Promise<void> {
+  async saveHosts(): Promise<void> {
     try {
-      for (const node of this.nodes())
-        await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isEnabled: node.isEnabled, isTrusted: node.isTrusted }));
-      for (const device of this.requesterDevices())
+      for (const node of this.nodes().filter((item) => item.isEnabled !== item.originalIsEnabled)) {
+        await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isEnabled: node.isEnabled }));
+        node.originalIsEnabled = node.isEnabled;
+      }
+      this.notify.success(this.transloco.translate('success'));
+    } catch (error) { this.notify.error(error); }
+  }
+
+  async saveRequesters(): Promise<void> {
+    try {
+      for (const device of this.requesterDevices().filter((item) => item.isTrusted !== item.originalIsTrusted)) {
         await lastValueFrom(this.http.put(`/api/printing/requesters/${device.id}`, { isTrusted: device.isTrusted }));
+        device.originalIsTrusted = device.isTrusted;
+      }
       this.notify.success(this.transloco.translate('success'));
     } catch (error) { this.notify.error(error); }
   }

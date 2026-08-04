@@ -127,7 +127,7 @@ public sealed record PrintNodeDto(
     string? LastClient,
     IReadOnlyList<PrinterEndpointDto> Endpoints);
 
-public sealed record SetPrintNodeStateRequest(bool IsEnabled, bool IsTrusted);
+public sealed record SetPrintNodeStateRequest(bool IsEnabled);
 
 public sealed record PrintRequesterDeviceDto(
     long Id,

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Cartex.Domain.Common.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cartex.Api.Middleware;
 
@@ -30,7 +31,9 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             ),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, null),
             ConflictException => (StatusCodes.Status409Conflict, exception.Message, null),
-            DbUpdateException => (StatusCodes.Status409Conflict, "The operation conflicts with existing data. Retry.", null),
+            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
+                (StatusCodes.Status409Conflict, "The operation conflicts with existing data. Retry.", null),
+            DbUpdateException => (StatusCodes.Status500InternalServerError, "An internal data error occurred", null),
             ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message, null),
             BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message, null),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", null),
