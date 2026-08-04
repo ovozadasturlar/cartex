@@ -492,6 +492,7 @@ internal static class PrintingPayloadValidator
         var withPrice = configured.AllowPriceOverride && requestedWithPrice is not null
             ? requestedWithPrice.Value
             : configured.DefaultWithPrice;
+        var showSku = Boolean(payload, "showSku") ?? configured.ShowSku;
         if (priceText?.Length > 80 || sku?.Length > 80) throw new BusinessRuleException("Invalid barcode label payload.");
         return JsonSerializer.Serialize(new
         {
@@ -500,7 +501,7 @@ internal static class PrintingPayloadValidator
             priceText,
             sku,
             withPrice,
-            showSku = configured.ShowSku,
+            showSku,
             nameLines = configured.NameLines,
             currencyDisplay = configured.CurrencyDisplay,
             currencyCase = configured.CurrencyCase,

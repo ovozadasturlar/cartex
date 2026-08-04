@@ -46,6 +46,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
     [ObservableProperty] private bool _printWithPrice;
+    [ObservableProperty] private bool _printWithSku;
     [ObservableProperty] private BarcodeLabelChoice? _selectedBarcode;
 
     public bool HasManyBarcodes => Barcodes.Count > 1;
@@ -76,6 +77,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
             printer.GetSettings());
         Quantity = 1;
         PrintWithPrice = printer.GetSettings().LabelDefaultWithPrice;
+        PrintWithSku = printer.GetSettings().LabelShowSku;
         OnPropertyChanged(nameof(CanOverridePrice));
         Code = null;
         Preview = null;
@@ -122,6 +124,7 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
     }
 
     partial void OnPrintWithPriceChanged(bool value) => UpdatePreview();
+    partial void OnPrintWithSkuChanged(bool value) => UpdatePreview();
 
     private void UpdatePreview()
     {
@@ -134,7 +137,14 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
         var name = barcode.IsPack ? $"{ProductName} {barcode.Label}" : ProductName;
         try
         {
-            using var stream = new MemoryStream(labels.RenderLabelPreview(barcode.Code, name, PrintWithPrice ? PriceText : null, Sku));
+            var options = LabelSize.Resolve(printer.GetSettings()) with { ShowSku = PrintWithSku };
+            var result = labels.RenderLabelPreview(
+                barcode.Code,
+                name,
+                PrintWithPrice ? PriceText : null,
+                options,
+                Sku);
+            using var stream = new MemoryStream(result.Image);
             Preview = new Bitmap(stream);
         }
         catch
@@ -168,7 +178,8 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{ProductName} {barcode.Label}" : ProductName;
-            labels.PrintLabels(Code, name, Quantity, null, PrintWithPrice ? PriceText : null, Sku);
+            var options = LabelSize.Resolve(printer.GetSettings()) with { ShowSku = PrintWithSku };
+            labels.PrintLabels(Code, name, Quantity, null, PrintWithPrice ? PriceText : null, Sku, options);
             IsOpen = false;
             toast.Success(LocalizationManager.Instance["success"]);
         }

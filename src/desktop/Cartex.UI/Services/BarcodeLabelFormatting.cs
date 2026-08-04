@@ -56,7 +56,7 @@ public static class BarcodeLabelFormatting
             _ => token
         };
         var digits = Math.Clamp(decimalDigits ?? metadata.DecimalDigits, 0, 4);
-        var number = amount.Value.ToString($"N{digits}");
+        var number = CurrencyCatalog.FormatLabelNumber(amount.Value, digits);
         var position = useCode ? "Suffix" : symbolPosition is "Prefix" or "Suffix" ? symbolPosition : metadata.SymbolPosition;
         return position == "Prefix" ? $"{token}{number}" : $"{number} {token}";
     }

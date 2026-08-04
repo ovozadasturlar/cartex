@@ -42,12 +42,14 @@ public sealed class PrintDispatchService(
         int copies,
         string? priceText,
         string? sku,
+        bool withPrice,
+        bool showSku,
         CancellationToken cancellationToken = default) =>
         TryCreateAsync(
             PrintJobKind.BarcodeLabel,
             "barcode",
             code,
-            JsonSerializer.SerializeToElement(new { code, name, priceText, sku }),
+            JsonSerializer.SerializeToElement(new { code, name, priceText, sku, withPrice, showSku }),
             false,
             null,
             $"barcode:{_auth.DeviceId}:{Guid.NewGuid():N}",

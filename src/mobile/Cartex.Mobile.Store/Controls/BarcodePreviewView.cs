@@ -81,7 +81,7 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
         DrawName(canvas, ProductName, new RectF(content.Left, content.Top, content.Width, nameHeight), previewNameLines);
         var y = content.Top + nameHeight;
         canvas.FontColor = Colors.Black;
-        canvas.Font = Microsoft.Maui.Graphics.Font.Default;
+        canvas.Font = new Microsoft.Maui.Graphics.Font("Consolas", FontWeights.Normal, FontStyleType.Normal);
         canvas.FontSize = 9;
         if (!string.IsNullOrWhiteSpace(Sku))
         {
@@ -90,7 +90,7 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
         }
         if (!string.IsNullOrWhiteSpace(PriceText))
         {
-            canvas.Font = Microsoft.Maui.Graphics.Font.DefaultBold;
+            canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", FontWeights.Bold, FontStyleType.Normal);
             canvas.FontSize = 13;
             canvas.DrawString(PriceText, content.Left, y, content.Width, 18, HorizontalAlignment.Center, VerticalAlignment.Center);
             y += 19;
@@ -113,7 +113,7 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
             }
         }
 
-        canvas.Font = Microsoft.Maui.Graphics.Font.Default;
+        canvas.Font = new Microsoft.Maui.Graphics.Font("Consolas", FontWeights.Normal, FontStyleType.Normal);
         canvas.FontSize = 10;
         canvas.DrawString(Code, content.Left, barcodeTop + barcodeHeight, content.Width, 18, HorizontalAlignment.Center, VerticalAlignment.Center);
     }
@@ -128,7 +128,7 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
     private static void DrawName(ICanvas canvas, string value, RectF bounds, int lines)
     {
         if (string.IsNullOrWhiteSpace(value)) return;
-        canvas.Font = Microsoft.Maui.Graphics.Font.DefaultBold;
+        canvas.Font = new Microsoft.Maui.Graphics.Font("Arial", FontWeights.Bold, FontStyleType.Normal);
         canvas.FontColor = Colors.Black;
         canvas.FontSize = 12;
         var maxLines = Math.Clamp(lines, 1, 3);

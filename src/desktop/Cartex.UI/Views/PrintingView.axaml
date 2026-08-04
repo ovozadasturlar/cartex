@@ -927,7 +927,8 @@
                                   HorizontalAlignment="Stretch" PlaceholderText="—" />
                     </StackPanel>
                     <StackPanel Spacing="5">
-                        <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}" />
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[label_size]}"
+                                   ToolTip.Tip="{Binding L[label_size_hint]}" />
                         <Grid ColumnDefinitions="*,8,90,8,90">
                             <ComboBox ItemsSource="{Binding LabelPresets}" SelectedItem="{Binding SelectedLabelPreset}" />
                             <NumericUpDown Grid.Column="2" Value="{Binding LabelWidthMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
@@ -938,11 +939,13 @@
                     </StackPanel>
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_mode]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_mode]}"
+                                       ToolTip.Tip="{Binding L[label_mode_hint]}" />
                             <ComboBox ItemsSource="{Binding LabelModes}" SelectedItem="{Binding LabelMode}" MinHeight="34" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_gap]}"
+                                       ToolTip.Tip="{Binding L[label_gap_hint]}" />
                             <NumericUpDown Value="{Binding LabelGapMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                            Minimum="1" Maximum="20" FormatString="0.#" MinHeight="34"
                                            IsEnabled="{Binding !UsePrinterGapCalibration}" />
@@ -1008,10 +1011,13 @@
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="*,12,*,12,*">
-                                <ToggleSwitch Content="{Binding L[label_default_with_price]}" IsChecked="{Binding LabelDefaultWithPrice}" />
-                                <ToggleSwitch Grid.Column="2" Content="{Binding L[label_show_sku]}" IsChecked="{Binding LabelShowSku}" />
+                                <ToggleSwitch Content="{Binding L[label_default_with_price]}" IsChecked="{Binding LabelDefaultWithPrice}"
+                                              ToolTip.Tip="{Binding L[label_default_with_price_hint]}" />
+                                <ToggleSwitch Grid.Column="2" Content="{Binding L[label_show_sku]}" IsChecked="{Binding LabelShowSku}"
+                                              ToolTip.Tip="{Binding L[label_show_sku_hint]}" />
                                 <ToggleSwitch Grid.Column="4" Content="{Binding L[label_allow_price_override]}"
-                                              IsChecked="{Binding LabelAllowPriceOverride}" />
+                                              IsChecked="{Binding LabelAllowPriceOverride}"
+                                              ToolTip.Tip="{Binding L[label_allow_price_override_hint]}" />
                             </Grid>
                         </StackPanel>
                     </Border>

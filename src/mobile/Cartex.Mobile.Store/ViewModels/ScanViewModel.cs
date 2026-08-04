@@ -55,6 +55,7 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private BarcodeChoice? _selectedBarcode;
     [ObservableProperty] private int _printCopies = 1;
     [ObservableProperty] private bool _printWithPrice;
+    [ObservableProperty] private bool _printWithSku;
     [ObservableProperty] private bool _canOverridePrintPrice = true;
 
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
@@ -65,7 +66,7 @@ public partial class ScanViewModel : ObservableObject
     public string BarcodePreviewPrice => PrintWithPrice && _product is not null
         ? FormatLabelPrice(_product, _labelSettings.Current)
         : string.Empty;
-    public string BarcodePreviewSku => _labelSettings.Current.ShowSku ? _productSku ?? string.Empty : string.Empty;
+    public string BarcodePreviewSku => PrintWithSku ? _productSku ?? string.Empty : string.Empty;
     public int BarcodePreviewNameLines => _labelSettings.Current.NameLines;
 
     private ProductLookupDto? _product;
@@ -266,6 +267,7 @@ public partial class ScanViewModel : ObservableObject
             SelectedBarcode = BarcodeChoices.FirstOrDefault(x => x.Code == _activeBarcode) ?? BarcodeChoices.FirstOrDefault();
             PrintCopies = 1;
             PrintWithPrice = settings.DefaultWithPrice;
+            PrintWithSku = settings.ShowSku;
             CanOverridePrintPrice = settings.AllowPriceOverride;
             ProductActionsExpanded = false;
             IsBarcodeMode = true;
@@ -306,7 +308,8 @@ public partial class ScanViewModel : ObservableObject
                 PrintCopies,
                 FormatLabelPrice(_product, _labelSettings.Current),
                 _productSku,
-                PrintWithPrice);
+                PrintWithPrice,
+                PrintWithSku);
             Ui.Toast(Loc.Instance["print_sent"]);
         }
         catch (Exception ex)
@@ -597,7 +600,7 @@ public partial class ScanViewModel : ObservableObject
         var amount = useDefaultCurrency
             ? product.SellingPrice
             : product.OriginalSellingPrice ?? product.SellingPrice;
-        var number = amount.ToString($"N{metadata.DecimalDigits}");
+        var number = CurrencyCatalog.FormatLabelNumber(amount, metadata.DecimalDigits);
         var position = settings.CurrencyDisplay == "code" ? "Suffix" : metadata.SymbolPosition;
         return position == "Prefix" ? $"{token}{number}" : $"{number} {token}";
     }
@@ -623,6 +626,7 @@ public partial class ScanViewModel : ObservableObject
 
     partial void OnPrintCopiesChanged(int value) => OnPropertyChanged(nameof(PrintTotalText));
     partial void OnPrintWithPriceChanged(bool value) => OnPropertyChanged(nameof(BarcodePreviewPrice));
+    partial void OnPrintWithSkuChanged(bool value) => OnPropertyChanged(nameof(BarcodePreviewSku));
     partial void OnSelectedBarcodeChanged(BarcodeChoice? value) => NotifyBarcodePreviewChanged();
 
     private void NotifyBarcodePreviewChanged()

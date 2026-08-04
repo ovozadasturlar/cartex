@@ -118,10 +118,13 @@
                                 </ListBox>
                                 <TextBlock Grid.Row="4" Text="{Binding L[no_barcode_hint]}" IsVisible="{Binding !HasBarcodes}"
                                            Foreground="{DynamicResource TextMuted}" FontSize="12.5" TextWrapping="Wrap" />
-                                <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="{Binding L[print_with_price]}" FontSize="12"
+                                <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding L[label_default_with_price]}" FontSize="12"
                                                Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                                     <ToggleSwitch IsChecked="{Binding PrintWithPrice}" IsEnabled="{Binding CanOverridePrice}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding L[label_show_sku]}" FontSize="12" Margin="10,0,0,0"
+                                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                                    <ToggleSwitch IsChecked="{Binding PrintWithSku}" VerticalAlignment="Center" />
                                 </StackPanel>
                                 <Image Grid.Row="8" Source="{Binding Preview}" Height="128" HorizontalAlignment="Center"
                                        Stretch="Uniform" IsVisible="{Binding HasCode}" />

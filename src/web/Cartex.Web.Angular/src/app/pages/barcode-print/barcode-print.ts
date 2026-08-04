@@ -1,11 +1,11 @@
 import { Component, ElementRef, OnInit, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslocoModule } from '@jsverse/transloco';
 import JsBarcode from 'jsbarcode';
 import { lastValueFrom } from 'rxjs';
@@ -25,11 +25,11 @@ import { PagingBar } from '../../shared/paging-bar';
   imports: [
     FormsModule,
     MatButtonModule,
-    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSlideToggleModule,
     TranslocoModule,
     CxCurrencyPipe,
     EmptyState,
@@ -61,6 +61,7 @@ export class BarcodePrint implements OnInit {
   search = '';
   quantity = 1;
   printWithPrice = false;
+  printWithSku = false;
   allowPriceOverride = true;
   private labelSettings: BarcodeLabelSettings = {
     defaultWithPrice: false,
@@ -107,6 +108,7 @@ export class BarcodePrint implements OnInit {
     }
     if (currenciesResult.status === 'fulfilled') this.currencies = currenciesResult.value;
     this.printWithPrice = this.labelSettings.defaultWithPrice;
+    this.printWithSku = this.labelSettings.showSku;
     this.allowPriceOverride = this.labelSettings.allowPriceOverride;
     this.load();
   }
@@ -134,7 +136,7 @@ export class BarcodePrint implements OnInit {
       symbol,
       this.labelSettings.currencyDisplay === 'code' ? 'Suffix' : currency?.symbolPosition ?? product.priceSymbolPosition,
       currency?.decimalDigits ?? product.priceDecimalDigits,
-    );
+    ).replace(/[\u00a0\u202f]/g, ' ');
   }
 
   searchNow(): void {
@@ -195,6 +197,7 @@ export class BarcodePrint implements OnInit {
             : null,
           withPrice: this.printWithPrice,
           sku: product.code,
+          showSku: this.printWithSku,
         },
         copies: count,
       });
@@ -209,12 +212,16 @@ export class BarcodePrint implements OnInit {
     const price = this.printWithPrice && product.sellingPrice != null
       ? `<strong>${safe(this.labelPrice(product))}</strong>`
       : '';
+    const sku = this.printWithSku && product.code
+      ? `<span class="sku">SKU: ${safe(product.code)}</span>`
+      : '';
     const pack = barcode.packQty > 1 ? `<small>× ${barcode.packQty}</small>` : '';
     const labels = Array.from({ length: count }, () => `
       <article class="label">
         <div class="name">${safe(product.name)} ${pack}</div>
-        ${svg}
+        ${sku}
         ${price}
+        ${svg}
       </article>`).join('');
     const popup = window.open('', '_blank', 'noopener,noreferrer');
     if (!popup) return;
@@ -225,8 +232,9 @@ export class BarcodePrint implements OnInit {
       .label { width: 58mm; min-height: 34mm; padding: 2.5mm; border: 1px dashed #bbb; text-align: center; break-inside: avoid; }
       .name { height: 8mm; overflow: hidden; font-size: 10pt; font-weight: 600; }
       .name small { font-weight: 400; }
+      .sku { display: block; margin-top: 1mm; font: 8pt Consolas, monospace; }
       svg { width: 100%; height: 18mm; }
-      strong { display: block; font-size: 11pt; }
+      strong { display: block; margin-top: 1mm; font: 700 11pt Arial, sans-serif; }
       @media print { .label { border-color: transparent; } }
     </style></head><body>${labels}<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
     popup.document.close();

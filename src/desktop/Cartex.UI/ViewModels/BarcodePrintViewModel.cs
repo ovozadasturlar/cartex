@@ -46,6 +46,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
     [ObservableProperty] private bool _printWithPrice;
+    [ObservableProperty] private bool _printWithSku;
     private IReadOnlyList<CurrencyDto> _currencies = [];
 
     public event Action? FocusChipsRequested;
@@ -103,6 +104,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         try { _printer.CacheBarcodeLabelSettings(await _settingsApi.GetBarcodeLabelAsync()); }
         catch { }
         PrintWithPrice = _printer.GetSettings().LabelDefaultWithPrice;
+        PrintWithSku = _printer.GetSettings().LabelShowSku;
         try { _currencies = await _ratesApi.GetCurrenciesAsync(); }
         catch { _currencies = []; }
         OnPropertyChanged(nameof(CanOverridePrice));
@@ -201,6 +203,8 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         UpdatePreview();
     }
 
+    partial void OnPrintWithSkuChanged(bool value) => UpdatePreview();
+
     [RelayCommand] private void Increment() => Quantity++;
     [RelayCommand] private void Decrement() { if (Quantity > 1) Quantity--; }
     [RelayCommand] private void ClearSelection() => SelectedProduct = null;
@@ -211,8 +215,14 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
-            var png = _labels.RenderLabelPreview(CurrentCode, name, PrintWithPrice ? PriceText : null, SelectedProduct.Code);
-            using var stream = new MemoryStream(png);
+            var options = LabelSize.Resolve(_printer.GetSettings()) with { ShowSku = PrintWithSku };
+            var result = _labels.RenderLabelPreview(
+                CurrentCode,
+                name,
+                PrintWithPrice ? PriceText : null,
+                options,
+                SelectedProduct.Code);
+            using var stream = new MemoryStream(result.Image);
             Preview = new Bitmap(stream);
         }
         catch { Preview = null; }
@@ -226,8 +236,16 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
             var price = PrintWithPrice ? PriceText : null;
-            if (!await _dispatch.TryBarcodeAsync(CurrentCode, name, Quantity, price, SelectedProduct.Code))
-                _labels.PrintLabels(CurrentCode, name, Quantity, null, price, SelectedProduct.Code);
+            var options = LabelSize.Resolve(_printer.GetSettings()) with { ShowSku = PrintWithSku };
+            if (!await _dispatch.TryBarcodeAsync(
+                    CurrentCode,
+                    name,
+                    Quantity,
+                    price,
+                    SelectedProduct.Code,
+                    PrintWithPrice,
+                    PrintWithSku))
+                _labels.PrintLabels(CurrentCode, name, Quantity, null, price, SelectedProduct.Code, options);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

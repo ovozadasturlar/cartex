@@ -64,17 +64,24 @@
             }
           </div>
           <div class="preview">
-            <svg #barcodePreview></svg>
+            <span class="preview-name">{{ product.name }}</span>
+            @if (printWithSku && product.code) {
+              <span class="preview-sku">SKU: {{ product.code }}</span>
+            }
             @if (printWithPrice && product.sellingPrice != null) {
               <strong class="cx-money">{{ labelPrice(product) }}</strong>
             }
+            <svg #barcodePreview></svg>
           </div>
           <div class="controls">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('quantity') }}</mat-label>
               <input matInput type="number" min="1" max="500" [(ngModel)]="quantity" />
             </mat-form-field>
-            <mat-checkbox [(ngModel)]="printWithPrice" [disabled]="!allowPriceOverride">{{ t('print_with_price') }}</mat-checkbox>
+            <div class="label-options">
+              <label><span>{{ t('price') }}</span><mat-slide-toggle [(ngModel)]="printWithPrice" [disabled]="!allowPriceOverride" [attr.aria-label]="t('price')" /></label>
+              <label><span>SKU</span><mat-slide-toggle [(ngModel)]="printWithSku" aria-label="SKU" /></label>
+            </div>
           </div>
           <button class="print" matButton="filled" [disabled]="!selectedBarcode()" (click)="print()">
             <mat-icon>print</mat-icon>{{ t('print') }}

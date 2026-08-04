@@ -27,12 +27,17 @@
 .barcode-options button.active { border-color: var(--cx-brand); background: var(--cx-brand-soft); }
 .barcode-options small { color: var(--cx-text-2); }
 .preview {
-  display: grid; place-items: center; min-height: 190px; margin: 18px 0; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 190px; margin: 18px 0; padding: 16px;
   border-radius: 10px; background: white; color: #111;
 }
-.preview svg { width: min(100%, 360px); }
+.preview-name { max-width: 100%; max-height: 42px; overflow: hidden; text-align: center; font: 700 14px Arial, sans-serif; }
+.preview-sku { margin-top: 4px; font: 12px Consolas, monospace; }
+.preview strong { margin-top: 4px; font: 700 18px Arial, sans-serif; }
+.preview svg { width: min(100%, 360px); margin-top: 4px; }
 .controls { display: flex; align-items: center; gap: 16px; }
 .controls mat-form-field { width: 125px; }
+.label-options { display: flex; align-items: center; gap: 18px; }
+.label-options label { display: flex; align-items: center; gap: 8px; }
 .print { width: 100%; margin-top: 12px; }
 @media (width < 1000px) {
   .layout { grid-template-columns: 1fr; }

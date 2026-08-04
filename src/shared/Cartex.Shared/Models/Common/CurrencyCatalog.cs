@@ -1,7 +1,15 @@
+using System.Globalization;
+
 namespace Cartex.Shared.Models.Common;
 
 public static class CurrencyCatalog
 {
+    private static readonly NumberFormatInfo LabelNumberFormat = new()
+    {
+        NumberGroupSeparator = " ",
+        NumberDecimalSeparator = ","
+    };
+
     public static readonly string[] All = ["UZS", "USD", "EUR", "RUB", "KZT", "TRY", "CNY"];
 
     public static CurrencyMetadata Resolve(string? code) => (code ?? "UZS").ToUpperInvariant() switch
@@ -24,6 +32,12 @@ public static class CurrencyCatalog
         var digits = Math.Clamp(decimalDigits ?? metadata.DecimalDigits, 0, 4);
         var number = amount.ToString($"N{digits}");
         return resolvedPosition == "Prefix" ? $"{resolvedSymbol}{number}" : $"{number} {resolvedSymbol}";
+    }
+
+    public static string FormatLabelNumber(decimal amount, int decimalDigits)
+    {
+        var digits = Math.Clamp(decimalDigits, 0, 4);
+        return amount.ToString($"N{digits}", LabelNumberFormat);
     }
 }
 

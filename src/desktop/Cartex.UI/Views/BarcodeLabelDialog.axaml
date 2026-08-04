@@ -76,10 +76,13 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                    <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding [print_with_price], Source={x:Static svc:LocalizationManager.Instance}}"
+                    <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding [label_default_with_price], Source={x:Static svc:LocalizationManager.Instance}}"
                                    FontSize="12" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                         <ToggleSwitch IsChecked="{Binding PrintWithPrice}" IsEnabled="{Binding CanOverridePrice}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding [label_show_sku], Source={x:Static svc:LocalizationManager.Instance}}"
+                                   FontSize="12" Margin="10,0,0,0" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <ToggleSwitch IsChecked="{Binding PrintWithSku}" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <Image Grid.Row="8" Source="{Binding Preview}" Height="128" HorizontalAlignment="Center"

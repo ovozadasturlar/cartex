@@ -16,12 +16,12 @@ public sealed class MobilePrintDispatcher(
     public bool CanReprintReceipt => Allowed("printing.receipts.reprint");
     public bool CanPrintZReport => Allowed("printing.z_reports.print");
 
-    public Task PrintBarcodeAsync(string code, string name, int copies, string? priceText, string? sku, bool withPrice) =>
+    public Task PrintBarcodeAsync(string code, string name, int copies, string? priceText, string? sku, bool withPrice, bool showSku) =>
         CreateAsync(
             PrintJobKind.BarcodeLabel,
             "barcode",
             code,
-            new { code, name, priceText, sku, withPrice },
+            new { code, name, priceText, sku, withPrice, showSku },
             Math.Clamp(copies, 1, 500),
             false,
             null,

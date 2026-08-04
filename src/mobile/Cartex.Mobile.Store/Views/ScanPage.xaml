@@ -230,12 +230,15 @@
                             </BindableLayout.ItemTemplate>
                         </HorizontalStackLayout>
                     </ScrollView>
-                    <Grid ColumnDefinitions="*,Auto" Padding="2,0">
-                        <Label Text="{svc:T print_with_price}" VerticalOptions="Center"
+                    <HorizontalStackLayout Spacing="8" Padding="2,0">
+                        <Label Text="{svc:T price}" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                        <Switch Grid.Column="1" IsToggled="{Binding PrintWithPrice}"
+                        <Switch IsToggled="{Binding PrintWithPrice}"
                                 IsEnabled="{Binding CanOverridePrintPrice}" />
-                    </Grid>
+                        <Label Text="SKU" Margin="10,0,0,0" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Switch IsToggled="{Binding PrintWithSku}" />
+                    </HorizontalStackLayout>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <Button Text="&#x2212;" Style="{StaticResource PinKey}" WidthRequest="52" HeightRequest="52"
                                 Command="{Binding DecreasePrintCopiesCommand}" />
