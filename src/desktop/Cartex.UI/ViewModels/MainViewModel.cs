@@ -58,13 +58,18 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isShortcutHelpOpen;
     [ObservableProperty] private bool _isDialogOpen;
+    [ObservableProperty] private bool _isPageSwitcherOpen;
+    [ObservableProperty] private PageSwitchItem? _selectedPageSwitchItem;
     public ObservableCollection<ShortcutHelpRow> ShortcutHelpRows { get; } = [];
+    public ObservableCollection<PageSwitchItem> PageSwitchItems { get; } = [];
+    private readonly List<string> _recentPageKeys = [];
 
-    public bool IsShellOverlayOpen => IsPaletteOpen || IsShortcutHelpOpen || IsOnboardingOpen;
+    public bool IsShellOverlayOpen => IsPaletteOpen || IsShortcutHelpOpen || IsOnboardingOpen || IsPageSwitcherOpen;
     public bool BlurCurrentPage => IsDialogOpen && CurrentPage is not SettingsHubViewModel;
     partial void OnIsPaletteOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
     partial void OnIsShortcutHelpOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
     partial void OnIsOnboardingOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
+    partial void OnIsPageSwitcherOpenChanged(bool value) => OnPropertyChanged(nameof(IsShellOverlayOpen));
     partial void OnIsDialogOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(BlurCurrentPage));
@@ -79,6 +84,7 @@ public partial class MainViewModel : ViewModelBase
         {
             ShortcutHelpRows.Clear();
             ShortcutHelpRows.Add(new ShortcutHelpRow("Ctrl+K", L["shortcut_palette"]));
+            ShortcutHelpRows.Add(new ShortcutHelpRow("Ctrl+Tab", L["shortcut_recent_pages"]));
             ShortcutHelpRows.Add(new ShortcutHelpRow("F1", L["shortcut_help"]));
             foreach (var s in _shortcuts.Current)
                 ShortcutHelpRows.Add(new ShortcutHelpRow(s.Gesture, L[s.LabelKey]));
@@ -331,6 +337,7 @@ public partial class MainViewModel : ViewModelBase
 
         IsSettingsActive = false;
         newValue.IsActive = true;
+        RememberPage(newValue.Key);
         CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
         CurrentPageTitle = newValue.Title;
         StartPageLoad(CurrentPage);
@@ -342,6 +349,7 @@ public partial class MainViewModel : ViewModelBase
         if (!CanOpenSettings) return;
         SelectedMenuItem = null;
         IsSettingsActive = true;
+        RememberPage("__settings");
         CurrentPage = ServiceLocator.Resolve<SettingsHubViewModel>();
         CurrentPageTitle = L["settings"];
         StartPageLoad(CurrentPage);
@@ -420,6 +428,90 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void SelectMenuItem(MenuItem item) => SelectedMenuItem = item;
 
+    public void BeginPageSwitch(int direction)
+    {
+        RebuildPageSwitchItems();
+        if (PageSwitchItems.Count < 2)
+            return;
+
+        IsPageSwitcherOpen = true;
+        SelectPageSwitchItem(direction > 0 ? 1 : PageSwitchItems.Count - 1);
+    }
+
+    public void CyclePageSwitch(int direction)
+    {
+        if (!IsPageSwitcherOpen)
+        {
+            BeginPageSwitch(direction);
+            return;
+        }
+        if (PageSwitchItems.Count == 0)
+            return;
+
+        var current = SelectedPageSwitchItem is null ? 0 : PageSwitchItems.IndexOf(SelectedPageSwitchItem);
+        SelectPageSwitchItem((current + direction + PageSwitchItems.Count) % PageSwitchItems.Count);
+    }
+
+    public void CommitPageSwitch()
+    {
+        var target = SelectedPageSwitchItem;
+        ClosePageSwitch();
+        if (target is null)
+            return;
+        if (target.Key == "__settings")
+        {
+            OpenSettingsCommand.Execute(null);
+            return;
+        }
+
+        var item = MenuSections.SelectMany(section => section.Items).FirstOrDefault(candidate => candidate.Key == target.Key);
+        if (item is not null)
+            SelectedMenuItem = item;
+    }
+
+    public void CancelPageSwitch() => ClosePageSwitch();
+
+    private void RebuildPageSwitchItems()
+    {
+        PageSwitchItems.Clear();
+        foreach (var key in _recentPageKeys)
+        {
+            if (key == "__settings")
+            {
+                if (CanOpenSettings)
+                    PageSwitchItems.Add(new PageSwitchItem(key, L["settings"], Material.Icons.MaterialIconKind.Cog));
+                continue;
+            }
+
+            var item = MenuSections.SelectMany(section => section.Items).FirstOrDefault(candidate => candidate.Key == key);
+            if (item is not null)
+                PageSwitchItems.Add(new PageSwitchItem(key, item.Title, item.Icon));
+        }
+    }
+
+    private void SelectPageSwitchItem(int index)
+    {
+        foreach (var item in PageSwitchItems)
+            item.IsSelected = false;
+        SelectedPageSwitchItem = PageSwitchItems[index];
+        SelectedPageSwitchItem.IsSelected = true;
+    }
+
+    private void RememberPage(string key)
+    {
+        _recentPageKeys.Remove(key);
+        _recentPageKeys.Insert(0, key);
+        if (_recentPageKeys.Count > 8)
+            _recentPageKeys.RemoveRange(8, _recentPageKeys.Count - 8);
+    }
+
+    private void ClosePageSwitch()
+    {
+        IsPageSwitcherOpen = false;
+        SelectedPageSwitchItem = null;
+        PageSwitchItems.Clear();
+    }
+
     [RelayCommand]
     private void Logout()
     {
@@ -430,3 +522,11 @@ public partial class MainViewModel : ViewModelBase
 }
 
 public sealed record ShortcutHelpRow(string Gesture, string Label);
+
+public sealed partial class PageSwitchItem(string key, string title, Material.Icons.MaterialIconKind icon) : ObservableObject
+{
+    public string Key { get; } = key;
+    public string Title { get; } = title;
+    public Material.Icons.MaterialIconKind Icon { get; } = icon;
+    [ObservableProperty] private bool _isSelected;
+}

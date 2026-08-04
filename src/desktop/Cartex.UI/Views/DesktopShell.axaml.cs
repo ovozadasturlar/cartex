@@ -37,6 +37,7 @@ public partial class DesktopShell : UserControl
             {
                 _keyHost = top;
                 _keyHost.AddHandler(KeyDownEvent, OnShellKeyDown, RoutingStrategies.Tunnel);
+                _keyHost.AddHandler(KeyUpEvent, OnShellKeyUp, RoutingStrategies.Tunnel);
                 _keyHost.AddHandler(KeyDownEvent, OnPageShortcutKeyDown, RoutingStrategies.Bubble);
             }
         }
@@ -47,6 +48,7 @@ public partial class DesktopShell : UserControl
         if (_keyHost is not null)
         {
             _keyHost.RemoveHandler(KeyDownEvent, OnShellKeyDown);
+            _keyHost.RemoveHandler(KeyUpEvent, OnShellKeyUp);
             _keyHost.RemoveHandler(KeyDownEvent, OnPageShortcutKeyDown);
             _keyHost = null;
         }
@@ -56,6 +58,27 @@ public partial class DesktopShell : UserControl
     private void OnShellKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
+
+        if (e.Key == Key.Tab && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            var direction = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : 1;
+            if (vm.IsPageSwitcherOpen)
+                vm.CyclePageSwitch(direction);
+            else
+                vm.BeginPageSwitch(direction);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsPageSwitcherOpen)
+        {
+            if (e.Key == Key.Escape)
+            {
+                vm.CancelPageSwitch();
+                e.Handled = true;
+            }
+            return;
+        }
 
         if (vm.IsShortcutHelpOpen)
         {
@@ -92,6 +115,17 @@ public partial class DesktopShell : UserControl
         if (e.Key == Key.F1)
         {
             vm.ToggleShortcutHelpCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnShellKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !vm.IsPageSwitcherOpen)
+            return;
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            vm.CommitPageSwitch();
             e.Handled = true;
         }
     }

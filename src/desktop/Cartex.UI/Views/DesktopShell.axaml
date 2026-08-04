@@ -61,6 +61,19 @@
             <Setter Property="Margin" Value="0,6,0,0" />
             <Setter Property="BoxShadow" Value="0 8 24 0 #22000000" />
         </Style>
+        <Style Selector="Border.page-switch-item">
+            <Setter Property="Width" Value="126" />
+            <Setter Property="MinHeight" Value="116" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Border.page-switch-item.selected">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
     </UserControl.Styles>
 
     <Grid>
@@ -347,6 +360,47 @@
             </Panel>
 
         </DockPanel>
+
+        <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsPageSwitcherOpen}"
+                Background="#40000000" IsHitTestVisible="False">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="16" Padding="14"
+                    MaxWidth="900" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BoxShadow="0 18 50 0 #44000000">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding L[recent_pages]}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondary}" Margin="4,0" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding PageSwitchItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="page-switch-item" Classes.selected="{Binding IsSelected}">
+                                        <StackPanel Spacing="9" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Border Width="48" Height="48" CornerRadius="24"
+                                                    Background="{DynamicResource SidebarItemHover}">
+                                                <mi:MaterialIcon Kind="{Binding Icon}" Width="25" Height="25"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" MaxWidth="100" MaxHeight="38"
+                                                       TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5"
+                                                       Foreground="{DynamicResource TextPrimary}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock Text="Ctrl + Tab" HorizontalAlignment="Center" FontSize="11"
+                               Foreground="{DynamicResource TextMuted}" />
+                </StackPanel>
+            </Border>
+        </Border>
 
         <Border Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsPaletteOpen}"
                 Background="#30000000"

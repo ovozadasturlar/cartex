@@ -5,8 +5,11 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Rates;
+using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Shifts;
+using Cartex.UI.Models;
 using Cartex.UI.Services;
 
 namespace Cartex.UI.ViewModels;
@@ -46,6 +49,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly BranchContextService _branch;
     private readonly AuthService _auth;
     private readonly IPrintingApi _printingApi;
+    private readonly IRatesApi _ratesApi;
+    private List<CurrencyDto> _labelPreviewCurrencies =
+    [
+        new("UZS", "Uzbek so'mi", true, true, true, true, 1, DateTime.UtcNow, "so'm", "Suffix", 0),
+        new("USD", "US Dollar", true, true, false, false, 12_500, DateTime.UtcNow, "$", "Prefix", 2)
+    ];
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
     public bool CanEditLabelContent => _auth.HasPermission("settings.barcodeLabel");
@@ -593,13 +602,22 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             var templateSettings = new PrinterSettings
             {
                 LabelCurrencyDisplay = LabelCurrencyDisplay,
-                LabelCurrencyCase = LabelCurrencyCase
+                LabelCurrencyCase = LabelCurrencyCase,
+                LabelPriceCurrencyMode = LabelPriceCurrencyMode
             };
+            var sampleCurrency = _labelPreviewCurrencies.First(currency => !currency.IsBase && currency.Rate is > 0);
             var result = _labels.RenderLabelPreview(
                 "4780000123456",
                 L["receipt_preview_item_one"],
                 LabelDefaultWithPrice
-                    ? BarcodeLabelFormatting.FormatPrice(25_000, "UZS", null, null, null, templateSettings)
+                    ? BarcodeLabelFormatting.FormatProductPrice(
+                        12.5m,
+                        sampleCurrency.Code,
+                        sampleCurrency.Symbol,
+                        sampleCurrency.SymbolPosition,
+                        sampleCurrency.DecimalDigits,
+                        _labelPreviewCurrencies,
+                        templateSettings)
                     : null,
                 options,
                 "CTX-001");
@@ -629,7 +647,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         IBarcodeLabelService labels,
         BranchContextService branch,
         AuthService auth,
-        IPrintingApi printingApi)
+        IPrintingApi printingApi,
+        IRatesApi ratesApi)
     {
         _printer = printer;
         _toast = toast;
@@ -639,6 +658,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _branch = branch;
         _auth = auth;
         _printingApi = printingApi;
+        _ratesApi = ratesApi;
     }
 
     public async Task LoadAsync()
@@ -648,6 +668,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         var printers = await Task.Run(_printer.GetInstalledPrinters);
         Printers.Clear();
         foreach (var p in printers) Printers.Add(p);
+        await LoadLabelPreviewCurrenciesAsync();
 
         _isLoadingLabelSettings = true;
         try
@@ -866,10 +887,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void TestPrint()
     {
-        if (string.IsNullOrWhiteSpace(ReceiptPrinter)) { _toast.Warning(L["error"]); return; }
+        var targetPrinter = IsThermal ? ReceiptPrinter : DocumentPrinter;
+        if (string.IsNullOrWhiteSpace(targetPrinter)) { _toast.Warning(L["error"]); return; }
         try
         {
-            _printer.PrintRaw(ReceiptPrinter, "Cartex\n  Test print\n\n\n");
+            SaveLocalPrinterSettings();
+            _printer.PrintReceipt(CreatePreviewReceipt(), targetPrinter, (int)ReceiptCopies);
             _toast.Info(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -901,8 +924,16 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         {
             SaveLocalPrinterSettings();
             var settings = _printer.GetSettings();
+            var sampleCurrency = _labelPreviewCurrencies.First(currency => !currency.IsBase && currency.Rate is > 0);
             var price = settings.LabelDefaultWithPrice
-                ? BarcodeLabelFormatting.FormatPrice(25_000, "UZS", null, null, null, settings)
+                ? BarcodeLabelFormatting.FormatProductPrice(
+                    12.5m,
+                    sampleCurrency.Code,
+                    sampleCurrency.Symbol,
+                    sampleCurrency.SymbolPosition,
+                    sampleCurrency.DecimalDigits,
+                    _labelPreviewCurrencies,
+                    settings)
                 : null;
             _labels.PrintLabels("4780000000000", "Sinov mahsulot", 1, BarcodePrinter, price, "CTX-001");
             _toast.Info(L["success"]);
@@ -929,6 +960,61 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             _toast.Info(L["label_calibrate_started"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task LoadLabelPreviewCurrenciesAsync()
+    {
+        try
+        {
+            var currencies = await _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
+            if (currencies.Any(currency => currency.IsBase)
+                && currencies.Any(currency => !currency.IsBase && currency.Rate is > 0))
+                _labelPreviewCurrencies = currencies
+                    .Where(currency => currency.IsBase || currency.Rate is > 0)
+                    .ToList();
+        }
+        catch
+        {
+        }
+    }
+
+    private ReceiptDto CreatePreviewReceipt()
+    {
+        var items = new List<ReceiptItemDto>
+        {
+            new(L["receipt_preview_item_one"], 2, L["unit"], 12_500, 25_000),
+            new(L["receipt_preview_item_two"], 1, L["unit"], 8_000, 8_000),
+            new(L["receipt_preview_item_three"], 1.5m, L["unit"], 14_000, 21_000),
+            new(L["receipt_preview_item_four"], 2, L["unit"], 9_500, 19_000),
+            new(L["receipt_preview_item_five"], 1, L["unit"], 11_000, 11_000)
+        };
+        return new ReceiptDto(
+            "preview-1048",
+            PreviewBusinessName,
+            PreviewBranchName,
+            PreviewAddress,
+            PreviewPhone,
+            DateTime.Now,
+            84_000,
+            0,
+            84_000,
+            0,
+            0,
+            0,
+            0,
+            0,
+            PreviewCashierName,
+            items,
+            [new ReceiptPaymentDto("Cash", "UZS", 84_000, 1, 84_000)],
+            1048,
+            "Dilshod",
+            LocalizationManager.Instance.CurrentLanguage switch
+            {
+                AppLanguage.Ru => "ru",
+                AppLanguage.UzCyrl => "uz-cyrl",
+                AppLanguage.En => "en",
+                _ => "uz-latn"
+            });
     }
 
     private void ApplyPrinterCalibrationProfile()

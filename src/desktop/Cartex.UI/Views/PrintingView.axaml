@@ -11,8 +11,8 @@
 
     <UserControl.Resources>
         <DataTemplate x:Key="ThermalReceiptPreview" x:DataType="vm:PrintingViewModel">
-            <Border Width="210" Height="440" Background="White" Padding="14">
-                <StackPanel Spacing="5">
+            <Border Width="210" Height="500" Background="White" Padding="14">
+                <StackPanel Spacing="4">
                     <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding ShowBusinessName}"
                                Foreground="{Binding PreviewInkBrush}" FontSize="14" FontWeight="Bold" TextAlignment="Center" />
                     <TextBlock Text="{Binding PreviewBranchName}" IsVisible="{Binding ShowBranchName}"
@@ -40,14 +40,29 @@
                         <TextBlock Text="1 × 8 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
                         <TextBlock Grid.Column="1" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
                     </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_three]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1.5 × 14 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="21 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_four]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="2 × 9 500" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="19 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_five]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1 × 11 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="11 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
+                    </Grid>
                     <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding L[total]}" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
-                        <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
+                        <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShowPaymentDetails}">
                         <TextBlock Text="{Binding L[cash]}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
                     </Grid>
                     <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
                     <TextBlock Text="{Binding PreviewFooterText}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center"
@@ -112,15 +127,36 @@
                             <TextBlock Grid.Column="3" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
                             <TextBlock Grid.Column="4" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
                         </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="3" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_three]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1.5" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="14 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="21 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55" Background="{Binding PreviewFaintBrush}">
+                            <TextBlock Text="4" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_four]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="2" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="9 500" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="19 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="5" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_five]}" Foreground="{Binding PreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="11 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="11 000" Foreground="{Binding PreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
                         <Border Height="1" Background="{Binding PreviewLineBrush}" />
                         <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Right" Width="140">
                             <TextBlock Text="{Binding L[total]}" Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" />
-                            <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" />
+                            <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewInkBrush}" FontSize="10" FontWeight="Bold" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Right" Width="140"
                               IsVisible="{Binding ShowPaymentDetails}">
                             <TextBlock Text="{Binding L[cash]}" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
-                            <TextBlock Grid.Column="1" Text="33 000" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewMutedBrush}" FontSize="7" />
                         </Grid>
                         <Border HorizontalAlignment="Right" Background="{Binding PreviewStatusBackgroundBrush}"
                                 BorderBrush="{Binding PreviewStatusBrush}" BorderThickness="1"
@@ -711,8 +747,7 @@
                                            Foreground="{DynamicResource TextPrimary}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                                <Button Classes="outline" Command="{Binding TestPrintCommand}" Content="{Binding L[printer_test]}"
-                                        IsVisible="{Binding IsThermal}" />
+                                <Button Classes="outline" Command="{Binding TestPrintCommand}" Content="{Binding L[printer_test]}" />
                                 <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
                                         Command="{Binding SaveCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="7">
