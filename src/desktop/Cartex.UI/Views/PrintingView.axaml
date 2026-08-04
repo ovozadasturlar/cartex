@@ -396,6 +396,19 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
         </Style>
+        <Style Selector="Button.kindtab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.kindtab.active">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
         <Style Selector="Border.previewslot">
             <Setter Property="BorderBrush" Value="#CBD5E1" />
             <Setter Property="BorderThickness" Value="1" />
@@ -910,9 +923,21 @@
                                 <TextBlock Text="{Binding L[label_content_defaults_hint]}" Foreground="{DynamicResource TextMuted}"
                                            FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
-                            <Grid ColumnDefinitions="*,12,*,12,*">
+                            <Grid ColumnDefinitions="*,12,*,12,*,12,*">
                                 <StackPanel Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_display]}" />
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_price_currency]}"
+                                               ToolTip.Tip="{Binding L[label_price_currency_hint]}" />
+                                    <ComboBox ItemsSource="{Binding LabelPriceCurrencyModes}" SelectedItem="{Binding LabelPriceCurrencyMode}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=label_price_currency}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_display]}"
+                                               ToolTip.Tip="{Binding L[label_currency_display_hint]}" />
                                     <ComboBox ItemsSource="{Binding LabelCurrencyDisplays}" SelectedItem="{Binding LabelCurrencyDisplay}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="x:String">
@@ -921,8 +946,9 @@
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_case]}" />
+                                <StackPanel Grid.Column="4" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_currency_case]}"
+                                               ToolTip.Tip="{Binding L[label_currency_case_hint]}" />
                                     <ComboBox ItemsSource="{Binding LabelCurrencyCases}" SelectedItem="{Binding LabelCurrencyCase}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="x:String">
@@ -931,8 +957,9 @@
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Grid.Column="4" Spacing="5">
-                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_name_lines]}" />
+                                <StackPanel Grid.Column="6" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[label_name_lines]}"
+                                               ToolTip.Tip="{Binding L[label_name_lines_hint]}" />
                                     <ComboBox ItemsSource="{Binding LabelNameLineOptions}" SelectedItem="{Binding LabelNameLines}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="x:String">
@@ -952,13 +979,15 @@
                     </Border>
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_x]}"
+                                       ToolTip.Tip="{Binding L[label_shift_x_hint]}" />
                             <NumericUpDown Value="{Binding LabelShiftXMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                            Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#"
                                            c:MoneyInput.Clean="False" MinHeight="34" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_shift_y]}"
+                                       ToolTip.Tip="{Binding L[label_shift_y_hint]}" />
                             <NumericUpDown Value="{Binding LabelShiftYMm, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                            Minimum="-10" Maximum="10" Increment="0.5" FormatString="0.0#"
                                            c:MoneyInput.Clean="False" MinHeight="34" />
@@ -974,20 +1003,20 @@
                     </StackPanel>
                     <Grid ColumnDefinitions="*,12,*,12,*,12,*">
                         <StackPanel Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_rotation]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_rotation]}" ToolTip.Tip="{Binding L[label_rotation_hint]}" />
                             <ComboBox ItemsSource="{Binding LabelRotations}" SelectedItem="{Binding LabelRotation}" MinHeight="34" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_dpi]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_dpi]}" ToolTip.Tip="{Binding L[label_dpi_hint]}" />
                             <ComboBox ItemsSource="{Binding LabelDpis}" SelectedItem="{Binding LabelDpi}" MinHeight="34" />
                         </StackPanel>
                         <StackPanel Grid.Column="4" Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_density]}" ToolTip.Tip="{Binding L[label_density_hint]}" />
                             <NumericUpDown Value="{Binding LabelDensity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                            Minimum="1" Maximum="15" FormatString="0" MinHeight="34" />
                         </StackPanel>
                         <StackPanel Grid.Column="6" Spacing="5">
-                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" />
+                            <TextBlock Classes="fieldlabel" Text="{Binding L[label_speed]}" ToolTip.Tip="{Binding L[label_speed_hint]}" />
                             <NumericUpDown Value="{Binding LabelSpeed, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                            Minimum="1" Maximum="6" FormatString="0" MinHeight="34" />
                         </StackPanel>
@@ -1378,8 +1407,8 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="2" IsVisible="{Binding IsNetworkSection}" ColumnDefinitions="420,16,*">
-            <Border Grid.Column="0" Classes="printcard">
+        <Grid Grid.Row="2" IsVisible="{Binding IsNetworkSection}" ColumnDefinitions="Auto,16,*">
+            <Border Grid.Column="0" Classes="printcard" Width="420" IsVisible="{Binding CanViewPrintRoutes}">
                 <Grid RowDefinitions="Auto,Auto,*,Auto">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="sectiontitle" Text="Print qurilmalari" />
@@ -1442,17 +1471,23 @@
             <Border Grid.Column="2" Classes="printcard">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="14">
-                        <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" />
-                        <Grid ColumnDefinitions="*,12,*">
-                            <StackPanel Spacing="6">
-                                <TextBlock Classes="fieldlabel" Text="Print turi" />
-                                <ComboBox ItemsSource="{Binding NetworkKinds}" SelectedItem="{Binding SelectedNetworkKind}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Spacing="6">
-                                <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
-                                <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingMode}" />
-                            </StackPanel>
+                        <StackPanel Spacing="14" IsVisible="{Binding CanViewPrintRoutes}">
+                        <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" VerticalAlignment="Center" />
+                        <Grid ColumnDefinitions="*,8,*,8,*,8,*">
+                            <Button Classes="kindtab" Classes.active="{Binding IsNetworkReceipt}" Content="Chek"
+                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="Receipt" />
+                            <Button Grid.Column="2" Classes="kindtab" Classes.active="{Binding IsNetworkBarcode}" Content="Etiketka"
+                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="BarcodeLabel" />
+                            <Button Grid.Column="4" Classes="kindtab" Classes.active="{Binding IsNetworkZReport}" Content="Z-hisobot"
+                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="ZReport" />
+                            <Button Grid.Column="6" Classes="kindtab" Classes.active="{Binding IsNetworkDocument}" Content="Hujjat"
+                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="Document" />
                         </Grid>
+                        <StackPanel Spacing="6">
+                                <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
+                                <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingMode}"
+                                          ToolTip.Tip="Lokal printer, qat’iy prioritet yoki faqat lokal ishlash tartibini belgilaydi" />
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="Bu print turi faol" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkPolicyEnabled}" />
@@ -1469,47 +1504,54 @@
                         <Grid ColumnDefinitions="*,12,*">
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="fieldlabel" Text="Muvaffaqiyatli printer rejimi" />
-                                <ComboBox ItemsSource="{Binding NetworkStickyModes}" SelectedItem="{Binding NetworkStickyMode}" />
+                                <ComboBox ItemsSource="{Binding NetworkStickyModes}" SelectedItem="{Binding NetworkStickyMode}"
+                                          ToolTip.Tip="Oxirgi muvaffaqiyatli printer qachongacha birinchi tanlanishini boshqaradi" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="6">
-                                <TextBlock Classes="fieldlabel" Text="Standart bo‘lib turish vaqti (daqiqa)" />
+                                <TextBlock Classes="fieldlabel" Text="Standart bo‘lib turish vaqti (daqiqa)"
+                                           ToolTip.Tip="Duration rejimida muvaffaqiyatli printer qancha vaqt afzal bo‘lishini kiriting" />
                                 <NumericUpDown Value="{Binding NetworkStickyMinutes}" Minimum="0" Maximum="43200" Increment="0.5" />
                             </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="*,10,*,10,*,10,*">
                             <StackPanel Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="Maks. nusxa" />
+                                <TextBlock Classes="fieldlabel" Text="Maks. nusxa" ToolTip.Tip="Bitta print vazifasida ruxsat etilgan eng ko‘p nusxa" />
                                 <NumericUpDown Value="{Binding NetworkMaxCopies}" Minimum="1" Maximum="100" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="Vazifa / daqiqa" />
+                                <TextBlock Classes="fieldlabel" Text="Vazifa / daqiqa" ToolTip.Tip="Bir foydalanuvchi bir daqiqada yuborishi mumkin bo‘lgan vazifalar limiti" />
                                 <NumericUpDown Value="{Binding NetworkMaxJobsPerMinute}" Minimum="1" Maximum="1000" />
                             </StackPanel>
                             <StackPanel Grid.Column="4" Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="Nusxa / daqiqa" />
+                                <TextBlock Classes="fieldlabel" Text="Nusxa / daqiqa" ToolTip.Tip="Bir daqiqada yuborilishi mumkin bo‘lgan jami nusxalar limiti" />
                                 <NumericUpDown Value="{Binding NetworkMaxCopiesPerMinute}" Minimum="1" Maximum="5000" />
                             </StackPanel>
                             <StackPanel Grid.Column="6" Spacing="5">
-                                <TextBlock Classes="fieldlabel" Text="Kutish (soniya)" />
+                                <TextBlock Classes="fieldlabel" Text="Kutish (soniya)" ToolTip.Tip="Printer vazifani qabul qilmasa keyingi printerga o‘tish vaqti" />
                                 <NumericUpDown Value="{Binding NetworkAssignmentTimeoutSeconds}" Minimum="5" Maximum="300" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="fieldlabel" Text="Printerlar prioriteti" />
-                        <ItemsControl ItemsSource="{Binding NetworkEndpoints}">
+                        <TextBlock Classes="fieldlabel" Text="Printerlar tartibi"
+                                   ToolTip.Tip="Tanlangan printerni tutqichidan ushlab kerakli joyga suring" />
+                        <ItemsControl ItemsSource="{Binding NetworkEndpoints}" MaxHeight="520">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:NetworkRouteEndpointItem">
                                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                            CornerRadius="8" Padding="10" Margin="0,0,0,7">
-                                        <Grid ColumnDefinitions="Auto,*,110,90,Auto">
+                                            CornerRadius="8" Padding="10" Margin="0,0,0,7"
+                                            DragDrop.AllowDrop="True" DragDrop.DragOver="OnEndpointDragOver"
+                                            DragDrop.Drop="OnEndpointDrop">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,110,Auto">
+                                            <TextBlock Text="⠿" Cursor="SizeAll" FontSize="20" Margin="0,0,8,0"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       PointerPressed="OnEndpointDragHandlePressed"
+                                                       ToolTip.Tip="Prioritetni o‘zgartirish uchun torting" />
                                             <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Margin="10,0">
+                                            <StackPanel Grid.Column="2" Margin="10,0">
                                                 <TextBlock Text="{Binding PrinterName}" FontWeight="SemiBold" />
                                                 <TextBlock Text="{Binding DeviceName}" FontSize="11"
                                                            Foreground="{DynamicResource TextSecondary}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" />
-                                            <NumericUpDown Grid.Column="3" Value="{Binding Priority}" Minimum="1" Maximum="1000"
-                                                           IsEnabled="{Binding IsSelected}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding Status}" VerticalAlignment="Center" />
                                             <ToggleSwitch Grid.Column="4" IsChecked="{Binding IsEnabled}"
                                                           IsEnabled="{Binding IsSelected}" />
                                         </Grid>
@@ -1519,6 +1561,58 @@
                         </ItemsControl>
                         <Button Classes="primary" Content="Yo‘naltirishni saqlash"
                                 Command="{Binding SaveNetworkRouteCommand}" IsVisible="{Binding CanEditPrintRoutes}" />
+                        </StackPanel>
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,6" IsVisible="{Binding CanViewPrintJobs}" />
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanViewPrintJobs}">
+                            <StackPanel>
+                                <TextBlock Classes="sectiontitle" Text="Oxirgi print vazifalari" />
+                                <TextBlock Text="Yuborilgan ma’lumot, qurilma, printer va bajarilish holati"
+                                           Foreground="{DynamicResource TextMuted}" FontSize="11.5" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Text="Oxirgi 50 ta" Foreground="{DynamicResource TextMuted}"
+                                           VerticalAlignment="Center" />
+                                <Button Classes="outline" Content="Yangilash" Command="{Binding RefreshNetworkJobsCommand}" />
+                            </StackPanel>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding NetworkJobs}" IsVisible="{Binding CanViewPrintJobs}" MaxHeight="560">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NetworkPrintJobItem">
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="9" Padding="11" Margin="0,0,0,8">
+                                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <TextBlock Text="{Binding Kind}" FontWeight="SemiBold" />
+                                                <Border Background="{DynamicResource SidebarItemHover}" CornerRadius="10" Padding="7,2">
+                                                    <TextBlock Text="{Binding Status}" FontSize="10.5" />
+                                                </Border>
+                                                <TextBlock Text="{Binding CopiesText}" Foreground="{DynamicResource TextSecondary}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding CreatedText}" FontSize="10.5"
+                                                       Foreground="{DynamicResource TextMuted}" />
+                                            <StackPanel Grid.Row="1" Margin="0,7,10,0" Spacing="3">
+                                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding RequestedText}" FontSize="10.5"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                                <TextBlock Text="{Binding TargetText}" FontSize="10.5"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                                <TextBlock Text="{Binding ErrorText}" FontSize="10.5" Foreground="#DC2626"
+                                                           TextWrapping="Wrap" IsVisible="{Binding HasError}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center">
+                                                <Button Classes="outline" Content="Qayta urinish" IsVisible="{Binding CanRetry}"
+                                                        Command="{Binding $parent[UserControl].DataContext.RetryNetworkJobCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                <Button Classes="danger" Content="Bekor qilish" IsVisible="{Binding CanCancel}"
+                                                        Command="{Binding $parent[UserControl].DataContext.CancelNetworkJobCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

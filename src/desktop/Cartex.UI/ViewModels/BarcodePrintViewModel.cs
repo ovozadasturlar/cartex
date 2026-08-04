@@ -9,6 +9,7 @@ using Cartex.ApiClient.Paging;
 using Cartex.ApiClient.Querying;
 using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Rates;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
@@ -29,6 +30,8 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     private readonly IBarcodesApi _barcodesApi;
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
+    private readonly IRatesApi _ratesApi;
+    private readonly ISettingsApi _settingsApi;
     private readonly PrintDispatchService _dispatch;
     private readonly IToastService _toast;
 
@@ -43,6 +46,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _quantity = 1;
     [ObservableProperty] private Bitmap? _preview;
     [ObservableProperty] private bool _printWithPrice;
+    private IReadOnlyList<CurrencyDto> _currencies = [];
 
     public event Action? FocusChipsRequested;
     public event Action? FocusQuantityRequested;
@@ -53,12 +57,13 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     public bool CanOverridePrice => _printer.GetSettings().LabelAllowPriceOverride;
     public string PrinterInfo => _printer.BarcodePrinter ?? L["printer_not_set"];
     public string PriceText => SelectedProduct?.SellingPrice is { } price
-        ? BarcodeLabelFormatting.FormatPrice(
+        ? BarcodeLabelFormatting.FormatProductPrice(
             price,
             SelectedProduct.PriceCurrency,
             SelectedProduct.PriceSymbol,
             SelectedProduct.PriceSymbolPosition,
             SelectedProduct.PriceDecimalDigits,
+            _currencies,
             _printer.GetSettings())
         : "";
     public string SelectedProductImageUrl => SelectedProduct?.ImageUrl ?? string.Empty;
@@ -77,6 +82,8 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         IBarcodesApi barcodesApi,
         IBarcodeLabelService labels,
         IPrinterService printer,
+        IRatesApi ratesApi,
+        ISettingsApi settingsApi,
         PrintDispatchService dispatch,
         IToastService toast)
     {
@@ -84,17 +91,23 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         _barcodesApi = barcodesApi;
         _labels = labels;
         _printer = printer;
+        _ratesApi = ratesApi;
+        _settingsApi = settingsApi;
         _dispatch = dispatch;
         _toast = toast;
         Paging.Attach(LoadProductsAsync);
     }
 
-    public Task LoadAsync()
+    public async Task LoadAsync()
     {
+        try { _printer.CacheBarcodeLabelSettings(await _settingsApi.GetBarcodeLabelAsync()); }
+        catch { }
         PrintWithPrice = _printer.GetSettings().LabelDefaultWithPrice;
+        try { _currencies = await _ratesApi.GetCurrenciesAsync(); }
+        catch { _currencies = []; }
         OnPropertyChanged(nameof(CanOverridePrice));
         OnPropertyChanged(nameof(PrinterInfo));
-        return SearchAsync();
+        await SearchAsync();
     }
 
     private CancellationTokenSource? _searchCts;

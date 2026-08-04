@@ -1112,5 +1112,18 @@
   "label_name_all": "To'liq",
   "label_default_with_price": "Narxni standart ko'rsatish",
   "label_show_sku": "SKU mavjud bo'lsa ko'rsatish",
-  "label_allow_price_override": "Chop etishda narx holatini o'zgartirish"
+  "label_allow_price_override": "Chop etishda narx holatini o'zgartirish",
+  "label_price_currency": "Narx valyutasi",
+  "label_price_currency_product": "Mahsulot valyutasi",
+  "label_price_currency_default": "Asosiy valyuta",
+  "label_price_currency_hint": "Mahsulot kiritilgan valyutada yoki do'konning asosiy valyutasiga amaldagi kurs bilan o'tkazib chiqariladi",
+  "label_currency_display_hint": "Valyuta belgisi ($, so'm) yoki kodi (USD, UZS) ko'rsatilishini belgilaydi",
+  "label_currency_case_hint": "Valyuta kodi katta yoki kichik harflarda yozilishini belgilaydi",
+  "label_name_lines_hint": "Etiketkada mahsulot nomi uchun ajratiladigan qatorlar soni",
+  "label_shift_x_hint": "Chop tasvirini gorizontal yo'nalishda millimetr bilan tekislaydi",
+  "label_shift_y_hint": "Chop tasvirini vertikal yo'nalishda millimetr bilan tekislaydi",
+  "label_rotation_hint": "Printer qog'ozni teskari chiqarayotgan bo'lsa tasvirni 180 daraja aylantiradi",
+  "label_dpi_hint": "Printer aniqligi; ko'p termal printerlar 203 yoki 300 DPI ishlatadi",
+  "label_density_hint": "Termal bosmaning qorayish darajasi; juda yuqori qiymat barkodni yoyishi mumkin",
+  "label_speed_hint": "Printer tezligi; sifat yomonlashsa kichikroq qiymat tanlang"
 }

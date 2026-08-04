@@ -14,6 +14,7 @@ import { CxCurrencyPipe, formatCurrency } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { RemotePrintService } from '../../core/remote-print.service';
 import { BarcodeLabelSettings, SettingsApi } from '../../core/api/settings.api';
+import { Currency, RatesApi } from '../../core/api/finance.api';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -44,6 +45,7 @@ export class BarcodePrint implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly remotePrint = inject(RemotePrintService);
   private readonly settingsApi = inject(SettingsApi);
+  private readonly ratesApi = inject(RatesApi);
   private readonly preview = viewChild<ElementRef<SVGSVGElement>>('barcodePreview');
 
   readonly loading = signal(true);
@@ -67,7 +69,9 @@ export class BarcodePrint implements OnInit {
     nameLines: 2,
     currencyDisplay: 'symbol',
     currencyCase: 'original',
+    priceCurrencyMode: 'product',
   };
+  private currencies: Currency[] = [];
   private page = 1;
   private pageSize = 20;
 
@@ -93,10 +97,15 @@ export class BarcodePrint implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.readCachedSettings();
-    try {
-      this.labelSettings = await lastValueFrom(this.settingsApi.barcodeLabel());
+    const [settingsResult, currenciesResult] = await Promise.allSettled([
+      lastValueFrom(this.settingsApi.barcodeLabel()),
+      lastValueFrom(this.ratesApi.currencies()),
+    ]);
+    if (settingsResult.status === 'fulfilled') {
+      this.labelSettings = settingsResult.value;
       localStorage.setItem('cartex.barcodeLabelSettings', JSON.stringify(this.labelSettings));
-    } catch {}
+    }
+    if (currenciesResult.status === 'fulfilled') this.currencies = currenciesResult.value;
     this.printWithPrice = this.labelSettings.defaultWithPrice;
     this.allowPriceOverride = this.labelSettings.allowPriceOverride;
     this.load();
@@ -104,19 +113,27 @@ export class BarcodePrint implements OnInit {
 
   labelPrice(product: CatalogProduct): string {
     if (product.sellingPrice == null) return '';
+    const baseCurrency = this.currencies.find((currency) => currency.isBase);
+    const sourceCurrency = this.currencies.find((currency) => currency.code === product.priceCurrency);
+    const useDefault = this.labelSettings.priceCurrencyMode === 'default' && baseCurrency != null;
+    const currency = useDefault ? baseCurrency : sourceCurrency;
+    const rate = useDefault && product.priceCurrency !== baseCurrency?.code ? sourceCurrency?.rate : 1;
+    if (useDefault && (rate == null || rate <= 0)) return '';
+    const amount = useDefault ? product.sellingPrice * (rate ?? 1) : product.sellingPrice;
+    const code = currency?.code ?? product.priceCurrency ?? 'UZS';
     let symbol = this.labelSettings.currencyDisplay === 'code'
-      ? product.priceCurrency ?? 'UZS'
-      : product.priceSymbol;
+      ? code
+      : currency?.symbol ?? product.priceSymbol;
     if (symbol) {
       if (this.labelSettings.currencyCase === 'upper') symbol = symbol.toUpperCase();
       if (this.labelSettings.currencyCase === 'lower') symbol = symbol.toLowerCase();
     }
     return formatCurrency(
-      product.sellingPrice,
-      product.priceCurrency,
+      amount,
+      code,
       symbol,
-      this.labelSettings.currencyDisplay === 'code' ? 'Suffix' : product.priceSymbolPosition,
-      product.priceDecimalDigits,
+      this.labelSettings.currencyDisplay === 'code' ? 'Suffix' : currency?.symbolPosition ?? product.priceSymbolPosition,
+      currency?.decimalDigits ?? product.priceDecimalDigits,
     );
   }
 

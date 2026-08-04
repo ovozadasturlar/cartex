@@ -19,6 +19,7 @@ public sealed class GetBarcodeLabelSettingsQueryHandler(ISettingsService setting
             value.ShowSku,
             value.NameLines,
             value.CurrencyDisplay,
-            value.CurrencyCase);
+            value.CurrencyCase,
+            value.PriceCurrencyMode);
     }
 }

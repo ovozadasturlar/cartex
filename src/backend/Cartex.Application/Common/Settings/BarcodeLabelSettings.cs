@@ -8,4 +8,5 @@ public sealed class BarcodeLabelSettings
     public int NameLines { get; set; } = 2;
     public string CurrencyDisplay { get; set; } = "symbol";
     public string CurrencyCase { get; set; } = "original";
+    public string PriceCurrencyMode { get; set; } = "product";
 }

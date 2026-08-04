@@ -3,6 +3,7 @@ using System.IO;
 using Avalonia.Media.Imaging;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Rates;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,7 +30,7 @@ public sealed record BarcodeLabelTarget(
     string? CurrencySymbolPosition = null,
     int? CurrencyDecimalDigits = null);
 
-public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast) : ObservableObject
+public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi ratesApi, ISettingsApi settingsApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast) : ObservableObject
 {
     private long _variantId;
 
@@ -55,17 +56,23 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IBarcodeLabel
 
     public async Task OpenAsync(BarcodeLabelTarget target)
     {
+        try { printer.CacheBarcodeLabelSettings(await settingsApi.GetBarcodeLabelAsync()); }
+        catch { }
         _variantId = target.VariantId;
         ProductName = target.ProductName;
         UnitName = target.UnitName;
         ImageUrl = target.ImageUrl;
         Sku = target.Sku;
-        PriceText = BarcodeLabelFormatting.FormatPrice(
+        IReadOnlyList<CurrencyDto> currencies;
+        try { currencies = await ratesApi.GetCurrenciesAsync(); }
+        catch { currencies = []; }
+        PriceText = BarcodeLabelFormatting.FormatProductPrice(
             target.Price,
             target.CurrencyCode,
             target.CurrencySymbol,
             target.CurrencySymbolPosition,
             target.CurrencyDecimalDigits,
+            currencies,
             printer.GetSettings());
         Quantity = 1;
         PrintWithPrice = printer.GetSettings().LabelDefaultWithPrice;

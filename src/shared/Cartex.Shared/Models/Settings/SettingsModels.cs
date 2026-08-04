@@ -78,14 +78,16 @@ public record BarcodeLabelSettingsDto(
     bool ShowSku = false,
     int NameLines = 2,
     string CurrencyDisplay = "symbol",
-    string CurrencyCase = "original");
+    string CurrencyCase = "original",
+    string PriceCurrencyMode = "product");
 public record UpdateBarcodeLabelSettingsRequest(
     bool DefaultWithPrice,
     bool AllowPriceOverride,
     bool ShowSku,
     int NameLines,
     string CurrencyDisplay,
-    string CurrencyCase);
+    string CurrencyCase,
+    string PriceCurrencyMode);
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);

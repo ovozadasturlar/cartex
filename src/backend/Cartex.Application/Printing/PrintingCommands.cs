@@ -447,7 +447,8 @@ internal static class PrintingPayloadValidator
             showSku = configured.ShowSku,
             nameLines = configured.NameLines,
             currencyDisplay = configured.CurrencyDisplay,
-            currencyCase = configured.CurrencyCase
+            currencyCase = configured.CurrencyCase,
+            priceCurrencyMode = configured.PriceCurrencyMode
         });
     }
 
@@ -752,7 +753,40 @@ internal static class PrintingMapper
         (Cartex.Shared.Models.Printing.PrintJobStatus)job.Status, job.SourceType, job.SourceId,
         job.Copies, job.IsReprint, job.Reason, job.RequestedByUserId, job.RequestedDeviceId,
         job.RequestedDeviceName, job.RequestedClient, job.AssignedNodeId, job.AssignedEndpointId,
-        job.AttemptCount, job.CreatedAt, job.CompletedAt, job.ErrorCode, job.ErrorMessage);
+        job.AttemptCount, job.CreatedAt, job.CompletedAt, job.ErrorCode, job.ErrorMessage,
+        JobSummary(job), job.RequestedByUser?.FullName ?? job.RequestedByUser?.Username,
+        job.AssignedNode?.Name, job.AssignedEndpoint?.DisplayName);
+
+    private static string JobSummary(PrintJob job)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(job.PayloadJson);
+            var payload = document.RootElement;
+            return job.Kind switch
+            {
+                DomainJobKind.BarcodeLabel => string.Join(" · ", new[]
+                    {
+                        Text(payload, "name"),
+                        Text(payload, "code"),
+                        Text(payload, "priceText")
+                    }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                DomainJobKind.Receipt => $"Receipt #{job.SourceId}",
+                DomainJobKind.ZReport => $"Z report #{job.SourceId}",
+                DomainJobKind.Document => $"Document #{job.SourceId}",
+                _ => job.SourceId
+            };
+        }
+        catch
+        {
+            return job.SourceId;
+        }
+    }
+
+    private static string? Text(JsonElement payload, string name) =>
+        payload.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 
     public static async Task<PrintRoutingPolicyDto> PolicyAsync(IApplicationDbContext db, long policyId, CancellationToken cancellationToken)
     {

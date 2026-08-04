@@ -702,7 +702,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _storageApi = storageApi;
         _labels = labels;
         _printer = printer;
-        BarcodePrint = new BarcodeLabelSession(barcodesApi, labels, printer, toast);
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, toast);
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;

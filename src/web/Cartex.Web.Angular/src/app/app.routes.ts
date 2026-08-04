@@ -57,7 +57,7 @@ export const routes: Routes = [
           { path: 'integrations', data: { permission: 'settings.integrations' }, loadComponent: () => import('./pages/integrations/integrations').then((m) => m.Integrations) },
           { path: 'hardware-keys', data: { permission: 'keys.view' }, loadComponent: () => import('./pages/hardware-keys/hardware-keys').then((m) => m.HardwareKeys) },
           { path: 'receipt-settings', data: { permission: 'settings.receipt' }, loadComponent: () => import('./pages/receipt-settings/receipt-settings').then((m) => m.ReceiptSettings) },
-          { path: 'printing', data: { permission: 'printing.routes.view' }, loadComponent: () => import('./pages/printing/printing').then((m) => m.Printing) },
+          { path: 'printing', data: { permission: 'printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch' }, loadComponent: () => import('./pages/printing/printing').then((m) => m.Printing) },
         ],
       },
     ],

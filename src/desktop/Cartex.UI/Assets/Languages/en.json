@@ -1112,5 +1112,18 @@
   "label_name_all": "Full",
   "label_default_with_price": "Show price by default",
   "label_show_sku": "Show SKU when available",
-  "label_allow_price_override": "Allow changing price visibility when printing"
+  "label_allow_price_override": "Allow changing price visibility when printing",
+  "label_price_currency": "Price currency",
+  "label_price_currency_product": "Product currency",
+  "label_price_currency_default": "Base currency",
+  "label_price_currency_hint": "Print in the product currency or convert to the store's base currency using the current rate",
+  "label_currency_display_hint": "Show the currency symbol ($, sum) or code (USD, UZS)",
+  "label_currency_case_hint": "Controls the letter case of the currency code",
+  "label_name_lines_hint": "Number of label lines reserved for the product name",
+  "label_shift_x_hint": "Aligns the printed image horizontally in millimetres",
+  "label_shift_y_hint": "Aligns the printed image vertically in millimetres",
+  "label_rotation_hint": "Rotates the image 180 degrees when paper feeds in reverse",
+  "label_dpi_hint": "Printer resolution; most thermal printers use 203 or 300 DPI",
+  "label_density_hint": "Thermal print darkness; excessive values may blur the barcode",
+  "label_speed_hint": "Printer speed; lower it when print quality drops"
 }

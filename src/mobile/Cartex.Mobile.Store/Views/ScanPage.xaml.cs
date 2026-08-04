@@ -13,6 +13,7 @@ public partial class ScanPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _vm = vm;
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     protected override async void OnAppearing()
@@ -36,6 +37,7 @@ public partial class ScanPage : ContentPage
     {
         _cameraCts?.Cancel();
         Reader.CameraEnabled = false;
+        HideProductActionsImmediately();
         base.OnDisappearing();
     }
 
@@ -78,8 +80,6 @@ public partial class ScanPage : ContentPage
     {
         if (_vm.ProductActionsExpanded)
         {
-            await Task.WhenAll(ProductActionMenu.FadeToAsync(0, 140), ProductActionMenu.TranslateToAsync(0, -12, 140, Easing.CubicIn));
-            ProductActionMenu.IsVisible = false;
             _vm.ProductActionsExpanded = false;
             return;
         }
@@ -91,10 +91,35 @@ public partial class ScanPage : ContentPage
         await Task.WhenAll(ProductActionMenu.FadeToAsync(1, 170), ProductActionMenu.TranslateToAsync(0, 0, 170, Easing.CubicOut));
     }
 
-    private async void OnBarcodeActionClicked(object? sender, EventArgs e)
+    private void OnBarcodeActionClicked(object? sender, EventArgs e)
+    {
+        if (ProductActionMenu.IsVisible)
+            _vm.ProductActionsExpanded = false;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ScanViewModel.ProductActionsExpanded) && !_vm.ProductActionsExpanded)
+            MainThread.BeginInvokeOnMainThread(async () => await CollapseProductActionsAsync());
+    }
+
+    private async Task CollapseProductActionsAsync()
     {
         if (!ProductActionMenu.IsVisible) return;
-        await Task.WhenAll(ProductActionMenu.FadeToAsync(0, 120), ProductActionMenu.TranslateToAsync(0, -12, 120, Easing.CubicIn));
+        await Task.WhenAll(
+            ProductActionMenu.FadeToAsync(0, 140),
+            ProductActionMenu.TranslateToAsync(0, -12, 140, Easing.CubicIn));
+        if (!_vm.ProductActionsExpanded)
+            ProductActionMenu.IsVisible = false;
+    }
+
+    private void HideProductActionsImmediately()
+    {
+        _vm.ProductActionsExpanded = false;
+        ProductActionMenu.AbortAnimation("FadeTo");
+        ProductActionMenu.AbortAnimation("TranslateTo");
+        ProductActionMenu.Opacity = 0;
+        ProductActionMenu.TranslationY = -12;
         ProductActionMenu.IsVisible = false;
     }
 

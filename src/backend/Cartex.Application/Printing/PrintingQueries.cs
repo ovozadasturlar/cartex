@@ -94,7 +94,13 @@ public sealed class GetPrintJobsQueryHandler(IApplicationDbContext db, ICurrentU
                 throw new ForbiddenException("Print job access denied.");
             query = query.Where(x => x.RequestedByUserId == currentUser.UserId);
         }
-        var jobs = await query.OrderByDescending(x => x.CreatedAt).Take(Math.Clamp(request.Take, 1, 500)).ToListAsync(cancellationToken);
+        var jobs = await query
+            .Include(x => x.RequestedByUser)
+            .Include(x => x.AssignedNode)
+            .Include(x => x.AssignedEndpoint)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(Math.Clamp(request.Take, 1, 500))
+            .ToListAsync(cancellationToken);
         return jobs.Select(PrintingMapper.Job).ToList();
     }
 }
@@ -109,8 +115,8 @@ public sealed class CancelPrintJobCommandHandler(IApplicationDbContext db, ICurr
         var job = await db.PrintJobs.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Print job not found.");
         PrintingGuard.EnsureBranch(currentUser, job.BranchId);
-        if (job.Status is DomainJobStatus.SpoolSubmitted or DomainJobStatus.Completed)
-            throw new BusinessRuleException("A submitted print job cannot be cancelled.");
+        if (job.Status is not (DomainJobStatus.Pending or DomainJobStatus.Assigned))
+            throw new BusinessRuleException("Only pending or assigned print jobs can be cancelled.");
         job.Status = DomainJobStatus.Cancelled;
         job.CancelledAt = DateTime.UtcNow;
         job.LeaseToken = null;

@@ -82,7 +82,7 @@ export const SETTINGS_SECTIONS: NavSection[] = [
       { labelKey: 'loyalty', icon: 'loyalty', route: '/settings/loyalty', permission: 'loyalty.view' },
       { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'expense_categories.view' },
       { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'settings.receipt' },
-      { labelKey: 'printing', icon: 'print', route: '/settings/printing', permission: 'printing.routes.view' },
+      { labelKey: 'printing', icon: 'print', route: '/settings/printing', permission: 'printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch' },
       { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.view' },
       { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
       { labelKey: 'reminders', icon: 'notifications_active', route: '/settings/reminders', permission: 'notifications.view' },

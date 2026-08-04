@@ -129,6 +129,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _usePrinterGapCalibration;
     [ObservableProperty] private string _labelCurrencyDisplay = "symbol";
     [ObservableProperty] private string _labelCurrencyCase = "original";
+    [ObservableProperty] private string _labelPriceCurrencyMode = "product";
     [ObservableProperty] private string _labelNameLines = "2";
     [ObservableProperty] private bool _labelDefaultWithPrice;
     [ObservableProperty] private bool _labelAllowPriceOverride = true;
@@ -493,6 +494,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public int[] LabelRotations { get; } = [0, 180];
     public string[] LabelCurrencyDisplays { get; } = ["symbol", "code"];
     public string[] LabelCurrencyCases { get; } = ["original", "upper", "lower"];
+    public string[] LabelPriceCurrencyModes { get; } = ["product", "default"];
     public string[] LabelNameLineOptions { get; } = ["1", "2", "all"];
     public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
     public int[] BusinessPaperWidths { get; } = [32, 42, 48];
@@ -526,6 +528,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     partial void OnLabelRotationChanged(int value) => RefreshLabelPreview();
     partial void OnLabelCurrencyDisplayChanged(string value) => RefreshLabelPreview();
     partial void OnLabelCurrencyCaseChanged(string value) => RefreshLabelPreview();
+    partial void OnLabelPriceCurrencyModeChanged(string value) => RefreshLabelPreview();
     partial void OnLabelNameLinesChanged(string value) => RefreshLabelPreview();
     partial void OnLabelDefaultWithPriceChanged(bool value) => RefreshLabelPreview();
     partial void OnLabelShowSkuChanged(bool value) => RefreshLabelPreview();
@@ -706,6 +709,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             UsePrinterGapCalibration = label.UsePrinterGapCalibration;
             LabelCurrencyDisplay = s.LabelCurrencyDisplay == "code" ? "code" : "symbol";
             LabelCurrencyCase = s.LabelCurrencyCase is "upper" or "lower" ? s.LabelCurrencyCase : "original";
+            LabelPriceCurrencyMode = s.LabelPriceCurrencyMode == "default" ? "default" : "product";
             LabelNameLines = s.LabelNameLines is 1 or 2 ? s.LabelNameLines.ToString() : "all";
             LabelDefaultWithPrice = s.LabelDefaultWithPrice;
             LabelAllowPriceOverride = s.LabelAllowPriceOverride;
@@ -729,6 +733,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelNameLines = labelSettings.NameLines is 1 or 2 ? labelSettings.NameLines.ToString() : "all";
             LabelCurrencyDisplay = labelSettings.CurrencyDisplay == "code" ? "code" : "symbol";
             LabelCurrencyCase = labelSettings.CurrencyCase is "upper" or "lower" ? labelSettings.CurrencyCase : "original";
+            LabelPriceCurrencyMode = labelSettings.PriceCurrencyMode == "default" ? "default" : "product";
             SaveLocalPrinterSettings();
             RefreshLabelPreview();
         }
@@ -807,7 +812,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 LabelShowSku,
                 int.TryParse(LabelNameLines, out var labelNameLines) ? labelNameLines : 0,
                 LabelCurrencyDisplay,
-                LabelCurrencyCase));
+                LabelCurrencyCase,
+                LabelPriceCurrencyMode));
         }
         catch (Exception ex)
         {
@@ -1004,6 +1010,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             UsePrinterGapCalibration = UsePrinterGapCalibration,
             LabelCurrencyDisplay = LabelCurrencyDisplay,
             LabelCurrencyCase = LabelCurrencyCase,
+            LabelPriceCurrencyMode = LabelPriceCurrencyMode,
             LabelNameLines = int.TryParse(LabelNameLines, out var nameLines) ? nameLines : 0,
             LabelDefaultWithPrice = LabelDefaultWithPrice,
             LabelAllowPriceOverride = LabelAllowPriceOverride,

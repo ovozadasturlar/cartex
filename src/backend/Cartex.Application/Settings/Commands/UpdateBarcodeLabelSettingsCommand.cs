@@ -12,7 +12,8 @@ public record UpdateBarcodeLabelSettingsCommand(
     bool ShowSku,
     int NameLines,
     string CurrencyDisplay,
-    string CurrencyCase) : ICommand<Unit>;
+    string CurrencyCase,
+    string PriceCurrencyMode) : ICommand<Unit>;
 
 public sealed class UpdateBarcodeLabelSettingsCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateBarcodeLabelSettingsCommand, Unit>
@@ -26,7 +27,8 @@ public sealed class UpdateBarcodeLabelSettingsCommandHandler(ISettingsService se
             ShowSku = request.ShowSku,
             NameLines = request.NameLines,
             CurrencyDisplay = request.CurrencyDisplay,
-            CurrencyCase = request.CurrencyCase
+            CurrencyCase = request.CurrencyCase,
+            PriceCurrencyMode = request.PriceCurrencyMode
         };
         audit.Add("settings", "settings", null, new { section = "barcodeLabel" });
         await settings.SetAsync(SettingKeys.BarcodeLabel, value, cancellationToken);
@@ -41,5 +43,6 @@ public sealed class UpdateBarcodeLabelSettingsCommandValidator : AbstractValidat
         RuleFor(x => x.NameLines).InclusiveBetween(0, 2);
         RuleFor(x => x.CurrencyDisplay).Must(x => x is "symbol" or "code");
         RuleFor(x => x.CurrencyCase).Must(x => x is "original" or "upper" or "lower");
+        RuleFor(x => x.PriceCurrencyMode).Must(x => x is "product" or "default");
     }
 }

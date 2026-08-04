@@ -191,7 +191,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _settingsApi = settingsApi;
-        BarcodePrint = new BarcodeLabelSession(barcodesApi, labels, printer, toast);
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, toast);
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);

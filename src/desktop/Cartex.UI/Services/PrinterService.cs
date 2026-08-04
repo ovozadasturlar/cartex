@@ -48,6 +48,7 @@ public sealed record PrinterSettings
     public bool UsePrinterGapCalibration { get; init; }
     public string? LabelCurrencyDisplay { get; init; }
     public string? LabelCurrencyCase { get; init; }
+    public string? LabelPriceCurrencyMode { get; init; }
     public int LabelNameLines { get; init; } = 2;
     public bool LabelDefaultWithPrice { get; init; }
     public bool LabelAllowPriceOverride { get; init; } = true;
@@ -126,6 +127,7 @@ public interface IPrinterService
     PrinterCapabilities GetPrinterCapabilities(string? printerName);
     PrinterSettings GetSettings();
     void SaveSettings(PrinterSettings settings);
+    void CacheBarcodeLabelSettings(BarcodeLabelSettingsDto settings);
     bool AutoPrintEnabled { get; }
     string? BarcodePrinter { get; }
     ReceiptPrintOptions? ReceiptOptions { get; set; }
@@ -193,6 +195,17 @@ public sealed class PrinterService : IPrinterService
         }
         catch { }
     }
+
+    public void CacheBarcodeLabelSettings(BarcodeLabelSettingsDto settings) => SaveSettings(_settings with
+    {
+        LabelDefaultWithPrice = settings.DefaultWithPrice,
+        LabelAllowPriceOverride = settings.AllowPriceOverride,
+        LabelShowSku = settings.ShowSku,
+        LabelNameLines = settings.NameLines,
+        LabelCurrencyDisplay = settings.CurrencyDisplay,
+        LabelCurrencyCase = settings.CurrencyCase,
+        LabelPriceCurrencyMode = settings.PriceCurrencyMode
+    });
 
     public bool AutoPrintEnabled =>
         _settings.AutoPrintReceipt &&

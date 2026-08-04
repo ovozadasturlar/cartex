@@ -210,7 +210,11 @@ public sealed record PrintJobDto(
     DateTime CreatedAt,
     DateTime? CompletedAt,
     string? ErrorCode,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    string? Summary = null,
+    string? RequestedByName = null,
+    string? AssignedDeviceName = null,
+    string? AssignedPrinterName = null);
 
 public sealed record AssignedPrintJobDto(
     long Id,

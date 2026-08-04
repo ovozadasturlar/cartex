@@ -31,14 +31,37 @@ public sealed partial class NetworkRouteEndpointItem(PrinterEndpointDto endpoint
     [ObservableProperty] private int _priority;
 }
 
+public sealed class NetworkPrintJobItem(PrintJobDto job, bool allowCancel, bool allowRetry)
+{
+    public long Id => job.Id;
+    public string Kind => job.Kind.ToString();
+    public string Status => job.Status.ToString();
+    public string Summary => string.IsNullOrWhiteSpace(job.Summary) ? $"{job.SourceType} #{job.SourceId}" : job.Summary;
+    public string CreatedText => job.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss");
+    public string RequestedText => string.Join(" · ", new[] { job.RequestedByName, job.RequestedDeviceName, job.RequestedClient }
+        .Where(x => !string.IsNullOrWhiteSpace(x)));
+    public string TargetText => string.Join(" · ", new[] { job.AssignedDeviceName, job.AssignedPrinterName }
+        .Where(x => !string.IsNullOrWhiteSpace(x)));
+    public string CopiesText => $"×{job.Copies}";
+    public string? ErrorText => string.IsNullOrWhiteSpace(job.ErrorMessage) ? job.ErrorCode : job.ErrorMessage;
+    public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
+    public bool CanCancel => allowCancel && job.Status is PrintJobStatus.Pending or PrintJobStatus.Assigned;
+    public bool CanRetry => allowRetry && job.Status is PrintJobStatus.Failed or PrintJobStatus.Cancelled;
+}
+
 public partial class PrintingViewModel
 {
-    public bool CanViewPrintNetwork => _auth.HasPermission("printing.nodes.view")
-        && _auth.HasPermission("printing.routes.view");
+    public bool CanViewPrintNetwork => (_auth.HasPermission("printing.nodes.view")
+        && _auth.HasPermission("printing.routes.view")) || CanViewPrintJobs;
     public bool CanManagePrintNodes => _auth.HasPermission("printing.nodes.manage");
     public bool CanEditPrintRoutes => _auth.HasPermission("printing.routes.edit");
+    public bool CanViewPrintRoutes => _auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view");
+    public bool CanViewPrintJobs => _auth.HasPermission("printing.jobs.viewOwn|printing.jobs.viewBranch");
+    public bool CanCancelPrintJobs => _auth.HasPermission("printing.jobs.cancel");
+    public bool CanRetryPrintJobs => _auth.HasPermission("printing.jobs.retry");
     public ObservableCollection<NetworkPrintNodeItem> NetworkNodes { get; } = [];
     public ObservableCollection<NetworkRouteEndpointItem> NetworkEndpoints { get; } = [];
+    public ObservableCollection<NetworkPrintJobItem> NetworkJobs { get; } = [];
     public IReadOnlyList<PrintJobKind> NetworkKinds { get; } = Enum.GetValues<PrintJobKind>();
     public IReadOnlyList<PrintRoutingMode> NetworkRoutingModes { get; } = Enum.GetValues<PrintRoutingMode>();
     public IReadOnlyList<PrintStickyMode> NetworkStickyModes { get; } = Enum.GetValues<PrintStickyMode>();
@@ -57,22 +80,42 @@ public partial class PrintingViewModel
     [ObservableProperty] private decimal _networkAssignmentTimeoutSeconds = 20;
     [ObservableProperty] private bool _networkAvailable;
 
-    partial void OnSelectedNetworkKindChanged(PrintJobKind value) => ApplyNetworkPolicy();
+    public bool IsNetworkReceipt => SelectedNetworkKind == PrintJobKind.Receipt;
+    public bool IsNetworkBarcode => SelectedNetworkKind == PrintJobKind.BarcodeLabel;
+    public bool IsNetworkZReport => SelectedNetworkKind == PrintJobKind.ZReport;
+    public bool IsNetworkDocument => SelectedNetworkKind == PrintJobKind.Document;
+
+    partial void OnSelectedNetworkKindChanged(PrintJobKind value)
+    {
+        OnPropertyChanged(nameof(IsNetworkReceipt));
+        OnPropertyChanged(nameof(IsNetworkBarcode));
+        OnPropertyChanged(nameof(IsNetworkZReport));
+        OnPropertyChanged(nameof(IsNetworkDocument));
+        ApplyNetworkPolicy();
+    }
+
+    [RelayCommand]
+    private void SelectNetworkKind(string value)
+    {
+        if (Enum.TryParse<PrintJobKind>(value, true, out var kind))
+            SelectedNetworkKind = kind;
+    }
 
     private async Task LoadNetworkPrintingAsync()
     {
-        if (_branch.CurrentBranchId is not long branchId
-            || !_auth.HasPermission("printing.nodes.view")
-            || !_auth.HasPermission("printing.routes.view"))
-            return;
+        if (_branch.CurrentBranchId is not long branchId) return;
         try
         {
-            var nodes = await _printingApi.GetNodesAsync(branchId);
-            _networkPolicies = await _printingApi.GetRoutesAsync(branchId);
-            NetworkNodes.Clear();
-            foreach (var node in nodes) NetworkNodes.Add(new NetworkPrintNodeItem(node));
+            if (_auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view"))
+            {
+                var nodes = await _printingApi.GetNodesAsync(branchId);
+                _networkPolicies = await _printingApi.GetRoutesAsync(branchId);
+                NetworkNodes.Clear();
+                foreach (var node in nodes) NetworkNodes.Add(new NetworkPrintNodeItem(node));
+                ApplyNetworkPolicy();
+            }
             NetworkAvailable = true;
-            ApplyNetworkPolicy();
+            await LoadNetworkJobsAsync();
         }
         catch
         {
@@ -146,6 +189,19 @@ public partial class PrintingViewModel
         SortNetworkEndpoints();
     }
 
+    public void ReorderNetworkEndpoint(NetworkRouteEndpointItem? source, NetworkRouteEndpointItem? target)
+    {
+        if (source is null || target is null || ReferenceEquals(source, target) || !source.IsSelected || !target.IsSelected)
+            return;
+        var oldIndex = NetworkEndpoints.IndexOf(source);
+        var newIndex = NetworkEndpoints.IndexOf(target);
+        if (oldIndex < 0 || newIndex < 0) return;
+        NetworkEndpoints.Move(oldIndex, newIndex);
+        var priority = 1;
+        foreach (var endpoint in NetworkEndpoints.Where(x => x.IsSelected))
+            endpoint.Priority = priority++;
+    }
+
     private void SortNetworkEndpoints()
     {
         var sorted = NetworkEndpoints.OrderByDescending(x => x.IsSelected).ThenBy(x => x.Priority)
@@ -195,4 +251,55 @@ public partial class PrintingViewModel
         PrintJobKind.Document => PrintCapability.Document,
         _ => PrintCapability.None
     };
+
+    [RelayCommand]
+    private Task RefreshNetworkJobsAsync() => LoadNetworkJobsAsync();
+
+    [RelayCommand]
+    private async Task CancelNetworkJobAsync(NetworkPrintJobItem? item)
+    {
+        if (item is null || !item.CanCancel) return;
+        try
+        {
+            await _printingApi.CancelAsync(item.Id);
+            await LoadNetworkJobsAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
+
+    [RelayCommand]
+    private async Task RetryNetworkJobAsync(NetworkPrintJobItem? item)
+    {
+        if (item is null || !item.CanRetry) return;
+        try
+        {
+            await _printingApi.RetryAsync(item.Id);
+            await LoadNetworkJobsAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
+
+    private async Task LoadNetworkJobsAsync()
+    {
+        NetworkJobs.Clear();
+        if (!CanViewPrintJobs || _branch.CurrentBranchId is not long branchId) return;
+        try
+        {
+            var jobs = await _printingApi.GetJobsAsync(branchId, 50);
+            foreach (var job in jobs)
+                NetworkJobs.Add(new NetworkPrintJobItem(job, CanCancelPrintJobs, CanRetryPrintJobs));
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
 }

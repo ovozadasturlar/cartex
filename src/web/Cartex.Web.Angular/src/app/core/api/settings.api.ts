@@ -105,6 +105,7 @@ export interface BarcodeLabelSettings {
   nameLines: number;
   currencyDisplay: 'symbol' | 'code';
   currencyCase: 'original' | 'upper' | 'lower';
+  priceCurrencyMode: 'product' | 'default';
 }
 
 export interface ReminderSettings {

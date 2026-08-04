@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -61,14 +62,33 @@ interface EndpointChoice {
   priority: number;
 }
 
+interface PrintJob {
+  id: number;
+  kind: string;
+  status: string;
+  summary: string | null;
+  sourceType: string;
+  sourceId: string;
+  copies: number;
+  requestedByName: string | null;
+  requestedDeviceName: string | null;
+  requestedClient: string | null;
+  assignedDeviceName: string | null;
+  assignedPrinterName: string | null;
+  createdAt: string;
+  errorMessage: string | null;
+  errorCode: string | null;
+}
+
 @Component({
   selector: 'app-printing',
-  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule, TranslocoModule, PageHeader],
+  imports: [DatePipe, FormsModule, MatButtonModule, MatCheckboxModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule, TranslocoModule, PageHeader],
   template: `
     <ng-container *transloco="let t">
       <cx-page-header title="Tarmoq printerlari" subtitle="Chek, barkod, Z-hisobot va hujjatlarni turli qurilmalardagi printerlarga yo‘naltirish" />
       @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-      <div class="layout">
+      <div class="layout" [class.jobs-only]="!canViewRoutes">
+        @if (canViewRoutes) {
         <section class="cx-card panel">
           <div class="head"><h3>Print qurilmalari</h3><mat-icon>devices</mat-icon></div>
           @for (node of nodes(); track node.id) {
@@ -89,21 +109,25 @@ interface EndpointChoice {
             <button matButton="filled" (click)="saveNodes()"><mat-icon>save</mat-icon>Qurilmalarni saqlash</button>
           }
         </section>
+        }
 
         <section class="cx-card panel route">
+          @if (canViewRoutes) {
           <div class="head"><h3>Print turi bo‘yicha yo‘naltirish</h3><mat-icon>alt_route</mat-icon></div>
-          <div class="fields two">
-            <label>Print turi<select [(ngModel)]="kind" (ngModelChange)="applyPolicy()">@for (item of kinds; track item) { <option [value]="item">{{ item }}</option> }</select></label>
-            <label>Yo‘naltirish rejimi<select [(ngModel)]="policy.routingMode">@for (item of routingModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+          <div class="kind-tabs">
+            @for (item of kinds; track item) {
+              <button type="button" [class.active]="kind === item" (click)="selectKind(item)">{{ kindLabel(item) }}</button>
+            }
           </div>
+          <label>Yo‘naltirish rejimi<select [(ngModel)]="policy.routingMode" title="Lokal printer, qat’iy prioritet yoki faqat lokal ishlash tartibi">@for (item of routingModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
           <div class="switches">
             <mat-slide-toggle [(ngModel)]="policy.isEnabled">Bu print turi faol</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.allowFallback">Mos printerga avtomatik o‘tish</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.requireTrustedNode">Faqat ishonchli qurilmalar</mat-slide-toggle>
           </div>
           <div class="fields two">
-            <label>Muvaffaqiyatli printer rejimi<select [(ngModel)]="policy.stickyMode">@for (item of stickyModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
-            <label>Standart bo‘lib turish vaqti (daqiqa)<input type="number" min="0" max="43200" step="0.5" [(ngModel)]="stickyMinutes" /></label>
+            <label title="Oxirgi muvaffaqiyatli printer qachongacha birinchi tanlanishini boshqaradi">Muvaffaqiyatli printer rejimi<select [(ngModel)]="policy.stickyMode">@for (item of stickyModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+            <label title="Duration rejimida muvaffaqiyatli printer qancha vaqt afzal bo‘lishi">Standart bo‘lib turish vaqti (daqiqa)<input type="number" min="0" max="43200" step="0.5" [(ngModel)]="stickyMinutes" /></label>
           </div>
           <div class="fields limits">
             <label>Maks. nusxa<input type="number" min="1" max="100" [(ngModel)]="policy.maxCopies" /></label>
@@ -111,18 +135,37 @@ interface EndpointChoice {
             <label>Nusxa / daqiqa<input type="number" min="1" max="5000" [(ngModel)]="policy.maxCopiesPerMinute" /></label>
             <label>Kutish (soniya)<input type="number" min="5" max="300" [(ngModel)]="policy.assignmentTimeoutSeconds" /></label>
           </div>
-          <h4>Printerlar prioriteti</h4>
+          <h4 title="Tanlangan printerni tutqichidan ushlab kerakli joyga suring">Printerlar tartibi</h4>
           @for (choice of choices(); track choice.endpoint.id) {
-            <div class="choice">
+            <div class="choice" [class.dragging]="draggedChoice === choice" (dragover)="$event.preventDefault()" (drop)="dropChoice(choice)">
+              <span class="grip" draggable="true" (dragstart)="startChoiceDrag(choice, $event)" title="Prioritetni o‘zgartirish uchun torting">⠿</span>
               <mat-checkbox [(ngModel)]="choice.selected" />
               <div><strong>{{ choice.endpoint.displayName }}</strong><small>{{ choice.deviceName }} · {{ choice.endpoint.status }}</small></div>
-              <input aria-label="Priority" type="number" min="1" max="1000" [(ngModel)]="choice.priority" [disabled]="!choice.selected" />
               <mat-slide-toggle [(ngModel)]="choice.enabled" [disabled]="!choice.selected" />
             </div>
           }
           @if (!choices().length) { <p class="muted">Bu tur uchun mos printer topilmadi.</p> }
           @if (canEditRoutes) {
             <button matButton="filled" (click)="saveRoute()"><mat-icon>save</mat-icon>Yo‘naltirishni saqlash</button>
+          }
+          }
+          @if (canViewJobs) {
+            <div class="jobs-head"><div><h3>Oxirgi print vazifalari</h3><small>Yuborilgan ma’lumot, qurilma, printer va bajarilish holati</small></div><button matButton (click)="loadJobs()"><mat-icon>refresh</mat-icon>Yangilash</button></div>
+            <div class="jobs">
+              @for (job of jobs(); track job.id) {
+                <article class="job">
+                  <div class="job-head"><strong>{{ job.kind }}</strong><span>{{ job.status }}</span><small>×{{ job.copies }} · {{ job.createdAt | date:'dd.MM.yyyy HH:mm:ss' }}</small></div>
+                  <p>{{ job.summary || job.sourceType + ' #' + job.sourceId }}</p>
+                  <small>{{ job.requestedByName }} · {{ job.requestedDeviceName }} · {{ job.requestedClient }}</small>
+                  <small>{{ job.assignedDeviceName }} · {{ job.assignedPrinterName }}</small>
+                  @if (job.errorMessage || job.errorCode) { <small class="error">{{ job.errorMessage || job.errorCode }}</small> }
+                  <div class="job-actions">
+                    @if (canRetryJobs && (job.status === 'Failed' || job.status === 'Cancelled')) { <button matButton (click)="retryJob(job)">Qayta urinish</button> }
+                    @if (canCancelJobs && (job.status === 'Pending' || job.status === 'Assigned')) { <button matButton (click)="cancelJob(job)">Bekor qilish</button> }
+                  </div>
+                </article>
+              }
+            </div>
           }
         </section>
       </div>
@@ -131,6 +174,7 @@ interface EndpointChoice {
   styles: `
     :host { display: block; }
     .layout { display: grid; grid-template-columns: minmax(300px, 430px) minmax(500px, 1fr); gap: 16px; }
+    .layout.jobs-only { grid-template-columns: minmax(0, 900px); }
     .panel { padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
     .head, .node-title, .toggles, .choice { display: flex; align-items: center; gap: 12px; }
     .head { justify-content: space-between; } h3, h4 { margin: 0; } .node-title span { margin-left: auto; color: var(--cx-text-3); font-size: 12px; }
@@ -142,7 +186,15 @@ interface EndpointChoice {
     input, select { min-height: 40px; border: 1px solid var(--cx-border); border-radius: 8px; padding: 7px 10px; background: var(--cx-surface); color: var(--cx-text); }
     .switches { display: flex; gap: 18px; flex-wrap: wrap; }
     .choice { border: 1px solid var(--cx-border); border-radius: 9px; padding: 9px; }
-    .choice div { flex: 1; display: flex; min-width: 0; flex-direction: column; } .choice input { width: 76px; }
+    .choice div { flex: 1; display: flex; min-width: 0; flex-direction: column; }
+    .grip { cursor: grab; color: var(--cx-text-3); font-size: 21px; user-select: none; } .choice.dragging { opacity: .55; }
+    .kind-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .kind-tabs button { min-height: 40px; border: 1px solid var(--cx-border); border-radius: 8px; background: transparent; color: var(--cx-text-1); cursor: pointer; }
+    .kind-tabs button.active { border-color: var(--cx-brand); background: var(--cx-brand-soft); color: var(--cx-brand); }
+    .jobs-head, .job-head, .job-actions { display: flex; align-items: center; gap: 8px; } .jobs-head { justify-content: space-between; border-top: 1px solid var(--cx-border); padding-top: 16px; }
+    .jobs { display: grid; gap: 8px; max-height: 560px; overflow: auto; } .job { border: 1px solid var(--cx-border); border-radius: 9px; padding: 11px; display: grid; gap: 4px; }
+    .job p { margin: 3px 0; } .job-head small { margin-left: auto; } .job-head span { border-radius: 12px; padding: 2px 8px; background: var(--cx-surface-2); font-size: 11px; }
+    .job-actions { justify-content: flex-end; } .error { color: #dc2626; }
     button { align-self: flex-end; }
     @media (max-width: 1050px) { .layout { grid-template-columns: 1fr; } }
     @media (max-width: 650px) { .two, .limits { grid-template-columns: 1fr; } .choice { flex-wrap: wrap; } .endpoint { flex-direction: column; } }
@@ -155,9 +207,14 @@ export class Printing implements OnInit {
   private readonly auth = inject(AuthService);
   readonly canManageNodes = this.auth.hasPermission('printing.nodes.manage');
   readonly canEditRoutes = this.auth.hasPermission('printing.routes.edit');
+  readonly canViewRoutes = this.auth.hasPermission('printing.nodes.view') && this.auth.hasPermission('printing.routes.view');
+  readonly canViewJobs = this.auth.hasPermission('printing.jobs.viewOwn|printing.jobs.viewBranch');
+  readonly canCancelJobs = this.auth.hasPermission('printing.jobs.cancel');
+  readonly canRetryJobs = this.auth.hasPermission('printing.jobs.retry');
   readonly loading = signal(true);
   readonly nodes = signal<PrintNode[]>([]);
   readonly choices = signal<EndpointChoice[]>([]);
+  readonly jobs = signal<PrintJob[]>([]);
   readonly kinds = ['Receipt', 'BarcodeLabel', 'ZReport', 'Document'];
   readonly routingModes = ['LocalFirst', 'PriorityOnly', 'LocalOnly'];
   readonly stickyModes = ['Disabled', 'Duration', 'UntilFailure', 'Permanent'];
@@ -166,19 +223,23 @@ export class Printing implements OnInit {
   kind = 'Receipt';
   stickyMinutes = 10;
   policy: RoutingPolicy = this.defaultPolicy();
+  draggedChoice: EndpointChoice | null = null;
 
   async ngOnInit(): Promise<void> {
     try {
       const context = await lastValueFrom(this.http.get<{ defaultBranchId: number; branches: { id: number }[] }>('/api/auth/context'));
       this.branchId = context.defaultBranchId || context.branches[0]?.id || 0;
       if (!this.branchId) return;
-      const [nodes, policies] = await Promise.all([
-        lastValueFrom(this.http.get<PrintNode[]>('/api/printing/nodes', { params: { branchId: this.branchId } })),
-        lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
-      ]);
-      this.nodes.set(nodes);
-      this.policies = policies;
-      this.applyPolicy();
+      if (this.canViewRoutes) {
+        const [nodes, policies] = await Promise.all([
+          lastValueFrom(this.http.get<PrintNode[]>('/api/printing/nodes', { params: { branchId: this.branchId } })),
+          lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
+        ]);
+        this.nodes.set(nodes);
+        this.policies = policies;
+        this.applyPolicy();
+      }
+      if (this.canViewJobs) await this.loadJobs();
     } catch (error) {
       this.notify.error(error);
     } finally {
@@ -196,6 +257,42 @@ export class Printing implements OnInit {
         const target = existing.get(endpoint.id);
         return { endpoint, deviceName: node.name, selected: !!target, enabled: target?.isEnabled ?? true, priority: target?.priority ?? 1000 };
       })).sort((a, b) => Number(b.selected) - Number(a.selected) || a.priority - b.priority));
+  }
+
+  selectKind(kind: string): void { this.kind = kind; this.applyPolicy(); }
+  kindLabel(kind: string): string { return ({ Receipt: 'Chek', BarcodeLabel: 'Etiketka', ZReport: 'Z-hisobot', Document: 'Hujjat' } as Record<string, string>)[kind] ?? kind; }
+
+  startChoiceDrag(choice: EndpointChoice, event: DragEvent): void {
+    if (!choice.selected) { event.preventDefault(); return; }
+    this.draggedChoice = choice;
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  dropChoice(target: EndpointChoice): void {
+    const source = this.draggedChoice;
+    this.draggedChoice = null;
+    if (!source || source === target || !source.selected || !target.selected) return;
+    const choices = [...this.choices()];
+    const from = choices.indexOf(source);
+    const to = choices.indexOf(target);
+    choices.splice(to, 0, choices.splice(from, 1)[0]);
+    choices.filter((choice) => choice.selected).forEach((choice, index) => choice.priority = index + 1);
+    this.choices.set(choices);
+  }
+
+  async loadJobs(): Promise<void> {
+    try { this.jobs.set(await lastValueFrom(this.http.get<PrintJob[]>('/api/printing/jobs', { params: { branchId: this.branchId, take: 50 } }))); }
+    catch (error) { this.notify.error(error); }
+  }
+
+  async cancelJob(job: PrintJob): Promise<void> {
+    try { await lastValueFrom(this.http.post(`/api/printing/jobs/${job.id}/cancel`, {})); await this.loadJobs(); }
+    catch (error) { this.notify.error(error); }
+  }
+
+  async retryJob(job: PrintJob): Promise<void> {
+    try { await lastValueFrom(this.http.post(`/api/printing/jobs/${job.id}/retry`, {})); await this.loadJobs(); }
+    catch (error) { this.notify.error(error); }
   }
 
   async saveNodes(): Promise<void> {
@@ -223,4 +320,3 @@ export class Printing implements OnInit {
     return { kind: this.kind, isEnabled: true, routingMode: 'LocalFirst', allowFallback: true, stickyMode: 'Duration', stickyDurationSeconds: 600, maxCopies: 3, maxJobsPerMinute: 20, maxCopiesPerMinute: 30, assignmentTimeoutSeconds: 20, requireTrustedNode: true, targets: [] };
   }
 }
-

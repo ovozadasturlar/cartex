@@ -62,6 +62,11 @@ public partial class ScanViewModel : ObservableObject
     public bool CanPrintBarcode => _printDispatcher.CanPrintBarcode;
     public bool HasProductActions => CanEditProduct || CanPrintBarcode;
     public string PrintTotalText => $"{Loc.Instance["total"]}: {PrintCopies}";
+    public string BarcodePreviewPrice => PrintWithPrice && _product is not null
+        ? FormatLabelPrice(_product, _labelSettings.Current)
+        : string.Empty;
+    public string BarcodePreviewSku => _labelSettings.Current.ShowSku ? _productSku ?? string.Empty : string.Empty;
+    public int BarcodePreviewNameLines => _labelSettings.Current.NameLines;
 
     private ProductLookupDto? _product;
     private decimal _step = 1;
@@ -162,6 +167,7 @@ public partial class ScanViewModel : ObservableObject
         try
         {
             var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: false);
+            ProductActionsExpanded = false;
             _product = product;
             _activeBarcode = barcode;
             _productSku = null;
@@ -263,6 +269,7 @@ public partial class ScanViewModel : ObservableObject
             CanOverridePrintPrice = settings.AllowPriceOverride;
             ProductActionsExpanded = false;
             IsBarcodeMode = true;
+            NotifyBarcodePreviewChanged();
         }
         catch (Exception ex)
         {
@@ -462,6 +469,7 @@ public partial class ScanViewModel : ObservableObject
     private async Task PickResultAsync(SearchRow row)
     {
         var p = row.Product;
+        ProductActionsExpanded = false;
         try
         {
             _product = await BuildLookupAsync(p, 1);
@@ -574,7 +582,10 @@ public partial class ScanViewModel : ObservableObject
 
     private static string FormatLabelPrice(ProductLookupDto product, Cartex.Shared.Models.Settings.BarcodeLabelSettingsDto settings)
     {
-        var code = product.PriceCurrency ?? product.BaseCurrency ?? "UZS";
+        var useDefaultCurrency = settings.PriceCurrencyMode == "default";
+        var code = useDefaultCurrency
+            ? product.BaseCurrency ?? "UZS"
+            : product.PriceCurrency ?? product.BaseCurrency ?? "UZS";
         var metadata = CurrencyCatalog.Resolve(code);
         var token = settings.CurrencyDisplay == "code" ? metadata.Code : metadata.Symbol;
         token = settings.CurrencyCase switch
@@ -583,7 +594,9 @@ public partial class ScanViewModel : ObservableObject
             "lower" => token.ToLowerInvariant(),
             _ => token
         };
-        var amount = product.OriginalSellingPrice ?? product.SellingPrice;
+        var amount = useDefaultCurrency
+            ? product.SellingPrice
+            : product.OriginalSellingPrice ?? product.SellingPrice;
         var number = amount.ToString($"N{metadata.DecimalDigits}");
         var position = settings.CurrencyDisplay == "code" ? "Suffix" : metadata.SymbolPosition;
         return position == "Prefix" ? $"{token}{number}" : $"{number} {token}";
@@ -609,6 +622,15 @@ public partial class ScanViewModel : ObservableObject
     private static partial Regex HandoffCode();
 
     partial void OnPrintCopiesChanged(int value) => OnPropertyChanged(nameof(PrintTotalText));
+    partial void OnPrintWithPriceChanged(bool value) => OnPropertyChanged(nameof(BarcodePreviewPrice));
+    partial void OnSelectedBarcodeChanged(BarcodeChoice? value) => NotifyBarcodePreviewChanged();
+
+    private void NotifyBarcodePreviewChanged()
+    {
+        OnPropertyChanged(nameof(BarcodePreviewPrice));
+        OnPropertyChanged(nameof(BarcodePreviewSku));
+        OnPropertyChanged(nameof(BarcodePreviewNameLines));
+    }
 }
 
 public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
