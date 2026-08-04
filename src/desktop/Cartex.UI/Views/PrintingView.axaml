@@ -1540,13 +1540,15 @@
                                             CornerRadius="8" Padding="10" Margin="0,0,0,7"
                                             DragDrop.AllowDrop="True" DragDrop.DragOver="OnEndpointDragOver"
                                             DragDrop.Drop="OnEndpointDrop">
-                                        <Grid ColumnDefinitions="Auto,Auto,*,110,Auto">
-                                            <TextBlock Text="⠿" Cursor="SizeAll" FontSize="20" Margin="0,0,8,0"
+                                        <Grid ColumnDefinitions="28,36,*,110,Auto">
+                                            <TextBlock Grid.Column="0" Text="⠿" Cursor="SizeAll" FontSize="20"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        Foreground="{DynamicResource TextMuted}"
                                                        PointerPressed="OnEndpointDragHandlePressed"
                                                        ToolTip.Tip="Prioritetni o‘zgartirish uchun torting" />
-                                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="2" Margin="10,0">
+                                            <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="2" Margin="8,0">
                                                 <TextBlock Text="{Binding PrinterName}" FontWeight="SemiBold" />
                                                 <TextBlock Text="{Binding DeviceName}" FontSize="11"
                                                            Foreground="{DynamicResource TextSecondary}" />
