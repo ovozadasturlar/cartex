@@ -125,12 +125,12 @@
                 IsVisible="{Binding OverlayVisible}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto">
 
-                <Grid Grid.Row="0" HeightRequest="200" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                <Grid Grid.Row="0" HeightRequest="178" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
                     <ctl:Thumb Source="{Binding ImageUrl}" Size="200" Stretch="True" Radius="0"
                                IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}" />
-                    <Grid Padding="24,14" IsVisible="{Binding IsBarcodeMode}">
+                    <Grid Padding="18,10" IsVisible="{Binding IsBarcodeMode}">
                         <Border BackgroundColor="White" Stroke="#D8DEE8" StrokeThickness="1"
-                                WidthRequest="220" HeightRequest="165" HorizontalOptions="Center"
+                                WidthRequest="200" HeightRequest="150" HorizontalOptions="Center"
                                 StrokeShape="RoundRectangle 10" Padding="0">
                             <local:BarcodePreviewView Code="{Binding SelectedBarcode.Code}"
                                                       ProductName="{Binding ProductName}"
@@ -216,7 +216,7 @@
                             IsVisible="{Binding CanReceiveStock}" />
                 </VerticalStackLayout>
 
-                <VerticalStackLayout Grid.Row="2" Grid.RowSpan="2" Padding="16,0,16,16" Spacing="12"
+                <VerticalStackLayout Grid.Row="2" Grid.RowSpan="2" Padding="16,0,16,12" Spacing="8"
                                      IsVisible="{Binding IsBarcodeMode}">
                     <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                         <HorizontalStackLayout BindableLayout.ItemsSource="{Binding BarcodeChoices}" Spacing="8">
@@ -230,8 +230,6 @@
                             </BindableLayout.ItemTemplate>
                         </HorizontalStackLayout>
                     </ScrollView>
-                    <Label Text="{Binding SelectedBarcode.Code}" HorizontalTextAlignment="Center"
-                           Style="{StaticResource MutedLabel}" />
                     <Grid ColumnDefinitions="*,Auto" Padding="2,0">
                         <Label Text="{svc:T print_with_price}" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />

@@ -77,11 +77,26 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
         var modules = values.Sum(value => Patterns[value].Sum(c => c - '0'));
         var content = dirtyRect.Inflate(-12, -8);
         var previewNameLines = NameLines <= 0 ? 3 : NameLines;
-        var nameHeight = previewNameLines == 1 ? 20f : previewNameLines == 2 ? 34f : 48f;
+        var nameHeight = previewNameLines == 1 ? 16f : previewNameLines == 2 ? 30f : 44f;
         DrawName(canvas, ProductName, new RectF(content.Left, content.Top, content.Width, nameHeight), previewNameLines);
-        var footerHeight = string.IsNullOrWhiteSpace(PriceText) && string.IsNullOrWhiteSpace(Sku) ? 22f : 42f;
-        var barcodeTop = content.Top + nameHeight + 3;
-        var barcodeHeight = Math.Max(30f, content.Height - nameHeight - footerHeight - 5);
+        var y = content.Top + nameHeight;
+        canvas.FontColor = Colors.Black;
+        canvas.Font = Microsoft.Maui.Graphics.Font.Default;
+        canvas.FontSize = 9;
+        if (!string.IsNullOrWhiteSpace(Sku))
+        {
+            canvas.DrawString($"SKU: {Sku}", content.Left, y, content.Width, 13, HorizontalAlignment.Center, VerticalAlignment.Center);
+            y += 14;
+        }
+        if (!string.IsNullOrWhiteSpace(PriceText))
+        {
+            canvas.Font = Microsoft.Maui.Graphics.Font.DefaultBold;
+            canvas.FontSize = 13;
+            canvas.DrawString(PriceText, content.Left, y, content.Width, 18, HorizontalAlignment.Center, VerticalAlignment.Center);
+            y += 19;
+        }
+        var barcodeTop = y + 2;
+        var barcodeHeight = Math.Max(26f, content.Bottom - barcodeTop - 15);
         var quiet = 12f;
         var width = Math.Max(0.7f, (content.Width - quiet * 2) / modules);
         var x = content.Left + quiet;
@@ -98,18 +113,9 @@ public sealed class BarcodePreviewView : GraphicsView, IDrawable
             }
         }
 
-        canvas.FontColor = Colors.Black;
+        canvas.Font = Microsoft.Maui.Graphics.Font.Default;
         canvas.FontSize = 10;
         canvas.DrawString(Code, content.Left, barcodeTop + barcodeHeight, content.Width, 18, HorizontalAlignment.Center, VerticalAlignment.Center);
-        canvas.FontSize = 10;
-        if (!string.IsNullOrWhiteSpace(Sku))
-            canvas.DrawString(Sku, content.Left, content.Bottom - 18, content.Width * 0.48f, 18, HorizontalAlignment.Left, VerticalAlignment.Center);
-        if (!string.IsNullOrWhiteSpace(PriceText))
-        {
-            canvas.FontSize = 13;
-            canvas.Font = Microsoft.Maui.Graphics.Font.DefaultBold;
-            canvas.DrawString(PriceText, content.Left + content.Width * 0.42f, content.Bottom - 20, content.Width * 0.58f, 20, HorizontalAlignment.Right, VerticalAlignment.Center);
-        }
     }
 
     private static BindableProperty PreviewProperty<T>(string name, T defaultValue) => BindableProperty.Create(
