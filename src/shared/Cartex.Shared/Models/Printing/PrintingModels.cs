@@ -60,7 +60,8 @@ public enum PrintJobStatus
     Completed,
     Failed,
     ManualReview,
-    Cancelled
+    Cancelled,
+    Rejected
 }
 
 public enum PrintAttemptStatus
@@ -128,6 +129,19 @@ public sealed record PrintNodeDto(
 
 public sealed record SetPrintNodeStateRequest(bool IsEnabled, bool IsTrusted);
 
+public sealed record PrintRequesterDeviceDto(
+    long Id,
+    long BranchId,
+    string DeviceId,
+    string Name,
+    string? Client,
+    bool IsTrusted,
+    DateTime FirstSeenAt,
+    DateTime LastSeenAt,
+    string? LastUsername);
+
+public sealed record SetPrintRequesterDeviceTrustRequest(bool IsTrusted);
+
 public sealed record SetPrinterEndpointRequest(
     bool IsEnabled,
     PrintCapability Capabilities,
@@ -160,6 +174,7 @@ public sealed record PrintRoutingPolicyDto(
     int MaxCopiesPerMinute,
     int AssignmentTimeoutSeconds,
     bool RequireTrustedNode,
+    bool RequireTrustedRequesterDevice,
     IReadOnlyList<PrintRouteTargetDto> Targets);
 
 public sealed record PrintRouteTargetRequest(long EndpointId, int Priority, bool IsEnabled);
@@ -175,6 +190,7 @@ public sealed record UpdatePrintRoutingPolicyRequest(
     int MaxCopiesPerMinute,
     int AssignmentTimeoutSeconds,
     bool RequireTrustedNode,
+    bool RequireTrustedRequesterDevice,
     IReadOnlyList<PrintRouteTargetRequest> Targets);
 
 public sealed record CreatePrintJobRequest(

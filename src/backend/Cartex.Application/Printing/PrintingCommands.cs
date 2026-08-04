@@ -156,6 +156,26 @@ public sealed class SetPrintNodeStateCommandHandler(IApplicationDbContext db, IC
     }
 }
 
+public record SetPrintRequesterDeviceTrustCommand(long Id, SetPrintRequesterDeviceTrustRequest Request) : ICommand<Unit>;
+
+public sealed class SetPrintRequesterDeviceTrustCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IAuditService audit) : IRequestHandler<SetPrintRequesterDeviceTrustCommand, Unit>
+{
+    public async Task<Unit> Handle(SetPrintRequesterDeviceTrustCommand command, CancellationToken cancellationToken)
+    {
+        var device = await db.PrintRequesterDevices.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
+            ?? throw new NotFoundException("Print requester device not found.");
+        PrintingGuard.EnsureBranch(currentUser, device.BranchId);
+        device.IsTrusted = command.Request.IsTrusted;
+        audit.Add(device.IsTrusted ? "printRequesterTrust" : "printRequesterUntrust", "print_requester_devices",
+            device.Id, new { device.DeviceId, device.Name, device.Client });
+        await db.SaveChangesAsync(cancellationToken);
+        return Unit.Value;
+    }
+}
+
 public record SetPrinterEndpointCommand(long Id, SetPrinterEndpointRequest Request) : ICommand<Unit>;
 
 public sealed class SetPrinterEndpointCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
@@ -236,6 +256,7 @@ public sealed class UpdatePrintRoutingPolicyCommandHandler(
         policy.MaxCopiesPerMinute = request.MaxCopiesPerMinute;
         policy.AssignmentTimeoutSeconds = request.AssignmentTimeoutSeconds;
         policy.RequireTrustedNode = request.RequireTrustedNode;
+        policy.RequireTrustedRequesterDevice = request.RequireTrustedRequesterDevice;
         if (policy.StickyMode == DomainStickyMode.Disabled)
         {
             policy.StickyEndpointId = null;
@@ -296,8 +317,6 @@ public sealed class CreatePrintJobCommandHandler(
             PrintingGuard.EnsureDevice(currentUser, request.DeviceId);
 
         var kind = (DomainJobKind)request.Kind;
-        var payloadJson = await PrintingPayloadValidator.ValidateAsync(
-            db, settings, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
         var policy = await routing.GetOrCreatePolicyAsync(request.BranchId, kind, cancellationToken);
         if (!policy.IsEnabled) throw new BusinessRuleException("Printing is disabled for this print type.");
         if (request.Copies < 1 || request.Copies > policy.MaxCopies)
@@ -319,7 +338,32 @@ public sealed class CreatePrintJobCommandHandler(
             || (recent?.Copies ?? 0) + request.Copies > policy.MaxCopiesPerMinute)
             throw new BusinessRuleException("Printing rate limit exceeded.");
 
-        var deviceId = currentUser.DeviceId ?? request.DeviceId;
+        var now = DateTime.UtcNow;
+        var deviceId = (currentUser.DeviceId ?? request.DeviceId)?.Trim();
+        PrintRequesterDevice? requesterDevice = null;
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            requesterDevice = await db.PrintRequesterDevices.FirstOrDefaultAsync(
+                x => x.BranchId == request.BranchId && x.DeviceId == deviceId, cancellationToken);
+            if (requesterDevice is null)
+            {
+                requesterDevice = new PrintRequesterDevice
+                {
+                    BranchId = request.BranchId,
+                    DeviceId = deviceId,
+                    FirstSeenAt = now
+                };
+                db.PrintRequesterDevices.Add(requesterDevice);
+            }
+            var deviceName = currentUser.DeviceName ?? request.DeviceName;
+            requesterDevice.Name = string.IsNullOrWhiteSpace(deviceName) ? deviceId : deviceName.Trim();
+            requesterDevice.Client = currentUser.Client;
+            requesterDevice.LastSeenAt = now;
+            requesterDevice.LastUserId = currentUser.UserId;
+            requesterDevice.LastIpAddress = currentUser.IpAddress;
+        }
+
+        var trustedRequester = !policy.RequireTrustedRequesterDevice || requesterDevice?.IsTrusted == true;
         var originNodeId = string.IsNullOrWhiteSpace(deviceId)
             ? null
             : await db.PrintNodes.Where(x => x.DeviceId == deviceId && x.BranchId == request.BranchId)
@@ -330,7 +374,7 @@ public sealed class CreatePrintJobCommandHandler(
             Kind = kind,
             SourceType = request.SourceType.Trim(),
             SourceId = request.SourceId.Trim(),
-            PayloadJson = payloadJson,
+            PayloadJson = "{}",
             IdempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim(),
             Copies = request.Copies,
             IsReprint = request.IsReprint,
@@ -344,6 +388,18 @@ public sealed class CreatePrintJobCommandHandler(
             CorrelationId = currentUser.CorrelationId,
             OriginNodeId = originNodeId
         };
+        if (!trustedRequester)
+        {
+            job.Status = DomainJobStatus.Rejected;
+            job.ErrorCode = "UNTRUSTED_REQUEST_DEVICE";
+            job.ErrorMessage = "This device is not trusted to send print jobs.";
+            db.PrintJobs.Add(job);
+            await db.SaveChangesAsync(cancellationToken);
+            return PrintingMapper.Job(job);
+        }
+
+        job.PayloadJson = await PrintingPayloadValidator.ValidateAsync(
+            db, settings, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
         db.PrintJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
         if (await routing.AssignAsync(job, cancellationToken) && job.AssignedNodeId is not null)
@@ -799,6 +855,7 @@ internal static class PrintingMapper
             (Cartex.Shared.Models.Printing.PrintStickyMode)policy.StickyMode, policy.StickyDurationSeconds,
             policy.StickyEndpointId, policy.StickyUntil, policy.MaxCopies, policy.MaxJobsPerMinute,
             policy.MaxCopiesPerMinute, policy.AssignmentTimeoutSeconds, policy.RequireTrustedNode,
+            policy.RequireTrustedRequesterDevice,
             policy.Targets.OrderBy(x => x.Priority).Select(x => new PrintRouteTargetDto(
                 x.PrinterEndpointId, x.PrinterEndpoint.PrintNode.Name, x.PrinterEndpoint.DisplayName,
                 (Cartex.Shared.Models.Printing.PrintCapability)x.PrinterEndpoint.Capabilities, x.Priority,

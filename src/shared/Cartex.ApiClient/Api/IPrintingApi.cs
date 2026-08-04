@@ -17,6 +17,12 @@ public interface IPrintingApi
     [Put("/api/printing/nodes/{id}")]
     Task SetNodeAsync(long id, [Body] SetPrintNodeStateRequest request, CancellationToken cancellationToken = default);
 
+    [Get("/api/printing/requesters")]
+    Task<List<PrintRequesterDeviceDto>> GetRequesterDevicesAsync([Query] long branchId, CancellationToken cancellationToken = default);
+
+    [Put("/api/printing/requesters/{id}")]
+    Task SetRequesterDeviceAsync(long id, [Body] SetPrintRequesterDeviceTrustRequest request, CancellationToken cancellationToken = default);
+
     [Put("/api/printing/endpoints/{id}")]
     Task SetEndpointAsync(long id, [Body] SetPrinterEndpointRequest request, CancellationToken cancellationToken = default);
 

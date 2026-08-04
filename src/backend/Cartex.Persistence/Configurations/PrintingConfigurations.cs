@@ -65,6 +65,22 @@ public class PrintRouteTargetConfiguration : IEntityTypeConfiguration<PrintRoute
     }
 }
 
+public class PrintRequesterDeviceConfiguration : IEntityTypeConfiguration<PrintRequesterDevice>
+{
+    public void Configure(EntityTypeBuilder<PrintRequesterDevice> builder)
+    {
+        builder.ToTable("print_requester_devices");
+        builder.Property(x => x.DeviceId).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Client).HasMaxLength(20);
+        builder.Property(x => x.LastIpAddress).HasMaxLength(64);
+        builder.HasIndex(x => new { x.BranchId, x.DeviceId }).IsUnique();
+        builder.HasIndex(x => new { x.BranchId, x.IsTrusted });
+        builder.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.LastUser).WithMany().HasForeignKey(x => x.LastUserId).OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
 public class PrintJobConfiguration : IEntityTypeConfiguration<PrintJob>
 {
     public void Configure(EntityTypeBuilder<PrintJob> builder)

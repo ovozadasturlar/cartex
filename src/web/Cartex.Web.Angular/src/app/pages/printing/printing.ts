@@ -33,6 +33,16 @@ interface PrintNode {
   endpoints: PrinterEndpoint[];
 }
 
+interface PrintRequesterDevice {
+  id: number;
+  deviceId: string;
+  name: string;
+  client: string | null;
+  isTrusted: boolean;
+  lastSeenAt: string;
+  lastUsername: string | null;
+}
+
 interface RouteTarget {
   endpointId: number;
   priority: number;
@@ -51,6 +61,7 @@ interface RoutingPolicy {
   maxCopiesPerMinute: number;
   assignmentTimeoutSeconds: number;
   requireTrustedNode: boolean;
+  requireTrustedRequesterDevice: boolean;
   targets: RouteTarget[];
 }
 
@@ -104,6 +115,13 @@ interface PrintJob {
               }
             </article>
           }
+          <div class="requesters-title"><strong>Print so‘rovi qurilmalari</strong><small>Telefon, web va desktop</small></div>
+          @for (device of requesterDevices(); track device.id) {
+            <article class="node requester">
+              <div class="node-title"><strong>{{ device.name }}</strong><mat-slide-toggle [(ngModel)]="device.isTrusted" [disabled]="!canManageNodes">Ishonchli</mat-slide-toggle></div>
+              <small>{{ device.lastUsername }} · {{ device.client }} · {{ device.lastSeenAt | date:'dd.MM.yyyy HH:mm' }}</small>
+            </article>
+          }
           @if (!nodes().length && !loading()) { <p class="muted">Hali print-host ro‘yxatdan o‘tmagan.</p> }
           @if (canManageNodes) {
             <button matButton="filled" (click)="saveNodes()"><mat-icon>save</mat-icon>Qurilmalarni saqlash</button>
@@ -124,6 +142,7 @@ interface PrintJob {
             <mat-slide-toggle [(ngModel)]="policy.isEnabled">Bu print turi faol</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.allowFallback">Mos printerga avtomatik o‘tish</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.requireTrustedNode">Faqat ishonchli qurilmalar</mat-slide-toggle>
+            <mat-slide-toggle [(ngModel)]="policy.requireTrustedRequesterDevice">Faqat ishonchli qurilmalardan so‘rov</mat-slide-toggle>
           </div>
           <div class="fields two">
             <label title="Oxirgi muvaffaqiyatli printer qachongacha birinchi tanlanishini boshqaradi">Muvaffaqiyatli printer rejimi<select [(ngModel)]="policy.stickyMode">@for (item of stickyModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
@@ -188,9 +207,11 @@ interface PrintJob {
     .choice { border: 1px solid var(--cx-border); border-radius: 9px; padding: 9px; }
     .choice div { flex: 1; display: flex; min-width: 0; flex-direction: column; }
     .grip { cursor: grab; color: var(--cx-text-3); font-size: 21px; user-select: none; } .choice.dragging { opacity: .55; }
-    .kind-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .kind-tabs button { min-height: 40px; border: 1px solid var(--cx-border); border-radius: 8px; background: transparent; color: var(--cx-text-1); cursor: pointer; }
-    .kind-tabs button.active { border-color: var(--cx-brand); background: var(--cx-brand-soft); color: var(--cx-brand); }
+    .kind-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--cx-border); }
+    .kind-tabs button { min-height: 42px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--cx-text-2); cursor: pointer; }
+    .kind-tabs button:hover { background: var(--cx-surface-2); }
+    .kind-tabs button.active { border-bottom-color: var(--cx-brand); color: var(--cx-brand); }
+    .requesters-title { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--cx-border); }
     .jobs-head, .job-head, .job-actions { display: flex; align-items: center; gap: 8px; } .jobs-head { justify-content: space-between; border-top: 1px solid var(--cx-border); padding-top: 16px; }
     .jobs { display: grid; gap: 8px; max-height: 560px; overflow: auto; } .job { border: 1px solid var(--cx-border); border-radius: 9px; padding: 11px; display: grid; gap: 4px; }
     .job p { margin: 3px 0; } .job-head small { margin-left: auto; } .job-head span { border-radius: 12px; padding: 2px 8px; background: var(--cx-surface-2); font-size: 11px; }
@@ -213,6 +234,7 @@ export class Printing implements OnInit {
   readonly canRetryJobs = this.auth.hasPermission('printing.jobs.retry');
   readonly loading = signal(true);
   readonly nodes = signal<PrintNode[]>([]);
+  readonly requesterDevices = signal<PrintRequesterDevice[]>([]);
   readonly choices = signal<EndpointChoice[]>([]);
   readonly jobs = signal<PrintJob[]>([]);
   readonly kinds = ['Receipt', 'BarcodeLabel', 'ZReport', 'Document'];
@@ -231,11 +253,13 @@ export class Printing implements OnInit {
       this.branchId = context.defaultBranchId || context.branches[0]?.id || 0;
       if (!this.branchId) return;
       if (this.canViewRoutes) {
-        const [nodes, policies] = await Promise.all([
+        const [nodes, requesterDevices, policies] = await Promise.all([
           lastValueFrom(this.http.get<PrintNode[]>('/api/printing/nodes', { params: { branchId: this.branchId } })),
+          lastValueFrom(this.http.get<PrintRequesterDevice[]>('/api/printing/requesters', { params: { branchId: this.branchId } })),
           lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
         ]);
         this.nodes.set(nodes);
+        this.requesterDevices.set(requesterDevices);
         this.policies = policies;
         this.applyPolicy();
       }
@@ -299,6 +323,8 @@ export class Printing implements OnInit {
     try {
       for (const node of this.nodes())
         await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isEnabled: node.isEnabled, isTrusted: node.isTrusted }));
+      for (const device of this.requesterDevices())
+        await lastValueFrom(this.http.put(`/api/printing/requesters/${device.id}`, { isTrusted: device.isTrusted }));
       this.notify.success(this.transloco.translate('success'));
     } catch (error) { this.notify.error(error); }
   }
@@ -317,6 +343,6 @@ export class Printing implements OnInit {
   }
 
   private defaultPolicy(): RoutingPolicy {
-    return { kind: this.kind, isEnabled: true, routingMode: 'LocalFirst', allowFallback: true, stickyMode: 'Duration', stickyDurationSeconds: 600, maxCopies: 3, maxJobsPerMinute: 20, maxCopiesPerMinute: 30, assignmentTimeoutSeconds: 20, requireTrustedNode: true, targets: [] };
+    return { kind: this.kind, isEnabled: true, routingMode: 'LocalFirst', allowFallback: true, stickyMode: 'Duration', stickyDurationSeconds: 600, maxCopies: 3, maxJobsPerMinute: 20, maxCopiesPerMinute: 30, assignmentTimeoutSeconds: 20, requireTrustedNode: true, requireTrustedRequesterDevice: false, targets: [] };
   }
 }

@@ -61,6 +61,7 @@ public class PrintRoutingPolicy : AuditableEntity, IBranchScoped
     public int MaxCopiesPerMinute { get; set; } = 30;
     public int AssignmentTimeoutSeconds { get; set; } = 20;
     public bool RequireTrustedNode { get; set; } = true;
+    public bool RequireTrustedRequesterDevice { get; set; }
     public ICollection<PrintRouteTarget> Targets { get; set; } = [];
 }
 
@@ -72,6 +73,21 @@ public class PrintRouteTarget : BaseEntity
     public PrinterEndpoint PrinterEndpoint { get; set; } = null!;
     public int Priority { get; set; }
     public bool IsEnabled { get; set; } = true;
+}
+
+public class PrintRequesterDevice : AuditableEntity, IBranchScoped
+{
+    public long BranchId { get; set; }
+    public Branch Branch { get; set; } = null!;
+    public string DeviceId { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public string? Client { get; set; }
+    public bool IsTrusted { get; set; }
+    public DateTime FirstSeenAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
+    public long? LastUserId { get; set; }
+    public User? LastUser { get; set; }
+    public string? LastIpAddress { get; set; }
 }
 
 public class PrintJob : BaseEntity, IBranchScoped

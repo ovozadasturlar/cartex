@@ -28,6 +28,23 @@ public sealed class GetPrintNodesQueryHandler(IApplicationDbContext db, ICurrent
     }
 }
 
+public record GetPrintRequesterDevicesQuery(long BranchId) : IRequest<IReadOnlyList<PrintRequesterDeviceDto>>;
+
+public sealed class GetPrintRequesterDevicesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    : IRequestHandler<GetPrintRequesterDevicesQuery, IReadOnlyList<PrintRequesterDeviceDto>>
+{
+    public async Task<IReadOnlyList<PrintRequesterDeviceDto>> Handle(GetPrintRequesterDevicesQuery request, CancellationToken cancellationToken)
+    {
+        PrintingGuard.EnsureBranch(currentUser, request.BranchId);
+        return await db.PrintRequesterDevices.AsNoTracking()
+            .Where(x => x.BranchId == request.BranchId)
+            .OrderByDescending(x => x.LastSeenAt)
+            .Select(x => new PrintRequesterDeviceDto(x.Id, x.BranchId, x.DeviceId, x.Name, x.Client,
+                x.IsTrusted, x.FirstSeenAt, x.LastSeenAt, x.LastUser == null ? null : x.LastUser.Username))
+            .ToListAsync(cancellationToken);
+    }
+}
+
 public record GetPrintRoutingPoliciesQuery(long BranchId) : IRequest<IReadOnlyList<PrintRoutingPolicyDto>>;
 
 public sealed class GetPrintRoutingPoliciesQueryHandler(

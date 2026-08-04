@@ -31,6 +31,17 @@ public sealed partial class NetworkRouteEndpointItem(PrinterEndpointDto endpoint
     [ObservableProperty] private int _priority;
 }
 
+public sealed partial class NetworkRequesterDeviceItem(PrintRequesterDeviceDto source) : ObservableObject
+{
+    public long Id => source.Id;
+    public string Name => source.Name;
+    public string DeviceId => source.DeviceId;
+    public string Detail => string.Join(" · ", new[] { source.LastUsername, source.Client }
+        .Where(x => !string.IsNullOrWhiteSpace(x)));
+    public string LastSeenText => source.LastSeenAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    [ObservableProperty] private bool _isTrusted = source.IsTrusted;
+}
+
 public sealed class NetworkPrintJobItem(PrintJobDto job, bool allowCancel, bool allowRetry)
 {
     public long Id => job.Id;
@@ -60,6 +71,7 @@ public partial class PrintingViewModel
     public bool CanCancelPrintJobs => _auth.HasPermission("printing.jobs.cancel");
     public bool CanRetryPrintJobs => _auth.HasPermission("printing.jobs.retry");
     public ObservableCollection<NetworkPrintNodeItem> NetworkNodes { get; } = [];
+    public ObservableCollection<NetworkRequesterDeviceItem> NetworkRequesterDevices { get; } = [];
     public ObservableCollection<NetworkRouteEndpointItem> NetworkEndpoints { get; } = [];
     public ObservableCollection<NetworkPrintJobItem> NetworkJobs { get; } = [];
     public IReadOnlyList<PrintJobKind> NetworkKinds { get; } = Enum.GetValues<PrintJobKind>();
@@ -73,6 +85,7 @@ public partial class PrintingViewModel
     [ObservableProperty] private bool _networkPolicyEnabled = true;
     [ObservableProperty] private bool _networkAllowFallback = true;
     [ObservableProperty] private bool _networkRequireTrusted = true;
+    [ObservableProperty] private bool _networkRequireTrustedRequester;
     [ObservableProperty] private decimal _networkStickyMinutes = 10;
     [ObservableProperty] private decimal _networkMaxCopies = 3;
     [ObservableProperty] private decimal _networkMaxJobsPerMinute = 20;
@@ -109,9 +122,12 @@ public partial class PrintingViewModel
             if (_auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view"))
             {
                 var nodes = await _printingApi.GetNodesAsync(branchId);
+                var requesterDevices = await _printingApi.GetRequesterDevicesAsync(branchId);
                 _networkPolicies = await _printingApi.GetRoutesAsync(branchId);
                 NetworkNodes.Clear();
                 foreach (var node in nodes) NetworkNodes.Add(new NetworkPrintNodeItem(node));
+                NetworkRequesterDevices.Clear();
+                foreach (var device in requesterDevices) NetworkRequesterDevices.Add(new NetworkRequesterDeviceItem(device));
                 ApplyNetworkPolicy();
             }
             NetworkAvailable = true;
@@ -132,6 +148,7 @@ public partial class PrintingViewModel
         NetworkStickyMode = policy.StickyMode;
         NetworkAllowFallback = policy.AllowFallback;
         NetworkRequireTrusted = policy.RequireTrustedNode;
+        NetworkRequireTrustedRequester = policy.RequireTrustedRequesterDevice;
         NetworkStickyMinutes = Math.Max(0, policy.StickyDurationSeconds / 60m);
         NetworkMaxCopies = policy.MaxCopies;
         NetworkMaxJobsPerMinute = policy.MaxJobsPerMinute;
@@ -163,6 +180,8 @@ public partial class PrintingViewModel
         {
             foreach (var node in NetworkNodes)
                 await _printingApi.SetNodeAsync(node.Id, new SetPrintNodeStateRequest(node.IsEnabled, node.IsTrusted));
+            foreach (var device in NetworkRequesterDevices)
+                await _printingApi.SetRequesterDeviceAsync(device.Id, new SetPrintRequesterDeviceTrustRequest(device.IsTrusted));
             await LoadNetworkPrintingAsync();
             _toast.Success(L["success"]);
         }
@@ -230,6 +249,7 @@ public partial class PrintingViewModel
                     (int)Math.Clamp(NetworkMaxCopiesPerMinute, 1, 5000),
                     (int)Math.Clamp(NetworkAssignmentTimeoutSeconds, 5, 300),
                     NetworkRequireTrusted,
+                    NetworkRequireTrustedRequester,
                     targets));
             var index = _networkPolicies.FindIndex(x => x.Kind == updated.Kind);
             if (index >= 0) _networkPolicies[index] = updated;

@@ -78,6 +78,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PrinterEndpoint> PrinterEndpoints => Set<PrinterEndpoint>();
     public DbSet<PrintRoutingPolicy> PrintRoutingPolicies => Set<PrintRoutingPolicy>();
     public DbSet<PrintRouteTarget> PrintRouteTargets => Set<PrintRouteTarget>();
+    public DbSet<PrintRequesterDevice> PrintRequesterDevices => Set<PrintRequesterDevice>();
     public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
     public DbSet<PrintAttempt> PrintAttempts => Set<PrintAttempt>();
 

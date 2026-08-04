@@ -42,6 +42,19 @@ public sealed class PrintingController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("requesters")]
+    [HasPermission(AppPermissions.Printing.NodesView)]
+    public async Task<ActionResult<IReadOnlyList<PrintRequesterDeviceDto>>> GetRequesters(long branchId, CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new GetPrintRequesterDevicesQuery(branchId), cancellationToken));
+
+    [HttpPut("requesters/{id:long}")]
+    [HasPermission(AppPermissions.Printing.NodesManage)]
+    public async Task<IActionResult> SetRequester(long id, SetPrintRequesterDeviceTrustRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new SetPrintRequesterDeviceTrustCommand(id, request), cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("endpoints/{id:long}")]
     [HasPermission(AppPermissions.Printing.NodesManage)]
     public async Task<IActionResult> SetEndpoint(long id, SetPrinterEndpointRequest request, CancellationToken cancellationToken)
@@ -64,6 +77,8 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     public async Task<ActionResult<PrintJobDto>> CreateJob(CreatePrintJobRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new CreatePrintJobCommand(request), cancellationToken);
+        if (result.Status == PrintJobStatus.Rejected)
+            return StatusCode(StatusCodes.Status403Forbidden, result);
         return CreatedAtAction(nameof(GetJobs), new { branchId = result.BranchId }, result);
     }
 

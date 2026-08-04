@@ -398,14 +398,17 @@
         </Style>
         <Style Selector="Button.kindtab">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="14,10" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="Button.kindtab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
         </Style>
         <Style Selector="Button.kindtab.active">
-            <Setter Property="Background" Value="{DynamicResource SidebarItemActive}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryBrush}" />
         </Style>
@@ -1409,7 +1412,7 @@
 
         <Grid Grid.Row="2" IsVisible="{Binding IsNetworkSection}" ColumnDefinitions="Auto,16,*">
             <Border Grid.Column="0" Classes="printcard" Width="420" IsVisible="{Binding CanViewPrintRoutes}">
-                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <Grid RowDefinitions="Auto,Auto,*,Auto,*,Auto">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="sectiontitle" Text="Print qurilmalari" />
                         <TextBlock Text="Har bir kompyuter va undagi printerlar alohida endpoint sifatida ro‘yxatdan o‘tadi."
@@ -1462,7 +1465,37 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                    <Button Grid.Row="3" Classes="primary" Margin="0,12,0,0"
+                    <StackPanel Grid.Row="3" Margin="0,12,0,8" Spacing="3">
+                        <TextBlock Classes="sectiontitle" Text="Print so‘rovi qurilmalari" />
+                        <TextBlock Text="Telefon, web va desktop’dan so‘rov yuborgan qurilmalar"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="11.5" />
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding NetworkRequesterDevices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NetworkRequesterDeviceItem">
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="10" Margin="0,0,0,7">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="10.5"
+                                                           Foreground="{DynamicResource TextSecondary}" />
+                                                <TextBlock Text="{Binding LastSeenText}" FontSize="10"
+                                                           Foreground="{DynamicResource TextMuted}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="Ishonchli" VerticalAlignment="Center" />
+                                                <ToggleSwitch IsChecked="{Binding IsTrusted}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Button Grid.Row="5" Classes="primary" Margin="0,12,0,0"
                             Content="Qurilmalarni saqlash" Command="{Binding SaveNetworkNodesCommand}"
                             IsVisible="{Binding CanManagePrintNodes}" />
                 </Grid>
@@ -1473,16 +1506,18 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="14" IsVisible="{Binding CanViewPrintRoutes}">
                         <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" VerticalAlignment="Center" />
-                        <Grid ColumnDefinitions="*,8,*,8,*,8,*">
-                            <Button Classes="kindtab" Classes.active="{Binding IsNetworkReceipt}" Content="Chek"
-                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="Receipt" />
-                            <Button Grid.Column="2" Classes="kindtab" Classes.active="{Binding IsNetworkBarcode}" Content="Etiketka"
-                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="BarcodeLabel" />
-                            <Button Grid.Column="4" Classes="kindtab" Classes.active="{Binding IsNetworkZReport}" Content="Z-hisobot"
-                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="ZReport" />
-                            <Button Grid.Column="6" Classes="kindtab" Classes.active="{Binding IsNetworkDocument}" Content="Hujjat"
-                                    Command="{Binding SelectNetworkKindCommand}" CommandParameter="Document" />
-                        </Grid>
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                            <Grid ColumnDefinitions="*,*,*,*">
+                                <Button Classes="kindtab" Classes.active="{Binding IsNetworkReceipt}" Content="Chek"
+                                        Command="{Binding SelectNetworkKindCommand}" CommandParameter="Receipt" />
+                                <Button Grid.Column="1" Classes="kindtab" Classes.active="{Binding IsNetworkBarcode}" Content="Etiketka"
+                                        Command="{Binding SelectNetworkKindCommand}" CommandParameter="BarcodeLabel" />
+                                <Button Grid.Column="2" Classes="kindtab" Classes.active="{Binding IsNetworkZReport}" Content="Z-hisobot"
+                                        Command="{Binding SelectNetworkKindCommand}" CommandParameter="ZReport" />
+                                <Button Grid.Column="3" Classes="kindtab" Classes.active="{Binding IsNetworkDocument}" Content="Hujjat"
+                                        Command="{Binding SelectNetworkKindCommand}" CommandParameter="Document" />
+                            </Grid>
+                        </Border>
                         <StackPanel Spacing="6">
                                 <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
                                 <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingMode}"
@@ -1500,6 +1535,11 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="Faqat ishonchli qurilmalardan foydalanish" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkRequireTrusted}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Faqat ishonchli qurilmalardan print so‘rovi qabul qilish"
+                                       VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkRequireTrustedRequester}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,12,*">
                             <StackPanel Spacing="6">

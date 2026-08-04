@@ -58,7 +58,8 @@ public enum PrintJobStatus
     Completed,
     Failed,
     ManualReview,
-    Cancelled
+    Cancelled,
+    Rejected
 }
 
 public enum PrintAttemptStatus

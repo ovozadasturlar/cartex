@@ -65,6 +65,7 @@ public interface IApplicationDbContext
     DbSet<PrinterEndpoint> PrinterEndpoints { get; }
     DbSet<PrintRoutingPolicy> PrintRoutingPolicies { get; }
     DbSet<PrintRouteTarget> PrintRouteTargets { get; }
+    DbSet<PrintRequesterDevice> PrintRequesterDevices { get; }
     DbSet<PrintJob> PrintJobs { get; }
     DbSet<PrintAttempt> PrintAttempts { get; }
 
