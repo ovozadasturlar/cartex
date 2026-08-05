@@ -169,6 +169,7 @@ public partial class MainViewModel : ViewModelBase
         Connectivity.Start();
         ServiceLocator.Resolve<OfflineSyncService>().Start();
         _ = ServiceLocator.Resolve<PrintHostService>().StartAsync();
+        _ = ServiceLocator.Resolve<PrintStatusHubService>().EnsureStartedAsync();
         _ = Branch.LoadAsync();
         _ = CheckOnboardingAsync();
 

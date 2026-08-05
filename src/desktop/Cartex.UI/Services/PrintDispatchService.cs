@@ -9,13 +9,15 @@ namespace Cartex.UI.Services;
 public sealed class PrintDispatchService(
     IPrintingApi printing,
     AuthService auth,
-    BranchContextService branch)
+    BranchContextService branch,
+    PrintStatusHubService statusHub,
+    IToastService toast)
 {
     private readonly AuthService _auth = auth;
     private readonly BranchContextService _branch = branch;
 
-    public Task<bool> TryReceiptAsync(ReceiptDto receipt, bool reprint, CancellationToken cancellationToken = default) =>
-        TryCreateAsync(
+    public Task PrintReceiptAsync(ReceiptDto receipt, bool reprint, CancellationToken cancellationToken = default) =>
+        CreateAsync(
             PrintJobKind.Receipt,
             "receipt_token",
             receipt.ReceiptToken,
@@ -25,8 +27,8 @@ public sealed class PrintDispatchService(
             reprint ? $"receipt-reprint:{receipt.ReceiptToken}:{Guid.NewGuid():N}" : $"receipt:{receipt.ReceiptToken}",
             cancellationToken);
 
-    public Task<bool> TryZReportAsync(ZReportDto report, bool reprint, CancellationToken cancellationToken = default) =>
-        TryCreateAsync(
+    public Task PrintZReportAsync(ZReportDto report, bool reprint, CancellationToken cancellationToken = default) =>
+        CreateAsync(
             PrintJobKind.ZReport,
             "shift",
             report.ShiftId.ToString(),
@@ -36,7 +38,7 @@ public sealed class PrintDispatchService(
             reprint ? $"z-reprint:{report.ShiftId}:{Guid.NewGuid():N}" : $"z:{report.ShiftId}",
             cancellationToken);
 
-    public Task<bool> TryBarcodeAsync(
+    public Task PrintBarcodeAsync(
         string code,
         string name,
         int copies,
@@ -45,7 +47,7 @@ public sealed class PrintDispatchService(
         bool withPrice,
         bool showSku,
         CancellationToken cancellationToken = default) =>
-        TryCreateAsync(
+        CreateAsync(
             PrintJobKind.BarcodeLabel,
             "barcode",
             code,
@@ -56,7 +58,7 @@ public sealed class PrintDispatchService(
             cancellationToken,
             copies);
 
-    private async Task<bool> TryCreateAsync(
+    private async Task CreateAsync(
         PrintJobKind kind,
         string sourceType,
         string sourceId,
@@ -74,28 +76,29 @@ public sealed class PrintDispatchService(
             PrintJobKind.ZReport => "printing.z_reports.print",
             _ => "printing.documents.print"
         };
-        if (!_auth.HasPermission("printing.remote.use") || !_auth.HasPermission(permission)
-            || _branch.CurrentBranchId is not long branchId)
-            return false;
-        try
-        {
-            await printing.CreateJobAsync(new CreatePrintJobRequest(
-                branchId,
-                kind,
-                sourceType,
-                sourceId,
-                payload,
-                copies,
-                reprint,
-                reason,
-                idempotencyKey,
-                _auth.DeviceId,
-                _auth.DeviceName), cancellationToken);
-            return true;
-        }
-        catch (Refit.ApiException exception) when ((int)exception.StatusCode is 403 or 404)
-        {
-            return false;
-        }
+        if (!_auth.HasPermission("printing.remote.use"))
+            throw new UnauthorizedAccessException("Tarmoq orqali chop etish ruxsati kerak.");
+        if (!_auth.HasPermission(permission))
+            throw new UnauthorizedAccessException("Ushbu turdagi chop etish ruxsati kerak.");
+        if (_branch.CurrentBranchId is not long branchId)
+            throw new InvalidOperationException("Chop etish uchun filial tanlanmagan.");
+
+        await statusHub.EnsureStartedAsync();
+        var job = await printing.CreateJobAsync(new CreatePrintJobRequest(
+            branchId,
+            kind,
+            sourceType,
+            sourceId,
+            payload,
+            copies,
+            reprint,
+            reason,
+            idempotencyKey,
+            _auth.DeviceId,
+            _auth.DeviceName), cancellationToken);
+        if (job.Status == PrintJobStatus.Completed)
+            toast.Success(string.Format(LocalizationManager.Instance["print_completed"], PrintNotificationText.Kind(kind), string.Empty));
+        else
+            toast.Info(string.Format(LocalizationManager.Instance["print_queued"], PrintNotificationText.Kind(kind)));
     }
 }
