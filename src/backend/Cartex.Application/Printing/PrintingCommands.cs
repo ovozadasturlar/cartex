@@ -604,7 +604,7 @@ public sealed class SubmitPrintJobCommandHandler(IApplicationDbContext db, ICurr
     }
 }
 
-public sealed class CompletePrintJobCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+public sealed class CompletePrintJobCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IPrintJobNotifier notifier)
     : IRequestHandler<CompletePrintJobCommand, Unit>
 {
     public async Task<Unit> Handle(CompletePrintJobCommand command, CancellationToken cancellationToken)
@@ -627,6 +627,21 @@ public sealed class CompletePrintJobCommandHandler(IApplicationDbContext db, ICu
             policy.StickyUntil = policy.StickyMode == DomainStickyMode.Duration ? now.AddSeconds(policy.StickyDurationSeconds) : null;
         }
         await db.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(job.RequestedDeviceId))
+        {
+            try
+            {
+                await notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
+                    job.Id,
+                    (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
+                    Cartex.Shared.Models.Printing.PrintJobStatus.Completed,
+                    endpoint.DisplayName,
+                    null), cancellationToken);
+            }
+            catch
+            {
+            }
+        }
         return Unit.Value;
     }
 }
@@ -654,6 +669,21 @@ public sealed class FailPrintJobCommandHandler(
             attempt.Status = DomainAttemptStatus.UnknownAfterSubmit;
             job.Status = DomainJobStatus.ManualReview;
             await db.SaveChangesAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(job.RequestedDeviceId))
+            {
+                try
+                {
+                    await notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
+                        job.Id,
+                        (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
+                        Cartex.Shared.Models.Printing.PrintJobStatus.ManualReview,
+                        endpoint.DisplayName,
+                        job.ErrorMessage), cancellationToken);
+                }
+                catch
+                {
+                }
+            }
             return Unit.Value;
         }
 

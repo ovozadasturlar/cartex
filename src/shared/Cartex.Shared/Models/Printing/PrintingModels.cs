@@ -232,6 +232,13 @@ public sealed record PrintJobDto(
     string? AssignedDeviceName = null,
     string? AssignedPrinterName = null);
 
+public sealed record PrintJobStatusUpdate(
+    long JobId,
+    PrintJobKind Kind,
+    PrintJobStatus Status,
+    string? PrinterName,
+    string? ErrorMessage);
+
 public sealed record AssignedPrintJobDto(
     long Id,
     long BranchId,

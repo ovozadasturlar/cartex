@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Shared.Models.Printing;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Cartex.Api.Hubs;
@@ -6,8 +7,11 @@ namespace Cartex.Api.Hubs;
 public sealed class SignalRCPrintJobNotifier(IHubContext<PrintingHub> hub) : IPrintJobNotifier
 {
     public Task NotifyJobAvailableAsync(string deviceId, long jobId, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(Group(deviceId)).SendAsync("PrintJobAvailable", jobId, cancellationToken);
+        hub.Clients.Group(HostGroup(deviceId)).SendAsync("PrintJobAvailable", jobId, cancellationToken);
 
-    public static string Group(string deviceId) => $"print:{deviceId}";
+    public Task NotifyJobStatusChangedAsync(string deviceId, PrintJobStatusUpdate update, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(RequesterGroup(deviceId)).SendAsync("PrintJobStatusChanged", update, cancellationToken);
+
+    public static string HostGroup(string deviceId) => $"print-host:{deviceId}";
+    public static string RequesterGroup(string deviceId) => $"print-requester:{deviceId}";
 }
-

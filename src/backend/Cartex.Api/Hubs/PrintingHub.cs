@@ -21,6 +21,15 @@ public sealed class PrintingHub(IApplicationDbContext db, ICurrentUser currentUs
         if (node is null) throw new HubException("Print node is not registered.");
         try { Cartex.Application.Printing.PrintingCredential.Ensure(node, hostToken); }
         catch { throw new HubException("Invalid print host credential."); }
-        await Groups.AddToGroupAsync(Context.ConnectionId, SignalRCPrintJobNotifier.Group(deviceId));
+        await Groups.AddToGroupAsync(Context.ConnectionId, SignalRCPrintJobNotifier.HostGroup(deviceId));
+    }
+
+    public Task SubscribeRequester(string deviceId)
+    {
+        if (!currentUser.HasPermission(AppPermissions.Printing.RemoteUse))
+            throw new HubException("Remote printing permission is required.");
+        if (string.IsNullOrWhiteSpace(currentUser.DeviceId) || currentUser.DeviceId != deviceId)
+            throw new HubException("Device identity mismatch.");
+        return Groups.AddToGroupAsync(Context.ConnectionId, SignalRCPrintJobNotifier.RequesterGroup(deviceId));
     }
 }
