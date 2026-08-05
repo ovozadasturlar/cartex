@@ -407,11 +407,15 @@ public sealed class PrinterService : IPrinterService
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || imagePages.Count == 0)
             return;
 
+        var physicalPaper = _settings.ReceiptMode is "a4" or "a5"
+            ? _settings.ReceiptMode
+            : (_settings.DocumentPaperSize is "a5" ? "a5" : "a4");
+
         WindowsImagePrinter.Print(
             printerName,
             imagePages,
-            _settings.DocumentPaperSize is "a5" ? "a5" : "a4",
-            DocumentPrintLayout.ResolveOutputFormat("document", _settings.DocumentPaperSize ?? "a4"),
+            physicalPaper,
+            DocumentPrintLayout.ResolveOutputFormat("document", physicalPaper),
             _settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
             _settings.DocumentPagesPerSheet is 2 or 4 ? _settings.DocumentPagesPerSheet : 1,
             Math.Clamp(copies, 1, 100));

@@ -8,24 +8,36 @@ namespace Cartex.UI.Services;
 internal static class WindowsImagePrinter
 {
     private const int DmOutBuffer = 2;
-    private const int DmInBuffer = 8;
-    private const int DmOrientation = 0x00000001;
-    private const int DmPaperSize = 0x00000002;
-    private const int DmColor = 0x00000800;
-    private const short DmOrientPortrait = 1;
-    private const short DmOrientLandscape = 2;
-    private const short DmColorMonochrome = 1;
-    private const short DmColorColor = 2;
-    private const short DmPaperA4 = 9;
-    private const short DmPaperA5 = 11;
+    private const int DmInBuffer  = 8;
+    private const int DmOrientation    = 0x00000001;
+    private const int DmPaperSize      = 0x00000002;
+    private const int DmPaperLength    = 0x00000004;
+    private const int DmPaperWidth     = 0x00000008;
+    private const int DmDefaultSource  = 0x00000200;
+    private const int DmColor          = 0x00000800;
+    private const short DmOrientPortrait    = 1;
+    private const short DmOrientLandscape   = 2;
+    private const short DmColorMonochrome   = 1;
+    private const short DmColorColor        = 2;
+    private const short DmBinFormSource     = 15;
     private const short DcColorDevice = 32;
-    private const int HorzRes = 8;
-    private const int VertRes = 10;
+    private const int HorzRes    = 8;
+    private const int VertRes    = 10;
     private const int LogPixelsX = 88;
     private const int LogPixelsY = 90;
     private const int DibRgbColors = 0;
-    private const int SrcCopy = 0x00CC0020;
-    private const int Halftone = 4;
+    private const int SrcCopy      = 0x00CC0020;
+    private const int Halftone     = 4;
+
+    private static readonly IReadOnlyDictionary<string, short> PaperCodeMap =
+        new Dictionary<string, short>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["a3"]     = 8,
+            ["a4"]     = 9,
+            ["a5"]     = 11,
+            ["letter"] = 1,
+            ["legal"]  = 5,
+        };
 
     public static bool SupportsColor(string? printerName)
     {
@@ -111,11 +123,14 @@ internal static class WindowsImagePrinter
         IntPtr dc = IntPtr.Zero;
         try
         {
+            var paperCode  = PaperCodeMap.TryGetValue(paperSize, out var code) ? code : (short)9;
+            var dimensions = DocumentPrintLayout.GetPaperDimensions(paperSize, orientation);
             devMode = CreateDevMode(
                 printer,
                 printerName,
-                paperSize == "a5" ? DmPaperA5 : DmPaperA4,
+                paperCode,
                 orientation == "landscape" ? DmOrientLandscape : DmOrientPortrait,
+                dimensions,
                 supportsColor);
             dc = CreateDC("WINSPOOL", printerName, null, devMode);
             if (dc == IntPtr.Zero)
@@ -209,8 +224,9 @@ internal static class WindowsImagePrinter
     private static IntPtr CreateDevMode(
         IntPtr printer,
         string printerName,
-        short paperSize,
+        short paperCode,
         short orientation,
+        PaperDimensions dimensions,
         bool supportsColor)
     {
         var size = DocumentProperties(IntPtr.Zero, printer, printerName, IntPtr.Zero, IntPtr.Zero, 0);
@@ -225,10 +241,14 @@ internal static class WindowsImagePrinter
         }
 
         var mode = Marshal.PtrToStructure<DevMode>(pointer);
-        mode.Fields |= DmOrientation | DmPaperSize | DmColor;
-        mode.Orientation = orientation;
-        mode.PaperSize = paperSize;
-        mode.Color = supportsColor ? DmColorColor : DmColorMonochrome;
+        mode.Fields        |= DmOrientation | DmPaperSize | DmPaperLength | DmPaperWidth | DmDefaultSource | DmColor;
+        mode.Orientation    = orientation;
+        mode.PaperSize      = paperCode;
+        mode.PaperLength    = (short)Math.Round(dimensions.HeightMm * 10);
+        mode.PaperWidth     = (short)Math.Round(dimensions.WidthMm  * 10);
+        mode.DefaultSource  = DmBinFormSource;
+        mode.FormName       = "";
+        mode.Color          = supportsColor ? DmColorColor : DmColorMonochrome;
         Marshal.StructureToPtr(mode, pointer, false);
 
         if (DocumentProperties(IntPtr.Zero, printer, printerName, pointer, pointer, DmInBuffer | DmOutBuffer) < 0)
@@ -283,8 +303,8 @@ internal static class WindowsImagePrinter
                     slotHeight);
                 var targetWidth = Math.Max(1, (int)Math.Floor(printSize.Width));
                 var targetHeight = Math.Max(1, (int)Math.Floor(printSize.Height));
-                var x = column * slotWidth;
-                var y = row * slotHeight;
+                var x = column * slotWidth + (slotWidth  - targetWidth)  / 2;
+                var y = row    * slotHeight + (slotHeight - targetHeight) / 2;
                 var bitmapInfo = new BitmapInfo
                 {
                     Header = new BitmapInfoHeader

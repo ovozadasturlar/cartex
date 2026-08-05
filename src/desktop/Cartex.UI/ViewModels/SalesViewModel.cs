@@ -1907,12 +1907,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         var settings = _printer.GetSettings();
         if (settings.ReceiptMode is "a4" or "a5")
         {
-            var documentFormat = DocumentPrintLayout.ResolveOutputFormat(
-                "document",
-                settings.DocumentPaperSize ?? "a4");
+            var physicalPaper     = settings.ReceiptMode is "a4" or "a5" ? settings.ReceiptMode : "a4";
+            var documentFormat    = DocumentPrintLayout.ResolveOutputFormat("document", physicalPaper);
             var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
                 settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
                 settings.DocumentPagesPerSheet);
+
             var content = await _receiptApi.GetPrintImagesAsync(
                 CurrentReceipt.ReceiptToken,
                 documentFormat,

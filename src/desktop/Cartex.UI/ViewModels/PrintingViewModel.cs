@@ -50,6 +50,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly AuthService _auth;
     private readonly IPrintingApi _printingApi;
     private readonly IRatesApi _ratesApi;
+    private readonly IReceiptApi _receiptApi;
+    private readonly ISalesApi _salesApi;
     private List<CurrencyDto> _labelPreviewCurrencies =
     [
         new("UZS", "Uzbek so'mi", true, true, true, true, 1, DateTime.UtcNow, "so'm", "Suffix", 0),
@@ -648,7 +650,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         BranchContextService branch,
         AuthService auth,
         IPrintingApi printingApi,
-        IRatesApi ratesApi)
+        IRatesApi ratesApi,
+        IReceiptApi receiptApi,
+        ISalesApi salesApi)
     {
         _printer = printer;
         _toast = toast;
@@ -659,6 +663,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _auth = auth;
         _printingApi = printingApi;
         _ratesApi = ratesApi;
+        _receiptApi = receiptApi;
+        _salesApi = salesApi;
     }
 
     public async Task LoadAsync()
@@ -885,14 +891,50 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void TestPrint()
+    private async Task TestPrint()
     {
         var targetPrinter = IsThermal ? ReceiptPrinter : DocumentPrinter;
         if (string.IsNullOrWhiteSpace(targetPrinter)) { _toast.Warning(L["error"]); return; }
         try
         {
             SaveLocalPrinterSettings();
-            _printer.PrintReceipt(CreatePreviewReceipt(), targetPrinter, (int)ReceiptCopies);
+            if (IsDocument)
+            {
+                var sales = await _salesApi.GetAllAsync(
+                    fromDate: DateTime.Today.AddDays(-30),
+                    toDate:   DateTime.Today.AddDays(1));
+                var token = sales
+                    .OrderByDescending(s => s.SaleDate)
+                    .Select(s => s.ReceiptToken)
+                    .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    _printer.PrintReceipt(CreatePreviewReceipt(), targetPrinter, (int)ReceiptCopies);
+                    _toast.Info(L["success"]);
+                    return;
+                }
+                var physicalPaper     = ReceiptMode is "a4" or "a5" ? ReceiptMode : "a4";
+                var documentFormat    = DocumentPrintLayout.ResolveOutputFormat("document", physicalPaper);
+                var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
+                    DocumentOrientation is "landscape" ? "landscape" : "portrait",
+                    DocumentPagesPerSheet);
+                var content = await _receiptApi.GetPrintImagesAsync(token, documentFormat, renderOrientation);
+                await using var package = await content.ReadAsStreamAsync();
+                using var archive = new System.IO.Compression.ZipArchive(package, System.IO.Compression.ZipArchiveMode.Read);
+                var pages = new List<byte[]>(archive.Entries.Count);
+                foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
+                {
+                    await using var input = entry.Open();
+                    using var output = new MemoryStream();
+                    await input.CopyToAsync(output);
+                    pages.Add(output.ToArray());
+                }
+                _printer.PrintDocumentImages(pages, targetPrinter, (int)ReceiptCopies);
+            }
+            else
+            {
+                _printer.PrintReceipt(CreatePreviewReceipt(), targetPrinter, (int)ReceiptCopies);
+            }
             _toast.Info(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
