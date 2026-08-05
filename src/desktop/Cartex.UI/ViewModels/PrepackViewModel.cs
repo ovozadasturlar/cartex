@@ -11,7 +11,7 @@ namespace Cartex.UI.ViewModels;
 public partial class PrepackViewModel(
     IPrepacksApi api,
     IStocksApi stocksApi,
-    IBarcodeLabelService labels,
+    PrintDispatchService printDispatch,
     IToastService toast,
     IBusyService busy) : ViewModelBase
 {
@@ -68,7 +68,7 @@ public partial class PrepackViewModel(
             {
                 var created = await api.CreateAsync(new CreatePrepacksRequest(_warehouseId, Selected.VariantId, Quantity, Count, ExpiresHours));
                 foreach (var label in created)
-                    labels.PrintLabels(label.LabelCode, $"{label.ProductName} {label.Quantity:0.###} {label.UnitName} = {label.Price:N0}", 1, null);
+                    await printDispatch.PrintBarcodeAsync(label.LabelCode, $"{label.ProductName} {label.Quantity:0.###} {label.UnitName} = {label.Price:N0}", 1, null, null, false, false);
                 toast.Success(L["prepack_printed"]);
                 await RefreshActiveAsync();
             }

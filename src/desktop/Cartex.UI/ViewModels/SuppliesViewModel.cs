@@ -104,6 +104,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly IStorageApi _storageApi;
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
+    private readonly PrintDispatchService _printDispatch;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
@@ -684,7 +685,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
-        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog,
+        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog, PrintDispatchService printDispatch,
         IFilePickerService filePicker)
     {
         _filePicker = filePicker;
@@ -702,7 +703,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _storageApi = storageApi;
         _labels = labels;
         _printer = printer;
-        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, toast);
+        _printDispatch = printDispatch;
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, printDispatch, toast);
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
@@ -949,8 +951,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         {
             var code = await _barcodesApi.GenerateAsync(variantId);
             _toast.Success($"{L["barcode"]}: {code}");
-            if (!string.IsNullOrWhiteSpace(_printer.BarcodePrinter))
-                _labels.PrintLabels(code, name, 1, _printer.BarcodePrinter);
+            await _printDispatch.PrintBarcodeAsync(code, name, 1, null, null, false, false);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

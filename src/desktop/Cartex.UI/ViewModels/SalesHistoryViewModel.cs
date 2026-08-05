@@ -176,36 +176,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         if (Receipt is null || !_auth.HasPermission("printing.receipts.reprint")) return;
         try
         {
-            if (await _printDispatch.TryReceiptAsync(Receipt, true)) return;
-            var printerSettings = _printer.GetSettings();
-            if (printerSettings.ReceiptMode is "a4" or "a5")
-            {
-                var documentFormat = DocumentPrintLayout.ResolveOutputFormat(
-                    "document",
-                    printerSettings.DocumentPaperSize ?? "a4");
-                var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
-                    printerSettings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
-                    printerSettings.DocumentPagesPerSheet);
-                var content = await _receiptApi.GetPrintImagesAsync(
-                    Receipt.ReceiptToken,
-                    documentFormat,
-                    renderOrientation);
-                await using var package = await content.ReadAsStreamAsync();
-                using var archive = new ZipArchive(package, ZipArchiveMode.Read);
-                var pages = new List<byte[]>(archive.Entries.Count);
-                foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
-                {
-                    await using var input = entry.Open();
-                    using var output = new MemoryStream();
-                    await input.CopyToAsync(output);
-                    pages.Add(output.ToArray());
-                }
-                _printer.PrintDocumentImages(pages);
-            }
-            else
-            {
-                _printer.PrintReceipt(Receipt);
-            }
+            await _printDispatch.PrintReceiptAsync(Receipt, true);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

@@ -1895,7 +1895,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         try
         {
             await PrintCurrentReceiptAsync();
-            _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -1903,34 +1902,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private async Task PrintCurrentReceiptAsync()
     {
         if (CurrentReceipt is null) return;
-        if (await _printDispatch.TryReceiptAsync(CurrentReceipt, false)) return;
-        var settings = _printer.GetSettings();
-        if (settings.ReceiptMode is "a4" or "a5")
-        {
-            var physicalPaper     = settings.ReceiptMode is "a4" or "a5" ? settings.ReceiptMode : "a4";
-            var documentFormat    = DocumentPrintLayout.ResolveOutputFormat("document", physicalPaper);
-            var renderOrientation = DocumentPrintLayout.GetReceiptOrientation(
-                settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
-                settings.DocumentPagesPerSheet);
-
-            var content = await _receiptApi.GetPrintImagesAsync(
-                CurrentReceipt.ReceiptToken,
-                documentFormat,
-                renderOrientation);
-            await using var package = await content.ReadAsStreamAsync();
-            using var archive = new ZipArchive(package, ZipArchiveMode.Read);
-            var pages = new List<byte[]>(archive.Entries.Count);
-            foreach (var entry in archive.Entries.OrderBy(x => x.FullName, StringComparer.Ordinal))
-            {
-                await using var input = entry.Open();
-                using var output = new MemoryStream();
-                await input.CopyToAsync(output);
-                pages.Add(output.ToArray());
-            }
-            _printer.PrintDocumentImages(pages);
-        }
-        else
-            _printer.PrintReceipt(CurrentReceipt);
+        await _printDispatch.PrintReceiptAsync(CurrentReceipt, false);
     }
 
     [RelayCommand]

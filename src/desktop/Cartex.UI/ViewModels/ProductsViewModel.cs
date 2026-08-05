@@ -167,7 +167,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IFilePickerService filePicker, IPrinterService printer, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog,
-        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import)
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import, PrintDispatchService printDispatch)
     {
         _cache = cache;
         Import = import;
@@ -191,7 +191,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _settingsApi = settingsApi;
-        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, toast);
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, printDispatch, toast);
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);

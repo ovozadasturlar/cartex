@@ -30,7 +30,7 @@ public sealed record BarcodeLabelTarget(
     string? CurrencySymbolPosition = null,
     int? CurrencyDecimalDigits = null);
 
-public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi ratesApi, ISettingsApi settingsApi, IBarcodeLabelService labels, IPrinterService printer, IToastService toast) : ObservableObject
+public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi ratesApi, ISettingsApi settingsApi, IBarcodeLabelService labels, IPrinterService printer, PrintDispatchService dispatch, IToastService toast) : ObservableObject
 {
     private long _variantId;
 
@@ -171,17 +171,15 @@ public partial class BarcodeLabelSession(IBarcodesApi barcodesApi, IRatesApi rat
     private void Cancel() => IsOpen = false;
 
     [RelayCommand]
-    private void Print()
+    private async Task PrintAsync()
     {
         if (string.IsNullOrWhiteSpace(Code) || Quantity < 1) return;
 
         try
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{ProductName} {barcode.Label}" : ProductName;
-            var options = LabelSize.Resolve(printer.GetSettings()) with { ShowSku = PrintWithSku };
-            labels.PrintLabels(Code, name, Quantity, null, PrintWithPrice ? PriceText : null, Sku, options);
+            await dispatch.PrintBarcodeAsync(Code, name, Quantity, PrintWithPrice ? PriceText : null, Sku, PrintWithPrice, PrintWithSku);
             IsOpen = false;
-            toast.Success(LocalizationManager.Instance["success"]);
         }
         catch (Exception ex)
         {

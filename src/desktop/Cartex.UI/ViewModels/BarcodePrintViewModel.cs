@@ -236,17 +236,14 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
         {
             var name = SelectedBarcode is { IsPack: true } barcode ? $"{SelectedProduct.Name} {barcode.Display}" : SelectedProduct.Name;
             var price = PrintWithPrice ? PriceText : null;
-            var options = LabelSize.Resolve(_printer.GetSettings()) with { ShowSku = PrintWithSku };
-            if (!await _dispatch.TryBarcodeAsync(
-                    CurrentCode,
-                    name,
-                    Quantity,
-                    price,
-                    SelectedProduct.Code,
-                    PrintWithPrice,
-                    PrintWithSku))
-                _labels.PrintLabels(CurrentCode, name, Quantity, null, price, SelectedProduct.Code, options);
-            _toast.Success(L["success"]);
+            await _dispatch.PrintBarcodeAsync(
+                CurrentCode,
+                name,
+                Quantity,
+                price,
+                SelectedProduct.Code,
+                PrintWithPrice,
+                PrintWithSku);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

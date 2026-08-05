@@ -339,8 +339,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         if (!printer.GetSettings().AutoPrintZReport || LastReport is null) return;
         try
         {
-            if (!await _printDispatch.TryZReportAsync(LastReport, false))
-                printer.PrintZReport(LastReport);
+            await _printDispatch.PrintZReportAsync(LastReport, false);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -351,9 +350,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         if (LastReport is null || !_auth.HasPermission("printing.z_reports.print")) return;
         try
         {
-            if (!await _printDispatch.TryZReportAsync(LastReport, true))
-                ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
-            _toast.Info(L["success"]);
+            await _printDispatch.PrintZReportAsync(LastReport, true);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
