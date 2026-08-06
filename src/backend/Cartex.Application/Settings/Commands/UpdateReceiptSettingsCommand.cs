@@ -20,7 +20,10 @@ public record UpdateReceiptSettingsCommand(
     bool ShowReceiptNumber = true,
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
-    bool ShowElectronicLink = true) : ICommand<Unit>;
+    bool ShowElectronicLink = true,
+    bool ShowLogo = true,
+    bool ShowCustomerPhone = true,
+    bool ShowCustomerEmail = false) : ICommand<Unit>;
 
 public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateReceiptSettingsCommand, Unit>
@@ -42,7 +45,10 @@ public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService setting
             ShowReceiptNumber = request.ShowReceiptNumber,
             ShowPaymentDetails = request.ShowPaymentDetails,
             ShowQrCode = request.ShowQrCode,
-            ShowElectronicLink = request.ShowElectronicLink
+            ShowElectronicLink = request.ShowElectronicLink,
+            ShowLogo = request.ShowLogo,
+            ShowCustomerPhone = request.ShowCustomerPhone,
+            ShowCustomerEmail = request.ShowCustomerEmail
         };
         audit.Add("settings", "settings", null, new { section = "receipt" });
         await settings.SetAsync(SettingKeys.Receipt, cfg, cancellationToken);

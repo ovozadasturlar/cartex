@@ -16,6 +16,9 @@ public sealed class ReceiptSettings
     public bool ShowPaymentDetails { get; set; } = true;
     public bool ShowQrCode { get; set; } = true;
     public bool ShowElectronicLink { get; set; } = true;
+    public bool ShowLogo { get; set; } = true;
+    public bool ShowCustomerPhone { get; set; } = true;
+    public bool ShowCustomerEmail { get; set; } = false;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string? PublicReceiptBaseUrl { get; set; }

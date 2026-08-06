@@ -297,6 +297,26 @@ public sealed class PrintHostService
         }
         var receipt = await _receiptApi.GetAsync(token);
         var receiptOptions = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
+        
+        if (receiptOptions?.ShowLogo == true && !string.IsNullOrWhiteSpace(receipt.LogoImageKey))
+        {
+            try
+            {
+                var storageApi = Avalonia.Controls.Design.IsDesignMode ? null : ServiceLocator.Resolve<IStorageApi>();
+                if (storageApi != null)
+                {
+                    var file = await storageApi.GetUrlAsync(receipt.LogoImageKey);
+                    using var hc = new System.Net.Http.HttpClient();
+                    var imageBytes = await hc.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
+                    
+                    int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);
+                    var rasterBytes = EscPosImageHelper.BinarizeToEscPosRaster(imageBytes, width);
+                    receiptOptions = receiptOptions with { LogoRasterBytes = rasterBytes };
+                }
+            }
+            catch { }
+        }
+
         return () => _printer.PrintReceipt(receipt, job.PrinterSystemName, job.Copies, receiptOptions);
     }
 
@@ -384,7 +404,10 @@ public sealed class PrintHostService
             Boolean(settings, "showPaymentDetails") ?? true,
             Boolean(settings, "showQrCode") ?? true,
             Boolean(settings, "showElectronicLink") ?? true,
-            Text(settings, "publicReceiptBaseUrl"));
+            Text(settings, "publicReceiptBaseUrl"),
+            Boolean(settings, "showLogo") ?? true,
+            Boolean(settings, "showCustomerPhone") ?? true,
+            Boolean(settings, "showCustomerEmail") ?? false);
     }
 
     private void BranchChanged(object? sender, PropertyChangedEventArgs args)

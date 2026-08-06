@@ -78,7 +78,11 @@ public record ReceiptPrintOptions(
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
     bool ShowElectronicLink = true,
-    string? PublicReceiptBaseUrl = null);
+    string? PublicReceiptBaseUrl = null,
+    bool ShowLogo = true,
+    bool ShowCustomerPhone = true,
+    bool ShowCustomerEmail = false,
+    byte[]? LogoRasterBytes = null);
 
 public record LabelOptions(
     double WidthMm,
@@ -253,10 +257,8 @@ public sealed class PrinterService : IPrinterService
             : null;
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
-            if (link is null)
-                PrintRaw(printerName, text);
-            else if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
-                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link), "Cartex Receipt");
+            if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
+                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link, opts?.LogoRasterBytes), "Cartex Receipt");
         }
     }
 
@@ -435,6 +437,8 @@ public sealed class PrinterService : IPrinterService
         if (opts?.ShowReceiptNumber != false) sb.AppendLine($"{T("receipt_no")} {r.SaleId}");
         if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"{T("cashier")}: {r.UserName}");
         if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.AppendLine($"{T("customer")}: {r.CustomerName}");
+        if (opts?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(r.CustomerPhone)) sb.AppendLine($"Tel: {r.CustomerPhone}");
+        if (opts?.ShowCustomerEmail != false && !string.IsNullOrWhiteSpace(r.CustomerEmail)) sb.AppendLine($"Email: {r.CustomerEmail}");
         sb.AppendLine(new string('-', w));
         foreach (var i in r.Items)
         {
@@ -471,21 +475,28 @@ public sealed class PrinterService : IPrinterService
         return sb.ToString();
     }
 
-    private static byte[] BuildEscPosReceipt(string text, string qrContent)
+    private static byte[] BuildEscPosReceipt(string text, string? qrContent, byte[]? logoRasterBytes = null)
     {
-        var output = new List<byte>(Encoding.UTF8.GetByteCount(text) + qrContent.Length + 64);
+        var output = new List<byte>(Encoding.UTF8.GetByteCount(text) + (qrContent?.Length ?? 0) + (logoRasterBytes?.Length ?? 0) + 64);
+        if (logoRasterBytes != null && logoRasterBytes.Length > 0)
+        {
+            output.AddRange(logoRasterBytes);
+        }
         output.AddRange(Encoding.UTF8.GetBytes(text));
 
         static void AddCommand(List<byte> bytes, params byte[] command) => bytes.AddRange(command);
-        AddCommand(output, 0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05);
-        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
+        if (!string.IsNullOrWhiteSpace(qrContent))
+        {
+            AddCommand(output, 0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05);
+            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
 
-        var data = Encoding.UTF8.GetBytes(qrContent);
-        var length = data.Length + 3;
-        AddCommand(output, 0x1D, 0x28, 0x6B, (byte)(length & 0xFF), (byte)(length >> 8), 0x31, 0x50, 0x30);
-        output.AddRange(data);
-        AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30, 0x0A, 0x0A);
+            var data = Encoding.UTF8.GetBytes(qrContent);
+            var length = data.Length + 3;
+            AddCommand(output, 0x1D, 0x28, 0x6B, (byte)(length & 0xFF), (byte)(length >> 8), 0x31, 0x50, 0x30);
+            output.AddRange(data);
+            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30, 0x0A, 0x0A);
+        }
         return output.ToArray();
     }
 

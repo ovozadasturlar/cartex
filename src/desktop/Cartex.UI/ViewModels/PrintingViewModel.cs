@@ -169,6 +169,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _showPaymentDetails = true;
     [ObservableProperty] private bool _showQrCode = true;
     [ObservableProperty] private bool _showElectronicLink = true;
+    [ObservableProperty] private bool _showLogo = true;
+    [ObservableProperty] private bool _showCustomerPhone = true;
+    [ObservableProperty] private bool _showCustomerEmail = false;
     [ObservableProperty] private string? _publicReceiptBaseUrl;
     [ObservableProperty] private string _previewBusinessName = string.Empty;
     [ObservableProperty] private string _previewBranchName = string.Empty;
@@ -783,6 +786,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ShowPaymentDetails = cfg.ShowPaymentDetails;
             ShowQrCode = cfg.ShowQrCode;
             ShowElectronicLink = cfg.ShowElectronicLink;
+            ShowLogo = cfg.ShowLogo;
+            ShowCustomerPhone = cfg.ShowCustomerPhone;
+            ShowCustomerEmail = cfg.ShowCustomerEmail;
             PublicReceiptBaseUrl = cfg.PublicReceiptBaseUrl;
         }
         catch { }
@@ -801,7 +807,10 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ShowPaymentDetails,
             ShowQrCode,
             ShowElectronicLink,
-            PublicReceiptBaseUrl);
+            PublicReceiptBaseUrl,
+            ShowLogo,
+            ShowCustomerPhone,
+            ShowCustomerEmail);
         SaveLocalPrinterSettings();
 
         var currentBranch = _branch.SelectedBranch;
@@ -864,7 +873,10 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 ShowReceiptNumber,
                 ShowPaymentDetails,
                 ShowQrCode,
-                ShowElectronicLink));
+                ShowElectronicLink,
+                ShowLogo,
+                ShowCustomerPhone,
+                ShowCustomerEmail));
         }
         catch (Exception ex)
         {
@@ -885,7 +897,10 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ShowPaymentDetails,
             ShowQrCode,
             ShowElectronicLink,
-            PublicReceiptBaseUrl);
+            PublicReceiptBaseUrl,
+            ShowLogo,
+            ShowCustomerPhone,
+            ShowCustomerEmail);
         ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Receipt);
         _toast.Success(L["success"]);
     }

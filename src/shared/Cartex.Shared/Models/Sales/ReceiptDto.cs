@@ -24,8 +24,15 @@ public record ReceiptDto(
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
     string? CustomerName = null,
+    string? CustomerPhone = null,
+    string? CustomerEmail = null,
     string? Language = null,
-    decimal CreditAmount = 0)
+    string? BusinessPhone = null,
+    string? BusinessTelegram = null,
+    string? BusinessWebsite = null,
+    string? LogoImageKey = null,
+    decimal CreditAmount = 0,
+    string? BaseCurrency = null)
 {
     public bool HasPayments => Payments.Count > 0;
 }

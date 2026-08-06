@@ -680,44 +680,56 @@
                                     <TextBox Text="{Binding FooterText}" MinHeight="36" />
                                 </StackPanel>
                             </Grid>
-                            <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                            <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowLogo}" />
+                                    <TextBlock Text="Show Logo" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowBusinessName}" />
                                     <TextBlock Text="{Binding L[receipt_show_business]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowBranchName}" />
                                     <TextBlock Text="{Binding L[receipt_show_branch]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowAddress}" />
                                     <TextBlock Text="{Binding L[receipt_show_address]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowPhone}" />
                                     <TextBlock Text="{Binding L[receipt_show_phone]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowCashier}" />
                                     <TextBlock Text="{Binding L[receipt_show_cashier]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowCustomer}" />
                                     <TextBlock Text="{Binding L[receipt_show_customer]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="3" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowCustomerPhone}" />
+                                    <TextBlock Text="Show Customer Phone" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding ShowCustomerEmail}" />
+                                    <TextBlock Text="Show Customer Email" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowReceiptNumber}" />
                                     <TextBlock Text="{Binding L[receipt_show_number]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="3" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowPaymentDetails}" />
                                     <TextBlock Text="{Binding L[receipt_show_payments]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="5" Grid.Column="2" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowQrCode}" />
                                     <TextBlock Text="{Binding L[receipt_show_qr]}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8">
                                     <ToggleSwitch IsChecked="{Binding ShowElectronicLink}" />
                                     <TextBlock Text="{Binding L[receipt_show_link]}" VerticalAlignment="Center" />
                                 </StackPanel>

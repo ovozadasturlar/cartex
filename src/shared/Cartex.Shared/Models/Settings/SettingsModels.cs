@@ -56,7 +56,10 @@ public record ReceiptSettingsDto(
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
     bool ShowElectronicLink = true,
-    string? PublicReceiptBaseUrl = null);
+    string? PublicReceiptBaseUrl = null,
+    bool ShowLogo = true,
+    bool ShowCustomerPhone = true,
+    bool ShowCustomerEmail = false);
 public record UpdateReceiptSettingsRequest(
     string? HeaderText,
     string? FooterText,
@@ -71,7 +74,10 @@ public record UpdateReceiptSettingsRequest(
     bool ShowReceiptNumber = true,
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
-    bool ShowElectronicLink = true);
+    bool ShowElectronicLink = true,
+    bool ShowLogo = true,
+    bool ShowCustomerPhone = true,
+    bool ShowCustomerEmail = false);
 public record BarcodeLabelSettingsDto(
     bool DefaultWithPrice = false,
     bool AllowPriceOverride = true,

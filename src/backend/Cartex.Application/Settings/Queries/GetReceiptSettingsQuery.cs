@@ -19,7 +19,10 @@ public record ReceiptSettingsDto(
     bool ShowPaymentDetails = true,
     bool ShowQrCode = true,
     bool ShowElectronicLink = true,
-    string? PublicReceiptBaseUrl = null);
+    string? PublicReceiptBaseUrl = null,
+    bool ShowLogo = true,
+    bool ShowCustomerPhone = true,
+    bool ShowCustomerEmail = false);
 
 public record GetReceiptSettingsQuery : IRequest<ReceiptSettingsDto>;
 
@@ -45,6 +48,9 @@ public sealed class GetReceiptSettingsQueryHandler(ISettingsService settings)
             cfg.ShowPaymentDetails,
             cfg.ShowQrCode,
             cfg.ShowElectronicLink,
-            notification?.PublicBaseUrl);
+            notification?.PublicBaseUrl,
+            cfg.ShowLogo,
+            cfg.ShowCustomerPhone,
+            cfg.ShowCustomerEmail);
     }
 }
