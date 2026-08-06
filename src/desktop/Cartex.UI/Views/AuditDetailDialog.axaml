@@ -37,7 +37,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:AuditChangeRow">
                                     <Grid ColumnDefinitions="180,*,*" MinHeight="38">
-                                        <TextBlock Text="{Binding Field}" Padding="10,8" FontFamily="Consolas" />
+                                        <TextBlock Text="{Binding TranslatedField}" Padding="10,8" ToolTip.Tip="{Binding Field}" />
                                         <TextBlock Grid.Column="1" Text="{Binding OldValue, FallbackValue=—}" Padding="10,8"
                                                    TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
                                         <TextBlock Grid.Column="2" Text="{Binding NewValue, FallbackValue=—}" Padding="10,8"

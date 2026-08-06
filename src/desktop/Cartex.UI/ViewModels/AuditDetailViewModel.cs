@@ -6,7 +6,7 @@ using Irihi.Avalonia.Shared.Contracts;
 
 namespace Cartex.UI.ViewModels;
 
-public sealed record AuditChangeRow(string Field, string? OldValue, string? NewValue);
+public sealed record AuditChangeRow(string Field, string TranslatedField, string? OldValue, string? NewValue);
 
 public partial class AuditDetailViewModel : ViewModelBase, IDialogContext
 {
@@ -21,6 +21,7 @@ public partial class AuditDetailViewModel : ViewModelBase, IDialogContext
         foreach (var field in oldValues.Keys.Union(newValues.Keys).OrderBy(x => x))
             Changes.Add(new AuditChangeRow(
                 field,
+                Cartex.UI.Services.AuditTranslator.TranslateField(field),
                 oldValues.GetValueOrDefault(field),
                 newValues.GetValueOrDefault(field)));
     }
