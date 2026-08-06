@@ -483,17 +483,25 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             long? categoryId = FilterCategory is { Id: > 0 } ? FilterCategory.Id : null;
-            var all = await _productsApi.GetAllAsync(categoryId, search);
+            var response = await _productsApi.QueryAsync(QueryRequest.Create()
+                .Page(0, 0)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .With("categoryId", categoryId)
+                .With("minPrice", FilterMinPrice)
+                .With("maxPrice", FilterMaxPrice)
+                .Build());
+            var all = response.Content ?? [];
             await _export.ExportAsync(L["products"], all,
             [
-                new(L["name"], p => p.Name),
+                new(L["name"], p => p.Name, 2.0f),
                 new(L["category"], p => p.CategoryName),
-                new(L["unit"], p => p.UnitName),
-                new(L["sku_code"], p => p.Code),
-                new(L["barcode"], p => string.Join(" ", p.Barcodes)),
-                new(L["min_stock"], p => p.MinStock),
+                new(L["unit"], p => p.UnitName, 0.6f),
+                new(L["sku_code"], p => p.Code, 0.7f),
+                new(L["barcode"], p => string.Join(" ", p.Barcodes), 1.4f),
+                new(L["min_stock"], p => p.MinStock, 0.6f),
                 new(L["ikpu_code"], p => p.IkpuCode),
-                new(L["vat_rate"], p => p.VatRate),
+                new(L["vat_rate"], p => p.VatRate, 0.5f),
             ], Enum.Parse<ExportFormat>(format));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

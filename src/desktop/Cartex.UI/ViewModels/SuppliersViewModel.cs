@@ -145,7 +145,13 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var all = await _api.GetAllAsync();
+            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var response = await _api.QueryAsync(QueryRequest.Create()
+                .Page(0, 0)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .Build());
+            var all = response.Content ?? [];
             await _export.ExportAsync(L["suppliers"], all,
             [
                 new(L["name"], s => s.Name),

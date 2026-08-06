@@ -63,8 +63,9 @@ public partial class CategoriesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var all = await _api.GetAllAsync();
-            await _export.ExportAsync(L["categories"], all,
+            // Use the already-filtered Categories collection (respects SearchText local filter)
+            var items = Categories.ToList();
+            await _export.ExportAsync(L["categories"], items,
             [
                 new(L["name"], x => x.Name),
                 new(L["description"], x => x.Description),

@@ -6,7 +6,7 @@ namespace Cartex.ApiClient.Api;
 public interface ISuppliersApi
 {
     [Get("/api/suppliers")]
-    Task<List<SupplierDto>> GetAllAsync();
+    Task<List<SupplierDto>> GetAllAsync([Query] string? search = null);
 
     [Get("/api/suppliers")]
     Task<IApiResponse<List<SupplierDto>>> QueryAsync([Query] IDictionary<string, object> query);

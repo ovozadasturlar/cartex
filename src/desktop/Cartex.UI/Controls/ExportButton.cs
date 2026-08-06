@@ -35,12 +35,27 @@ public class ExportButton : Button
         };
 
         var flyout = new MenuFlyout();
-        foreach (var (header, param) in new[] { ("Excel", "Excel"), ("PDF", "Pdf"), ("CSV", "Csv") })
-        {
-            var item = new MenuItem { Header = header, CommandParameter = param };
-            item.Bind(MenuItem.CommandProperty, this.GetObservable(CommandProperty));
-            flyout.Items.Add(item);
-        }
+
+        var excelItem = new MenuItem { Header = "Excel", CommandParameter = "Excel" };
+        excelItem.Bind(MenuItem.CommandProperty, this.GetObservable(CommandProperty));
+        flyout.Items.Add(excelItem);
+
+        var pdfItem = new MenuItem { Header = "PDF" };
+        
+        var pdfLandscapeItem = new MenuItem { Header = "Horizontal", CommandParameter = "Pdf" };
+        pdfLandscapeItem.Bind(MenuItem.CommandProperty, this.GetObservable(CommandProperty));
+        pdfItem.Items.Add(pdfLandscapeItem);
+
+        var pdfPortraitItem = new MenuItem { Header = "Vertical", CommandParameter = "PdfPortrait" };
+        pdfPortraitItem.Bind(MenuItem.CommandProperty, this.GetObservable(CommandProperty));
+        pdfItem.Items.Add(pdfPortraitItem);
+
+        flyout.Items.Add(pdfItem);
+
+        var csvItem = new MenuItem { Header = "CSV", CommandParameter = "Csv" };
+        csvItem.Bind(MenuItem.CommandProperty, this.GetObservable(CommandProperty));
+        flyout.Items.Add(csvItem);
+
         Flyout = flyout;
     }
 

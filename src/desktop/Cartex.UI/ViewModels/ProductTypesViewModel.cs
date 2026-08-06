@@ -78,8 +78,9 @@ public partial class ProductTypesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var all = await _api.GetAllAsync();
-            await _export.ExportAsync(L["product_types"], all,
+            // Use the already-filtered ProductTypes collection (respects SearchText local filter)
+            var items = ProductTypes.ToList();
+            await _export.ExportAsync(L["product_types"], items,
             [
                 new(L["name"], t => t.Name),
             ], Enum.Parse<ExportFormat>(format));
