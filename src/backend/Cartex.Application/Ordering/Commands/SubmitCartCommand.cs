@@ -11,7 +11,16 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record SubmitCartItemDto(long VariantId, decimal Quantity);
 
-public record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items, string? IdempotencyKey = null, string? Note = null, CartKind? Kind = null) : ICommand<string>;
+public record SubmitCartCommand(
+    long WarehouseId,
+    long? CustomerId,
+    List<SubmitCartItemDto> Items,
+    string? IdempotencyKey = null,
+    string? Note = null,
+    CartKind? Kind = null,
+    decimal PaidCash = 0,
+    decimal PaidCard = 0,
+    decimal PaidBonus = 0) : ICommand<string>;
 
 public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ICartNotifier notifier) : IRequestHandler<SubmitCartCommand, string>
 {
@@ -39,7 +48,10 @@ public sealed class SubmitCartCommandHandler(IApplicationDbContext db, ICurrentU
             AggregateCode = Guid.NewGuid().ToString("N"),
             IdempotencyKey = idempotencyKey,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            Kind = request.Kind ?? await ResolveKindAsync(cancellationToken)
+            Kind = request.Kind ?? await ResolveKindAsync(cancellationToken),
+            PaidCash = request.PaidCash,
+            PaidCard = request.PaidCard,
+            PaidBonus = request.PaidBonus
         };
 
         foreach (var item in request.Items)

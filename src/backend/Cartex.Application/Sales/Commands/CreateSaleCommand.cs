@@ -296,8 +296,11 @@ public sealed class CreateSaleCommandHandler(
         if (requiresShift && shiftId is null)
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
-        if ((paidBonus > 0 || debtAmount > 0) && request.CustomerId is null)
-            throw new BusinessRuleException("Bonus to'lov yoki qarz uchun mijoz tanlanishi shart.");
+        if (paidBonus > 0 && request.CustomerId is null)
+            throw new BusinessRuleException("Bonus bilan to'lash uchun mijoz tanlanishi shart.");
+
+        if (debtAmount > 0 && request.CustomerId is null)
+            throw new BusinessRuleException("Qarzga sotish uchun mijoz tanlanishi shart.");
 
         if (request.CustomerId is not null && paidBonus > 0)
         {

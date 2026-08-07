@@ -6,9 +6,6 @@ using Cartex.Shared.Models.Ordering;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CartDto = Cartex.Application.Ordering.Queries.CartDto;
-using CartListDto = Cartex.Application.Ordering.Queries.CartListDto;
-using CartLoadItemDto = Cartex.Application.Ordering.Queries.CartLoadItemDto;
 
 namespace Cartex.Api.Controllers;
 
@@ -72,7 +69,8 @@ public class OrderingController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
     {
-        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus, request.IdempotencyKey));
+        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList();
+        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus, request.IdempotencyKey, items));
         return Ok(saleId);
     }
 }

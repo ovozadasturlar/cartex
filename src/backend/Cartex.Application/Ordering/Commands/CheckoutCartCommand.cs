@@ -6,9 +6,17 @@ using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
+using Cartex.Shared.Models.Ordering;
+
 namespace Cartex.Application.Ordering.Commands;
 
-public record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus, string? IdempotencyKey = null) : ICommand<long>;
+public record CheckoutCartCommand(
+    string Code,
+    decimal PaidCash,
+    decimal PaidCard,
+    decimal PaidBonus,
+    string? IdempotencyKey = null,
+    List<CheckoutCartItemDto>? Items = null) : ICommand<long>;
 
 public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser, ICartNotifier notifier) : IRequestHandler<CheckoutCartCommand, long>
 {
@@ -36,13 +44,17 @@ public sealed class CheckoutCartCommandHandler(IApplicationDbContext db, ISender
             if (cart.Status is CartStatus.CheckedOut or CartStatus.Cancelled)
                 throw new BusinessRuleException("Savatcha allaqachon yakunlangan yoki bekor qilingan.");
 
+            var saleItems = request.Items is { Count: > 0 }
+                ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)).ToList()
+                : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList();
+
             var result = await sender.Send(new CreateSaleCommand(
                 cart.WarehouseId,
                 cart.CustomerId,
                 request.PaidCash,
                 request.PaidCard,
                 request.PaidBonus,
-                cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList(),
+                saleItems,
                 IdempotencyKey: idempotencyKey,
                 FromQueuedCart: true), cancellationToken);
 

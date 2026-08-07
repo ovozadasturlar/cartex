@@ -4,13 +4,11 @@ using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 
+using Cartex.Shared.Models.Ordering;
+
 namespace Cartex.Application.Ordering.Queries;
 
 public record GetCartByCodeQuery(string Code) : IRequest<CartDto?>;
-
-public record CartItemDto(long VariantId, string ProductName, decimal Quantity, decimal UnitPrice, decimal LineTotal);
-
-public record CartDto(string AggregateCode, string Status, long WarehouseId, long? CustomerId, string? CustomerName, decimal Total, List<CartItemDto> Items, string? Note);
 
 public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCartByCodeQuery, CartDto?>
 {
@@ -29,15 +27,32 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
             && cart.CreatedBy != currentUser.UserId)
             return null;
 
+        var baseCurrency = await db.Businesses
+            .Select(b => b.Currency)
+            .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+
+        var rates = await db.ExchangeRates
+            .OrderByDescending(r => r.EffectiveAt)
+            .GroupBy(r => r.Code)
+            .Select(g => g.First())
+            .ToDictionaryAsync(r => r.Code, r => r.Rate, cancellationToken);
+
         var variantIds = cart.Items.Select(i => i.VariantId).ToList();
 
         var prices = await db.ProductPrices
             .Where(pp => variantIds.Contains(pp.VariantId) && (pp.WarehouseId == cart.WarehouseId || pp.WarehouseId == null))
             .ToListAsync(cancellationToken);
 
-        decimal PriceOf(long variantId) =>
-            (prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == cart.WarehouseId)
-             ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null))?.SellingPrice ?? 0;
+        decimal PriceOf(long variantId)
+        {
+            var p = prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == cart.WarehouseId)
+                 ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null);
+            if (p is null) return 0;
+            var rate = (p.Currency == baseCurrency || string.IsNullOrEmpty(p.Currency))
+                ? 1m
+                : (rates.TryGetValue(p.Currency, out var r) ? r : 1m);
+            return Math.Round(p.SellingPrice * rate, 2);
+        }
 
         var items = cart.Items.Select(i =>
         {
@@ -46,6 +61,7 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
         }).ToList();
 
         return new CartDto(cart.AggregateCode, cart.Status.ToString(), cart.WarehouseId, cart.CustomerId,
-            cart.Customer != null ? cart.Customer.FullName : null, items.Sum(i => i.LineTotal), items, cart.Note);
+            cart.Customer != null ? cart.Customer.FullName : null, items.Sum(i => i.LineTotal), items, cart.Note,
+            cart.PaidCash, cart.PaidCard, cart.PaidBonus);
     }
 }
