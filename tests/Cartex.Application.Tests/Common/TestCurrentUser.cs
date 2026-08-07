@@ -11,6 +11,11 @@ public sealed class TestCurrentUser : ICurrentUser
     public IReadOnlyCollection<long> BranchIds { get; private set; } = [];
     public bool CanAccessAllBranches { get; private set; }
     public string? Client => null;
+    public string? DeviceId => null;
+    public string? DeviceName => null;
+    public string? IpAddress => null;
+    public string? UserAgent => null;
+    public string? CorrelationId => null;
     public HashSet<string> Granted { get; } = [];
 
     public bool HasPermission(string permission) => CanAccessAllBranches || Granted.Contains(permission);

@@ -52,8 +52,14 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     public bool CanCreate => _auth.HasPermission("users.create");
     public bool CanEdit => _auth.HasPermission("users.edit");
     public bool CanDelete => _auth.HasPermission("users.delete");
+    public bool CanChangeUsername => _auth.HasPermission("*");
     public string EditTitle => IsNew ? L["create_user"] : L["edit_user"];
     public string PasswordLabel => IsNew ? L["password"] : L["new_password"];
+
+    [ObservableProperty] private bool _isChangeUsernameOpen;
+    [ObservableProperty] private string _changeUsernameTarget = "";
+    [ObservableProperty] private string _newUsername = "";
+    private long _changeUsernameId;
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
@@ -218,6 +224,34 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
+
+    [RelayCommand]
+    private void OpenChangeUsername(UserDto user)
+    {
+        if (!CanChangeUsername) return;
+        _changeUsernameId = user.Id;
+        ChangeUsernameTarget = $"Joriy username: {user.Username}";
+        NewUsername = user.Username;
+        IsChangeUsernameOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelChangeUsername() => IsChangeUsernameOpen = false;
+
+    [RelayCommand]
+    private async Task ConfirmChangeUsernameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewUsername)) { _toast.Error(L["error"]); return; }
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _usersApi.ChangeUsernameAsync(_changeUsernameId, new ChangeUsernameRequest(NewUsername.Trim()));
+            _toast.Success(L["success"]);
+            IsChangeUsernameOpen = false;
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task DeleteAsync(UserDto user)

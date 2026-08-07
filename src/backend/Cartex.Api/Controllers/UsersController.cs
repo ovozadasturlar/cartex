@@ -44,4 +44,13 @@ public class UsersController(ISender sender) : ControllerBase
         await sender.Send(new DeleteUserCommand(id));
         return NoContent();
     }
+
+    [HttpPatch("{id:long}/username")]
+    public async Task<IActionResult> ChangeUsername(long id, [FromBody] ChangeUsernameRequest request)
+    {
+        await sender.Send(new ChangeUsernameCommand(id, request.NewUsername));
+        return NoContent();
+    }
 }
+
+public record ChangeUsernameRequest(string NewUsername);

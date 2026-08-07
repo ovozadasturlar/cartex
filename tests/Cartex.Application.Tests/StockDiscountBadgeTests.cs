@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Customers.Commands;
 using Cartex.Application.Stocks.Queries;
@@ -63,7 +64,8 @@ public class StockDiscountBadgeTests(DatabaseFixture fixture) : DatabaseTest(fix
             scope.ServiceProvider.GetRequiredService<IApplicationDbContext>(),
             new NoStorage(),
             scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>(),
-            scope.ServiceProvider.GetRequiredService<ISettingsService>());
+            scope.ServiceProvider.GetRequiredService<ISettingsService>(),
+            scope.ServiceProvider.GetRequiredService<ICurrencyService>());
         var page = await handler.Handle(new GetStockOnHandQuery(warehouseId), default);
         return page.Items;
     }

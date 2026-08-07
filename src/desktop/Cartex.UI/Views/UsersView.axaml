@@ -74,6 +74,13 @@
                                                                  Foreground="{DynamicResource TextSecondary}" />
                                             </Button>
                                             <Button Classes="icon" Margin="0,0,6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenChangeUsernameCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanChangeUsername}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="Username o'zgartirish">
+                                                <mi:MaterialIcon Kind="AccountEdit" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="0,0,6,0"
                                                     Command="{Binding $parent[DataGrid].DataContext.DeleteCommand}"
                                                     IsVisible="{Binding $parent[DataGrid].DataContext.CanDelete}"
                                                     CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[delete]}">
@@ -197,6 +204,33 @@
                         </Grid>
                     </Grid>
                 </DockPanel>
+            </Border>
+        </Border>
+
+        <!-- ===== CHANGE USERNAME DIALOG (developer only) ===== -->
+        <Border IsVisible="{Binding IsChangeUsernameOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelChangeUsernameCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 16 60 0 #44000000">
+                <StackPanel Margin="28" Spacing="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Username o'zgartirish" FontSize="17" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="{Binding ChangeUsernameTarget}" FontSize="12"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <c:FieldLabel Text="Yangi username" Required="True" />
+                        <TextBox Text="{Binding NewUsername}" MinHeight="38"
+                                 PlaceholderText="yangi_username" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                        <Button Classes="outline" Command="{Binding CancelChangeUsernameCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding ConfirmChangeUsernameCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </Border>
     </Panel>
