@@ -580,6 +580,24 @@
                                     </StackPanel>
                                 </Grid>
 
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="Avtomatik PDF jild (Microsoft Print to PDF uchun)" />
+                                    <Grid ColumnDefinitions="*,8,44">
+                                        <TextBox Text="{Binding PdfExportPath}" PlaceholderText="Misol: C:\Cheklar" IsReadOnly="True">
+                                            <TextBox.InnerRightContent>
+                                                <Button Classes="icon" Command="{Binding ClearPdfExportPathCommand}" IsVisible="{Binding PdfExportPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <mi:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                                </Button>
+                                            </TextBox.InnerRightContent>
+                                        </TextBox>
+                                        <Button Grid.Column="2" Classes="primary" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0"
+                                                Command="{Binding SelectPdfExportPathCommand}"
+                                                ToolTip.Tip="Jildni tanlash">
+                                            <mi:MaterialIcon Kind="FolderOpen" Width="20" Height="20" />
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+
                                 <StackPanel Spacing="7">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[document_paper_size]}" />
                                     <Grid ColumnDefinitions="*,8,*">

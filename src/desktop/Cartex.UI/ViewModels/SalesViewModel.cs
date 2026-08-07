@@ -196,6 +196,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paidBonus;
     [ObservableProperty] private decimal _discountAmount;
     [ObservableProperty] private decimal _discountPercent;
+    [ObservableProperty] private bool _isPaymentPanelOpen = false;
     private bool _syncingDiscount;
     private bool _discountByPercent;
     [ObservableProperty] private bool _isCustomerPanelOpen;
@@ -596,7 +597,29 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             foreach (var item in cart.Items)
             {
                 var stock = Products.FirstOrDefault(p => p.VariantId == item.VariantId);
-                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity, stock?.Quantity, stock, enforceCreatePermission: false);
+                // Use local stock price (already in base currency) to avoid unconverted foreign-currency prices
+                var price = stock?.SellingPrice ?? item.UnitPrice;
+                AddToCart(item.VariantId, item.ProductName, price, item.Quantity, stock?.Quantity, stock, enforceCreatePermission: false);
+            }
+
+            if (cart.PaidCash > 0 || cart.PaidCard > 0 || cart.PaidBonus > 0)
+            {
+                if (IsMulticurrency)
+                {
+                    PaymentRows.Clear();
+                    if (cart.PaidCash > 0)
+                        PaymentRows.Add(new PaymentRow(_baseCurrency, PayMethods.FirstOrDefault(m => m.Key == "cash") ?? PayMethods[0], Currencies, PayMethods, NotifyTotals, RateOf, _baseCurrency) { Amount = cart.PaidCash });
+                    if (cart.PaidCard > 0)
+                        PaymentRows.Add(new PaymentRow(_baseCurrency, PayMethods.FirstOrDefault(m => m.Key == "card") ?? PayMethods[0], Currencies, PayMethods, NotifyTotals, RateOf, _baseCurrency) { Amount = cart.PaidCard });
+                    if (cart.PaidBonus > 0)
+                        PaymentRows.Add(new PaymentRow(_baseCurrency, PayMethods.FirstOrDefault(m => m.Key == "bonus") ?? PayMethods[0], Currencies, PayMethods, NotifyTotals, RateOf, _baseCurrency) { Amount = cart.PaidBonus });
+                }
+                else
+                {
+                    PaidCash = cart.PaidCash;
+                    PaidCard = cart.PaidCard;
+                    PaidBonus = cart.PaidBonus;
+                }
             }
 
             if (cart.CustomerId is { } customerId)
@@ -864,7 +887,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
         try { SetAutoDiscount(await FetchPreviewTotalAsync()); }
-        catch { }
+        catch { SetAutoDiscount(0); }
     }
 
     private async Task<decimal> FetchPreviewTotalAsync()
@@ -1359,7 +1382,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        CartItems.Add(new CartItem
+        CartItems.Insert(0, new CartItem
         {
             VariantId = prepack.VariantId,
             PrepackId = prepack.PrepackId,
@@ -1402,11 +1425,16 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             if (available is not null) existing.Available = available;
             existing.ProductDetail ??= detail;
             existing.Quantity += quantity;
+            
+            var index = CartItems.IndexOf(existing);
+            if (index > 0)
+                CartItems.Move(index, 0);
+
             NotifyTotals();
             return;
         }
 
-        CartItems.Add(new CartItem
+        CartItems.Insert(0, new CartItem
         {
             VariantId = variantId,
             ProductName = name,
@@ -1704,13 +1732,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private async Task LoadQueueAccessAsync()
     {
         if (!_auth.HasPermission("sales.view")) return;
-        try
-        {
-            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
-            CanSeeQueue = enabled.Contains("store") || enabled.Contains("ordering");
-        }
-        catch { return; }
-        if (!CanSeeQueue) return;
+        CanSeeQueue = true;
+        
         await LoadQueueAsync();
         if (!_queueHubWired)
         {
@@ -1765,8 +1788,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
+    private void TogglePaymentPanel() => IsPaymentPanelOpen = !IsPaymentPanelOpen;
+
+    [RelayCommand]
     private async Task CompleteSaleAsync()
     {
+        if (!IsPaymentPanelOpen)
+        {
+            IsPaymentPanelOpen = true;
+            return;
+        }
+
         if (!CanCheckout)
             return;
         if (CartItems.Count == 0) { _toast.Warning(L["no_items"]); return; }
@@ -1822,10 +1854,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             {
                 using (_busy.Begin(L["loading"]))
                 {
+                    await SyncActiveCartAsync();
+                    var cash = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "cash").Sum(r => r.AmountBase) : PaidCash;
+                    var card = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "card").Sum(r => r.AmountBase) : PaidCard;
+                    var bonus = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
+
+                    var checkoutItems = CartItems
+                        .Select(c => new CheckoutCartItemDto(c.VariantId, c.Quantity, CanOverridePrice ? c.PriceOverride : null))
+                        .ToList();
+
                     _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
                     await _orderingApi.CheckoutAsync(
                         queuedCode,
-                        new CheckoutCartRequest(PaidCash, PaidCard, PaidBonus, _saleIdempotencyKey));
+                        new CheckoutCartRequest(cash, card, bonus, _saleIdempotencyKey, checkoutItems));
                 }
                 _activeCartCode = null;
                 ClearCart();

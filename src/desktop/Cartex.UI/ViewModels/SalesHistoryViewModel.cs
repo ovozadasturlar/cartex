@@ -160,11 +160,18 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
                 Receipt = await _receiptApi.GetAsync(sale.ReceiptToken);
             _receiptSale = sale;
+            
+            // Generate QR Code
+            var baseUrl = Cartex.UI.Services.SettingsService.Instance.ApiBaseUrl?.TrimEnd('/');
+            ReceiptQrCode = Cartex.UI.Services.QrService.Generate($"{baseUrl}/r/{sale.ReceiptToken}");
+            
             OnPropertyChanged(nameof(CanResendReceipt));
             IsReceiptOpen = true;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
+
+    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _receiptQrCode;
 
     private SaleDto? _receiptSale;
     public bool CanResendReceipt =>

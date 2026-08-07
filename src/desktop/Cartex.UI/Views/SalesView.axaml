@@ -498,6 +498,27 @@
                                        Foreground="{DynamicResource TextPrimary}" />
                         </Grid>
 
+                        <StackPanel Spacing="10" ClipToBounds="True" Classes="payment-panel" Classes.open="{Binding IsPaymentPanelOpen}">
+                            <StackPanel.Styles>
+                                <Style Selector="StackPanel.payment-panel">
+                                    <Setter Property="MaxHeight" Value="0" />
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                </Style>
+                                <Style Selector="StackPanel.payment-panel.open">
+                                    <Setter Property="MaxHeight" Value="2000" />
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                            </StackPanel.Styles>
+                            <StackPanel.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </StackPanel.Transitions>
+
+
                         <Grid ColumnDefinitions="*,110,150">
                             <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}"
                                        VerticalAlignment="Center" />
@@ -681,14 +702,24 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid ColumnDefinitions="Auto,8,*">
-                            <Button Grid.Column="0" Classes="outline" MinHeight="50" Padding="14,0"
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="Auto,8,Auto,8,*">
+                            <Button Grid.Column="0" Background="Transparent" BorderThickness="0" MinHeight="50" Padding="14,0"
+                                    HorizontalContentAlignment="Center" Command="{Binding TogglePaymentPanelCommand}"
+                                    ToolTip.Tip="To'lov ma'lumotlari">
+                                <Panel>
+                                    <mi:MaterialIcon Kind="ChevronDown" Width="22" Height="22" IsVisible="{Binding IsPaymentPanelOpen}" />
+                                    <mi:MaterialIcon Kind="ChevronUp" Width="22" Height="22" IsVisible="{Binding !IsPaymentPanelOpen}" />
+                                </Panel>
+                            </Button>
+                            <Button Grid.Column="2" Classes="outline" MinHeight="50" Padding="14,0"
                                     HorizontalContentAlignment="Center" Command="{Binding HoldSaleCommand}"
                                     IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
                                     ToolTip.Tip="{Binding L[hold_sale]}">
                                 <mi:MaterialIcon Kind="PauseCircleOutline" Width="22" Height="22" />
                             </Button>
-                            <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            <Button Grid.Column="4" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     MinHeight="50" FontSize="17" Command="{Binding CompleteSaleCommand}"
                                     IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCheckout}"
                                     Content="{Binding L[complete_sale]}" />

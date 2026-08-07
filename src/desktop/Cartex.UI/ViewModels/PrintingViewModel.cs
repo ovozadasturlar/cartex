@@ -124,6 +124,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _zReportPrinter;
     [ObservableProperty] private string? _barcodePrinter;
     [ObservableProperty] private string? _documentPrinter;
+    [ObservableProperty] private string? _pdfExportPath;
     [ObservableProperty] private bool _autoPrintReceipt;
     [ObservableProperty] private bool _autoPrintZReport;
     [ObservableProperty] private decimal _receiptCopies = 1;
@@ -686,6 +687,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ZReportPrinter = s.ZReportPrinter;
             BarcodePrinter = s.BarcodePrinter;
             DocumentPrinter = s.DocumentPrinter;
+            PdfExportPath = s.PdfExportPath;
             AutoPrintReceipt = s.AutoPrintReceipt;
             AutoPrintZReport = s.AutoPrintZReport;
             ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
@@ -906,6 +908,32 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
+    private async Task SelectPdfExportPathAsync()
+    {
+        var lifetime = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+        var top = lifetime?.MainWindow;
+        if (top == null) return;
+
+        var folders = await top.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+        {
+            Title = L["select_pdf_folder"],
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            PdfExportPath = folders[0].Path.LocalPath;
+            SaveLocalPrinterSettings();
+        }
+    }
+    [RelayCommand]
+    private void ClearPdfExportPath()
+    {
+        PdfExportPath = string.Empty;
+        SaveLocalPrinterSettings();
+    }
+
+    [RelayCommand]
     private async Task TestPrint()
     {
         var targetPrinter = IsThermal ? ReceiptPrinter : DocumentPrinter;
@@ -913,7 +941,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         try
         {
             SaveLocalPrinterSettings();
-            if (IsDocument)
+            var isPdf = targetPrinter.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase) ||
+                        targetPrinter.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase) ||
+                        targetPrinter.Contains("XPS", StringComparison.OrdinalIgnoreCase) ||
+                        targetPrinter.Contains("OneNote", StringComparison.OrdinalIgnoreCase);
+
+            if (IsDocument || isPdf)
             {
                 var sales = await _salesApi.GetAllAsync(
                     fromDate: DateTime.Today.AddDays(-30),
@@ -924,8 +957,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                     .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
                 if (string.IsNullOrWhiteSpace(token))
                 {
-                    _printer.PrintReceipt(CreatePreviewReceipt(), targetPrinter, (int)ReceiptCopies);
-                    _toast.Info(L["success"]);
+                    _toast.Warning("PDF test uchun kamida 1 ta savdo tarixi kerak.");
                     return;
                 }
                 var physicalPaper     = ReceiptMode is "a4" or "a5" ? ReceiptMode : "a4";
@@ -944,7 +976,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                     await input.CopyToAsync(output);
                     pages.Add(output.ToArray());
                 }
-                _printer.PrintDocumentImages(pages, targetPrinter, (int)ReceiptCopies);
+                _printer.PrintDocumentImages(pages, targetPrinter, (int)ReceiptCopies, PdfExportPath);
             }
             else
             {
@@ -1121,6 +1153,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ZReportPrinter = ZReportPrinter,
             BarcodePrinter = BarcodePrinter,
             DocumentPrinter = DocumentPrinter,
+            PdfExportPath = PdfExportPath,
             AutoPrintReceipt = AutoPrintReceipt,
             LabelWidthMm = (double)LabelWidthMm,
             LabelHeightMm = (double)LabelHeightMm,

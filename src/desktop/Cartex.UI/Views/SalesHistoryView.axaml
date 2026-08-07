@@ -4,6 +4,7 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:sales="using:Cartex.Shared.Models.Sales"
              x:Class="Cartex.UI.Views.SalesHistoryView"
              x:CompileBindings="False">
 
@@ -106,15 +107,19 @@
             </Panel>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsReceiptOpen}" Background="#30000000"
+        <!-- ===== RECEIPT DIALOG (horizontal 2-column) ===== -->
+        <Border IsVisible="{Binding IsReceiptOpen}" Background="#44000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseReceiptCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420" MaxHeight="640"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="740" MinHeight="530" MaxHeight="600"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 24 80 0 #44000000">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,16,0,0">
+
+                    <!-- Action buttons at bottom -->
+                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,10,Auto,10,Auto" Margin="24,14">
                         <Button Grid.Column="0" Classes="brand" HorizontalAlignment="Stretch"
-                                Command="{Binding CloseReceiptCommand}" Content="{Binding L[cancel]}" />
+                                Command="{Binding CloseReceiptCommand}" Content="{Binding L[close]}" />
                         <Button Grid.Column="2" Classes="outline" Command="{Binding PrintReceiptCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="7">
                                 <mi:MaterialIcon Kind="Printer" Width="16" Height="16" />
@@ -129,11 +134,177 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-                    <c:ReceiptCard DataContext="{Binding Receipt}" />
+
+                    <!-- Thin separator -->
+                    <Border DockPanel.Dock="Bottom" Height="1" Background="{DynamicResource BorderBrush}" />
+
+                    <!-- 2-column body -->
+                    <Grid ColumnDefinitions="290,1,*">
+
+                        <!-- LEFT PANEL: company + totals + QR -->
+                        <ScrollViewer Grid.Column="0" Padding="20">
+                            <StackPanel Spacing="14" DataContext="{Binding Receipt}">
+
+                                <!-- Business badge -->
+                                <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="10" Padding="12,10">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="{Binding BusinessName}" FontWeight="Bold" FontSize="14"
+                                                   Foreground="{DynamicResource BrandPrimaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding BranchName}" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                                        <TextBlock Text="{Binding BranchAddress}" FontSize="11"
+                                                   Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap"
+                                                   IsVisible="{Binding BranchAddress, Converter={x:Static conv:NullToBoolConverter.Instance}}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Meta rows -->
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [sale_date], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SaleDate, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                   FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [cashier], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding UserName}" FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding CustomerName, Converter={x:Static conv:NullToBoolConverter.Instance}}">
+                                        <TextBlock Text="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CustomerName}" FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Separator -->
+                                <Border Height="1" Background="{DynamicResource BorderBrush}" />
+
+                                <!-- Totals -->
+                                <StackPanel Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [total], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalAmount, StringFormat='{}{0:N0}'}"
+                                                   FontWeight="Bold" FontSize="14"
+                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding DiscountAmount, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [discount], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DiscountAmount, StringFormat='{}{0:N0}'}"
+                                                   FontSize="12" Foreground="{DynamicResource DangerBrush}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidCash, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [cash], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidCash, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidCard, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [card], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidCard, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidBonus, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [bonus], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidBonus, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding DebtAmount, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [debt], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource DangerBrush}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DebtAmount, StringFormat='{}{0:N0}'}"
+                                                   FontSize="12" Foreground="{DynamicResource DangerBrush}" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding CashbackEarned, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [cashback_earned], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CashbackEarned, StringFormat='{}{0:N0}'}"
+                                                   FontSize="12" Foreground="{DynamicResource SuccessBrush}" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- QR Code -->
+                                <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="12"
+                                        HorizontalAlignment="Center"
+                                        IsVisible="{Binding $parent[UserControl].DataContext.ReceiptQrCode, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Image Source="{Binding $parent[UserControl].DataContext.ReceiptQrCode}" Width="120" Height="120"
+                                               HorizontalAlignment="Center" Stretch="Uniform" />
+                                        <TextBlock Text="{Binding ReceiptToken}" FontSize="9"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   HorizontalAlignment="Center" TextWrapping="Wrap"
+                                                   MaxWidth="180" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Vertical divider -->
+                        <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+
+                        <!-- RIGHT PANEL: products list -->
+                        <DockPanel Grid.Column="2">
+                            <!-- Header row -->
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,70,80,90"
+                                  Background="{DynamicResource SidebarItemHover}">
+                                <TextBlock Grid.Column="0" Text="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}"
+                                           Padding="20,10,8,10" FontWeight="SemiBold" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Grid.Column="1" Text="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}"
+                                           Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Grid.Column="2" Text="{Binding [price], Source={x:Static svc:LocalizationManager.Instance}}"
+                                           Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Grid.Column="3" Text="{Binding [amount], Source={x:Static svc:LocalizationManager.Instance}}"
+                                           Padding="8,10,20,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                            </Grid>
+
+                            <!-- Items -->
+                            <ScrollViewer DataContext="{Binding Receipt}">
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="sales:ReceiptItemDto">
+                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                                                <Grid ColumnDefinitions="*,70,80,90" MinHeight="46">
+                                                    <StackPanel Grid.Column="0" Margin="20,10,8,10" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="13"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding UnitName}" FontSize="11"
+                                                                   Foreground="{DynamicResource TextMuted}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Quantity, StringFormat='{}{0:0.###}'}"
+                                                               VerticalAlignment="Center" Padding="8" TextAlignment="Right"
+                                                               FontSize="13" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}"
+                                                               VerticalAlignment="Center" Padding="8" TextAlignment="Right"
+                                                               FontSize="13" Foreground="{DynamicResource TextSecondary}" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding LineTotal, StringFormat='{}{0:N0}'}"
+                                                               VerticalAlignment="Center" Padding="8,8,20,8" TextAlignment="Right"
+                                                               FontWeight="SemiBold" FontSize="13"
+                                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Border>
 
+        <!-- ===== RETURN DIALOG ===== -->
         <Border IsVisible="{Binding IsReturnOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseReturnCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="480" MaxHeight="660"
