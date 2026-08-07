@@ -24,7 +24,8 @@ public static class DependencyInjection
                 .UseSnakeCaseNamingConvention()
                 .ConfigureWarnings(w => w.Ignore(
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning,
-                    CoreEventId.FirstWithoutOrderByAndFilterWarning))
+                    CoreEventId.FirstWithoutOrderByAndFilterWarning,
+                    RelationalEventId.PendingModelChangesWarning))
                 .AddInterceptors(sp.GetServices<ISaveChangesInterceptor>()));
 
         services.AddScoped<IApplicationDbContext>(provider =>

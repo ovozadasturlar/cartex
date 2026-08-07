@@ -19,5 +19,9 @@ public class Cart : SoftDeleteEntity, IBranchScoped
     public CartStatus Status { get; set; } = CartStatus.Open;
     public CartKind Kind { get; set; } = CartKind.Queue;
 
+    public decimal PaidCash { get; set; }
+    public decimal PaidCard { get; set; }
+    public decimal PaidBonus { get; set; }
+
     public ICollection<CartItem> Items { get; set; } = [];
 }

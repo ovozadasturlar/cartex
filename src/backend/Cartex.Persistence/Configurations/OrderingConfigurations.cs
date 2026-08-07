@@ -16,6 +16,9 @@ public class CartConfiguration : IEntityTypeConfiguration<Cart>
             .HasFilter("idempotency_key IS NOT NULL");
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);
+        builder.Property(x => x.PaidCash).HasPrecision(14, 2);
+        builder.Property(x => x.PaidCard).HasPrecision(14, 2);
+        builder.Property(x => x.PaidBonus).HasPrecision(14, 2);
         builder.HasIndex(x => new { x.Kind, x.Status });
         builder.HasIndex(x => x.BranchId);
 
