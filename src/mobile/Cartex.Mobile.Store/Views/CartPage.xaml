@@ -229,10 +229,18 @@
                                 Style="{StaticResource BtnOutline}" BorderWidth="1"
                                 Command="{Binding DecrementSelectedCommand}" />
                         
-                        <Label Grid.Column="1" BindingContext="{Binding SelectedProduct}" Text="{Binding Quantity, StringFormat='{0:0.###}', FallbackValue='0'}" 
-                               WidthRequest="80" HorizontalTextAlignment="Center" VerticalOptions="Center" 
-                               FontSize="22" FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Border Grid.Column="1" StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                                StrokeShape="RoundRectangle 12" BackgroundColor="Transparent"
+                                WidthRequest="100">
+                            <Entry Text="{Binding SelectedQuantityText}" Keyboard="Numeric"
+                                   HorizontalTextAlignment="Center" VerticalOptions="Center"
+                                   FontSize="22" FontAttributes="Bold" HeightRequest="56"
+                                   Margin="0"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                   Completed="OnQuantityEntryCompleted"
+                                   Unfocused="OnQuantityEntryUnfocused" />
+                        </Border>
                                
                         <Button Grid.Column="2" Text="+" FontSize="24" WidthRequest="56" HeightRequest="56" CornerRadius="16" Padding="0"
                                 Style="{StaticResource BtnOutline}" BorderWidth="1"

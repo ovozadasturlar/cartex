@@ -79,4 +79,15 @@ public partial class CartPage : ContentPage
                 _openSwipeView = null;
         }
     }
+
+    private void OnQuantityEntryCompleted(object? sender, EventArgs e)
+    {
+        _vm.SetQuantityFromTextCommand.Execute(null);
+        KeyboardDismissal.Hide();
+    }
+
+    private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e)
+    {
+        _vm.SetQuantityFromTextCommand.Execute(null);
+    }
 }

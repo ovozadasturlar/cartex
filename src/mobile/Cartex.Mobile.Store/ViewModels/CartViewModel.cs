@@ -32,6 +32,10 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private bool _isProductModalOpen;
     [ObservableProperty] private CartLine? _selectedProduct;
     [ObservableProperty] private string _selectedProductImage = "";
+    [ObservableProperty] private string _selectedQuantityText = "";
+
+    partial void OnSelectedProductChanged(CartLine? value) =>
+        SelectedQuantityText = value?.Quantity.ToString("0.###") ?? "0";
 
     private CancellationTokenSource? _searchCts;
     private readonly ImageUrlBuilder _images;
@@ -103,14 +107,20 @@ public partial class CartViewModel : ObservableObject
     private void DecrementSelected()
     {
         if (SelectedProduct is not null)
+        {
             Decrement(SelectedProduct);
+            SelectedQuantityText = SelectedProduct.Quantity.ToString("0.###");
+        }
     }
 
     [RelayCommand]
     private void IncrementSelected()
     {
         if (SelectedProduct is not null)
+        {
             Increment(SelectedProduct);
+            SelectedQuantityText = SelectedProduct.Quantity.ToString("0.###");
+        }
     }
 
     [RelayCommand]
@@ -183,6 +193,24 @@ public partial class CartViewModel : ObservableObject
 
     [RelayCommand]
     private void CloseProductModal() => IsProductModalOpen = false;
+
+    [RelayCommand]
+    private void SetQuantityFromText()
+    {
+        if (SelectedProduct is null) return;
+        if (decimal.TryParse(SelectedQuantityText?.Replace(',', '.'),
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var qty) && qty >= 0)
+        {
+            var rounded = Math.Round(qty, 3);
+            _cart.SetQuantity(SelectedProduct.VariantId, rounded);
+        }
+        else
+        {
+            SelectedQuantityText = SelectedProduct.Quantity.ToString("0.###");
+        }
+    }
 
     [RelayCommand]
     private Task NextAsync()
