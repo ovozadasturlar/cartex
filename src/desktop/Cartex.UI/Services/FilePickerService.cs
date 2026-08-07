@@ -10,6 +10,7 @@ public interface IFilePickerService
     Task<PickedFile?> PickImageAsync();
     Task<PickedFile?> PickSpreadsheetAsync();
     Task<Stream?> SaveFileAsync(string suggestedName, string extension);
+    Task<string?> SaveFilePathAsync(string suggestedName, string extension);
 }
 
 public sealed class FilePickerService : IFilePickerService
@@ -77,5 +78,20 @@ public sealed class FilePickerService : IFilePickerService
         });
 
         return file is null ? null : await file.OpenWriteAsync();
+    }
+
+    public async Task<string?> SaveFilePathAsync(string suggestedName, string extension)
+    {
+        if (_top is null)
+            return null;
+
+        var file = await _top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            SuggestedFileName = suggestedName,
+            DefaultExtension = extension,
+            FileTypeChoices = [new FilePickerFileType(extension.ToUpperInvariant()) { Patterns = [$"*.{extension}"] }]
+        });
+
+        return file?.TryGetLocalPath();
     }
 }

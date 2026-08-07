@@ -17,6 +17,7 @@ public sealed record PrinterSettings
     public string? ZReportPrinter { get; init; }
     public string? BarcodePrinter { get; init; }
     public string? DocumentPrinter { get; init; }
+    public string? PdfExportPath { get; init; }
     public bool AutoPrintReceipt { get; init; }
     public double LabelWidthMm { get; init; }
     public double LabelHeightMm { get; init; }
@@ -36,6 +37,7 @@ public sealed record PrinterSettings
     public bool ReceiptShowPaymentDetails { get; init; } = true;
     public bool ReceiptShowQrCode { get; init; } = true;
     public bool ReceiptShowElectronicLink { get; init; } = true;
+    public bool ReceiptShowCustomerEmail { get; init; } = false;
     public string? ReceiptPublicBaseUrl { get; init; }
     public bool AutoPrintZReport { get; init; }
     public string? LabelMode { get; init; }
@@ -82,7 +84,8 @@ public record ReceiptPrintOptions(
     bool ShowLogo = true,
     bool ShowCustomerPhone = true,
     bool ShowCustomerEmail = false,
-    byte[]? LogoRasterBytes = null);
+    byte[]? LogoRasterBytes = null,
+    string? OutputFilePath = null);
 
 public record LabelOptions(
     double WidthMm,
@@ -141,13 +144,13 @@ public interface IPrinterService
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies);
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options);
     void PrintZReport(ZReportDto report);
-    void PrintZReport(ZReportDto report, string printerName, int copies);
+    void PrintZReport(ZReportDto report, string printerName, int copies, string? outputFilePath = null);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
-    void PrintRaw(string? printerName, string text);
-    void PrintRawBytes(string? printerName, byte[] data);
+    void PrintRaw(string? printerName, string text, string? outputFilePath = null);
+    void PrintRawBytes(string? printerName, byte[] data, string? outputFilePath = null);
     void PrintDocument(string filePath, string? printerName);
     void PrintDocumentImages(IReadOnlyList<byte[]> imagePages);
-    void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies);
+    void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies, string? outputFilePath = null);
 }
 
 public sealed class PrinterService : IPrinterService
@@ -182,7 +185,10 @@ public sealed class PrinterService : IPrinterService
                 _settings.ReceiptShowPaymentDetails,
                 _settings.ReceiptShowQrCode,
                 _settings.ReceiptShowElectronicLink,
-                _settings.ReceiptPublicBaseUrl);
+                _settings.ReceiptPublicBaseUrl,
+                true,
+                _settings.ReceiptShowPhone,
+                _settings.ReceiptShowCustomerEmail);
         }
         catch { _path = null; }
     }
@@ -258,7 +264,7 @@ public sealed class PrinterService : IPrinterService
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
             if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
-                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link, opts?.LogoRasterBytes), "Cartex Receipt");
+                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link, opts?.LogoRasterBytes), "Cartex Receipt", opts?.OutputFilePath);
         }
     }
 
@@ -270,7 +276,7 @@ public sealed class PrinterService : IPrinterService
         PrintZReport(r, configured ?? "", 1);
     }
 
-    public void PrintZReport(ZReportDto r, string printerName, int copies)
+    public void PrintZReport(ZReportDto r, string printerName, int copies, string? outputFilePath = null)
     {
         var mode = DocumentPrintLayout.ResolveOutputFormat(
             _settings.ZReportMode is "a4" or "a5" ? "document" : "thermal",
@@ -281,7 +287,7 @@ public sealed class PrinterService : IPrinterService
                 ? _settings.ZReportPaperWidth
                 : _settings.ReceiptPaperWidth;
             for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
-                PrintRaw(printerName, FormatZReport(r, width));
+                PrintRaw(printerName, FormatZReport(r, width), outputFilePath);
             return;
         }
 
@@ -310,14 +316,18 @@ public sealed class PrinterService : IPrinterService
             reportOrientation,
             supportsColor);
 
-        WindowsImagePrinter.Print(
-            printerName,
-            pages,
-            physicalPaper,
-            mode,
-            physicalOrientation,
-            pagesPerSheet,
-            Math.Clamp(copies, 1, 100));
+        if (_settings.ReceiptMode is "a4" or "a5")
+            PrintDocumentImages(pages, printerName, copies);
+        else
+            WindowsImagePrinter.Print(
+                printerName,
+                pages,
+                "receipt",
+                _settings.ReceiptPaperWidth > 65 ? "80mm" : "58mm",
+                "portrait",
+                1,
+                copies,
+                outputFilePath);
     }
 
     public string FormatZReport(ZReportDto r, int? paperWidth = null)
@@ -373,16 +383,17 @@ public sealed class PrinterService : IPrinterService
         return sb.ToString();
     }
 
-    public void PrintRaw(string? printerName, string text)
+    public void PrintRaw(string? printerName, string text, string? outputFilePath = null)
     {
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName)) return;
-        RawPrinter.Send(printerName, Encoding.UTF8.GetBytes(text), "Cartex Receipt");
+        if (string.IsNullOrWhiteSpace(printerName)) return;
+        var bytes = Encoding.UTF8.GetBytes(text);
+        PrintRawBytes(printerName, bytes, outputFilePath);
     }
 
-    public void PrintRawBytes(string? printerName, byte[] data)
+    public void PrintRawBytes(string? printerName, byte[] data, string? outputFilePath = null)
     {
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || data.Length == 0) return;
-        RawPrinter.Send(printerName, data, "Cartex Label");
+        if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
+            RawPrinter.Send(printerName, data, "Cartex Raw Print", outputFilePath);
     }
 
     public void PrintDocument(string filePath, string? printerName)
@@ -402,9 +413,9 @@ public sealed class PrinterService : IPrinterService
     }
 
     public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages) =>
-        PrintDocumentImages(imagePages, _settings.DocumentPrinter ?? "", _settings.ReceiptCopies);
+        PrintDocumentImages(imagePages, _settings.DocumentPrinter ?? "", _settings.ReceiptCopies, null);
 
-    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies)
+    public void PrintDocumentImages(IReadOnlyList<byte[]> imagePages, string printerName, int copies, string? outputFilePath = null)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName) || imagePages.Count == 0)
             return;
@@ -420,7 +431,8 @@ public sealed class PrinterService : IPrinterService
             DocumentPrintLayout.ResolveOutputFormat("document", physicalPaper),
             _settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
             _settings.DocumentPagesPerSheet is 2 or 4 ? _settings.DocumentPagesPerSheet : 1,
-            Math.Clamp(copies, 1, 100));
+            Math.Clamp(copies, 1, 100),
+            outputFilePath);
     }
 
     private static string FormatReceipt(ReceiptDto r, ReceiptPrintOptions? opts)
@@ -642,7 +654,7 @@ internal static class RawPrinter
     [DllImport("winspool.drv", SetLastError = true)]
     private static extern bool WritePrinter(IntPtr hPrinter, IntPtr buf, int count, out int written);
 
-    public static void Send(string printerName, byte[] bytes, string docName)
+    public static void Send(string printerName, byte[] bytes, string docName, string? outputFilePath = null)
     {
         if (!OperatingSystem.IsWindows()) return;
         var unmanaged = Marshal.AllocCoTaskMem(bytes.Length);
@@ -653,7 +665,7 @@ internal static class RawPrinter
                 throw new InvalidOperationException($"OpenPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
             try
             {
-                var di = new DOCINFO { DocName = docName, DataType = "RAW" };
+                var di = new DOCINFO { DocName = docName, DataType = "RAW", OutputFile = outputFilePath };
                 if (!StartDocPrinter(hPrinter, 1, ref di))
                     throw new InvalidOperationException($"StartDocPrinter '{printerName}' failed (Win32 error {Marshal.GetLastWin32Error()})");
                 try

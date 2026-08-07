@@ -74,7 +74,8 @@ internal static class WindowsImagePrinter
         string receiptPaperSize,
         string orientation,
         int pagesPerSheet,
-        int copies)
+        int copies,
+        string? outputFilePath = null)
     {
         if (!OperatingSystem.IsWindows())
             return;
@@ -97,7 +98,8 @@ internal static class WindowsImagePrinter
                 orientation,
                 pagesPerSheet,
                 copies,
-                supportsColor);
+                supportsColor,
+                outputFilePath);
         }
         finally
         {
@@ -114,7 +116,8 @@ internal static class WindowsImagePrinter
         string orientation,
         int pagesPerSheet,
         int copies,
-        bool supportsColor)
+        bool supportsColor,
+        string? outputFilePath = null)
     {
         if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
             throw new Win32Exception(Marshal.GetLastWin32Error(), $"Printer ochilmadi: {printerName}");
@@ -139,7 +142,8 @@ internal static class WindowsImagePrinter
             var info = new DocInfo
             {
                 Size = Marshal.SizeOf<DocInfo>(),
-                DocName = "Cartex Receipt"
+                DocName = "Cartex Receipt",
+                Output = outputFilePath
             };
             if (StartDoc(dc, ref info) <= 0)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Chop etish vazifasi boshlanmadi.");

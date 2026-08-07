@@ -21,6 +21,7 @@ public sealed class PrintHostService
     private readonly BranchContextService _branch;
     private readonly PrintHostJournal _journal;
     private readonly PrintHostCredentialStore _credentialStore;
+    private readonly IFilePickerService _filePicker;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private CancellationTokenSource? _lifetime;
@@ -37,7 +38,8 @@ public sealed class PrintHostService
         AuthService auth,
         BranchContextService branch,
         PrintHostJournal journal,
-        PrintHostCredentialStore credentialStore)
+        PrintHostCredentialStore credentialStore,
+        IFilePickerService filePicker)
     {
         _printingApi = printingApi;
         _receiptApi = receiptApi;
@@ -48,6 +50,7 @@ public sealed class PrintHostService
         _branch = branch;
         _journal = journal;
         _credentialStore = credentialStore;
+        _filePicker = filePicker;
         _hostToken = credentialStore.Load();
         _auth.LoggedOut += () => _ = StopAsync();
         _branch.PropertyChanged += BranchChanged;
@@ -150,6 +153,9 @@ public sealed class PrintHostService
     private static void Add(IDictionary<string, PrintCapability> endpoints, string? printer, PrintCapability capability)
     {
         if (string.IsNullOrWhiteSpace(printer)) return;
+        if (printer.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase) ||
+            printer.Contains("XPS Document", StringComparison.OrdinalIgnoreCase) ||
+            printer.Contains("OneNote", StringComparison.OrdinalIgnoreCase)) return;
         endpoints[printer] = endpoints.TryGetValue(printer, out var current) ? current | capability : capability;
     }
 
@@ -290,10 +296,21 @@ public sealed class PrintHostService
     {
         var token = Text(job.Payload, "receiptToken") ?? job.SourceId;
         var settings = _printer.GetSettings();
-        if (settings.ReceiptMode is "a4" or "a5")
+        var actualPrinter = string.IsNullOrWhiteSpace(job.PrinterSystemName) 
+            ? settings.ReceiptPrinter 
+            : job.PrinterSystemName;
+            
+        var isPdfPrinter = actualPrinter != null &&
+                           (actualPrinter.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase) ||
+                            actualPrinter.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase) ||
+                            actualPrinter.Contains("XPS", StringComparison.OrdinalIgnoreCase) ||
+                            actualPrinter.Contains("OneNote", StringComparison.OrdinalIgnoreCase));
+
+        if (settings.ReceiptMode is "a4" or "a5" || isPdfPrinter)
         {
             var pages = await LoadReceiptDocumentAsync(token, cancellationToken);
-            return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies);
+            var pdfPath = await GetPdfOutputPathAsync(actualPrinter, $"Chek_{token}");
+            return () => _printer.PrintDocumentImages(pages, actualPrinter ?? "", job.Copies, pdfPath);
         }
         var receipt = await _receiptApi.GetAsync(token);
         var receiptOptions = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
@@ -317,7 +334,11 @@ public sealed class PrintHostService
             catch { }
         }
 
-        return () => _printer.PrintReceipt(receipt, job.PrinterSystemName, job.Copies, receiptOptions);
+        var receiptFilePath = await GetPdfOutputPathAsync(actualPrinter, $"Chek_{token}");
+        if (receiptOptions != null)
+            receiptOptions = receiptOptions with { OutputFilePath = receiptFilePath };
+
+        return () => _printer.PrintReceipt(receipt, actualPrinter ?? "", job.Copies, receiptOptions);
     }
 
     private Action PrepareBarcode(AssignedPrintJobDto job)
@@ -342,7 +363,8 @@ public sealed class PrintHostService
         var value = Number(job.Payload, "shiftId") ?? (long.TryParse(job.SourceId, out var id) ? id : 0);
         if (value <= 0) throw new InvalidOperationException("Shift is required.");
         var report = await _shiftsApi.GetReportAsync(value);
-        return () => _printer.PrintZReport(report, job.PrinterSystemName, job.Copies);
+        var pdfPath = await GetPdfOutputPathAsync(job.PrinterSystemName, $"ZReport_{value}");
+        return () => _printer.PrintZReport(report, job.PrinterSystemName, job.Copies, pdfPath);
     }
 
     private async Task<Action> PrepareDocumentAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
@@ -351,7 +373,8 @@ public sealed class PrintHostService
         if (string.IsNullOrWhiteSpace(receiptToken))
             throw new InvalidOperationException("Unsupported document source.");
         var pages = await LoadReceiptDocumentAsync(receiptToken, cancellationToken);
-        return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies);
+        var pdfPath = await GetPdfOutputPathAsync(job.PrinterSystemName, $"Hujjat_{receiptToken}");
+        return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies, pdfPath);
     }
 
     private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(string token, CancellationToken cancellationToken)
@@ -373,6 +396,36 @@ public sealed class PrintHostService
             pages.Add(output.ToArray());
         }
         return pages;
+    }
+
+    private async Task<string?> GetPdfOutputPathAsync(string? printerName, string defaultFileName)
+    {
+        if (string.IsNullOrWhiteSpace(printerName) || 
+            (!printerName.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase) &&
+             !printerName.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase) &&
+             !printerName.Contains("XPS", StringComparison.OrdinalIgnoreCase) &&
+             !printerName.Contains("OneNote", StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        var path = _printer.GetSettings().PdfExportPath;
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            if (!System.IO.Directory.Exists(path))
+                System.IO.Directory.CreateDirectory(path);
+            return System.IO.Path.Combine(path, $"{defaultFileName}.pdf");
+        }
+        string? picked = null;
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () => 
+        {
+            picked = await _filePicker.SaveFilePathAsync(defaultFileName, "pdf");
+        });
+            
+        if (string.IsNullOrWhiteSpace(picked))
+            throw new OperationCanceledException("PDF saqlash bekor qilindi.");
+                
+        return picked;
     }
 
     private static string? Text(JsonElement payload, string name) =>

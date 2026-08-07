@@ -15,7 +15,7 @@ public static class EscPosImageHelper
             var width = targetWidth;
             var height = (int)((double)bitmap.Height / bitmap.Width * width);
 
-            using var resized = bitmap.Resize(new SKImageInfo(width, height), SKFilterQuality.High);
+            using var resized = bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear));
             if (resized == null) return [];
 
             int widthBytes = (width + 7) / 8;

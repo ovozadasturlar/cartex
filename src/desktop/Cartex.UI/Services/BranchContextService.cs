@@ -20,7 +20,7 @@ public sealed partial class BranchContextService : ObservableObject
     public long? CurrentWarehouseId => SelectedWarehouse?.Id;
     public bool HasMultipleBranches => Branches.Count > 1;
     public bool HasMultipleWarehouses =>
-        SelectedBranch is not null && Warehouses.Count(w => w.BranchId == SelectedBranch.Id) > 1;
+        Warehouses.Count > 1;
 
     public BranchContextService(ISessionsApi sessionsApi) => _sessionsApi = sessionsApi;
 
