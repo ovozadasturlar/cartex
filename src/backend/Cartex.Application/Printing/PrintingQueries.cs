@@ -187,6 +187,7 @@ public sealed class RecoverPrintJobsCommandHandler(
         var now = DateTime.UtcNow;
         var expired = await db.PrintJobs.Include(x => x.Attempts)
             .Where(x => (x.Status == DomainJobStatus.Assigned || x.Status == DomainJobStatus.Accepted) && x.LeaseExpiresAt < now)
+            .OrderBy(x => x.CreatedAt)
             .Take(100).ToListAsync(cancellationToken);
         foreach (var job in expired)
         {
@@ -207,6 +208,7 @@ public sealed class RecoverPrintJobsCommandHandler(
 
         var uncertain = await db.PrintJobs.Include(x => x.Attempts)
             .Where(x => x.Status == DomainJobStatus.SpoolSubmitted && x.SubmittedAt < now.AddMinutes(-10))
+            .OrderBy(x => x.CreatedAt)
             .Take(100).ToListAsync(cancellationToken);
         foreach (var job in uncertain)
         {
