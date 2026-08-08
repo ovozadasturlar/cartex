@@ -88,7 +88,7 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));
 
-        var customerId = await SeedDebtorAsync();
+        await SeedDebtorAsync();
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(minDays: 30), DateTime.UtcNow, CancellationToken.None));
         Assert.Equal(0, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(minBalance: 1_000_000_000m), DateTime.UtcNow, CancellationToken.None));
         Assert.Equal(1, await DebtReminderScheduler.EnqueueDueRemindersAsync(db, Config(), DateTime.UtcNow, CancellationToken.None));

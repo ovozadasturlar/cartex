@@ -39,17 +39,15 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         return stream;
     }
 
-    private async Task<long> LoginAsync()
+    private async Task LoginAsync()
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var branch = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
-        var warehouse = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
 
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch);
-        return warehouse;
     }
 
     [Fact]
@@ -244,7 +242,7 @@ public class ProductImportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var unitId = await db.Units.Where(u => u.IsDefault).Select(u => u.Id).FirstAsync();
         await sender.Send(new CreateProductCommand(
             Name: "Kirim tovari", CategoryId: null, UnitId: unitId, MinStock: null,
-            Barcodes: [new BarcodeInput("4780000000021", 1)]));
+            Barcodes: [new BarcodeInput("4780000000021")]));
 
         await using var file = Sheet(
             ["Nomi", "Barkod", "Soni", "Kirim narxi"],

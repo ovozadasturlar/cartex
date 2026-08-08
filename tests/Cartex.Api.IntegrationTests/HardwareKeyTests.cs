@@ -29,7 +29,7 @@ public class HardwareKeyTests(CartexApiFactory factory)
         Assert.NotNull(key);
 
         var client = factory.CreateClient();
-        var login = await client.PostAsJsonAsync("/api/auth/login-with-key", new { keyContent = key!.Content, serial = "AB12CD34" });
+        var login = await client.PostAsJsonAsync("/api/auth/login-with-key", new { keyContent = key.Content, serial = "AB12CD34" });
         login.EnsureSuccessStatusCode();
         var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.Equal("seller", body!.Role);

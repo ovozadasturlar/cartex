@@ -45,7 +45,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
             var current = await sender.Send(new GetCurrentShiftQuery());
             Assert.NotNull(current);
-            report = await sender.Send(new CloseShiftCommand(current!.Id, current.ExpectedCash));
+            report = await sender.Send(new CloseShiftCommand(current.Id, current.ExpectedCash));
         }
 
         Assert.Equal(100000, report.OpeningFloat);
@@ -59,7 +59,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     [Fact]
     public async Task Close_with_counted_below_expected_reports_negative_difference()
     {
-        var (branch1, warehouse1, businessId, adminId, _) = await SetupAsync();
+        var (branch1, _, businessId, adminId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         ZReportDto report;

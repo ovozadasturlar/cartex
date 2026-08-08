@@ -56,7 +56,7 @@ public class OrderingLifecycleTests(CartexApiFactory factory)
     [Fact]
     public async Task Features_enabled_endpoint_is_available_to_seller()
     {
-        var developer = await DeveloperAsync(factory);
+        await DeveloperAsync(factory);
         var seller = await AuthHelper.LoginAsync(factory, "seller", "seller123");
         var enabled = await seller.GetFromJsonAsync<List<string>>("/api/features/enabled");
         Assert.NotNull(enabled);

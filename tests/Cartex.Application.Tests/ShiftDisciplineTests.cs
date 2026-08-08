@@ -106,7 +106,7 @@ public class ShiftDisciplineTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     [Fact]
     public async Task Z_report_includes_cash_debt_repayment()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync();
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         var shiftId = await TestShift.OpenAsync(Fixture);
 

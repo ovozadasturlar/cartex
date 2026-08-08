@@ -2,7 +2,6 @@ using Cartex.Application.Stocks.Commands;
 using Cartex.Application.StockTransfers.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;

@@ -85,7 +85,7 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             var detail = await sender.Send(new GetSupplyByIdQuery(supplyId));
             Assert.NotNull(detail);
-            Assert.Equal(80_000m, detail!.TotalAmount);
+            Assert.Equal(80_000m, detail.TotalAmount);
             Assert.Equal(30_000m, detail.PaidCash);
             Assert.Equal(0m, detail.PaidCard);
             var item = Assert.Single(detail.Items);

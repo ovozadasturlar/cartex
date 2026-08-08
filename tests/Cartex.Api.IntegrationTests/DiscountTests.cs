@@ -40,7 +40,7 @@ public class DiscountTests(CartexApiFactory factory)
 
         var receipt = await client.GetFromJsonAsync<Receipt>($"/r/{saleResult!.ReceiptToken}");
         Assert.NotNull(receipt);
-        Assert.Equal(discount, receipt!.DiscountAmount);
+        Assert.Equal(discount, receipt.DiscountAmount);
         Assert.Equal(net, receipt.TotalAmount);
         Assert.Equal(0m, receipt.DebtAmount);
     }

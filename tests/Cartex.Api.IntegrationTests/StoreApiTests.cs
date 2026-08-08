@@ -90,7 +90,7 @@ public class StoreApiTests(CartexApiFactory factory)
         var catalog = await client.GetFromJsonAsync<List<CatalogItem>>($"/api/store/catalog?warehouseId={warehouseId}");
         var item = catalog!.FirstOrDefault(c => c.VariantId == variantId);
         Assert.NotNull(item);
-        Assert.Equal(12000m, item!.Price);
+        Assert.Equal(12000m, item.Price);
         Assert.True(item.Available);
 
         var body = new { warehouseId, items = new[] { new { variantId, quantity = 2m } } };

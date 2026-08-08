@@ -102,7 +102,7 @@ public class RefreshTokenTests(CartexApiFactory factory)
         var mine = sessions!.FirstOrDefault(s => s.DeviceName == "Sessions-Device");
         Assert.NotNull(mine);
 
-        var revoke = await client.DeleteAsync($"/api/auth/sessions/{mine!.Id}");
+        var revoke = await client.DeleteAsync($"/api/auth/sessions/{mine.Id}");
         Assert.Equal(HttpStatusCode.NoContent, revoke.StatusCode);
 
         var refresh = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = login.RefreshToken });

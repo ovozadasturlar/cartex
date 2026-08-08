@@ -77,7 +77,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     [Fact]
     public async Task Full_return_after_partial_clears_everything_exactly()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync();
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(Fixture);
 
