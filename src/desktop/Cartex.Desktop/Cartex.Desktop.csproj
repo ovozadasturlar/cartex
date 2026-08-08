@@ -18,10 +18,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
   </ItemGroup>
 
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-xrw6-gwf8-vvr9" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Cartex.UI\Cartex.UI.csproj" />

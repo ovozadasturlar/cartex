@@ -23,9 +23,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        if (enableFeature)
-            await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
-                .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, true));
+        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency
+                                     || f.Code == FeatureCatalog.PricingMulticurrency
+                                     || f.Code == FeatureCatalog.SalesMulticurrency)
+            .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, enableFeature));
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
@@ -54,7 +55,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     [Fact]
     public async Task Foreign_payment_rejected_when_feature_disabled()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync(enableFeature: false);
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync(enableFeature: false);
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(Fixture);
         await SetRateAsync("USD", 12600m);
@@ -223,7 +224,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, AccountType.Cash, DebtCurrency: "USD", PayCurrency: "UZS"));
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, DebtCurrency: "USD", PayCurrency: "UZS"));
         }
 
         using var check2 = Fixture.CreateScope();

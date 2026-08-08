@@ -6,11 +6,11 @@ using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Shared.Models.Printing;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using DomainCapability = Cartex.Domain.Enums.PrintCapability;
 using DomainEndpointStatus = Cartex.Domain.Enums.PrinterEndpointStatus;
 using DomainJobKind = Cartex.Domain.Enums.PrintJobKind;
@@ -604,7 +604,11 @@ public sealed class SubmitPrintJobCommandHandler(IApplicationDbContext db, ICurr
     }
 }
 
-public sealed class CompletePrintJobCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IPrintJobNotifier notifier)
+public sealed class CompletePrintJobCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IPrintJobNotifier notifier,
+    ILogger<CompletePrintJobCommandHandler> logger)
     : IRequestHandler<CompletePrintJobCommand, Unit>
 {
     public async Task<Unit> Handle(CompletePrintJobCommand command, CancellationToken cancellationToken)
@@ -638,8 +642,9 @@ public sealed class CompletePrintJobCommandHandler(IApplicationDbContext db, ICu
                     endpoint.DisplayName,
                     null), cancellationToken);
             }
-            catch
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
+                logger.LogWarning(ex, "Could not notify device {DeviceId} that print job {JobId} completed", job.RequestedDeviceId, job.Id);
             }
         }
         return Unit.Value;
@@ -650,7 +655,8 @@ public sealed class FailPrintJobCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     PrintRoutingService routing,
-    IPrintJobNotifier notifier) : IRequestHandler<FailPrintJobCommand, Unit>
+    IPrintJobNotifier notifier,
+    ILogger<FailPrintJobCommandHandler> logger) : IRequestHandler<FailPrintJobCommand, Unit>
 {
     public async Task<Unit> Handle(FailPrintJobCommand command, CancellationToken cancellationToken)
     {
@@ -680,8 +686,9 @@ public sealed class FailPrintJobCommandHandler(
                         endpoint.DisplayName,
                         job.ErrorMessage), cancellationToken);
                 }
-                catch
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
+                    logger.LogWarning(ex, "Could not notify device {DeviceId} that print job {JobId} requires manual review", job.RequestedDeviceId, job.Id);
                 }
             }
             return Unit.Value;

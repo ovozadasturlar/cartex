@@ -46,6 +46,7 @@ public class UsersController(ISender sender) : ControllerBase
     }
 
     [HttpPatch("{id:long}/username")]
+    [HasPermission(AppPermissions.Wildcard)]
     public async Task<IActionResult> ChangeUsername(long id, [FromBody] ChangeUsernameRequest request)
     {
         await sender.Send(new ChangeUsernameCommand(id, request.NewUsername));

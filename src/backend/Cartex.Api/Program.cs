@@ -39,7 +39,7 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
-builder.Services.AddSingleton<IPrintJobNotifier, SignalRCPrintJobNotifier>();
+builder.Services.AddSingleton<IPrintJobNotifier, SignalRPrintJobNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
 builder.Services.AddHostedService<PrintJobRecoveryService>();
 

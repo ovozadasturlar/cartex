@@ -83,6 +83,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("barcode-label")]
+    [HasPermission(AppPermissions.Printing.BarcodePrint)]
     public async Task<ActionResult<BarcodeLabelSettingsDto>> GetBarcodeLabel() =>
         Ok(await sender.Send(new GetBarcodeLabelSettingsQuery()));
 

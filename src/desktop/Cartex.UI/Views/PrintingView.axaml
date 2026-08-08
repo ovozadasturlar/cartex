@@ -1722,10 +1722,10 @@
                                             <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6"
                                                         VerticalAlignment="Center">
                                                 <Button Classes="outline" Content="Qayta urinish" IsVisible="{Binding CanRetry}"
-                                                        Command="{Binding $parent[UserControl].DataContext.RetryNetworkJobCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).RetryNetworkJobCommand}"
                                                         CommandParameter="{Binding .}" />
                                                 <Button Classes="danger" Content="Bekor qilish" IsVisible="{Binding CanCancel}"
-                                                        Command="{Binding $parent[UserControl].DataContext.CancelNetworkJobCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).CancelNetworkJobCommand}"
                                                         CommandParameter="{Binding .}" />
                                             </StackPanel>
                                         </Grid>

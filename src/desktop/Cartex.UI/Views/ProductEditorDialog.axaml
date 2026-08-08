@@ -223,8 +223,8 @@
                                                        Foreground="{DynamicResource TextMuted}"
                                                        Text="{Binding PackQty, Converter={x:Static conv:PackQtyConverter.Instance}}" />
                                             <Button Grid.Column="2" Classes="icon-sm" Padding="3"
-                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanDeleteBarcode}"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.DeleteEditBarcodeCommand}"
+                                                    IsVisible="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).CanDeleteBarcode}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).DeleteEditBarcodeCommand}"
                                                     CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
                                             </Button>
@@ -267,13 +267,13 @@
                                                        Foreground="{DynamicResource TextSecondary}"
                                                        Text="{Binding Kind, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=pack}" />
                                             <Button Grid.Column="3" Classes="icon-sm" Padding="3"
-                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanEdit}"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.EditPackCommand}" CommandParameter="{Binding}">
+                                                    IsVisible="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).CanEdit}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).EditPackCommand}" CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Pencil" Width="14" Height="14" Foreground="{DynamicResource TextSecondary}" />
                                             </Button>
                                             <Button Grid.Column="4" Classes="icon-sm" Padding="3"
-                                                    IsVisible="{Binding $parent[ItemsControl].DataContext.CanDeleteVariant}"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.DeletePackCommand}" CommandParameter="{Binding}">
+                                                    IsVisible="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).CanDeleteVariant}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:ProductsViewModel)DataContext).DeletePackCommand}" CommandParameter="{Binding}">
                                                 <mi:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource DangerBrush}" />
                                             </Button>
                                         </Grid>

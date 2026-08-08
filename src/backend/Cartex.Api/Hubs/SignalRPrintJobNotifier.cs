@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Cartex.Api.Hubs;
 
-public sealed class SignalRCPrintJobNotifier(IHubContext<PrintingHub> hub) : IPrintJobNotifier
+public sealed class SignalRPrintJobNotifier(IHubContext<PrintingHub> hub) : IPrintJobNotifier
 {
     public Task NotifyJobAvailableAsync(string deviceId, long jobId, CancellationToken cancellationToken = default) =>
         hub.Clients.Group(HostGroup(deviceId)).SendAsync("PrintJobAvailable", jobId, cancellationToken);

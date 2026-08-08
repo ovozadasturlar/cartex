@@ -1,6 +1,6 @@
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
-using Cartex.Application.Common.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace Cartex.Application.Settings.Queries;
 
@@ -13,7 +13,10 @@ public record SettingsDto(TelegramSettingsDto Telegram, EmailSettingsDto Email, 
 
 public record GetSettingsQuery : IRequest<SettingsDto>;
 
-public sealed class GetSettingsQueryHandler(ISettingsService settings, ISecretProtector protector) : IRequestHandler<GetSettingsQuery, SettingsDto>
+public sealed class GetSettingsQueryHandler(
+    ISettingsService settings,
+    ISecretProtector protector,
+    ILogger<GetSettingsQueryHandler> logger) : IRequestHandler<GetSettingsQuery, SettingsDto>
 {
     public async Task<SettingsDto> Handle(GetSettingsQuery request, CancellationToken cancellationToken)
     {
@@ -24,7 +27,16 @@ public sealed class GetSettingsQueryHandler(ISettingsService settings, ISecretPr
 
         var tokenLength = 0;
         if (!string.IsNullOrEmpty(tg.BotToken))
-            try { tokenLength = protector.Unprotect(tg.BotToken).Length; } catch { }
+        {
+            try
+            {
+                tokenLength = protector.Unprotect(tg.BotToken).Length;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not read the stored Telegram bot token length");
+            }
+        }
 
         return new SettingsDto(
             new TelegramSettingsDto(tg.Enabled, tg.ChatId, !string.IsNullOrEmpty(tg.BotToken), tokenLength),

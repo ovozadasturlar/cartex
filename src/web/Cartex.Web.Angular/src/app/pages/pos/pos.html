@@ -65,7 +65,7 @@
                 <button class="tile" [disabled]="!canCreateCart" (click)="addTile(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
-                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                      <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
                     } @else {
                       <mat-icon>inventory_2</mat-icon>
                     }
@@ -92,7 +92,7 @@
                 <button class="prow" [disabled]="!canCreateCart" (click)="addTile(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
-                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                      <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
                     } @else {
                       <mat-icon>inventory_2</mat-icon>
                     }

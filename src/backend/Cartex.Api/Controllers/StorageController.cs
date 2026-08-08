@@ -20,7 +20,7 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
 
     [HttpPost("upload")]
     [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
-    public async Task<IActionResult> Upload(IFormFile file)
+    public async Task<IActionResult> Upload(IFormFile? file)
     {
         if (file is null || file.Length == 0)
             return BadRequest();

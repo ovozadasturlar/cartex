@@ -15,10 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\backend\Cartex.Domain\Cartex.Domain.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />

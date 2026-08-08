@@ -74,6 +74,7 @@ public sealed class PrintingController(ISender sender) : ControllerBase
         Ok(await sender.Send(new UpdatePrintRoutingPolicyCommand(branchId, kind, request), cancellationToken));
 
     [HttpPost("jobs")]
+    [HasPermission(AppPermissions.Printing.RemoteUse)]
     public async Task<ActionResult<PrintJobDto>> CreateJob(CreatePrintJobRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new CreatePrintJobCommand(request), cancellationToken);
@@ -83,6 +84,7 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     }
 
     [HttpGet("jobs")]
+    [HasPermission(AppPermissions.Printing.JobsViewOwn, AppPermissions.Printing.JobsViewBranch)]
     public async Task<ActionResult<IReadOnlyList<PrintJobDto>>> GetJobs(long branchId, int take = 100, CancellationToken cancellationToken = default) =>
         Ok(await sender.Send(new GetPrintJobsQuery(branchId, take), cancellationToken));
 

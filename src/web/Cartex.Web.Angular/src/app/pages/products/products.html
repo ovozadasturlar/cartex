@@ -46,7 +46,7 @@
             <td mat-cell *matCellDef="let p" class="col-img">
               @if (p.imageUrl) {
                 <button class="thumb-button" type="button" (click)="openImage(p, $event)">
-                  <img class="thumb" [src]="p.imageUrl + '&thumb=true'" [alt]="p.name" (error)="p.imageUrl = null" />
+                  <img class="thumb" [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.name" (error)="p.imageUrl = null" />
                 </button>
               } @else {
                 <div class="thumb ph"><mat-icon>inventory_2</mat-icon></div>

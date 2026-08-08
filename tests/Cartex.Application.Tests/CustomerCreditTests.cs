@@ -22,7 +22,9 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         if (multicurrency)
-            await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
+            await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency
+                                         || f.Code == FeatureCatalog.PricingMulticurrency
+                                         || f.Code == FeatureCatalog.SalesMulticurrency)
                 .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, true));
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
         var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;

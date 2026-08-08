@@ -18,7 +18,9 @@ public class ShiftCurrencyValidationTests(DatabaseFixture fixture) : DatabaseTes
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
+        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency
+                                     || f.Code == FeatureCatalog.PricingMulticurrency
+                                     || f.Code == FeatureCatalog.SalesMulticurrency)
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, multicurrency));
         var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
