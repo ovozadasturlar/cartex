@@ -1,5 +1,3 @@
-using Cartex.UI.Services;
-using System.Collections.Generic;
 
 namespace Cartex.UI.Services;
 

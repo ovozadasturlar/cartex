@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -37,7 +36,7 @@ public sealed record PrinterSettings
     public bool ReceiptShowPaymentDetails { get; init; } = true;
     public bool ReceiptShowQrCode { get; init; } = true;
     public bool ReceiptShowElectronicLink { get; init; } = true;
-    public bool ReceiptShowCustomerEmail { get; init; } = false;
+    public bool ReceiptShowCustomerEmail { get; init; }
     public string? ReceiptPublicBaseUrl { get; init; }
     public bool AutoPrintZReport { get; init; }
     public string? LabelMode { get; init; }

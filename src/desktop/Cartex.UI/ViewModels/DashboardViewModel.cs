@@ -9,7 +9,6 @@ using Cartex.Shared.Models.Transactions;
 using Cartex.UI.Services;
 using Avalonia.Media;
 using LiveChartsCore;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;

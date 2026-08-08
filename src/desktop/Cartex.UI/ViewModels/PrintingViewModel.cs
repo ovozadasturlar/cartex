@@ -172,7 +172,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _showElectronicLink = true;
     [ObservableProperty] private bool _showLogo = true;
     [ObservableProperty] private bool _showCustomerPhone = true;
-    [ObservableProperty] private bool _showCustomerEmail = false;
+    [ObservableProperty] private bool _showCustomerEmail;
     [ObservableProperty] private string? _publicReceiptBaseUrl;
     [ObservableProperty] private string _previewBusinessName = string.Empty;
     [ObservableProperty] private string _previewBranchName = string.Empty;

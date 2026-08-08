@@ -6,7 +6,6 @@ using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Reports;
 using Cartex.UI.Services;
 using LiveChartsCore;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;

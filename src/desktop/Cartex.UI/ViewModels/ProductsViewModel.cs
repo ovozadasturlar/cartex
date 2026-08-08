@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,7 +12,6 @@ using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Storage;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Barcodes;
-using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Units;
 using Cartex.UI.Models;
 using Cartex.UI.Services;

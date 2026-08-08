@@ -10,6 +10,7 @@ namespace Cartex.UI.ViewModels;
 
 public partial class LoginViewModel : ViewModelBase
 {
+    private static readonly HttpClient HealthCheckHttpClient = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly AuthService _authService;
     private readonly NavigationService _navigationService;
 
@@ -233,8 +234,7 @@ public partial class LoginViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            (await http.GetAsync($"{url}/health")).EnsureSuccessStatusCode();
+            (await HealthCheckHttpClient.GetAsync($"{url}/health")).EnsureSuccessStatusCode();
             SettingsService.Instance.ApiBaseUrl = url;
             ServerStatus = L["server_connected"];
             IsServerEditOpen = false;

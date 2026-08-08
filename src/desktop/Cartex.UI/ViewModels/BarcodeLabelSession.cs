@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using Avalonia.Media.Imaging;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Barcodes;

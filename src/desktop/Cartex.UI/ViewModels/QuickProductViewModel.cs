@@ -6,7 +6,6 @@ using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Units;
 using Cartex.UI.Services;
-using Refit;
 
 namespace Cartex.UI.ViewModels;
 

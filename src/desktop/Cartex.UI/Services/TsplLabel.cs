@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using SkiaSharp;
@@ -140,7 +139,9 @@ public static class TsplLabel
         else
             canvas.Translate(-shiftX, -shiftY);
 
-        using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = false };
+        using var paint = new SKPaint();
+        paint.Color = SKColors.Black;
+        paint.IsAntialias = false;
         var sideMargin = Dots(2);
         var edgeMargin = Dots(2.5);
         var usable = widthDots - sideMargin * 2;

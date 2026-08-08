@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using Cartex.Shared.Models.Customers;
 using Cartex.UI.ViewModels;

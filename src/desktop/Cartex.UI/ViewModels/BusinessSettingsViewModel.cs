@@ -1,5 +1,3 @@
-using System.IO;
-using System.Net.Http;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

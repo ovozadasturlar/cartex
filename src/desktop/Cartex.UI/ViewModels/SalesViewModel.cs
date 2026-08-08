@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -14,7 +13,6 @@ using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Supplies;
 using Cartex.Shared.Models.Shifts;
-using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Ordering;
 using Avalonia.Input;
@@ -196,7 +194,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paidBonus;
     [ObservableProperty] private decimal _discountAmount;
     [ObservableProperty] private decimal _discountPercent;
-    [ObservableProperty] private bool _isPaymentPanelOpen = false;
+    [ObservableProperty] private bool _isPaymentPanelOpen;
     private bool _syncingDiscount;
     private bool _discountByPercent;
     [ObservableProperty] private bool _isCustomerPanelOpen;

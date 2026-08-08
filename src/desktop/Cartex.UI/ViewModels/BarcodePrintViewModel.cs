@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,7 +6,6 @@ using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Paging;
 using Cartex.ApiClient.Querying;
-using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Rates;
 using Cartex.UI.Models;

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Products;
 using Cartex.UI.Services;

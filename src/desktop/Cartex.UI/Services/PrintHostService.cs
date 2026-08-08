@@ -12,6 +12,7 @@ namespace Cartex.UI.Services;
 
 public sealed class PrintHostService
 {
+    private static readonly HttpClient ImageHttpClient = new();
     private readonly IPrintingApi _printingApi;
     private readonly IReceiptApi _receiptApi;
     private readonly IShiftsApi _shiftsApi;
@@ -323,8 +324,7 @@ public sealed class PrintHostService
                 if (storageApi != null)
                 {
                     var file = await storageApi.GetUrlAsync(receipt.LogoImageKey);
-                    using var hc = new System.Net.Http.HttpClient();
-                    var imageBytes = await hc.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
+                    var imageBytes = await ImageHttpClient.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
                     
                     int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);
                     var rasterBytes = EscPosImageHelper.BinarizeToEscPosRaster(imageBytes, width);

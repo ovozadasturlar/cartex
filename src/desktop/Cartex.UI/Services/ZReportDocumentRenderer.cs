@@ -500,7 +500,9 @@ public static class ZReportDocumentRenderer
         SKTextAlign align = SKTextAlign.Left)
     {
         using var font = CreateFont(typeface, size);
-        using var paint = new SKPaint { Color = color, IsAntialias = true };
+        using var paint = new SKPaint();
+        paint.Color = color;
+        paint.IsAntialias = true;
         canvas.DrawText(text, x, baseline, align, font, paint);
     }
 
@@ -519,18 +521,19 @@ public static class ZReportDocumentRenderer
         float borderWidth,
         float radius)
     {
-        using var fill = new SKPaint { Color = background, IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var fill = new SKPaint();
+        fill.Color = background;
+        fill.IsAntialias = true;
+        fill.Style = SKPaintStyle.Fill;
         canvas.DrawRoundRect(rect, radius, radius, fill);
         if (borderWidth <= 0)
             return;
 
-        using var stroke = new SKPaint
-        {
-            Color = border,
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = borderWidth
-        };
+        using var stroke = new SKPaint();
+        stroke.Color = border;
+        stroke.IsAntialias = true;
+        stroke.Style = SKPaintStyle.Stroke;
+        stroke.StrokeWidth = borderWidth;
         canvas.DrawRoundRect(rect, radius, radius, stroke);
     }
 
@@ -543,7 +546,10 @@ public static class ZReportDocumentRenderer
         SKColor color,
         float width)
     {
-        using var paint = new SKPaint { Color = color, IsAntialias = true, StrokeWidth = width };
+        using var paint = new SKPaint();
+        paint.Color = color;
+        paint.IsAntialias = true;
+        paint.StrokeWidth = width;
         canvas.DrawLine(startX, startY, endX, endY, paint);
     }
 

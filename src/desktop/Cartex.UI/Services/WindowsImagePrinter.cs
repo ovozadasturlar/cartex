@@ -183,16 +183,14 @@ internal static class WindowsImagePrinter
         }
         else
         {
-            using var paint = new SKPaint
-            {
-                ColorFilter = SKColorFilter.CreateColorMatrix(
+            using var paint = new SKPaint();
+            paint.ColorFilter = SKColorFilter.CreateColorMatrix(
                 [
                     0.2126f, 0.7152f, 0.0722f, 0, 0,
                     0.2126f, 0.7152f, 0.0722f, 0, 0,
                     0.2126f, 0.7152f, 0.0722f, 0, 0,
                     0,       0,       0,       1, 0
-                ])
-            };
+                ]);
             canvas.DrawBitmap(source, 0, 0, paint);
         }
         return target;

@@ -1,12 +1,10 @@
 using System.Collections.ObjectModel;
-using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Sales;
-using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
 

@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Threading;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Auth;
 

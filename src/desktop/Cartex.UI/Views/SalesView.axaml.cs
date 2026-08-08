@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Cartex.Shared.Models.Stocks;
 using Cartex.UI.ViewModels;
 
 namespace Cartex.UI.Views;
