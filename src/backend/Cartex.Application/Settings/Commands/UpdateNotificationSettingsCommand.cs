@@ -1,8 +1,6 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Enums;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Settings.Commands;
 

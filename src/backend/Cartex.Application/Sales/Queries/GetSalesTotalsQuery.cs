@@ -1,7 +1,6 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;

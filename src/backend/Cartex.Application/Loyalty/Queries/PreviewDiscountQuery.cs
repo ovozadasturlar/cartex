@@ -1,5 +1,4 @@
 using Cartex.Application.Common.Loyalty;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Loyalty.Queries;
 

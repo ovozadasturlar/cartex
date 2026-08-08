@@ -2,7 +2,6 @@ using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Supplies.Queries;
 

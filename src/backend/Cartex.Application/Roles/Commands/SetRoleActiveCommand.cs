@@ -1,7 +1,4 @@
-using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Security;
-using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 

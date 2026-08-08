@@ -2,7 +2,6 @@ using System.Text.Json;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Shared.Models.Printing;
 using Microsoft.EntityFrameworkCore;

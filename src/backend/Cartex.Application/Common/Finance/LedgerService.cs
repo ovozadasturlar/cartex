@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;

@@ -1,7 +1,6 @@
 using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.StockTransfers.Queries;

@@ -42,11 +42,9 @@ public sealed class TelegramService(
 
         var token = protector.Unprotect(cfg.BotToken);
         var client = httpClientFactory.CreateClient();
-        using var form = new MultipartFormDataContent
-        {
-            { new StringContent(chatId), "chat_id" },
-            { new ByteArrayContent(content), "document", fileName }
-        };
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(chatId), "chat_id");
+        form.Add(new ByteArrayContent(content), "document", fileName);
         if (!string.IsNullOrWhiteSpace(caption))
             form.Add(new StringContent(caption), "caption");
 

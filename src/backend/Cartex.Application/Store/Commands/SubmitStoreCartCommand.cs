@@ -1,6 +1,4 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
-using Cartex.Domain.Common.Exceptions;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Events;

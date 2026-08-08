@@ -3,7 +3,6 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Permissions.Queries;
 

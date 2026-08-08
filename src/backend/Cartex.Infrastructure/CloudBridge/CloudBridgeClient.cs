@@ -15,10 +15,8 @@ public sealed class CloudBridgeClient(ISettingsService settings, ISecretProtecto
     public async Task PushReceiptAsync(CloudBridgeSettings cfg, string token, string html, byte[] pdf, CancellationToken cancellationToken)
     {
         var client = httpFactory.CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{cfg.GatewayUrl!.TrimEnd('/')}/api/receipts")
-        {
-            Content = JsonContent.Create(new { token, html, pdfBase64 = Convert.ToBase64String(pdf) })
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{cfg.GatewayUrl!.TrimEnd('/')}/api/receipts");
+        request.Content = JsonContent.Create(new { token, html, pdfBase64 = Convert.ToBase64String(pdf) });
         if (!string.IsNullOrEmpty(cfg.LicenseKey))
             request.Headers.Add("X-License-Key", protector.Unprotect(cfg.LicenseKey));
         var response = await client.SendAsync(request, cancellationToken);

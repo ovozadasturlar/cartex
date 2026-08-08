@@ -1,5 +1,4 @@
 using Cartex.Application.Common.Finance;
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Application.Common.Models;

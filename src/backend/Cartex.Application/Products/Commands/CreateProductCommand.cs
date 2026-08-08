@@ -1,13 +1,11 @@
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
-using Cartex.Application.Barcodes;
 using Cartex.Application.Barcodes.Commands;
 using Microsoft.Extensions.Configuration;
 

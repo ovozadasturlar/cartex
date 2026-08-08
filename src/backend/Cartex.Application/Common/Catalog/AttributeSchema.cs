@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Cartex.Domain.Common.Exceptions;
 
 namespace Cartex.Application.Common.Catalog;
 

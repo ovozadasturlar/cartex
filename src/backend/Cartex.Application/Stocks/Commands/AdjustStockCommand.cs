@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Inventory;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;

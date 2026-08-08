@@ -22,7 +22,8 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
             ["message"] = text,
             ["from"] = settings.Sender ?? "4546"
         });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send") { Content = sendForm };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send");
+        request.Content = sendForm;
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var sendResponse = await client.SendAsync(request, cancellationToken);
         if (!sendResponse.IsSuccessStatusCode)

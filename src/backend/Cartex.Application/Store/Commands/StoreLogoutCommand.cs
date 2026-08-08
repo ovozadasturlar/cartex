@@ -1,6 +1,4 @@
 using Cartex.Application.Auth;
-using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Common;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;

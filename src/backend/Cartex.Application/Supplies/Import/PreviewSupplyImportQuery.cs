@@ -57,7 +57,7 @@ public sealed class PreviewSupplyImportQueryHandler(IApplicationDbContext db, IS
 
         var result = rows.Select(r =>
         {
-            var matched = r.VariantId is { } variantId && r.Quantity is > 0;
+            var matched = r.VariantId is not null && r.Quantity is > 0;
             var message = r.VariantId is null
                 ? "Mahsulot topilmadi"
                 : r.Quantity is not > 0 ? "Miqdor yo'q yoki noto'g'ri" : null;

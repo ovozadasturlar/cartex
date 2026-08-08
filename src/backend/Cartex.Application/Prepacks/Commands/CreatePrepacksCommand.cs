@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Cartex.Application.Common.Finance;
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;

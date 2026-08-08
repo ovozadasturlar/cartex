@@ -1,7 +1,6 @@
 namespace Cartex.Application.Common.Extensions;
 
 using Cartex.Application.Common.Models;
-using Cartex.Domain.Common.Exceptions;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq.Expressions;

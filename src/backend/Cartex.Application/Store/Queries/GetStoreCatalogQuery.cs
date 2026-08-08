@@ -1,5 +1,3 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Common.Exceptions;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 

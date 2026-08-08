@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Persistence;
 using FluentValidation;
 

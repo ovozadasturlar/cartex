@@ -1,7 +1,5 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Auth.Services;
-using Cartex.Application.Common.Interfaces;
 
 namespace Cartex.Application.Auth.Commands;
 

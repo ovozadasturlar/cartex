@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using FluentValidation;

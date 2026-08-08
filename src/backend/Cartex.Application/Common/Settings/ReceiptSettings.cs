@@ -18,7 +18,7 @@ public sealed class ReceiptSettings
     public bool ShowElectronicLink { get; set; } = true;
     public bool ShowLogo { get; set; } = true;
     public bool ShowCustomerPhone { get; set; } = true;
-    public bool ShowCustomerEmail { get; set; } = false;
+    public bool ShowCustomerEmail { get; set; } = true;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string? PublicReceiptBaseUrl { get; set; }

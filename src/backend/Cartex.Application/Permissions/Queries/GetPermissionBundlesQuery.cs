@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 
 namespace Cartex.Application.Permissions.Queries;

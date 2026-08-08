@@ -1,5 +1,4 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Licensing.Queries;
 

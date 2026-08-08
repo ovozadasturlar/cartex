@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Enums;

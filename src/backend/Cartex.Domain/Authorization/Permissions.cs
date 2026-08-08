@@ -257,7 +257,7 @@ public static class AppPermissions
         public const string JobsRetry = "printing.jobs.retry";
         public const string JobsCancel = "printing.jobs.cancel";
         public const string NodesView = "printing.nodes.view";
-        public const string NodesManage = "printing.nodes.manage";
+        public const string NodesManage = "printing.nodes.edit";
         public const string RoutesView = "printing.routes.view";
         public const string RoutesEdit = "printing.routes.edit";
         public const string AuditView = "printing.audit.view";

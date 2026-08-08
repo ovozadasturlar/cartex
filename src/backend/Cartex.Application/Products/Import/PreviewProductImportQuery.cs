@@ -11,7 +11,7 @@ public sealed class PreviewProductImportQueryHandler(IApplicationDbContext db, I
     public async Task<ProductImportPreviewDto> Handle(PreviewProductImportQuery request, CancellationToken cancellationToken)
     {
         var table = spreadsheet.Read(request.Content);
-        Console.WriteLine($"[Debug] Imported rows (including header): {table.Count}");;
+        Console.WriteLine($"[Debug] Imported rows (including header): {table.Count}");
         if (table.Count < 2)
             throw new BusinessRuleException("Faylda ma'lumot yo'q.");
 

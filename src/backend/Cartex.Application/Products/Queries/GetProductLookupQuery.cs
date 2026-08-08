@@ -1,5 +1,4 @@
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.ProductPacks.Queries;
 using Microsoft.EntityFrameworkCore;
 

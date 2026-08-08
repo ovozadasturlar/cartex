@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Search;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Common;

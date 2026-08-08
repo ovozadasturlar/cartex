@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cartex.Persistence.Seed;
 
 public sealed record DemoCatalog(
-    Branch Branch1, Branch Branch2, Warehouse Wh1, Warehouse Wh2,
+    Branch Branch1, Warehouse Wh1, Warehouse Wh2,
     User Admin, User Seller, Account Cash, Account Card,
     List<ProductVariant> Variants, decimal[] SellingPrices, List<Stock> Stocks,
     Supplier[] Suppliers, List<Customer> Customers,
@@ -230,7 +230,7 @@ public static class DemoDataSeeder
         await context.Customers.AddRangeAsync(customers);
         await context.SaveChangesAsync();
 
-        return new DemoCatalog(branch1, branch2, wh1, wh2, admin, seller, cash, card, variants, sellingPrices, stocks, suppliers, customers, openingDate, today0, now);
+        return new DemoCatalog(branch1, wh1, wh2, admin, seller, cash, card, variants, sellingPrices, stocks, suppliers, customers, openingDate, today0, now);
     }
 
     public static async Task SeedTransactionsAsync(ApplicationDbContext context, DemoCatalog cat)
@@ -244,7 +244,6 @@ public static class DemoDataSeeder
         DateTime Day(int offset) => today0.AddDays(offset);
 
         var branch1 = cat.Branch1;
-        var branch2 = cat.Branch2;
         var wh1 = cat.Wh1;
         var wh2 = cat.Wh2;
         var admin = cat.Admin;
@@ -299,7 +298,7 @@ public static class DemoDataSeeder
             context.Supplies.Add(supply);
         }
 
-        var groups = new List<long>[4] { [], [], [], [] };
+        var groups = new List<long>[] { [], [], [], [] };
         for (var i = 0; i < allVids.Count; i++) groups[i % 4].Add(allVids[i]);
 
         AddSupply(suppliers[0], Day(-29).AddHours(10), groups[0], 60);
@@ -427,7 +426,7 @@ public static class DemoDataSeeder
                         if (used.Add(cand) && Remaining(cand) >= 1) { vid = cand; break; }
                     }
                     if (vid == 0) continue;
-                    var qty = Math.Min((decimal)rnd.Next(1, 6), Remaining(vid));
+                    var qty = Math.Min(rnd.Next(1, 6), Remaining(vid));
                     var made = Allocate(sale, vid, qty, prices[vid]);
                     items.AddRange(made);
                     gross += made.Sum(m => m.Quantity * m.UnitPrice);

@@ -1,5 +1,4 @@
 using FluentValidation;
-using Cartex.Application.Common.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Cartex.Application.Common.Behaviors;
 using Cartex.Application.Common.Finance;

@@ -1,10 +1,8 @@
 using System.Globalization;
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Cartex.Persistence;
-using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Barcodes.Commands;

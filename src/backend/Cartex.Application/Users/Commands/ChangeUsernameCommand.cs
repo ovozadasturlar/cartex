@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
@@ -33,7 +32,7 @@ public sealed class ChangeUsernameCommandHandler(
         var oldUsername = user.Username;
         user.Username = request.NewUsername;
 
-        audit.Add("user.username_changed", "users", user.Id, new { OldUsername = oldUsername, NewUsername = request.NewUsername });
+        audit.Add("user.renamed", "users", user.Id, new { OldUsername = oldUsername, NewUsername = request.NewUsername });
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

@@ -1,6 +1,5 @@
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Reports.Queries;

@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Domain.Common;

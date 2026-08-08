@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Cartex.Application.Common;
 using Cartex.Application.Common.Interfaces;

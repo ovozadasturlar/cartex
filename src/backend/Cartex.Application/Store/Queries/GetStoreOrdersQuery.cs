@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;

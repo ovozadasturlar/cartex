@@ -41,7 +41,7 @@ public sealed class ReceiptMirrorHandler(ISender sender, IReceiptPdfRenderer pdf
             PublicReceiptBaseUrl = s.PublicReceiptBaseUrl
         };
         var html = ReceiptHtmlRenderer.Render(receipt, opts);
-        var pdf = opts?.PaperFormat switch
+        var pdf = opts.PaperFormat switch
         {
             "A4" => pdfRenderer.RenderDocument(receipt, opts, a4: true),
             "Thermal" => pdfRenderer.Render(receipt, opts),

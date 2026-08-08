@@ -1,5 +1,4 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -392,7 +391,7 @@ public sealed class CreateSaleCommandHandler(
 
         await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, cashbackLines, userId, shiftId, cancellationToken);
 
-        sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.BranchId, sale.CustomerId, sale.TotalAmount));
+        sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.CustomerId, sale.TotalAmount));
         sale.RaiseDomainEvent(new ReceiptMirrorEvent(sale.ReceiptToken));
 
         if (priceOverrides.Count > 0)

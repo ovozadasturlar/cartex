@@ -20,17 +20,16 @@ public sealed class EmailService(
             return null;
         }
 
-        using var message = new MailMessage
-        {
-            From = new MailAddress(cfg.FromAddress, cfg.FromName ?? cfg.FromAddress),
-            Subject = subject,
-            Body = body
-        };
+        using var message = new MailMessage();
+        message.From = new MailAddress(cfg.FromAddress, cfg.FromName ?? cfg.FromAddress);
+        message.Subject = subject;
+        message.Body = body;
         message.To.Add(to);
         if (attachment is not null)
             message.Attachments.Add(new Attachment(new MemoryStream(attachment.Content), attachment.FileName));
 
-        using var client = new SmtpClient(cfg.Host, cfg.Port) { EnableSsl = cfg.UseSsl };
+        using var client = new SmtpClient(cfg.Host, cfg.Port);
+        client.EnableSsl = cfg.UseSsl;
         if (!string.IsNullOrWhiteSpace(cfg.Username))
             client.Credentials = new NetworkCredential(cfg.Username, string.IsNullOrWhiteSpace(cfg.Password) ? "" : protector.Unprotect(cfg.Password));
 

@@ -1,7 +1,6 @@
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Shifts.Queries;

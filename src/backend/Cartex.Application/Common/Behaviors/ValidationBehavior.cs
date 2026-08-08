@@ -1,5 +1,4 @@
 using FluentValidation;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Common.Behaviors;
 

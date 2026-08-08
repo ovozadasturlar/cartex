@@ -1,5 +1,4 @@
 using Cartex.Application.Common;
-using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Services;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;

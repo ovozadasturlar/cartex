@@ -1,5 +1,3 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using FluentValidation;

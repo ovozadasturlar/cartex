@@ -9,7 +9,7 @@ public class HttpPagingMetadataWriter(IHttpContextAccessor accessor) : IPagingMe
 {
     public void Write(PagedListMetadata metadata)
     {
-        var headers = accessor.HttpContext?.Response?.Headers;
+        var headers = accessor.HttpContext?.Response.Headers;
         if (headers is null) return;
         headers["X-Paging"] = JsonSerializer.Serialize(metadata);
     }

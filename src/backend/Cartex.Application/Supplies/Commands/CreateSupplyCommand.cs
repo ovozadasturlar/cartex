@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Common.Inventory;
@@ -8,7 +7,6 @@ using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
-using Cartex.Domain.Measurement;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Products;
 

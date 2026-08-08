@@ -25,10 +25,8 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
         };
         var payload = new Dictionary<string, object> { ["messages"] = new[] { message } };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/broker-api/send")
-        {
-            Content = JsonContent.Create(payload)
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/broker-api/send");
+        request.Content = JsonContent.Create(payload);
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{settings.Login}:{password}"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
 

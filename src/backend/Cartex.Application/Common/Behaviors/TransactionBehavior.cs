@@ -1,5 +1,4 @@
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 
 namespace Cartex.Application.Common.Behaviors;
 
