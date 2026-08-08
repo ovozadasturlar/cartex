@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
-using Cartex.Mobile.Agent.Data;
 using Cartex.Mobile.Agent.Services;
 using Cartex.Mobile.Core;
 using Cartex.Shared.Models.Categories;

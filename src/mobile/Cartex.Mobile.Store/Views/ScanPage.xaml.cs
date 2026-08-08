@@ -63,7 +63,6 @@ public partial class ScanPage : ContentPage
         if (_vm.SearchVisible)
         {
             _vm.ToggleSearchCommand.Execute(null);
-            return true;
         }
 
         return true;

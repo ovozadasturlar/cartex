@@ -34,6 +34,18 @@ public partial class AppShell : Shell
         base.OnNavigated(args);
         if (args.Source is ShellNavigationSource.ShellSectionChanged or ShellNavigationSource.ShellItemChanged or ShellNavigationSource.ShellContentChanged
             && Navigation.NavigationStack.Count > 1)
-            Dispatcher.Dispatch(async () => await Navigation.PopToRootAsync(false));
+            Dispatcher.Dispatch(() => _ = PopToRootAsync());
+    }
+
+    private async Task PopToRootAsync()
+    {
+        try
+        {
+            await Navigation.PopToRootAsync(false);
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
     }
 }

@@ -4,7 +4,6 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Mobile.Store.ViewModels;
 using Cartex.Mobile.Store.Views;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cartex.Mobile.Store;
 

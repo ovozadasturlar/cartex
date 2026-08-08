@@ -1,6 +1,5 @@
 using Cartex.Mobile.Store.ViewModels;
 using Cartex.Mobile.Store.Services;
-using Microsoft.Maui.Controls;
 
 namespace Cartex.Mobile.Store.Views;
 

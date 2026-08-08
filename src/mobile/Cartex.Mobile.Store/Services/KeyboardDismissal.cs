@@ -1,7 +1,6 @@
 using Android.Content;
 using Android.Views.InputMethods;
 using Android.Widget;
-using Microsoft.Maui.ApplicationModel;
 
 namespace Cartex.Mobile.Store.Services;
 

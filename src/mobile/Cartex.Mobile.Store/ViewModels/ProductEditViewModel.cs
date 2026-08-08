@@ -270,7 +270,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             var units = await _units.GetAllAsync();
             var unitId = units.FirstOrDefault()?.Id ?? 0;
 
-            var newId = await _products.CreateAsync(new CreateProductRequest(
+            await _products.CreateAsync(new CreateProductRequest(
                 Name.Trim(),
                 Category?.Id,
                 unitId,

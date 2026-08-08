@@ -651,7 +651,7 @@ public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
     public string FullInfo => $"{Product.Name} | {Product.UnitName} | {Product.Dimension ?? ""}";
 }
 
-public sealed partial class BarcodeChoice(BarcodeDto barcode) : ObservableObject
+public sealed class BarcodeChoice(BarcodeDto barcode) : ObservableObject
 {
     public string Code => barcode.Code;
     public decimal PackQty => barcode.PackQty;

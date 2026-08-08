@@ -3,7 +3,6 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
-using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Sales;
 using CommunityToolkit.Mvvm.ComponentModel;

@@ -5,7 +5,6 @@ using Cartex.Mobile.Agent.Models;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Ordering;
 using Cartex.Shared.Models.Sales;
-using Microsoft.Maui.Networking;
 using Refit;
 using Cartex.Mobile.Core;
 

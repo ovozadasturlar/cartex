@@ -122,7 +122,7 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
     }
 
     private decimal ParsePaid() =>
-        decimal.TryParse(PaidCashText?.Replace(" ", ""), out var v) && v >= 0 ? v : 0;
+        decimal.TryParse(PaidCashText.Replace(" ", ""), out var v) && v >= 0 ? v : 0;
 
     [RelayCommand]
     private void FullCash()

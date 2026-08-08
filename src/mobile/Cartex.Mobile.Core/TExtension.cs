@@ -1,4 +1,3 @@
-using Microsoft.Maui.Controls.Xaml;
 
 namespace Cartex.Mobile.Core;
 

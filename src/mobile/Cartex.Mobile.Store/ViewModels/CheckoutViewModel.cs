@@ -91,7 +91,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             
             _customerId = _localCart.CustomerId;
             CustomerName = _localCart.CustomerName ?? "";
-            NoteText = _localCart.Note ?? "";
+            NoteText = _localCart.Note;
             _totalAmount = _localCart.Total;
         }
 

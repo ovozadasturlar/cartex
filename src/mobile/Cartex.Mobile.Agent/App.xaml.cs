@@ -36,16 +36,21 @@ public partial class App : Application
 		return window;
 	}
 
-	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(async () =>
+	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(() => _ = HandleSessionInvalidatedAsync());
+
+	private static async Task HandleSessionInvalidatedAsync()
 	{
-		if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
-		AppLock.Disable();
-		await shell.GoToAsync("//login");
 		try
 		{
+			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
+			AppLock.Disable();
+			await shell.GoToAsync("//login");
 			if (shell.CurrentPage is { } page)
 				await page.DisplayAlertAsync(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
 		}
-		catch { }
-	});
+		catch (Exception exception)
+		{
+			System.Diagnostics.Debug.WriteLine(exception);
+		}
+	}
 }

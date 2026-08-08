@@ -53,7 +53,7 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
     private Task PickOnMapAsync()
     {
         var query = new Dictionary<string, object> { ["picked"] = (Action<double, double>)OnMapPicked };
-        if (HasLocation && Latitude is double lat && Longitude is double lng)
+        if (HasLocation && Latitude is { } lat && Longitude is { } lng)
         {
             query["lat"] = lat;
             query["lng"] = lng;

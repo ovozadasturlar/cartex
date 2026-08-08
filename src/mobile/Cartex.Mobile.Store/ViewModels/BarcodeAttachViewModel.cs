@@ -17,7 +17,6 @@ public partial class BarcodeAttachViewModel : ObservableObject, IQueryAttributab
     private readonly IProductsApi _products;
     private readonly IBarcodesApi _barcodes;
     private readonly ImageUrlBuilder _images;
-    private readonly MobilePermissions _permissions;
 
     private string _barcode = "";
     private CancellationTokenSource? _cts;
@@ -41,7 +40,6 @@ public partial class BarcodeAttachViewModel : ObservableObject, IQueryAttributab
         _products = products;
         _barcodes = barcodes;
         _images = images;
-        _permissions = permissions;
         CanEditProduct = permissions.Has("barcodes.create");
     }
 

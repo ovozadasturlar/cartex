@@ -4,7 +4,6 @@ using Cartex.Mobile.Agent.Services;
 using Cartex.Mobile.Agent.ViewModels;
 using Cartex.Mobile.Agent.Views;
 using BarcodeScanning;
-using Microsoft.Extensions.DependencyInjection;
 using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent;
