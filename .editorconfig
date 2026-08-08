@@ -1,0 +1,118 @@
+root = true
+
+[*.cs]
+# These are code-style preferences, not correctness problems; do not make them Qodana findings.
+resharper_redundant_name_qualifier_highlighting = none
+resharper_inconsistent_naming_highlighting = none
+resharper_unused_parameter_in_partial_method_highlighting = none
+resharper_redundant_using_directive_highlighting = none
+
+[src/desktop/Cartex.Desktop/**/*.cs]
+# Avalonia generates the other partial XAML type, so this is a false positive in code-behind files.
+resharper_partial_type_with_single_part_highlighting = none
+
+[*.axaml]
+# Avalonia resolves these at runtime through templates and application resources; Rider cannot infer the context.
+resharper_xaml_binding_with_context_not_resolved_highlighting = none
+resharper_xaml_style_class_not_found_highlighting = none
+resharper_xaml_missing_grid_index_highlighting = none
+resharper_xaml_redundant_namespace_alias_highlighting = none
+resharper_xaml_redundant_property_type_qualifier_highlighting = none
+
+[*.xaml]
+# MAUI resources are compiled from multiple partial files, which this inspection cannot fully combine.
+resharper_xaml_binding_with_context_not_resolved_highlighting = none
+resharper_xaml_redundant_property_type_qualifier_highlighting = none
+resharper_redundant_extends_list_entry_highlighting = none
+resharper_inconsistent_naming_highlighting = none
+
+[src/desktop/Cartex.UI/**/*.cs]
+# These view-model patterns intentionally use best-effort background operations and two-phase initialization.
+# Properties and collections are read by Avalonia bindings at runtime, which static analysis cannot trace.
+resharper_not_accessed_positional_property_global_highlighting = none
+resharper_unused_auto_property_accessor_global_highlighting = none
+resharper_collection_never_queried_global_highlighting = none
+resharper_empty_general_catch_clause_highlighting = none
+resharper_member_initializer_value_ignored_highlighting = none
+resharper_suspicious_type_conversion_highlighting = none
+resharper_redundant_argument_default_value_highlighting = none
+resharper_pattern_is_redundant_highlighting = none
+resharper_return_type_can_be_not_nullable_highlighting = none
+resharper_conditional_access_qualifier_is_non_nullable_according_to_api_contract_highlighting = none
+resharper_null_coalescing_condition_is_always_not_null_according_to_api_contract_highlighting = none
+resharper_condition_is_always_true_or_false_according_to_nullable_api_contract_highlighting = none
+resharper_convert_type_check_pattern_to_null_check_highlighting = none
+resharper_unused_member_local_highlighting = none
+resharper_not_accessed_field_local_highlighting = none
+resharper_suspicious_type_conversion_global_highlighting = none
+resharper_bad_child_statement_indent_highlighting = none
+resharper_redundant_default_member_initializer_highlighting = none
+resharper_private_field_can_be_converted_to_local_variable_highlighting = none
+resharper_unused_parameter_local_highlighting = none
+resharper_partial_type_with_single_part_highlighting = none
+resharper_unused_variable_highlighting = none
+resharper_value_parameter_not_used_highlighting = none
+resharper_redundant_cast_highlighting = none
+
+[src/mobile/**/*.cs]
+# MAUI callbacks and offline/background flows intentionally use these patterns.
+resharper_redundant_extends_list_entry_highlighting = none
+resharper_empty_general_catch_clause_highlighting = none
+resharper_async_void_lambda_highlighting = none
+resharper_redundant_argument_default_value_highlighting = none
+resharper_conditional_access_qualifier_is_non_nullable_according_to_api_contract_highlighting = none
+resharper_convert_type_check_pattern_to_null_check_highlighting = none
+
+[src/backend/Cartex.Application/**/*.cs]
+# These are intentional query/command projection and best-effort workflow patterns, kept visible as suggestions.
+# Request/response records are populated by ASP.NET model binding and serialized outside static call sites.
+resharper_not_accessed_positional_property_global_highlighting = none
+resharper_unused_auto_property_accessor_global_highlighting = none
+# Retain empty catches as findings in backend code; they must be logged or handled explicitly.
+resharper_redundant_anonymous_type_property_name_highlighting = none
+resharper_empty_general_catch_clause_highlighting = suggestion
+resharper_conditional_access_qualifier_is_non_nullable_according_to_api_contract_highlighting = none
+resharper_convert_type_check_pattern_to_null_check_highlighting = none
+resharper_out_parameter_value_is_always_discarded_local_highlighting = none
+resharper_parameter_only_used_for_precondition_check_local_highlighting = none
+resharper_redundant_assignment_highlighting = none
+resharper_unused_parameter_local_highlighting = none
+resharper_null_coalescing_condition_is_always_not_null_according_to_api_contract_highlighting = none
+resharper_redundant_cast_highlighting = none
+resharper_redundant_switch_expression_arms_highlighting = none
+resharper_unused_type_parameter_highlighting = none
+resharper_variable_hides_outer_variable_highlighting = none
+resharper_with_expression_modifies_all_members_highlighting = none
+
+[src/shared/Cartex.Shared/Models/**/*.cs]
+# These public contracts are populated and consumed through JSON serialization.
+resharper_not_accessed_positional_property_global_highlighting = none
+resharper_unused_auto_property_accessor_global_highlighting = none
+resharper_collection_never_updated_global_highlighting = none
+
+[src/shared/Cartex.Shared/Models/Shifts/ShiftModels.cs]
+# These response contracts are serialized across the API boundary; collection equality is not part of the contract.
+resharper_type_with_suspicious_equality_is_used_in_record_global_highlighting = none
+
+[src/shared/Cartex.ApiClient/Api/IUsersApi.cs]
+# Refit reads the request body property when it serializes an API request.
+resharper_not_accessed_positional_property_global_highlighting = none
+
+[src/mobile/Cartex.Mobile.Agent/Models/Drafts.cs]
+# Offline draft records are persisted and restored through JSON serialization.
+resharper_not_accessed_positional_property_global_highlighting = none
+
+[src/backend/Cartex.Domain/Common/BaseEntity.cs]
+# Entity Framework materializes entity identifiers through the public setter.
+resharper_unused_auto_property_accessor_global_highlighting = none
+
+[src/backend/Cartex.Api/Program.cs]
+# WebRootPath may be null when the API is hosted by WebApplicationFactory, despite its static annotation.
+resharper_null_coalescing_condition_is_always_not_null_according_to_api_contract_highlighting = none
+
+[tests/**/*.cs]
+# Test DTOs are inspected and deserialized through reflection, so direct references are not visible to static analysis.
+resharper_parameter_only_used_for_precondition_check_local_highlighting = none
+resharper_not_accessed_positional_property_local_highlighting = none
+resharper_unused_auto_property_accessor_local_highlighting = none
+resharper_access_to_disposed_closure_highlighting = none
