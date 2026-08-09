@@ -54,7 +54,10 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
+          # Qodana defaults to 80% of runner RAM. Reserve memory for the GitHub runner
+          # and Docker itself so the analysis process cannot terminate the runner agent.
           args: |
+            -e _JAVA_OPTIONS=-Xmx4g
             --linter qodana-dotnet
             --within-docker true
             --no-build
