@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260809120217_AddTradeCases")]
+    partial class AddTradeCases
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,14 +493,8 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("legal_name");
 
                     b.Property<string>("LogoImageKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("logo_image_key");
-
-                    b.Property<string>("MonochromeLogoImageKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("monochrome_logo_image_key");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -595,27 +592,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
 
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("cancellation_reason");
-
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_at");
-
-                    b.Property<long?>("CancelledByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cancelled_by_user_id");
-
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("claimed_at");
-
-                    b.Property<long?>("ClaimedByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("claimed_by_user_id");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -624,23 +600,9 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
 
-                    b.Property<decimal>("CreditAmount")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("credit_amount");
-
                     b.Property<long?>("CustomerId")
                         .HasColumnType("bigint")
                         .HasColumnName("customer_id");
-
-                    b.Property<string>("DebtCurrency")
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("debt_currency");
-
-                    b.Property<DateOnly?>("DebtDueDate")
-                        .HasColumnType("date")
-                        .HasColumnName("debt_due_date");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
@@ -680,14 +642,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(14,2)")
                         .HasColumnName("paid_cash");
 
-                    b.Property<long?>("RequeuedFromCartId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("requeued_from_cart_id");
-
-                    b.Property<long?>("SaleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sale_id");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -701,19 +655,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<long?>("UpdatedBy")
                         .HasColumnType("bigint")
                         .HasColumnName("updated_by");
-
-                    b.Property<bool>("UseCustomerAdvance")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("use_customer_advance");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("version");
 
                     b.Property<long>("WarehouseId")
                         .HasColumnType("bigint")
@@ -729,12 +670,6 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("BranchId")
                         .HasDatabaseName("ix_carts_branch_id");
 
-                    b.HasIndex("CancelledByUserId")
-                        .HasDatabaseName("ix_carts_cancelled_by_user_id");
-
-                    b.HasIndex("ClaimedByUserId")
-                        .HasDatabaseName("ix_carts_claimed_by_user_id");
-
                     b.HasIndex("CustomerId")
                         .HasDatabaseName("ix_carts_customer_id");
 
@@ -743,22 +678,11 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_carts_idempotency_key")
                         .HasFilter("idempotency_key IS NOT NULL");
 
-                    b.HasIndex("RequeuedFromCartId")
-                        .HasDatabaseName("ix_carts_requeued_from_cart_id");
-
-                    b.HasIndex("SaleId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_carts_sale_id")
-                        .HasFilter("\"sale_id\" IS NOT NULL");
-
                     b.HasIndex("WarehouseId")
                         .HasDatabaseName("ix_carts_warehouse_id");
 
                     b.HasIndex("Kind", "Status")
                         .HasDatabaseName("ix_carts_kind_status");
-
-                    b.HasIndex("Status", "ClaimedByUserId", "ClaimedAt")
-                        .HasDatabaseName("ix_carts_status_claimed_by_user_id_claimed_at");
 
                     b.ToTable("carts", (string)null);
                 });
@@ -795,102 +719,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_cart_items_variant_id");
 
                     b.ToTable("cart_items", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CartParticipant", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("CartId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cart_id");
-
-                    b.Property<long>("PartyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("party_id");
-
-                    b.Property<string>("PartyNameSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("party_name_snapshot");
-
-                    b.Property<string>("PartyPhoneSnapshot")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("party_phone_snapshot");
-
-                    b.Property<long>("RoleDefinitionId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("role_definition_id");
-
-                    b.Property<string>("RoleLabelSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("role_label_snapshot");
-
-                    b.HasKey("Id")
-                        .HasName("pk_cart_participants");
-
-                    b.HasIndex("PartyId")
-                        .HasDatabaseName("ix_cart_participants_party_id");
-
-                    b.HasIndex("RoleDefinitionId")
-                        .HasDatabaseName("ix_cart_participants_role_definition_id");
-
-                    b.HasIndex("CartId", "RoleDefinitionId", "PartyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_cart_participants_cart_id_role_definition_id_party_id");
-
-                    b.ToTable("cart_participants", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CartPayment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("amount");
-
-                    b.Property<long>("CartId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cart_id");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<string>("Method")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("method");
-
-                    b.HasKey("Id")
-                        .HasName("pk_cart_payments");
-
-                    b.HasIndex("CartId", "Method", "Currency")
-                        .HasDatabaseName("ix_cart_payments_cart_id_method_currency");
-
-                    b.ToTable("cart_payments", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_cart_payments_amount", "\"amount\" > 0");
-                        });
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.CashbackRule", b =>
@@ -1156,10 +984,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("notifications_opt_out");
 
-                    b.Property<long>("PartyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("party_id");
-
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
@@ -1192,10 +1016,6 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_customers_card_barcode")
                         .HasFilter("\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
-
-                    b.HasIndex("PartyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customers_party_id");
 
                     b.HasIndex("Phone")
                         .IsUnique()
@@ -1408,151 +1228,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_customer_payment_tenders_customer_payment_document_id");
 
                     b.ToTable("customer_payment_tenders", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateOnly>("BusinessDate")
-                        .HasColumnType("date")
-                        .HasColumnName("business_date");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<long>("CustomerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_id");
-
-                    b.Property<string>("DocumentNumber")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("document_number");
-
-                    b.Property<string>("IdempotencyKey")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("status");
-
-                    b.Property<decimal>("TotalBaseAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("total_base_amount");
-
-                    b.Property<long?>("TradeCaseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("trade_case_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_refund_documents");
-
-                    b.HasIndex("DocumentNumber")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_refund_documents_document_number");
-
-                    b.HasIndex("TradeCaseId")
-                        .HasDatabaseName("ix_customer_refund_documents_trade_case_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_customer_refund_documents_user_id");
-
-                    b.HasIndex("BranchId", "IdempotencyKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_refund_documents_branch_id_idempotency_key")
-                        .HasFilter("\"idempotency_key\" IS NOT NULL");
-
-                    b.HasIndex("CustomerId", "BusinessDate", "Id")
-                        .HasDatabaseName("ix_customer_refund_documents_customer_id_business_date_id");
-
-                    b.ToTable("customer_refund_documents", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundTender", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("amount");
-
-                    b.Property<decimal>("AmountBase")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("amount_base");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<long>("CustomerRefundDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_refund_document_id");
-
-                    b.Property<string>("Method")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("method");
-
-                    b.Property<decimal>("Rate")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)")
-                        .HasColumnName("rate");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_refund_tenders");
-
-                    b.HasIndex("CustomerRefundDocumentId")
-                        .HasDatabaseName("ix_customer_refund_tenders_customer_refund_document_id");
-
-                    b.ToTable("customer_refund_tenders", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.CustomerReturnDocument", b =>
@@ -3134,212 +2809,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("notification_outbox", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<DateTime>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("claimed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("DeviceId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("device_id");
-
-                    b.Property<string>("DeviceName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("device_name");
-
-                    b.Property<long>("Epoch")
-                        .HasColumnType("bigint")
-                        .HasColumnName("epoch");
-
-                    b.Property<long>("LastAcceptedSequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_accepted_sequence");
-
-                    b.Property<DateTime>("LastHeartbeatAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_heartbeat_at");
-
-                    b.Property<long>("LastReportedPendingCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_reported_pending_count");
-
-                    b.Property<DateTime?>("LastSyncAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_sync_at");
-
-                    b.Property<string>("RevokeReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("revoke_reason");
-
-                    b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("revoked_at");
-
-                    b.Property<long?>("RevokedByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("revoked_by_user_id");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("integer")
-                        .HasColumnName("version");
-
-                    b.Property<long>("WarehouseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("warehouse_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_offline_authority_leases");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_offline_authority_leases_branch_id");
-
-                    b.HasIndex("BusinessId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_authority_leases_business_id")
-                        .HasFilter("\"revoked_at\" IS NULL");
-
-                    b.HasIndex("RevokedByUserId")
-                        .HasDatabaseName("ix_offline_authority_leases_revoked_by_user_id");
-
-                    b.HasIndex("DeviceId", "RevokedAt")
-                        .HasDatabaseName("ix_offline_authority_leases_device_id_revoked_at");
-
-                    b.HasIndex("WarehouseId", "RevokedAt")
-                        .HasDatabaseName("ix_offline_authority_leases_warehouse_id_revoked_at");
-
-                    b.ToTable("offline_authority_leases", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineSyncEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ActorUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("actor_user_id");
-
-                    b.Property<DateTime>("DeviceOccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("device_occurred_at");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<string>("IdempotencyKey")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("kind");
-
-                    b.Property<long>("OfflineAuthorityLeaseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("offline_authority_lease_id");
-
-                    b.Property<string>("PayloadHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("payload_hash");
-
-                    b.Property<DateTime>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("processed_at");
-
-                    b.Property<string>("ResultCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("result_code");
-
-                    b.Property<long?>("ResultEntityId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("result_entity_id");
-
-                    b.Property<long>("Sequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sequence");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id")
-                        .HasName("pk_offline_sync_events");
-
-                    b.HasIndex("ActorUserId")
-                        .HasDatabaseName("ix_offline_sync_events_actor_user_id");
-
-                    b.HasIndex("EventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_sync_events_event_id");
-
-                    b.HasIndex("OfflineAuthorityLeaseId", "ProcessedAt")
-                        .HasDatabaseName("ix_offline_sync_events_offline_authority_lease_id_processed_at");
-
-                    b.HasIndex("OfflineAuthorityLeaseId", "Sequence")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_sync_events_offline_authority_lease_id_sequence");
-
-                    b.ToTable("offline_sync_events", (string)null);
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
                 {
                     b.Property<long>("Id")
@@ -3394,637 +2863,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_otp_challenges_customer_id");
 
                     b.ToTable("otp_challenges", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.ParticipantRoleDefinition", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("AppliesToCart")
-                        .HasColumnType("boolean")
-                        .HasColumnName("applies_to_cart");
-
-                    b.Property<bool>("AppliesToSale")
-                        .HasColumnType("boolean")
-                        .HasColumnName("applies_to_sale");
-
-                    b.Property<bool>("AppliesToTradeCase")
-                        .HasColumnType("boolean")
-                        .HasColumnName("applies_to_trade_case");
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<bool>("CanEqualBuyer")
-                        .HasColumnType("boolean")
-                        .HasColumnName("can_equal_buyer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_enabled");
-
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_required");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("key");
-
-                    b.Property<int>("MaxCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_count");
-
-                    b.Property<string>("PluralLabel")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
-                        .HasColumnName("plural_label");
-
-                    b.Property<string>("SingularLabel")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("singular_label");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_participant_role_definitions");
-
-                    b.HasIndex("BusinessId", "Key")
-                        .IsUnique()
-                        .HasDatabaseName("ix_participant_role_definitions_business_id_key");
-
-                    b.HasIndex("BusinessId", "IsEnabled", "SortOrder")
-                        .HasDatabaseName("ix_participant_role_definitions_business_id_is_enabled_sort_or");
-
-                    b.ToTable("participant_role_definitions", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_participant_roles_max_count", "\"max_count\" BETWEEN 1 AND 10");
-                        });
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProfile", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_enabled");
-
-                    b.Property<DateOnly>("JoinedAt")
-                        .HasColumnType("date")
-                        .HasColumnName("joined_at");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("PartnerCode")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("partner_code");
-
-                    b.Property<long>("PartyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("party_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_profiles");
-
-                    b.HasIndex("PartnerCode")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_profiles_partner_code");
-
-                    b.HasIndex("PartyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_profiles_party_id");
-
-                    b.ToTable("partner_profiles", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProgram", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Basis")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("basis");
-
-                    b.Property<long?>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<decimal?>("CapPerSale")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cap_per_sale");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<int>("HoldDays")
-                        .HasColumnType("integer")
-                        .HasColumnName("hold_days");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_enabled");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("mode");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<long>("RoleDefinitionId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("role_definition_id");
-
-                    b.Property<string>("Trigger")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("trigger");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<decimal>("Value")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("value");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_programs");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_partner_programs_branch_id");
-
-                    b.HasIndex("RoleDefinitionId")
-                        .HasDatabaseName("ix_partner_programs_role_definition_id");
-
-                    b.HasIndex("BusinessId", "RoleDefinitionId", "BranchId", "IsEnabled")
-                        .HasDatabaseName("ix_partner_programs_business_id_role_definition_id_branch_id_i");
-
-                    b.ToTable("partner_programs", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_partner_program_hold", "\"hold_days\" BETWEEN 0 AND 3650");
-
-                            t.HasCheckConstraint("ck_partner_program_value", "\"value\" >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRedemptionDocument", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("amount");
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateOnly>("BusinessDate")
-                        .HasColumnType("date")
-                        .HasColumnName("business_date");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("DocumentNumber")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("document_number");
-
-                    b.Property<string>("IdempotencyKey")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("mode");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<long>("PartnerProfileId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_profile_id");
-
-                    b.Property<decimal?>("ProductQuantity")
-                        .HasPrecision(12, 3)
-                        .HasColumnType("numeric(12,3)")
-                        .HasColumnName("product_quantity");
-
-                    b.Property<long?>("ProductVariantId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("product_variant_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("status");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_redemption_documents");
-
-                    b.HasIndex("DocumentNumber")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_redemption_documents_document_number");
-
-                    b.HasIndex("PartnerProfileId")
-                        .HasDatabaseName("ix_partner_redemption_documents_partner_profile_id");
-
-                    b.HasIndex("ProductVariantId")
-                        .HasDatabaseName("ix_partner_redemption_documents_product_variant_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_partner_redemption_documents_user_id");
-
-                    b.HasIndex("BranchId", "IdempotencyKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_redemption_documents_branch_id_idempotency_key")
-                        .HasFilter("\"idempotency_key\" IS NOT NULL");
-
-                    b.ToTable("partner_redemption_documents", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_partner_redemptions_amount", "\"amount\" > 0");
-                        });
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRewardEntry", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTime>("AvailableAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("available_at");
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<long?>("CustomerPaymentDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_payment_document_id");
-
-                    b.Property<long?>("CustomerReturnDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_return_document_id");
-
-                    b.Property<string>("DetailsJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("details_json");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<decimal>("FinancialBasis")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("financial_basis");
-
-                    b.Property<string>("Mode")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("mode");
-
-                    b.Property<long?>("OriginalEntryId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("original_entry_id");
-
-                    b.Property<long>("PartnerProfileId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_profile_id");
-
-                    b.Property<long>("PartnerProgramId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_program_id");
-
-                    b.Property<long?>("PartnerRedemptionDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_redemption_document_id");
-
-                    b.Property<decimal>("QuantityBasis")
-                        .HasPrecision(12, 3)
-                        .HasColumnType("numeric(12,3)")
-                        .HasColumnName("quantity_basis");
-
-                    b.Property<long?>("SaleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sale_id");
-
-                    b.Property<long?>("SaleItemId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sale_item_id");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("state");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_reward_entries");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_partner_reward_entries_branch_id");
-
-                    b.HasIndex("CustomerPaymentDocumentId")
-                        .HasDatabaseName("ix_partner_reward_entries_customer_payment_document_id");
-
-                    b.HasIndex("CustomerReturnDocumentId")
-                        .HasDatabaseName("ix_partner_reward_entries_customer_return_document_id");
-
-                    b.HasIndex("EventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_reward_entries_event_id");
-
-                    b.HasIndex("OriginalEntryId")
-                        .HasDatabaseName("ix_partner_reward_entries_original_entry_id");
-
-                    b.HasIndex("PartnerProgramId")
-                        .HasDatabaseName("ix_partner_reward_entries_partner_program_id");
-
-                    b.HasIndex("PartnerRedemptionDocumentId")
-                        .HasDatabaseName("ix_partner_reward_entries_partner_redemption_document_id");
-
-                    b.HasIndex("SaleId")
-                        .HasDatabaseName("ix_partner_reward_entries_sale_id");
-
-                    b.HasIndex("SaleItemId", "PartnerProgramId")
-                        .HasDatabaseName("ix_partner_reward_entries_sale_item_id_partner_program_id");
-
-                    b.HasIndex("PartnerProfileId", "Mode", "State", "AvailableAt")
-                        .HasDatabaseName("ix_partner_reward_entries_partner_profile_id_mode_state_availa");
-
-                    b.ToTable("partner_reward_entries", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRewardRule", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("IsExcluded")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_excluded");
-
-                    b.Property<long>("PartnerProgramId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_program_id");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer")
-                        .HasColumnName("priority");
-
-                    b.Property<string>("Scope")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("scope");
-
-                    b.Property<long>("TargetId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("target_id");
-
-                    b.Property<decimal?>("ValueOverride")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("value_override");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_reward_rules");
-
-                    b.HasIndex("PartnerProgramId", "Scope", "TargetId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_reward_rules_partner_program_id_scope_target_id");
-
-                    b.ToTable("partner_reward_rules", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("address");
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("email");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("full_name");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("phone");
-
-                    b.Property<string>("TaxId")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("tax_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_parties");
-
-                    b.HasIndex("BusinessId", "FullName")
-                        .HasDatabaseName("ix_parties_business_id_full_name");
-
-                    b.HasIndex("BusinessId", "Phone")
-                        .IsUnique()
-                        .HasDatabaseName("ix_parties_business_id_phone")
-                        .HasFilter("\"phone\" IS NOT NULL AND NOT \"is_deleted\"");
-
-                    b.ToTable("parties", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>
@@ -4696,10 +3534,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("assignment_timeout_seconds");
 
-                    b.Property<bool>("AutoPrintOnSale")
-                        .HasColumnType("boolean")
-                        .HasColumnName("auto_print_on_sale");
-
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
@@ -4711,10 +3545,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<long?>("CreatedBy")
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
-
-                    b.Property<int>("DefaultCopies")
-                        .HasColumnType("integer")
-                        .HasColumnName("default_copies");
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean")
@@ -4738,10 +3568,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("max_jobs_per_minute");
 
-                    b.Property<string>("ReceiptSettingsOverrideJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("receipt_settings_override_json");
-
                     b.Property<bool>("RequireTrustedNode")
                         .HasColumnType("boolean")
                         .HasColumnName("require_trusted_node");
@@ -4749,11 +3575,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<bool>("RequireTrustedRequesterDevice")
                         .HasColumnType("boolean")
                         .HasColumnName("require_trusted_requester_device");
-
-                    b.Property<long>("Revision")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint")
-                        .HasColumnName("revision");
 
                     b.Property<string>("RoutingMode")
                         .IsRequired()
@@ -4797,12 +3618,7 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_print_routing_policies_branch_id_kind");
 
-                    b.ToTable("print_routing_policies", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_print_routing_default_copies", "default_copies BETWEEN 1 AND 100");
-
-                            t.HasCheckConstraint("ck_print_routing_revision", "revision > 0");
-                        });
+                    b.ToTable("print_routing_policies", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.PrinterEndpoint", b =>
@@ -5781,66 +4597,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("sale_items", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.SaleParticipant", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("PartyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("party_id");
-
-                    b.Property<string>("PartyNameSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("party_name_snapshot");
-
-                    b.Property<string>("PartyPhoneSnapshot")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("party_phone_snapshot");
-
-                    b.Property<long>("RoleDefinitionId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("role_definition_id");
-
-                    b.Property<string>("RoleLabelSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("role_label_snapshot");
-
-                    b.Property<long>("SaleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sale_id");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("source");
-
-                    b.HasKey("Id")
-                        .HasName("pk_sale_participants");
-
-                    b.HasIndex("PartyId")
-                        .HasDatabaseName("ix_sale_participants_party_id");
-
-                    b.HasIndex("RoleDefinitionId")
-                        .HasDatabaseName("ix_sale_participants_role_definition_id");
-
-                    b.HasIndex("SaleId", "RoleDefinitionId", "PartyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sale_participants_sale_id_role_definition_id_party_id");
-
-                    b.ToTable("sale_participants", (string)null);
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.SalePayment", b =>
                 {
                     b.Property<long>("Id")
@@ -6686,60 +5442,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("trade_cases", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.TradeCaseParticipant", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("PartyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("party_id");
-
-                    b.Property<string>("PartyNameSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("party_name_snapshot");
-
-                    b.Property<string>("PartyPhoneSnapshot")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("party_phone_snapshot");
-
-                    b.Property<long>("RoleDefinitionId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("role_definition_id");
-
-                    b.Property<string>("RoleLabelSnapshot")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("role_label_snapshot");
-
-                    b.Property<long>("TradeCaseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("trade_case_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_trade_case_participants");
-
-                    b.HasIndex("PartyId")
-                        .HasDatabaseName("ix_trade_case_participants_party_id");
-
-                    b.HasIndex("RoleDefinitionId")
-                        .HasDatabaseName("ix_trade_case_participants_role_definition_id");
-
-                    b.HasIndex("TradeCaseId", "RoleDefinitionId", "PartyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_trade_case_participants_trade_case_id_role_definition_id_pa");
-
-                    b.ToTable("trade_case_participants", (string)null);
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.TradeCaseSettlement", b =>
                 {
                     b.Property<long>("Id")
@@ -6879,10 +5581,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("customer_payment_document_id");
 
-                    b.Property<long?>("CustomerRefundDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_refund_document_id");
-
                     b.Property<long?>("CustomerReturnDocumentId")
                         .HasColumnType("bigint")
                         .HasColumnName("customer_return_document_id");
@@ -6909,10 +5607,6 @@ namespace Cartex.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("operation_type");
-
-                    b.Property<long?>("PartnerRedemptionDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_redemption_document_id");
 
                     b.Property<decimal>("Rate")
                         .HasPrecision(18, 6)
@@ -6960,9 +5654,6 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("CustomerPaymentDocumentId")
                         .HasDatabaseName("ix_transactions_customer_payment_document_id");
 
-                    b.HasIndex("CustomerRefundDocumentId")
-                        .HasDatabaseName("ix_transactions_customer_refund_document_id");
-
                     b.HasIndex("CustomerReturnDocumentId")
                         .HasDatabaseName("ix_transactions_customer_return_document_id");
 
@@ -6971,9 +5662,6 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("FromAccountId")
                         .HasDatabaseName("ix_transactions_from_account_id");
-
-                    b.HasIndex("PartnerRedemptionDocumentId")
-                        .HasDatabaseName("ix_transactions_partner_redemption_document_id");
 
                     b.HasIndex("SaleId")
                         .HasDatabaseName("ix_transactions_sale_id");
@@ -7369,35 +6057,11 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_carts_branches_branch_id");
 
-                    b.HasOne("Cartex.Domain.Entities.User", "CancelledByUser")
-                        .WithMany()
-                        .HasForeignKey("CancelledByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_users_cancelled_by_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "ClaimedByUser")
-                        .WithMany()
-                        .HasForeignKey("ClaimedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_users_claimed_by_user_id");
-
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_carts_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Cart", "RequeuedFromCart")
-                        .WithMany()
-                        .HasForeignKey("RequeuedFromCartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_carts_requeued_from_cart_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
-                        .WithMany()
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_sales_sale_id");
 
                     b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
                         .WithMany()
@@ -7406,15 +6070,7 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_carts_warehouses_warehouse_id");
 
-                    b.Navigation("CancelledByUser");
-
-                    b.Navigation("ClaimedByUser");
-
                     b.Navigation("Customer");
-
-                    b.Navigation("RequeuedFromCart");
-
-                    b.Navigation("Sale");
 
                     b.Navigation("Warehouse");
                 });
@@ -7438,48 +6094,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Cart");
 
                     b.Navigation("Variant");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CartParticipant", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Cart", "Cart")
-                        .WithMany("Participants")
-                        .HasForeignKey("CartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_cart_participants_carts_cart_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Party", "Party")
-                        .WithMany()
-                        .HasForeignKey("PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_cart_participants_parties_party_id");
-
-                    b.HasOne("Cartex.Domain.Entities.ParticipantRoleDefinition", "RoleDefinition")
-                        .WithMany()
-                        .HasForeignKey("RoleDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_cart_participants_participant_role_definitions_role_definit");
-
-                    b.Navigation("Cart");
-
-                    b.Navigation("Party");
-
-                    b.Navigation("RoleDefinition");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CartPayment", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Cart", "Cart")
-                        .WithMany("Payments")
-                        .HasForeignKey("CartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_cart_payments_carts_cart_id");
-
-                    b.Navigation("Cart");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.CashbackRule", b =>
@@ -7513,16 +6127,7 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_customers_users_assigned_user_id");
 
-                    b.HasOne("Cartex.Domain.Entities.Party", "Party")
-                        .WithOne("CustomerProfile")
-                        .HasForeignKey("Cartex.Domain.Entities.Customer", "PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customers_parties_party_id");
-
                     b.Navigation("AssignedUser");
-
-                    b.Navigation("Party");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.CustomerPaymentAllocation", b =>
@@ -7589,54 +6194,6 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_customer_payment_tenders_customer_payment_documents_custome");
-
-                    b.Navigation("Document");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", null)
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.TradeCase", "TradeCase")
-                        .WithMany()
-                        .HasForeignKey("TradeCaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_customer_refund_documents_trade_cases_trade_case_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_users_user_id");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("TradeCase");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundTender", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.CustomerRefundDocument", "Document")
-                        .WithMany("Tenders")
-                        .HasForeignKey("CustomerRefundDocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_tenders_customer_refund_documents_customer_");
 
                     b.Navigation("Document");
                 });
@@ -7994,65 +6551,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("NotificationDelivery");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_businesses_business_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "RevokedByUser")
-                        .WithMany()
-                        .HasForeignKey("RevokedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_offline_authority_leases_users_revoked_by_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
-                        .WithMany()
-                        .HasForeignKey("WarehouseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_warehouses_warehouse_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Business");
-
-                    b.Navigation("RevokedByUser");
-
-                    b.Navigation("Warehouse");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineSyncEvent", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.User", "ActorUser")
-                        .WithMany()
-                        .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_sync_events_users_actor_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.OfflineAuthorityLease", "Lease")
-                        .WithMany("Events")
-                        .HasForeignKey("OfflineAuthorityLeaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_sync_events_offline_authority_leases_offline_author");
-
-                    b.Navigation("ActorUser");
-
-                    b.Navigation("Lease");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
@@ -8063,195 +6561,6 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_otp_challenges_customers_customer_id");
 
                     b.Navigation("Customer");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.ParticipantRoleDefinition", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_participant_role_definitions_businesses_business_id");
-
-                    b.Navigation("Business");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProfile", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Party", "Party")
-                        .WithOne("PartnerProfile")
-                        .HasForeignKey("Cartex.Domain.Entities.PartnerProfile", "PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_profiles_parties_party_id");
-
-                    b.Navigation("Party");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProgram", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_programs_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_programs_businesses_business_id");
-
-                    b.HasOne("Cartex.Domain.Entities.ParticipantRoleDefinition", "RoleDefinition")
-                        .WithMany()
-                        .HasForeignKey("RoleDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_programs_participant_role_definitions_role_definiti");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Business");
-
-                    b.Navigation("RoleDefinition");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRedemptionDocument", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", null)
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_redemption_documents_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerProfile", "PartnerProfile")
-                        .WithMany()
-                        .HasForeignKey("PartnerProfileId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_redemption_documents_partner_profiles_partner_profi");
-
-                    b.HasOne("Cartex.Domain.Entities.ProductVariant", "ProductVariant")
-                        .WithMany()
-                        .HasForeignKey("ProductVariantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_redemption_documents_product_variants_product_varia");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_redemption_documents_users_user_id");
-
-                    b.Navigation("PartnerProfile");
-
-                    b.Navigation("ProductVariant");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRewardEntry", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", null)
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_reward_entries_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.CustomerPaymentDocument", "CustomerPaymentDocument")
-                        .WithMany()
-                        .HasForeignKey("CustomerPaymentDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_customer_payment_documents_customer_");
-
-                    b.HasOne("Cartex.Domain.Entities.CustomerReturnDocument", "CustomerReturnDocument")
-                        .WithMany()
-                        .HasForeignKey("CustomerReturnDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_customer_return_documents_customer_r");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerRewardEntry", "OriginalEntry")
-                        .WithMany()
-                        .HasForeignKey("OriginalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_partner_reward_entries_original_entr");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerProfile", "PartnerProfile")
-                        .WithMany()
-                        .HasForeignKey("PartnerProfileId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_reward_entries_partner_profiles_partner_profile_id");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerProgram", "PartnerProgram")
-                        .WithMany()
-                        .HasForeignKey("PartnerProgramId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_reward_entries_partner_programs_partner_program_id");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerRedemptionDocument", "PartnerRedemptionDocument")
-                        .WithMany("Entries")
-                        .HasForeignKey("PartnerRedemptionDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_partner_redemption_documents_partner");
-
-                    b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
-                        .WithMany()
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_sales_sale_id");
-
-                    b.HasOne("Cartex.Domain.Entities.SaleItem", "SaleItem")
-                        .WithMany()
-                        .HasForeignKey("SaleItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_partner_reward_entries_sale_items_sale_item_id");
-
-                    b.Navigation("CustomerPaymentDocument");
-
-                    b.Navigation("CustomerReturnDocument");
-
-                    b.Navigation("OriginalEntry");
-
-                    b.Navigation("PartnerProfile");
-
-                    b.Navigation("PartnerProgram");
-
-                    b.Navigation("PartnerRedemptionDocument");
-
-                    b.Navigation("Sale");
-
-                    b.Navigation("SaleItem");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRewardRule", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.PartnerProgram", "Program")
-                        .WithMany("Rules")
-                        .HasForeignKey("PartnerProgramId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_reward_rules_partner_programs_partner_program_id");
-
-                    b.Navigation("Program");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_parties_businesses_business_id");
-
-                    b.Navigation("Business");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Prepack", b =>
@@ -8630,36 +6939,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Variant");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.SaleParticipant", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Party", "Party")
-                        .WithMany()
-                        .HasForeignKey("PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_sale_participants_parties_party_id");
-
-                    b.HasOne("Cartex.Domain.Entities.ParticipantRoleDefinition", "RoleDefinition")
-                        .WithMany()
-                        .HasForeignKey("RoleDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_sale_participants_participant_role_definitions_role_definit");
-
-                    b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
-                        .WithMany("Participants")
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_sale_participants_sales_sale_id");
-
-                    b.Navigation("Party");
-
-                    b.Navigation("RoleDefinition");
-
-                    b.Navigation("Sale");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.SalePayment", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
@@ -8905,36 +7184,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Warehouse");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.TradeCaseParticipant", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Party", "Party")
-                        .WithMany()
-                        .HasForeignKey("PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_trade_case_participants_parties_party_id");
-
-                    b.HasOne("Cartex.Domain.Entities.ParticipantRoleDefinition", "RoleDefinition")
-                        .WithMany()
-                        .HasForeignKey("RoleDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_trade_case_participants_participant_role_definitions_role_d");
-
-                    b.HasOne("Cartex.Domain.Entities.TradeCase", "TradeCase")
-                        .WithMany("Participants")
-                        .HasForeignKey("TradeCaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_trade_case_participants_trade_cases_trade_case_id");
-
-                    b.Navigation("Party");
-
-                    b.Navigation("RoleDefinition");
-
-                    b.Navigation("TradeCase");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.TradeCaseSettlement", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
@@ -8973,12 +7222,6 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_transactions_customer_payment_documents_customer_payment_do");
 
-                    b.HasOne("Cartex.Domain.Entities.CustomerRefundDocument", "CustomerRefundDocument")
-                        .WithMany("Transactions")
-                        .HasForeignKey("CustomerRefundDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_transactions_customer_refund_documents_customer_refund_docu");
-
                     b.HasOne("Cartex.Domain.Entities.CustomerReturnDocument", "CustomerReturnDocument")
                         .WithMany("Transactions")
                         .HasForeignKey("CustomerReturnDocumentId")
@@ -8996,12 +7239,6 @@ namespace Cartex.Persistence.Migrations
                         .HasForeignKey("FromAccountId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_transactions_accounts_from_account_id");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerRedemptionDocument", "PartnerRedemptionDocument")
-                        .WithMany("Transactions")
-                        .HasForeignKey("PartnerRedemptionDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_transactions_partner_redemption_documents_partner_redemptio");
 
                     b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
                         .WithMany()
@@ -9040,15 +7277,11 @@ namespace Cartex.Persistence.Migrations
 
                     b.Navigation("CustomerPaymentDocument");
 
-                    b.Navigation("CustomerRefundDocument");
-
                     b.Navigation("CustomerReturnDocument");
 
                     b.Navigation("ExpenseCategory");
 
                     b.Navigation("FromAccount");
-
-                    b.Navigation("PartnerRedemptionDocument");
 
                     b.Navigation("Sale");
 
@@ -9153,10 +7386,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.Cart", b =>
                 {
                     b.Navigation("Items");
-
-                    b.Navigation("Participants");
-
-                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Category", b =>
@@ -9177,13 +7406,6 @@ namespace Cartex.Persistence.Migrations
                 {
                     b.Navigation("Allocations");
 
-                    b.Navigation("Tenders");
-
-                    b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
                     b.Navigation("Tenders");
 
                     b.Navigation("Transactions");
@@ -9221,30 +7443,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
                 {
                     b.Navigation("Attempts");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.Navigation("Events");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProgram", b =>
-                {
-                    b.Navigation("Rules");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerRedemptionDocument", b =>
-                {
-                    b.Navigation("Entries");
-
-                    b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>
-                {
-                    b.Navigation("CustomerProfile");
-
-                    b.Navigation("PartnerProfile");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Permission", b =>
@@ -9299,8 +7497,6 @@ namespace Cartex.Persistence.Migrations
                 {
                     b.Navigation("Items");
 
-                    b.Navigation("Participants");
-
                     b.Navigation("Payments");
                 });
 
@@ -9326,8 +7522,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.TradeCase", b =>
                 {
                     b.Navigation("Issues");
-
-                    b.Navigation("Participants");
 
                     b.Navigation("Payments");
 

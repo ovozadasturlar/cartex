@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260809124909_AddCartCheckoutDraft")]
+    partial class AddCartCheckoutDraft
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,14 +493,8 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("legal_name");
 
                     b.Property<string>("LogoImageKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("logo_image_key");
-
-                    b.Property<string>("MonochromeLogoImageKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("monochrome_logo_image_key");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -595,27 +592,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
 
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("cancellation_reason");
-
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_at");
-
-                    b.Property<long?>("CancelledByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cancelled_by_user_id");
-
-                    b.Property<DateTime?>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("claimed_at");
-
-                    b.Property<long?>("ClaimedByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("claimed_by_user_id");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -680,14 +656,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(14,2)")
                         .HasColumnName("paid_cash");
 
-                    b.Property<long?>("RequeuedFromCartId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("requeued_from_cart_id");
-
-                    b.Property<long?>("SaleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sale_id");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -708,13 +676,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("use_customer_advance");
 
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("version");
-
                     b.Property<long>("WarehouseId")
                         .HasColumnType("bigint")
                         .HasColumnName("warehouse_id");
@@ -729,12 +690,6 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("BranchId")
                         .HasDatabaseName("ix_carts_branch_id");
 
-                    b.HasIndex("CancelledByUserId")
-                        .HasDatabaseName("ix_carts_cancelled_by_user_id");
-
-                    b.HasIndex("ClaimedByUserId")
-                        .HasDatabaseName("ix_carts_claimed_by_user_id");
-
                     b.HasIndex("CustomerId")
                         .HasDatabaseName("ix_carts_customer_id");
 
@@ -743,22 +698,11 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_carts_idempotency_key")
                         .HasFilter("idempotency_key IS NOT NULL");
 
-                    b.HasIndex("RequeuedFromCartId")
-                        .HasDatabaseName("ix_carts_requeued_from_cart_id");
-
-                    b.HasIndex("SaleId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_carts_sale_id")
-                        .HasFilter("\"sale_id\" IS NOT NULL");
-
                     b.HasIndex("WarehouseId")
                         .HasDatabaseName("ix_carts_warehouse_id");
 
                     b.HasIndex("Kind", "Status")
                         .HasDatabaseName("ix_carts_kind_status");
-
-                    b.HasIndex("Status", "ClaimedByUserId", "ClaimedAt")
-                        .HasDatabaseName("ix_carts_status_claimed_by_user_id_claimed_at");
 
                     b.ToTable("carts", (string)null);
                 });
@@ -1408,151 +1352,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_customer_payment_tenders_customer_payment_document_id");
 
                     b.ToTable("customer_payment_tenders", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateOnly>("BusinessDate")
-                        .HasColumnType("date")
-                        .HasColumnName("business_date");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<long>("CustomerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_id");
-
-                    b.Property<string>("DocumentNumber")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("document_number");
-
-                    b.Property<string>("IdempotencyKey")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("status");
-
-                    b.Property<decimal>("TotalBaseAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("total_base_amount");
-
-                    b.Property<long?>("TradeCaseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("trade_case_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_refund_documents");
-
-                    b.HasIndex("DocumentNumber")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_refund_documents_document_number");
-
-                    b.HasIndex("TradeCaseId")
-                        .HasDatabaseName("ix_customer_refund_documents_trade_case_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_customer_refund_documents_user_id");
-
-                    b.HasIndex("BranchId", "IdempotencyKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_refund_documents_branch_id_idempotency_key")
-                        .HasFilter("\"idempotency_key\" IS NOT NULL");
-
-                    b.HasIndex("CustomerId", "BusinessDate", "Id")
-                        .HasDatabaseName("ix_customer_refund_documents_customer_id_business_date_id");
-
-                    b.ToTable("customer_refund_documents", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundTender", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("amount");
-
-                    b.Property<decimal>("AmountBase")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("amount_base");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<long>("CustomerRefundDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_refund_document_id");
-
-                    b.Property<string>("Method")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)")
-                        .HasColumnName("method");
-
-                    b.Property<decimal>("Rate")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)")
-                        .HasColumnName("rate");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_refund_tenders");
-
-                    b.HasIndex("CustomerRefundDocumentId")
-                        .HasDatabaseName("ix_customer_refund_tenders_customer_refund_document_id");
-
-                    b.ToTable("customer_refund_tenders", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.CustomerReturnDocument", b =>
@@ -3134,212 +2933,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("notification_outbox", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<DateTime>("ClaimedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("claimed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("DeviceId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("device_id");
-
-                    b.Property<string>("DeviceName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("device_name");
-
-                    b.Property<long>("Epoch")
-                        .HasColumnType("bigint")
-                        .HasColumnName("epoch");
-
-                    b.Property<long>("LastAcceptedSequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_accepted_sequence");
-
-                    b.Property<DateTime>("LastHeartbeatAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_heartbeat_at");
-
-                    b.Property<long>("LastReportedPendingCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_reported_pending_count");
-
-                    b.Property<DateTime?>("LastSyncAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_sync_at");
-
-                    b.Property<string>("RevokeReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("revoke_reason");
-
-                    b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("revoked_at");
-
-                    b.Property<long?>("RevokedByUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("revoked_by_user_id");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("integer")
-                        .HasColumnName("version");
-
-                    b.Property<long>("WarehouseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("warehouse_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_offline_authority_leases");
-
-                    b.HasIndex("BranchId")
-                        .HasDatabaseName("ix_offline_authority_leases_branch_id");
-
-                    b.HasIndex("BusinessId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_authority_leases_business_id")
-                        .HasFilter("\"revoked_at\" IS NULL");
-
-                    b.HasIndex("RevokedByUserId")
-                        .HasDatabaseName("ix_offline_authority_leases_revoked_by_user_id");
-
-                    b.HasIndex("DeviceId", "RevokedAt")
-                        .HasDatabaseName("ix_offline_authority_leases_device_id_revoked_at");
-
-                    b.HasIndex("WarehouseId", "RevokedAt")
-                        .HasDatabaseName("ix_offline_authority_leases_warehouse_id_revoked_at");
-
-                    b.ToTable("offline_authority_leases", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineSyncEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ActorUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("actor_user_id");
-
-                    b.Property<DateTime>("DeviceOccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("device_occurred_at");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("event_id");
-
-                    b.Property<string>("IdempotencyKey")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("kind");
-
-                    b.Property<long>("OfflineAuthorityLeaseId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("offline_authority_lease_id");
-
-                    b.Property<string>("PayloadHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("payload_hash");
-
-                    b.Property<DateTime>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("processed_at");
-
-                    b.Property<string>("ResultCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("result_code");
-
-                    b.Property<long?>("ResultEntityId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("result_entity_id");
-
-                    b.Property<long>("Sequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sequence");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id")
-                        .HasName("pk_offline_sync_events");
-
-                    b.HasIndex("ActorUserId")
-                        .HasDatabaseName("ix_offline_sync_events_actor_user_id");
-
-                    b.HasIndex("EventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_sync_events_event_id");
-
-                    b.HasIndex("OfflineAuthorityLeaseId", "ProcessedAt")
-                        .HasDatabaseName("ix_offline_sync_events_offline_authority_lease_id_processed_at");
-
-                    b.HasIndex("OfflineAuthorityLeaseId", "Sequence")
-                        .IsUnique()
-                        .HasDatabaseName("ix_offline_sync_events_offline_authority_lease_id_sequence");
-
-                    b.ToTable("offline_sync_events", (string)null);
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
                 {
                     b.Property<long>("Id")
@@ -4696,10 +4289,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("assignment_timeout_seconds");
 
-                    b.Property<bool>("AutoPrintOnSale")
-                        .HasColumnType("boolean")
-                        .HasColumnName("auto_print_on_sale");
-
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
@@ -4711,10 +4300,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<long?>("CreatedBy")
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
-
-                    b.Property<int>("DefaultCopies")
-                        .HasColumnType("integer")
-                        .HasColumnName("default_copies");
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean")
@@ -4738,10 +4323,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("max_jobs_per_minute");
 
-                    b.Property<string>("ReceiptSettingsOverrideJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("receipt_settings_override_json");
-
                     b.Property<bool>("RequireTrustedNode")
                         .HasColumnType("boolean")
                         .HasColumnName("require_trusted_node");
@@ -4749,11 +4330,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<bool>("RequireTrustedRequesterDevice")
                         .HasColumnType("boolean")
                         .HasColumnName("require_trusted_requester_device");
-
-                    b.Property<long>("Revision")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint")
-                        .HasColumnName("revision");
 
                     b.Property<string>("RoutingMode")
                         .IsRequired()
@@ -4797,12 +4373,7 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_print_routing_policies_branch_id_kind");
 
-                    b.ToTable("print_routing_policies", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_print_routing_default_copies", "default_copies BETWEEN 1 AND 100");
-
-                            t.HasCheckConstraint("ck_print_routing_revision", "revision > 0");
-                        });
+                    b.ToTable("print_routing_policies", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.PrinterEndpoint", b =>
@@ -6879,10 +6450,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("customer_payment_document_id");
 
-                    b.Property<long?>("CustomerRefundDocumentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_refund_document_id");
-
                     b.Property<long?>("CustomerReturnDocumentId")
                         .HasColumnType("bigint")
                         .HasColumnName("customer_return_document_id");
@@ -6959,9 +6526,6 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("CustomerPaymentDocumentId")
                         .HasDatabaseName("ix_transactions_customer_payment_document_id");
-
-                    b.HasIndex("CustomerRefundDocumentId")
-                        .HasDatabaseName("ix_transactions_customer_refund_document_id");
 
                     b.HasIndex("CustomerReturnDocumentId")
                         .HasDatabaseName("ix_transactions_customer_return_document_id");
@@ -7369,35 +6933,11 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_carts_branches_branch_id");
 
-                    b.HasOne("Cartex.Domain.Entities.User", "CancelledByUser")
-                        .WithMany()
-                        .HasForeignKey("CancelledByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_users_cancelled_by_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "ClaimedByUser")
-                        .WithMany()
-                        .HasForeignKey("ClaimedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_users_claimed_by_user_id");
-
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_carts_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Cart", "RequeuedFromCart")
-                        .WithMany()
-                        .HasForeignKey("RequeuedFromCartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_carts_requeued_from_cart_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Sale", "Sale")
-                        .WithMany()
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_carts_sales_sale_id");
 
                     b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
                         .WithMany()
@@ -7406,15 +6946,7 @@ namespace Cartex.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_carts_warehouses_warehouse_id");
 
-                    b.Navigation("CancelledByUser");
-
-                    b.Navigation("ClaimedByUser");
-
                     b.Navigation("Customer");
-
-                    b.Navigation("RequeuedFromCart");
-
-                    b.Navigation("Sale");
 
                     b.Navigation("Warehouse");
                 });
@@ -7589,54 +7121,6 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_customer_payment_tenders_customer_payment_documents_custome");
-
-                    b.Navigation("Document");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", null)
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.TradeCase", "TradeCase")
-                        .WithMany()
-                        .HasForeignKey("TradeCaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_customer_refund_documents_trade_cases_trade_case_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_documents_users_user_id");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("TradeCase");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundTender", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.CustomerRefundDocument", "Document")
-                        .WithMany("Tenders")
-                        .HasForeignKey("CustomerRefundDocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_refund_tenders_customer_refund_documents_customer_");
 
                     b.Navigation("Document");
                 });
@@ -7992,65 +7476,6 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_notification_delivery_attempts_notification_deliveries_noti");
 
                     b.Navigation("NotificationDelivery");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_businesses_business_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "RevokedByUser")
-                        .WithMany()
-                        .HasForeignKey("RevokedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_offline_authority_leases_users_revoked_by_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Warehouse", "Warehouse")
-                        .WithMany()
-                        .HasForeignKey("WarehouseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_authority_leases_warehouses_warehouse_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Business");
-
-                    b.Navigation("RevokedByUser");
-
-                    b.Navigation("Warehouse");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineSyncEvent", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.User", "ActorUser")
-                        .WithMany()
-                        .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_sync_events_users_actor_user_id");
-
-                    b.HasOne("Cartex.Domain.Entities.OfflineAuthorityLease", "Lease")
-                        .WithMany("Events")
-                        .HasForeignKey("OfflineAuthorityLeaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_offline_sync_events_offline_authority_leases_offline_author");
-
-                    b.Navigation("ActorUser");
-
-                    b.Navigation("Lease");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.OtpChallenge", b =>
@@ -8973,12 +8398,6 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_transactions_customer_payment_documents_customer_payment_do");
 
-                    b.HasOne("Cartex.Domain.Entities.CustomerRefundDocument", "CustomerRefundDocument")
-                        .WithMany("Transactions")
-                        .HasForeignKey("CustomerRefundDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_transactions_customer_refund_documents_customer_refund_docu");
-
                     b.HasOne("Cartex.Domain.Entities.CustomerReturnDocument", "CustomerReturnDocument")
                         .WithMany("Transactions")
                         .HasForeignKey("CustomerReturnDocumentId")
@@ -9039,8 +8458,6 @@ namespace Cartex.Persistence.Migrations
                         .HasConstraintName("fk_transactions_users_user_id");
 
                     b.Navigation("CustomerPaymentDocument");
-
-                    b.Navigation("CustomerRefundDocument");
 
                     b.Navigation("CustomerReturnDocument");
 
@@ -9182,13 +8599,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Transactions");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerRefundDocument", b =>
-                {
-                    b.Navigation("Tenders");
-
-                    b.Navigation("Transactions");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.CustomerReturnDocument", b =>
                 {
                     b.Navigation("Lines");
@@ -9221,11 +8631,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
                 {
                     b.Navigation("Attempts");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>
-                {
-                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.PartnerProgram", b =>
