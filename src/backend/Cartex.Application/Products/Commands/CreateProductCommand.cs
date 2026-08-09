@@ -8,6 +8,7 @@ using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
 using Cartex.Application.Barcodes.Commands;
 using Microsoft.Extensions.Configuration;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Products.Commands;
 
@@ -27,9 +28,10 @@ public record CreateProductCommand(
     decimal? SellingPrice = null,
     string? PriceCurrency = null,
     long? ManufacturerId = null,
-    bool? AmountEntryEnabled = null) : ICommand<long>;
+    bool? AmountEntryEnabled = null,
+    decimal? QuantityStepOverride = null) : ICommand<long>;
 
-public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration) : IRequestHandler<CreateProductCommand, long>
+public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateProductCommand, long>
 {
     public async Task<long> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
@@ -55,7 +57,8 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             ImageKey = request.ImageKey,
             IkpuCode = request.IkpuCode,
             VatRate = request.VatRate,
-            AmountEntryEnabled = request.AmountEntryEnabled
+            AmountEntryEnabled = request.AmountEntryEnabled,
+            QuantityStepOverride = request.QuantityStepOverride
         };
 
         db.Products.Add(product);
@@ -69,6 +72,7 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             .Select(b => b with { Code = b.Code.Trim() }).DistinctBy(b => b.Code).ToList() ?? [];
         if (inputs.Count > 0)
         {
+            await quantityPolicy.ValidateAsync(inputs.Select(x => (variant.Id, x.PackQty > 0 ? x.PackQty : 1m)), cancellationToken);
             var codes = inputs.Select(b => b.Code).ToList();
             var existing = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
@@ -103,5 +107,11 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
     {
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.MinStock).GreaterThanOrEqualTo(0).When(x => x.MinStock.HasValue);
+        RuleFor(x => x.QuantityStepOverride)
+            .InclusiveBetween(QuantityPolicyService.MinimumStep, QuantityPolicyService.MaximumStep)
+            .When(x => x.QuantityStepOverride.HasValue);
+        RuleFor(x => x.QuantityStepOverride)
+            .Must(x => !x.HasValue || x.Value == decimal.Round(x.Value, 3))
+            .WithMessage("Miqdor qadami ko'pi bilan 3 kasr xonasiga ega bo'lishi kerak.");
     }
 }

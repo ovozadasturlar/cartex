@@ -5,6 +5,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Application.Common.Measurement;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -12,7 +13,7 @@ namespace Cartex.Application.Stocks.Commands;
 
 public record AdjustStockCommand(long WarehouseId, long VariantId, decimal CountedQuantity, string? Reason) : ICommand<Unit>;
 
-public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IBranchCatalogService branchCatalog, IAuditService audit)
+public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IBranchCatalogService branchCatalog, IAuditService audit, IQuantityPolicyService quantityPolicy)
     : IRequestHandler<AdjustStockCommand, Unit>
 {
     public async Task<Unit> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
@@ -21,6 +22,8 @@ public sealed class AdjustStockCommandHandler(IApplicationDbContext db, ICurrent
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
+
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.CountedQuantity)], cancellationToken, allowZero: true);
 
         var stocks = await db.Stocks
             .Where(s => s.WarehouseId == request.WarehouseId && s.VariantId == request.VariantId)

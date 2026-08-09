@@ -24,7 +24,17 @@ public record AuditLogDto(
     string? OldData,
     string? NewData,
     DateTime CreatedAt,
-    string? Client);
+    string? Client,
+    Guid EventId,
+    string? Summary,
+    string? CommandName,
+    string? Details,
+    int EntityCount,
+    long? BranchId,
+    string? DeviceId,
+    string? DeviceName,
+    string? IpAddress,
+    string? CorrelationId);
 
 public sealed class GetAuditLogsQueryHandler(
     IApplicationDbContext db,
@@ -67,7 +77,17 @@ public sealed class GetAuditLogsQueryHandler(
                     a.OldData,
                     a.NewData,
                     a.CreatedAt,
-                    a.Client),
+                    a.Client,
+                    a.EventId,
+                    a.Summary,
+                    a.CommandName,
+                    a.Details,
+                    a.EntityCount,
+                    a.BranchId,
+                    a.DeviceId,
+                    a.DeviceName,
+                    a.IpAddress,
+                    a.CorrelationId),
                 writer, cancellationToken);
     }
 }

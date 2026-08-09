@@ -26,6 +26,14 @@ public class SalesController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("list")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<ActionResult<IReadOnlyCollection<SaleListDto>>> GetSaleList([FromQuery] GetSaleListQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
     [HttpGet("totals")]
     [HasPermission(AppPermissions.Sales.View)]
     public async Task<ActionResult<SalesTotalsDto>> GetTotals([FromQuery] GetSalesTotalsQuery query)
@@ -33,6 +41,11 @@ public class SalesController(ISender sender) : ControllerBase
         var result = await sender.Send(query);
         return Ok(result);
     }
+
+    [HttpGet("{id:long}")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<ActionResult<SaleDetailDto>> GetById(long id) =>
+        Ok(await sender.Send(new GetSaleByIdQuery(id)));
 
     [HttpPost]
     [HasPermission(AppPermissions.Sales.Checkout)]

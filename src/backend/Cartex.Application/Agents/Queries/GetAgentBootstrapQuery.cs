@@ -27,7 +27,7 @@ public sealed class GetAgentBootstrapQueryHandler(IApplicationDbContext db, ICur
             .FirstOrDefaultAsync(cancellationToken);
 
         var customers = await db.Customers
-            .Where(c => c.AgentId == userId)
+            .Where(c => c.AssignedUserId == userId)
             .OrderBy(c => c.FullName)
             .Select(c => new AgentCustomerDto(
                 c.Id,

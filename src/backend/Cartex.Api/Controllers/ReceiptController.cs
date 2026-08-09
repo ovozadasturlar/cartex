@@ -2,6 +2,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Infrastructure.Notifications;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
+using Cartex.Application.Printing;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace Cartex.Api.Controllers;
 [Route("r")]
 [AllowAnonymous]
 [EnableRateLimiting("public")]
-public class ReceiptController(ISender sender) : ControllerBase
+public class ReceiptController(ISender sender, IObjectStorage storage) : ControllerBase
 {
     [HttpGet("{token}")]
     public async Task<ActionResult<ReceiptDto>> GetReceipt(string token)
@@ -41,6 +42,7 @@ public class ReceiptController(ISender sender) : ControllerBase
 
         var receiptSettings = await sender.Send(new Cartex.Application.Settings.Queries.GetReceiptSettingsQuery());
         var opts = ToRenderSettings(receiptSettings);
+        receipt = await WithLogoAsync(receipt, opts, monochrome: false, HttpContext.RequestAborted);
         var pdf = (size ?? receiptSettings.PaperFormat).ToLowerInvariant() switch
         {
             "a4" => pdfRenderer.RenderDocument(receipt, opts, a4: true),
@@ -55,16 +57,23 @@ public class ReceiptController(ISender sender) : ControllerBase
         string token,
         [FromServices] IReceiptPdfRenderer pdfRenderer,
         [FromQuery] string size = "a4",
-        [FromQuery] string orientation = "portrait")
+        [FromQuery] string orientation = "portrait",
+        [FromQuery] long? printJobId = null,
+        [FromQuery] bool monochrome = false)
     {
         var receipt = await sender.Send(new GetReceiptByTokenQuery(token));
         if (receipt is null)
             return NotFound();
 
         var receiptSettings = await sender.Send(new Cartex.Application.Settings.Queries.GetReceiptSettingsQuery());
+        var renderSettings = printJobId is { } jobId
+            ? await sender.Send(new GetPrintJobReceiptSettingsQuery(jobId, token))
+            : null;
+        var effectiveSettings = renderSettings ?? ToRenderSettings(receiptSettings);
+        receipt = await WithLogoAsync(receipt, effectiveSettings, monochrome, HttpContext.RequestAborted);
         var images = pdfRenderer.RenderDocumentImages(
             receipt,
-            ToRenderSettings(receiptSettings),
+            effectiveSettings,
             a4: !string.Equals(size, "a5", StringComparison.OrdinalIgnoreCase),
             landscape: string.Equals(orientation, "landscape", StringComparison.OrdinalIgnoreCase));
         using var output = new MemoryStream();
@@ -97,6 +106,36 @@ public class ReceiptController(ISender sender) : ControllerBase
             ShowPaymentDetails = settings.ShowPaymentDetails,
             ShowQrCode = settings.ShowQrCode,
             ShowElectronicLink = settings.ShowElectronicLink,
-            PublicReceiptBaseUrl = settings.PublicReceiptBaseUrl
+            PublicReceiptBaseUrl = settings.PublicReceiptBaseUrl,
+            ShowLogo = settings.ShowLogo,
+            ShowCustomerPhone = settings.ShowCustomerPhone,
+            ShowCustomerEmail = settings.ShowCustomerEmail
         };
+
+    private async Task<ReceiptDto> WithLogoAsync(
+        ReceiptDto receipt,
+        ReceiptSettings settings,
+        bool monochrome,
+        CancellationToken cancellationToken)
+    {
+        if (!settings.ShowLogo || string.IsNullOrWhiteSpace(receipt.LogoImageKey))
+            return receipt;
+        try
+        {
+            var key = monochrome && !string.IsNullOrWhiteSpace(receipt.MonochromeLogoImageKey)
+                ? receipt.MonochromeLogoImageKey
+                : receipt.LogoImageKey;
+            var download = await storage.DownloadAsync(key!, cancellationToken);
+            if (download is null) return receipt;
+            await using var content = download.Value.Content;
+            using var output = new MemoryStream();
+            await content.CopyToAsync(output, cancellationToken);
+            return receipt with { LogoBytes = output.ToArray() };
+        }
+        catch
+        {
+            // Branding failure must not block a receipt from being rendered.
+            return receipt;
+        }
+    }
 }

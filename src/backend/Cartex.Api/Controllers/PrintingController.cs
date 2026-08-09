@@ -68,10 +68,26 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<PrintRoutingPolicyDto>>> GetRoutes(long branchId, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetPrintRoutingPoliciesQuery(branchId), cancellationToken));
 
+    [HttpGet("bootstrap")]
+    [HasPermission(AppPermissions.Printing.RoutesView, AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.RemoteUse)]
+    public async Task<ActionResult<PrintingBootstrapDto>> GetBootstrap(
+        long branchId,
+        string? deviceId,
+        CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new GetPrintingBootstrapQuery(branchId, deviceId), cancellationToken));
+
     [HttpPut("routes/{kind}")]
     [HasPermission(AppPermissions.Printing.RoutesEdit)]
     public async Task<ActionResult<PrintRoutingPolicyDto>> SetRoute(long branchId, PrintJobKind kind, UpdatePrintRoutingPolicyRequest request, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new UpdatePrintRoutingPolicyCommand(branchId, kind, request), cancellationToken));
+
+    [HttpPut("receipt-policy")]
+    [HasPermission(AppPermissions.Printing.RoutesEdit)]
+    public async Task<ActionResult<PrintRoutingPolicyDto>> SetReceiptPolicy(
+        long branchId,
+        UpdateReceiptPrintPolicyRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new UpdateReceiptPrintPolicyCommand(branchId, request), cancellationToken));
 
     [HttpPost("jobs")]
     [HasPermission(AppPermissions.Printing.RemoteUse)]

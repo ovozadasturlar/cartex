@@ -5,6 +5,7 @@ using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Prepacks.Commands;
 
@@ -12,7 +13,7 @@ public record PrepackLabelDto(long Id, string LabelCode, string ProductName, str
 
 public record CreatePrepacksCommand(long WarehouseId, long VariantId, decimal Quantity, int Count = 1, int? ExpiresHours = null) : ICommand<List<PrepackLabelDto>>;
 
-public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<CreatePrepacksCommand, List<PrepackLabelDto>>
+public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurrencyService currency, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreatePrepacksCommand, List<PrepackLabelDto>>
 {
     public async Task<List<PrepackLabelDto>> Handle(CreatePrepacksCommand request, CancellationToken cancellationToken)
     {
@@ -24,6 +25,8 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
             .Select(v => new { v.Id, v.Product.Name, UnitName = v.Product.Unit.ShortName })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Mahsulot topilmadi.");
+
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.Quantity)], cancellationToken);
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var price = await db.ProductPrices

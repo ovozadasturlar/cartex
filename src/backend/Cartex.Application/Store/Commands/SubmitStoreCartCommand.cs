@@ -5,6 +5,7 @@ using Cartex.Domain.Events;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Store.Commands;
 
@@ -12,7 +13,7 @@ public record SubmitStoreCartItemDto(long VariantId, decimal Quantity);
 
 public record SubmitStoreCartCommand(long WarehouseId, List<SubmitStoreCartItemDto> Items, string? IdempotencyKey = null) : ICommand<string>;
 
-public sealed class SubmitStoreCartCommandHandler(IApplicationDbContext db, ICurrentCustomer currentCustomer)
+public sealed class SubmitStoreCartCommandHandler(IApplicationDbContext db, ICurrentCustomer currentCustomer, IQuantityPolicyService quantityPolicy)
     : IRequestHandler<SubmitStoreCartCommand, string>
 {
     public async Task<string> Handle(SubmitStoreCartCommand request, CancellationToken cancellationToken)
@@ -37,6 +38,9 @@ public sealed class SubmitStoreCartCommandHandler(IApplicationDbContext db, ICur
             .CountAsync(cancellationToken);
         if (inCatalog != variantIds.Count)
             throw new NotFoundException("Mahsulot topilmadi.");
+
+        await quantityPolicy.ValidateAsync(
+            request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
 
         var cart = new Cart
         {
@@ -71,6 +75,8 @@ public sealed class SubmitStoreCartCommandValidator : AbstractValidator<SubmitSt
     public SubmitStoreCartCommandValidator()
     {
         RuleFor(x => x.Items).NotEmpty();
+        RuleFor(x => x.Items).Must(x => x.Select(i => i.VariantId).Distinct().Count() == x.Count)
+            .WithMessage("Bir mahsulot varianti savatda takrorlanmasligi kerak.");
         RuleForEach(x => x.Items).Must(i => i.Quantity > 0).WithMessage("Miqdor 0 dan katta bo'lishi kerak.");
         RuleFor(x => x.IdempotencyKey).MaximumLength(64);
     }

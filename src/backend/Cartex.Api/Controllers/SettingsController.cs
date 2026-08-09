@@ -126,6 +126,19 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("trade-cases")]
+    [HasPermission(AppPermissions.TradeCases.View)]
+    public async Task<ActionResult<Cartex.Application.Settings.Queries.TradeCaseSettingsDto>> GetTradeCases() =>
+        Ok(await sender.Send(new GetTradeCaseSettingsQuery()));
+
+    [HttpPut("trade-cases")]
+    [HasPermission(AppPermissions.Business.Edit)]
+    public async Task<IActionResult> UpdateTradeCases(UpdateTradeCaseSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("storage")]
     [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<ActionResult<Cartex.Application.Settings.Queries.StorageSettingsDto>> GetStorage()

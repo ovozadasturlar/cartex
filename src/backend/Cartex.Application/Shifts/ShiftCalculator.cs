@@ -35,13 +35,16 @@ public static class ShiftCalculator
             .ToListAsync(cancellationToken);
 
         var cardSales = Math.Round(txns.Where(t => t.OperationType == OperationType.Sale && t.ToAccountId is { } toId && cardAccounts.Contains(toId)).Sum(t => t.Amount * t.Rate), 2);
-        var cardReturns = Math.Round(txns.Where(t => t.OperationType == OperationType.Sale && t.FromAccountId is { } fromId && cardAccounts.Contains(fromId)).Sum(t => t.Amount * t.Rate), 2);
+        var cardReturns = Math.Round(txns.Where(t =>
+            (t.OperationType == OperationType.Sale || t.OperationType == OperationType.CustomerRefund)
+            && t.FromAccountId is { } fromId && cardAccounts.Contains(fromId)).Sum(t => t.Amount * t.Rate), 2);
         var bonusUsed = txns.Where(t => t.OperationType == OperationType.BonusSpend && t.FromAccountId != null).Sum(t => t.Amount);
         var newDebt = Math.Round(txns.Where(t => t.OperationType == OperationType.DebtCharge && t.SaleId != null && t.ToAccountId != null).Sum(t => t.Amount * t.Rate), 2);
         var salesCount = txns
             .Where(t => t.SaleId != null
                 && ((t.OperationType == OperationType.Sale && t.ToAccountId != null)
                     || (t.OperationType == OperationType.BonusSpend && t.FromAccountId != null)
+                    || (t.OperationType == OperationType.CustomerAdvance && t.FromAccountId != null)
                     || (t.OperationType == OperationType.DebtCharge && t.ToAccountId != null)))
             .Select(t => t.SaleId)
             .Distinct()
@@ -50,8 +53,12 @@ public static class ShiftCalculator
         (decimal Sales, decimal Returns, decimal DebtIn, decimal SupplyOut, decimal ChangeOut) Terms(long? accountId)
         {
             var sales = txns.Where(t => t.OperationType == OperationType.Sale && t.ToAccountId == accountId).Sum(t => t.Amount);
-            var returns = txns.Where(t => t.OperationType == OperationType.Sale && t.FromAccountId == accountId).Sum(t => t.Amount);
-            var debtIn = txns.Where(t => t.OperationType == OperationType.DebtPay && t.ToAccountId == accountId).Sum(t => t.Amount);
+            var returns = txns.Where(t =>
+                (t.OperationType == OperationType.Sale || t.OperationType == OperationType.CustomerRefund)
+                && t.FromAccountId == accountId).Sum(t => t.Amount);
+            var debtIn = txns.Where(t =>
+                (t.OperationType == OperationType.DebtPay || t.OperationType == OperationType.CustomerPayment)
+                && t.ToAccountId == accountId).Sum(t => t.Amount);
             var supplyOut = txns.Where(t => (t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay) && t.FromAccountId == accountId).Sum(t => t.Amount)
                 - txns.Where(t => t.OperationType == OperationType.SupplyPay && t.ToAccountId == accountId).Sum(t => t.Amount);
             var changeOut = txns.Where(t => t.OperationType == OperationType.Change && t.FromAccountId == accountId).Sum(t => t.Amount);

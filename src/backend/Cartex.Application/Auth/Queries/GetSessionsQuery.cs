@@ -1,7 +1,5 @@
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
-using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +9,7 @@ public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, 
 
 public record GetSessionsQuery(bool All = false) : IRequest<IReadOnlyList<DeviceSessionDto>>;
 
-public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser, ISettingsService settings)
+public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
     : IRequestHandler<GetSessionsQuery, IReadOnlyList<DeviceSessionDto>>
 {
     public async Task<IReadOnlyList<DeviceSessionDto>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
@@ -19,8 +17,13 @@ public sealed class GetSessionsQueryHandler(IApplicationDbContext db, ICurrentUs
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
         var all = request.All && currentUser.HasPermission(AppPermissions.Devices.ViewAll);
         var now = DateTime.UtcNow;
-        var offline = await settings.GetAsync<OfflineCacheSettings>(SettingKeys.OfflineCache, cancellationToken);
-        var offlineDeviceId = offline?.DeviceId;
+        var businessId = currentUser.BusinessId;
+        var offlineDeviceId = businessId is null
+            ? null
+            : await db.OfflineAuthorityLeases.AsNoTracking()
+                .Where(x => x.BusinessId == businessId && x.RevokedAt == null)
+                .Select(x => x.DeviceId)
+                .FirstOrDefaultAsync(cancellationToken);
         var sessions = await db.RefreshSessions
             .Where(s => (all || s.UserId == userId) && s.RevokedAt == null && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastUsedAt)

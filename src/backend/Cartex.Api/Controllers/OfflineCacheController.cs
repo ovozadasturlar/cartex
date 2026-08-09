@@ -5,6 +5,7 @@ using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.OfflineCache;
 
 namespace Cartex.Api.Controllers;
 
@@ -24,25 +25,42 @@ public class OfflineCacheController(ISender sender) : ControllerBase
 
     [HttpPost("claim")]
     [HasPermission(AppPermissions.Devices.Revoke)]
-    public async Task<IActionResult> Claim(ClaimOfflineCacheCommand command)
+    public async Task<ActionResult<OfflineLeaseGrantDto>> Claim(ClaimOfflineCacheRequest request)
     {
-        await sender.Send(command);
-        return Ok();
+        var result = await sender.Send(new ClaimOfflineCacheCommand(
+            request.DeviceId, request.DeviceName, request.WarehouseId));
+        return Ok(result);
     }
 
     [HttpPost("release")]
     [HasPermission(AppPermissions.Devices.Revoke)]
-    public async Task<IActionResult> Release()
+    public async Task<IActionResult> Release(ReleaseOfflineCacheRequest request)
     {
-        await sender.Send(new ReleaseOfflineCacheCommand());
+        await sender.Send(new ReleaseOfflineCacheCommand(
+            request.LeaseId, request.LeaseToken, request.Force, request.Reason));
         return Ok();
     }
 
+    [HttpPost("heartbeat")]
+    [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<OfflineHeartbeatDto>> Heartbeat(OfflineHeartbeatRequest request) =>
+        Ok(await sender.Send(new HeartbeatOfflineCacheCommand(
+            request.LeaseId, request.Epoch, request.LeaseToken, request.PendingCount)));
+
     [HttpGet("snapshot")]
-    [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<ActionResult<OfflineSnapshotDto>> GetSnapshot([FromQuery] long warehouseId, [FromQuery] string deviceId)
+    [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<OfflineSnapshotDto>> GetSnapshot(
+        [FromQuery] long leaseId,
+        [FromQuery] long epoch,
+        [FromHeader(Name = "X-Offline-Lease-Token")] string leaseToken)
     {
-        var snapshot = await sender.Send(new GetOfflineSnapshotQuery(warehouseId, deviceId));
+        var snapshot = await sender.Send(new GetOfflineSnapshotQuery(leaseId, epoch, leaseToken));
         return Ok(snapshot);
     }
+
+    [HttpPost("sync/batches")]
+    [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<OfflineSyncBatchResult>> Sync(OfflineSyncBatchRequest request) =>
+        Ok(await sender.Send(new ProcessOfflineSyncBatch(
+            request.LeaseId, request.Epoch, request.LeaseToken, request.Events)));
 }

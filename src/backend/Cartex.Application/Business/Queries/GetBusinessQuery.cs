@@ -21,7 +21,8 @@ public record BusinessDto(
     string? Telegram = null,
     string? Website = null,
     bool PricingMulticurrency = false,
-    bool SalesMulticurrency = false);
+    bool SalesMulticurrency = false,
+    string? MonochromeLogoImageKey = null);
 
 public sealed class GetBusinessQueryHandler(IApplicationDbContext db, ISettingsService settings, IFeatureStateProvider features)
     : IRequestHandler<GetBusinessQuery, BusinessDto>
@@ -46,6 +47,7 @@ public sealed class GetBusinessQueryHandler(IApplicationDbContext db, ISettingsS
             business.Telegram,
             business.Website,
             pricingMulticurrency,
-            salesMulticurrency);
+            salesMulticurrency,
+            business.MonochromeLogoImageKey);
     }
 }

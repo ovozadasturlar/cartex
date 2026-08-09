@@ -65,6 +65,34 @@ public class CustomersController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:long}/statement")]
+    [HasPermission(AppPermissions.Statements.View)]
+    public async Task<ActionResult<CustomerStatementDto>> GetStatement(
+        long id,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] long? tradeCaseId = null,
+        [FromQuery] long? branchId = null,
+        [FromQuery] string? documentTypes = null) =>
+        Ok(await sender.Send(new GetCustomerStatementQuery(id, from, to, tradeCaseId, branchId, documentTypes)));
+
+    [HttpGet("{id:long}/statement/export")]
+    [HasPermission(AppPermissions.Statements.Export)]
+    public async Task<IActionResult> ExportStatement(
+        long id,
+        [FromQuery] string format = "pdf",
+        [FromQuery] string mode = "both",
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] long? tradeCaseId = null,
+        [FromQuery] long? branchId = null,
+        [FromQuery] string? documentTypes = null)
+    {
+        var document = await sender.Send(new ExportCustomerStatementCommand(
+            id, format, mode, from, to, tradeCaseId, branchId, documentTypes));
+        return File(document.Content, document.ContentType, document.FileName);
+    }
+
     [HttpGet("by-card/{code}")]
     [HasPermission(AppPermissions.Customers.View)]
     public async Task<ActionResult<CustomerDto>> GetByCard(string code)

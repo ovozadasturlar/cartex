@@ -9,6 +9,7 @@ using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Products;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Supplies.Commands;
 
@@ -31,7 +32,7 @@ public record CreateSupplyCommand(
     decimal PaidCard = 0,
     string? Currency = null) : ICommand<long>;
 
-public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IBranchCatalogService branchCatalog, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
+public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IBranchCatalogService branchCatalog, IAuditService audit, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateSupplyCommand, long>
 {
     public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
@@ -54,6 +55,8 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
 
         var resolver = await SupplyLineResolver.LoadAsync(db, request.Items, cancellationToken);
         var lines = request.Items.Select(item => (item, resolved: resolver.Resolve(item))).ToList();
+        await quantityPolicy.ValidateAsync(
+            lines.Select(x => (x.item.VariantId, x.resolved.Quantity)), cancellationToken);
 
         var supply = new Supply
         {

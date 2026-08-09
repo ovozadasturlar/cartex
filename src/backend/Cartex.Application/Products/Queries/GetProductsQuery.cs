@@ -41,7 +41,11 @@ public record ProductDto(
     bool AllowsAmountEntry = false,
     string? PriceSymbol = null,
     string? PriceSymbolPosition = null,
-    int? PriceDecimalDigits = null);
+    int? PriceDecimalDigits = null,
+    decimal QuantityStep = 1,
+    bool AllowsFractional = false,
+    decimal? QuantityStepOverride = null,
+    bool? AmountEntryEnabled = null);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,
@@ -97,7 +101,10 @@ public sealed class GetProductsQueryHandler(
                     Dimension = p.Unit.Dimension.ToString(),
                     p.ManufacturerId,
                     p.IsEnabled,
-                    p.AmountEntryEnabled
+                    p.AmountEntryEnabled,
+                    p.QuantityStepOverride,
+                    p.Unit.DefaultQuantityStep,
+                    p.Unit.DefaultAllowAmountEntry
                 },
                 writer, cancellationToken);
 
@@ -127,10 +134,14 @@ public sealed class GetProductsQueryHandler(
                 r.IsEnabled,
                 r.CategoryId,
                 r.UnitId,
-                r.Dimension != nameof(Cartex.Domain.Enums.UnitDimension.Count) && r.AmountEntryEnabled != false,
+                r.AmountEntryEnabled ?? r.DefaultAllowAmountEntry,
                 r.Price?.Symbol,
                 r.Price?.SymbolPosition,
-                r.Price?.DecimalDigits))
+                r.Price?.DecimalDigits,
+                r.QuantityStepOverride ?? r.DefaultQuantityStep,
+                (r.QuantityStepOverride ?? r.DefaultQuantityStep) != decimal.Truncate(r.QuantityStepOverride ?? r.DefaultQuantityStep),
+                r.QuantityStepOverride,
+                r.AmountEntryEnabled))
             .ToList();
 
         var keys = list.Where(p => p.ImageKey != null).Select(p => p.ImageKey!).Distinct().ToList();

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
+using Cartex.Application.Common.Measurement;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -14,7 +15,8 @@ public record UpdateVariantCommand(long Id, string? Name, string? Code, string? 
 public sealed class UpdateVariantCommandHandler(
     IApplicationDbContext db,
     IObjectStorage storage,
-    ILogger<UpdateVariantCommandHandler> logger) : IRequestHandler<UpdateVariantCommand, Unit>
+    ILogger<UpdateVariantCommandHandler> logger,
+    IQuantityPolicyService quantityPolicy) : IRequestHandler<UpdateVariantCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateVariantCommand request, CancellationToken cancellationToken)
     {
@@ -44,6 +46,8 @@ public sealed class UpdateVariantCommandHandler(
             .Select(b => b with { Code = b.Code.Trim(), PackQty = b.PackQty > 0 ? b.PackQty : 1 })
             .DistinctBy(b => b.Code)
             .ToDictionary(b => b.Code);
+
+        await quantityPolicy.ValidateAsync(desired.Values.Select(x => (variant.Id, x.PackQty)), cancellationToken);
 
         foreach (var existing in variant.Barcodes.Where(b => !desired.ContainsKey(b.Code)).ToList())
             db.Barcodes.Remove(existing);

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Barcodes.Commands;
 
@@ -11,11 +12,12 @@ public record CreateBarcodeCommand(long VariantId, string Code, decimal PackQty)
 
 public record GenerateBarcodeCommand(long VariantId, decimal PackQty = 1) : ICommand<string>;
 
-public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateBarcodeCommand, long>
+public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateBarcodeCommand, long>
 {
     public async Task<long> Handle(CreateBarcodeCommand request, CancellationToken cancellationToken)
     {
         GeneratedPackCodes.EnsureConsistent(request.Code, request.PackQty);
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.PackQty)], cancellationToken);
         if (await db.Barcodes.AnyAsync(b => b.Code == request.Code, cancellationToken))
             throw new BusinessRuleException("Bu barkod allaqachon mavjud.");
 
@@ -33,7 +35,7 @@ public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db) : IReq
     }
 }
 
-public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, IConfiguration configuration) : IRequestHandler<GenerateBarcodeCommand, string>
+public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, IConfiguration configuration, IQuantityPolicyService quantityPolicy) : IRequestHandler<GenerateBarcodeCommand, string>
 {
     public async Task<string> Handle(GenerateBarcodeCommand request, CancellationToken cancellationToken)
     {
@@ -41,6 +43,7 @@ public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, ICon
             throw new NotFoundException("Variant not found.");
 
         var qty = request.PackQty > 1 ? request.PackQty : 1m;
+        await quantityPolicy.ValidateAsync([(request.VariantId, qty)], cancellationToken);
         var code = GeneratedBarcodeCode.Build(configuration, request.VariantId, qty);
 
         var existing = await db.Barcodes.FirstOrDefaultAsync(b => b.Code == code, cancellationToken);
@@ -79,5 +82,6 @@ public sealed class CreateBarcodeCommandValidator : AbstractValidator<CreateBarc
     public CreateBarcodeCommandValidator()
     {
         RuleFor(x => x.Code).NotEmpty().MaximumLength(60);
+        RuleFor(x => x.PackQty).GreaterThan(0);
     }
 }

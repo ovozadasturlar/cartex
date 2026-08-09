@@ -21,7 +21,8 @@ public record ProductLookupDto(
     decimal? OriginalSellingPrice = null,
     string? PriceCurrency = null,
     string? BaseCurrency = null,
-    decimal ConversionRate = 1);
+    decimal ConversionRate = 1,
+    bool AllowsFractional = false);
 
 public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<GetProductByBarcodeQuery, ProductLookupDto?>
 {
@@ -29,12 +30,12 @@ public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, IC
     {
         var barcode = await db.Barcodes
             .Where(b => b.Code == request.Code)
-            .Select(b => new { b.VariantId, b.PackQty, ProductName = b.Variant.Product.Name, UnitName = b.Variant.Product.Unit.Name, Dimension = b.Variant.Product.Unit.Dimension, b.Variant.Product.IsEnabled, b.Variant.Product.AmountEntryEnabled, ImageKey = b.Variant.ImageKey ?? b.Variant.Product.ImageKey })
+            .Select(b => new { b.VariantId, b.PackQty, ProductName = b.Variant.Product.Name, UnitName = b.Variant.Product.Unit.Name, Dimension = b.Variant.Product.Unit.Dimension, b.Variant.Product.IsEnabled, b.Variant.Product.AmountEntryEnabled, b.Variant.Product.QuantityStepOverride, b.Variant.Product.Unit.DefaultQuantityStep, b.Variant.Product.Unit.DefaultAllowAmountEntry, ImageKey = b.Variant.ImageKey ?? b.Variant.Product.ImageKey })
             .FirstOrDefaultAsync(cancellationToken);
 
         barcode ??= await db.ProductVariants
             .Where(v => v.Code == request.Code)
-            .Select(v => new { VariantId = v.Id, PackQty = 1m, ProductName = v.Product.Name, UnitName = v.Product.Unit.Name, Dimension = v.Product.Unit.Dimension, v.Product.IsEnabled, v.Product.AmountEntryEnabled, ImageKey = v.ImageKey ?? v.Product.ImageKey })
+            .Select(v => new { VariantId = v.Id, PackQty = 1m, ProductName = v.Product.Name, UnitName = v.Product.Unit.Name, Dimension = v.Product.Unit.Dimension, v.Product.IsEnabled, v.Product.AmountEntryEnabled, v.Product.QuantityStepOverride, v.Product.Unit.DefaultQuantityStep, v.Product.Unit.DefaultAllowAmountEntry, ImageKey = v.ImageKey ?? v.Product.ImageKey })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (barcode is null || (request.ForSale && !barcode.IsEnabled))
@@ -56,7 +57,8 @@ public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, IC
             .Where(s => s.VariantId == barcode.VariantId && s.WarehouseId == request.WarehouseId)
             .SumAsync(s => (decimal?)s.Quantity, cancellationToken) ?? 0;
 
-        var allowsAmountEntry = barcode.Dimension != UnitDimension.Count && barcode.AmountEntryEnabled != false;
+        var allowsAmountEntry = barcode.AmountEntryEnabled ?? barcode.DefaultAllowAmountEntry;
+        var quantityStep = barcode.QuantityStepOverride ?? barcode.DefaultQuantityStep;
         return new ProductLookupDto(
             barcode.VariantId,
             barcode.ProductName,
@@ -67,10 +69,11 @@ public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, IC
             barcode.Dimension.ToString(),
             barcode.ImageKey,
             allowsAmountEntry,
-            allowsAmountEntry ? 0.001m : 1m,
+            quantityStep,
             price?.SellingPrice,
             price?.Currency ?? baseCurrency,
             baseCurrency,
-            rate);
+            rate,
+            quantityStep != decimal.Truncate(quantityStep));
     }
 }

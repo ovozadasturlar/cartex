@@ -19,7 +19,7 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/webp", "image/gif" };
 
     [HttpPost("upload")]
-    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit, AppPermissions.Business.Edit)]
     public async Task<IActionResult> Upload(IFormFile? file)
     {
         if (file is null || file.Length == 0)
@@ -39,6 +39,20 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
 
         var key = await ImageStore.SaveAsync(storage, processor, buffer, file.ContentType, Path.GetExtension(file.FileName), ct);
         return Ok(new { key });
+    }
+
+    [HttpPost("upload-logo")]
+    [HasPermission(AppPermissions.Business.Edit)]
+    public async Task<IActionResult> UploadLogo(IFormFile? file)
+    {
+        ValidateImage(file);
+        var ct = HttpContext.RequestAborted;
+        await using var stream = file!.OpenReadStream();
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, ct);
+        var (colorKey, monochromeKey) = await ImageStore.SaveLogoPairAsync(
+            storage, processor, buffer, file.ContentType, Path.GetExtension(file.FileName), ct);
+        return Ok(new { colorKey, monochromeKey });
     }
 
     [HttpPost("from-url")]
@@ -72,6 +86,16 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
             return NotFound();
         Response.Headers.CacheControl = "public,max-age=86400,immutable";
         return File(result.Value.Content, result.Value.ContentType);
+    }
+
+    private static void ValidateImage(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+            throw new BusinessRuleException("Rasm fayli tanlanmagan.");
+        if (file.Length > MaxFileSize)
+            throw new BusinessRuleException("Fayl hajmi 5 MB dan oshmasligi kerak.");
+        if (!AllowedContentTypes.Contains(file.ContentType))
+            throw new BusinessRuleException("Faqat rasm fayllariga ruxsat (png, jpeg, webp, gif).");
     }
 }
 

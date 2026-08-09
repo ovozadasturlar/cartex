@@ -12,6 +12,7 @@ public class CorrelationIdMiddleware(RequestDelegate next)
             ? value.ToString()
             : Guid.NewGuid().ToString();
 
+        context.TraceIdentifier = correlationId;
         context.Response.Headers[HeaderName] = correlationId;
 
         using (LogContext.PushProperty("CorrelationId", correlationId))

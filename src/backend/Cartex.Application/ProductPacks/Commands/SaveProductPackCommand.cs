@@ -3,6 +3,7 @@ using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -18,8 +19,14 @@ public sealed class CreateProductPackCommandHandler(IApplicationDbContext db) : 
 {
     public async Task<long> Handle(CreateProductPackCommand request, CancellationToken cancellationToken)
     {
-        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, cancellationToken))
+        var policy = await db.Products
+            .Where(p => p.Id == request.ProductId)
+            .Select(p => new { Step = p.QuantityStepOverride ?? p.Unit.DefaultQuantityStep })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (policy is null)
             throw new NotFoundException("Mahsulot topilmadi.");
+        if (!QuantityPolicyService.IsValid(request.Size, policy.Step))
+            throw new BusinessRuleException($"Qadoq miqdori {policy.Step:0.###} qadamiga mos emas.", "quantity_step_violation");
 
         var pack = new ProductPack
         {
@@ -50,8 +57,12 @@ public sealed class UpdateProductPackCommandHandler(IApplicationDbContext db) : 
 {
     public async Task<Unit> Handle(UpdateProductPackCommand request, CancellationToken cancellationToken)
     {
-        var pack = await db.ProductPacks.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
+        var pack = await db.ProductPacks.Include(p => p.Product).ThenInclude(p => p.Unit).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Qadoq topilmadi.");
+
+        var step = pack.Product.QuantityStepOverride ?? pack.Product.Unit.DefaultQuantityStep;
+        if (!QuantityPolicyService.IsValid(request.Size, step))
+            throw new BusinessRuleException($"Qadoq miqdori {step:0.###} qadamiga mos emas.", "quantity_step_violation");
 
         pack.Name = request.Name.Trim();
         pack.Size = request.Size;
