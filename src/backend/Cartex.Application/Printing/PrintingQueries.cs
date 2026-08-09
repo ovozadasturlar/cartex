@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
@@ -61,6 +62,87 @@ public sealed class GetPrintRoutingPoliciesQueryHandler(
             result.Add(await PrintingMapper.PolicyAsync(db, policy.Id, cancellationToken));
         }
         return result;
+    }
+}
+
+public record GetPrintingBootstrapQuery(long BranchId, string? DeviceId)
+    : IRequest<PrintingBootstrapDto>;
+
+public sealed class GetPrintingBootstrapQueryHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    PrintRoutingService routing,
+    ReceiptPrintPolicyService receiptPolicy)
+    : IRequestHandler<GetPrintingBootstrapQuery, PrintingBootstrapDto>
+{
+    public async Task<PrintingBootstrapDto> Handle(
+        GetPrintingBootstrapQuery request,
+        CancellationToken cancellationToken)
+    {
+        PrintingGuard.EnsureBranch(currentUser, request.BranchId);
+        var policy = await routing.GetOrCreatePolicyAsync(request.BranchId, DomainJobKind.Receipt, cancellationToken);
+        var (business, effective) = await receiptPolicy.ResolveAsync(policy, cancellationToken);
+
+        PrintNodeDto? node = null;
+        var deviceId = request.DeviceId?.Trim();
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            var entity = await db.PrintNodes.AsNoTracking().Include(x => x.Endpoints)
+                .FirstOrDefaultAsync(x => x.BranchId == request.BranchId && x.DeviceId == deviceId,
+                    cancellationToken);
+            if (entity is not null) node = PrintingMapper.Node(entity);
+        }
+
+        var settingRevision = await db.BusinessSettings.AsNoTracking()
+            .Where(x => x.Key == SettingKeys.Receipt)
+            .Select(x => x.UpdatedAt ?? x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        var revision = $"{settingRevision.Ticks:x}-{policy.Revision:x}";
+        return new PrintingBootstrapDto(
+            request.BranchId,
+            deviceId,
+            ReceiptPrintPolicyService.ToDto(business),
+            ReceiptPrintPolicyService.ToDto(effective),
+            await PrintingMapper.PolicyAsync(db, policy.Id, cancellationToken),
+            node,
+            revision,
+            DateTime.UtcNow);
+    }
+}
+
+public record GetPrintJobReceiptSettingsQuery(long JobId, string ReceiptToken)
+    : IRequest<ReceiptSettings?>;
+
+public sealed class GetPrintJobReceiptSettingsQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetPrintJobReceiptSettingsQuery, ReceiptSettings?>
+{
+    public async Task<ReceiptSettings?> Handle(
+        GetPrintJobReceiptSettingsQuery request,
+        CancellationToken cancellationToken)
+    {
+        var payloadJson = await db.PrintJobs.AsNoTracking()
+            .Where(x => x.Id == request.JobId && x.Kind == DomainJobKind.Receipt)
+            .Select(x => x.PayloadJson)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (payloadJson is null) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("receiptToken", out var token)
+                || token.GetString() != request.ReceiptToken
+                || !root.TryGetProperty("receiptSettings", out var value))
+                return null;
+            var result = JsonSerializer.Deserialize<ReceiptSettings>(value.GetRawText(),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (result is not null && value.TryGetProperty("publicReceiptBaseUrl", out var publicUrl))
+                result.PublicReceiptBaseUrl = publicUrl.GetString();
+            return result;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
 

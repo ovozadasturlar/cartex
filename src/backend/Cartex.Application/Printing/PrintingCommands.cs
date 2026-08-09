@@ -254,11 +254,13 @@ public sealed class UpdatePrintRoutingPolicyCommandHandler(
         policy.StickyMode = (DomainStickyMode)request.StickyMode;
         policy.StickyDurationSeconds = request.StickyDurationSeconds;
         policy.MaxCopies = request.MaxCopies;
+        policy.DefaultCopies = Math.Min(policy.DefaultCopies, policy.MaxCopies);
         policy.MaxJobsPerMinute = request.MaxJobsPerMinute;
         policy.MaxCopiesPerMinute = request.MaxCopiesPerMinute;
         policy.AssignmentTimeoutSeconds = request.AssignmentTimeoutSeconds;
         policy.RequireTrustedNode = request.RequireTrustedNode;
         policy.RequireTrustedRequesterDevice = request.RequireTrustedRequesterDevice;
+        policy.Revision++;
         if (policy.StickyMode == DomainStickyMode.Disabled)
         {
             policy.StickyEndpointId = null;
@@ -273,6 +275,62 @@ public sealed class UpdatePrintRoutingPolicyCommandHandler(
             IsEnabled = x.IsEnabled
         }).ToList();
         await db.SaveChangesAsync(cancellationToken);
+        return await PrintingMapper.PolicyAsync(db, policy.Id, cancellationToken);
+    }
+}
+
+public record UpdateReceiptPrintPolicyCommand(
+    long BranchId,
+    UpdateReceiptPrintPolicyRequest Request) : ICommand<PrintRoutingPolicyDto>;
+
+public sealed class UpdateReceiptPrintPolicyCommandValidator : AbstractValidator<UpdateReceiptPrintPolicyCommand>
+{
+    public UpdateReceiptPrintPolicyCommandValidator()
+    {
+        RuleFor(x => x.BranchId).GreaterThan(0);
+        RuleFor(x => x.Request.DefaultCopies).InclusiveBetween(1, 100);
+        RuleFor(x => x.Request.BranchOverride).NotNull().When(x => x.Request.UseBranchOverride);
+        When(x => x.Request.BranchOverride is not null, () =>
+        {
+            RuleFor(x => x.Request.BranchOverride!.PaperWidth).Must(x => x is 32 or 42 or 48);
+            RuleFor(x => x.Request.BranchOverride!.PaperFormat).Must(x => x is "Thermal" or "A5" or "A4");
+            RuleFor(x => x.Request.BranchOverride!.HeaderText).MaximumLength(200);
+            RuleFor(x => x.Request.BranchOverride!.FooterText).MaximumLength(200);
+        });
+    }
+}
+
+public sealed class UpdateReceiptPrintPolicyCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    PrintRoutingService routing,
+    IAuditService audit) : IRequestHandler<UpdateReceiptPrintPolicyCommand, PrintRoutingPolicyDto>
+{
+    public async Task<PrintRoutingPolicyDto> Handle(
+        UpdateReceiptPrintPolicyCommand command,
+        CancellationToken cancellationToken)
+    {
+        PrintingGuard.EnsureBranch(currentUser, command.BranchId);
+        var policy = await routing.GetOrCreatePolicyAsync(command.BranchId, DomainJobKind.Receipt, cancellationToken);
+        if (command.Request.ExpectedRevision is { } expected && expected != policy.Revision)
+            throw new ConflictException("Chop etish sozlamasi boshqa qurilmada o'zgartirilgan. Yangilab qayta urinib ko'ring.");
+
+        policy.AutoPrintOnSale = command.Request.AutoPrintOnSale;
+        policy.DefaultCopies = Math.Clamp(command.Request.DefaultCopies, 1, policy.MaxCopies);
+        policy.ReceiptSettingsOverrideJson = command.Request.UseBranchOverride
+            ? ReceiptPrintPolicyService.SerializeOverride(command.Request.BranchOverride!)
+            : null;
+        policy.Revision++;
+        await db.SaveChangesAsync(cancellationToken);
+
+        audit.SetOutcome("printing.receipt_policy_updated", "print_routing_policies", policy.Id, new
+        {
+            policy.BranchId,
+            policy.AutoPrintOnSale,
+            policy.DefaultCopies,
+            UseBranchOverride = policy.ReceiptSettingsOverrideJson is not null,
+            policy.Revision
+        }, "Chek chop etish siyosati yangilandi", policy.BranchId);
         return await PrintingMapper.PolicyAsync(db, policy.Id, cancellationToken);
     }
 }
@@ -301,7 +359,8 @@ public sealed class CreatePrintJobCommandHandler(
     ICurrentUser currentUser,
     ISettingsService settings,
     PrintRoutingService routing,
-    IPrintJobNotifier notifier) : IRequestHandler<CreatePrintJobCommand, PrintJobDto>
+    IPrintJobNotifier notifier,
+    IAuditService audit) : IRequestHandler<CreatePrintJobCommand, PrintJobDto>
 {
     public async Task<PrintJobDto> Handle(CreatePrintJobCommand command, CancellationToken cancellationToken)
     {
@@ -397,6 +456,16 @@ public sealed class CreatePrintJobCommandHandler(
             job.ErrorMessage = "This device is not approved to send print jobs.";
             db.PrintJobs.Add(job);
             await db.SaveChangesAsync(cancellationToken);
+            audit.SetOutcome("print.rejected", "print_jobs", job.Id, new
+            {
+                job.Kind,
+                job.SourceType,
+                job.SourceId,
+                job.Copies,
+                job.IsReprint,
+                job.Reason,
+                job.ErrorCode
+            }, "Chop etish topshirig'i rad etildi", job.BranchId);
             return PrintingMapper.Job(job);
         }
 
@@ -404,6 +473,16 @@ public sealed class CreatePrintJobCommandHandler(
             db, settings, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
         db.PrintJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
+        audit.SetOutcome(job.IsReprint ? "print.reprint_requested" : "print.requested", "print_jobs", job.Id, new
+        {
+            job.Kind,
+            job.SourceType,
+            job.SourceId,
+            job.Copies,
+            job.IsReprint,
+            job.Reason,
+            job.RequestedDeviceId
+        }, job.IsReprint ? "Qayta chop etish topshirig'i yaratildi" : "Chop etish topshirig'i yaratildi", job.BranchId);
         if (await routing.AssignAsync(job, cancellationToken) && job.AssignedNodeId is not null)
         {
             var targetDeviceId = await db.PrintNodes.Where(x => x.Id == job.AssignedNodeId)
@@ -457,28 +536,14 @@ internal static class PrintingPayloadValidator
         }
         if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException("Receipt not found.");
         var configured = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken) ?? new();
+        var policy = await db.PrintRoutingPolicies.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.BranchId == branchId && x.Kind == DomainJobKind.Receipt,
+                cancellationToken);
+        if (ReceiptPrintPolicyService.DeserializeOverride(policy?.ReceiptSettingsOverrideJson) is { } branchOverride)
+            configured = ReceiptPrintPolicyService.FromDto(branchOverride);
         var notification = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken);
-        return JsonSerializer.Serialize(new
-        {
-            receiptToken = token,
-            receiptSettings = new
-            {
-                configured.HeaderText,
-                configured.FooterText,
-                configured.PaperWidth,
-                configured.ShowBusinessName,
-                configured.ShowBranchName,
-                configured.ShowAddress,
-                configured.ShowPhone,
-                configured.ShowCashier,
-                configured.ShowCustomer,
-                configured.ShowReceiptNumber,
-                configured.ShowPaymentDetails,
-                configured.ShowQrCode,
-                configured.ShowElectronicLink,
-                PublicReceiptBaseUrl = notification?.PublicBaseUrl
-            }
-        });
+        configured.PublicReceiptBaseUrl = notification?.PublicBaseUrl;
+        return ReceiptPrintPolicyService.SerializeReceiptPayload(token, configured);
     }
 
     private static async Task<string> BarcodeAsync(IApplicationDbContext db, ISettingsService settings, JsonElement payload, CancellationToken cancellationToken)
@@ -900,6 +965,10 @@ internal static class PrintingMapper
                 x.PrinterEndpointId, x.PrinterEndpoint.PrintNode.Name, x.PrinterEndpoint.DisplayName,
                 (Cartex.Shared.Models.Printing.PrintCapability)x.PrinterEndpoint.Capabilities, x.Priority,
                 x.IsEnabled, x.PrinterEndpoint.PrintNode.IsTrusted,
-                (Cartex.Shared.Models.Printing.PrinterEndpointStatus)x.PrinterEndpoint.Status)).ToList());
+                (Cartex.Shared.Models.Printing.PrinterEndpointStatus)x.PrinterEndpoint.Status)).ToList(),
+            policy.AutoPrintOnSale,
+            policy.DefaultCopies,
+            ReceiptPrintPolicyService.DeserializeOverride(policy.ReceiptSettingsOverrideJson),
+            policy.Revision);
     }
 }
