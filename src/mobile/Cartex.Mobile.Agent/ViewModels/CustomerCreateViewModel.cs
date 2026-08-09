@@ -129,7 +129,7 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
                 Name.Trim(), Phone.Trim(), null, 0,
                 Address: string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
                 CreditLimit: limit,
-                AgentId: auth.UserId,
+                AssignedUserId: auth.UserId,
                 Latitude: Latitude,
                 Longitude: Longitude));
             await sync.SyncAsync();
