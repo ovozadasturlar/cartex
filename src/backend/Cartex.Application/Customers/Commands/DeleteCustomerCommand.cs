@@ -18,7 +18,7 @@ public sealed class DeleteCustomerCommandHandler(IApplicationDbContext db, ICurr
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Customer not found.");
 
-        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) && customer.AgentId != currentUser.UserId)
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) && customer.AssignedUserId != currentUser.UserId)
             throw new NotFoundException("Customer not found.");
 
         if (customer.Accounts.Any(a => a.Balance != 0))

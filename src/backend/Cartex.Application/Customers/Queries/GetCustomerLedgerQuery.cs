@@ -20,7 +20,7 @@ public sealed class GetCustomerLedgerQueryHandler(
     public async Task<IReadOnlyCollection<CustomerLedgerEntryDto>> Handle(GetCustomerLedgerQuery request, CancellationToken cancellationToken)
     {
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) &&
-            !await db.Customers.AnyAsync(c => c.Id == request.CustomerId && c.AgentId == currentUser.UserId, cancellationToken))
+            !await db.Customers.AnyAsync(c => c.Id == request.CustomerId && c.AssignedUserId == currentUser.UserId, cancellationToken))
             return [];
 
         var accounts = await db.Accounts

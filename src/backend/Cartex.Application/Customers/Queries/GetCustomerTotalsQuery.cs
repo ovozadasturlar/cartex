@@ -19,11 +19,11 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         var query = db.Customers.AsFilterable(request);
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
-            query = query.Where(c => c.AgentId == currentUser.UserId);
+            query = query.Where(c => c.AssignedUserId == currentUser.UserId);
         var count = await query.CountAsync(cancellationToken);
         var sums = await query
             .SelectMany(c => c.Accounts)
-            .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus)
+            .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus || a.Type == AccountType.CustomerAdvance)
             .GroupBy(a => new { a.Type, a.Currency })
             .Select(g => new
             {
@@ -31,7 +31,7 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
                 g.Key.Currency,
                 Sum = g.Sum(a => a.Balance),
                 Owed = g.Sum(a => a.Balance > 0 ? a.Balance : 0m),
-                Credit = g.Sum(a => a.Balance < 0 ? -a.Balance : 0m)
+                Credit = g.Sum(a => a.Balance)
             })
             .ToListAsync(cancellationToken);
         var rates = (await db.ExchangeRates
@@ -44,6 +44,6 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
             count,
             sums.Where(s => s.Type == AccountType.Debt).Sum(s => ToBase(s.Currency, s.Owed)),
             sums.Where(s => s.Type == AccountType.Bonus).Sum(s => s.Sum),
-            sums.Where(s => s.Type == AccountType.Debt).Sum(s => ToBase(s.Currency, s.Credit)));
+            sums.Where(s => s.Type == AccountType.CustomerAdvance).Sum(s => ToBase(s.Currency, s.Credit)));
     }
 }

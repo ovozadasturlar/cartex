@@ -7,7 +7,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AgentId = null, double? Latitude = null, double? Longitude = null) : ICommand<Unit>;
+public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null) : ICommand<Unit>;
 
 public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCustomerCommand, Unit>
 {
@@ -16,7 +16,7 @@ public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurr
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Customer not found.");
 
-        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) && customer.AgentId != currentUser.UserId)
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) && customer.AssignedUserId != currentUser.UserId)
             throw new NotFoundException("Customer not found.");
 
         customer.FullName = request.FullName;
@@ -28,10 +28,16 @@ public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurr
         customer.DiscountPct = request.DiscountPct;
         customer.CreditLimit = request.CreditLimit;
         customer.NotificationsOptOut = request.NotificationsOptOut;
+        var party = await db.Parties.FirstAsync(x => x.Id == customer.PartyId, cancellationToken);
+        party.FullName = request.FullName.Trim();
+        party.Phone = customer.Phone;
+        party.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        party.Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim();
         if (request.PreferredLanguage is not null)
             customer.PreferredLanguage = request.PreferredLanguage;
-        if (request.AgentId is not null)
-            customer.AgentId = request.AgentId == 0 ? null : request.AgentId;
+        var assignedUserId = request.AssignedUserId ?? request.AgentId;
+        if (assignedUserId is not null)
+            customer.AssignedUserId = assignedUserId == 0 ? null : assignedUserId;
         if (request.Latitude is not null && request.Longitude is not null)
         {
             customer.Latitude = request.Latitude == 0 ? null : request.Latitude;

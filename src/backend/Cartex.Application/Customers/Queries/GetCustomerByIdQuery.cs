@@ -15,7 +15,7 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         var customers = db.Customers.Where(c => c.Id == request.Id);
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
-            customers = customers.Where(c => c.AgentId == currentUser.UserId);
+            customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
 
         return await customers
             .Select(c => new CustomerDto(
@@ -31,7 +31,11 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
                 c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
                     : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
                 c.CreditLimit,
-                c.NotificationsOptOut))
+                c.NotificationsOptOut,
+                c.TelegramChatId != null,
+                c.PreferredLanguage,
+                c.Accounts.Where(a => a.Type == AccountType.CustomerAdvance).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
+                    : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault()))))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

@@ -12,9 +12,10 @@ namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomersQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerDto>>;
 
-public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null)
+public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null, decimal CreditBalance = 0)
 {
     public IReadOnlyList<CurrencyAmountDto> DebtBalances { get; init; } = [];
+    public IReadOnlyList<CurrencyAmountDto> CreditBalances { get; init; } = [];
 }
 
 public sealed class GetCustomersQueryHandler(
@@ -28,7 +29,7 @@ public sealed class GetCustomersQueryHandler(
         var baseCode = await currency.BaseAsync(cancellationToken);
         var customers = db.Customers.AsSingleQuery();
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
-            customers = customers.Where(c => c.AgentId == currentUser.UserId);
+            customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
 
         var items = await customers
             .ToPagedListAsync(request,
@@ -54,6 +55,10 @@ public sealed class GetCustomersQueryHandler(
                     Debts = db.Accounts
                         .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Debt && a.Balance != 0)
                         .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))
+                        .ToList(),
+                    Credits = db.Accounts
+                        .Where(a => a.CustomerId == c.Id && a.Type == AccountType.CustomerAdvance && a.Balance != 0)
+                        .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))
                         .ToList()
                 },
                 writer, cancellationToken);
@@ -67,7 +72,9 @@ public sealed class GetCustomersQueryHandler(
         return items.Select(x => x.Dto with
         {
             DebtBalance = x.Debts.Sum(d => d.Amount * (d.Currency == baseCode ? 1m : rates.GetValueOrDefault(d.Currency))),
-            DebtBalances = x.Debts
+            DebtBalances = x.Debts,
+            CreditBalance = x.Credits.Sum(d => d.Amount * (d.Currency == baseCode ? 1m : rates.GetValueOrDefault(d.Currency))),
+            CreditBalances = x.Credits
         }).ToList();
     }
 }
