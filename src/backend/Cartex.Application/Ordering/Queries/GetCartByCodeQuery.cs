@@ -15,13 +15,17 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
     {
         var cart = await db.Carts
             .Include(c => c.Customer)
-            .Include(c => c.Items).ThenInclude(i => i.Variant).ThenInclude(v => v.Product)
+            .Include(c => c.Items).ThenInclude(i => i.Variant).ThenInclude(v => v.Product).ThenInclude(p => p.Unit)
+            .Include(c => c.Participants)
+            .Include(c => c.Payments)
+            .Include(c => c.ClaimedByUser)
             .FirstOrDefaultAsync(c => c.AggregateCode == request.Code, cancellationToken);
 
         if (cart is null)
             return null;
 
-        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout)
+        if (!currentUser.HasPermission(AppPermissions.Sales.View)
+            && !currentUser.HasPermission(AppPermissions.Sales.Checkout)
             && !currentUser.HasPermission(AppPermissions.Sales.Create)
             && cart.CreatedBy != currentUser.UserId)
             return null;
@@ -56,11 +60,53 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
         var items = cart.Items.Select(i =>
         {
             var unitPrice = PriceOf(i.VariantId);
-            return new CartItemDto(i.VariantId, i.Variant.Product.Name, i.Quantity, unitPrice, unitPrice * i.Quantity);
+            var step = i.Variant.Product.QuantityStepOverride ?? i.Variant.Product.Unit.DefaultQuantityStep;
+            return new CartItemDto(i.VariantId, i.Variant.Product.Name, i.Quantity, unitPrice, unitPrice * i.Quantity,
+                i.Variant.Product.Unit.ShortName, step, step != decimal.Truncate(step),
+                i.Variant.Product.ImageKey);
         }).ToList();
+
+        var actions = new List<string>();
+        var isOwner = cart.CreatedBy == currentUser.UserId;
+        var isClaimant = cart.ClaimedByUserId == currentUser.UserId;
+        var canOverrideClaim = currentUser.HasPermission(AppPermissions.Sales.OverrideClaim);
+        if (cart.Status == Cartex.Domain.Enums.CartStatus.Open)
+        {
+            if (currentUser.HasPermission(AppPermissions.Sales.Create) && (isOwner || currentUser.HasPermission(AppPermissions.Sales.ViewAll)))
+                actions.Add("edit");
+            if (currentUser.HasPermission(AppPermissions.Sales.Checkout)) actions.Add("claim");
+            if (isOwner || currentUser.HasPermission(AppPermissions.Sales.Checkout)) actions.Add("cancel");
+            actions.Add("showQr");
+        }
+        else if (cart.Status is Cartex.Domain.Enums.CartStatus.Confirmed or Cartex.Domain.Enums.CartStatus.Ready)
+        {
+            if (currentUser.HasPermission(AppPermissions.Sales.Checkout) && (isClaimant || canOverrideClaim))
+                actions.Add("checkout");
+            if (isClaimant || canOverrideClaim) actions.Add("cancel");
+        }
+        else if (cart.Status == Cartex.Domain.Enums.CartStatus.CheckedOut)
+        {
+            if (cart.SaleId.HasValue) actions.Add("openSale");
+        }
+        else if (cart.Status == Cartex.Domain.Enums.CartStatus.Cancelled
+                 && (currentUser.HasPermission(AppPermissions.Sales.Create)
+                     || currentUser.HasPermission(AppPermissions.Sales.Pick)))
+            actions.Add("requeue");
 
         return new CartDto(cart.AggregateCode, cart.Status.ToString(), cart.WarehouseId, cart.CustomerId,
             cart.Customer != null ? cart.Customer.FullName : null, items.Sum(i => i.LineTotal), items, cart.Note,
-            cart.PaidCash, cart.PaidCard, cart.PaidBonus);
+            cart.PaidCash, cart.PaidCard, cart.PaidBonus,
+            cart.Participants.OrderBy(x => x.Id).Select(x => new CartParticipantDto(
+                x.RoleDefinitionId, x.PartyId, x.PartyNameSnapshot,
+                x.PartyPhoneSnapshot, x.RoleLabelSnapshot)).ToList(),
+            cart.Payments.OrderBy(x => x.Id).Select(x => new CartPaymentDto(
+                x.Method.ToString(), x.Currency, x.Amount)).ToList(),
+            cart.DebtCurrency, cart.DebtDueDate, cart.CreditAmount, cart.UseCustomerAdvance,
+            cart.Id, cart.Kind.ToString(), cart.Version, cart.CreatedBy,
+            cart.CreatedBy.HasValue
+                ? await db.Users.Where(x => x.Id == cart.CreatedBy).Select(x => x.FullName).FirstOrDefaultAsync(cancellationToken)
+                : null,
+            cart.ClaimedByUserId, cart.ClaimedByUser?.FullName, cart.ClaimedAt, cart.SaleId,
+            cart.CancelledAt, cart.CancellationReason, cart.RequeuedFromCartId, actions);
     }
 }

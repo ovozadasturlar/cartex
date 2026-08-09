@@ -38,6 +38,13 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
                 ItemCount = c.Items.Count,
                 c.CreatedAt,
                 CreatedByName = db.Users.Where(u => u.Id == c.CreatedBy).Select(u => u.FullName).FirstOrDefault(),
+                c.Kind,
+                c.Version,
+                c.ClaimedByUserId,
+                ClaimedByName = c.ClaimedByUser != null ? c.ClaimedByUser.FullName : null,
+                c.ClaimedAt,
+                c.SaleId,
+                c.CancellationReason,
                 c.Note,
                 Items = c.Items.Select(i => new { i.VariantId, i.Quantity }).ToList()
             })
@@ -90,7 +97,14 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
                 c.CreatedAt,
                 c.CreatedByName,
                 c.Note,
-                estTotal);
+                estTotal,
+                c.Kind.ToString(),
+                c.Version,
+                c.ClaimedByUserId,
+                c.ClaimedByName,
+                c.ClaimedAt,
+                c.SaleId,
+                c.CancellationReason);
         }).ToList();
     }
 }
