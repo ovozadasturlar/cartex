@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.CasePaymentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CasePaymentViewModel"
+    Title="{svc:T receive_payment}">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                <Border Style="{StaticResource Card}" Padding="14"><VerticalStackLayout Spacing="3"><Label Text="{Binding CaseTitle}" FontSize="16" FontAttributes="Bold" /><Label Text="{Binding CustomerName}" Style="{StaticResource MutedLabel}" FontSize="12" /></VerticalStackLayout></Border>
+                <Grid ColumnDefinitions="*,Auto"><VerticalStackLayout Spacing="2"><Label Text="{svc:T payment_rows}" FontSize="15" FontAttributes="Bold" /><Label Text="{svc:T payment_rows_hint}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout><Button Grid.Column="1" Text="{StaticResource IcPlus}" FontFamily="MDI" WidthRequest="42" HeightRequest="42" Padding="0" Command="{Binding AddPaymentCommand}" IsEnabled="{Binding CanAdd}" /></Grid>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Payments}" Spacing="10">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CheckoutPaymentRow">
+                            <Border Style="{StaticResource Card}" Padding="12">
+                                <VerticalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6">
+                                        <Picker ItemsSource="{Binding PaymentMethods, Source={RelativeSource AncestorType={x:Type vm:CasePaymentViewModel}}}" SelectedItem="{Binding SelectedMethod}" ItemDisplayBinding="{Binding Label}" />
+                                        <Picker Grid.Column="1" ItemsSource="{Binding Currencies, Source={RelativeSource AncestorType={x:Type vm:CasePaymentViewModel}}}" SelectedItem="{Binding SelectedCurrency}" ItemDisplayBinding="{Binding Code}" />
+                                        <Button Grid.Column="2" Text="{StaticResource IcClose}" FontFamily="MDI" WidthRequest="38" HeightRequest="38" Padding="0" BackgroundColor="Transparent" Command="{Binding RemovePaymentCommand, Source={RelativeSource AncestorType={x:Type vm:CasePaymentViewModel}}}" CommandParameter="{Binding .}" />
+                                    </Grid>
+                                    <Border Style="{StaticResource InputWrap}"><Entry Text="{Binding AmountText}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" /></Border>
+                                    <Label Text="{Binding BaseAmountText}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <Border Style="{StaticResource InputWrap}"><Editor Text="{Binding Note}" Placeholder="{svc:T note_placeholder}" AutoSize="TextChanges" /></Border>
+                <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" IsVisible="{Binding HasError}"><Label Text="{Binding Error}" Style="{StaticResource TxDanger}" /></Border>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <Grid ColumnDefinitions="*,Auto"><VerticalStackLayout Spacing="1"><Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding TotalText}" FontSize="19" FontAttributes="Bold" /></VerticalStackLayout><Button Grid.Column="1" Text="{svc:T receive_payment}" Style="{StaticResource BtnPrimary}" WidthRequest="140" Command="{Binding SaveCommand}" /></Grid>
+        </Border>
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

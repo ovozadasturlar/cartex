@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.TradeCaseDetailPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:models="clr-namespace:Cartex.Shared.Models.TradeCases;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:TradeCaseDetailViewModel">
+
+    <Grid RowDefinitions="*,Auto">
+        <RefreshView IsRefreshing="{Binding IsLoading, Mode=OneWay}" Command="{Binding RefreshCommand}">
+            <ScrollView>
+                <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                    <Border Style="{StaticResource Card}" Padding="16">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="{Binding CaseNumber}" Style="{StaticResource MutedLabel}" FontSize="12" CharacterSpacing="1" />
+                                    <Label Text="{Binding Title}" FontSize="20" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{Binding CustomerName}" FontSize="14" FontAttributes="Bold" />
+                                    <Label Text="{Binding Location}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                    <Label Text="{Binding SiteAddress}" Style="{StaticResource MutedLabel}" FontSize="12" IsVisible="{Binding HasSiteAddress}" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="12,6"
+                                        VerticalOptions="Start" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                    <Label Text="{Binding Status}" FontSize="12" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Border>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Button Text="☎" Style="{StaticResource BtnOutline}" IsVisible="{Binding HasPhone}" Command="{Binding CallCommand}" />
+                                <Button Grid.Column="1" Text="{svc:T statement}" Style="{StaticResource BtnOutline}" IsVisible="{Binding CanExport}" Command="{Binding OpenStatementCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Border Style="{StaticResource Card}" Padding="10">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="{svc:T issued}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                <Label Text="{Binding IssuedText}" FontSize="17" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="10">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="{svc:T returned}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                <Label Text="{Binding ReturnedText}" FontSize="17" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource Card}" Padding="10">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="{svc:T with_customer}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                <Label Text="{Binding CustodyText}" FontSize="17" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{svc:T estimated_outstanding}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding WorkflowText}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding OutstandingText}" FontSize="19" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasParticipants}">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Participants}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:TradeCaseParticipantDto">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Label Text="{Binding RoleLabel}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        <Label Grid.Column="1" Text="{Binding PartyName}" FontSize="14" FontAttributes="Bold" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding HasLines}">
+                        <Label Text="{svc:T custody_items}" FontSize="15" FontAttributes="Bold" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Lines}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TradeCaseLineRow">
+                                    <Border Style="{StaticResource Card}" Padding="12">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Line.ProductName}" FontSize="14" FontAttributes="Bold" />
+                                                <Label Text="{Binding Source}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                                <Label Text="{Binding Quantity}" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                                <Label Text="{Binding Amount}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding HasDocuments}">
+                        <Label Text="{svc:T document_timeline}" FontSize="15" FontAttributes="Bold" />
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Documents}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TradeCaseDocumentRow">
+                                    <Border Style="{StaticResource Card}" Padding="12">
+                                        <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding OpenDocumentCommand, Source={RelativeSource AncestorType={x:Type vm:TradeCaseDetailViewModel}}}" CommandParameter="{Binding .}" /></Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <Border WidthRequest="36" HeightRequest="36" StrokeThickness="0" StrokeShape="RoundRectangle 18"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                                <Label Text="{StaticResource IcHistory}" FontFamily="MDI" Style="{StaticResource Icon}" />
+                                            </Border>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding TypeText}" FontSize="14" FontAttributes="Bold" />
+                                                <Label Text="{Binding Document.DocumentNumber}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="2" Spacing="1">
+                                                <Label Text="{Binding Amount}" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                                                <Label Text="{Binding Date}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Text="{svc:T export}" Style="{StaticResource BtnOutline}" IsVisible="{Binding CanExport}" Command="{Binding ExportCommand}" />
+                        <Button Grid.Column="1" Text="{svc:T close_case}" Style="{StaticResource BtnOutline}" IsVisible="{Binding CanClose}" Command="{Binding CloseCaseCommand}" />
+                    </Grid>
+                    <Button Text="{svc:T cancel_case}" Style="{StaticResource BtnOutline}" IsVisible="{Binding CanCancel}" Command="{Binding CancelCaseCommand}"
+                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                            BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+
+                    <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                            IsVisible="{Binding HasError}">
+                        <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" />
+                    </Border>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <Border Grid.Row="1" StrokeThickness="1" Padding="12"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                <Button Text="{svc:T issue_goods}" Style="{StaticResource BtnOutline}" FontSize="12" Padding="6" IsVisible="{Binding CanIssue}" Command="{Binding IssueCommand}" />
+                <Button Grid.Column="1" Text="{svc:T receive_return}" Style="{StaticResource BtnOutline}" FontSize="12" Padding="6" IsVisible="{Binding CanReturn}" Command="{Binding ReturnCommand}" />
+                <Button Grid.Column="2" Text="{svc:T receive_payment_short}" Style="{StaticResource BtnOutline}" FontSize="12" Padding="6" IsVisible="{Binding CanReceivePayment}" Command="{Binding ReceivePaymentCommand}" />
+                <Button Grid.Column="3" Text="{svc:T settle}" Style="{StaticResource BtnPrimary}" FontSize="12" Padding="6" IsVisible="{Binding CanSettle}" Command="{Binding SettleCommand}" />
+            </Grid>
+        </Border>
+
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.CaseStatementPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:models="clr-namespace:Cartex.Shared.Models.TradeCases;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CaseStatementViewModel"
+    Title="{svc:T statement}">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                <Border Style="{StaticResource Card}" Padding="14"><VerticalStackLayout Spacing="3"><Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" /><Label Text="{Binding CaseNumber}" Style="{StaticResource MutedLabel}" FontSize="12" /><Label Text="{Binding CustomerName}" Style="{StaticResource MutedLabel}" FontSize="12" /></VerticalStackLayout></Border>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8"><Border Style="{StaticResource Card}" Padding="10"><VerticalStackLayout Spacing="2"><Label Text="{svc:T opening_balance}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding OpeningText}" FontSize="17" FontAttributes="Bold" /></VerticalStackLayout></Border><Border Grid.Column="1" Style="{StaticResource Card}" Padding="10"><VerticalStackLayout Spacing="2"><Label Text="{svc:T closing_balance}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding ClosingText}" FontSize="17" FontAttributes="Bold" TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" /></VerticalStackLayout></Border></Grid>
+                <Grid ColumnDefinitions="*,Auto"><VerticalStackLayout><Label Text="{svc:T date_filter}" FontAttributes="Bold" /><Label Text="{svc:T full_case_period}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout><Switch Grid.Column="1" IsToggled="{Binding UseDateFilter}" /></Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding UseDateFilter}"><DatePicker Date="{Binding FromDate}" /><DatePicker Grid.Column="1" Date="{Binding ToDate}" /></Grid>
+                <Button Text="{svc:T apply}" Style="{StaticResource BtnOutline}" IsVisible="{Binding UseDateFilter}" Command="{Binding ApplyFilterCommand}" />
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"><HorizontalStackLayout Spacing="8"><Button Text="{svc:T statement_both}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="both" /><Button Text="{svc:T statement_timeline}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="timeline" /><Button Text="{svc:T statement_consolidated}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="consolidated" /></HorizontalStackLayout></ScrollView>
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowTimeline}">
+                    <Label Text="{svc:T statement_timeline}" FontSize="15" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Timeline}" Spacing="8">
+                        <BindableLayout.ItemTemplate><DataTemplate x:DataType="models:TradeCaseStatementEntryDto"><Border Style="{StaticResource Card}" Padding="12"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><VerticalStackLayout Spacing="2"><Label Text="{Binding Summary}" FontSize="14" FontAttributes="Bold" /><Label Text="{Binding DocumentNumber}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding OccurredAt, StringFormat='{0:dd.MM.yyyy HH:mm}'}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout><VerticalStackLayout Grid.Column="1" Spacing="1"><Label Text="{Binding Debit, StringFormat='+{0:N0}'}" FontAttributes="Bold" HorizontalTextAlignment="End" /><Label Text="{Binding Credit, StringFormat='−{0:N0}'}" FontAttributes="Bold" HorizontalTextAlignment="End" /><Label Text="{Binding RunningBalance, StringFormat='{0:N0}'}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" /></VerticalStackLayout></Grid></Border></DataTemplate></BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowProducts}">
+                    <Label Text="{svc:T statement_consolidated}" FontSize="15" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Products}" Spacing="8">
+                        <BindableLayout.ItemTemplate><DataTemplate x:DataType="models:TradeCaseStatementProductDto"><Border Style="{StaticResource Card}" Padding="12"><VerticalStackLayout Spacing="5"><Grid ColumnDefinitions="*,Auto"><Label Text="{Binding ProductName}" FontSize="14" FontAttributes="Bold" /><Label Grid.Column="1" Text="{Binding ChargedAmount, StringFormat='{0:N0}'}" FontAttributes="Bold" /></Grid><Grid ColumnDefinitions="*,*,*" ColumnSpacing="6"><VerticalStackLayout><Label Text="{svc:T issued}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding Issued, StringFormat='{0:0.###}'}" /></VerticalStackLayout><VerticalStackLayout Grid.Column="1"><Label Text="{svc:T returned}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding ReturnedSellable, StringFormat='{0:0.###}'}" /></VerticalStackLayout><VerticalStackLayout Grid.Column="2"><Label Text="{svc:T with_customer}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding OutstandingCustody, StringFormat='{0:0.###}'}" /></VerticalStackLayout></Grid></VerticalStackLayout></Border></DataTemplate></BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+                <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" IsVisible="{Binding HasError}"><Label Text="{Binding Error}" Style="{StaticResource TxDanger}" /></Border>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"><Grid ColumnDefinitions="*,*" ColumnSpacing="8"><Button Text="PDF" Style="{StaticResource BtnPrimary}" Command="{Binding ExportCommand}" CommandParameter="pdf" /><Button Grid.Column="1" Text="XLSX" Style="{StaticResource BtnOutline}" Command="{Binding ExportCommand}" CommandParameter="xlsx" /></Grid></Border>
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>
