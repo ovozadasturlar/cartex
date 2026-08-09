@@ -6,6 +6,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -38,7 +39,8 @@ public record SaleDto(
     string? CustomerName,
     string UserName,
     List<SaleLineDto> Items,
-    bool CanResendReceipt);
+    bool CanResendReceipt,
+    decimal PaidAdvance = 0);
 
 public sealed class GetSalesQueryHandler(
     IApplicationDbContext db,
@@ -54,22 +56,15 @@ public sealed class GetSalesQueryHandler(
         var canSendEmail = notificationSettings?.Channels.Contains(NotificationChannel.Email) == true;
         var canSendSms = notificationSettings?.Channels.Contains(NotificationChannel.Sms) == true;
 
-        var query = db.Sales.AsQueryable();
-
-        if (!currentUser.HasPermission(AppPermissions.Sales.ViewAll))
-            query = query.Where(s => s.UserId == currentUser.UserId);
-
-        if (request.FromDate is { } fromDate)
-            query = query.Where(s => s.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));
-        if (request.ToDate is { } toDate)
-            query = query.Where(s => s.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
-        if (request.WarehouseId is { } warehouseId)
-            query = query.Where(s => s.WarehouseId == warehouseId);
-        if (request.CustomerId is { } customerId)
-            query = query.Where(s => s.CustomerId == customerId);
+        var query = db.Sales
+            .AsNoTracking()
+            .ApplySaleScope(request, currentUser, request.FromDate, request.ToDate,
+                request.WarehouseId, request.CustomerId);
+        var paging = request with { };
+        paging.WithoutSearch();
 
         return await query
-            .ToPagedListAsync(request,
+            .ToPagedListAsync(paging,
                 s => new SaleDto(
                     s.Id,
                     s.CreatedAt,
@@ -93,7 +88,8 @@ public sealed class GetSalesQueryHandler(
                     !s.Customer.NotificationsOptOut &&
                     ((canSendTelegram && s.Customer.TelegramChatId != null && s.Customer.TelegramChatId != "") ||
                      (canSendEmail && s.Customer.Email != null && s.Customer.Email != "") ||
-                     (canSendSms && s.Customer.Phone != null && s.Customer.Phone != ""))),
+                     (canSendSms && s.Customer.Phone != null && s.Customer.Phone != "")),
+                    s.PaidAdvance),
                 writer, cancellationToken);
     }
 }

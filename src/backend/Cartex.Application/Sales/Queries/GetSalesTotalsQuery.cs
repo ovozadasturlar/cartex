@@ -12,6 +12,7 @@ public record GetSalesTotalsQuery : FilteringRequest, IRequest<SalesTotalsDto>
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
     public long? WarehouseId { get; set; }
+    public long? CustomerId { get; set; }
 }
 
 public record SalesTotalsDto(int Count, decimal TotalAmount, decimal TotalDiscount, decimal TotalDebt);
@@ -20,19 +21,13 @@ public sealed class GetSalesTotalsQueryHandler(IApplicationDbContext db, ICurren
 {
     public async Task<SalesTotalsDto> Handle(GetSalesTotalsQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Sales.AsQueryable();
-
-        if (!currentUser.HasPermission(AppPermissions.Sales.ViewAll))
-            query = query.Where(s => s.UserId == currentUser.UserId);
-
-        if (request.FromDate is { } fromDate)
-            query = query.Where(s => s.CreatedAt >= DateTime.SpecifyKind(fromDate, DateTimeKind.Utc));
-        if (request.ToDate is { } toDate)
-            query = query.Where(s => s.CreatedAt < DateTime.SpecifyKind(toDate, DateTimeKind.Utc));
-        if (request.WarehouseId is { } warehouseId)
-            query = query.Where(s => s.WarehouseId == warehouseId);
-
-        query = query.AsFilterable(request);
+        var query = db.Sales
+            .AsNoTracking()
+            .ApplySaleScope(request, currentUser, request.FromDate, request.ToDate,
+                request.WarehouseId, request.CustomerId);
+        var filtering = request with { };
+        filtering.WithoutSearch();
+        query = query.AsFilterable(filtering);
 
         var totals = await query
             .GroupBy(_ => 1)

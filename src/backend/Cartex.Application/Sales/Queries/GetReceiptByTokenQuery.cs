@@ -1,5 +1,6 @@
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -37,7 +38,15 @@ public record ReceiptDto(
     string? BusinessWebsite = null,
     string? LogoImageKey = null,
     decimal CreditAmount = 0,
-    string? BaseCurrency = null);
+    string? BaseCurrency = null,
+    decimal PaidAdvance = 0,
+    string? MonochromeLogoImageKey = null)
+{
+    // Rendering-only data. It is populated only for PDF/image generation so the
+    // normal receipt API remains lightweight and never serializes a base64 logo.
+    [JsonIgnore]
+    public byte[]? LogoBytes { get; init; }
+}
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
@@ -76,7 +85,9 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 business.Website,
                 business.LogoImageKey,
                 sale.CreditAmount,
-                business.Currency))
+                business.Currency,
+                sale.PaidAdvance,
+                business.MonochromeLogoImageKey))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

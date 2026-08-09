@@ -9,12 +9,25 @@ using Cartex.Domain.Enums;
 using Cartex.Domain.Events;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Measurement;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
+using Cartex.Application.Common.Participants;
+using Cartex.Application.Common.Partners;
+using System.Text.Json.Serialization;
+using Cartex.Application.Printing;
+using Cartex.Application.OfflineCache;
 
 namespace Cartex.Application.Sales.Commands;
 
-public record CreateSaleItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
+public record CreateSaleItemDto(
+    long VariantId,
+    decimal Quantity,
+    decimal? UnitPrice = null,
+    long? PrepackId = null,
+    [property: JsonIgnore] long? StockId = null,
+    [property: JsonIgnore] string? SourceCurrency = null,
+    [property: JsonIgnore] decimal? SourceRate = null);
 
 public record SalePaymentDto(PaymentMethod Method, string Currency, decimal Amount);
 
@@ -30,6 +43,8 @@ file sealed record ResolvedSaleLine(
     decimal Rate,
     decimal PriceDiscount);
 
+internal sealed record AdvanceUse(Account Account, decimal Amount, decimal Rate, decimal AmountBase);
+
 public record CreateSaleCommand(
     long WarehouseId,
     long? CustomerId,
@@ -44,7 +59,13 @@ public record CreateSaleCommand(
     string? IdempotencyKey = null,
     bool ApplyAutoDiscount = true,
     decimal CreditAmount = 0,
-    bool FromQueuedCart = false) : ICommand<CreateSaleResult>;
+    bool FromQueuedCart = false,
+    bool UseCustomerAdvance = true,
+    List<ParticipantInput>? Participants = null,
+    [property: JsonIgnore] long? TradeCaseId = null,
+    [property: JsonIgnore] bool StockAlreadyIssued = false,
+    [property: JsonIgnore] bool FromOfflineSync = false,
+    [property: JsonIgnore] long? OfflineActorUserId = null) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -56,6 +77,10 @@ public sealed class CreateSaleCommandHandler(
     ICashbackCalculator cashbackCalculator,
     IDiscountCalculator discountCalculator,
     ISettingsService settingsService,
+    IParticipantService participantService,
+    IPartnerRewardService partnerRewards,
+    ReceiptPrintPolicyService receiptPrinting,
+    IOfflineAuthorityGuard offlineAuthority,
     IAuditService audit) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
     public Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken) =>
@@ -63,11 +88,21 @@ public sealed class CreateSaleCommandHandler(
 
     private async Task<CreateSaleResult> HandleCoreAsync(CreateSaleCommand request, CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout))
+        var authenticatedUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        if (request.OfflineActorUserId.HasValue && !request.FromOfflineSync)
+            throw new ForbiddenException("Offline actor can only be used by the replay pipeline.");
+        var userId = request.OfflineActorUserId ?? authenticatedUserId;
+        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout)
+            && !(request.TradeCaseId.HasValue
+                 && currentUser.HasPermission(AppPermissions.TradeCases.Settle)))
             throw new ForbiddenException("Sale checkout permission is required.");
-        if (!request.FromQueuedCart && !currentUser.HasPermission(AppPermissions.Sales.Create))
+        if (!request.FromQueuedCart && request.TradeCaseId is null
+            && !currentUser.HasPermission(AppPermissions.Sales.Create))
             throw new ForbiddenException("Sale creation permission is required.");
+        if (request.TradeCaseId is not null && !currentUser.HasPermission(AppPermissions.TradeCases.Settle))
+            throw new ForbiddenException("Loyihani hisob-kitob qilishga ruxsat yo'q.");
+        if (request.StockAlreadyIssued != request.TradeCaseId.HasValue)
+            throw new BusinessRuleException("Saqlovdagi ombor manbasi noto'g'ri.", "invalid_custody_sale_source");
 
         var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
         if (idempotencyKey is not null)
@@ -83,14 +118,41 @@ public sealed class CreateSaleCommandHandler(
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
+        if (!request.FromOfflineSync)
+            await offlineAuthority.EnsureOnlineMutationAllowedAsync(warehouse.BranchId, cancellationToken);
+
         if (warehouse.AssignedUserId != userId &&
             await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
             throw new BusinessRuleException("Sizga biriktirilgan ombor bor — savdo faqat o'sha ombordan qilinadi.");
 
+        if (request.TradeCaseId is { } tradeCaseId)
+        {
+            var validCase = await db.TradeCases.AnyAsync(x =>
+                x.Id == tradeCaseId
+                && x.WarehouseId == request.WarehouseId
+                && x.CustomerId == request.CustomerId
+                && x.Status != TradeCaseStatus.Cancelled
+                && x.Status != TradeCaseStatus.Settled, cancellationToken);
+            if (!validCase)
+                throw new BusinessRuleException("Loyiha va savdo ma'lumotlari mos emas.", "invalid_trade_case_sale");
+            if (request.Items.Any(x => x.StockId is null || x.PrepackId is not null))
+                throw new BusinessRuleException("Saqlovdagi har bir qatorning ombor manbasi bo'lishi kerak.", "custody_stock_source_required");
+        }
+
+        var resolvedParticipants = await participantService.ResolveAsync(
+            request.Participants, ParticipantContext.Sale, request.CustomerId, cancellationToken);
+
         var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
         var variants = await db.ProductVariants
             .Where(v => variantIds.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId, v.Product.IsEnabled, ProductName = v.Product.Name, v.Product.Unit.Dimension })
+            .Select(v => new
+            {
+                v.Id,
+                v.ProductId,
+                v.Product.IsEnabled,
+                ProductName = v.Product.Name,
+                QuantityStep = v.Product.QuantityStepOverride ?? v.Product.Unit.DefaultQuantityStep
+            })
             .ToListAsync(cancellationToken);
 
         if (variants.Count != variantIds.Count)
@@ -99,9 +161,10 @@ public sealed class CreateSaleCommandHandler(
         foreach (var item in request.Items.Where(item => item.PrepackId is null))
         {
             var variant = variants.First(v => v.Id == item.VariantId);
-            var precision = variant.Dimension == UnitDimension.Count ? 0 : 3;
-            if (item.Quantity != Math.Round(item.Quantity, precision))
-                throw new BusinessRuleException($"\"{variant.ProductName}\" miqdori o'lchov birligiga mos emas.");
+            if (!QuantityPolicyService.IsValid(item.Quantity, variant.QuantityStep))
+                throw new BusinessRuleException(
+                    $"\"{variant.ProductName}\" miqdori {variant.QuantityStep:0.###} qadamiga mos emas.",
+                    "quantity_step_violation");
         }
 
         if (variants.FirstOrDefault(v => !v.IsEnabled) is { } blocked)
@@ -142,9 +205,9 @@ public sealed class CreateSaleCommandHandler(
             .Where(p => variantIds.Contains(p.VariantId) && (p.WarehouseId == warehouse.Id || p.WarehouseId == null))
             .ToListAsync(cancellationToken);
 
-        var baseCode = await currency.BaseAsync(cancellationToken);
+        var baseCode = (await currency.BaseAsync(cancellationToken)).ToUpperInvariant();
         var priceRates = new Dictionary<string, decimal>();
-        foreach (var code in prices.Select(p => p.Currency).Distinct().Where(c => c != baseCode))
+        foreach (var code in prices.Select(p => p.Currency.Trim().ToUpperInvariant()).Distinct().Where(c => c != baseCode))
             priceRates[code] = await currency.RateAsync(code, cancellationToken);
 
         CatalogPrice? PriceOf(long variantId)
@@ -152,8 +215,9 @@ public sealed class CreateSaleCommandHandler(
             var price = prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == warehouse.Id)
                 ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null);
             if (price is null) return null;
-            var rate = price.Currency == baseCode ? 1m : priceRates[price.Currency];
-            return new CatalogPrice(price, Math.Round(price.SellingPrice * rate, 2), price.Currency, rate);
+            var code = price.Currency.Trim().ToUpperInvariant();
+            var rate = code == baseCode ? 1m : priceRates[code];
+            return new CatalogPrice(price, Math.Round(price.SellingPrice * rate, 2), code, rate);
         }
 
         var resolvedItems = new List<ResolvedSaleLine>();
@@ -175,40 +239,68 @@ public sealed class CreateSaleCommandHandler(
                 if (item.UnitPrice is null)
                     throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (VariantId={item.VariantId}).");
 
-                var newPrice = await db.ProductPrices.IgnoreQueryFilters()
-                    .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
-                if (newPrice is null)
+                if (request.TradeCaseId.HasValue)
                 {
-                    newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
-                    db.ProductPrices.Add(newPrice);
+                    var sourceCode = string.IsNullOrWhiteSpace(item.SourceCurrency)
+                        ? baseCode
+                        : item.SourceCurrency.Trim().ToUpperInvariant();
+                    var fallbackRate = item.SourceRate is > 0 ? item.SourceRate.Value : 1m;
+                    catalogPrice = new CatalogPrice(
+                        new ProductPrice { VariantId = item.VariantId, Currency = sourceCode },
+                        item.UnitPrice.Value,
+                        sourceCode,
+                        fallbackRate);
                 }
                 else
                 {
-                    newPrice.IsDeleted = false;
-                    newPrice.SellingPrice = 0;
-                    newPrice.Currency = baseCode;
+
+                    var newPrice = await db.ProductPrices.IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
+                    if (newPrice is null)
+                    {
+                        newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
+                        db.ProductPrices.Add(newPrice);
+                    }
+                    else
+                    {
+                        newPrice.IsDeleted = false;
+                        newPrice.SellingPrice = 0;
+                        newPrice.Currency = baseCode;
+                    }
+                    prices.Add(newPrice);
+                    catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
                 }
-                prices.Add(newPrice);
-                catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
             }
 
             var enteredPrice = item.UnitPrice ?? catalogPrice.Amount;
-            var priceDiscount = Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
-            var unitPrice = Math.Max(catalogPrice.Amount, enteredPrice);
+            var priceDiscount = request.TradeCaseId.HasValue
+                ? 0
+                : Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
+            var unitPrice = request.TradeCaseId.HasValue
+                ? enteredPrice
+                : Math.Max(catalogPrice.Amount, enteredPrice);
 
-            if (item.UnitPrice is not null && enteredPrice != catalogPrice.Amount)
+            if (request.TradeCaseId is null && item.UnitPrice is not null && enteredPrice != catalogPrice.Amount)
                 priceOverrides.Add((item.VariantId, catalogPrice.Amount, enteredPrice));
 
-            if (enteredPrice > catalogPrice.Amount &&
+            if (!request.TradeCaseId.HasValue && enteredPrice > catalogPrice.Amount &&
                 (!priceIncreases.TryGetValue(catalogPrice.Source, out var increase) || enteredPrice > increase.Amount))
                 priceIncreases[catalogPrice.Source] = new CatalogPrice(catalogPrice.Source, enteredPrice, catalogPrice.Currency, catalogPrice.Rate);
 
-            resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice, catalogPrice.Currency, catalogPrice.Rate, priceDiscount));
+            var sourceCurrency = request.TradeCaseId.HasValue && !string.IsNullOrWhiteSpace(item.SourceCurrency)
+                ? item.SourceCurrency.Trim().ToUpperInvariant()
+                : catalogPrice.Currency;
+            var sourceRate = request.TradeCaseId.HasValue && item.SourceRate is > 0
+                ? item.SourceRate.Value
+                : catalogPrice.Rate;
+            resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice,
+                sourceCurrency, sourceRate, priceDiscount));
         }
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
-        if (priceOverrides.Count > 0 && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+        if (priceOverrides.Count > 0 && request.TradeCaseId is null
+            && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
         var grossAmount = resolvedItems.Sum(x => x.Quantity * x.UnitPrice);
@@ -233,14 +325,26 @@ public sealed class CreateSaleCommandHandler(
 
         if (request.Payments is { Count: > 0 } rows)
         {
-            if ((rows.Any(r => r.Currency != baseCode) || (request.DebtCurrency is not null && request.DebtCurrency != baseCode))
+            var normalizedRows = rows
+                .Where(r => r.Amount > 0)
+                .Select(r => r with
+                {
+                    Currency = string.IsNullOrWhiteSpace(r.Currency)
+                        ? baseCode
+                        : r.Currency.Trim().ToUpperInvariant()
+                })
+                .ToList();
+
+            if ((normalizedRows.Any(r => r.Currency != baseCode)
+                 || (!string.IsNullOrWhiteSpace(request.DebtCurrency)
+                     && request.DebtCurrency.Trim().ToUpperInvariant() != baseCode))
                 && !await currency.IsSalesMulticurrencyAsync(cancellationToken))
                 throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
 
-            if (rows.Any(r => r.Method == PaymentMethod.Bonus && r.Currency != baseCode))
+            if (normalizedRows.Any(r => r.Method == PaymentMethod.Bonus && r.Currency != baseCode))
                 throw new BusinessRuleException("Bonus faqat bazaviy valyutada.");
 
-            foreach (var row in rows.Where(r => r.Amount > 0))
+            foreach (var row in normalizedRows)
             {
                 await currency.EnsureSalesAllowedAsync(row.Currency, cancellationToken);
                 var rate = await currency.RateAsync(row.Currency, cancellationToken);
@@ -255,7 +359,10 @@ public sealed class CreateSaleCommandHandler(
             }
 
             paidCash = payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.AmountBase);
-            paidCard = payments.Where(p => p.Method == PaymentMethod.Card).Sum(p => p.AmountBase);
+            // PaidCard is the legacy aggregate for all cashless tenders. The normalized
+            // SalePayment rows retain the exact Card/Transfer/Bank distinction.
+            paidCard = payments.Where(p => p.Method is PaymentMethod.Card or PaymentMethod.Transfer or PaymentMethod.Bank)
+                .Sum(p => p.AmountBase);
             paidBonus = payments.Where(p => p.Method == PaymentMethod.Bonus).Sum(p => p.AmountBase);
         }
         else
@@ -265,7 +372,42 @@ public sealed class CreateSaleCommandHandler(
             paidBonus = request.PaidBonus;
         }
 
-        var debtAmount = Math.Max(0, totalAmount - paidCash - paidCard - paidBonus);
+        var advanceUses = new List<AdvanceUse>();
+        var remainingBeforeAdvance = Math.Max(0, totalAmount - paidCash - paidCard - paidBonus);
+        if (request.UseCustomerAdvance && request.CustomerId is { } advanceCustomerId && remainingBeforeAdvance > 0)
+        {
+            var advanceCurrencies = await db.Accounts
+                .Where(x => x.CustomerId == advanceCustomerId
+                    && x.Type == AccountType.CustomerAdvance
+                    && x.Balance > 0)
+                .OrderByDescending(x => x.Currency == baseCode)
+                .ThenBy(x => x.CreatedAt)
+                .Select(x => x.Currency)
+                .ToListAsync(cancellationToken);
+
+            foreach (var advanceCurrency in advanceCurrencies)
+            {
+                if (remainingBeforeAdvance <= 0) break;
+                var account = await ledger.FindCustomerAccountAsync(
+                    advanceCustomerId, AccountType.CustomerAdvance, cancellationToken, advanceCurrency);
+                if (account is not { Balance: > 0 }) continue;
+                var rate = advanceCurrency == baseCode ? 1m : await currency.RateAsync(advanceCurrency, cancellationToken);
+                // Never debit more native currency than the base amount being applied.
+                var maxNative = Math.Floor(remainingBeforeAdvance / rate * 10_000m) / 10_000m;
+                var amount = Math.Min(account.Balance, maxNative);
+                var amountBase = Math.Round(amount * rate, 2);
+                if (amountBase > remainingBeforeAdvance)
+                {
+                    amount = Math.Max(0, amount - 0.0001m);
+                    amountBase = Math.Round(amount * rate, 2);
+                }
+                if (amount <= 0 || amountBase <= 0) continue;
+                advanceUses.Add(new AdvanceUse(account, amount, rate, amountBase));
+                remainingBeforeAdvance -= amountBase;
+            }
+        }
+        var paidAdvance = advanceUses.Sum(x => x.AmountBase);
+        var debtAmount = Math.Max(0, totalAmount - paidCash - paidCard - paidBonus - paidAdvance);
         var excessAmount = Math.Max(0, paidCash + paidCard + paidBonus - totalAmount);
 
         if (request.CreditAmount > 0)
@@ -308,7 +450,9 @@ public sealed class CreateSaleCommandHandler(
                 throw new BusinessRuleException("Bonus balansi yetarli emas.");
         }
 
-        var debtCurrency = debtAmount > 0 ? request.DebtCurrency ?? baseCode : baseCode;
+        var debtCurrency = debtAmount > 0 && !string.IsNullOrWhiteSpace(request.DebtCurrency)
+            ? request.DebtCurrency.Trim().ToUpperInvariant()
+            : baseCode;
         await currency.EnsureSalesAllowedAsync(debtCurrency, cancellationToken);
         var debtRate = debtCurrency == baseCode ? 1m : await currency.RateAsync(debtCurrency, cancellationToken);
 
@@ -337,11 +481,13 @@ public sealed class CreateSaleCommandHandler(
             WarehouseId = request.WarehouseId,
             UserId = userId,
             CustomerId = request.CustomerId,
+            TradeCaseId = request.TradeCaseId,
             TotalAmount = totalAmount,
             DiscountAmount = discountAmount,
             PaidCash = paidCash - changeAmount,
             PaidCard = paidCard,
             PaidBonus = paidBonus,
+            PaidAdvance = paidAdvance,
             DebtAmount = debtAmount,
             DebtDueDate = debtAmount > 0 ? request.DebtDueDate : null,
             DebtCurrency = debtCurrency,
@@ -353,14 +499,58 @@ public sealed class CreateSaleCommandHandler(
             IdempotencyKey = idempotencyKey,
             Payments = payments
         };
+        foreach (var participant in resolvedParticipants)
+            sale.Participants.Add(new SaleParticipant
+            {
+                RoleDefinitionId = participant.RoleDefinitionId,
+                PartyId = participant.PartyId,
+                PartyNameSnapshot = participant.PartyName,
+                PartyPhoneSnapshot = participant.PartyPhone,
+                RoleLabelSnapshot = participant.RoleLabel,
+                Source = request.TradeCaseId.HasValue
+                    ? ParticipantAttributionSource.CaseInherited
+                    : request.FromQueuedCart
+                        ? ParticipantAttributionSource.CartInherited
+                        : ParticipantAttributionSource.Direct
+            });
 
         var cashbackFactor = grossAmount > 0 ? totalAmount / grossAmount : 1m;
-        var cashbackLines = new List<CashbackLine>();
-
-        await stockAllocator.PreloadAsync(request.WarehouseId, resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
+        Dictionary<long, Stock> issuedStocks = [];
+        if (request.StockAlreadyIssued)
+        {
+            var stockIds = resolvedItems.Select(x => x.Item.StockId!.Value).Distinct().ToList();
+            issuedStocks = await db.Stocks
+                .Where(x => stockIds.Contains(x.Id) && x.WarehouseId == request.WarehouseId)
+                .ToDictionaryAsync(x => x.Id, cancellationToken);
+            if (issuedStocks.Count != stockIds.Count
+                || resolvedItems.Any(x => issuedStocks[x.Item.StockId!.Value].VariantId != x.Item.VariantId))
+                throw new BusinessRuleException("Saqlovdagi mahsulot partiyasi mos emas.", "invalid_custody_stock_source");
+        }
+        else
+        {
+            await stockAllocator.PreloadAsync(request.WarehouseId,
+                resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
+        }
 
         foreach (var line in resolvedItems)
         {
+            if (request.StockAlreadyIssued)
+            {
+                var stock = issuedStocks[line.Item.StockId!.Value];
+                sale.Items.Add(new SaleItem
+                {
+                    VariantId = line.Item.VariantId,
+                    StockId = stock.Id,
+                    Stock = stock,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.UnitPrice,
+                    PriceCurrency = line.Currency,
+                    PriceRate = line.Rate,
+                    PurchasePrice = stock.PurchasePrice
+                });
+                continue;
+            }
+
             var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId, line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
 
             foreach (var allocation in allocations)
@@ -379,8 +569,6 @@ public sealed class CreateSaleCommandHandler(
 
                 allocation.Batch.Quantity -= allocation.Quantity;
             }
-
-            cashbackLines.Add(new CashbackLine(variantProduct[line.Item.VariantId], line.Quantity, line.UnitPrice * line.Quantity * cashbackFactor));
         }
 
         foreach (var increase in priceIncreases.Values)
@@ -389,10 +577,18 @@ public sealed class CreateSaleCommandHandler(
         await branchCatalog.ActivateAsync(warehouse.BranchId, variantIds, BranchCatalogActivationSource.Sale, cancellationToken);
         db.Sales.Add(sale);
 
-        await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, cashbackLines, userId, shiftId, cancellationToken);
+        await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, advanceUses,
+            variantProduct, cashbackFactor, userId, shiftId, cancellationToken);
+        await partnerRewards.AccrueSaleAsync(sale, cancellationToken);
 
         sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.CustomerId, sale.TotalAmount));
         sale.RaiseDomainEvent(new ReceiptMirrorEvent(sale.ReceiptToken));
+
+        // The job is a durable outbox row written atomically with the sale. A
+        // background router assigns it after commit, so checkout never waits on
+        // an OS printer or a network print host.
+        if (!request.FromOfflineSync)
+            await receiptPrinting.EnqueueAutomaticReceiptAsync(sale, cancellationToken);
 
         if (priceOverrides.Count > 0)
             audit.Add("priceOverride", "sales", null,
@@ -404,6 +600,29 @@ public sealed class CreateSaleCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
 
+        audit.SetOutcome("sale.completed", "sales", sale.Id, new
+        {
+            sale.ReceiptToken,
+            sale.BranchId,
+            sale.WarehouseId,
+            sale.CustomerId,
+            sale.TradeCaseId,
+            sale.TotalAmount,
+            sale.DiscountAmount,
+            sale.PaidCash,
+            sale.PaidCard,
+            sale.PaidBonus,
+            sale.PaidAdvance,
+            sale.DebtAmount,
+            sale.DebtCurrency,
+            sale.ChangeAmount,
+            sale.CreditAmount,
+            origin = request.FromOfflineSync ? "offlineSync" : request.FromQueuedCart ? "queue" : "online",
+            payments = sale.Payments.Select(x => new { x.Method, x.Currency, x.Amount, x.Rate, x.AmountBase }),
+            participants = sale.Participants.Select(x => new { x.RoleDefinitionId, x.PartyId, x.RoleLabelSnapshot }),
+            items = resolvedItems.Select(x => new { x.Item.VariantId, x.Quantity, x.UnitPrice, x.Currency, x.Rate })
+        }, "Savdo amalga oshirildi", sale.BranchId, request.OfflineActorUserId);
+
         if (prepackIds.Count > 0)
             await db.Prepacks.Where(p => prepackIds.Contains(p.Id))
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.SoldSaleId, sale.Id), cancellationToken);
@@ -411,19 +630,36 @@ public sealed class CreateSaleCommandHandler(
         return new CreateSaleResult(sale.Id, sale.ReceiptToken);
     }
 
-    private async Task PostLedgerAsync(Sale sale, long branchId, decimal debtAmount, List<CashbackLine> cashbackLines, long userId, long? shiftId, CancellationToken cancellationToken)
+    private async Task PostLedgerAsync(
+        Sale sale,
+        long branchId,
+        decimal debtAmount,
+        IReadOnlyCollection<AdvanceUse> advanceUses,
+        IReadOnlyDictionary<long, long> variantProduct,
+        decimal cashbackFactor,
+        long userId,
+        long? shiftId,
+        CancellationToken cancellationToken)
     {
         void Post(OperationType type, decimal amount, Account? from, Account? to, decimal rate = 1m)
         {
             var transaction = ledger.Post(type, amount, from, to, userId, shiftId, rate);
             transaction.Sale = sale;
+            transaction.TradeCaseId = sale.TradeCaseId;
         }
 
         if (sale.Payments.Count > 0)
         {
             foreach (var payment in sale.Payments.Where(p => p.Method != PaymentMethod.Bonus))
             {
-                var type = payment.Method == PaymentMethod.Cash ? AccountType.Cash : AccountType.Card;
+                var type = payment.Method switch
+                {
+                    PaymentMethod.Cash => AccountType.Cash,
+                    PaymentMethod.Card => AccountType.Card,
+                    PaymentMethod.Transfer => AccountType.Transfer,
+                    PaymentMethod.Bank => AccountType.Bank,
+                    _ => throw new BusinessRuleException("Qo'llab-quvvatlanmaydigan to'lov turi.", "unsupported_payment_method")
+                };
                 var account = await ledger.BranchAccountAsync(branchId, type, cancellationToken, payment.Currency);
                 Post(OperationType.Sale, payment.Amount, null, account, payment.Rate);
             }
@@ -460,6 +696,9 @@ public sealed class CreateSaleCommandHandler(
             Post(OperationType.BonusSpend, sale.PaidBonus, bonus, null);
         }
 
+        foreach (var advanceUse in advanceUses)
+            Post(OperationType.CustomerAdvance, advanceUse.Amount, advanceUse.Account, null, advanceUse.Rate);
+
         if (debtAmount > 0)
         {
             var debt = await ledger.CustomerAccountAsync(customerId, AccountType.Debt, cancellationToken, sale.DebtCurrency);
@@ -469,16 +708,33 @@ public sealed class CreateSaleCommandHandler(
 
         if (sale.CreditAmount > 0)
         {
-            var debt = await ledger.CustomerAccountAsync(customerId, AccountType.Debt, cancellationToken);
-            Post(OperationType.CustomerCredit, sale.CreditAmount, debt, null);
+            var advance = await ledger.CustomerAccountAsync(customerId, AccountType.CustomerAdvance, cancellationToken);
+            Post(OperationType.CustomerAdvance, sale.CreditAmount, null, advance);
         }
 
-        var cashback = await cashbackCalculator.CalculateAsync(branchId, cashbackLines, cancellationToken);
-        if (cashback > 0)
+        var saleItems = sale.Items.ToList();
+        var cashback = await cashbackCalculator.CalculateBreakdownAsync(branchId,
+            saleItems.Select(x => new CashbackLine(
+                variantProduct[x.VariantId], x.Quantity, x.UnitPrice * x.Quantity * cashbackFactor)).ToList(),
+            cancellationToken);
+        if (cashback.Total > 0)
         {
-            var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
-            Post(OperationType.Cashback, cashback, null, bonus);
-            sale.CashbackEarned = cashback;
+            for (var i = 0; i < saleItems.Count; i++)
+                saleItems[i].CashbackEarned = cashback.LineAmounts[i];
+            var remainingCashback = cashback.Total;
+            var recovery = await ledger.FindCustomerAccountAsync(customerId, AccountType.RewardRecovery, cancellationToken);
+            if (recovery is { Balance: > 0 })
+            {
+                var recovered = Math.Min(recovery.Balance, remainingCashback);
+                Post(OperationType.CashbackRecovery, recovered, recovery, null);
+                remainingCashback -= recovered;
+            }
+            if (remainingCashback > 0)
+            {
+                var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
+                Post(OperationType.Cashback, remainingCashback, null, bonus);
+            }
+            sale.CashbackEarned = cashback.Total;
         }
     }
 }

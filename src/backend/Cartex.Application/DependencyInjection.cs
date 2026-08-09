@@ -4,10 +4,14 @@ using Cartex.Application.Common.Behaviors;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
+using Cartex.Application.Common.Measurement;
+using Cartex.Application.Common.Participants;
+using Cartex.Application.Common.Partners;
 using Cartex.Application.Common.Security;
 using Cartex.Application.Auth;
 using Cartex.Auth.Services;
 using Cartex.Application.Printing;
+using Cartex.Application.OfflineCache;
 
 namespace Cartex.Application;
 
@@ -29,6 +33,9 @@ public static class DependencyInjection
 
         services.AddScoped<ILedgerService, LedgerService>();
         services.AddScoped<ICurrencyService, CurrencyService>();
+        services.AddScoped<IQuantityPolicyService, QuantityPolicyService>();
+        services.AddScoped<IParticipantService, ParticipantService>();
+        services.AddScoped<IPartnerRewardService, PartnerRewardService>();
 
         services.AddScoped<ICashbackCalculator, CashbackCalculator>();
         services.AddScoped<ICashbackStrategy, PercentCashbackStrategy>();
@@ -38,6 +45,8 @@ public static class DependencyInjection
         services.AddScoped<IStockAllocator, StockAllocator>();
         services.AddScoped<IBranchCatalogService, BranchCatalogService>();
         services.AddScoped<PrintRoutingService>();
+        services.AddScoped<ReceiptPrintPolicyService>();
+        services.AddScoped<IOfflineAuthorityGuard, OfflineAuthorityGuard>();
 
         return services;
     }
