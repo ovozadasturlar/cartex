@@ -18,22 +18,28 @@ public interface ICurrencyService
 public sealed class CurrencyService(IApplicationDbContext db, IFeatureStateProvider features) : ICurrencyService
 {
     private string? _base;
+    private readonly Dictionary<string, decimal> _rates = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<string> BaseAsync(CancellationToken cancellationToken) =>
-        _base ??= await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
+        _base ??= (await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken)).Trim().ToUpperInvariant();
 
     public async Task<decimal> RateAsync(string code, CancellationToken cancellationToken)
     {
-        if (code == await BaseAsync(cancellationToken))
+        var normalized = code.Trim().ToUpperInvariant();
+        if (normalized == await BaseAsync(cancellationToken))
             return 1m;
+        if (_rates.TryGetValue(normalized, out var cached))
+            return cached;
 
         var rate = await db.ExchangeRates
-            .Where(r => r.Code == code)
+            .Where(r => r.Code == normalized)
             .OrderByDescending(r => r.EffectiveAt)
             .Select(r => (decimal?)r.Rate)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return rate ?? throw new BusinessRuleException($"Kurs kiritilmagan: {code}");
+        var resolved = rate ?? throw new BusinessRuleException($"Kurs kiritilmagan: {normalized}");
+        _rates[normalized] = resolved;
+        return resolved;
     }
 
     public Task<bool> IsPricingMulticurrencyAsync(CancellationToken cancellationToken) =>

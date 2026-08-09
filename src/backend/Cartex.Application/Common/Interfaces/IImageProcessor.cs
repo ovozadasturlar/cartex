@@ -5,4 +5,5 @@ public record ProcessedImage(byte[] Display, byte[] Thumb, string ContentType, s
 public interface IImageProcessor
 {
     ProcessedImage? Process(Stream original);
+    ProcessedImage? ProcessMonochrome(Stream original);
 }

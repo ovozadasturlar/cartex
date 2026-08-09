@@ -6,10 +6,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Cartex.Application.Common.Loyalty;
 
 public record CashbackLine(long ProductId, decimal Quantity, decimal LineTotal);
+public record CashbackCalculation(decimal Total, IReadOnlyList<decimal> LineAmounts);
 
 public interface ICashbackCalculator
 {
     Task<decimal> CalculateAsync(long branchId, IReadOnlyCollection<CashbackLine> lines, CancellationToken cancellationToken);
+    Task<CashbackCalculation> CalculateBreakdownAsync(long branchId, IReadOnlyList<CashbackLine> lines, CancellationToken cancellationToken);
 }
 
 public interface ICashbackStrategy
@@ -32,7 +34,13 @@ public sealed class FixedPerUnitCashbackStrategy : ICashbackStrategy
 
 public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICashbackStrategy> strategies) : ICashbackCalculator
 {
-    public async Task<decimal> CalculateAsync(long branchId, IReadOnlyCollection<CashbackLine> lines, CancellationToken cancellationToken)
+    public async Task<decimal> CalculateAsync(long branchId, IReadOnlyCollection<CashbackLine> lines, CancellationToken cancellationToken) =>
+        (await CalculateBreakdownAsync(branchId, lines.ToList(), cancellationToken)).Total;
+
+    public async Task<CashbackCalculation> CalculateBreakdownAsync(
+        long branchId,
+        IReadOnlyList<CashbackLine> lines,
+        CancellationToken cancellationToken)
     {
         var programs = await db.LoyaltyPrograms
             .Where(p => p.IsEnabled && (p.BranchId == branchId || p.BranchId == null))
@@ -43,7 +51,7 @@ public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICa
             ?? programs.FirstOrDefault(p => p.BranchId == null);
 
         if (program is null)
-            return 0;
+            return new CashbackCalculation(0, lines.Select(_ => 0m).ToList());
 
         var productIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var categoryByProduct = await db.Products
@@ -51,26 +59,44 @@ public sealed class CashbackCalculator(IApplicationDbContext db, IEnumerable<ICa
             .Select(p => new { p.Id, p.CategoryId })
             .ToDictionaryAsync(p => p.Id, p => p.CategoryId, cancellationToken);
 
-        decimal total = 0;
-        decimal percentBase = 0;
+        var rawByLine = new List<decimal>(lines.Count);
         foreach (var line in lines)
         {
             var rule = ResolveRule(program, line.ProductId, categoryByProduct.GetValueOrDefault(line.ProductId));
             var strategy = rule is null ? null : strategies.FirstOrDefault(s => s.Method == rule.Method);
+            decimal lineReward = 0;
             if (rule is not null && strategy is not null)
             {
-                total += strategy.Calculate(line, rule.Value);
+                lineReward += strategy.Calculate(line, rule.Value);
                 if (!rule.ExcludeFromTotalPercent)
-                    percentBase += line.LineTotal;
+                    lineReward += line.LineTotal * program.TotalPercent / 100;
             }
             else
             {
-                percentBase += line.LineTotal;
+                lineReward += line.LineTotal * program.TotalPercent / 100;
             }
+            rawByLine.Add(lineReward);
         }
 
-        var raw = total + percentBase * program.TotalPercent / 100;
-        return program.CashbackRounding > 0 ? Math.Floor(raw / program.CashbackRounding) * program.CashbackRounding : raw;
+        var raw = rawByLine.Sum();
+        var total = program.CashbackRounding > 0
+            ? Math.Floor(raw / program.CashbackRounding) * program.CashbackRounding
+            : raw;
+        total = Math.Round(total, 2);
+        if (raw <= 0 || total <= 0)
+            return new CashbackCalculation(0, lines.Select(_ => 0m).ToList());
+
+        var allocated = new List<decimal>(lines.Count);
+        decimal used = 0;
+        for (var i = 0; i < rawByLine.Count; i++)
+        {
+            var amount = i == rawByLine.Count - 1
+                ? total - used
+                : Math.Round(total * rawByLine[i] / raw, 2);
+            allocated.Add(amount);
+            used += amount;
+        }
+        return new CashbackCalculation(total, allocated);
     }
 
     private static CashbackRule? ResolveRule(LoyaltyProgram program, long productId, long? categoryId)

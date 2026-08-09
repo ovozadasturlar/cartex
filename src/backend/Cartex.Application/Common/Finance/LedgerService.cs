@@ -125,6 +125,8 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
             AccountType.Bank => "Bank o'tkazmasi",
             AccountType.Bonus => "Bonus",
             AccountType.Debt => "Qarz",
+            AccountType.CustomerAdvance => "Mijoz avansi",
+            AccountType.RewardRecovery => "Bonus qaytaruv qarzi",
             _ => type.ToString()
         };
         return isBase ? name : $"{name} {currency}";
