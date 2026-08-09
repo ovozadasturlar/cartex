@@ -11,8 +11,14 @@ public interface ISalesApi
     [Get("/api/sales")]
     Task<IApiResponse<List<SaleDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
+    [Get("/api/sales/list")]
+    Task<IApiResponse<List<SaleListDto>>> QueryListAsync([Query] IDictionary<string, object> query);
+
     [Get("/api/sales/totals")]
-    Task<SalesTotalsDto> GetTotalsAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] string? search = null);
+    Task<SalesTotalsDto> GetTotalsAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] string? search = null, [Query] long? customerId = null);
+
+    [Get("/api/sales/{id}")]
+    Task<SaleDetailDto> GetByIdAsync(long id);
 
     [Post("/api/sales")]
     Task<CreateSaleResult> CreateAsync([Body] CreateSaleRequest request);

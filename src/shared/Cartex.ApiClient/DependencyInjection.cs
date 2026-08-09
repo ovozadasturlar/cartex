@@ -56,6 +56,11 @@ public static class DependencyInjection
         RegisterAuthorized<ISalesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ISuppliesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ICustomersApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<ICustomerPaymentsApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<ICustomerRefundsApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<ICustomerReturnsApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<ITradeCasesApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IPartnersApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ISuppliersApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IAccountsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ITransactionsApi>(services, settings, baseUrl, clientName, timeout);

@@ -9,6 +9,10 @@ public interface IStorageApi
     [Post("/api/storage/upload")]
     Task<UploadResult> UploadAsync(StreamPart file);
 
+    [Multipart]
+    [Post("/api/storage/upload-logo")]
+    Task<LogoUploadResult> UploadLogoAsync(StreamPart file);
+
     [Post("/api/storage/from-url")]
     Task<UploadResult> UploadFromUrlAsync([Body] ImageFromUrlRequest request);
 

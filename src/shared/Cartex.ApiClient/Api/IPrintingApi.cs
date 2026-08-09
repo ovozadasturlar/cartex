@@ -29,8 +29,14 @@ public interface IPrintingApi
     [Get("/api/printing/routes")]
     Task<List<PrintRoutingPolicyDto>> GetRoutesAsync([Query] long branchId, CancellationToken cancellationToken = default);
 
+    [Get("/api/printing/bootstrap")]
+    Task<PrintingBootstrapDto> GetBootstrapAsync([Query] long branchId, [Query] string? deviceId = null, CancellationToken cancellationToken = default);
+
     [Put("/api/printing/routes/{kind}")]
     Task<PrintRoutingPolicyDto> SetRouteAsync(PrintJobKind kind, [Query] long branchId, [Body] UpdatePrintRoutingPolicyRequest request, CancellationToken cancellationToken = default);
+
+    [Put("/api/printing/receipt-policy")]
+    Task<PrintRoutingPolicyDto> SetReceiptPolicyAsync([Query] long branchId, [Body] UpdateReceiptPrintPolicyRequest request, CancellationToken cancellationToken = default);
 
     [Post("/api/printing/jobs")]
     Task<PrintJobDto> CreateJobAsync([Body] CreatePrintJobRequest request, CancellationToken cancellationToken = default);
