@@ -226,7 +226,22 @@ public static class DemoDataSeeder
             ("Otabek Norov", "+998901112209", "DC1009", 0, 0),
             ("Zulfiya Qodirova", "+998901112210", "DC1010", 3, 2_500_000),
         };
-        var customers = custInfo.Select(c => new Customer { FullName = c.Full, Phone = c.Phone, CardBarcode = c.Card, DiscountPct = c.Disc, CreditLimit = c.Limit, CreatedAt = openingDate }).ToList();
+        var customers = custInfo.Select(c => new Customer
+        {
+            Party = new Party
+            {
+                BusinessId = branch1.BusinessId,
+                FullName = c.Full,
+                Phone = c.Phone,
+                CreatedAt = openingDate
+            },
+            FullName = c.Full,
+            Phone = c.Phone,
+            CardBarcode = c.Card,
+            DiscountPct = c.Disc,
+            CreditLimit = c.Limit,
+            CreatedAt = openingDate
+        }).ToList();
         await context.Customers.AddRangeAsync(customers);
         await context.SaveChangesAsync();
 

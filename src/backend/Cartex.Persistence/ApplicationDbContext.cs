@@ -54,6 +54,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<CartPayment> CartPayments => Set<CartPayment>();
     public DbSet<Feature> Features => Set<Feature>();
     public DbSet<LicenseState> LicenseStates => Set<LicenseState>();
     public DbSet<BusinessSetting> BusinessSettings => Set<BusinessSetting>();
@@ -81,6 +82,34 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PrintRequesterDevice> PrintRequesterDevices => Set<PrintRequesterDevice>();
     public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
     public DbSet<PrintAttempt> PrintAttempts => Set<PrintAttempt>();
+    public DbSet<CustomerPaymentDocument> CustomerPaymentDocuments => Set<CustomerPaymentDocument>();
+    public DbSet<CustomerPaymentTender> CustomerPaymentTenders => Set<CustomerPaymentTender>();
+    public DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations => Set<CustomerPaymentAllocation>();
+    public DbSet<CustomerRefundDocument> CustomerRefundDocuments => Set<CustomerRefundDocument>();
+    public DbSet<CustomerRefundTender> CustomerRefundTenders => Set<CustomerRefundTender>();
+    public DbSet<CustomerReturnDocument> CustomerReturnDocuments => Set<CustomerReturnDocument>();
+    public DbSet<CustomerReturnLine> CustomerReturnLines => Set<CustomerReturnLine>();
+    public DbSet<CustomerReturnSettlement> CustomerReturnSettlements => Set<CustomerReturnSettlement>();
+    public DbSet<InventoryPosition> InventoryPositions => Set<InventoryPosition>();
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<TradeCase> TradeCases => Set<TradeCase>();
+    public DbSet<GoodsIssueDocument> GoodsIssueDocuments => Set<GoodsIssueDocument>();
+    public DbSet<GoodsIssueLine> GoodsIssueLines => Set<GoodsIssueLine>();
+    public DbSet<GoodsReturnDocument> GoodsReturnDocuments => Set<GoodsReturnDocument>();
+    public DbSet<GoodsReturnLine> GoodsReturnLines => Set<GoodsReturnLine>();
+    public DbSet<TradeCaseSettlement> TradeCaseSettlements => Set<TradeCaseSettlement>();
+    public DbSet<Party> Parties => Set<Party>();
+    public DbSet<PartnerProfile> PartnerProfiles => Set<PartnerProfile>();
+    public DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions => Set<ParticipantRoleDefinition>();
+    public DbSet<SaleParticipant> SaleParticipants => Set<SaleParticipant>();
+    public DbSet<CartParticipant> CartParticipants => Set<CartParticipant>();
+    public DbSet<TradeCaseParticipant> TradeCaseParticipants => Set<TradeCaseParticipant>();
+    public DbSet<PartnerProgram> PartnerPrograms => Set<PartnerProgram>();
+    public DbSet<PartnerRewardRule> PartnerRewardRules => Set<PartnerRewardRule>();
+    public DbSet<PartnerRewardEntry> PartnerRewardEntries => Set<PartnerRewardEntry>();
+    public DbSet<PartnerRedemptionDocument> PartnerRedemptionDocuments => Set<PartnerRedemptionDocument>();
+    public DbSet<OfflineAuthorityLease> OfflineAuthorityLeases => Set<OfflineAuthorityLease>();
+    public DbSet<OfflineSyncEvent> OfflineSyncEvents => Set<OfflineSyncEvent>();
 
     private readonly List<Action> _afterCommit = [];
 
@@ -119,6 +148,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("pg_trgm");
+        modelBuilder.HasSequence<long>("document_number_seq");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -129,6 +159,59 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         }
 
         base.OnModelCreating(modelBuilder);
+    }
+
+    public Task<long> NextDocumentSequenceAsync(CancellationToken cancellationToken = default) =>
+        Database.SqlQueryRaw<long>("SELECT nextval('document_number_seq') AS \"Value\"")
+            .SingleAsync(cancellationToken);
+
+    public Task UpsertInventoryPositionAsync(
+        long branchId,
+        Cartex.Domain.Enums.InventoryLocationKind locationKind,
+        long locationId,
+        long variantId,
+        decimal quantity,
+        long? userId,
+        CancellationToken cancellationToken = default) =>
+        Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO inventory_positions
+                (branch_id, location_kind, location_id, variant_id, quantity, created_at, created_by)
+            VALUES
+                ({branchId}, {locationKind.ToString()}, {locationId}, {variantId}, {quantity}, {DateTime.UtcNow}, {userId})
+            ON CONFLICT (branch_id, location_kind, location_id, variant_id)
+            DO UPDATE SET quantity = inventory_positions.quantity + EXCLUDED.quantity,
+                          updated_at = EXCLUDED.created_at,
+                          updated_by = EXCLUDED.created_by
+            """, cancellationToken);
+
+    public async Task<bool> AdjustInventoryPositionAsync(
+        long branchId,
+        Cartex.Domain.Enums.InventoryLocationKind locationKind,
+        long locationId,
+        long variantId,
+        decimal delta,
+        long? userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (delta >= 0)
+        {
+            await UpsertInventoryPositionAsync(branchId, locationKind, locationId, variantId,
+                delta, userId, cancellationToken);
+            return true;
+        }
+
+        var affected = await Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE inventory_positions
+               SET quantity = quantity + {delta},
+                   updated_at = {DateTime.UtcNow},
+                   updated_by = {userId}
+             WHERE branch_id = {branchId}
+               AND location_kind = {locationKind.ToString()}
+               AND location_id = {locationId}
+               AND variant_id = {variantId}
+               AND quantity + {delta} >= 0
+            """, cancellationToken);
+        return affected == 1;
     }
 
     private static readonly MethodInfo ConfigureFilterMethod =

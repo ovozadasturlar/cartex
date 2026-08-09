@@ -1,13 +1,14 @@
 using System.Text.Json;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cartex.Persistence.Interceptors;
 
-public sealed class EntityAuditInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
+public sealed class EntityAuditInterceptor(ICurrentUser currentUser, AuditScopeState auditScope) : SaveChangesInterceptor
 {
     private static readonly HashSet<Type> ExcludedTypes =
     [
@@ -17,7 +18,11 @@ public sealed class EntityAuditInterceptor(ICurrentUser currentUser) : SaveChang
         typeof(NotificationDeliveryAttempt),
         typeof(DebtReminderLog),
         typeof(RefreshSession),
-        typeof(OtpChallenge)
+        typeof(OtpChallenge),
+        // Heartbeats and replay journals are high-volume operational records.
+        // Claim/release and the replayed business command emit semantic audit events.
+        typeof(OfflineAuthorityLease),
+        typeof(OfflineSyncEvent)
     ];
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -53,15 +58,34 @@ public sealed class EntityAuditInterceptor(ICurrentUser currentUser) : SaveChang
                 continue;
 
             var entity = (BaseEntity)entry.Entity;
+            var table = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name;
+            var branchId = entry.Entity is IBranchScoped branchScoped ? branchScoped.BranchId : currentUser.DefaultBranchId;
+            if (auditScope.IsActive)
+            {
+                auditScope.Capture(new AuditEntityChange(action, table, entity, branchId, oldData, newData));
+                continue;
+            }
+
             context.Set<AuditLog>().Add(new AuditLog
             {
                 UserId = currentUser.UserId,
                 Client = currentUser.Client,
+                DeviceId = currentUser.DeviceId,
+                DeviceName = currentUser.DeviceName,
+                IpAddress = currentUser.IpAddress,
+                UserAgent = currentUser.UserAgent,
+                CorrelationId = currentUser.CorrelationId,
                 Action = action,
-                TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
+                TableName = table,
                 RecordId = entity.Id > 0 ? entity.Id : null,
                 OldData = oldData.Count == 0 ? null : JsonSerializer.Serialize(oldData),
-                NewData = newData.Count == 0 ? null : JsonSerializer.Serialize(newData)
+                NewData = newData.Count == 0 ? null : JsonSerializer.Serialize(newData),
+                Details = JsonSerializer.Serialize(new
+                {
+                    changes = new[] { new { action, subjectType = table, subjectId = entity.Id > 0 ? entity.Id : (long?)null, oldValues = oldData, newValues = newData } }
+                }),
+                EntityCount = 1,
+                BranchId = branchId
             });
         }
     }
@@ -84,8 +108,8 @@ public sealed class EntityAuditInterceptor(ICurrentUser currentUser) : SaveChang
 
             var name = property.Metadata.Name;
             var redact = IsSensitive(entry.Entity, name);
-            var oldValue = redact ? "[REDACTED]" : property.OriginalValue;
-            var newValue = redact ? "[REDACTED]" : property.CurrentValue;
+            var oldValue = redact ? "[REDACTED]" : Normalize(property.OriginalValue);
+            var newValue = redact ? "[REDACTED]" : Normalize(property.CurrentValue);
 
             if (entry.State != EntityState.Added)
                 oldData[name] = oldValue;
@@ -98,6 +122,14 @@ public sealed class EntityAuditInterceptor(ICurrentUser currentUser) : SaveChang
             : deleted ? "EntityDeleted" : "EntityUpdated";
         return (action, oldData, newData);
     }
+
+    private static object? Normalize(object? value) => value switch
+    {
+        null => null,
+        byte[] bytes => $"[BINARY:{bytes.Length}]",
+        string text when text.Length > 1000 => $"{text[..1000]}…[TRUNCATED:{text.Length}]",
+        _ => value
+    };
 
     private static bool IsSensitive(object entity, string propertyName)
     {

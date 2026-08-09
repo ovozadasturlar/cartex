@@ -41,6 +41,7 @@ public interface IApplicationDbContext
     DbSet<NotificationOutbox> NotificationOutbox { get; }
     DbSet<Cart> Carts { get; }
     DbSet<CartItem> CartItems { get; }
+    DbSet<CartPayment> CartPayments { get; }
     DbSet<Feature> Features { get; }
     DbSet<LicenseState> LicenseStates { get; }
     DbSet<BusinessSetting> BusinessSettings { get; }
@@ -68,12 +69,59 @@ public interface IApplicationDbContext
     DbSet<PrintRequesterDevice> PrintRequesterDevices { get; }
     DbSet<PrintJob> PrintJobs { get; }
     DbSet<PrintAttempt> PrintAttempts { get; }
+    DbSet<CustomerPaymentDocument> CustomerPaymentDocuments { get; }
+    DbSet<CustomerPaymentTender> CustomerPaymentTenders { get; }
+    DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations { get; }
+    DbSet<CustomerRefundDocument> CustomerRefundDocuments { get; }
+    DbSet<CustomerRefundTender> CustomerRefundTenders { get; }
+    DbSet<CustomerReturnDocument> CustomerReturnDocuments { get; }
+    DbSet<CustomerReturnLine> CustomerReturnLines { get; }
+    DbSet<CustomerReturnSettlement> CustomerReturnSettlements { get; }
+    DbSet<InventoryPosition> InventoryPositions { get; }
+    DbSet<InventoryMovement> InventoryMovements { get; }
+    DbSet<TradeCase> TradeCases { get; }
+    DbSet<GoodsIssueDocument> GoodsIssueDocuments { get; }
+    DbSet<GoodsIssueLine> GoodsIssueLines { get; }
+    DbSet<GoodsReturnDocument> GoodsReturnDocuments { get; }
+    DbSet<GoodsReturnLine> GoodsReturnLines { get; }
+    DbSet<TradeCaseSettlement> TradeCaseSettlements { get; }
+    DbSet<Party> Parties { get; }
+    DbSet<PartnerProfile> PartnerProfiles { get; }
+    DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions { get; }
+    DbSet<SaleParticipant> SaleParticipants { get; }
+    DbSet<CartParticipant> CartParticipants { get; }
+    DbSet<TradeCaseParticipant> TradeCaseParticipants { get; }
+    DbSet<PartnerProgram> PartnerPrograms { get; }
+    DbSet<PartnerRewardRule> PartnerRewardRules { get; }
+    DbSet<PartnerRewardEntry> PartnerRewardEntries { get; }
+    DbSet<PartnerRedemptionDocument> PartnerRedemptionDocuments { get; }
+    DbSet<OfflineAuthorityLease> OfflineAuthorityLeases { get; }
+    DbSet<OfflineSyncEvent> OfflineSyncEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
 
     Task ReloadAsync(object entity, CancellationToken cancellationToken = default);
+
+    Task<long> NextDocumentSequenceAsync(CancellationToken cancellationToken = default);
+
+    Task UpsertInventoryPositionAsync(
+        long branchId,
+        Cartex.Domain.Enums.InventoryLocationKind locationKind,
+        long locationId,
+        long variantId,
+        decimal quantity,
+        long? userId,
+        CancellationToken cancellationToken = default);
+    Task<bool> AdjustInventoryPositionAsync(
+        long branchId,
+        Cartex.Domain.Enums.InventoryLocationKind locationKind,
+        long locationId,
+        long variantId,
+        decimal delta,
+        long? userId,
+        CancellationToken cancellationToken = default);
 
     void RunAfterCommit(Action action);
 }

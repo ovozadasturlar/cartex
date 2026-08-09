@@ -12,10 +12,16 @@ public static class DatabaseSeeder
 
     public static readonly string[] SellerPermissions =
     [
-        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View,
+        AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
         AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
+        AppPermissions.Customers.ReceivePayment, AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Create,
+        AppPermissions.Returns.View, AppPermissions.Returns.Create,
+        AppPermissions.TradeCases.View, AppPermissions.TradeCases.Create, AppPermissions.TradeCases.Edit,
+        AppPermissions.TradeCases.Settle, AppPermissions.GoodsIssues.View, AppPermissions.GoodsIssues.Create,
+        AppPermissions.GoodsIssues.Return, AppPermissions.Statements.View,
+        AppPermissions.Partners.View, AppPermissions.PartnerRewards.View,
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Devices.View, AppPermissions.Devices.Revoke,
         AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ZReportPrint,
@@ -27,6 +33,11 @@ public static class DatabaseSeeder
         AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.Create,
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
         AppPermissions.Customers.View, AppPermissions.Customers.Create, AppPermissions.Customers.Edit,
+        AppPermissions.Customers.ReceivePayment, AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Create,
+        AppPermissions.TradeCases.View, AppPermissions.TradeCases.Create, AppPermissions.TradeCases.Edit,
+        AppPermissions.GoodsIssues.View, AppPermissions.GoodsIssues.Create, AppPermissions.GoodsIssues.Return,
+        AppPermissions.Statements.View,
+        AppPermissions.Partners.View, AppPermissions.Partners.Edit, AppPermissions.PartnerRewards.View,
         AppPermissions.Stocks.View, AppPermissions.StockTransfers.View, AppPermissions.StockTransfers.Receive,
         AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Devices.View, AppPermissions.Devices.Revoke,
@@ -36,14 +47,20 @@ public static class DatabaseSeeder
     public static readonly string[] SellerAssistantPermissions =
     [
         AppPermissions.Sales.Create,
+        AppPermissions.Partners.View,
         AppPermissions.Branches.View,
         AppPermissions.Warehouses.View
     ];
 
     public static readonly string[] CashierPermissions =
     [
-        AppPermissions.Sales.Checkout, AppPermissions.Sales.View,
+        AppPermissions.Sales.Checkout, AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
+        AppPermissions.Customers.View, AppPermissions.Customers.ViewAll, AppPermissions.Customers.ReceivePayment,
+        AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Create,
+        AppPermissions.Returns.View, AppPermissions.Returns.Create,
+        AppPermissions.TradeCases.View, AppPermissions.TradeCases.Settle,
+        AppPermissions.Partners.View,
         AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ReceiptReprint,
         AppPermissions.Printing.ZReportPrint, AppPermissions.Printing.RemoteUse,
@@ -57,6 +74,11 @@ public static class DatabaseSeeder
         AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
         AppPermissions.Shifts.View, AppPermissions.Shifts.ViewAll,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
+        AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Void,
+        AppPermissions.Returns.View, AppPermissions.Returns.Approve,
+        AppPermissions.TradeCases.View, AppPermissions.TradeCases.Settle, AppPermissions.TradeCases.Close,
+        AppPermissions.GoodsIssues.View, AppPermissions.Statements.View, AppPermissions.Statements.Export,
+        AppPermissions.Partners.View, AppPermissions.PartnerRewards.View, AppPermissions.PartnerRewards.Redeem,
         AppPermissions.Suppliers.View, AppPermissions.Supplies.View,
         AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Printing.DocumentPrint, AppPermissions.Printing.RemoteUse,
@@ -93,13 +115,13 @@ public static class DatabaseSeeder
 
     private static readonly DefaultRoleSeed[] DefaultBusinessRoles =
     [
-        new(AppRoles.Seller, "Sotuvchi — savat va to'lov bilan to'liq savdo", "pos", "queue", AppRoles.SellerLevel, 2, SellerPermissions),
-        new(AppRoles.SellerAssistant, "Sotuvchi yordamchisi — savat yig'adi va navbatga yuboradi", "pos", "queue", AppRoles.SellerAssistantLevel, 1, SellerAssistantPermissions),
-        new(AppRoles.Cashier, "Kassir — navbatdagi savat uchun to'lov qabul qiladi", "pos", "queue", AppRoles.CashierLevel, 2, CashierPermissions),
-        new(AppRoles.Accountant, "Hisobchi — moliya va hisobotlarni faqat ko'radi", "dashboard", null, AppRoles.AccountantLevel, 2, AccountantPermissions),
+        new(AppRoles.Seller, "Sotuvchi — savat va to'lov bilan to'liq savdo", "pos", "queue", AppRoles.SellerLevel, 4, SellerPermissions),
+        new(AppRoles.SellerAssistant, "Sotuvchi yordamchisi — savat yig'adi va navbatga yuboradi", "pos", "queue", AppRoles.SellerAssistantLevel, 2, SellerAssistantPermissions),
+        new(AppRoles.Cashier, "Kassir — navbatdagi savat uchun to'lov qabul qiladi", "pos", "queue", AppRoles.CashierLevel, 4, CashierPermissions),
+        new(AppRoles.Accountant, "Hisobchi — moliya va hisobotlarni faqat ko'radi", "dashboard", null, AppRoles.AccountantLevel, 4, AccountantPermissions),
         new(AppRoles.WarehouseOperator, "Omborchi — qoldiq va ombor harakatlarini boshqaradi", "warehouse", null, AppRoles.WarehouseOperatorLevel, 2, WarehouseOperatorPermissions),
         new(AppRoles.SupplyOperator, "Kirim operatori — ta'minot va kirimni boshqaradi", "supplies", null, AppRoles.SupplyOperatorLevel, 2, SupplyOperatorPermissions),
-        new(AppRoles.Agent, "Savdo agenti (mobil)", "pos", "order", AppRoles.AgentLevel, 2, AgentPermissions)
+        new(AppRoles.Agent, "Savdo agenti (mobil)", "pos", "order", AppRoles.AgentLevel, 4, AgentPermissions)
     ];
 
     public static readonly (string Name, string ShortName, UnitDimension Dimension, decimal Factor, bool IsDefault)[] SystemUnits =
@@ -120,7 +142,17 @@ public static class DatabaseSeeder
         var existing = (await context.Units.IgnoreQueryFilters().Select(u => u.ShortName).ToListAsync()).ToHashSet();
         var missing = SystemUnits
             .Where(u => !existing.Contains(u.ShortName))
-            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true, IsDefault = u.IsDefault })
+            .Select(u => new Unit
+            {
+                Name = u.Name,
+                ShortName = u.ShortName,
+                Dimension = u.Dimension,
+                Factor = u.Factor,
+                DefaultQuantityStep = u.Dimension == UnitDimension.Count ? 1m : 0.001m,
+                DefaultAllowAmountEntry = u.Dimension != UnitDimension.Count,
+                IsSystem = true,
+                IsDefault = u.IsDefault
+            })
             .ToList();
 
         if (missing.Count > 0)
@@ -509,7 +541,17 @@ public static class DatabaseSeeder
         await context.Accounts.AddRangeAsync(cashAccount, cardAccount);
 
         var defaultUnits = SystemUnits
-            .Select(u => new Unit { Name = u.Name, ShortName = u.ShortName, Dimension = u.Dimension, Factor = u.Factor, IsSystem = true, IsDefault = u.IsDefault })
+            .Select(u => new Unit
+            {
+                Name = u.Name,
+                ShortName = u.ShortName,
+                Dimension = u.Dimension,
+                Factor = u.Factor,
+                DefaultQuantityStep = u.Dimension == UnitDimension.Count ? 1m : 0.001m,
+                DefaultAllowAmountEntry = u.Dimension != UnitDimension.Count,
+                IsSystem = true,
+                IsDefault = u.IsDefault
+            })
             .ToList();
         await context.Units.AddRangeAsync(defaultUnits);
 

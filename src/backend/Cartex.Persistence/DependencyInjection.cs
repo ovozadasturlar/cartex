@@ -10,6 +10,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)
     {
+        services.AddScoped<AuditScopeState>();
         services.AddScoped<IAuditService, AuditService>();
 
         services.AddScoped<ISaveChangesInterceptor, SoftDeleteInterceptor>();
