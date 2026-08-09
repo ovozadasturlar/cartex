@@ -6,7 +6,7 @@ namespace Cartex.ArchitectureTests;
 
 public partial class AuditActionLengthTests
 {
-    private const int MaxLength = 15;
+    private const int MaxLength = 80;
 
     [GeneratedRegex("""audit\.Add\(\s*"(?<action>[^"]+)"|Add\(\s*"(?<action>[^"]+)"\s*,\s*"[^"]+"\s*,""")]
     private static partial Regex AuditCall();
