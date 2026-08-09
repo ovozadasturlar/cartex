@@ -28,15 +28,21 @@ public sealed class MobilePrintDispatcher(
             $"barcode:{code}:mobile:{Guid.NewGuid():N}");
 
     public Task ReprintReceiptAsync(SaleDto sale) =>
+        ReprintReceiptAsync(sale.Id, sale.ReceiptToken);
+
+    public Task ReprintReceiptAsync(SaleListDto sale) =>
+        ReprintReceiptAsync(sale.Id, sale.ReceiptToken);
+
+    public Task ReprintReceiptAsync(long saleId, string receiptToken) =>
         CreateAsync(
             PrintJobKind.Receipt,
             "sale",
-            sale.Id.ToString(),
-            new { receiptToken = sale.ReceiptToken },
+            saleId.ToString(),
+            new { receiptToken },
             1,
             true,
             "mobile_reprint",
-            $"receipt-reprint:{sale.Id}:mobile:{Guid.NewGuid():N}");
+            $"receipt-reprint:{saleId}:mobile:{Guid.NewGuid():N}");
 
     public Task PrintZReportAsync(long shiftId) =>
         CreateAsync(
