@@ -1,5 +1,6 @@
 using BarcodeScanning;
 using Cartex.Mobile.Core;
+using Cartex.Mobile.Store.Services;
 using Cartex.Mobile.Store.ViewModels;
 
 namespace Cartex.Mobile.Store.Views;
@@ -121,6 +122,15 @@ public partial class ScanPage : ContentPage
         ProductActionMenu.TranslationY = -12;
         ProductActionMenu.IsVisible = false;
     }
+
+    private void OnQuantityEntryCompleted(object? sender, EventArgs e)
+    {
+        _vm.SetQuantityFromTextCommand.Execute(null);
+        KeyboardDismissal.Hide();
+    }
+
+    private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e) =>
+        _vm.SetQuantityFromTextCommand.Execute(null);
 
     private async Task RestartCameraAsync(CancellationToken cancellationToken)
     {

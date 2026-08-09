@@ -195,16 +195,21 @@
 
                 <Grid Grid.Row="2" Padding="16,0,16,12" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
                       IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}">
-                    <Button Text="&#x2212;" Style="{StaticResource PinKey}"
-                            WidthRequest="52" HeightRequest="52"
-                            Command="{Binding DecreaseCommand}" />
-                    <Label Grid.Column="1" Text="{Binding Quantity, StringFormat='{0:0.###}'}"
-                           FontSize="24" FontAttributes="Bold"
-                           HorizontalOptions="Center" VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                    <Button Grid.Column="2" Text="+" Style="{StaticResource PinKey}"
-                            WidthRequest="52" HeightRequest="52"
-                            Command="{Binding IncreaseCommand}" />
+                    <ctl:HoldRepeatButton Text="&#x2212;" Style="{StaticResource PinKey}"
+                                          WidthRequest="52" HeightRequest="52"
+                                          RepeatCommand="{Binding DecreaseCommand}" />
+                    <Border Grid.Column="1" Style="{StaticResource InputWrap}" WidthRequest="120"
+                            HorizontalOptions="Center">
+                        <Entry Text="{Binding QuantityText, Mode=TwoWay}" Keyboard="Numeric"
+                               ReturnType="Done"
+                               FontSize="24" FontAttributes="Bold"
+                               HorizontalTextAlignment="Center" VerticalTextAlignment="Center"
+                               Completed="OnQuantityEntryCompleted"
+                               Unfocused="OnQuantityEntryUnfocused" />
+                    </Border>
+                    <ctl:HoldRepeatButton Grid.Column="2" Text="+" Style="{StaticResource PinKey}"
+                                          WidthRequest="52" HeightRequest="52"
+                                          RepeatCommand="{Binding IncreaseCommand}" />
                 </Grid>
 
                 <VerticalStackLayout Grid.Row="3" Padding="16,0,16,16" Spacing="10"

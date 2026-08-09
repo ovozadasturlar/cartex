@@ -19,15 +19,16 @@ public partial class CartPage : ContentPage
         };
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
-        _vm.Appear();
+        await _vm.AppearAsync();
     }
 
     protected override void OnDisappearing()
     {
         KeyboardDismissal.Hide();
+        CloseOpenSwipe();
         _vm.Disappear();
         base.OnDisappearing();
     }
@@ -43,6 +44,12 @@ public partial class CartPage : ContentPage
         if (_vm.IsCustomerModalOpen)
         {
             _vm.CloseCustomerModalCommand.Execute(null);
+            return true;
+        }
+
+        if (_vm.IsParticipantModalOpen)
+        {
+            _vm.CloseParticipantModalCommand.Execute(null);
             return true;
         }
 
@@ -88,5 +95,20 @@ public partial class CartPage : ContentPage
     private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e)
     {
         _vm.SetQuantityFromTextCommand.Execute(null);
+    }
+
+    private void OnOutsideTapped(object? sender, TappedEventArgs e) => CloseOpenSwipe();
+
+    private void OnCartScrolled(object? sender, ItemsViewScrolledEventArgs e) => CloseOpenSwipe();
+
+    private void CloseOpenSwipe()
+    {
+        if (_openSwipeView is null)
+            return;
+
+        _openSwipeView.Close();
+        if (_openSwipeView.BindingContext is Services.CartLine line)
+            line.IsSwiped = false;
+        _openSwipeView = null;
     }
 }
