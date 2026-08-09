@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/desktop/">
+    <Project Path="src/desktop/Cartex.Desktop/Cartex.Desktop.csproj" />
+    <Project Path="src/desktop/Cartex.UI/Cartex.UI.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
+    <Project Path="src/shared/Cartex.Shared/Cartex.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cartex.UnitTests/Cartex.UnitTests.csproj" />
+  </Folder>
+</Solution>

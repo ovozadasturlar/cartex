@@ -9,7 +9,7 @@
 #################################################################################
 version: "1.0"
 
-# Run the .NET linter natively in CI and locally.
+# Run the .NET linter natively for local analysis. CI overrides this to Docker.
 linter: qodana-dotnet
 withinDocker: false
 
