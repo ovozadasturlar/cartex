@@ -20,8 +20,11 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
         builder.Property(x => x.DiscountPct).HasPrecision(5, 2);
         builder.Property(x => x.CreditLimit).HasPrecision(18, 2);
-        builder.HasIndex(x => x.AgentId);
-        builder.HasOne(x => x.Agent).WithMany().HasForeignKey(x => x.AgentId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.AssignedUserId);
+        builder.HasIndex(x => x.PartyId).IsUnique();
+        builder.HasOne(x => x.Party).WithOne(x => x.CustomerProfile)
+            .HasForeignKey<Customer>(x => x.PartyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -34,6 +37,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.PaidCash).HasPrecision(18, 2);
         builder.Property(x => x.PaidCard).HasPrecision(18, 2);
         builder.Property(x => x.PaidBonus).HasPrecision(18, 2);
+        builder.Property(x => x.PaidAdvance).HasPrecision(18, 2);
         builder.Property(x => x.DebtAmount).HasPrecision(18, 2);
         builder.Property(x => x.DebtCurrency).HasMaxLength(3);
         builder.Property(x => x.DebtRate).HasPrecision(18, 6);
@@ -43,6 +47,8 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.RefundedCard).HasPrecision(18, 2);
         builder.Property(x => x.RefundedBonus).HasPrecision(18, 2);
         builder.Property(x => x.RefundedDebt).HasPrecision(18, 2);
+        builder.Property(x => x.RefundedAdvance).HasPrecision(18, 2);
+        builder.Property(x => x.ReturnNoChargeAmount).HasPrecision(18, 2);
         builder.Property(x => x.RefundedCashback).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
@@ -66,6 +72,12 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .WithMany(c => c.Sales)
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.TradeCase)
+            .WithMany(x => x.Sales)
+            .HasForeignKey(x => x.TradeCaseId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.TradeCaseId);
     }
 }
 
@@ -79,7 +91,9 @@ public class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.Property(x => x.PriceCurrency).HasMaxLength(3);
         builder.Property(x => x.PriceRate).HasPrecision(18, 6);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);
+        builder.Property(x => x.CashbackEarned).HasPrecision(18, 2);
         builder.Property(x => x.ReturnedQuantity).HasPrecision(12, 3);
+        builder.Property(x => x.ReturnedCashback).HasPrecision(18, 2);
 
         builder.HasOne(x => x.Sale)
             .WithMany(s => s.Items)
@@ -105,7 +119,7 @@ public class SalePaymentConfiguration : IEntityTypeConfiguration<SalePayment>
         builder.ToTable("sale_payments");
         builder.Property(x => x.Method).HasConversion<string>().HasMaxLength(10);
         builder.Property(x => x.Currency).HasMaxLength(3);
-        builder.Property(x => x.Amount).HasPrecision(18, 2);
+        builder.Property(x => x.Amount).HasPrecision(18, 4);
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.AmountBase).HasPrecision(18, 2);
 

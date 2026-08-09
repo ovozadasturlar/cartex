@@ -12,7 +12,7 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.Name).HasMaxLength(60);
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Currency).HasMaxLength(3);
-        builder.Property(x => x.Balance).HasPrecision(18, 2);
+        builder.Property(x => x.Balance).HasPrecision(18, 4);
 
         builder.HasOne(x => x.Branch)
             .WithMany()
@@ -50,7 +50,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.ToTable("transactions");
-        builder.Property(x => x.Amount).HasPrecision(18, 2);
+        builder.Property(x => x.Amount).HasPrecision(18, 4);
         builder.Property(x => x.Currency).HasMaxLength(3);
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.OperationType).HasConversion<string>().HasMaxLength(30);
@@ -79,6 +79,32 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.ShiftId);
+
+        builder.HasOne(x => x.CustomerPaymentDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerPaymentDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.CustomerReturnDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerReturnDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.CustomerRefundDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerRefundDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.TradeCase)
+            .WithMany()
+            .HasForeignKey(x => x.TradeCaseId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.PartnerRedemptionDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.PartnerRedemptionDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.CustomerPaymentDocumentId);
+        builder.HasIndex(x => x.CustomerReturnDocumentId);
+        builder.HasIndex(x => x.CustomerRefundDocumentId);
+        builder.HasIndex(x => x.TradeCaseId);
+        builder.HasIndex(x => x.PartnerRedemptionDocumentId);
     }
 }
 
