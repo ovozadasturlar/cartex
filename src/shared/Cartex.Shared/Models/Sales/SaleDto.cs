@@ -21,4 +21,5 @@ public record SaleDto(
     string? CustomerName,
     string UserName,
     List<SaleLineDto> Items,
-    bool CanResendReceipt = false);
+    bool CanResendReceipt = false,
+    decimal PaidAdvance = 0);

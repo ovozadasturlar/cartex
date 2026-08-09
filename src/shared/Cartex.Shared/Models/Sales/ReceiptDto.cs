@@ -32,7 +32,9 @@ public record ReceiptDto(
     string? BusinessWebsite = null,
     string? LogoImageKey = null,
     decimal CreditAmount = 0,
-    string? BaseCurrency = null)
+    string? BaseCurrency = null,
+    decimal PaidAdvance = 0,
+    string? MonochromeLogoImageKey = null)
 {
     public bool HasPayments => Payments.Count > 0;
 }

@@ -11,4 +11,5 @@ public record SalesBreakdownReportDto(
     decimal Debt,
     List<CashierSalesDto> ByCashier,
     List<CategorySalesDto> ByCategory,
-    decimal Credit = 0);
+    decimal Credit = 0,
+    decimal Advance = 0);

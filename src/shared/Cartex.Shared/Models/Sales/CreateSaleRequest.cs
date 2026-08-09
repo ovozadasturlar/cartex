@@ -1,3 +1,5 @@
+using Cartex.Shared.Models.Partners;
+
 namespace Cartex.Shared.Models.Sales;
 
 public record CreateSaleItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
@@ -17,4 +19,6 @@ public record CreateSaleRequest(
     DateOnly? DebtDueDate = null,
     string? IdempotencyKey = null,
     bool ApplyAutoDiscount = true,
-    decimal CreditAmount = 0);
+    decimal CreditAmount = 0,
+    bool UseCustomerAdvance = true,
+    List<ParticipantSelectionRequest>? Participants = null);
