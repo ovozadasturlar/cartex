@@ -63,7 +63,9 @@ jobs:
             --within-docker false
             --no-build
           pr-mode: false
-          use-caches: true
+          # Native Qodana cache can contain an incomplete IDE distribution after a failed run.
+          # Keep analysis reproducible until the pipeline is stable.
+          use-caches: false
           post-pr-comment: true
           use-annotations: true
           upload-result: false
