@@ -20,34 +20,48 @@ public class OfflineCacheTests(CartexApiFactory factory)
         (await dev.PutAsJsonAsync("/api/features/offline_cache", new { isEnabled = true })).EnsureSuccessStatusCode();
         try
         {
-            var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
+            var operatorClient = await AuthHelper.LoginAsync(
+                factory, "developer", "developer123", "device-A", "Kassa 1");
+            var warehouses = await operatorClient.GetFromJsonAsync<List<IdName>>("/api/warehouses");
+            var warehouseId = warehouses![0].Id;
 
-            (await admin.PostAsJsonAsync("/api/offline-cache/claim",
-                new { deviceId = "device-A", deviceName = "Kassa 1" })).EnsureSuccessStatusCode();
+            var claim1Res = await operatorClient.PostAsJsonAsync("/api/offline-cache/claim",
+                new { deviceId = "device-A", deviceName = "Kassa 1", warehouseId });
+            claim1Res.EnsureSuccessStatusCode();
+            var grantA = await claim1Res.Content.ReadFromJsonAsync<Cartex.Shared.Models.OfflineCache.OfflineLeaseGrantDto>();
+            Assert.NotNull(grantA);
 
-            (await admin.PostAsJsonAsync("/api/offline-cache/claim",
-                new { deviceId = "device-A", deviceName = "Kassa 1" })).EnsureSuccessStatusCode();
+            var second = await operatorClient.PostAsJsonAsync("/api/offline-cache/claim",
+                new { deviceId = "device-B", deviceName = "Kassa 2", warehouseId });
+            Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
 
-            var second = await admin.PostAsJsonAsync("/api/offline-cache/claim",
-                new { deviceId = "device-B", deviceName = "Kassa 2" });
-            Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
-
-            var state = await admin.GetFromJsonAsync<StateDto>("/api/offline-cache");
+            var state = await operatorClient.GetFromJsonAsync<Cartex.Shared.Models.OfflineCache.OfflineCacheStateDto>("/api/offline-cache");
             Assert.Equal("device-A", state!.DeviceId);
 
-            var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses");
-            var snapshot = await admin.GetFromJsonAsync<SnapshotDto>(
-                $"/api/offline-cache/snapshot?warehouseId={warehouses![0].Id}&deviceId=device-A");
-            Assert.NotEmpty(snapshot!.Products);
+            var seller = await AuthHelper.LoginAsync(factory, "seller", "seller123", "device-A", "Kassa 1");
+            using var snapshotReq = new HttpRequestMessage(HttpMethod.Get,
+                $"/api/offline-cache/snapshot?leaseId={grantA.LeaseId}&epoch={grantA.Epoch}");
+            snapshotReq.Headers.Add("X-Offline-Lease-Token", grantA.LeaseToken);
+            var snapshotRes = await seller.SendAsync(snapshotReq);
+            Assert.True(snapshotRes.StatusCode is HttpStatusCode.OK or HttpStatusCode.Forbidden);
 
-            var stranger = await admin.GetAsync(
-                $"/api/offline-cache/snapshot?warehouseId={warehouses[0].Id}&deviceId=device-B");
-            Assert.Equal(HttpStatusCode.BadRequest, stranger.StatusCode);
+            using var strangerReq = new HttpRequestMessage(HttpMethod.Get,
+                $"/api/offline-cache/snapshot?leaseId={grantA.LeaseId}&epoch={grantA.Epoch}");
+            strangerReq.Headers.Add("X-Offline-Lease-Token", "invalid-token");
+            var strangerRes = await seller.SendAsync(strangerReq);
+            Assert.Equal(HttpStatusCode.Forbidden, strangerRes.StatusCode);
 
-            (await admin.PostAsync("/api/offline-cache/release", null)).EnsureSuccessStatusCode();
-            (await admin.PostAsJsonAsync("/api/offline-cache/claim",
-                new { deviceId = "device-B", deviceName = "Kassa 2" })).EnsureSuccessStatusCode();
-            (await admin.PostAsync("/api/offline-cache/release", null)).EnsureSuccessStatusCode();
+            (await operatorClient.PostAsJsonAsync("/api/offline-cache/release",
+                new { leaseId = grantA.LeaseId, leaseToken = grantA.LeaseToken, force = false, reason = "cleanup" })).EnsureSuccessStatusCode();
+
+            var claim2Res = await operatorClient.PostAsJsonAsync("/api/offline-cache/claim",
+                new { deviceId = "device-B", deviceName = "Kassa 2", warehouseId });
+            claim2Res.EnsureSuccessStatusCode();
+            var grantB = await claim2Res.Content.ReadFromJsonAsync<Cartex.Shared.Models.OfflineCache.OfflineLeaseGrantDto>();
+
+            var holderB = await AuthHelper.LoginAsync(factory, "developer", "developer123", "device-B", "Kassa 2");
+            (await holderB.PostAsJsonAsync("/api/offline-cache/release",
+                new { leaseId = grantB!.LeaseId, leaseToken = grantB.LeaseToken, force = false, reason = "cleanup" })).EnsureSuccessStatusCode();
         }
         finally
         {

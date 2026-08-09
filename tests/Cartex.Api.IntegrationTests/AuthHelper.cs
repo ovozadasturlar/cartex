@@ -7,10 +7,18 @@ public static class AuthHelper
 {
     private sealed record LoginResponse(string Token, string FullName, string Role);
 
-    public static async Task<HttpClient> LoginAsync(CartexApiFactory factory, string username, string password)
+    public static Task<HttpClient> LoginAsync(CartexApiFactory factory, string username, string password) =>
+        LoginAsync(factory, username, password, null, null);
+
+    public static async Task<HttpClient> LoginAsync(
+        CartexApiFactory factory,
+        string username,
+        string password,
+        string? deviceId,
+        string? deviceName)
     {
         var client = factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { username, password, deviceId, deviceName });
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
