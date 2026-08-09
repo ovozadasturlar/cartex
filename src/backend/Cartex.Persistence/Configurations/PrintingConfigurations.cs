@@ -47,6 +47,13 @@ public class PrintRoutingPolicyConfiguration : IEntityTypeConfiguration<PrintRou
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.RoutingMode).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.StickyMode).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.ReceiptSettingsOverrideJson).HasColumnType("jsonb");
+        builder.Property(x => x.Revision).IsConcurrencyToken();
+        builder.ToTable(table =>
+        {
+            table.HasCheckConstraint("ck_print_routing_default_copies", "default_copies BETWEEN 1 AND 100");
+            table.HasCheckConstraint("ck_print_routing_revision", "revision > 0");
+        });
         builder.HasIndex(x => new { x.BranchId, x.Kind }).IsUnique();
         builder.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.StickyEndpoint).WithMany().HasForeignKey(x => x.StickyEndpointId).OnDelete(DeleteBehavior.SetNull);

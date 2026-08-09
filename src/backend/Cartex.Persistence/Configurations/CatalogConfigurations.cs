@@ -22,11 +22,15 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
 {
     public void Configure(EntityTypeBuilder<Unit> builder)
     {
-        builder.ToTable("units");
+        builder.ToTable("units", table => table.HasCheckConstraint(
+            "ck_units_default_quantity_step",
+            "\"default_quantity_step\" >= 0.001 AND \"default_quantity_step\" <= 1000000"));
         builder.Property(x => x.Name).HasMaxLength(20).IsRequired();
         builder.Property(x => x.ShortName).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Dimension).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Factor).HasPrecision(18, 6);
+        builder.Property(x => x.DefaultQuantityStep).HasPrecision(12, 3).HasDefaultValue(1m);
+        builder.Property(x => x.DefaultAllowAmountEntry).HasDefaultValue(false);
         builder.Property(x => x.IsEnabled).HasDefaultValue(true);
     }
 }
@@ -45,7 +49,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("products");
+        builder.ToTable("products", table => table.HasCheckConstraint(
+            "ck_products_quantity_step_override",
+            "\"quantity_step_override\" IS NULL OR (\"quantity_step_override\" >= 0.001 AND \"quantity_step_override\" <= 1000000)"));
         builder.Property(x => x.Name).IsRequired();
         builder.Property(x => x.MinStock).HasPrecision(12, 3);
         builder.Property(x => x.Attributes).HasColumnType("jsonb");
@@ -53,6 +59,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.VatRate).HasPrecision(5, 2);
         builder.Property(x => x.ImageKey).HasMaxLength(200);
         builder.Property(x => x.IsEnabled).HasDefaultValue(true);
+        builder.Property(x => x.QuantityStepOverride).HasPrecision(12, 3);
         builder.Property(x => x.AmountEntryEnabled);
         builder.HasIndex(x => x.Name, "ix_products_name_trgm").HasDatabaseName("ix_products_name_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.HasIndex(x => x.IkpuCode, "ix_products_ikpu_code_trgm").HasDatabaseName("ix_products_ikpu_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
