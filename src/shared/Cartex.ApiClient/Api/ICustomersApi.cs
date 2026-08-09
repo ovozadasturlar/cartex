@@ -40,4 +40,24 @@ public interface ICustomersApi
 
     [Post("/api/customers/{id}/message")]
     Task SendMessageAsync(long id, [Body] SendCustomerMessageRequest request);
+
+    [Get("/api/customers/{id}/statement")]
+    Task<CustomerStatementDto> GetStatementAsync(
+        long id,
+        [Query] DateTime? from = null,
+        [Query] DateTime? to = null,
+        [Query] long? tradeCaseId = null,
+        [Query] long? branchId = null,
+        [Query] string? documentTypes = null);
+
+    [Get("/api/customers/{id}/statement/export")]
+    Task<HttpContent> ExportStatementAsync(
+        long id,
+        [Query] string format = "pdf",
+        [Query] string mode = "both",
+        [Query] DateTime? from = null,
+        [Query] DateTime? to = null,
+        [Query] long? tradeCaseId = null,
+        [Query] long? branchId = null,
+        [Query] string? documentTypes = null);
 }
