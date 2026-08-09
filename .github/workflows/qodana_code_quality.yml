@@ -11,6 +11,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: qodana-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   qodana:
     runs-on: ubuntu-latest
@@ -30,10 +34,6 @@ jobs:
         run: |
           dotnet workload restore Cartex.slnx
           dotnet restore Cartex.slnx
-      - name: Build solution
-        # Qodana needs resolved projects, not publish-ready Android packages. Keep this
-        # aligned with the restore configuration so RuntimeIdentifiers are consistent.
-        run: dotnet build Cartex.slnx --configuration Debug --no-restore
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.2
         env:
@@ -42,6 +42,7 @@ jobs:
           args: |
             --linter qodana-dotnet
             --within-docker false
+            --no-build
           # When pr-mode is set to true, Qodana analyzes only the files that have been changed
           pr-mode: false
           use-caches: true
