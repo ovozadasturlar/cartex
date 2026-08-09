@@ -3,10 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
 using Cartex.Mobile.Core;
+using Cartex.Mobile.Store.Services;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class LoginViewModel(MobileAuthService auth, SessionStore session) : ObservableObject
+public partial class LoginViewModel(
+    MobileAuthService auth,
+    SessionStore session,
+    MobileOfflineService offline) : ObservableObject
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
@@ -68,6 +72,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             if (!restored) IsChecking = false;
         }
         if (!restored) return;
+        await offline.StartAsync();
         await Shell.Current.GoToAsync("//home", false);
         _ = auth.ValidateSessionAsync();
         if (AppLock.PinEnabled)
@@ -108,6 +113,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         {
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
+            await offline.StartAsync();
             Password = "";
             await Shell.Current.GoToAsync("//home");
             _ = OfferPinSetupAsync();

@@ -30,6 +30,7 @@ public partial class ScanViewModel : ObservableObject
     private readonly ImageUrlBuilder _images;
     private readonly MobilePrintDispatcher _printDispatcher;
     private readonly BarcodeLabelSettingsCache _labelSettings;
+    private readonly MobileOfflineService _offline;
 
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
@@ -41,6 +42,7 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private string _stockText = "";
     [ObservableProperty] private string? _imageUrl;
     [ObservableProperty] private decimal _quantity;
+    [ObservableProperty] private string _quantityText = "1";
     [ObservableProperty] private bool _canEditProduct;
     [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private int _cartCount;
@@ -70,7 +72,9 @@ public partial class ScanViewModel : ObservableObject
     public int BarcodePreviewNameLines => _labelSettings.Current.NameLines;
 
     private ProductLookupDto? _product;
-    private decimal _step = 1;
+    private decimal _quantityStep = 1;
+    private decimal _incrementStep = 1;
+    private bool _allowsFractional;
     private bool _handled;
     private string? _lastValue;
     private DateTime _lastAt = DateTime.MinValue;
@@ -82,7 +86,7 @@ public partial class ScanViewModel : ObservableObject
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
@@ -95,6 +99,7 @@ public partial class ScanViewModel : ObservableObject
         _images = images;
         _printDispatcher = printDispatcher;
         _labelSettings = labelSettings;
+        _offline = offline;
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         cart.Changed += () => CartCount = _cart.Count;
@@ -123,6 +128,7 @@ public partial class ScanViewModel : ObservableObject
 
     private async Task ApproveQrAsync(string code)
     {
+        if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
         var page = Shell.Current.CurrentPage;
         var confirmed = page is not null && await page.DisplayAlertAsync(
             Loc.Instance["qr_approve_title"], Loc.Instance["qr_approve_msg"], Loc.Instance["ok"], Loc.Instance["cancel"]);
@@ -150,6 +156,7 @@ public partial class ScanViewModel : ObservableObject
 
     private async Task OpenHandoffAsync(string code)
     {
+        if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
         if (_permissions.HasAny("sales.create", "sales.checkout"))
             await Shell.Current.GoToAsync($"checkout?code={code}");
         else
@@ -165,6 +172,12 @@ public partial class ScanViewModel : ObservableObject
             Resume();
             return;
         }
+        await _offline.StartAsync();
+        if (_offline.ShouldUseOffline)
+        {
+            await LookupOfflineAsync(barcode);
+            return;
+        }
         try
         {
             var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: false);
@@ -172,8 +185,7 @@ public partial class ScanViewModel : ObservableObject
             _product = product;
             _activeBarcode = barcode;
             _productSku = null;
-            _step = product.PackQty > 0 ? product.PackQty : 1;
-            Quantity = _step;
+            ConfigureQuantity(product, product.PackQty > 0 ? product.PackQty : 1);
             ProductName = product.ProductName;
             PriceText = FormatPrice(product);
             StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
@@ -191,8 +203,32 @@ public partial class ScanViewModel : ObservableObject
         }
         catch
         {
-            await FlashAsync(Loc.Instance["err_no_connection"]);
+            _offline.MarkServerUnavailable();
+            if (_offline.IsEnabled)
+                await LookupOfflineAsync(barcode);
+            else
+                await FlashAsync(Loc.Instance["err_no_connection"]);
         }
+    }
+
+    private async Task LookupOfflineAsync(string barcode)
+    {
+        var product = await _offline.FindProductAsync(barcode);
+        if (product is null)
+        {
+            await FlashAsync(Loc.Instance["offline_product_not_cached"]);
+            return;
+        }
+        ProductActionsExpanded = false;
+        _product = product;
+        _activeBarcode = barcode;
+        _productSku = null;
+        ConfigureQuantity(product, product.PackQty > 0 ? product.PackQty : 1);
+        ProductName = product.ProductName;
+        PriceText = FormatPrice(product);
+        StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
+        ImageUrl = null;
+        OverlayVisible = true;
     }
 
     private Task HandleUnknownBarcodeAsync(string barcode)
@@ -205,6 +241,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task AttachUnknownBarcodeAsync()
     {
+        if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
         if (string.IsNullOrEmpty(UnknownBarcode)) return;
 
         var barcode = UnknownBarcode;
@@ -216,6 +253,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateProductFromUnknownBarcodeAsync()
     {
+        if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
         if (string.IsNullOrEmpty(UnknownBarcode)) return;
 
         var barcode = UnknownBarcode;
@@ -228,18 +266,19 @@ public partial class ScanViewModel : ObservableObject
     private void CloseUnknownBarcode() => Resume();
 
     [RelayCommand]
-    private void Increase() => Quantity += _step;
+    private void Increase() => Quantity += _incrementStep;
 
     [RelayCommand]
-    private void Decrease() => Quantity = Math.Max(_step, Quantity - _step);
+    private void Decrease() => Quantity = Math.Max(_quantityStep, Quantity - _incrementStep);
+
+    [RelayCommand]
+    private void SetQuantityFromText() => TryCommitQuantity(showError: true);
 
     [RelayCommand]
     private void AddToCart()
     {
-        if (_product is null) return;
-        var existing = _cart.Lines.FirstOrDefault(l => l.VariantId == _product.VariantId)?.Quantity ?? 0;
-        _cart.Add(_product);
-        _cart.SetQuantity(_product.VariantId, existing + Quantity);
+        if (_product is null || !TryCommitQuantity(showError: true)) return;
+        _cart.Add(_product, Quantity);
         Ui.Toast(Loc.Instance["added_to_cart"]);
         CloseOverlay();
     }
@@ -247,6 +286,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task EditProductAsync()
     {
+        if (BlockOnlineMutationWhileOffline()) return;
         var variantId = _product?.VariantId;
         if (variantId is null) return;
         CloseOverlay();
@@ -256,6 +296,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenBarcodePrintAsync()
     {
+        if (BlockOnlineMutationWhileOffline()) return;
         if (_product is null || !CanPrintBarcode) return;
         try
         {
@@ -325,6 +366,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private void ReceiveStock()
     {
+        if (BlockOnlineMutationWhileOffline()) return;
         if (_product is null) return;
         var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == _product.VariantId)?.Quantity ?? 0;
         _supplyCart.Add(_product);
@@ -380,6 +422,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateProductFromSearchAsync()
     {
+        if (BlockOnlineMutationWhileOffline()) return;
         if (!CanEditProduct) return;
 
         var barcode = SearchText.Trim();
@@ -420,6 +463,18 @@ public partial class ScanViewModel : ObservableObject
         try
         {
             await Task.Delay(200, cts.Token);
+            if (_offline.ShouldUseOffline)
+            {
+                var cached = page == 1
+                    ? await _offline.SearchProductsAsync(text, SearchPageSize)
+                    : [];
+                if (cts.IsCancellationRequested) return;
+                _loadedSearchPage = page;
+                _hasMoreSearchResults = false;
+                foreach (var product in cached)
+                    SearchResults.Add(new SearchRow(product, _images));
+                return;
+            }
             var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(page, SearchPageSize).Search(text).Build());
             if (cts.IsCancellationRequested) return;
 
@@ -430,7 +485,16 @@ public partial class ScanViewModel : ObservableObject
                 SearchResults.Add(new SearchRow(p, _images));
         }
         catch (OperationCanceledException) { }
-        catch { }
+        catch
+        {
+            _offline.MarkServerUnavailable();
+            if (page == 1 && _offline.IsEnabled && !cts.IsCancellationRequested)
+            {
+                foreach (var product in await _offline.SearchProductsAsync(text, SearchPageSize))
+                    SearchResults.Add(new SearchRow(product, _images));
+                _hasMoreSearchResults = false;
+            }
+        }
         finally
         {
             if (_searchCts == cts)
@@ -475,17 +539,19 @@ public partial class ScanViewModel : ObservableObject
         ProductActionsExpanded = false;
         try
         {
-            _product = await BuildLookupAsync(p, 1);
+            _product = _offline.ShouldUseOffline
+                ? await _offline.FindProductByVariantAsync(p.DefaultVariantId, 1)
+                  ?? throw new InvalidOperationException(Loc.Instance["offline_product_not_cached"])
+                : await BuildLookupAsync(p, 1);
         }
         catch (InvalidOperationException ex)
         {
             Ui.Toast(ex.Message);
             return;
         }
-        _step = 1;
+        ConfigureQuantity(_product, 1);
         _activeBarcode = p.Barcodes.FirstOrDefault();
         _productSku = p.Code;
-        Quantity = 1;
         ProductName = p.Name;
         PriceText = FormatPrice(_product);
         StockText = StockTextFor(p.OnHand, p.UnitName, p.DefaultVariantId);
@@ -526,11 +592,24 @@ public partial class ScanViewModel : ObservableObject
 
         try
         {
+            if (_offline.ShouldUseOffline)
+            {
+                var cached = await _offline.FindProductByVariantAsync(variantId, _product.PackQty);
+                if (cached is null) return;
+                _product = cached;
+                ConfigureQuantity(_product, Quantity);
+                ProductName = _product.ProductName;
+                PriceText = FormatPrice(_product);
+                StockText = StockTextFor(_product.OnHand, _product.UnitName, _product.VariantId);
+                ImageUrl = null;
+                return;
+            }
             var updated = (await _productsApi.GetAllAsync(variantId: variantId)).FirstOrDefault();
             if (updated is null)
                 return;
 
             _product = await BuildLookupAsync(updated, _product.PackQty);
+            ConfigureQuantity(_product, Quantity);
             ProductName = _product.ProductName;
             PriceText = FormatPrice(_product);
             StockText = StockTextFor(_product.OnHand, _product.UnitName, _product.VariantId);
@@ -555,7 +634,7 @@ public partial class ScanViewModel : ObservableObject
               ?? throw new InvalidOperationException(Loc.Instance["currency_rate_required"]);
         var originalPrice = product.SellingPrice ?? 0;
         var basePrice = Math.Round(originalPrice * rate, 2);
-        var step = product.AllowsAmountEntry ? 0.001m : 1m;
+        var step = QuantityInput.NormalizeStep(product.QuantityStep, product.AllowsFractional);
         return new ProductLookupDto(
             product.DefaultVariantId,
             product.Name,
@@ -570,7 +649,38 @@ public partial class ScanViewModel : ObservableObject
             originalPrice,
             priceCurrency,
             baseCurrency,
-            rate);
+            rate,
+            product.AllowsFractional);
+    }
+
+    partial void OnQuantityChanged(decimal value) => QuantityText = QuantityInput.Format(value);
+
+    private void ConfigureQuantity(ProductLookupDto product, decimal initialQuantity)
+    {
+        _allowsFractional = product.AllowsFractional;
+        _quantityStep = QuantityInput.NormalizeStep(product.QuantityStep, _allowsFractional);
+        _incrementStep = product.PackQty > 0 ? product.PackQty : 1;
+        Quantity = Math.Max(_quantityStep, initialQuantity);
+    }
+
+    private bool TryCommitQuantity(bool showError)
+    {
+        if (QuantityInput.TryParse(QuantityText, _quantityStep, _allowsFractional, out var quantity, out var error))
+        {
+            Quantity = quantity;
+            return true;
+        }
+
+        QuantityText = QuantityInput.Format(Quantity);
+        if (showError)
+            Ui.Toast(Loc.Instance[error switch
+            {
+                QuantityInputError.MustBePositive => "quantity_positive_required",
+                QuantityInputError.FractionNotAllowed => "quantity_integer_required",
+                QuantityInputError.StepMismatch => "quantity_step_invalid",
+                _ => "quantity_invalid"
+            }]);
+        return false;
     }
 
     private static string FormatPrice(ProductLookupDto product)
@@ -634,6 +744,13 @@ public partial class ScanViewModel : ObservableObject
         OnPropertyChanged(nameof(BarcodePreviewPrice));
         OnPropertyChanged(nameof(BarcodePreviewSku));
         OnPropertyChanged(nameof(BarcodePreviewNameLines));
+    }
+
+    private bool BlockOnlineMutationWhileOffline()
+    {
+        if (!_offline.ShouldUseOffline) return false;
+        Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
+        return true;
     }
 }
 

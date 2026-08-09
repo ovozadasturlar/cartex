@@ -2,10 +2,19 @@ using Cartex.Mobile.Store.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.Mobile.Core;
+using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.OfflineCache;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, SessionStore session, CartStore cart, WarehouseContext warehouseContext) : ObservableObject
+public partial class ProfileViewModel(
+    MobileAuthService auth,
+    SessionStore session,
+    CartStore cart,
+    WarehouseContext warehouseContext,
+    MobileOfflineService offline,
+    IOfflineCacheApi offlineApi,
+    MobilePermissions permissions) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -14,12 +23,19 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _footer = "";
     [ObservableProperty] private string _themeName = "";
+    [ObservableProperty] private bool _offlineVisible;
+    [ObservableProperty] private bool _offlineBusy;
+    [ObservableProperty] private string _offlineTitle = "";
+    [ObservableProperty] private string _offlineSubtitle = "";
+    [ObservableProperty] private string _offlineAction = "";
+    private OfflineCacheStateDto? _offlineState;
 
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
     private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
 
-    public void Appear()
+    public async Task AppearAsync()
     {
+        await offline.StartAsync();
         FullName = auth.FullName is { Length: > 0 } name ? name : "—";
         Initials = string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
         Subtitle = auth.Role;
@@ -27,13 +43,16 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
         LanguageName = LangNames[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
         Footer = $"Cartex Do'kon {AppInfo.Current.VersionString} • {session.ServerUrl}";
         ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
+        OfflineVisible = permissions.Has("devices.revoke") && permissions.HasAny("sales.create", "sales.checkout");
+        if (OfflineVisible)
+            await RefreshOfflineAsync();
     }
 
     [RelayCommand]
     private async Task ChangeWarehouseAsync()
     {
         await warehouseContext.ChangeAsync();
-        Appear();
+        await AppearAsync();
     }
 
     [RelayCommand]
@@ -56,7 +75,7 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
         if (index < 0) return;
         Preferences.Set("app_theme", keys[index]);
         ApplyTheme();
-        Appear();
+        await AppearAsync();
     }
 
     public static void ApplyTheme() =>
@@ -91,5 +110,100 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
         cart.Clear();
         warehouseContext.Reset();
         await Shell.Current.GoToAsync("//login");
+    }
+
+    [RelayCommand]
+    private async Task ToggleOfflineAsync()
+    {
+        if (OfflineBusy) return;
+        OfflineBusy = true;
+        try
+        {
+            if (offline.IsEnabled && _offlineState?.IsCurrentDevice == true)
+            {
+                var pending = await offline.PendingCountAsync();
+                var errors = await offline.ErrorCountAsync();
+                if (pending + errors > 0 && !await Shell.Current.CurrentPage.DisplayAlertAsync(
+                        Loc.Instance["offline_sales"],
+                        string.Format(Loc.Instance["offline_pending_release_fmt"], pending + errors),
+                        Loc.Instance["disconnect"], Loc.Instance["cancel"]))
+                    return;
+                await offline.ReleaseAsync(pending + errors > 0
+                    ? "Mobil qurilmadan sinxronlanmagan amallar bilan uzildi"
+                    : null);
+            }
+            else
+            {
+                _offlineState = await offlineApi.GetStateAsync();
+                if (_offlineState.DeviceId is not null && !_offlineState.IsCurrentDevice)
+                {
+                    var message = string.Format(Loc.Instance["offline_other_device_fmt"],
+                        _offlineState.DeviceName ?? "—", _offlineState.LastReportedPendingCount);
+                    if (!await Shell.Current.CurrentPage.DisplayAlertAsync(
+                            Loc.Instance["offline_sales"], message,
+                            Loc.Instance["disconnect"], Loc.Instance["cancel"]))
+                        return;
+                    await offlineApi.ReleaseAsync(new ReleaseOfflineCacheRequest(
+                        _offlineState.LeaseId, Force: true,
+                        Reason: "Mobil qurilmadan yangi vakolat olish uchun majburan uzildi"));
+                }
+
+                if (!await warehouseContext.EnsureSelectedAsync() || warehouseContext.WarehouseId is null)
+                    throw new InvalidOperationException(Loc.Instance["warehouse_none"]);
+                var grant = await offlineApi.ClaimAsync(new ClaimOfflineCacheRequest(
+                    auth.DeviceId, auth.DeviceName, warehouseContext.WarehouseId.Value));
+                await offline.ActivateAsync(grant);
+            }
+            await RefreshOfflineAsync();
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is Refit.ApiException api ? ApiErrors.Describe(api) : ex.Message);
+        }
+        finally
+        {
+            OfflineBusy = false;
+        }
+    }
+
+    private async Task RefreshOfflineAsync()
+    {
+        try
+        {
+            _offlineState = await offlineApi.GetStateAsync();
+            if (_offlineState.DeviceId is null)
+            {
+                OfflineTitle = Loc.Instance["offline_sales"];
+                OfflineSubtitle = Loc.Instance["offline_available"];
+                OfflineAction = Loc.Instance["enable"];
+            }
+            else if (_offlineState.IsCurrentDevice)
+            {
+                var pending = await offline.PendingCountAsync();
+                var errors = await offline.ErrorCountAsync();
+                var last = await offline.LastSyncAsync() ?? "—";
+                OfflineTitle = $"{Loc.Instance["offline_sales"]} · {Loc.Instance["enabled"]}";
+                OfflineSubtitle = string.Format(Loc.Instance["offline_status_fmt"],
+                    _offlineState.WarehouseName ?? warehouseContext.WarehouseName,
+                    pending, errors, last);
+                OfflineAction = Loc.Instance["disconnect"];
+            }
+            else
+            {
+                OfflineTitle = Loc.Instance["offline_sales"];
+                OfflineSubtitle = string.Format(Loc.Instance["offline_holder_fmt"],
+                    _offlineState.DeviceName ?? "—", _offlineState.WarehouseName ?? "—",
+                    _offlineState.LastReportedPendingCount);
+                OfflineAction = Loc.Instance["take_over"];
+            }
+        }
+        catch
+        {
+            OfflineTitle = Loc.Instance["offline_sales"];
+            OfflineSubtitle = offline.IsEnabled
+                ? Loc.Instance["offline_local_ready"]
+                : Loc.Instance["err_no_connection"];
+            OfflineAction = offline.IsEnabled ? Loc.Instance["disconnect"] : Loc.Instance["enable"];
+        }
     }
 }

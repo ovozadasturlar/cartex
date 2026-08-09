@@ -31,19 +31,32 @@ public partial class TradeViewModel(
         new("CheckedOut", Loc.Instance["queue_sold"]),
         new("Cancelled", Loc.Instance["queue_cancelled"])
     ];
+    public ObservableCollection<SalesPeriodChip> SalesPeriods { get; } =
+    [
+        new("today", Loc.Instance["filter_today"]) { IsSelected = true },
+        new("week", Loc.Instance["filter_week"]),
+        new("month", Loc.Instance["filter_month"]),
+        new("all", Loc.Instance["filter_all"])
+    ];
 
     [ObservableProperty] private string _section = "queue";
     [ObservableProperty] private string _selectedStatus = "Open";
+    [ObservableProperty] private string _salesPeriod = "today";
+    [ObservableProperty] private string _salesSearch = "";
     [ObservableProperty] private bool _hasQueueAccess = true;
     [ObservableProperty] private bool _hasSalesAccess = true;
     [ObservableProperty] private bool _hasZReportAccess;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
+    [ObservableProperty] private bool _isLoadingMoreSales;
     [ObservableProperty] private string? _error;
     [ObservableProperty] private int _todayCount;
     [ObservableProperty] private string _todayTotal = "0";
+
     private bool _hubWired;
     private DateTime _lastLoadedAt;
+    private int _salesPage = 1;
+    private bool _hasMoreSales = true;
 
     public bool IsQueue => Section == "queue";
     public bool IsSales => Section == "sales";
@@ -101,6 +114,48 @@ public partial class TradeViewModel(
     private void ShowZReports() => Section = "zreports";
 
     [RelayCommand]
+    private async Task SearchSalesAsync()
+    {
+        if (IsBusy) return;
+        await LoadSalesCoreAsync(resetPaging: true);
+    }
+
+    [RelayCommand]
+    private async Task ClearSalesSearchAsync()
+    {
+        SalesSearch = "";
+        await LoadSalesCoreAsync(resetPaging: true);
+    }
+
+    [RelayCommand]
+    private async Task SelectSalesPeriodAsync(SalesPeriodChip chip)
+    {
+        if (chip.IsSelected || IsBusy) return;
+        SetSelectedPeriod(chip);
+        await LoadSalesCoreAsync(resetPaging: true);
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreSalesAsync()
+    {
+        if (IsBusy || IsLoadingMoreSales || !_hasMoreSales || !IsSales) return;
+        IsLoadingMoreSales = true;
+        try
+        {
+            _salesPage++;
+            await LoadSalesCoreAsync(resetPaging: false);
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+        finally
+        {
+            IsLoadingMoreSales = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task ReprintSaleAsync(TradeSaleRow row)
     {
         try
@@ -127,6 +182,10 @@ public partial class TradeViewModel(
             Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
         }
     }
+
+    [RelayCommand]
+    private Task OpenSaleAsync(TradeSaleRow row) =>
+        Shell.Current.GoToAsync($"sale/detail?id={row.Sale.Id}");
 
     [RelayCommand]
     private async Task PrintZReportAsync(TradeShiftRow row)
@@ -200,7 +259,7 @@ public partial class TradeViewModel(
             if (IsQueue)
                 await LoadQueueCoreAsync();
             else if (IsSales)
-                await LoadSalesCoreAsync();
+                await LoadSalesCoreAsync(resetPaging: true);
             else
                 await LoadZReportsCoreAsync();
             _lastLoadedAt = DateTime.UtcNow;
@@ -230,24 +289,73 @@ public partial class TradeViewModel(
             return;
         }
 
-        var items = await orderingApi.GetAllAsync(SelectedStatus, warehouse.WarehouseId);
+        var items = await orderingApi.GetAllAsync(SelectedStatus, warehouse.WarehouseId, "Queue");
         Carts.Clear();
         foreach (var cart in items)
             Carts.Add(new TradeQueueRow(cart));
         OnPropertyChanged(nameof(IsQueueEmpty));
     }
 
-    private async Task LoadSalesCoreAsync()
+    private async Task LoadSalesCoreAsync(bool resetPaging = true)
     {
-        var totalsTask = salesApi.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1));
-        var listTask = salesApi.QueryAsync(QueryRequest.Create().Page(1, 30).Sort("CreatedAt", true).Build());
+        if (resetPaging)
+        {
+            _salesPage = 1;
+            _hasMoreSales = true;
+        }
+
+        DateTime? fromDate = null;
+        DateTime? toDate = null;
+        if (SalesPeriod == "today")
+        {
+            fromDate = DateTime.Today;
+            toDate = DateTime.Today.AddDays(1);
+        }
+        else if (SalesPeriod == "week")
+        {
+            fromDate = DateTime.Today.AddDays(-7);
+            toDate = DateTime.Today.AddDays(1);
+        }
+        else if (SalesPeriod == "month")
+        {
+            fromDate = DateTime.Today.AddMonths(-1);
+            toDate = DateTime.Today.AddDays(1);
+        }
+
+        var queryBuilder = QueryRequest.Create()
+            .Page(_salesPage, 30)
+            .Sort("CreatedAt", true);
+
+        if (!string.IsNullOrWhiteSpace(SalesSearch))
+            queryBuilder = queryBuilder.Search(SalesSearch.Trim());
+        if (fromDate.HasValue)
+            queryBuilder = queryBuilder.Filter("FromDate", fromDate.Value.ToString("o"));
+        if (toDate.HasValue)
+            queryBuilder = queryBuilder.Filter("ToDate", toDate.Value.ToString("o"));
+        if (warehouse.WarehouseId > 0)
+            queryBuilder = queryBuilder.Filter("WarehouseId", warehouse.WarehouseId.ToString());
+
+        var listTask = salesApi.QueryListAsync(queryBuilder.Build());
+        var totalsTask = salesApi.GetTotalsAsync(
+            warehouseId: warehouse.WarehouseId > 0 ? warehouse.WarehouseId : null,
+            fromDate: fromDate,
+            toDate: toDate,
+            search: string.IsNullOrWhiteSpace(SalesSearch) ? null : SalesSearch.Trim());
+
+        var listResponse = await listTask;
         var totals = await totalsTask;
-        var list = (await listTask).Content ?? [];
+
+        var list = listResponse.Content ?? [];
         TodayCount = totals.Count;
         TodayTotal = totals.TotalAmount.ToString("N0");
-        Sales.Clear();
+
+        if (resetPaging)
+            Sales.Clear();
+
         foreach (var sale in list)
             Sales.Add(new TradeSaleRow(sale, printDispatcher.CanReprintReceipt, sale.CanResendReceipt));
+
+        _hasMoreSales = list.Count >= 30;
         OnPropertyChanged(nameof(IsSalesEmpty));
     }
 
@@ -266,11 +374,26 @@ public partial class TradeViewModel(
         foreach (var chip in QueueStatuses)
             chip.IsSelected = ReferenceEquals(chip, selected);
     }
+
+    private void SetSelectedPeriod(SalesPeriodChip selected)
+    {
+        SalesPeriod = selected.Period;
+        foreach (var chip in SalesPeriods)
+            chip.IsSelected = ReferenceEquals(chip, selected);
+    }
 }
 
 public sealed partial class QueueStatusChip(string status, string text) : ObservableObject
 {
     public string Status { get; } = status;
+    public string Text { get; } = text;
+
+    [ObservableProperty] private bool _isSelected;
+}
+
+public sealed partial class SalesPeriodChip(string period, string text) : ObservableObject
+{
+    public string Period { get; } = period;
     public string Text { get; } = text;
 
     [ObservableProperty] private bool _isSelected;
@@ -288,13 +411,31 @@ public sealed record TradeQueueRow(CartListDto Cart)
     public bool CanEdit => Cart.Status == "Open";
 }
 
-public sealed record TradeSaleRow(SaleDto Sale, bool CanPrint, bool CanResend)
+public sealed record TradeSaleRow(SaleListDto Sale, bool CanPrint, bool CanResend)
 {
     private DateTime Local => Sale.SaleDate.Kind == DateTimeKind.Utc ? Sale.SaleDate.ToLocalTime() : Sale.SaleDate;
     public string Total => Sale.TotalAmount.ToString("N0") + " UZS";
-    public string SubLine => Local.ToString("dd.MM HH:mm") + (string.IsNullOrEmpty(Sale.CustomerName) ? "" : "  •  " + Sale.CustomerName);
+    public string TimeText => Local.ToString("HH:mm");
+    public string DateText => Local.ToString("dd.MM.yyyy HH:mm");
+    public string CustomerName => string.IsNullOrEmpty(Sale.CustomerName) ? Loc.Instance["no_customer"] : Sale.CustomerName;
+    public bool HasCustomer => !string.IsNullOrEmpty(Sale.CustomerName);
+    public string UserName => Sale.UserName;
+    public string ItemsSummary => Sale.ItemCount switch
+    {
+        0 => "",
+        1 => Sale.FirstItemName ?? "",
+        2 => string.IsNullOrEmpty(Sale.SecondItemName) ? (Sale.FirstItemName ?? "") : $"{Sale.FirstItemName}, {Sale.SecondItemName}",
+        _ => $"{Sale.FirstItemName}, {Sale.SecondItemName} +{Sale.ItemCount - 2}"
+    };
+    public bool HasItemsSummary => !string.IsNullOrEmpty(ItemsSummary);
+    public string ReceiptToken => Sale.ReceiptToken;
     public bool HasCash => Sale.PaidCash > 0;
     public bool HasCard => Sale.PaidCard > 0;
+    public bool HasBonus => Sale.PaidBonus > 0;
+    public bool HasAdvance => Sale.PaidAdvance > 0;
+    public bool HasDebt => Sale.DebtAmount > 0;
+    public string DebtText => Sale.DebtAmount > 0 ? $"{Sale.DebtAmount:N0} UZS" : "";
+    public string AdvanceText => Sale.PaidAdvance > 0 ? $"{Sale.PaidAdvance:N0} UZS" : "";
 }
 
 public sealed record TradeShiftRow(ShiftHistoryDto Shift)
