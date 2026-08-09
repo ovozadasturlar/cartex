@@ -31,7 +31,9 @@ jobs:
           dotnet workload restore Cartex.slnx
           dotnet restore Cartex.slnx
       - name: Build solution
-        run: dotnet build Cartex.slnx --configuration Release --no-restore
+        # Qodana needs resolved projects, not publish-ready Android packages. Keep this
+        # aligned with the restore configuration so RuntimeIdentifiers are consistent.
+        run: dotnet build Cartex.slnx --configuration Debug --no-restore
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.2
         env:
