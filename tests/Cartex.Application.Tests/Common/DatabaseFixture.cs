@@ -97,6 +97,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private sealed class NullImageProcessor : Cartex.Application.Common.Interfaces.IImageProcessor
     {
         public Cartex.Application.Common.Interfaces.ProcessedImage? Process(Stream original) => null;
+        public Cartex.Application.Common.Interfaces.ProcessedImage? ProcessMonochrome(Stream original) => null;
     }
 
     private sealed class MemoryObjectStorage : Cartex.Application.Common.Interfaces.IObjectStorage

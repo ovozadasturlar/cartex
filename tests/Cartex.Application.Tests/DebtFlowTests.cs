@@ -45,7 +45,16 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return (await db.Accounts.FirstAsync(a => a.CustomerId == customerId && a.Type == AccountType.Debt)).Balance;
+        return (await db.Accounts.FirstOrDefaultAsync(a =>
+            a.CustomerId == customerId && a.Type == AccountType.Debt))?.Balance ?? 0m;
+    }
+
+    private async Task<decimal> AdvanceBalanceAsync(long customerId)
+    {
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return (await db.Accounts.FirstOrDefaultAsync(a =>
+            a.CustomerId == customerId && a.Type == AccountType.CustomerAdvance))?.Balance ?? 0m;
     }
 
     private async Task<decimal> BranchBalanceAsync(long branch, AccountType type)
@@ -159,7 +168,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         }
 
         Assert.Equal(50_000m, await DebtBalanceAsync(debtorId));
-        Assert.Equal(-30_000m, await DebtBalanceAsync(creditorId));
+        Assert.Equal(0m, await DebtBalanceAsync(creditorId));
+        Assert.Equal(30_000m, await AdvanceBalanceAsync(creditorId));
     }
 
     [Fact]
@@ -177,7 +187,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
                 CreditLimit: 30_000m, OpeningBalance: -20_000m));
         }
 
-        Assert.Equal(-20_000m, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await DebtBalanceAsync(customerId));
+        Assert.Equal(20_000m, await AdvanceBalanceAsync(customerId));
 
         using (var scope = Fixture.CreateScope())
         {
@@ -186,6 +197,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         }
 
         Assert.Equal(25_000m, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await AdvanceBalanceAsync(customerId));
     }
 
     [Fact]
