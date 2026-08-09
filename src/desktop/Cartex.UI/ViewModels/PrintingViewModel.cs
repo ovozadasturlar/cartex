@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Rates;
+using Cartex.Shared.Models.Printing;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Shifts;
@@ -60,6 +61,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
     public bool CanEditLabelContent => _auth.HasPermission("settings.barcodeLabel");
+    public bool CanEditAutoPrint => _auth.HasPermission("printing.routes.edit");
 
     public ObservableCollection<string> Printers { get; } = [];
 
@@ -173,6 +175,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _showLogo = true;
     [ObservableProperty] private bool _showCustomerPhone = true;
     [ObservableProperty] private bool _showCustomerEmail;
+    [ObservableProperty] private bool _useBranchReceiptOverride;
+    [ObservableProperty] private bool _printingSettingsOffline;
+    [ObservableProperty] private DateTime? _printingLastSyncedAt;
     [ObservableProperty] private string? _publicReceiptBaseUrl;
     [ObservableProperty] private string _previewBusinessName = string.Empty;
     [ObservableProperty] private string _previewBranchName = string.Empty;
@@ -186,12 +191,22 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     public bool IsThermal => ReceiptMode == "thermal";
     public bool IsDocument => !IsThermal;
+    public bool IsPdfReceiptOutput => IsDocument && IsPdfPrinter(DocumentPrinter);
+    public string PrintingSyncText => PrintingSettingsOffline
+        ? PrintingLastSyncedAt is { } cached
+            ? $"Offline · oxirgi sinxronizatsiya {cached.ToLocalTime():dd.MM HH:mm}"
+            : "Offline · qurilmadagi sozlamalar"
+        : PrintingLastSyncedAt is { } synced
+            ? $"Server bilan sinxron · {synced.ToLocalTime():HH:mm}"
+            : "Server bilan sinxron";
     public bool HasPublicReceiptBaseUrl => !string.IsNullOrWhiteSpace(PublicReceiptBaseUrl);
     public bool CanPreviewQrCode => ShowQrCode && HasPublicReceiptBaseUrl;
     public bool CanPreviewElectronicLink => ShowElectronicLink && HasPublicReceiptBaseUrl;
     public string PreviewElectronicReceiptLink => HasPublicReceiptBaseUrl
         ? $"{PublicReceiptBaseUrl!.TrimEnd('/')}/r/1048"
         : string.Empty;
+    public string PreviewCustomerPhone => "+998 90 555 12 34";
+    public string PreviewCustomerEmail => "dilshod@example.uz";
     public bool IsDocumentPaperA4 => DocumentPaperSize == "a4";
     public bool IsDocumentPaperA5 => DocumentPaperSize == "a5";
     public bool IsPortrait => DocumentOrientation == "portrait";
@@ -358,6 +373,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(IsDocument));
         NotifyPreviewColorChanged();
         NotifyPreviewLayoutChanged();
+        OnPropertyChanged(nameof(IsPdfReceiptOutput));
     }
 
     partial void OnReceiptPrinterChanged(string? value)
@@ -377,7 +393,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             OnPropertyChanged(nameof(PreviewPrinterName));
         if (IsZReportDocument && string.IsNullOrWhiteSpace(ZReportPrinter))
             RefreshZReportPrinterPreview();
+        OnPropertyChanged(nameof(IsPdfReceiptOutput));
     }
+
+    partial void OnPrintingSettingsOfflineChanged(bool value) => OnPropertyChanged(nameof(PrintingSyncText));
+    partial void OnPrintingLastSyncedAtChanged(DateTime? value) => OnPropertyChanged(nameof(PrintingSyncText));
 
     partial void OnDocumentPrinterSupportsColorChanged(bool value) => NotifyPreviewColorChanged();
 
@@ -675,11 +695,6 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     {
         var s = _printer.GetSettings();
 
-        var printers = await Task.Run(_printer.GetInstalledPrinters);
-        Printers.Clear();
-        foreach (var p in printers) Printers.Add(p);
-        await LoadLabelPreviewCurrenciesAsync();
-
         _isLoadingLabelSettings = true;
         try
         {
@@ -706,7 +721,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ShowPaymentDetails = s.ReceiptShowPaymentDetails;
             ShowQrCode = s.ReceiptShowQrCode;
             ShowElectronicLink = s.ReceiptShowElectronicLink;
+            ShowLogo = s.ReceiptShowLogo;
+            ShowCustomerPhone = s.ReceiptShowCustomerPhone;
+            ShowCustomerEmail = s.ReceiptShowCustomerEmail;
             PublicReceiptBaseUrl = s.ReceiptPublicBaseUrl;
+            PrintingLastSyncedAt = s.PrintingLastSyncedAtUtc;
             DocumentPaperSize = s.DocumentPaperSize == "a5" ? "a5" : "a4";
             DocumentOrientation = s.DocumentOrientation == "landscape" ? "landscape" : "portrait";
             DocumentPagesPerSheet = s.DocumentPagesPerSheet is 2 or 4 ? s.DocumentPagesPerSheet : 1;
@@ -752,6 +771,32 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         {
             _isLoadingLabelSettings = false;
         }
+
+        // Cached values are applied before the first await, so opening this page
+        // never flashes default/off values while network calls are in flight.
+        PrintingBootstrapDto? bootstrap = null;
+        if (_branch.CurrentBranchId is { } bootstrapBranchId)
+        {
+            try
+            {
+                bootstrap = await _printingApi.GetBootstrapAsync(bootstrapBranchId, _auth.DeviceId);
+                ApplyReceiptSettings(bootstrap.EffectiveReceipt);
+                UseBranchReceiptOverride = bootstrap.ReceiptPolicy.ReceiptOverride is not null;
+                AutoPrintReceipt = bootstrap.ReceiptPolicy.AutoPrintOnSale;
+                ReceiptCopies = Math.Clamp(bootstrap.ReceiptPolicy.DefaultCopies, 1, 5);
+                PrintingLastSyncedAt = bootstrap.ServerTimeUtc;
+                PrintingSettingsOffline = false;
+            }
+            catch
+            {
+                PrintingSettingsOffline = true;
+            }
+        }
+
+        var printers = await Task.Run(_printer.GetInstalledPrinters);
+        Printers.Clear();
+        foreach (var p in printers) Printers.Add(p);
+        await LoadLabelPreviewCurrenciesAsync();
         RefreshZReportPrinterPreview();
         NotifyZReportPreviewChanged();
         RefreshLabelPreview();
@@ -771,27 +816,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         }
         catch { }
 
+        if (bootstrap is null)
         try
         {
             var cfg = await _settingsApi.GetReceiptAsync();
-            HeaderText = cfg.HeaderText ?? string.Empty;
-            FooterText = cfg.FooterText ?? string.Empty;
-            BusinessPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
-            SendFormat = SendFormats.Contains(cfg.PaperFormat) ? cfg.PaperFormat : "Thermal";
-            ShowBusinessName = cfg.ShowBusinessName;
-            ShowBranchName = cfg.ShowBranchName;
-            ShowAddress = cfg.ShowAddress;
-            ShowPhone = cfg.ShowPhone;
-            ShowCashier = cfg.ShowCashier;
-            ShowCustomer = cfg.ShowCustomer;
-            ShowReceiptNumber = cfg.ShowReceiptNumber;
-            ShowPaymentDetails = cfg.ShowPaymentDetails;
-            ShowQrCode = cfg.ShowQrCode;
-            ShowElectronicLink = cfg.ShowElectronicLink;
-            ShowLogo = cfg.ShowLogo;
-            ShowCustomerPhone = cfg.ShowCustomerPhone;
-            ShowCustomerEmail = cfg.ShowCustomerEmail;
-            PublicReceiptBaseUrl = cfg.PublicReceiptBaseUrl;
+            ApplyReceiptSettings(cfg);
         }
         catch { }
 
@@ -858,7 +887,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             _toast.Error(ApiErrors.Describe(ex));
             return;
         }
-        if (CanEditReceiptContent)
+        if (CanEditReceiptContent && !UseBranchReceiptOverride)
         try
         {
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(
@@ -879,6 +908,25 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 ShowLogo,
                 ShowCustomerPhone,
                 ShowCustomerEmail));
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+        if (CanEditAutoPrint && _branch.CurrentBranchId is { } branchId)
+        try
+        {
+            var template = CurrentReceiptSettings();
+            var policy = await _printingApi.SetReceiptPolicyAsync(branchId,
+                new UpdateReceiptPrintPolicyRequest(
+                    AutoPrintReceipt,
+                    (int)Math.Clamp(ReceiptCopies, 1, 5),
+                    UseBranchReceiptOverride,
+                    UseBranchReceiptOverride ? template : null));
+            ReceiptCopies = policy.DefaultCopies;
+            PrintingLastSyncedAt = DateTime.UtcNow;
+            PrintingSettingsOffline = false;
         }
         catch (Exception ex)
         {
@@ -1097,6 +1145,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             [new ReceiptPaymentDto("Cash", "UZS", 84_000, 1, 84_000)],
             1048,
             "Dilshod",
+            PreviewCustomerPhone,
+            PreviewCustomerEmail,
             LocalizationManager.Instance.CurrentLanguage switch
             {
                 AppLanguage.Ru => "ru",
@@ -1173,7 +1223,14 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ReceiptShowPaymentDetails = ShowPaymentDetails,
             ReceiptShowQrCode = ShowQrCode,
             ReceiptShowElectronicLink = ShowElectronicLink,
+            ReceiptShowLogo = ShowLogo,
+            ReceiptShowCustomerPhone = ShowCustomerPhone,
+            ReceiptShowCustomerEmail = ShowCustomerEmail,
             ReceiptPublicBaseUrl = PublicReceiptBaseUrl,
+            CachedPrintingBranchId = _branch.CurrentBranchId,
+            CachedPrintingRevision = null,
+            PrintingLastSyncedAtUtc = PrintingLastSyncedAt,
+            CentralAutoPrint = !PrintingSettingsOffline && AutoPrintReceipt,
             AutoPrintZReport = AutoPrintZReport,
             LabelMode = LabelMode,
             LabelGapMm = (double)LabelGapMm,
@@ -1201,4 +1258,52 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ZReportDocumentPagesPerSheet = ZReportDocumentPagesPerSheet
         });
     }
+
+    private void ApplyReceiptSettings(ReceiptSettingsDto cfg)
+    {
+        HeaderText = cfg.HeaderText ?? string.Empty;
+        FooterText = cfg.FooterText ?? string.Empty;
+        BusinessPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
+        SendFormat = SendFormats.Contains(cfg.PaperFormat) ? cfg.PaperFormat : "Thermal";
+        ShowBusinessName = cfg.ShowBusinessName;
+        ShowBranchName = cfg.ShowBranchName;
+        ShowAddress = cfg.ShowAddress;
+        ShowPhone = cfg.ShowPhone;
+        ShowCashier = cfg.ShowCashier;
+        ShowCustomer = cfg.ShowCustomer;
+        ShowReceiptNumber = cfg.ShowReceiptNumber;
+        ShowPaymentDetails = cfg.ShowPaymentDetails;
+        ShowQrCode = cfg.ShowQrCode;
+        ShowElectronicLink = cfg.ShowElectronicLink;
+        ShowLogo = cfg.ShowLogo;
+        ShowCustomerPhone = cfg.ShowCustomerPhone;
+        ShowCustomerEmail = cfg.ShowCustomerEmail;
+        PublicReceiptBaseUrl = cfg.PublicReceiptBaseUrl;
+    }
+
+    private ReceiptSettingsDto CurrentReceiptSettings() => new(
+        string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
+        string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
+        BusinessPaperWidth,
+        SendFormat,
+        ShowBusinessName,
+        ShowBranchName,
+        ShowAddress,
+        ShowPhone,
+        ShowCashier,
+        ShowCustomer,
+        ShowReceiptNumber,
+        ShowPaymentDetails,
+        ShowQrCode,
+        ShowElectronicLink,
+        PublicReceiptBaseUrl,
+        ShowLogo,
+        ShowCustomerPhone,
+        ShowCustomerEmail);
+
+    private static bool IsPdfPrinter(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && (value.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("XPS", StringComparison.OrdinalIgnoreCase));
 }

@@ -25,8 +25,10 @@
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="5" />
-            <Setter Property="Width" Value="162" />
+            <Setter Property="MinWidth" Value="150" />
+            <Setter Property="MaxWidth" Value="230" />
             <Setter Property="Height" Value="208" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -288,7 +290,10 @@
                 <Grid RowDefinitions="Auto,Auto">
                     <ItemsRepeater Grid.Row="0" ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="172" MinItemHeight="218" MinColumnSpacing="0" MinRowSpacing="0" />
+                            <!-- 150px card + 10px horizontal margins. The layout recomputes
+                                 the column count and stretches every row to the viewport. -->
+                            <UniformGridLayout MinItemWidth="160" MinItemHeight="218"
+                                               MinColumnSpacing="0" MinRowSpacing="0" />
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>

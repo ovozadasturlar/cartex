@@ -29,6 +29,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _address = string.Empty;
     [ObservableProperty] private string? _logoImageKey;
     [ObservableProperty] private Bitmap? _logoPreview;
+    [ObservableProperty] private string? _monochromeLogoImageKey;
+    [ObservableProperty] private Bitmap? _monochromeLogoPreview;
+    [ObservableProperty] private bool _isMonochromeLogoCustom;
 
     public ObservableCollection<string> Currencies { get; } = new(CurrencyCatalog.All);
     public ObservableCollection<string> ShiftPolicies { get; } = [];
@@ -110,7 +113,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             Telegram = b.Telegram ?? string.Empty;
             Website = b.Website ?? string.Empty;
             LogoImageKey = b.LogoImageKey;
+            MonochromeLogoImageKey = b.MonochromeLogoImageKey;
             LogoPreview = await LoadBitmapAsync(b.LogoImageKey);
+            MonochromeLogoPreview = await LoadBitmapAsync(b.MonochromeLogoImageKey ?? b.LogoImageKey);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -137,9 +142,32 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             await using (picked.Content)
             {
-                var result = await _storageApi.UploadAsync(new StreamPart(picked.Content, picked.FileName, picked.ContentType));
-                LogoImageKey = result.Key;
-                LogoPreview = await LoadBitmapAsync(result.Key);
+                var result = await _storageApi.UploadLogoAsync(new StreamPart(picked.Content, picked.FileName, picked.ContentType));
+                LogoImageKey = result.ColorKey;
+                MonochromeLogoImageKey = result.MonochromeKey;
+                IsMonochromeLogoCustom = false;
+                LogoPreview = await LoadBitmapAsync(result.ColorKey);
+                MonochromeLogoPreview = await LoadBitmapAsync(result.MonochromeKey);
+            }
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task PickMonochromeLogo()
+    {
+        try
+        {
+            var picked = await _filePicker.PickImageAsync();
+            if (picked is null) return;
+            using (_busy.Begin(L["loading"]))
+            await using (picked.Content)
+            {
+                var result = await _storageApi.UploadAsync(
+                    new StreamPart(picked.Content, picked.FileName, picked.ContentType));
+                MonochromeLogoImageKey = result.Key;
+                MonochromeLogoPreview = await LoadBitmapAsync(result.Key);
+                IsMonochromeLogoCustom = true;
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -161,7 +189,8 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
                     LogoImageKey,
                     string.IsNullOrWhiteSpace(Telegram) ? null : Telegram.Trim(),
-                    string.IsNullOrWhiteSpace(Website) ? null : Website.Trim()));
+                    string.IsNullOrWhiteSpace(Website) ? null : Website.Trim(),
+                    MonochromeLogoImageKey));
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,

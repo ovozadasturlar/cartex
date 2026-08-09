@@ -15,21 +15,66 @@
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <StackPanel Spacing="16">
 
-                    <StackPanel Spacing="6">
+                    <StackPanel Spacing="8">
                         <TextBlock Text="{Binding L[logo]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <Grid ColumnDefinitions="Auto,14,*" VerticalAlignment="Center">
-                            <Border Grid.Column="0" Width="84" Height="84" CornerRadius="10" ClipToBounds="True"
-                                    Background="{DynamicResource AppBg}"
+                        <Grid ColumnDefinitions="*,14,*">
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="12" Padding="14"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <Panel>
-                                    <mi:MaterialIcon Kind="Domain" Width="28" Height="28"
-                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                     Foreground="{DynamicResource TextMuted}" />
-                                    <Image Source="{Binding LogoPreview}" Stretch="UniformToFill" />
-                                </Panel>
+                                <StackPanel Spacing="10">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="Rangli logotip" FontWeight="SemiBold" FontSize="13.5"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="Ilova va rangli hujjatlar uchun" FontSize="11"
+                                                   Foreground="{DynamicResource TextMuted}" />
+                                    </StackPanel>
+                                    <Border Height="112" CornerRadius="9" ClipToBounds="True" Background="White"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Panel>
+                                            <mi:MaterialIcon Kind="Domain" Width="30" Height="30"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                             Foreground="{DynamicResource TextMuted}" />
+                                            <Image Source="{Binding LogoPreview}" Stretch="Uniform" Margin="10" />
+                                        </Panel>
+                                    </Border>
+                                    <Button Classes="outline" HorizontalAlignment="Stretch"
+                                            Command="{Binding PickLogoCommand}">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="7">
+                                            <mi:MaterialIcon Kind="Upload" Width="17" Height="17" />
+                                            <TextBlock Text="Rangli rasmni yuklash" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Border>
-                            <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Left"
-                                    Command="{Binding PickLogoCommand}" Content="{Binding L[choose_image]}" />
+
+                            <Border Grid.Column="2" Background="{DynamicResource AppBg}" CornerRadius="12" Padding="14"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="Oq-qora logotip" FontWeight="SemiBold" FontSize="13.5"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="Termal chek va oq-qora qog‘oz uchun" FontSize="11"
+                                                   Foreground="{DynamicResource TextMuted}" />
+                                    </StackPanel>
+                                    <Border Height="112" CornerRadius="9" ClipToBounds="True" Background="White"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <Panel>
+                                            <mi:MaterialIcon Kind="Domain" Width="30" Height="30"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                             Foreground="#525252" />
+                                            <Image Source="{Binding MonochromeLogoPreview}" Stretch="Uniform" Margin="10" />
+                                        </Panel>
+                                    </Border>
+                                    <Button Classes="outline" HorizontalAlignment="Stretch"
+                                            Command="{Binding PickMonochromeLogoCommand}">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="7">
+                                            <mi:MaterialIcon Kind="ImageEditOutline" Width="17" Height="17" />
+                                            <TextBlock Text="Custom oq-qora yuklash" />
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="Rangli rasm yuklanganda tizim bu variantni avtomatik yaratadi."
+                                               FontSize="10.5" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </StackPanel>
 

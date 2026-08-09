@@ -36,8 +36,14 @@ public sealed record PrinterSettings
     public bool ReceiptShowPaymentDetails { get; init; } = true;
     public bool ReceiptShowQrCode { get; init; } = true;
     public bool ReceiptShowElectronicLink { get; init; } = true;
+    public bool ReceiptShowLogo { get; init; } = true;
+    public bool ReceiptShowCustomerPhone { get; init; } = true;
     public bool ReceiptShowCustomerEmail { get; init; }
     public string? ReceiptPublicBaseUrl { get; init; }
+    public long? CachedPrintingBranchId { get; init; }
+    public string? CachedPrintingRevision { get; init; }
+    public DateTime? PrintingLastSyncedAtUtc { get; init; }
+    public bool CentralAutoPrint { get; init; }
     public bool AutoPrintZReport { get; init; }
     public string? LabelMode { get; init; }
     public double LabelGapMm { get; init; }
@@ -137,6 +143,7 @@ public interface IPrinterService
     void SaveSettings(PrinterSettings settings);
     void CacheBarcodeLabelSettings(BarcodeLabelSettingsDto settings);
     bool AutoPrintEnabled { get; }
+    bool AutoPrintHandledByServer { get; }
     string? BarcodePrinter { get; }
     ReceiptPrintOptions? ReceiptOptions { get; set; }
     void PrintReceipt(ReceiptDto receipt);
@@ -185,8 +192,8 @@ public sealed class PrinterService : IPrinterService
                 _settings.ReceiptShowQrCode,
                 _settings.ReceiptShowElectronicLink,
                 _settings.ReceiptPublicBaseUrl,
-                true,
-                _settings.ReceiptShowPhone,
+                _settings.ReceiptShowLogo,
+                _settings.ReceiptShowCustomerPhone,
                 _settings.ReceiptShowCustomerEmail);
         }
         catch { _path = null; }
@@ -223,6 +230,8 @@ public sealed class PrinterService : IPrinterService
         (_settings.ReceiptMode is "a4" or "a5"
             ? !string.IsNullOrWhiteSpace(_settings.DocumentPrinter)
             : !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter));
+
+    public bool AutoPrintHandledByServer => _settings.CentralAutoPrint;
 
     public string? BarcodePrinter => _settings.BarcodePrinter;
     public ReceiptPrintOptions? ReceiptOptions { get; set; }

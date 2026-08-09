@@ -309,7 +309,11 @@ public sealed class PrintHostService
 
         if (settings.ReceiptMode is "a4" or "a5" || isPdfPrinter)
         {
-            var pages = await LoadReceiptDocumentAsync(token, cancellationToken);
+            var pages = await LoadReceiptDocumentAsync(
+                token,
+                cancellationToken,
+                job.Id,
+                monochrome: !_printer.GetPrinterCapabilities(actualPrinter).SupportsColor);
             var pdfPath = await GetPdfOutputPathAsync(actualPrinter, $"Chek_{token}");
             return () => _printer.PrintDocumentImages(pages, actualPrinter ?? "", job.Copies, pdfPath);
         }
@@ -323,7 +327,10 @@ public sealed class PrintHostService
                 var storageApi = Avalonia.Controls.Design.IsDesignMode ? null : ServiceLocator.Resolve<IStorageApi>();
                 if (storageApi != null)
                 {
-                    var file = await storageApi.GetUrlAsync(receipt.LogoImageKey);
+                    var logoKey = !string.IsNullOrWhiteSpace(receipt.MonochromeLogoImageKey)
+                        ? receipt.MonochromeLogoImageKey
+                        : receipt.LogoImageKey;
+                    var file = await storageApi.GetUrlAsync(logoKey!);
                     var imageBytes = await ImageHttpClient.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
                     
                     int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);
@@ -372,19 +379,27 @@ public sealed class PrintHostService
         var receiptToken = Text(job.Payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(receiptToken))
             throw new InvalidOperationException("Unsupported document source.");
-        var pages = await LoadReceiptDocumentAsync(receiptToken, cancellationToken);
+        var pages = await LoadReceiptDocumentAsync(
+            receiptToken,
+            cancellationToken,
+            job.Id,
+            monochrome: !_printer.GetPrinterCapabilities(job.PrinterSystemName).SupportsColor);
         var pdfPath = await GetPdfOutputPathAsync(job.PrinterSystemName, $"Hujjat_{receiptToken}");
         return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies, pdfPath);
     }
 
-    private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(string token, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(
+        string token,
+        CancellationToken cancellationToken,
+        long? printJobId = null,
+        bool monochrome = false)
     {
         var settings = _printer.GetSettings();
         var format = DocumentPrintLayout.ResolveOutputFormat("document", settings.DocumentPaperSize ?? "a4");
         var orientation = DocumentPrintLayout.GetReceiptOrientation(
             settings.DocumentOrientation is "landscape" ? "landscape" : "portrait",
             settings.DocumentPagesPerSheet);
-        var content = await _receiptApi.GetPrintImagesAsync(token, format, orientation);
+        var content = await _receiptApi.GetPrintImagesAsync(token, format, orientation, printJobId, monochrome);
         await using var package = await content.ReadAsStreamAsync(cancellationToken);
         using var archive = new ZipArchive(package, ZipArchiveMode.Read);
         var pages = new List<byte[]>(archive.Entries.Count);

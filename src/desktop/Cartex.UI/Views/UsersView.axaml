@@ -49,8 +49,27 @@
                                                 Header="{Binding [full_name], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" Binding="{Binding Username}"
                                                 Header="{Binding [username], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="*" Binding="{Binding RoleNames, Converter={x:Static conv:StringJoinConverter.Instance}}"
-                                                Header="{Binding [roles], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="*"
+                                                    Header="{Binding [roles], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ItemsControl ItemsSource="{Binding RoleNames}" Margin="4,2">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource BrandLightBrush}" CornerRadius="999"
+                                                            Padding="8,3" Margin="0,1,5,1">
+                                                        <TextBlock Text="{Binding}" FontSize="11.5"
+                                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="Auto" Binding="{Binding DefaultBranchName}"
                                                 Header="{Binding [default_branch], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto"
@@ -129,7 +148,18 @@
                             </StackPanel>
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding PasswordLabel}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <TextBox Text="{Binding EditPassword}" PasswordChar="●" MinHeight="38" />
+                                <TextBox x:Name="UserPasswordBox" Text="{Binding EditPassword}"
+                                         PasswordChar="●" RevealPassword="False" MinHeight="38">
+                                    <TextBox.InnerRightContent>
+                                        <ToggleButton IsChecked="{Binding #UserPasswordBox.RevealPassword, Mode=TwoWay}"
+                                                      Background="Transparent" BorderThickness="0" Padding="8,0"
+                                                      Cursor="Hand" VerticalAlignment="Center"
+                                                      ToolTip.Tip="Parolni ko‘rsatish/yashirish">
+                                            <mi:MaterialIcon Kind="EyeOutline" Width="18" Height="18"
+                                                             Foreground="{DynamicResource TextMuted}" />
+                                        </ToggleButton>
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
                             </StackPanel>
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[default_branch]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />

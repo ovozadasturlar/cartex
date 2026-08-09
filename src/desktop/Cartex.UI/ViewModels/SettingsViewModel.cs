@@ -21,6 +21,7 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
     [ObservableProperty] private string? _offlineSyncText;
     [ObservableProperty] private WarehouseDto? _selectedOfflineWarehouse;
     [ObservableProperty] private bool _offlineAssignedElsewhere;
+    private OfflineCacheStateDto? _offlineState;
 
     public bool CanEnableOffline => !OfflineEnabled && !OfflineAssignedElsewhere;
 
@@ -60,6 +61,11 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
             SelectedOfflineWarehouse = OfflineWarehouses.FirstOrDefault(w => w.Id == SettingsService.Instance.OfflineWarehouseId)
                 ?? OfflineWarehouses.FirstOrDefault();
             OfflineVisible = true;
+            _offlineState = state;
+            if (SettingsService.Instance.OfflineCacheEnabled
+                && (!state.IsCurrentDevice || state.LeaseId != offlineSync.Credential?.LeaseId))
+                await offlineSync.DeactivateLocalAsync();
+            OfflineEnabled = offlineSync.IsEnabled && state.IsCurrentDevice;
             ApplyState(state);
             await RefreshSyncTextAsync();
         }
@@ -76,8 +82,9 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
         OfflineHolderText = state.DeviceId is null
             ? L["offline_cache_free"]
             : state.DeviceId == SettingsService.Instance.DeviceId
-                ? L["offline_cache_this"]
-                : $"{L["offline_cache_holder"]}: {state.DeviceName}";
+                ? $"{L["offline_cache_this"]} · {state.WarehouseName}"
+                : $"{L["offline_cache_holder"]}: {state.DeviceName} · {state.WarehouseName}" +
+                  (state.LastReportedPendingCount > 0 ? $" · {L["offline_cache_queue"]}: {state.LastReportedPendingCount}" : "");
     }
 
     partial void OnOfflineEnabledChanged(bool value) => OnPropertyChanged(nameof(CanEnableOffline));
@@ -89,7 +96,8 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
         if (!await dialog.ConfirmDangerAsync(L["offline_cache_remote_release_confirm"], L["disconnect"])) return;
         try
         {
-            await offlineApi.ReleaseAsync();
+            await offlineApi.ReleaseAsync(new ReleaseOfflineCacheRequest(
+                _offlineState?.LeaseId, Force: true, Reason: "Boshqa qurilmadan majburan uzildi"));
             toast.Success(L["success"]);
             await LoadAsync();
         }
@@ -125,17 +133,25 @@ public partial class SettingsViewModel(IOfflineCacheApi offlineApi, IWarehousesA
                     toast.Warning(L["offline_cache_warehouse"]);
                     return;
                 }
-                await offlineApi.ClaimAsync(new ClaimOfflineCacheRequest(SettingsService.Instance.DeviceId, Environment.MachineName));
-                SettingsService.Instance.OfflineWarehouseId = SelectedOfflineWarehouse.Id;
-                SettingsService.Instance.OfflineCacheEnabled = true;
-                OfflineEnabled = true;
+                var grant = await offlineApi.ClaimAsync(new ClaimOfflineCacheRequest(
+                    SettingsService.Instance.DeviceId,
+                    Environment.MachineName,
+                    SelectedOfflineWarehouse.Id));
+                await offlineSync.ActivateAsync(grant);
+                OfflineEnabled = offlineSync.IsEnabled;
                 toast.Success(L["success"]);
-                await offlineSync.SyncAsync();
             }
             else
             {
-                await offlineApi.ReleaseAsync();
-                SettingsService.Instance.OfflineCacheEnabled = false;
+                var pending = await offlineSync.PendingCountAsync();
+                var errors = await offlineSync.ErrorCountAsync();
+                if (pending + errors > 0 && !await dialog.ConfirmDangerAsync(
+                        $"{L["offline_cache_queue"]}: {pending + errors}. {L["offline_cache_remote_release_confirm"]}",
+                        L["disconnect"]))
+                    return;
+                await offlineSync.ReleaseAsync(pending + errors > 0
+                    ? "Sinxronlanmagan amallar bilan foydalanuvchi tomonidan uzildi"
+                    : null);
                 OfflineEnabled = false;
                 toast.Success(L["success"]);
             }

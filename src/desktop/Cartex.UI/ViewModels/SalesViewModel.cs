@@ -1000,7 +1000,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             var cached = await Offline.SearchProductsAsync(string.IsNullOrEmpty(term) ? null : term, 300);
             Products.Clear();
             foreach (var p in cached)
-                Products.Add(new StockOnHandDto(p.VariantId, p.ProductName, null, p.CategoryName, p.UnitName, "", p.Quantity, p.SellingPrice, null));
+                Products.Add(new StockOnHandDto(p.VariantId, p.ProductName, null, p.CategoryName,
+                    p.UnitName, "", p.Quantity, p.SellingPrice, null,
+                    AllowsAmountEntry: p.AllowsAmountEntry,
+                    QuantityStep: p.QuantityStep,
+                    AllowsFractional: p.QuantityStep < 1));
             ProductsTotal = Products.Count;
             OnPropertyChanged(nameof(HasMoreProducts));
             return;
@@ -1839,7 +1843,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 CartItems.Select(c => new OfflineSaleItemDraft(c.VariantId, c.Quantity, CanOverridePrice ? c.PriceOverride : null)).ToList(),
                 DiscountAmount,
                 DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } offlineDue ? DateOnly.FromDateTime(offlineDue.Date) : null);
-            await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSaleAsync(draft);
+            try
+            {
+                await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSaleAsync(draft);
+            }
+            catch (Exception ex)
+            {
+                _toast.Error(ApiErrors.Describe(ex));
+                return;
+            }
             ClearCart();
             _toast.Success(L["offline_sale_queued"]);
             await LoadProductsAsync();
@@ -1922,7 +1934,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
 
-        if (!_printer.AutoPrintEnabled) return;
+        // A successful online checkout has already written the centralized
+        // automatic PrintJob in the same server transaction. Local dispatch is
+        // only the fallback for installations without centralized routing.
+        if (!_printer.AutoPrintEnabled || _printer.AutoPrintHandledByServer) return;
         try { await PrintCurrentReceiptAsync(); }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
