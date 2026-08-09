@@ -74,20 +74,21 @@ public sealed class Thumb : ContentView
 
         // Resolve image source.
         string? resolvedUrl = null;
-        if (!string.IsNullOrWhiteSpace(Source))
+        var source = Source;
+        if (!string.IsNullOrWhiteSpace(source))
         {
-            if (Uri.TryCreate(Source, UriKind.Absolute, out var absolute) &&
+            if (Uri.TryCreate(source, UriKind.Absolute, out var absolute) &&
                 (absolute.Scheme == "http" || absolute.Scheme == "https"))
             {
-                resolvedUrl = Source;
+                resolvedUrl = source;
             }
             else if (UrlBuilder != null)
             {
-                resolvedUrl = UrlBuilder.Full(Source, thumb: true);
+                resolvedUrl = UrlBuilder.Full(source, thumb: true);
             }
             else if (!string.IsNullOrWhiteSpace(PublicBaseUrl))
             {
-                var escaped = Uri.EscapeDataString(Source);
+                var escaped = Uri.EscapeDataString(source);
                 resolvedUrl = $"{PublicBaseUrl.TrimEnd('/')}/api/storage/content?key={escaped}";
             }
         }
