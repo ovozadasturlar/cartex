@@ -2,81 +2,57 @@ using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.Mobile.Core;
-using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Customers;
-using Cartex.Shared.Models.Sales;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cartex.Mobile.Store.Services;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class CustomersViewModel(
     ICustomersApi customersApi,
-    ISalesApi salesApi,
-    IBusinessApi businessApi,
-    MobilePermissions permissions) : ObservableObject
+    MobilePermissions permissions,
+    MobileOfflineService offline) : ObservableObject
 {
+    private const int PageSize = 30;
     public ObservableCollection<StoreCustomerRow> Customers { get; } = [];
-    public ObservableCollection<DebtCurrencyOption> DebtCurrencies { get; } = [];
-    public ObservableCollection<CustomerLedgerEntryDto> Ledger { get; } = [];
-    public ObservableCollection<SaleDto> Sales { get; } = [];
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private bool _hasAccess;
-    [ObservableProperty] private bool _canReceivePayment;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
-    [ObservableProperty] private bool _isDetailOpen;
-    [ObservableProperty] private bool _isPaymentOpen;
-    [ObservableProperty] private bool _isSalesTab;
-    [ObservableProperty] private bool _isSalesLoading;
-    [ObservableProperty] private StoreCustomerRow? _selectedCustomer;
-    [ObservableProperty] private DebtCurrencyOption? _selectedDebtCurrency;
-    [ObservableProperty] private string _paymentAmount = "";
-    [ObservableProperty] private bool _viaCard;
-    [ObservableProperty] private string _baseCurrency = "UZS";
+    [ObservableProperty] private bool _isLoadingMore;
     [ObservableProperty] private string? _error;
 
-    private CancellationTokenSource? _searchCts;
-
     public bool HasCustomers => Customers.Count > 0;
-    public bool HasDebt => DebtCurrencies.Count > 0;
-    public bool HasSales => Sales.Count > 0;
-    public bool CanUseCard => SelectedDebtCurrency?.Currency == BaseCurrency;
+
+    private CancellationTokenSource? _searchCts;
+    private int _page;
+    private bool _hasMore = true;
+    private DateTime _lastLoadedAt;
 
     public async Task AppearAsync()
     {
+        await offline.StartAsync();
         HasAccess = permissions.Has("customers.view");
-        CanReceivePayment = permissions.Has("customers.receivePayment");
         if (!HasAccess) return;
-
-        try { BaseCurrency = (await businessApi.GetAsync()).Currency; }
-        catch { }
-        await LoadCustomersAsync(Search, CancellationToken.None);
+        if (Customers.Count == 0 || DateTime.UtcNow - _lastLoadedAt > TimeSpan.FromSeconds(20))
+            await LoadAsync(reset: true, CancellationToken.None);
     }
 
     partial void OnSearchChanged(string value)
     {
         _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
-        _ = SearchAsync(value, cts);
+        var owner = _searchCts = new CancellationTokenSource();
+        _ = SearchAsync(owner);
     }
 
-    partial void OnSelectedDebtCurrencyChanged(DebtCurrencyOption? value)
-    {
-        if (value is null) return;
-        if (ViaCard && !CanUseCard) ViaCard = false;
-        OnPropertyChanged(nameof(CanUseCard));
-    }
-
-    partial void OnBaseCurrencyChanged(string value) => OnPropertyChanged(nameof(CanUseCard));
-
-    private async Task SearchAsync(string value, CancellationTokenSource cts)
+    private async Task SearchAsync(CancellationTokenSource owner)
     {
         try
         {
-            await Task.Delay(250, cts.Token);
-            await LoadCustomersAsync(value, cts.Token);
+            await Task.Delay(250, owner.Token);
+            await LoadAsync(reset: true, owner.Token);
         }
         catch (OperationCanceledException) { }
     }
@@ -84,162 +60,84 @@ public partial class CustomersViewModel(
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        await LoadCustomersAsync(Search, CancellationToken.None);
+        await LoadAsync(reset: true, CancellationToken.None);
         IsRefreshing = false;
     }
 
     [RelayCommand]
-    private async Task OpenDetailAsync(StoreCustomerRow row)
+    private async Task LoadMoreAsync()
     {
-        if (IsBusy) return;
-        IsBusy = true;
+        if (!_hasMore || IsBusy || IsRefreshing || IsLoadingMore) return;
+        await LoadAsync(reset: false, CancellationToken.None);
+    }
+
+    [RelayCommand]
+    private Task OpenDetailAsync(StoreCustomerRow row)
+    {
+        if (offline.ShouldUseOffline)
+        {
+            Ui.Toast(Loc.Instance["offline_detail_requires_internet"]);
+            return Task.CompletedTask;
+        }
+        return Shell.Current.GoToAsync($"customer/detail?id={row.Customer.Id}");
+    }
+
+    private async Task LoadAsync(bool reset, CancellationToken cancellationToken)
+    {
+        if (!HasAccess || IsBusy || (!reset && !_hasMore)) return;
+        if (reset) IsBusy = true;
+        else IsLoadingMore = true;
         Error = null;
         try
         {
-            await LoadDetailAsync(row.Customer.Id);
-            IsDetailOpen = true;
-        }
-        catch
-        {
-            Error = Loc.Instance["err_no_connection"];
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private void CloseDetail()
-    {
-        IsPaymentOpen = false;
-        IsDetailOpen = false;
-        SelectedCustomer = null;
-        Ledger.Clear();
-        Sales.Clear();
-        DebtCurrencies.Clear();
-        OnPropertyChanged(nameof(HasDebt));
-        OnPropertyChanged(nameof(HasSales));
-    }
-
-    [RelayCommand]
-    private void SelectProfileTab(string tab) => IsSalesTab = tab == "sales";
-
-    [RelayCommand]
-    private void OpenPayment()
-    {
-        if (!CanReceivePayment || !HasDebt) return;
-        PaymentAmount = "";
-        ViaCard = false;
-        IsPaymentOpen = true;
-    }
-
-    [RelayCommand]
-    private void ClosePayment() => IsPaymentOpen = false;
-
-    [RelayCommand]
-    private void SelectCash() => ViaCard = false;
-
-    [RelayCommand]
-    private void SelectCard()
-    {
-        if (CanUseCard) ViaCard = true;
-    }
-
-    [RelayCommand]
-    private async Task SavePaymentAsync()
-    {
-        if (SelectedCustomer is null || SelectedDebtCurrency is null || IsBusy) return;
-        if (!decimal.TryParse(PaymentAmount.Replace(" ", ""), out var amount) || amount <= 0)
-        {
-            Error = Loc.Instance["err_fill_all"];
-            return;
-        }
-        if (amount > SelectedDebtCurrency.Amount)
-        {
-            Error = Loc.Instance["payment_exceeds_debt"];
-            return;
-        }
-
-        IsBusy = true;
-        Error = null;
-        try
-        {
-            await customersApi.RepayDebtAsync(SelectedCustomer.Customer.Id,
-                new RepayDebtRequest(amount, ViaCard, SelectedDebtCurrency.Currency, SelectedDebtCurrency.Currency, Guid.NewGuid().ToString("N")));
-            Ui.Toast(Loc.Instance["saved_successfully"]);
-            IsPaymentOpen = false;
-            await LoadDetailAsync(SelectedCustomer.Customer.Id);
-            await LoadCustomersAsync(Search, CancellationToken.None);
-        }
-        catch (Refit.ApiException ex) { Error = ApiErrors.Describe(ex); }
-        catch { Error = Loc.Instance["err_no_connection"]; }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    private async Task LoadCustomersAsync(string term, CancellationToken cancellationToken)
-    {
-        if (!HasAccess) return;
-        try
-        {
-            var response = await customersApi.QueryAsync(QueryRequest.Create().Page(1, 30).Search(term).Build());
+            var nextPage = reset ? 1 : _page + 1;
+            IReadOnlyList<CustomerDto> rows;
+            if (offline.ShouldUseOffline)
+                rows = nextPage == 1 ? await offline.SearchCustomersAsync(Search, 200) : [];
+            else
+            {
+                var response = await customersApi.QueryAsync(
+                    QueryRequest.Create().Page(nextPage, PageSize).Search(Search).Build());
+                rows = response.Content ?? [];
+            }
             if (cancellationToken.IsCancellationRequested) return;
-            Customers.Clear();
-            foreach (var customer in response.Content ?? [])
+            if (reset) Customers.Clear();
+            var existing = Customers.Select(x => x.Customer.Id).ToHashSet();
+            foreach (var customer in rows.Where(x => existing.Add(x.Id)))
                 Customers.Add(new StoreCustomerRow(customer));
+            _page = nextPage;
+            _hasMore = rows.Count >= PageSize;
+            _lastLoadedAt = DateTime.UtcNow;
             OnPropertyChanged(nameof(HasCustomers));
         }
+        catch (Exception) when (cancellationToken.IsCancellationRequested) { }
         catch
         {
-            if (!cancellationToken.IsCancellationRequested)
-                Error = Loc.Instance["err_no_connection"];
+            offline.MarkServerUnavailable();
+            if (offline.IsEnabled && reset)
+            {
+                Customers.Clear();
+                foreach (var customer in await offline.SearchCustomersAsync(Search, 200))
+                    Customers.Add(new StoreCustomerRow(customer));
+                _hasMore = false;
+                OnPropertyChanged(nameof(HasCustomers));
+            }
+            else Error = Loc.Instance["err_no_connection"];
         }
-    }
-
-    private async Task LoadDetailAsync(long customerId)
-    {
-        var detailTask = customersApi.GetByIdAsync(customerId);
-        var ledgerTask = customersApi.GetLedgerAsync(customerId, 1, 12);
-        var salesTask = salesApi.QueryAsync(QueryRequest.Create().Page(1, 20).Sort("CreatedAt", true).With("customerId", customerId).Build());
-        var detail = await detailTask;
-        SelectedCustomer = new StoreCustomerRow(detail);
-        IsSalesTab = false;
-        PopulateDebtCurrencies(detail);
-        Ledger.Clear();
-        Sales.Clear();
-        var ledger = await ledgerTask;
-        if (ledger.IsSuccessStatusCode && ledger.Content is not null)
-            foreach (var item in ledger.Content)
-                Ledger.Add(item);
-        try
+        finally
         {
-            IsSalesLoading = true;
-            var sales = await salesTask;
-            if (sales.IsSuccessStatusCode && sales.Content is not null)
-                foreach (var sale in sales.Content)
-                    Sales.Add(sale);
+            IsBusy = false;
+            IsLoadingMore = false;
         }
-        catch { }
-        finally { IsSalesLoading = false; }
-        OnPropertyChanged(nameof(HasSales));
-    }
-
-    private void PopulateDebtCurrencies(CustomerDto customer)
-    {
-        DebtCurrencies.Clear();
-        foreach (var debt in customer.DebtBalances.Where(x => x.Amount > 0))
-            DebtCurrencies.Add(new DebtCurrencyOption(debt.Currency, debt.Amount));
-        SelectedDebtCurrency = DebtCurrencies.FirstOrDefault(x => x.Currency == BaseCurrency) ?? DebtCurrencies.FirstOrDefault();
-        OnPropertyChanged(nameof(HasDebt));
     }
 }
 
 public sealed record StoreCustomerRow(CustomerDto Customer)
 {
-    public string Initials => string.Concat(Customer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(word => char.ToUpper(word[0])));
+    public string Initials => string.Concat(Customer.FullName
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2).Select(word => char.ToUpper(word[0])));
+
     public string DebtText
     {
         get
@@ -250,11 +148,7 @@ public sealed record StoreCustomerRow(CustomerDto Customer)
                 : string.Join(" · ", debts.Select(x => $"{x.Amount:N0} {x.Currency}"));
         }
     }
+
     public bool HasDebt => Customer.DebtBalances.Any(x => x.Amount > 0);
     public string PhoneText => Customer.Phone ?? "—";
-}
-
-public sealed record DebtCurrencyOption(string Currency, decimal Amount)
-{
-    public string Display => $"{Amount:N0} {Currency}";
 }
