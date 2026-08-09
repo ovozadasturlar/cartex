@@ -24,6 +24,21 @@ public class Transaction : AuditableEntity
     public long? SaleId { get; set; }
     public Sale? Sale { get; set; }
 
+    public long? CustomerPaymentDocumentId { get; set; }
+    public CustomerPaymentDocument? CustomerPaymentDocument { get; set; }
+
+    public long? CustomerReturnDocumentId { get; set; }
+    public CustomerReturnDocument? CustomerReturnDocument { get; set; }
+
+    public long? CustomerRefundDocumentId { get; set; }
+    public CustomerRefundDocument? CustomerRefundDocument { get; set; }
+
+    public long? TradeCaseId { get; set; }
+    public TradeCase? TradeCase { get; set; }
+
+    public long? PartnerRedemptionDocumentId { get; set; }
+    public PartnerRedemptionDocument? PartnerRedemptionDocument { get; set; }
+
     public long? SupplyId { get; set; }
     public Supply? Supply { get; set; }
 

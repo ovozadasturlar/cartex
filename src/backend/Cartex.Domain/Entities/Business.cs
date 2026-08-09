@@ -12,6 +12,7 @@ public class Business : AuditableEntity
     public string? Telegram { get; set; }
     public string? Website { get; set; }
     public string? LogoImageKey { get; set; }
+    public string? MonochromeLogoImageKey { get; set; }
 
     public ICollection<Branch> Branches { get; set; } = [];
 }

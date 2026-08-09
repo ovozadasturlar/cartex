@@ -62,6 +62,14 @@ public class PrintRoutingPolicy : AuditableEntity, IBranchScoped
     public int AssignmentTimeoutSeconds { get; set; } = 20;
     public bool RequireTrustedNode { get; set; } = true;
     public bool RequireTrustedRequesterDevice { get; set; }
+    // The automatic trigger is a branch policy. The selected OS printer and PDF
+    // folder remain device-local and must never be copied between workstations.
+    public bool AutoPrintOnSale { get; set; }
+    public int DefaultCopies { get; set; } = 1;
+    // Null means that the business-wide receipt template is inherited. When set,
+    // it contains a complete ReceiptSettings snapshot for this branch.
+    public string? ReceiptSettingsOverrideJson { get; set; }
+    public long Revision { get; set; } = 1;
     public ICollection<PrintRouteTarget> Targets { get; set; } = [];
 }
 

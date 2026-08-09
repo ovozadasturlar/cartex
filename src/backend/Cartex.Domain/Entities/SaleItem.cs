@@ -18,5 +18,7 @@ public class SaleItem : BaseEntity
     public string PriceCurrency { get; set; } = "UZS";
     public decimal PriceRate { get; set; } = 1m;
     public decimal PurchasePrice { get; set; }
+    public decimal CashbackEarned { get; set; }
     public decimal ReturnedQuantity { get; set; }
+    public decimal ReturnedCashback { get; set; }
 }

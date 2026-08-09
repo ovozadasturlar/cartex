@@ -125,6 +125,7 @@ public static class AppPermissions
         public const string Create = "sales.create";
         public const string Pick = "sales.pick";
         public const string Checkout = "sales.checkout";
+        public const string OverrideClaim = "sales.claim.override";
         public const string Return = "sales.return";
         public const string Discount = "sales.discount";
         public const string PriceOverride = "sales.priceOverride";
@@ -174,7 +175,61 @@ public static class AppPermissions
         public const string Edit = "customers.edit";
         public const string Delete = "customers.delete";
         public const string ReceivePayment = "customers.receivePayment";
+        public const string Refund = "customers.refund";
         public const string Message = "customers.message";
+    }
+
+    public static class CustomerPayments
+    {
+        public const string View = "customer_payments.view";
+        public const string Create = "customer_payments.create";
+        public const string Void = "customer_payments.void";
+    }
+
+    public static class Returns
+    {
+        public const string View = "returns.view";
+        public const string Create = "returns.create";
+        public const string Approve = "returns.approve";
+        public const string Void = "returns.void";
+    }
+
+    public static class TradeCases
+    {
+        public const string View = "trade_cases.view";
+        public const string Create = "trade_cases.create";
+        public const string Edit = "trade_cases.edit";
+        public const string Settle = "trade_cases.settle";
+        public const string Close = "trade_cases.close";
+    }
+
+    public static class GoodsIssues
+    {
+        public const string View = "goods_issues.view";
+        public const string Create = "goods_issues.create";
+        public const string Return = "goods_issues.return";
+        public const string Void = "goods_issues.void";
+    }
+
+    public static class Statements
+    {
+        public const string View = "statements.view";
+        public const string Export = "statements.export";
+    }
+
+    public static class Partners
+    {
+        public const string View = "partners.view";
+        public const string Edit = "partners.edit";
+        public const string ConfigureRoles = "partners.roles.configure";
+    }
+
+    public static class PartnerRewards
+    {
+        public const string View = "partner_rewards.view";
+        public const string Configure = "partner_rewards.configure";
+        public const string Redeem = "partner_rewards.redeem";
+        public const string Adjust = "partner_rewards.adjust";
     }
 
     public static class Suppliers
@@ -340,6 +395,7 @@ public static class AppPermissions
             P(Sales.Create, "Create sales", true, Products.View, Stocks.View, Categories.View, Customers.View, Rates.View),
             P(Sales.Pick, "Pick carts", true, Products.View, Stocks.View),
             P(Sales.Checkout, "Complete queued carts and accept payments", true, Sales.Pick, Shifts.Open, Customers.View, Rates.View),
+            P(Sales.OverrideClaim, "Override another cashier's cart claim", true, Sales.Checkout),
             P(Sales.Return, "Return sales", true, Sales.View),
             P(Sales.Discount, "Apply sale discount", true, Sales.Create),
             P(Sales.PriceOverride, "Override sale item price", true, Sales.Create),
@@ -369,7 +425,33 @@ public static class AppPermissions
             P(Customers.Edit, "Edit customers", true, Customers.View, Rates.View),
             P(Customers.Delete, "Delete customers", true, Customers.View),
             P(Customers.ReceivePayment, "Receive customer debt payment", true, Customers.View, Rates.View),
+            P(Customers.Refund, "Pay an approved customer refund", true, Customers.View, Rates.View),
             P(Customers.Message, "Send messages to customers", true, Customers.View),
+            P(CustomerPayments.View, "View customer payment documents", true, Customers.View),
+            P(CustomerPayments.Create, "Receive customer payments and advances", true, CustomerPayments.View, Customers.ReceivePayment, Rates.View),
+            P(CustomerPayments.Void, "Void customer payment documents", true, CustomerPayments.View),
+            P(Returns.View, "View return documents", true, Sales.View),
+            P(Returns.Create, "Create product return documents", true, Returns.View, Stocks.View),
+            P(Returns.Approve, "Approve return settlements and refunds", true, Returns.Create, Customers.Refund),
+            P(Returns.Void, "Void return documents", true, Returns.View),
+            P(TradeCases.View, "View business cases and projects", true, Customers.View),
+            P(TradeCases.Create, "Create business cases and projects", true, TradeCases.View, Warehouses.View),
+            P(TradeCases.Edit, "Edit open business cases", true, TradeCases.View),
+            P(TradeCases.Settle, "Settle custody cases", true, TradeCases.View),
+            P(TradeCases.Close, "Close or cancel business cases", true, TradeCases.View),
+            P(GoodsIssues.View, "View custody issue and return documents", true, TradeCases.View, Products.View),
+            P(GoodsIssues.Create, "Issue goods into customer custody", true, GoodsIssues.View, Stocks.View),
+            P(GoodsIssues.Return, "Receive goods back from customer custody", true, GoodsIssues.View, Stocks.View),
+            P(GoodsIssues.Void, "Void custody documents", true, GoodsIssues.View),
+            P(Statements.View, "View customer and case statements", true, Customers.View),
+            P(Statements.Export, "Export customer and case statements", true, Statements.View, Reports.Export),
+            P(Partners.View, "View external business partners", true),
+            P(Partners.Edit, "Create and edit external business partners", true, Partners.View),
+            P(Partners.ConfigureRoles, "Configure participant roles and labels", false, Partners.View),
+            P(PartnerRewards.View, "View partner rewards and rankings", true, Partners.View),
+            P(PartnerRewards.Configure, "Configure partner reward programs", false, PartnerRewards.View, Partners.ConfigureRoles),
+            P(PartnerRewards.Redeem, "Redeem or pay partner rewards", true, PartnerRewards.View),
+            P(PartnerRewards.Adjust, "Adjust partner reward balances", true, PartnerRewards.View),
             P(Suppliers.View, "View suppliers", true),
             P(Suppliers.Create, "Create suppliers", true, Suppliers.View),
             P(Suppliers.Edit, "Edit suppliers", true, Suppliers.View),
@@ -433,7 +515,8 @@ public static class AppPermissions
             new PermissionBundleDefinition("supply_operator", "Kirim operatori",
                 [Supplies.Create, Supplies.Edit]),
             new PermissionBundleDefinition("cashier", "Sotuvchi / kassir",
-                [Sales.Create, Sales.Checkout, Sales.View, Shifts.Open, Shifts.Close, Sales.Discount]),
+                [Sales.Create, Sales.Checkout, Sales.View, Shifts.Open, Shifts.Close, Sales.Discount,
+                    CustomerPayments.Create, Returns.Create, TradeCases.View, TradeCases.Settle]),
             new PermissionBundleDefinition("inventory_operator", "Omborchi",
                 [Stocks.View, Stocks.Adjust, StockTransfers.View, StockTransfers.Create,
                     StockTransfers.Receive, StockTransfers.ReceiveAny]),
@@ -442,12 +525,20 @@ public static class AppPermissions
                     Units.Create, Units.Edit, ProductTypes.Create, ProductTypes.Edit,
                     Manufacturers.Create, Manufacturers.Edit, Barcodes.Create]),
             new PermissionBundleDefinition("customer_manager", "Mijozlar menejeri",
-                [Customers.Create, Customers.Edit, Customers.Message, Customers.ReceivePayment]),
+                [Customers.Create, Customers.Edit, Customers.Message, Customers.ReceivePayment,
+                    CustomerPayments.View, CustomerPayments.Create, Returns.View,
+                    TradeCases.View, TradeCases.Create, TradeCases.Edit, GoodsIssues.View,
+                    GoodsIssues.Create, GoodsIssues.Return, Statements.View,
+                    Partners.View, Partners.Edit, PartnerRewards.View]),
             new PermissionBundleDefinition("supplier_accountant", "Ta'minotchi va to'lovlar",
                 [Suppliers.Create, Suppliers.Edit, Suppliers.Pay, Supplies.View, Accounts.View, Transactions.View]),
             new PermissionBundleDefinition("accountant", "Hisobchi",
                 [Accounts.View, Transactions.View, Reports.View, Reports.Export,
-                    Customers.ReceivePayment, Suppliers.Pay]),
+                    Customers.ReceivePayment, Customers.Refund, CustomerPayments.View,
+                    CustomerPayments.Create, CustomerPayments.Void, Returns.View, Returns.Approve,
+                    TradeCases.View, TradeCases.Settle, TradeCases.Close, Statements.View, Statements.Export,
+                    Partners.View, PartnerRewards.View, PartnerRewards.Redeem,
+                    Suppliers.Pay]),
             new PermissionBundleDefinition("access_administrator", "Xodimlar va ruxsatlar",
                 [Users.Create, Users.Edit, Users.Delete, Roles.Create, Roles.Edit,
                     Roles.Delete, Roles.AssignPermissions]),
@@ -470,7 +561,7 @@ public static class AppPermissions
             ],
             ["sales.manage"] =
             [
-                Sales.Create, Sales.Pick, Sales.Checkout, Sales.Return,
+                Sales.Create, Sales.Pick, Sales.Checkout, Sales.OverrideClaim, Sales.Return,
                 Sales.Discount, Sales.PriceOverride, Sales.DiscountOverride,
                 Sales.CashOut, Sales.Prepack
             ],
@@ -483,7 +574,14 @@ public static class AppPermissions
             ["shifts.manage"] = [Shifts.Open, Shifts.Close],
             ["shifts.manageAll"] = [Shifts.CloseAll],
             ["supplies.manage"] = [Supplies.Create, Supplies.Edit, Supplies.Void, Supplies.Import],
-            ["customers.manage"] = [Customers.Create, Customers.Edit, Customers.Delete, Customers.ReceivePayment],
+            ["customers.manage"] = [Customers.Create, Customers.Edit, Customers.Delete, Customers.ReceivePayment,
+                Customers.Refund, CustomerPayments.View, CustomerPayments.Create, CustomerPayments.Void,
+                Returns.View, Returns.Create, Returns.Approve, Returns.Void,
+                TradeCases.View, TradeCases.Create, TradeCases.Edit, TradeCases.Settle, TradeCases.Close,
+                GoodsIssues.View, GoodsIssues.Create, GoodsIssues.Return, GoodsIssues.Void,
+                Statements.View, Statements.Export],
+            ["partners.manage"] = [Partners.View, Partners.Edit, Partners.ConfigureRoles,
+                PartnerRewards.View, PartnerRewards.Configure, PartnerRewards.Redeem, PartnerRewards.Adjust],
             ["suppliers.manage"] = [Suppliers.Create, Suppliers.Edit, Suppliers.Pay],
             ["accounts.manage"] = [Accounts.View],
             ["rates.manage"] = [Rates.View, Rates.Edit],

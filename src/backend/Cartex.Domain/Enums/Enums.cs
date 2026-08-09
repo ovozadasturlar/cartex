@@ -7,7 +7,9 @@ public enum AccountType
     Transfer,
     Bank,
     Bonus,
-    Debt
+    Debt,
+    CustomerAdvance,
+    RewardRecovery
 }
 
 public enum OperationType
@@ -21,14 +23,137 @@ public enum OperationType
     CashIn,
     CashOut,
     Change,
-    CustomerCredit
+    CustomerCredit,
+    CustomerPayment,
+    CustomerAdvance,
+    CustomerRefund,
+    SaleReturn,
+    CashbackRecovery,
+    PartnerRewardCash,
+    PartnerRewardBonus
 }
 
 public enum PaymentMethod
 {
     Cash,
     Card,
-    Bonus
+    Bonus,
+    Transfer,
+    Bank
+}
+
+public enum BusinessDocumentStatus
+{
+    Posted,
+    Voided
+}
+
+public enum ReturnItemCondition
+{
+    Sellable,
+    Opened,
+    Damaged,
+    Defective
+}
+
+public enum InventoryDisposition
+{
+    SellableRestock,
+    Quarantine,
+    Scrap,
+    SupplierClaim
+}
+
+public enum ReturnSettlementMethod
+{
+    ReduceDebt,
+    Cash,
+    Card,
+    Bonus,
+    CustomerAdvance,
+    NoCharge
+}
+
+public enum InventoryLocationKind
+{
+    External,
+    Warehouse,
+    Customer,
+    CustomerCustody,
+    Quarantine,
+    Scrap,
+    SupplierClaim
+}
+
+public enum InventoryMovementKind
+{
+    SaleIssue,
+    SaleReturn,
+    GoodsIssue,
+    GoodsReturn,
+    SupplyReceipt,
+    Transfer,
+    Adjustment,
+    Settlement,
+    PartnerReward
+}
+
+public enum TradeCaseStatus
+{
+    Open,
+    SettlementPending,
+    Settled,
+    Cancelled
+}
+
+public enum TradeCaseWorkflow
+{
+    ImmediateInvoice,
+    CustodyUntilSettlement
+}
+
+public enum TradeCasePricePolicy
+{
+    SnapshotAtIssue,
+    PriceAtSettlement
+}
+
+public enum PartnerRewardMode
+{
+    Points,
+    Cash,
+    Bonus,
+    Product
+}
+
+public enum PartnerRewardBasis
+{
+    NetRevenue,
+    NetMargin,
+    FixedPerUnit,
+    FixedPerSale
+}
+
+public enum PartnerRewardTrigger
+{
+    Sale,
+    Settlement,
+    Payment
+}
+
+public enum PartnerRewardState
+{
+    Pending,
+    Earned,
+    Reversed,
+    Redeemed
+}
+
+public enum ParticipantAttributionSource
+{
+    Direct,
+    CaseInherited,
+    CartInherited
 }
 
 public enum ShiftStatus
