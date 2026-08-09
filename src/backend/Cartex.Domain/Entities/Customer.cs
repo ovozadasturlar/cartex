@@ -4,6 +4,8 @@ namespace Cartex.Domain.Entities;
 
 public class Customer : SoftDeleteEntity
 {
+    public long PartyId { get; set; }
+    public Party Party { get; set; } = null!;
     public string FullName { get; set; } = null!;
     public string? LastName { get; set; }
     public string? Address { get; set; }
@@ -14,8 +16,9 @@ public class Customer : SoftDeleteEntity
     public string? PreferredLanguage { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public long? AgentId { get; set; }
-    public User? Agent { get; set; }
+    /// <summary>Internal employee responsible for this customer; never an external referrer.</summary>
+    public long? AssignedUserId { get; set; }
+    public User? AssignedUser { get; set; }
     public decimal DiscountPct { get; set; }
     public decimal CreditLimit { get; set; }
     public bool NotificationsOptOut { get; set; }
