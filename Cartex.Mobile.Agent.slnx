@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/mobile/">
+    <Project Path="src/mobile/Cartex.Mobile.Agent/Cartex.Mobile.Agent.csproj" />
+    <Project Path="src/mobile/Cartex.Mobile.Core/Cartex.Mobile.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
+    <Project Path="src/shared/Cartex.Shared/Cartex.Shared.csproj" />
+  </Folder>
+</Solution>
