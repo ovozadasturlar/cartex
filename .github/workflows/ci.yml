@@ -54,7 +54,10 @@ jobs:
           dotnet workload restore Cartex.slnx
           dotnet restore Cartex.slnx
       - name: Qodana Scan
-        uses: JetBrains/qodana-action@v2026.2
+        # Qodana 2026.2 native fails to start on GitHub-hosted Linux runners
+        # with EssentialPluginMissingException, before project analysis begins.
+        # Use the latest stable 2026.1 action until that upstream regression is fixed.
+        uses: JetBrains/qodana-action@v2026.1.3
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
