@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -29,3 +33,38 @@ jobs:
 
       - name: API integration tests
         run: dotnet test tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj -c Release
+
+  qodana:
+    name: Qodana analysis
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore workloads and dependencies
+        run: |
+          dotnet workload restore Cartex.slnx
+          dotnet restore Cartex.slnx
+      - name: Qodana Scan
+        uses: JetBrains/qodana-action@v2026.2
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        with:
+          args: |
+            --linter qodana-dotnet
+            --within-docker false
+            --no-build
+          pr-mode: false
+          use-caches: true
+          post-pr-comment: true
+          use-annotations: true
+          upload-result: false
+          push-fixes: 'none'
