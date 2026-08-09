@@ -14,4 +14,5 @@ public record ProductLookupDto(
     decimal? OriginalSellingPrice = null,
     string? PriceCurrency = null,
     string? BaseCurrency = null,
-    decimal ConversionRate = 1);
+    decimal ConversionRate = 1,
+    bool AllowsFractional = false);

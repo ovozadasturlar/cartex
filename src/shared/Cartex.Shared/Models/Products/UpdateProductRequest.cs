@@ -16,4 +16,5 @@ public record UpdateProductRequest(
     string? PriceCurrency = null,
     long? ManufacturerId = null,
     bool? AmountEntryEnabled = null,
-    bool ConfirmUnitDimensionChange = false);
+    bool ConfirmUnitDimensionChange = false,
+    decimal? QuantityStepOverride = null);
