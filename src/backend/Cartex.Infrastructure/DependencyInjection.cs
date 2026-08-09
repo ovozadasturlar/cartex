@@ -66,6 +66,8 @@ public static class DependencyInjection
         services.AddHostedService<SmsStatusPoller>();
         services.AddHostedService<Catalog.PrepackExpiryService>();
         services.AddScoped<IReceiptPdfRenderer, ReceiptPdfRenderer>();
+        services.AddSingleton<ITradeCaseStatementExporter, Documents.TradeCaseStatementExporter>();
+        services.AddSingleton<ICustomerStatementExporter, Documents.CustomerStatementExporter>();
         services.AddScoped<CloudBridgeClient>();
         services.AddTransient<INotificationHandler<DomainEventNotification<ReceiptMirrorEvent>>, ReceiptMirrorHandler>();
 

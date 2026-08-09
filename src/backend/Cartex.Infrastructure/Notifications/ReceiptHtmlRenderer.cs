@@ -22,7 +22,7 @@ public static class ReceiptHtmlRenderer
         sb.Append("body{font-family:-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;background:#eef2f7;margin:0;padding:20px 14px 34px}");
         sb.Append(".card{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(15,23,42,.10)}");
         sb.Append(".head{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;padding:24px 22px 20px;text-align:center}");
-        sb.Append(".logo{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:22px}");
+        sb.Append(".logo{width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:22px;object-fit:contain}");
         sb.Append("h1{font-size:19px;margin:0;letter-spacing:.2px}");
         sb.Append(".sub{opacity:.85;font-size:12.5px;margin:3px 0 0}");
         sb.Append(".meta{display:flex;justify-content:center;gap:8px;padding:12px 18px 0;flex-wrap:wrap}");
@@ -53,7 +53,10 @@ public static class ReceiptHtmlRenderer
         sb.Append("</style></head><body>");
 
         sb.Append("<div class=\"card\"><div class=\"head\">");
-        sb.Append("<div class=\"logo\">🧾</div>");
+        if (opts?.ShowLogo != false && !string.IsNullOrWhiteSpace(r.LogoImageKey))
+            sb.Append($"<img class=\"logo\" alt=\"logo\" src=\"/api/storage/content?key={Uri.EscapeDataString(r.LogoImageKey)}\">");
+        else if (opts?.ShowLogo != false)
+            sb.Append("<div class=\"logo\">🧾</div>");
         if (opts?.ShowBusinessName != false) sb.Append($"<h1>{E(r.BusinessName)}</h1>");
         if (opts?.ShowBranchName != false) sb.Append($"<p class=\"sub\">{E(r.BranchName)}</p>");
         if (opts?.ShowAddress != false && !string.IsNullOrEmpty(r.BranchAddress)) sb.Append($"<p class=\"sub\">{E(r.BranchAddress)}</p>");
@@ -66,6 +69,8 @@ public static class ReceiptHtmlRenderer
         if (opts?.ShowReceiptNumber != false) sb.Append($"<span class=\"chip\">{E(T("receipt_no"))} {r.SaleId}</span>");
         if (opts?.ShowCashier != false) sb.Append($"<span class=\"chip\">{E(r.UserName)}</span>");
         if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.Append($"<span class=\"chip\">{E(r.CustomerName)}</span>");
+        if (opts?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(r.CustomerPhone)) sb.Append($"<span class=\"chip\">{E(r.CustomerPhone)}</span>");
+        if (opts?.ShowCustomerEmail == true && !string.IsNullOrWhiteSpace(r.CustomerEmail)) sb.Append($"<span class=\"chip\">{E(r.CustomerEmail)}</span>");
         sb.Append("</div>");
 
         sb.Append("<div class=\"body\">");
@@ -95,6 +100,7 @@ public static class ReceiptHtmlRenderer
                 if (r.PaidCard > 0) Row(sb, T("card"), $"{r.PaidCard:N0}");
                 if (r.PaidBonus > 0) Row(sb, T("bonus"), $"{r.PaidBonus:N0}");
             }
+            if (r.PaidAdvance > 0) Row(sb, T("advance"), $"{r.PaidAdvance:N0}");
             if (r.ChangeAmount > 0) Row(sb, T("change"), $"{r.ChangeAmount:N0}");
             if (r.CreditAmount > 0) Row(sb, T("credit"), $"{r.CreditAmount:N0}");
             if (r.DebtAmount > 0) Row(sb, T("debt"), $"{r.DebtAmount:N0}", "debt");

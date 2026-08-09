@@ -27,6 +27,8 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                 page.Content().Column(col =>
                 {
                     col.Spacing(2);
+                    if (settings?.ShowLogo != false && receipt.LogoBytes is { Length: > 0 })
+                        col.Item().PaddingBottom(2).AlignCenter().MaxWidth(80).MaxHeight(55).Image(receipt.LogoBytes).FitArea();
                     if (settings?.ShowBusinessName != false)
                         col.Item().AlignCenter().Text(receipt.BusinessName).FontSize(13).Bold();
                     if (settings?.ShowBranchName != false)
@@ -44,6 +46,10 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                         col.Item().AlignCenter().Text($"{T("cashier")}: {receipt.UserName}").FontSize(8);
                     if (settings?.ShowCustomer != false && !string.IsNullOrWhiteSpace(receipt.CustomerName))
                         col.Item().AlignCenter().Text($"{T("customer")}: {receipt.CustomerName}").FontSize(8);
+                    if (settings?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(receipt.CustomerPhone))
+                        col.Item().AlignCenter().Text(receipt.CustomerPhone).FontSize(8);
+                    if (settings?.ShowCustomerEmail == true && !string.IsNullOrWhiteSpace(receipt.CustomerEmail))
+                        col.Item().AlignCenter().Text(receipt.CustomerEmail).FontSize(8);
                     col.Item().LineHorizontal(0.5f);
 
                     foreach (var item in receipt.Items)
@@ -76,6 +82,7 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                             if (receipt.PaidCard > 0) Line(col, T("card"), $"{receipt.PaidCard:N0}");
                             if (receipt.PaidBonus > 0) Line(col, T("bonus"), $"{receipt.PaidBonus:N0}");
                         }
+                        if (receipt.PaidAdvance > 0) Line(col, T("advance"), $"{receipt.PaidAdvance:N0}");
                         if (receipt.ChangeAmount > 0) Line(col, T("change"), $"{receipt.ChangeAmount:N0}");
                         if (receipt.CreditAmount > 0) Line(col, T("credit"), $"{receipt.CreditAmount:N0}");
                         if (receipt.DebtAmount > 0) Line(col, T("debt"), $"{receipt.DebtAmount:N0}");
@@ -134,6 +141,8 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                 {
                     col.Item().Row(row =>
                     {
+                        if (settings?.ShowLogo != false && receipt.LogoBytes is { Length: > 0 })
+                            row.ConstantItem(a4 ? 72 : 58).PaddingRight(10).AlignMiddle().Image(receipt.LogoBytes).FitArea();
                         row.RelativeItem().Column(left =>
                         {
                             if (settings?.ShowBusinessName != false)
@@ -160,6 +169,10 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                                 right.Item().AlignRight().Text($"{T("cashier")}: {receipt.UserName}").FontSize(8).FontColor(muted);
                             if (settings?.ShowCustomer != false && !string.IsNullOrWhiteSpace(receipt.CustomerName))
                                 right.Item().AlignRight().Text($"{T("customer")}: {receipt.CustomerName}").FontSize(8).FontColor(muted);
+                            if (settings?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(receipt.CustomerPhone))
+                                right.Item().AlignRight().Text(receipt.CustomerPhone).FontSize(8).FontColor(muted);
+                            if (settings?.ShowCustomerEmail == true && !string.IsNullOrWhiteSpace(receipt.CustomerEmail))
+                                right.Item().AlignRight().Text(receipt.CustomerEmail).FontSize(8).FontColor(muted);
                         });
                     });
                     if (!string.IsNullOrWhiteSpace(settings?.HeaderText))

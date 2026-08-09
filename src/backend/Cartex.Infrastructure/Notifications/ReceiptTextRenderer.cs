@@ -20,6 +20,8 @@ public static class ReceiptTextRenderer
         if (opts?.ShowReceiptNumber != false) sb.AppendLine($"{T("receipt_no")} {r.SaleId}");
         if (opts?.ShowCashier != false) sb.AppendLine($"{T("cashier")}: {r.UserName}");
         if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.AppendLine($"{T("customer")}: {r.CustomerName}");
+        if (opts?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(r.CustomerPhone)) sb.AppendLine(r.CustomerPhone);
+        if (opts?.ShowCustomerEmail == true && !string.IsNullOrWhiteSpace(r.CustomerEmail)) sb.AppendLine(r.CustomerEmail);
         sb.AppendLine("————————————");
         foreach (var i in r.Items)
         {
@@ -40,6 +42,7 @@ public static class ReceiptTextRenderer
                 if (r.PaidCard > 0) sb.AppendLine($"{T("card")}: {r.PaidCard:N0}");
                 if (r.PaidBonus > 0) sb.AppendLine($"{T("bonus")}: {r.PaidBonus:N0}");
             }
+            if (r.PaidAdvance > 0) sb.AppendLine($"{T("advance")}: {r.PaidAdvance:N0}");
             if (r.ChangeAmount > 0) sb.AppendLine($"{T("change")}: {r.ChangeAmount:N0}");
             if (r.CreditAmount > 0) sb.AppendLine($"{T("credit")}: {r.CreditAmount:N0}");
             if (r.DebtAmount > 0) sb.AppendLine($"{T("debt")}: {r.DebtAmount:N0}");
