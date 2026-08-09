@@ -50,6 +50,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<OrderingHubService>();
         builder.Services.AddSingleton<MobilePrintDispatcher>();
         builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
+        builder.Services.AddSingleton<MobileOfflineStore>();
+        builder.Services.AddSingleton<MobileOfflineService>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
 
         builder.Services.AddTransient<LoginViewModel>();
@@ -62,6 +64,19 @@ public static class MauiProgram
         builder.Services.AddTransient<ScanViewModel>();
         builder.Services.AddTransient<CartViewModel>();
         builder.Services.AddTransient<HandoffViewModel>();
+        builder.Services.AddTransient<SaleDetailViewModel>();
+        builder.Services.AddTransient<CartEditViewModel>();
+        builder.Services.AddTransient<CustomerDetailViewModel>();
+        builder.Services.AddTransient<CustomerStatementViewModel>();
+        builder.Services.AddTransient<CustomerRefundViewModel>();
+        builder.Services.AddTransient<SaleReturnViewModel>();
+        builder.Services.AddTransient<TradeCaseDetailViewModel>();
+        builder.Services.AddTransient<CaseIssueViewModel>();
+        builder.Services.AddTransient<CaseReturnViewModel>();
+        builder.Services.AddTransient<CasePaymentViewModel>();
+        builder.Services.AddTransient<CaseStatementViewModel>();
+        builder.Services.AddTransient<CaseSettlementViewModel>();
+        builder.Services.AddTransient<CaseCreateViewModel>();
         builder.Services.AddTransient<CheckoutViewModel>();
         builder.Services.AddTransient<TradeViewModel>();
         builder.Services.AddTransient<CustomersViewModel>();
@@ -79,6 +94,19 @@ public static class MauiProgram
         builder.Services.AddTransient<ScanPage>();
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<HandoffPage>();
+        builder.Services.AddTransient<SaleDetailPage>();
+        builder.Services.AddTransient<CartEditPage>();
+        builder.Services.AddTransient<CustomerDetailPage>();
+        builder.Services.AddTransient<CustomerStatementPage>();
+        builder.Services.AddTransient<CustomerRefundPage>();
+        builder.Services.AddTransient<SaleReturnPage>();
+        builder.Services.AddTransient<TradeCaseDetailPage>();
+        builder.Services.AddTransient<CaseIssuePage>();
+        builder.Services.AddTransient<CaseReturnPage>();
+        builder.Services.AddTransient<CasePaymentPage>();
+        builder.Services.AddTransient<CaseStatementPage>();
+        builder.Services.AddTransient<CaseSettlementPage>();
+        builder.Services.AddTransient<CaseCreatePage>();
         builder.Services.AddTransient<CheckoutPage>();
         builder.Services.AddTransient<TradePage>();
         builder.Services.AddTransient<CustomersPage>();

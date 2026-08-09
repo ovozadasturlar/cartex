@@ -35,6 +35,7 @@
 		<PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.6" />
 		<PackageReference Include="QRCoder" Version="1.8.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
 	</ItemGroup>
 
 	<ItemGroup>
