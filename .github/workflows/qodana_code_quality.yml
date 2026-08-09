@@ -22,6 +22,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore workloads and dependencies
+        run: |
+          dotnet workload restore Cartex.slnx
+          dotnet restore Cartex.slnx
+      - name: Build solution
+        run: dotnet build Cartex.slnx --configuration Release --no-restore
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.2
         env:
