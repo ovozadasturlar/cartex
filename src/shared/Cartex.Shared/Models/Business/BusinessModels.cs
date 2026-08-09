@@ -12,8 +12,9 @@ public record BusinessDto(
     string? Telegram = null,
     string? Website = null,
     bool PricingMulticurrency = false,
-    bool SalesMulticurrency = false);
+    bool SalesMulticurrency = false,
+    string? MonochromeLogoImageKey = null);
 
-public record UpdateBusinessRequest(string Name, string? LegalName, string Currency, string? Phone = null, string? Address = null, string? LogoImageKey = null, string? Telegram = null, string? Website = null);
+public record UpdateBusinessRequest(string Name, string? LegalName, string Currency, string? Phone = null, string? Address = null, string? LogoImageKey = null, string? Telegram = null, string? Website = null, string? MonochromeLogoImageKey = null);
 
 public record CompleteOnboardingRequest(string? Preset = null, string? Language = null);

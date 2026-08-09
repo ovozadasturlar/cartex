@@ -20,6 +20,9 @@ public static class ReceiptTexts
         ["cash"] = new() { ["uz-latn"] = "Naqd", ["uz-cyrl"] = "Нақд", ["ru"] = "Наличные", ["en"] = "Cash" },
         ["card"] = new() { ["uz-latn"] = "Karta", ["uz-cyrl"] = "Карта", ["ru"] = "Карта", ["en"] = "Card" },
         ["bonus"] = new() { ["uz-latn"] = "Bonus", ["uz-cyrl"] = "Бонус", ["ru"] = "Бонус", ["en"] = "Bonus" },
+        ["advance"] = new() { ["uz-latn"] = "Avansdan", ["uz-cyrl"] = "Авансдан", ["ru"] = "Из аванса", ["en"] = "From advance" },
+        ["transfer"] = new() { ["uz-latn"] = "Mobil o'tkazma", ["uz-cyrl"] = "Мобил ўтказма", ["ru"] = "Перевод", ["en"] = "Transfer" },
+        ["bank"] = new() { ["uz-latn"] = "Bank o'tkazmasi", ["uz-cyrl"] = "Банк ўтказмаси", ["ru"] = "Банковский перевод", ["en"] = "Bank transfer" },
         ["change"] = new() { ["uz-latn"] = "Qaytim", ["uz-cyrl"] = "Қайтим", ["ru"] = "Сдача", ["en"] = "Change" },
         ["credit"] = new() { ["uz-latn"] = "Hisobga yozildi", ["uz-cyrl"] = "Ҳисобга ёзилди", ["ru"] = "Зачислено на счёт", ["en"] = "Credited to account" },
         ["debt"] = new() { ["uz-latn"] = "Qarz", ["uz-cyrl"] = "Қарз", ["ru"] = "Долг", ["en"] = "Debt" },
@@ -43,6 +46,8 @@ public static class ReceiptTexts
         "Cash" => Get("cash", lang),
         "Card" => Get("card", lang),
         "Bonus" => Get("bonus", lang),
+        "Transfer" => Get("transfer", lang),
+        "Bank" => Get("bank", lang),
         _ => method
     };
 }

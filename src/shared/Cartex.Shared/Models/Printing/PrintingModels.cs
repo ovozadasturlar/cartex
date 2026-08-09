@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Shared.Models.Printing;
 
@@ -175,7 +176,11 @@ public sealed record PrintRoutingPolicyDto(
     int AssignmentTimeoutSeconds,
     bool RequireTrustedNode,
     bool RequireTrustedRequesterDevice,
-    IReadOnlyList<PrintRouteTargetDto> Targets);
+    IReadOnlyList<PrintRouteTargetDto> Targets,
+    bool AutoPrintOnSale = false,
+    int DefaultCopies = 1,
+    ReceiptSettingsDto? ReceiptOverride = null,
+    long Revision = 1);
 
 public sealed record PrintRouteTargetRequest(long EndpointId, int Priority, bool IsEnabled);
 
@@ -192,6 +197,28 @@ public sealed record UpdatePrintRoutingPolicyRequest(
     bool RequireTrustedNode,
     bool RequireTrustedRequesterDevice,
     IReadOnlyList<PrintRouteTargetRequest> Targets);
+
+/// <summary>
+/// Updates only the receipt trigger/template portion of the branch policy. It is
+/// intentionally separate from printer routing so a receipt editor cannot
+/// accidentally replace route targets and a route edit cannot erase branding.
+/// </summary>
+public sealed record UpdateReceiptPrintPolicyRequest(
+    bool AutoPrintOnSale,
+    int DefaultCopies,
+    bool UseBranchOverride = false,
+    ReceiptSettingsDto? BranchOverride = null,
+    long? ExpectedRevision = null);
+
+public sealed record PrintingBootstrapDto(
+    long BranchId,
+    string? DeviceId,
+    ReceiptSettingsDto BusinessReceipt,
+    ReceiptSettingsDto EffectiveReceipt,
+    PrintRoutingPolicyDto ReceiptPolicy,
+    PrintNodeDto? DeviceNode,
+    string Revision,
+    DateTime ServerTimeUtc);
 
 public sealed record CreatePrintJobRequest(
     long BranchId,
