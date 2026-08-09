@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.SaleDetailPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:models="clr-namespace:Cartex.Shared.Models.Sales;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:SaleDetailViewModel"
+    Title="{svc:T sale_details}">
+
+    <Grid RowDefinitions="*,Auto">
+        <RefreshView IsRefreshing="{Binding IsLoading, Mode=OneWay}" Command="{Binding RefreshCommand}">
+            <ScrollView>
+                <VerticalStackLayout Padding="16" Spacing="12">
+                    <Border Style="{StaticResource Card}" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="{Binding DateText}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                <Label Text="{Binding CustomerName}" FontSize="19" FontAttributes="Bold"
+                                       IsVisible="{Binding HasCustomer}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Text="{svc:T no_customer}" FontSize="15"
+                                       IsVisible="{Binding HasCustomer, Converter={StaticResource Invert}}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                <Label Text="{Binding LocationText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding CashierText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="21" FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="{svc:T products}" FontSize="15" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="12">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SaleDetailItemRow">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Name}" FontSize="14" LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                                <Label Text="{Binding QuantityPrice}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                                <Label Text="{Binding Returned}" FontSize="12" IsVisible="{Binding HasReturned}"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding Total}" FontSize="14" FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasPayments}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="{svc:T payments}" FontSize="15" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Payments}" Spacing="8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SaleDetailPaymentRow">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <Label Text="{Binding Method}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                                <Label Text="{Binding Amount}" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="End"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                                <Label Text="{Binding BaseAmount}" Style="{StaticResource MutedLabel}" FontSize="11"
+                                                       HorizontalTextAlignment="End" IsVisible="{Binding HasBaseAmount}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasDiscount}">
+                                <Label Text="{svc:T discount}" Style="{StaticResource MutedLabel}" />
+                                <Label Grid.Column="1" Text="{Binding DiscountText}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasDebt}">
+                                <Label Text="{svc:T debt_label}" TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                <Label Grid.Column="1" Text="{Binding DebtText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasChange}">
+                                <Label Text="{svc:T change_label}" Style="{StaticResource MutedLabel}" />
+                                <Label Grid.Column="1" Text="{Binding ChangeText}" FontAttributes="Bold" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasParticipants}">
+                        <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Participants}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:SaleDetailParticipantDto">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Label Text="{Binding RoleLabel}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        <Label Grid.Column="1" Text="{Binding PartyName}" FontSize="14" FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasReturns}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="{svc:T returns}" FontSize="15" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Returns}" Spacing="8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:SaleReturnSummaryDto">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Spacing="1">
+                                                <Label Text="{Binding DocumentNumber}" FontSize="14" FontAttributes="Bold" />
+                                                <Label Text="{Binding BusinessDate}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding RefundAmount, StringFormat='{0:N0} UZS'}"
+                                                   VerticalOptions="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="{svc:T customer_profile}" Style="{StaticResource BtnOutline}"
+                            IsVisible="{Binding CanOpenCustomer}" Command="{Binding OpenCustomerCommand}" />
+
+                    <VerticalStackLayout Spacing="10" Padding="0,24" IsVisible="{Binding HasError}">
+                        <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" HorizontalTextAlignment="Center" />
+                        <Button Text="{svc:T retry}" Style="{StaticResource BtnOutline}" Command="{Binding RefreshCommand}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                IsVisible="{Binding IsLoaded}">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Text="{svc:T print}" Style="{StaticResource BtnOutline}"
+                        IsVisible="{Binding CanPrint}" Command="{Binding PrintCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button Grid.Column="1" Text="{svc:T send}" Style="{StaticResource BtnOutline}"
+                        IsVisible="{Binding CanResend}" Command="{Binding ResendCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button Grid.Column="2" Text="{svc:T create_return}" Style="{StaticResource BtnPrimary}"
+                        IsVisible="{Binding CanCreateReturn}" Command="{Binding CreateReturnCommand}" />
+            </Grid>
+        </Border>
+
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

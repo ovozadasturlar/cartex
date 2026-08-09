@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.SaleReturnPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:SaleReturnViewModel"
+    Title="{svc:T create_return}">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                <Border Style="{StaticResource Card}" Padding="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding CustomerName}" FontSize="17" FontAttributes="Bold" IsVisible="{Binding HasCustomer}" />
+                            <Label Text="{svc:T sale_total}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="{Binding SaleTotalText}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+
+                <Label Text="{svc:T select_return_items}" FontSize="15" FontAttributes="Bold" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Lines}" Spacing="10">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SaleReturnLine">
+                            <Border Style="{StaticResource Card}" Padding="12">
+                                <VerticalStackLayout Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding Item.ProductName}" FontSize="14" FontAttributes="Bold" />
+                                            <Label Text="{Binding Item.ReturnableQuantity, StringFormat='Qoldiq: {0:0.###}'}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        </VerticalStackLayout>
+                                        <Switch Grid.Column="1" IsToggled="{Binding IsSelected}" />
+                                    </Grid>
+
+                                    <VerticalStackLayout Spacing="9" IsVisible="{Binding IsSelected}">
+                                        <Grid ColumnDefinitions="Auto,90,Auto" ColumnSpacing="8" HorizontalOptions="Center">
+                                            <ctl:HoldRepeatButton Text="−" WidthRequest="42" HeightRequest="42" Padding="0" CornerRadius="12"
+                                                                  Style="{StaticResource BtnOutline}"
+                                                                  RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
+                                                                  RepeatCommandParameter="{Binding .}" />
+                                            <Border Grid.Column="1" Style="{StaticResource InputWrap}" Padding="0">
+                                                <Entry Text="{Binding QuantityText}" Keyboard="Numeric" ReturnType="Done" HeightRequest="42"
+                                                       HorizontalTextAlignment="Center" FontAttributes="Bold"
+                                                       ReturnCommand="{Binding CommitQuantityCommand, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
+                                                       ReturnCommandParameter="{Binding .}" Unfocused="OnQuantityUnfocused" />
+                                            </Border>
+                                            <ctl:HoldRepeatButton Grid.Column="2" Text="+" WidthRequest="42" HeightRequest="42" Padding="0" CornerRadius="12"
+                                                                  Style="{StaticResource BtnOutline}"
+                                                                  RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
+                                                                  RepeatCommandParameter="{Binding .}" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                            <VerticalStackLayout Spacing="3">
+                                                <Label Text="{svc:T condition}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                                <Picker ItemsSource="{Binding Conditions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
+                                                        SelectedItem="{Binding SelectedCondition}" ItemDisplayBinding="{Binding Label}" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                                <Label Text="{svc:T disposition}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                                <Picker ItemsSource="{Binding Dispositions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
+                                                        SelectedItem="{Binding SelectedDisposition}" ItemDisplayBinding="{Binding Label}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                        <Border Style="{StaticResource InputWrap}">
+                                            <Entry Text="{Binding Reason}" Placeholder="{svc:T return_reason_optional}" />
+                                        </Border>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource Card}" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{svc:T estimated_refund}" Style="{StaticResource MutedLabel}" />
+                            <Label Grid.Column="1" Text="{Binding RefundText}" FontSize="18" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        </Grid>
+                        <Label Text="{svc:T return_settlement}" FontSize="14" FontAttributes="Bold" />
+                        <Picker ItemsSource="{Binding SettlementModes}" SelectedItem="{Binding SelectedSettlement}" ItemDisplayBinding="{Binding Label}" />
+                        <Label Text="{svc:T settlement_auto_hint}" Style="{StaticResource MutedLabel}" FontSize="11"
+                               IsVisible="{Binding IsAutomaticSettlement}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource InputWrap}">
+                    <Editor Text="{Binding Note}" Placeholder="{svc:T note_placeholder}" AutoSize="TextChanges" MaximumHeightRequest="120" />
+                </Border>
+
+                <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                        IsVisible="{Binding HasError}">
+                    <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" />
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <Button Text="{svc:T confirm_return}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding HasSelection}" />
+        </Border>
+
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

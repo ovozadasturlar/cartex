@@ -4,8 +4,6 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
-    xmlns:customers="clr-namespace:Cartex.Shared.Models.Customers;assembly=Cartex.Shared"
-    xmlns:sales="clr-namespace:Cartex.Shared.Models.Sales;assembly=Cartex.Shared"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:CustomersViewModel"
     Title="{svc:T customers}">
@@ -16,7 +14,9 @@
 
         <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
             <Grid>
-                <CollectionView ItemsSource="{Binding Customers}">
+                <CollectionView ItemsSource="{Binding Customers}"
+                                RemainingItemsThreshold="5"
+                                RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:StoreCustomerRow">
                             <Border Style="{StaticResource Card}" Margin="0,0,0,10" Padding="14,12">
@@ -27,17 +27,17 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <Border WidthRequest="42" HeightRequest="42" StrokeThickness="0" StrokeShape="RoundRectangle 21"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                        <Label Text="{Binding Initials}" FontSize="15" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                                        <Label Text="{Binding Initials}" FontSize="15" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
                                                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                                     </Border>
                                     <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                                        <Label Text="{Binding Customer.FullName}" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation"
-                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Text="{Binding Customer.FullName}" FontAttributes="Bold" FontSize="15"
+                                               LineBreakMode="TailTruncation" />
                                         <Label Text="{Binding PhoneText}" Style="{StaticResource MutedLabel}" FontSize="12" />
                                     </VerticalStackLayout>
-                                    <Label Grid.Column="2" Text="{Binding DebtText}" FontSize="12.5" FontAttributes="Bold" VerticalOptions="Center"
-                                           HorizontalTextAlignment="End" MaxLines="2"
-                                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}">
+                                    <Label Grid.Column="2" Text="{Binding DebtText}" FontSize="12.5" FontAttributes="Bold"
+                                           VerticalOptions="Center" HorizontalTextAlignment="End" MaxLines="2">
                                         <Label.Triggers>
                                             <DataTrigger TargetType="Label" Binding="{Binding HasDebt}" Value="True">
                                                 <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
@@ -49,169 +49,19 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                     <CollectionView.EmptyView>
-                        <Label Text="{svc:T customers_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,60" />
+                        <Label Text="{svc:T customers_empty}" Style="{StaticResource MutedLabel}"
+                               HorizontalOptions="Center" Margin="0,60" />
                     </CollectionView.EmptyView>
+                    <CollectionView.Footer>
+                        <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" Margin="0,8,0,16" />
+                    </CollectionView.Footer>
                 </CollectionView>
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                    VerticalOptions="Center" HorizontalOptions="Center" />
-                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}"
+                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}"
+                       IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}"
                        VerticalOptions="Center" HorizontalOptions="Center" />
             </Grid>
         </RefreshView>
-
-        <Grid Grid.RowSpan="2" BackgroundColor="#99000000" IsVisible="{Binding IsDetailOpen}">
-            <Border Style="{StaticResource Sheet}" VerticalOptions="End" Padding="20,18">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <VerticalStackLayout Spacing="3">
-                            <Label Text="{Binding SelectedCustomer.Customer.FullName}" Style="{StaticResource H1}" LineBreakMode="TailTruncation" />
-                            <Label Text="{Binding SelectedCustomer.PhoneText}" Style="{StaticResource MutedLabel}" />
-                        </VerticalStackLayout>
-                        <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
-                                WidthRequest="40" HeightRequest="40" CornerRadius="20" BackgroundColor="Transparent"
-                                Command="{Binding CloseDetailCommand}" />
-                    </Grid>
-
-                    <ScrollView Grid.Row="1">
-                        <VerticalStackLayout Spacing="14">
-                            <Grid ColumnDefinitions="*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                <Button Text="{svc:T profile}" Style="{StaticResource BtnOutline}" Command="{Binding SelectProfileTabCommand}" CommandParameter="profile">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding IsSalesTab}" Value="False">
-                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-                                <Button Grid.Column="1" Text="{svc:T sales}" Style="{StaticResource BtnOutline}" Command="{Binding SelectProfileTabCommand}" CommandParameter="sales">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding IsSalesTab}" Value="True">
-                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-                            </Grid>
-                            <Border Style="{StaticResource Card}" Padding="14,12">
-                                <VerticalStackLayout Spacing="8">
-                                    <Label Text="{svc:T customer_debt}" Style="{StaticResource MutedLabel}" FontSize="12" />
-                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding DebtCurrencies}" Spacing="5">
-                                        <BindableLayout.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:DebtCurrencyOption">
-                                                <Label Text="{Binding Display}" FontAttributes="Bold" FontSize="17"
-                                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                                            </DataTemplate>
-                                        </BindableLayout.ItemTemplate>
-                                    </VerticalStackLayout>
-                                    <Label Text="{svc:T no_debt}" Style="{StaticResource MutedLabel}" IsVisible="{Binding HasDebt, Converter={StaticResource Invert}}" />
-                                </VerticalStackLayout>
-                            </Border>
-                            <Border Style="{StaticResource Card}" Padding="14,12" IsVisible="{Binding IsSalesTab, Converter={StaticResource Invert}}">
-                                <VerticalStackLayout Spacing="8">
-                                    <Label Text="{svc:T customer_details}" FontAttributes="Bold" FontSize="14" />
-                                    <Label Text="{Binding SelectedCustomer.Customer.Email}" Style="{StaticResource MutedLabel}" IsVisible="{Binding SelectedCustomer.Customer.Email, Converter={StaticResource NotEmpty}}" />
-                                    <Label Text="{Binding SelectedCustomer.Customer.Address}" Style="{StaticResource MutedLabel}" IsVisible="{Binding SelectedCustomer.Customer.Address, Converter={StaticResource NotEmpty}}" />
-                                    <Label Text="{Binding SelectedCustomer.Customer.CardBarcode, StringFormat='Karta: {0}'}" Style="{StaticResource MutedLabel}" IsVisible="{Binding SelectedCustomer.Customer.CardBarcode, Converter={StaticResource NotEmpty}}" />
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                        <Label Text="{Binding SelectedCustomer.Customer.DiscountPct, StringFormat='Chegirma: {0:N1}%'}" Style="{StaticResource MutedLabel}" />
-                                        <Label Grid.Column="1" Text="{Binding SelectedCustomer.Customer.CashbackBalance, StringFormat='Bonus: {0:N0}'}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="End" />
-                                    </Grid>
-                                </VerticalStackLayout>
-                            </Border>
-                            <Border Style="{StaticResource Card}" Padding="14,12" IsVisible="{Binding IsSalesTab, Converter={StaticResource Invert}}">
-                                <VerticalStackLayout Spacing="8">
-                                    <Label Text="{svc:T recent_ops}" FontAttributes="Bold" FontSize="14"
-                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Ledger}" Spacing="7">
-                                        <BindableLayout.ItemTemplate>
-                                            <DataTemplate x:DataType="customers:CustomerLedgerEntryDto">
-                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                                    <VerticalStackLayout Spacing="1">
-                                                        <Label Text="{Binding OperationType}" FontSize="13" />
-                                                        <Label Text="{Binding Date, StringFormat='{0:dd.MM.yyyy HH:mm}'}" Style="{StaticResource MutedLabel}" FontSize="11" />
-                                                    </VerticalStackLayout>
-                                                    <Label Grid.Column="1" Text="{Binding Change, StringFormat='{0:N0}'}" FontAttributes="Bold" VerticalOptions="Center" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </BindableLayout.ItemTemplate>
-                                    </VerticalStackLayout>
-                                </VerticalStackLayout>
-                            </Border>
-                            <Border Style="{StaticResource Card}" Padding="14,12" IsVisible="{Binding IsSalesTab}">
-                                <VerticalStackLayout Spacing="8">
-                                    <ActivityIndicator IsRunning="{Binding IsSalesLoading}" IsVisible="{Binding IsSalesLoading}" />
-                                    <Label Text="{svc:T history_empty}" Style="{StaticResource MutedLabel}" IsVisible="{Binding HasSales, Converter={StaticResource Invert}}" />
-                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sales}" Spacing="8">
-                                        <BindableLayout.ItemTemplate>
-                                            <DataTemplate x:DataType="sales:SaleDto">
-                                                <Border StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" Padding="10,8">
-                                                    <VerticalStackLayout Spacing="4">
-                                                        <Grid ColumnDefinitions="*,Auto">
-                                                            <Label Text="{Binding SaleDate, StringFormat='{0:dd.MM.yyyy HH:mm}'}" Style="{StaticResource MutedLabel}" FontSize="11" />
-                                                            <Label Grid.Column="1" Text="{Binding TotalAmount, StringFormat='{0:N0}'}" FontAttributes="Bold" />
-                                                        </Grid>
-                                                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="2">
-                                                            <BindableLayout.ItemTemplate>
-                                                                <DataTemplate x:DataType="sales:SaleLineDto">
-                                                                    <Label Text="{Binding ProductName, StringFormat='• {0} ×'}" FontSize="12" LineBreakMode="TailTruncation" />
-                                                                </DataTemplate>
-                                                            </BindableLayout.ItemTemplate>
-                                                        </VerticalStackLayout>
-                                                        <Label Text="{Binding DebtAmount, StringFormat='Qarz: {0:N0}'}" Style="{StaticResource MutedLabel}" FontSize="11" IsVisible="{Binding DebtAmount, Converter={StaticResource Positive}}" />
-                                                    </VerticalStackLayout>
-                                                </Border>
-                                            </DataTemplate>
-                                        </BindableLayout.ItemTemplate>
-                                    </VerticalStackLayout>
-                                </VerticalStackLayout>
-                            </Border>
-                        </VerticalStackLayout>
-                    </ScrollView>
-
-                    <Button Grid.Row="2" Text="{svc:T repay_title}" Style="{StaticResource BtnPrimary}"
-                            Command="{Binding OpenPaymentCommand}" IsVisible="{Binding CanReceivePayment}" />
-                </Grid>
-            </Border>
-        </Grid>
-
-        <Grid Grid.RowSpan="2" BackgroundColor="#99000000" IsVisible="{Binding IsPaymentOpen}">
-            <Border Style="{StaticResource Sheet}" VerticalOptions="End" Padding="20,18">
-                <VerticalStackLayout Spacing="14">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Text="{svc:T repay_title}" Style="{StaticResource H1}" />
-                        <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
-                                WidthRequest="40" HeightRequest="40" CornerRadius="20" BackgroundColor="Transparent"
-                                Command="{Binding ClosePaymentCommand}" />
-                    </Grid>
-                    <Picker ItemsSource="{Binding DebtCurrencies}" SelectedItem="{Binding SelectedDebtCurrency}"
-                            ItemDisplayBinding="{Binding Display}" IsVisible="{Binding HasDebt}" />
-                    <Border Style="{StaticResource InputWrap}">
-                        <Entry Text="{Binding PaymentAmount}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" FontSize="18" />
-                    </Border>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <Button Text="{svc:T pay_cash}" Style="{StaticResource BtnOutline}" Command="{Binding SelectCashCommand}">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding ViaCard}" Value="False">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Grid.Column="1" Text="{svc:T pay_card}" Style="{StaticResource BtnOutline}" Command="{Binding SelectCardCommand}"
-                                IsVisible="{Binding CanUseCard}">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding ViaCard}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                    </Grid>
-                    <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}" />
-                    <Button Text="{svc:T repay_accept}" Style="{StaticResource BtnPrimary}" Command="{Binding SavePaymentCommand}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
-                </VerticalStackLayout>
-            </Border>
-        </Grid>
     </Grid>
 </ContentPage>
