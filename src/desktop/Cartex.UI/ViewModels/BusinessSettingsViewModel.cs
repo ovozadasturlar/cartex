@@ -48,6 +48,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _showOutOfStock;
     [ObservableProperty] private bool _showUnlistedProducts;
     [ObservableProperty] private bool _allowInsufficientStockSales;
+    [ObservableProperty] private bool _allowRetroactiveCashback;
     [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     [ObservableProperty] private bool _keyLoginEnabled = true;
@@ -88,6 +89,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             ShowOutOfStock = policy.ShowOutOfStock;
             ShowUnlistedProducts = policy.ShowUnlistedProducts;
             AllowInsufficientStockSales = policy.AllowInsufficientStockSales;
+            AllowRetroactiveCashback = policy.AllowRetroactiveCashback;
             _policyLoaded = true;
         }
         catch { }
@@ -195,7 +197,7 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
                         ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
                         AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier, ShowOutOfStock,
-                        ShowUnlistedProducts, AllowInsufficientStockSales));
+                        ShowUnlistedProducts, AllowInsufficientStockSales, AllowRetroactiveCashback));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));

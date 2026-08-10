@@ -166,6 +166,10 @@
                                 <TextBlock Text="{Binding L[allow_insufficient_stock_sales]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap" />
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowInsufficientStockSales}" />
                             </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[allow_retroactive_cashback]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowRetroactiveCashback}" />
+                            </Grid>
                             <TextBlock Text="{Binding L[sales_policy_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
