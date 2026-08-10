@@ -1954,12 +1954,26 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private long? _receiptCaseSaleId;
     [ObservableProperty] private string? _linkedCaseNumber;
-    private long? _receiptCaseCustomerId;
+    [ObservableProperty] private long? _receiptCaseCustomerId;
+    [ObservableProperty] private bool _canUseTradeCases;
 
-    public bool ShowReceiptCaseActions => ReceiptCaseSaleId is not null && LinkedCaseNumber is null;
+    public bool ShowAttachCustomerToReceipt => ReceiptCaseSaleId is not null && ReceiptCaseCustomerId is null && _auth.HasPermission("sales.assignCustomer");
+    public bool ShowReceiptCaseActions => ReceiptCaseSaleId is not null && LinkedCaseNumber is null && ReceiptCaseCustomerId is not null && CanUseTradeCases;
     public bool HasLinkedCase => LinkedCaseNumber is not null;
 
-    partial void OnReceiptCaseSaleIdChanged(long? value) => OnPropertyChanged(nameof(ShowReceiptCaseActions));
+    partial void OnReceiptCaseSaleIdChanged(long? value)
+    {
+        OnPropertyChanged(nameof(ShowReceiptCaseActions));
+        OnPropertyChanged(nameof(ShowAttachCustomerToReceipt));
+    }
+
+    partial void OnReceiptCaseCustomerIdChanged(long? value)
+    {
+        OnPropertyChanged(nameof(ShowReceiptCaseActions));
+        OnPropertyChanged(nameof(ShowAttachCustomerToReceipt));
+    }
+
+    partial void OnCanUseTradeCasesChanged(bool value) => OnPropertyChanged(nameof(ShowReceiptCaseActions));
 
     partial void OnLinkedCaseNumberChanged(string? value)
     {
@@ -1971,26 +1985,55 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         LinkedCaseNumber = null;
         ReceiptCaseSaleId = null;
-        _receiptCaseCustomerId = null;
-        if (CurrentReceipt is null
-            || (!_auth.HasPermission("trade_cases.create") && !_auth.HasPermission("trade_cases.edit")))
-            return;
-        try
-        {
-            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
-            if (!enabled.Contains("trade_cases")) return;
-        }
-        catch { }
+        ReceiptCaseCustomerId = null;
+        CanUseTradeCases = false;
+        if (CurrentReceipt is null) return;
         ReceiptCaseSaleId = CurrentReceipt.SaleId;
-        _receiptCaseCustomerId = _lastSoldCustomerId;
+        ReceiptCaseCustomerId = _lastSoldCustomerId;
+
+        if (_auth.HasPermission("trade_cases.create") || _auth.HasPermission("trade_cases.edit"))
+        {
+            try
+            {
+                var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
+                if (enabled.Contains("trade_cases")) CanUseTradeCases = true;
+            }
+            catch { }
+        }
     }
 
     private long? _lastSoldCustomerId;
 
     [RelayCommand]
+    private async Task AttachCustomerToReceipt()
+    {
+        if (ReceiptCaseSaleId is not { } saleId || !_auth.HasPermission("sales.assignCustomer")) return;
+        var vm = new CustomerPickerViewModel(_customersApi, _toast, _busy);
+        await vm.InitAsync();
+        var result = await _dialog.ShowAsync<CustomerPickerDialog, CustomerPickerViewModel, object>(vm);
+        if (result is not CustomerDto customer) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                await _salesApi.AssignCustomerAsync(saleId, customer.Id);
+            }
+            ReceiptCaseCustomerId = customer.Id;
+            _lastSoldCustomerId = customer.Id;
+            _toast.Success(string.Format(L["customer_assigned_fmt"], $"{customer.FullName} {customer.LastName}".Trim()));
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private async Task AttachReceiptToCase()
     {
-        if (_receiptCaseCustomerId is not { } customerId || ReceiptCaseSaleId is not { } saleId) return;
+        if (ReceiptCaseSaleId is not { } saleId) return;
+        if (ReceiptCaseCustomerId is not { } customerId)
+        {
+            _toast.Warning(L["case_customer_required"] ?? "Loyihaga biriktirish uchun mijoz tanlangan bo'lishi kerak.");
+            return;
+        }
         CustomerDto customer;
         try { customer = await _customersApi.GetByIdAsync(customerId); }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
