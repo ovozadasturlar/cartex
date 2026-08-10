@@ -43,7 +43,11 @@ public sealed class DialogService : IDialogService
         {
             return await TrackAsync(OverlayDialog.ShowCustomAsync<TView, TViewModel, TResult>(
                 vm,
-                options: new OverlayDialogOptions { CanLightDismiss = true },
+                options: new OverlayDialogOptions 
+                { 
+                    CanLightDismiss = true,
+                    Buttons = DialogButton.None
+                },
                 token: cancellation.Token));
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)

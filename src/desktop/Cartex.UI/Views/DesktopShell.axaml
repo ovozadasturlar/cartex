@@ -335,29 +335,34 @@
                 </Grid>
             </Border>
 
-            <Panel Classes.blurred="{Binding BlurCurrentPage}">
-                <TransitioningContentControl Content="{Binding CurrentPage}"
-                                             VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                    <TransitioningContentControl.PageTransition>
-                        <CrossFade Duration="0:0:0.18" />
-                    </TransitioningContentControl.PageTransition>
-                </TransitioningContentControl>
+            <Panel>
+                <Panel Classes.blurred="{Binding BlurCurrentPage}">
+                    <TransitioningContentControl Content="{Binding CurrentPage}"
+                                                 VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                        <TransitioningContentControl.PageTransition>
+                            <CrossFade Duration="0:0:0.18" />
+                        </TransitioningContentControl.PageTransition>
+                    </TransitioningContentControl>
 
-                <ProgressBar IsVisible="{Binding Busy.IsPageBusy}" IsIndeterminate="{Binding Busy.IsPageBusy}"
-                             VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="3"
-                             MinWidth="0" CornerRadius="0" IsHitTestVisible="False" />
+                    <ProgressBar IsVisible="{Binding Busy.IsPageBusy}" IsIndeterminate="{Binding Busy.IsPageBusy}"
+                                 VerticalAlignment="Top" HorizontalAlignment="Stretch" Height="3"
+                                 MinWidth="0" CornerRadius="0" IsHitTestVisible="False" />
 
-                <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000" IsHitTestVisible="False">
-                    <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
-                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                        <StackPanel Spacing="14" HorizontalAlignment="Center">
-                            <ProgressBar IsIndeterminate="{Binding Busy.IsBusy}" Width="190" />
-                            <TextBlock Text="{Binding Busy.Message}" Foreground="{DynamicResource TextSecondary}"
-                                       HorizontalAlignment="Center" />
-                        </StackPanel>
+                    <Border IsVisible="{Binding Busy.IsBusy}" Background="#30000000" IsHitTestVisible="False">
+                        <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="26,22"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Spacing="14" HorizontalAlignment="Center">
+                                <ProgressBar IsIndeterminate="{Binding Busy.IsBusy}" Width="190" />
+                                <TextBlock Text="{Binding Busy.Message}" Foreground="{DynamicResource TextSecondary}"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
                     </Border>
-                </Border>
+                </Panel>
+
+                <!-- Overlay dialog scoped to content frame (does not block sidebar or navbar) -->
+                <u:OverlayDialogHost />
             </Panel>
 
         </DockPanel>
@@ -472,8 +477,6 @@
                 Background="#30000000">
             <ContentControl Content="{Binding Onboarding}" />
         </Border>
-
-        <u:OverlayDialogHost Grid.Column="0" Grid.ColumnSpan="2" />
 
     </Grid>
 </UserControl>
