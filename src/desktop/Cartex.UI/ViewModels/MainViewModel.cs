@@ -107,6 +107,7 @@ public partial class MainViewModel : ViewModelBase
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
+        _navigationService.PageNavigationRequested += OnPageNavigationRequested;
         if (dialogService is DialogService dialogs)
             dialogs.OpenChanged += open => Avalonia.Threading.Dispatcher.UIThread.Post(() => IsDialogOpen = open);
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
@@ -313,6 +314,12 @@ public partial class MainViewModel : ViewModelBase
         var item = MenuSections.SelectMany(s => s.Items).FirstOrDefault(m => m.Key == menuKey);
         if (item is not null)
             SelectedMenuItem = item;
+    }
+
+    private void OnPageNavigationRequested(ViewModelBase page)
+    {
+        CurrentPage = page;
+        StartPageLoad(page);
     }
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)

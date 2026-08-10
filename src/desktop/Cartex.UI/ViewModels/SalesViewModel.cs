@@ -8,6 +8,8 @@ using Cartex.Shared.Models.Prepacks;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.TradeCases;
+using Cartex.UI.Views;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Rates;
@@ -171,6 +173,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IHeldSaleStore _heldStore;
     private readonly IPrinterService _printer;
     private readonly PrintDispatchService _printDispatch;
+    private readonly ITradeCasesApi _tradeCasesApi;
+    private readonly IDialogService _dialog;
     private readonly IScannedCodeParser _scannedCodeParser;
     private readonly IScanFeedbackService _scanFeedback;
     private readonly ConnectivityService _connectivity;
@@ -389,10 +393,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
         IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
         ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi,
-        PrintDispatchService printDispatch)
+        PrintDispatchService printDispatch, ITradeCasesApi tradeCasesApi, IDialogService dialog)
     {
         _shiftsApi = shiftsApi;
         _printDispatch = printDispatch;
+        _tradeCasesApi = tradeCasesApi;
+        _dialog = dialog;
         _cache = cache;
         _suppliersApi = suppliersApi;
         _suppliesApi = suppliesApi;
@@ -1914,7 +1920,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _activeCartCode = null;
             }
 
+            var soldCustomerId = SelectedCustomer?.Id;
             ClearCart();
+            _lastSoldCustomerId = soldCustomerId;
             _toast.Success(L["sale_completed"]);
             await ShowReceiptAsync(result.ReceiptToken);
             await LoadProductsAsync();
@@ -1934,11 +1942,74 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
 
+        await RefreshReceiptCaseActionsAsync();
+
         // A successful online checkout has already written the centralized
         // automatic PrintJob in the same server transaction. Local dispatch is
         // only the fallback for installations without centralized routing.
         if (!_printer.AutoPrintEnabled || _printer.AutoPrintHandledByServer) return;
         try { await PrintCurrentReceiptAsync(); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [ObservableProperty] private long? _receiptCaseSaleId;
+    [ObservableProperty] private string? _linkedCaseNumber;
+    private long? _receiptCaseCustomerId;
+
+    public bool ShowReceiptCaseActions => ReceiptCaseSaleId is not null && LinkedCaseNumber is null;
+    public bool HasLinkedCase => LinkedCaseNumber is not null;
+
+    partial void OnReceiptCaseSaleIdChanged(long? value) => OnPropertyChanged(nameof(ShowReceiptCaseActions));
+
+    partial void OnLinkedCaseNumberChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowReceiptCaseActions));
+        OnPropertyChanged(nameof(HasLinkedCase));
+    }
+
+    private async Task RefreshReceiptCaseActionsAsync()
+    {
+        LinkedCaseNumber = null;
+        ReceiptCaseSaleId = null;
+        _receiptCaseCustomerId = null;
+        if (CurrentReceipt is null
+            || (!_auth.HasPermission("trade_cases.create") && !_auth.HasPermission("trade_cases.edit")))
+            return;
+        try
+        {
+            var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
+            if (!enabled.Contains("trade_cases")) return;
+        }
+        catch { }
+        ReceiptCaseSaleId = CurrentReceipt.SaleId;
+        _receiptCaseCustomerId = _lastSoldCustomerId;
+    }
+
+    private long? _lastSoldCustomerId;
+
+    [RelayCommand]
+    private async Task AttachReceiptToCase()
+    {
+        if (_receiptCaseCustomerId is not { } customerId || ReceiptCaseSaleId is not { } saleId) return;
+        CustomerDto customer;
+        try { customer = await _customersApi.GetByIdAsync(customerId); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+        var vm = new SaleCaseAttachViewModel(_tradeCasesApi, _toast, _busy, Branch);
+        await vm.InitAsync(customerId, $"{customer.FullName} {customer.LastName}".Trim());
+        var result = await _dialog.ShowAsync<SaleCaseAttachDialog, SaleCaseAttachViewModel, object>(vm);
+        var (caseId, caseNumber) = result switch
+        {
+            TradeCaseCreatedDto created => (created.Id, created.CaseNumber),
+            TradeCaseListDto existing => (existing.Id, existing.CaseNumber),
+            _ => (0L, null)
+        };
+        if (caseNumber is null) return;
+        try
+        {
+            await _tradeCasesApi.LinkSaleAsync(caseId, saleId);
+            LinkedCaseNumber = caseNumber;
+            _toast.Success(string.Format(L["case_linked_fmt"], caseNumber));
+        }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 

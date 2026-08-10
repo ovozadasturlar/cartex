@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:customers="using:Cartex.Shared.Models.Customers"
+             x:Class="Cartex.UI.Views.TradeCaseCreateDialog"
+             x:DataType="vm:TradeCaseCreateViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="520" MaxHeight="680"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            BoxShadow="0 18 50 0 #33000000" Padding="24">
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{Binding L[tc_new_case]}" Classes="h2" Margin="0,0,0,16" />
+
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10"
+                        HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Classes="outline" Command="{Binding CancelCommand}" Content="{Binding L[cancel]}" />
+                <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+            </StackPanel>
+
+            <ScrollViewer>
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="5" IsVisible="{Binding !HasCustomer}">
+                        <TextBlock Text="{Binding L[customer]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding CustomerSearch, Mode=TwoWay}" PlaceholderText="{Binding L[search]}" MinHeight="40">
+                            <TextBox.InnerLeftContent>
+                                <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
+                                                 Foreground="{DynamicResource TextMuted}" />
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <Border Background="{DynamicResource AppBg}" CornerRadius="10" MaxHeight="220"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                IsVisible="{Binding HasSearchResults}">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding CustomerResults}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="customers:CustomerDto">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="12,9" Cursor="Hand"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    Command="{Binding $parent[ItemsControl].((vm:TradeCaseCreateViewModel)DataContext).PickCustomerCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding LastName}" Foreground="{DynamicResource TextSecondary}" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Phone}" FontSize="12" Foreground="{DynamicResource TextMuted}" />
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5" IsVisible="{Binding HasCustomer}">
+                        <TextBlock Text="{Binding L[customer]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="10" Padding="12,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <TextBlock Text="{Binding SelectedCustomerDisplay.FullName}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding SelectedCustomerDisplay.LastName}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextSecondary}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding SelectedCustomerDisplay.Phone}" FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="icon" VerticalAlignment="Center"
+                                        Command="{Binding ClearCustomerCommand}">
+                                    <mi:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="{DynamicResource TextMuted}" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[tc_title_label]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding Title, Mode=TwoWay}" MinHeight="40" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[tc_site_address]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding SiteAddress, Mode=TwoWay}" MinHeight="40" PlaceholderText="{Binding L[optional]}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

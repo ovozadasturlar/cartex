@@ -38,6 +38,19 @@ public sealed class PrintDispatchService(
             reprint ? $"z-reprint:{report.ShiftId}:{Guid.NewGuid():N}" : $"z:{report.ShiftId}",
             cancellationToken);
 
+    public Task PrintIssueNoteAsync(long issueId, long? branchId = null, CancellationToken cancellationToken = default) =>
+        CreateAsync(
+            PrintJobKind.Receipt,
+            "goods_issue",
+            issueId.ToString(),
+            JsonSerializer.SerializeToElement(new { issueId }),
+            false,
+            null,
+            $"issue-note:{issueId}:{Guid.NewGuid():N}",
+            cancellationToken,
+            branchId: branchId,
+            kindLabel: LocalizationManager.Instance["print_kind_issue_note"]);
+
     public Task PrintBarcodeAsync(
         string code,
         string name,
@@ -67,7 +80,9 @@ public sealed class PrintDispatchService(
         string? reason,
         string idempotencyKey,
         CancellationToken cancellationToken,
-        int copies = 1)
+        int copies = 1,
+        long? branchId = null,
+        string? kindLabel = null)
     {
         var permission = kind switch
         {
@@ -80,12 +95,13 @@ public sealed class PrintDispatchService(
             throw new UnauthorizedAccessException("Tarmoq orqali chop etish ruxsati kerak.");
         if (!_auth.HasPermission(permission))
             throw new UnauthorizedAccessException("Ushbu turdagi chop etish ruxsati kerak.");
-        if (_branch.CurrentBranchId is not long branchId)
+        var targetBranchId = branchId ?? _branch.CurrentBranchId;
+        if (targetBranchId is null)
             throw new InvalidOperationException("Chop etish uchun filial tanlanmagan.");
 
         await statusHub.EnsureStartedAsync();
         var job = await printing.CreateJobAsync(new CreatePrintJobRequest(
-            branchId,
+            targetBranchId.Value,
             kind,
             sourceType,
             sourceId,
@@ -96,9 +112,10 @@ public sealed class PrintDispatchService(
             idempotencyKey,
             _auth.DeviceId,
             _auth.DeviceName), cancellationToken);
+        var label = kindLabel ?? PrintNotificationText.Kind(kind);
         if (job.Status == PrintJobStatus.Completed)
-            toast.Success(string.Format(LocalizationManager.Instance["print_completed"], PrintNotificationText.Kind(kind), string.Empty));
+            toast.Success(string.Format(LocalizationManager.Instance["print_completed"], label, string.Empty));
         else
-            toast.Info(string.Format(LocalizationManager.Instance["print_queued"], PrintNotificationText.Kind(kind)));
+            toast.Info(string.Format(LocalizationManager.Instance["print_queued"], label));
     }
 }

@@ -134,6 +134,13 @@ public sealed class GetTradeCaseByIdQueryHandler(
                 x.BusinessDate, x.CreatedAt, x.Status.ToString(), 0,
                 x.TotalBaseAmount, x.Note, null, null))
             .ToListAsync(cancellationToken));
+        documents.AddRange(await db.Sales.AsNoTracking()
+            .Where(x => x.TradeCaseId == request.Id
+                        && !db.TradeCaseSettlements.Any(s => s.SaleId == x.Id))
+            .Select(x => new TradeCaseDocumentDto("Sale", x.Id, x.ReceiptToken,
+                DateOnly.FromDateTime(x.CreatedAt), x.CreatedAt, x.Status.ToString(),
+                x.Items.Sum(i => i.Quantity), x.TotalAmount, null, x.Id, x.ReceiptToken))
+            .ToListAsync(cancellationToken));
 
         var isOpen = header.Status is TradeCaseStatus.Open or TradeCaseStatus.SettlementPending;
         var hasCustody = lines.Any(x => x.CustodyQuantity > 0);

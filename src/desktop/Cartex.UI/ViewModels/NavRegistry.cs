@@ -21,6 +21,7 @@ public static class NavRegistry
         new("sales", "shift", MaterialIconKind.CashClock, typeof(ShiftViewModel), "shifts.view"),
         new("sales", "sale_history", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view"),
         new("sales", "orders", MaterialIconKind.ClipboardTextClockOutline, typeof(OrdersViewModel), "sales.view", "ordering"),
+        new("sales", "trade_cases", MaterialIconKind.BriefcaseClockOutline, typeof(TradeCasesViewModel), "trade_cases.view", "trade_cases"),
         new("sales", "customers", MaterialIconKind.AccountGroup, typeof(CustomersViewModel), "customers.view"),
         new("inventory", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
         new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),

@@ -1213,6 +1213,25 @@
                             </StackPanel>
                         </Button>
                     </Grid>
+                    <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" IsVisible="{Binding ShowReceiptCaseActions}">
+                        <Button Classes="outline" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                MinHeight="40" Command="{Binding AttachReceiptToCaseCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="LinkVariantPlus" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[tc_attach]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="10,8" CornerRadius="10"
+                            Background="{DynamicResource SidebarItemActive}" IsVisible="{Binding HasLinkedCase}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <mi:MaterialIcon Kind="CheckCircleOutline" Width="15" Height="15" Foreground="{DynamicResource SuccessBrush}" />
+                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold">
+                                <Run Text="{Binding L[tc_case_label]}" />
+                                <Run Text="{Binding LinkedCaseNumber}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                     <c:ReceiptCard DataContext="{Binding CurrentReceipt}" />
                 </DockPanel>
             </Border>

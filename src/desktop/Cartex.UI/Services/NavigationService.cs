@@ -9,6 +9,7 @@ public sealed partial class NavigationService : ObservableObject
     private ViewModelBase? _currentView;
 
     public event Action<string>? MenuNavigationRequested;
+    public event Action<ViewModelBase>? PageNavigationRequested;
 
     public void NavigateTo(ViewModelBase viewModel) => CurrentView = viewModel;
 
@@ -20,4 +21,7 @@ public sealed partial class NavigationService : ObservableObject
 
     public void RequestMenuNavigation(string menuKey) =>
         MenuNavigationRequested?.Invoke(menuKey);
+
+    public void RequestPageNavigation(ViewModelBase viewModel) =>
+        PageNavigationRequested?.Invoke(viewModel);
 }
