@@ -1,0 +1,37 @@
+.search-field {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 24px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--mat-table-background-color);
+  border-radius: 8px;
+}
+
+.header-cell {
+  text-align: left;
+  font-size: 12px;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  text-decoration: underline;
+}
+
+.num {
+  text-align: right;
+}
+
+.actions {
+  text-align: center;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+}

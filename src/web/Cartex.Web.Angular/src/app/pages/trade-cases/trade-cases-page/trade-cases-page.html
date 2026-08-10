@@ -1,0 +1,94 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('trade_cases')">
+    @if (canCreate) {
+      <button matButton="filled" (click)="openCreate()">
+        <mat-icon>add</mat-icon> {{ t('tc_new_case') }}
+      </button>
+    }
+  </cx-page-header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        [placeholder]="t('search')"
+        [ngModel]="search"
+        (ngModelChange)="onSearch($event)"
+      />
+    </mat-form-field>
+
+    <div class="table-wrapper">
+      @if (pagedList().items.length) {
+        <table mat-table [dataSource]="pagedList().items">
+          <ng-container matColumnDef="number">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('tc_case_number') }}</th>
+            <td mat-cell *matCellDef="let item" class="clickable" (click)="navigate(item.id)">
+              {{ item.caseNumber }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('tc_title_label') }}</th>
+            <td mat-cell *matCellDef="let item">{{ item.title }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="customer">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('customer') }}</th>
+            <td mat-cell *matCellDef="let item">{{ item.customerName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="warehouse">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('warehouse') }}</th>
+            <td mat-cell *matCellDef="let item">{{ item.warehouseName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('status') }}</th>
+            <td mat-cell *matCellDef="let item">
+              <span class="cx-chip" [class]="statusClass(item.status)">{{
+                t(statusKey(item.status))
+              }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="outstanding">
+            <th mat-header-cell *matHeaderCellDef class="header-cell num">
+              {{ t('tc_custody_amount') }}
+            </th>
+            <td mat-cell *matCellDef="let item" class="num">
+              {{ item.estimatedOutstandingAmount | cxMoney }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">{{ t('date') }}</th>
+            <td mat-cell *matCellDef="let item">{{ item.businessDate | date: 'dd.MM.yyyy' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="header-cell"></th>
+            <td mat-cell *matCellDef="let item" class="actions">
+              <button matIconButton class="nav" (click)="navigate(item.id)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnDefs; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnDefs"></tr>
+        </table>
+      } @else {
+        <div class="empty">
+          <cx-empty-state [message]="t('no_data')" />
+        </div>
+      }
+    </div>
+
+    @if (pagedList().meta) {
+      <cx-paging-bar [meta]="pagedList().meta" (changed)="onPage($event)" />
+    }
+  }
+</ng-container>

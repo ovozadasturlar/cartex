@@ -2,9 +2,35 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
-  CashierSales, Customer, CustomerSales, CustomerTotals, DailyCashFlow, DebtAgingReport,
-  LedgerEntry, LowStock, Product, ProductsTotals, Receipt, Sale, SalesBreakdown,
-  SalesReport, SalesTotals, Warehouse,
+  CashierSales,
+  ChangeTradeCaseStatusRequest,
+  CreateGoodsIssueRequest,
+  CreateGoodsReturnRequest,
+  CreateTradeCaseRequest,
+  Customer,
+  CustomerSales,
+  CustomerTotals,
+  DailyCashFlow,
+  DebtAgingReport,
+  GoodsIssueCreated,
+  GoodsIssuePrint,
+  GoodsReturnCreated,
+  LedgerEntry,
+  LowStock,
+  Product,
+  ProductsTotals,
+  Receipt,
+  Sale,
+  SalesBreakdown,
+  SalesReport,
+  SalesTotals,
+  SettleTradeCaseRequest,
+  TradeCaseDetail,
+  TradeCaseList,
+  TradeCaseSettlementCreated,
+  TradeCaseStatement,
+  UpdateTradeCaseRequest,
+  Warehouse,
 } from './models';
 import { ListQuery, Paged, listParams, toPaged } from './paging';
 
@@ -33,7 +59,10 @@ export class SalesApi {
     return this.http.post<void>(`/api/sales/${id}/resend-receipt`, {});
   }
 
-  returnSale(id: number, lines: { saleItemId: number; quantity: number; restock: boolean; reason: string | null }[]): Observable<void> {
+  returnSale(
+    id: number,
+    lines: { saleItemId: number; quantity: number; restock: boolean; reason: string | null }[],
+  ): Observable<void> {
     return this.http.post<void>(`/api/sales/${id}/return`, { saleId: id, lines });
   }
 }
@@ -75,7 +104,10 @@ export class CustomersApi {
 
   ledger(id: number, page: number, pageSize: number): Observable<Paged<LedgerEntry>> {
     return this.http
-      .get<LedgerEntry[]>(`/api/customers/${id}/ledger`, { params: { page, pageSize }, observe: 'response' })
+      .get<LedgerEntry[]>(`/api/customers/${id}/ledger`, {
+        params: { page, pageSize },
+        observe: 'response',
+      })
       .pipe(map(toPaged));
   }
 
@@ -98,17 +130,20 @@ export class CustomersApi {
     return this.http.post<number>('/api/customers', body);
   }
 
-  update(id: number, body: {
-    fullName: string;
-    lastName: string | null;
-    phone: string;
-    email: string | null;
-    address: string | null;
-    cardBarcode: string | null;
-    discountPct: number;
-    creditLimit: number;
-    notificationsOptOut: boolean;
-  }): Observable<void> {
+  update(
+    id: number,
+    body: {
+      fullName: string;
+      lastName: string | null;
+      phone: string;
+      email: string | null;
+      address: string | null;
+      cardBarcode: string | null;
+      discountPct: number;
+      creditLimit: number;
+      notificationsOptOut: boolean;
+    },
+  ): Observable<void> {
     return this.http.put<void>(`/api/customers/${id}`, body);
   }
 
@@ -116,13 +151,16 @@ export class CustomersApi {
     return this.http.delete<void>(`/api/customers/${id}`);
   }
 
-  repayDebt(id: number, body: {
-    amount: number;
-    viaCard: boolean;
-    debtCurrency: string | null;
-    payCurrency: string | null;
-    idempotencyKey: string;
-  }): Observable<void> {
+  repayDebt(
+    id: number,
+    body: {
+      amount: number;
+      viaCard: boolean;
+      debtCurrency: string | null;
+      payCurrency: string | null;
+      idempotencyKey: string;
+    },
+  ): Observable<void> {
     return this.http.post<void>(`/api/customers/${id}/repay-debt`, body);
   }
 }
@@ -132,7 +170,11 @@ export class ReportsApi {
   private readonly http = inject(HttpClient);
 
   sales(from: string, to: string, warehouseId?: number): Observable<SalesReport> {
-    const params: Record<string, string> = { from, to, tzOffsetMinutes: String(-new Date().getTimezoneOffset()) };
+    const params: Record<string, string> = {
+      from,
+      to,
+      tzOffsetMinutes: String(-new Date().getTimezoneOffset()),
+    };
     if (warehouseId) params['warehouseId'] = String(warehouseId);
     return this.http.get<SalesReport>('/api/reports/sales', { params });
   }
@@ -166,5 +208,105 @@ export class CatalogApi {
 
   enabledFeatures(): Observable<string[]> {
     return this.http.get<string[]>('/api/features/enabled');
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class TradeCasesApi {
+  private readonly http = inject(HttpClient);
+
+  list(params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: string;
+    warehouseId?: number;
+    customerId?: number;
+  }): Observable<Paged<TradeCaseList>> {
+    const queryParams: Record<string, string> = {};
+    if (params?.page) queryParams['Page'] = String(params.page);
+    if (params?.pageSize) queryParams['PageSize'] = String(params.pageSize);
+    if (params?.search) queryParams['Search'] = params.search;
+    if (params?.status) queryParams['Status'] = params.status;
+    if (params?.warehouseId) queryParams['WarehouseId'] = String(params.warehouseId);
+    if (params?.customerId) queryParams['CustomerId'] = String(params.customerId);
+
+    return this.http
+      .get<TradeCaseList[]>('/api/trade-cases', { params: queryParams, observe: 'response' })
+      .pipe(map(toPaged));
+  }
+
+  getById(id: number): Observable<TradeCaseDetail> {
+    return this.http.get<TradeCaseDetail>(`/api/trade-cases/${id}`);
+  }
+
+  create(request: CreateTradeCaseRequest): Observable<TradeCaseList> {
+    return this.http.post<TradeCaseList>('/api/trade-cases', request);
+  }
+
+  update(id: number, request: UpdateTradeCaseRequest): Observable<void> {
+    return this.http.put<void>(`/api/trade-cases/${id}`, request);
+  }
+
+  close(id: number, request: ChangeTradeCaseStatusRequest): Observable<void> {
+    return this.http.post<void>(`/api/trade-cases/${id}/close`, request);
+  }
+
+  cancel(id: number, request: ChangeTradeCaseStatusRequest): Observable<void> {
+    return this.http.post<void>(`/api/trade-cases/${id}/cancel`, request);
+  }
+
+  linkSale(id: number, saleId: number): Observable<void> {
+    return this.http.put<void>(`/api/trade-cases/${id}/sales/${saleId}`, {});
+  }
+
+  unlinkSale(id: number, saleId: number): Observable<void> {
+    return this.http.delete<void>(`/api/trade-cases/${id}/sales/${saleId}`);
+  }
+
+  issue(id: number, request: CreateGoodsIssueRequest): Observable<GoodsIssueCreated> {
+    return this.http.post<GoodsIssueCreated>(`/api/trade-cases/${id}/issues`, request);
+  }
+
+  returnGoods(id: number, request: CreateGoodsReturnRequest): Observable<GoodsReturnCreated> {
+    return this.http.post<GoodsReturnCreated>(`/api/trade-cases/${id}/returns`, request);
+  }
+
+  settle(id: number, request: SettleTradeCaseRequest): Observable<TradeCaseSettlementCreated> {
+    return this.http.post<TradeCaseSettlementCreated>(
+      `/api/trade-cases/${id}/settlements`,
+      request,
+    );
+  }
+
+  statement(
+    id: number,
+    params?: { from?: string | null; to?: string | null },
+  ): Observable<TradeCaseStatement> {
+    const queryParams: Record<string, string> = {};
+    if (params?.from) queryParams['From'] = params.from;
+    if (params?.to) queryParams['To'] = params.to;
+    return this.http.get<TradeCaseStatement>(`/api/trade-cases/${id}/statement`, {
+      params: queryParams,
+    });
+  }
+
+  exportStatement(
+    id: number,
+    format: string = 'pdf',
+    mode: string = 'both',
+    params?: { from?: string | null; to?: string | null },
+  ): Observable<Blob> {
+    const queryParams: Record<string, string> = { format, mode };
+    if (params?.from) queryParams['From'] = params.from;
+    if (params?.to) queryParams['To'] = params.to;
+    return this.http.get(`/api/trade-cases/${id}/statement/export`, {
+      params: queryParams,
+      responseType: 'blob',
+    });
+  }
+
+  getIssuePrint(issueId: number): Observable<GoodsIssuePrint> {
+    return this.http.get<GoodsIssuePrint>(`/api/trade-cases/issues/${issueId}/print`);
   }
 }
