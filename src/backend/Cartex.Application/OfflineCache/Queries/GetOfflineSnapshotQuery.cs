@@ -42,7 +42,7 @@ public sealed class GetOfflineSnapshotQueryHandler(
                 x.VariantId, x.ProductName, x.CategoryId, x.CategoryName, x.UnitName,
                 x.Dimension, x.Quantity, x.SellingPrice, x.NearestExpiry, x.ImageUrl,
                 x.DiscountPct, x.Code, x.Barcodes, x.AllowsAmountEntry,
-                x.QuantityStep, x.AllowsFractional)));
+                x.AllowsFractional)));
             if (chunk.Items.Count < 1000) break;
         }
 

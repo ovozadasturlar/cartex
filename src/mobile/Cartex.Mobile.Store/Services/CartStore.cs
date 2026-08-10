@@ -13,8 +13,6 @@ public sealed partial class CartLine : ObservableObject
     public decimal UnitPrice { get; set; }
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private bool _isSwiped;
-    public decimal QuantityStep { get; set; } = 1;
-    public decimal IncrementStep { get; set; } = 1;
     public bool AllowsFractional { get; set; }
     public decimal LineTotal => UnitPrice * Quantity;
     public string? ImageKey { get; set; }
@@ -56,9 +54,7 @@ public sealed class CartStore
                 UnitName = l.UnitName,
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
-                QuantityStep = l.QuantityStep > 0 ? l.QuantityStep : 1,
-                IncrementStep = l.IncrementStep > 0 ? l.IncrementStep : 1,
-                AllowsFractional = l.AllowsFractional || l.QuantityStep is > 0 and < 1,
+                AllowsFractional = l.AllowsFractional,
                 ImageKey = l.ImageKey
             }));
             CustomerId = draft.CustomerId;
@@ -88,8 +84,6 @@ public sealed class CartStore
                 UnitName = product.UnitName,
                 UnitPrice = product.SellingPrice,
                 Quantity = quantity,
-                QuantityStep = QuantityInput.NormalizeStep(product.QuantityStep, product.AllowsFractional),
-                IncrementStep = product.PackQty > 0 ? product.PackQty : 1,
                 AllowsFractional = product.AllowsFractional,
                 ImageKey = product.ImageKey
             });
@@ -101,7 +95,7 @@ public sealed class CartStore
     public bool SetQuantity(long variantId, decimal quantity)
     {
         var line = Lines.FirstOrDefault(l => l.VariantId == variantId);
-        if (line is null || !QuantityInput.IsValid(quantity, line.QuantityStep, line.AllowsFractional))
+        if (line is null || !QuantityInput.IsValid(quantity, line.AllowsFractional))
             return false;
         line.Quantity = quantity;
         Save(debouncePersistence: true);
@@ -225,7 +219,7 @@ public sealed class CartStore
         pending?.Dispose();
         var draft = new Draft(
             Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey,
-                l.QuantityStep, l.IncrementStep, l.AllowsFractional)).ToList(),
+                l.AllowsFractional)).ToList(),
             CustomerId, CustomerName, Note, SubmittedCartCode, SubmissionIdempotencyKey, CheckoutIdempotencyKey,
             Participants.ToList());
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
@@ -261,8 +255,6 @@ public sealed class CartStore
         decimal UnitPrice,
         decimal Quantity,
         string? ImageKey,
-        decimal QuantityStep = 1,
-        decimal IncrementStep = 1,
         bool AllowsFractional = false);
     private sealed record Draft(
         List<DraftLine> Lines,

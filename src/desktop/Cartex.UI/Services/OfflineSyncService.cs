@@ -189,7 +189,7 @@ public sealed class OfflineSyncService(
                 Quantity = p.Quantity,
                 SellingPrice = p.SellingPrice,
                 AllowsAmountEntry = p.AllowsAmountEntry,
-                QuantityStep = p.QuantityStep
+                AllowsFractional = p.AllowsFractional
             }),
             snapshot.Barcodes.Select(b => new OfflineBarcode
             {

@@ -186,7 +186,6 @@
   "quantity_invalid": "Miqdor noto'g'ri. Ko'pi bilan 3 ta kasr xonasi kiriting",
   "quantity_positive_required": "Miqdor noldan katta bo'lishi kerak",
   "quantity_integer_required": "Bu mahsulot faqat butun dona bilan sotiladi",
-  "quantity_step_invalid": "Miqdor mahsulot uchun belgilangan qadamga mos emas",
   "cart_details": "Savat tafsilotlari",
   "products": "Mahsulotlar",
   "cashier": "Kassir",

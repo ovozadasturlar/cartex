@@ -16,7 +16,7 @@ public record UnitDto(
     bool IsSystem,
     bool IsEnabled = true,
     bool IsDefault = false,
-    decimal DefaultQuantityStep = 1,
+    bool AllowFractional = true,
     bool DefaultAllowAmountEntry = false);
 
 public sealed class GetUnitsQueryHandler(
@@ -32,7 +32,7 @@ public sealed class GetUnitsQueryHandler(
         }
         return await db.Units
             .ToPagedListAsync(request,
-                u => new UnitDto(u.Id, u.Name, u.ShortName, u.Dimension.ToString(), u.Factor, u.IsSystem, u.IsEnabled, u.IsDefault, u.DefaultQuantityStep, u.DefaultAllowAmountEntry),
+                u => new UnitDto(u.Id, u.Name, u.ShortName, u.Dimension.ToString(), u.Factor, u.IsSystem, u.IsEnabled, u.IsDefault, u.AllowFractional, u.DefaultAllowAmountEntry),
                 writer, cancellationToken);
     }
 }

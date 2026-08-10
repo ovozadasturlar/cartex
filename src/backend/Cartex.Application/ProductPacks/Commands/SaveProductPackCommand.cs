@@ -21,12 +21,14 @@ public sealed class CreateProductPackCommandHandler(IApplicationDbContext db) : 
     {
         var policy = await db.Products
             .Where(p => p.Id == request.ProductId)
-            .Select(p => new { Step = p.QuantityStepOverride ?? p.Unit.DefaultQuantityStep })
+            .Select(p => new { AllowsFractional = p.FractionalOverride ?? p.Unit.AllowFractional })
             .FirstOrDefaultAsync(cancellationToken);
         if (policy is null)
             throw new NotFoundException("Mahsulot topilmadi.");
-        if (!QuantityPolicyService.IsValid(request.Size, policy.Step))
-            throw new BusinessRuleException($"Qadoq miqdori {policy.Step:0.###} qadamiga mos emas.", "quantity_step_violation");
+        if (request.Size != decimal.Round(request.Size, 3))
+            throw new BusinessRuleException("Qadoq miqdori 0.001 aniqlikdan oshmaydi.", "quantity_precision_exceeded");
+        if (!policy.AllowsFractional && request.Size != decimal.Truncate(request.Size))
+            throw new BusinessRuleException("Qadoq miqdori faqat butun son bo'lishi kerak.", "quantity_whole_required");
 
         var pack = new ProductPack
         {
@@ -60,9 +62,11 @@ public sealed class UpdateProductPackCommandHandler(IApplicationDbContext db) : 
         var pack = await db.ProductPacks.Include(p => p.Product).ThenInclude(p => p.Unit).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Qadoq topilmadi.");
 
-        var step = pack.Product.QuantityStepOverride ?? pack.Product.Unit.DefaultQuantityStep;
-        if (!QuantityPolicyService.IsValid(request.Size, step))
-            throw new BusinessRuleException($"Qadoq miqdori {step:0.###} qadamiga mos emas.", "quantity_step_violation");
+        var allowsFractional = pack.Product.FractionalOverride ?? pack.Product.Unit.AllowFractional;
+        if (request.Size != decimal.Round(request.Size, 3))
+            throw new BusinessRuleException("Qadoq miqdori 0.001 aniqlikdan oshmaydi.", "quantity_precision_exceeded");
+        if (!allowsFractional && request.Size != decimal.Truncate(request.Size))
+            throw new BusinessRuleException("Qadoq miqdori faqat butun son bo'lishi kerak.", "quantity_whole_required");
 
         pack.Name = request.Name.Trim();
         pack.Size = request.Size;

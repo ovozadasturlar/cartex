@@ -281,6 +281,7 @@
   "export": "Export",
   "export_done": "Exported",
   "factor": "Factor",
+  "allow_fractional": "Allow fractional quantities",
   "feature_effect_agents": "Field agents mobile app and agent sync API",
   "feature_effect_offline_cache": "Offline sales on a single till (SQLite cache, later sync)",
   "feature_effect_ordering": "Online orders section and POS cart-code scanning",

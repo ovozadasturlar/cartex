@@ -15,7 +15,6 @@ public sealed record SaleDetailItemDto(
     decimal LineTotal,
     decimal CashbackEarned,
     decimal ReturnedCashback,
-    decimal QuantityStep = 1,
     bool AllowsFractional = false);
 
 public sealed record SaleDetailPaymentDto(

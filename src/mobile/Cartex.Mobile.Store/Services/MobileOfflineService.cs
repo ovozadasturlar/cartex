@@ -272,7 +272,7 @@ public sealed class MobileOfflineService(
         return new ProductLookupDto(product.VariantId, product.ProductName, product.UnitName,
             packQty > 0 ? packQty : 1, product.SellingPrice, product.Quantity,
             product.Dimension, AllowsAmountEntry: product.AllowsAmountEntry,
-            QuantityStep: product.QuantityStep, OriginalSellingPrice: product.SellingPrice,
+            OriginalSellingPrice: product.SellingPrice,
             PriceCurrency: baseCurrency, BaseCurrency: baseCurrency,
             AllowsFractional: product.AllowsFractional);
     }
@@ -285,7 +285,7 @@ public sealed class MobileOfflineService(
         return new ProductLookupDto(product.VariantId, product.ProductName, product.UnitName,
             packQty > 0 ? packQty : 1, product.SellingPrice, product.Quantity,
             product.Dimension, AllowsAmountEntry: product.AllowsAmountEntry,
-            QuantityStep: product.QuantityStep, OriginalSellingPrice: product.SellingPrice,
+            OriginalSellingPrice: product.SellingPrice,
             PriceCurrency: baseCurrency, BaseCurrency: baseCurrency,
             AllowsFractional: product.AllowsFractional);
     }
@@ -300,7 +300,6 @@ public sealed class MobileOfflineService(
             x.SellingPrice, x.Quantity, PriceCurrency: baseCurrency,
             Dimension: x.Dimension, IsEnabled: true,
             AllowsAmountEntry: x.AllowsAmountEntry,
-            QuantityStep: x.QuantityStep,
             AllowsFractional: x.AllowsFractional)).ToList();
     }
 

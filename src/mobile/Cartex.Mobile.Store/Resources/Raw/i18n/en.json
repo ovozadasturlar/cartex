@@ -186,7 +186,6 @@
   "quantity_invalid": "Invalid quantity. Enter no more than 3 decimal places",
   "quantity_positive_required": "Quantity must be greater than zero",
   "quantity_integer_required": "This product can only be sold in whole units",
-  "quantity_step_invalid": "Quantity does not match the step configured for this product",
   "cart_details": "Cart details",
   "products": "Products",
   "cashier": "Cashier",

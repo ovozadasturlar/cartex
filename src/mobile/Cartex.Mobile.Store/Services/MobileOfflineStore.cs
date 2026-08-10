@@ -16,7 +16,6 @@ public sealed class MobileOfflineProduct
     public decimal Quantity { get; set; }
     public decimal SellingPrice { get; set; }
     public bool AllowsAmountEntry { get; set; }
-    public decimal QuantityStep { get; set; } = 1;
     public bool AllowsFractional { get; set; }
 }
 
@@ -130,7 +129,6 @@ public sealed class MobileOfflineStore
                 Quantity = x.Quantity,
                 SellingPrice = x.SellingPrice,
                 AllowsAmountEntry = x.AllowsAmountEntry,
-                QuantityStep = x.QuantityStep,
                 AllowsFractional = x.AllowsFractional
             }));
             c.DeleteAll<MobileOfflineBarcode>();

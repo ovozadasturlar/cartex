@@ -72,8 +72,6 @@ public partial class ScanViewModel : ObservableObject
     public int BarcodePreviewNameLines => _labelSettings.Current.NameLines;
 
     private ProductLookupDto? _product;
-    private decimal _quantityStep = 1;
-    private decimal _incrementStep = 1;
     private bool _allowsFractional;
     private bool _handled;
     private string? _lastValue;
@@ -266,10 +264,10 @@ public partial class ScanViewModel : ObservableObject
     private void CloseUnknownBarcode() => Resume();
 
     [RelayCommand]
-    private void Increase() => Quantity += _incrementStep;
+    private void Increase() => Quantity += 1m;
 
     [RelayCommand]
-    private void Decrease() => Quantity = Math.Max(_quantityStep, Quantity - _incrementStep);
+    private void Decrease() => Quantity = Math.Max(1m, Quantity - 1m);
 
     [RelayCommand]
     private void SetQuantityFromText() => TryCommitQuantity(showError: true);
@@ -634,7 +632,6 @@ public partial class ScanViewModel : ObservableObject
               ?? throw new InvalidOperationException(Loc.Instance["currency_rate_required"]);
         var originalPrice = product.SellingPrice ?? 0;
         var basePrice = Math.Round(originalPrice * rate, 2);
-        var step = QuantityInput.NormalizeStep(product.QuantityStep, product.AllowsFractional);
         return new ProductLookupDto(
             product.DefaultVariantId,
             product.Name,
@@ -645,7 +642,6 @@ public partial class ScanViewModel : ObservableObject
             product.Dimension ?? "",
             product.ImageKey,
             product.AllowsAmountEntry,
-            step,
             originalPrice,
             priceCurrency,
             baseCurrency,
@@ -658,14 +654,12 @@ public partial class ScanViewModel : ObservableObject
     private void ConfigureQuantity(ProductLookupDto product, decimal initialQuantity)
     {
         _allowsFractional = product.AllowsFractional;
-        _quantityStep = QuantityInput.NormalizeStep(product.QuantityStep, _allowsFractional);
-        _incrementStep = product.PackQty > 0 ? product.PackQty : 1;
-        Quantity = Math.Max(_quantityStep, initialQuantity);
+        Quantity = Math.Max(QuantityInput.NormalizeStep(_allowsFractional), initialQuantity);
     }
 
     private bool TryCommitQuantity(bool showError)
     {
-        if (QuantityInput.TryParse(QuantityText, _quantityStep, _allowsFractional, out var quantity, out var error))
+        if (QuantityInput.TryParse(QuantityText, _allowsFractional, out var quantity, out var error))
         {
             Quantity = quantity;
             return true;
@@ -677,7 +671,6 @@ public partial class ScanViewModel : ObservableObject
             {
                 QuantityInputError.MustBePositive => "quantity_positive_required",
                 QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-                QuantityInputError.StepMismatch => "quantity_step_invalid",
                 _ => "quantity_invalid"
             }]);
         return false;

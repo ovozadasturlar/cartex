@@ -17,4 +17,4 @@ public record CreateProductRequest(
     string? PriceCurrency = null,
     long? ManufacturerId = null,
     bool? AmountEntryEnabled = null,
-    decimal? QuantityStepOverride = null);
+    bool? FractionalOverride = null);

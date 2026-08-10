@@ -60,9 +60,9 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
         var items = cart.Items.Select(i =>
         {
             var unitPrice = PriceOf(i.VariantId);
-            var step = i.Variant.Product.QuantityStepOverride ?? i.Variant.Product.Unit.DefaultQuantityStep;
+            var allowsFractional = i.Variant.Product.FractionalOverride ?? i.Variant.Product.Unit.AllowFractional;
             return new CartItemDto(i.VariantId, i.Variant.Product.Name, i.Quantity, unitPrice, unitPrice * i.Quantity,
-                i.Variant.Product.Unit.ShortName, step, step != decimal.Truncate(step),
+                i.Variant.Product.Unit.ShortName, allowsFractional,
                 i.Variant.Product.ImageKey);
         }).ToList();
 

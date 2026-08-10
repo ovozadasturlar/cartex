@@ -21,6 +21,8 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  unitName?: string;
+  allowsFractional?: boolean;
 }
 
 export interface Cart {

@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Enums;
-using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Units.Commands;
 
@@ -12,7 +11,7 @@ public record UpdateUnitCommand(
     string ShortName,
     string Dimension = "Count",
     decimal Factor = 1,
-    decimal? DefaultQuantityStep = null,
+    bool? AllowFractional = null,
     bool? DefaultAllowAmountEntry = null) : ICommand<Unit>;
 
 public sealed class UpdateUnitCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateUnitCommand, Unit>
@@ -35,8 +34,8 @@ public sealed class UpdateUnitCommandHandler(IApplicationDbContext db) : IReques
             unit.Dimension = dimension;
             unit.Factor = request.Factor;
         }
-        if (request.DefaultQuantityStep is { } step)
-            unit.DefaultQuantityStep = step;
+        if (request.AllowFractional is { } allowFractional)
+            unit.AllowFractional = allowFractional;
         if (request.DefaultAllowAmountEntry is { } allowsAmountEntry)
             unit.DefaultAllowAmountEntry = allowsAmountEntry;
 
@@ -53,11 +52,5 @@ public sealed class UpdateUnitCommandValidator : AbstractValidator<UpdateUnitCom
         RuleFor(x => x.ShortName).NotEmpty().MaximumLength(10);
         RuleFor(x => x.Dimension).Must(x => Enum.TryParse<UnitDimension>(x, true, out _)).WithMessage("O'lchov turi noto'g'ri.");
         RuleFor(x => x.Factor).GreaterThan(0);
-        RuleFor(x => x.DefaultQuantityStep)
-            .InclusiveBetween(QuantityPolicyService.MinimumStep, QuantityPolicyService.MaximumStep)
-            .When(x => x.DefaultQuantityStep.HasValue);
-        RuleFor(x => x.DefaultQuantityStep)
-            .Must(x => !x.HasValue || x.Value == decimal.Round(x.Value, 3))
-            .WithMessage("Miqdor qadami ko'pi bilan 3 kasr xonasiga ega bo'lishi kerak.");
     }
 }

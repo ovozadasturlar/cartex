@@ -117,14 +117,14 @@ public partial class SaleReturnViewModel(
     private void Increment(SaleReturnLine line)
     {
         if (!line.IsSelected) line.IsSelected = true;
-        line.Quantity = Math.Min(line.Item.ReturnableQuantity, line.Quantity + line.IncrementStep);
+        line.Quantity = Math.Min(line.Item.ReturnableQuantity, line.Quantity + 1m);
         Recalculate();
     }
 
     [RelayCommand]
     private void Decrement(SaleReturnLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity) line.Quantity = next;
         Recalculate();
     }
@@ -132,7 +132,7 @@ public partial class SaleReturnViewModel(
     [RelayCommand]
     private void CommitQuantity(SaleReturnLine line)
     {
-        if (QuantityInput.TryParse(line.QuantityText, line.QuantityStep, line.Item.AllowsFractional,
+        if (QuantityInput.TryParse(line.QuantityText, line.Item.AllowsFractional,
                 out var quantity, out var error)
             && quantity <= line.Item.ReturnableQuantity)
         {
@@ -147,7 +147,6 @@ public partial class SaleReturnViewModel(
             : Loc.Instance[error switch
             {
                 QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-                QuantityInputError.StepMismatch => "quantity_step_invalid",
                 QuantityInputError.MustBePositive => "quantity_positive_required",
                 _ => "quantity_invalid"
             }]);
@@ -240,8 +239,6 @@ public sealed record ReturnOption(string Code, string Label);
 public partial class SaleReturnLine : ObservableObject
 {
     public SaleDetailItemDto Item { get; }
-    public decimal QuantityStep => QuantityInput.NormalizeStep(Item.QuantityStep, Item.AllowsFractional);
-    public decimal IncrementStep => 1m % QuantityStep == 0 ? 1m : QuantityStep;
 
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private decimal _quantity;

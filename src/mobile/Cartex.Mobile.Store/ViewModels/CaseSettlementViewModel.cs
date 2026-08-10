@@ -91,20 +91,20 @@ public partial class CaseSettlementViewModel(
     private void Increment(CaseSettlementLine line)
     {
         line.IsSelected = true;
-        line.Quantity = Math.Min(line.Source.CustodyQuantity, line.Quantity + line.IncrementStep);
+        line.Quantity = Math.Min(line.Source.CustodyQuantity, line.Quantity + 1m);
     }
 
     [RelayCommand]
     private void Decrement(CaseSettlementLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity) line.Quantity = next;
     }
 
     [RelayCommand]
     private void CommitQuantity(CaseSettlementLine line)
     {
-        if (QuantityInput.TryParse(line.QuantityText, line.QuantityStep, line.Source.AllowsFractional,
+        if (QuantityInput.TryParse(line.QuantityText, line.Source.AllowsFractional,
                 out var quantity, out var error) && quantity <= line.Source.CustodyQuantity)
         {
             line.Quantity = quantity;
@@ -116,7 +116,6 @@ public partial class CaseSettlementViewModel(
             : Loc.Instance[error switch
             {
                 QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-                QuantityInputError.StepMismatch => "quantity_step_invalid",
                 QuantityInputError.MustBePositive => "quantity_positive_required",
                 _ => "quantity_invalid"
             }]);
@@ -219,8 +218,6 @@ public partial class CaseSettlementViewModel(
 public partial class CaseSettlementLine : ObservableObject
 {
     public TradeCaseLineDto Source { get; }
-    public decimal QuantityStep => QuantityInput.NormalizeStep(Source.QuantityStep, Source.AllowsFractional);
-    public decimal IncrementStep => 1m % QuantityStep == 0 ? 1 : QuantityStep;
     public string CustodyText => $"{Source.CustodyQuantity:0.###} {Source.UnitName}";
     public decimal LineTotal => Quantity * Source.UnitPrice;
 

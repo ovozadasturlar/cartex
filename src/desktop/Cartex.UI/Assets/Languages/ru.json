@@ -281,6 +281,7 @@
   "export": "Экспорт",
   "export_done": "Экспортировано",
   "factor": "Коэффициент",
+  "allow_fractional": "Разрешить дробное количество",
   "feature_effect_agents": "Мобильное приложение полевых агентов и agent sync API",
   "feature_effect_offline_cache": "Офлайн-продажи на одной кассе (кеш SQLite, затем синхронизация)",
   "feature_effect_ordering": "Раздел онлайн-заказов и скан кода корзины в POS",

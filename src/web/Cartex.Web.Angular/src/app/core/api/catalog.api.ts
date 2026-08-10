@@ -124,6 +124,7 @@ export interface Unit {
   isSystem: boolean;
   isEnabled: boolean;
   isDefault: boolean;
+  allowFractional: boolean;
 }
 
 export interface ProductType {
@@ -229,11 +230,11 @@ export class UnitsApi {
     return this.http.get<Unit[]>('/api/units');
   }
 
-  create(r: { name: string; shortName: string; dimension: string; factor: number }): Observable<number> {
+  create(r: { name: string; shortName: string; dimension: string; factor: number; allowFractional?: boolean }): Observable<number> {
     return this.http.post<number>('/api/units', r);
   }
 
-  update(id: number, r: { name: string; shortName: string; dimension: string; factor: number }): Observable<void> {
+  update(id: number, r: { name: string; shortName: string; dimension: string; factor: number; allowFractional?: boolean }): Observable<void> {
     return this.http.put<void>(`/api/units/${id}`, r);
   }
 

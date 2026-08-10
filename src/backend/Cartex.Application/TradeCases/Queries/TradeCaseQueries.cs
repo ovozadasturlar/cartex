@@ -104,9 +104,7 @@ public sealed class GetTradeCaseByIdQueryHandler(
                 x.Quantity - x.ReturnedQuantity - x.SettledQuantity,
                 x.UnitPrice, x.PriceCurrency, x.PriceRate,
                 x.Variant.Barcodes.OrderBy(b => b.Id).Select(b => b.Code).FirstOrDefault(),
-                x.Variant.Product.QuantityStepOverride ?? x.Variant.Product.Unit.DefaultQuantityStep,
-                (x.Variant.Product.QuantityStepOverride ?? x.Variant.Product.Unit.DefaultQuantityStep)
-                    != decimal.Truncate(x.Variant.Product.QuantityStepOverride ?? x.Variant.Product.Unit.DefaultQuantityStep)))
+                x.Variant.Product.FractionalOverride ?? x.Variant.Product.Unit.AllowFractional))
             .ToListAsync(cancellationToken);
 
         var documents = new List<TradeCaseDocumentDto>();

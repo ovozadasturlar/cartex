@@ -151,7 +151,7 @@ public sealed class CreateSaleCommandHandler(
                 v.ProductId,
                 v.Product.IsEnabled,
                 ProductName = v.Product.Name,
-                QuantityStep = v.Product.QuantityStepOverride ?? v.Product.Unit.DefaultQuantityStep
+                AllowsFractional = v.Product.FractionalOverride ?? v.Product.Unit.AllowFractional
             })
             .ToListAsync(cancellationToken);
 
@@ -161,10 +161,14 @@ public sealed class CreateSaleCommandHandler(
         foreach (var item in request.Items.Where(item => item.PrepackId is null))
         {
             var variant = variants.First(v => v.Id == item.VariantId);
-            if (!QuantityPolicyService.IsValid(item.Quantity, variant.QuantityStep))
+            if (item.Quantity != decimal.Round(item.Quantity, 3))
                 throw new BusinessRuleException(
-                    $"\"{variant.ProductName}\" miqdori {variant.QuantityStep:0.###} qadamiga mos emas.",
-                    "quantity_step_violation");
+                    $"\"{variant.ProductName}\" miqdori 0.001 aniqlikdan oshmaydi.",
+                    "quantity_precision_exceeded");
+            if (!variant.AllowsFractional && item.Quantity != decimal.Truncate(item.Quantity))
+                throw new BusinessRuleException(
+                    $"\"{variant.ProductName}\" miqdori faqat butun son bo'lishi kerak.",
+                    "quantity_whole_required");
         }
 
         if (variants.FirstOrDefault(v => !v.IsEnabled) is { } blocked)

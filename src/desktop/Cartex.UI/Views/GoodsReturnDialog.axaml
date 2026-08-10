@@ -43,7 +43,7 @@
                                         <NumericUpDown Grid.Column="2" VerticalAlignment="Center" Margin="4"
                                                        Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                                        Minimum="0" Maximum="{Binding CustodyQuantity}"
-                                                       Increment="{Binding Line.QuantityStep}" FormatString="0.###"
+                                                       Increment="1" FormatString="0.###"
                                                        ShowButtonSpinner="False" />
                                         <ComboBox Grid.Column="3" VerticalAlignment="Center" Margin="4"
                                                   ItemsSource="{Binding $parent[ItemsControl].((vm:GoodsReturnViewModel)DataContext).ConditionOptions}"

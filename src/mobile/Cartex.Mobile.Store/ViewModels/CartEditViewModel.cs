@@ -67,14 +67,14 @@ public partial class CartEditViewModel(
     [RelayCommand]
     private void Increment(CartEditLine line)
     {
-        line.Quantity += line.IncrementStep;
+        line.Quantity += 1m;
         Recalculate();
     }
 
     [RelayCommand]
     private void Decrement(CartEditLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity)
             line.Quantity = next;
         Recalculate();
@@ -83,7 +83,7 @@ public partial class CartEditViewModel(
     [RelayCommand]
     private void CommitQuantity(CartEditLine line)
     {
-        if (QuantityInput.TryParse(line.QuantityText, line.QuantityStep, line.AllowsFractional,
+        if (QuantityInput.TryParse(line.QuantityText, line.AllowsFractional,
                 out var quantity, out var error))
         {
             line.Quantity = quantity;
@@ -96,7 +96,6 @@ public partial class CartEditViewModel(
         {
             QuantityInputError.MustBePositive => "quantity_positive_required",
             QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-            QuantityInputError.StepMismatch => "quantity_step_invalid",
             _ => "quantity_invalid"
         }]);
     }
@@ -112,8 +111,6 @@ public partial class CartEditViewModel(
     private void PickProduct(CartEditSearchRow row)
     {
         var product = row.Product;
-        var step = QuantityInput.NormalizeStep(product.QuantityStep, product.AllowsFractional);
-        var increment = 1m % step == 0 ? 1m : step;
         var existing = Lines.FirstOrDefault(x => x.VariantId == product.DefaultVariantId);
         if (existing is null)
         {
@@ -121,16 +118,14 @@ public partial class CartEditViewModel(
                 product.DefaultVariantId,
                 product.Name,
                 product.UnitName,
-                Math.Max(step, increment),
+                1m,
                 row.BasePrice,
-                step,
-                increment,
                 product.AllowsFractional,
                 product.ImageKey));
         }
         else
         {
-            existing.Quantity += existing.IncrementStep;
+            existing.Quantity += 1m;
         }
 
         SearchText = "";
@@ -210,10 +205,8 @@ public partial class CartEditViewModel(
             Lines.Clear();
             foreach (var item in cart.Items)
             {
-                var step = QuantityInput.NormalizeStep(item.QuantityStep, item.AllowsFractional);
-                var increment = 1m % step == 0 ? 1m : step;
                 Lines.Add(new CartEditLine(item.VariantId, item.ProductName, item.UnitName,
-                    item.Quantity, item.UnitPrice, step, increment, item.AllowsFractional, item.ImageKey));
+                    item.Quantity, item.UnitPrice, item.AllowsFractional, item.ImageKey));
             }
             Recalculate();
             IsLoaded = true;
@@ -341,8 +334,6 @@ public sealed partial class CartEditLine : ObservableObject
     public string ProductName { get; }
     public string UnitName { get; }
     public decimal UnitPrice { get; }
-    public decimal QuantityStep { get; }
-    public decimal IncrementStep { get; }
     public bool AllowsFractional { get; }
     public string? ImageKey { get; }
     public decimal LineTotal => UnitPrice * Quantity;
@@ -351,14 +342,12 @@ public sealed partial class CartEditLine : ObservableObject
     [ObservableProperty] private string _quantityText;
 
     public CartEditLine(long variantId, string productName, string unitName, decimal quantity,
-        decimal unitPrice, decimal quantityStep, decimal incrementStep, bool allowsFractional, string? imageKey)
+        decimal unitPrice, bool allowsFractional, string? imageKey)
     {
         VariantId = variantId;
         ProductName = productName;
         UnitName = unitName;
         UnitPrice = unitPrice;
-        QuantityStep = quantityStep;
-        IncrementStep = incrementStep;
         AllowsFractional = allowsFractional;
         ImageKey = imageKey;
         _quantity = quantity;

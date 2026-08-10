@@ -119,7 +119,6 @@ public sealed record TradeCaseLineDto(
     string PriceCurrency,
     decimal PriceRate,
     string? Barcode,
-    decimal QuantityStep = 1,
     bool AllowsFractional = false);
 
 public sealed record TradeCaseDocumentDto(

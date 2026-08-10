@@ -21,7 +21,6 @@ public partial class GoodsIssueLineRow : ObservableObject
         UnitName = product.UnitName;
         Stock = product.Quantity;
         UnitPrice = product.SellingPrice;
-        QuantityStep = product.QuantityStep > 0 ? product.QuantityStep : 1;
         AllowsFractional = product.AllowsFractional;
     }
 
@@ -29,7 +28,6 @@ public partial class GoodsIssueLineRow : ObservableObject
     public string ProductName { get; }
     public string UnitName { get; }
     public decimal Stock { get; }
-    public decimal QuantityStep { get; }
     public bool AllowsFractional { get; }
     public string QtyFormat => AllowsFractional ? "0.###" : "0";
 

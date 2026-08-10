@@ -226,7 +226,7 @@ export class Pos implements OnInit {
         qty: i.quantity,
         available: Number.MAX_SAFE_INTEGER,
         allowsAmountEntry: false,
-        quantityStep: 1,
+        allowsFractional: i.allowsFractional ?? false,
       })));
       if (cart.customerId) {
         try {
@@ -345,7 +345,7 @@ export class Pos implements OnInit {
       qty: 1,
       available: t.quantity,
       allowsAmountEntry: t.allowsAmountEntry,
-      quantityStep: t.quantityStep,
+      allowsFractional: t.allowsFractional,
     });
   }
 
@@ -354,7 +354,7 @@ export class Pos implements OnInit {
   }
 
   changeQty(line: CartLine, delta: number): void {
-    this.setQty(line, line.qty + delta * line.quantityStep);
+    this.setQty(line, line.qty + delta);
   }
 
   onQtyInput(line: CartLine, e: Event): void {
@@ -377,7 +377,7 @@ export class Pos implements OnInit {
 
   onLineAmount(line: CartLine, value: number): void {
     if (!line.allowsAmountEntry || line.price <= 0 || value <= 0) return;
-    const step = line.quantityStep > 0 ? line.quantityStep : 0.001;
+    const step = line.allowsFractional ? 0.001 : 1;
     const qty = Math.floor((value / line.price + 1e-9) / step) * step;
     if (qty > 0) this.setQty(line, Number(qty.toFixed(6)));
   }
@@ -556,7 +556,7 @@ export class Pos implements OnInit {
       qty,
       available: p.onHand,
       allowsAmountEntry: p.allowsAmountEntry,
-      quantityStep: p.quantityStep,
+      allowsFractional: p.allowsFractional,
     });
   }
 
@@ -574,7 +574,7 @@ export class Pos implements OnInit {
       this.remove(line);
       return;
     }
-    const step = line.quantityStep > 0 ? line.quantityStep : 1;
+    const step = line.allowsFractional ? 0.001 : 1;
     const normalized = Math.floor((qty + 1e-9) / step) * step;
     this.cart.update((c) => c.map((l) => (l === line ? { ...l, qty: Number(normalized.toFixed(6)) } : l)));
   }

@@ -10,7 +10,6 @@ public record CartItemDto(
     decimal UnitPrice,
     decimal LineTotal,
     string UnitName = "",
-    decimal QuantityStep = 1,
     bool AllowsFractional = false,
     string? ImageKey = null);
 

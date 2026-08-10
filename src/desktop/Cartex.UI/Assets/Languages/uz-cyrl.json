@@ -281,6 +281,7 @@
   "export": "Экспорт",
   "export_done": "Экспорт қилинди",
   "factor": "Коэффициент",
+  "allow_fractional": "Ҳақиқий сонга рухсат",
   "feature_effect_agents": "Савдо агентлари мобил иловаси ва агент sync API",
   "feature_effect_offline_cache": "Битта кассада офлайн савдо (SQLite кеш, кейин синхрон)",
   "feature_effect_ordering": "Онлайн буюртмалар бўлими ва POS'да сават-код сканери",

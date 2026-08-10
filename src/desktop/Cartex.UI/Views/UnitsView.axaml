@@ -126,6 +126,7 @@
                         <TextBlock Text="{Binding L[factor]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <NumericUpDown Value="{Binding EditFactor, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1" FormatString="0.####" MinHeight="38" />
                     </StackPanel>
+                    <CheckBox IsChecked="{Binding EditAllowFractional}" Content="{Binding L[allow_fractional]}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
                         <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
                         <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />

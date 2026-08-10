@@ -118,6 +118,7 @@ export class Units implements OnInit {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatSlideToggleModule,
     TranslocoModule,
   ],
   styleUrl: './units.scss',
@@ -148,6 +149,7 @@ export class Units implements OnInit {
           <mat-label>{{ t('factor') }}</mat-label>
           <input matInput type="number" min="0" [(ngModel)]="factor" />
         </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="allowFractional">{{ t('allow_fractional') }}</mat-slide-toggle>
       </div>
       <div mat-dialog-actions align="end">
         <button mat-button mat-dialog-close>{{ t('cancel') }}</button>
@@ -173,6 +175,7 @@ export class UnitDialog {
   shortName = this.unit?.shortName ?? '';
   dimension = this.unit?.dimension ?? this.data.dimension ?? 'Count';
   factor = this.unit?.factor ?? 1;
+  allowFractional = this.unit?.allowFractional ?? this.dimension !== 'Count';
 
   async save(): Promise<void> {
     if (!this.name.trim() || !this.shortName.trim()) return;
@@ -183,6 +186,7 @@ export class UnitDialog {
         shortName: this.shortName.trim(),
         dimension: this.dimension,
         factor: this.factor > 0 ? this.factor : 1,
+        allowFractional: this.allowFractional,
       };
       if (this.unit) await lastValueFrom(this.api.update(this.unit.id, body));
       else await lastValueFrom(this.api.create(body));

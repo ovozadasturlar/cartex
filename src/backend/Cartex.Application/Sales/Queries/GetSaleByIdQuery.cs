@@ -62,9 +62,7 @@ public sealed class GetSaleByIdQueryHandler(IApplicationDbContext db, ICurrentUs
                 i.Quantity * i.UnitPrice,
                 i.CashbackEarned,
                 i.ReturnedCashback,
-                i.Variant.Product.QuantityStepOverride ?? i.Variant.Product.Unit.DefaultQuantityStep,
-                (i.Variant.Product.QuantityStepOverride ?? i.Variant.Product.Unit.DefaultQuantityStep)
-                    != decimal.Truncate(i.Variant.Product.QuantityStepOverride ?? i.Variant.Product.Unit.DefaultQuantityStep))).ToList(),
+                i.Variant.Product.FractionalOverride ?? i.Variant.Product.Unit.AllowFractional)).ToList(),
             x.Payments.OrderBy(p => p.Id).Select(p => new SaleDetailPaymentDto(
                 p.Method.ToString(), p.Currency, p.Amount, p.Rate, p.AmountBase)).ToList(),
             x.Participants.OrderBy(p => p.Id).Select(p => new SaleDetailParticipantDto(

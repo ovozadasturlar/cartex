@@ -9,7 +9,7 @@ public class Unit : SoftDeleteEntity
     public string ShortName { get; set; } = null!;
     public UnitDimension Dimension { get; set; } = UnitDimension.Count;
     public decimal Factor { get; set; } = 1;
-    public decimal DefaultQuantityStep { get; set; } = 1;
+    public bool AllowFractional { get; set; } = true;
     public bool DefaultAllowAmountEntry { get; set; }
     public bool IsSystem { get; set; }
     public bool IsEnabled { get; set; } = true;

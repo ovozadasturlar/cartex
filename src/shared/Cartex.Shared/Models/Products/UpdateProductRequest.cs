@@ -17,4 +17,4 @@ public record UpdateProductRequest(
     long? ManufacturerId = null,
     bool? AmountEntryEnabled = null,
     bool ConfirmUnitDimensionChange = false,
-    decimal? QuantityStepOverride = null);
+    bool? FractionalOverride = null);

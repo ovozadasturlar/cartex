@@ -27,7 +27,7 @@ public record UpdateProductCommand(
     long? ManufacturerId = null,
     bool? AmountEntryEnabled = null,
     bool ConfirmUnitDimensionChange = false,
-    decimal? QuantityStepOverride = null) : ICommand<Unit>;
+    bool? FractionalOverride = null) : ICommand<Unit>;
 
 public sealed class UpdateProductCommandHandler(
     IApplicationDbContext db,
@@ -70,7 +70,7 @@ public sealed class UpdateProductCommandHandler(
         product.IkpuCode = request.IkpuCode;
         product.VatRate = request.VatRate;
         product.AmountEntryEnabled = request.AmountEntryEnabled;
-        product.QuantityStepOverride = request.QuantityStepOverride;
+        product.FractionalOverride = request.FractionalOverride;
 
         var defaultVariant = await db.ProductVariants.FirstOrDefaultAsync(v => v.ProductId == product.Id && v.IsDefault, cancellationToken);
         if (defaultVariant is not null)
@@ -110,11 +110,5 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
     {
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.MinStock).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.QuantityStepOverride)
-            .InclusiveBetween(QuantityPolicyService.MinimumStep, QuantityPolicyService.MaximumStep)
-            .When(x => x.QuantityStepOverride.HasValue);
-        RuleFor(x => x.QuantityStepOverride)
-            .Must(x => !x.HasValue || x.Value == decimal.Round(x.Value, 3))
-            .WithMessage("Miqdor qadami ko'pi bilan 3 kasr xonasiga ega bo'lishi kerak.");
     }
 }

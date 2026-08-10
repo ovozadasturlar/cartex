@@ -10,7 +10,6 @@ public sealed partial class SupplyCartLine : ObservableObject
     public string ProductName { get; set; } = "";
     public string UnitName { get; set; } = "";
     public string? ImageKey { get; set; }
-    public decimal QuantityStep { get; set; } = 1;
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private bool _isSwiped;
 }
@@ -39,8 +38,7 @@ public sealed class SupplyCartStore
                 ProductName = l.ProductName,
                 UnitName = l.UnitName,
                 Quantity = l.Quantity,
-                ImageKey = l.ImageKey,
-                QuantityStep = l.QuantityStep > 0 ? l.QuantityStep : 1
+                ImageKey = l.ImageKey
             }));
         }
         catch
@@ -59,8 +57,7 @@ public sealed class SupplyCartStore
                 ProductName = product.ProductName,
                 UnitName = product.UnitName,
                 Quantity = product.PackQty,
-                ImageKey = product.ImageKey,
-                QuantityStep = product.PackQty > 1 ? product.PackQty : product.QuantityStep
+                ImageKey = product.ImageKey
             });
         else
             line.Quantity += product.PackQty;
@@ -91,10 +88,10 @@ public sealed class SupplyCartStore
 
     private void Save()
     {
-        var draft = Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey, l.QuantityStep)).ToList();
+        var draft = Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey)).ToList();
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
         Changed?.Invoke();
     }
 
-    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity, string? ImageKey = null, decimal QuantityStep = 1);
+    private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity, string? ImageKey = null);
 }

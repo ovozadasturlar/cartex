@@ -5,5 +5,5 @@ public record CreateUnitRequest(
     string ShortName,
     string Dimension = "Count",
     decimal Factor = 1,
-    decimal? DefaultQuantityStep = null,
+    bool? AllowFractional = null,
     bool? DefaultAllowAmountEntry = null);

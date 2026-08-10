@@ -10,7 +10,7 @@ export interface CartLine {
   qty: number;
   available: number;
   allowsAmountEntry: boolean;
-  quantityStep: number;
+  allowsFractional: boolean;
 }
 
 export interface HeldSale {

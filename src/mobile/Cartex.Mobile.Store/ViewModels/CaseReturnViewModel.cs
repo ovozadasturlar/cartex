@@ -76,20 +76,20 @@ public partial class CaseReturnViewModel(ITradeCasesApi tradeCasesApi) : Observa
     private void Increment(CaseReturnLine line)
     {
         line.IsSelected = true;
-        line.Quantity = Math.Min(line.Source.CustodyQuantity, line.Quantity + line.IncrementStep);
+        line.Quantity = Math.Min(line.Source.CustodyQuantity, line.Quantity + 1m);
     }
 
     [RelayCommand]
     private void Decrement(CaseReturnLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity) line.Quantity = next;
     }
 
     [RelayCommand]
     private void CommitQuantity(CaseReturnLine line)
     {
-        if (QuantityInput.TryParse(line.QuantityText, line.QuantityStep, line.Source.AllowsFractional,
+        if (QuantityInput.TryParse(line.QuantityText, line.Source.AllowsFractional,
                 out var quantity, out var error) && quantity <= line.Source.CustodyQuantity)
         {
             line.Quantity = quantity;
@@ -102,7 +102,6 @@ public partial class CaseReturnViewModel(ITradeCasesApi tradeCasesApi) : Observa
             : Loc.Instance[error switch
             {
                 QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-                QuantityInputError.StepMismatch => "quantity_step_invalid",
                 QuantityInputError.MustBePositive => "quantity_positive_required",
                 _ => "quantity_invalid"
             }]);
@@ -161,8 +160,6 @@ public partial class CaseReturnLine : ObservableObject
 {
     public TradeCaseLineDto Source { get; }
     public string CustodyText => $"{Loc.Instance["with_customer"]}: {Source.CustodyQuantity:0.###} {Source.UnitName}";
-    public decimal QuantityStep => QuantityInput.NormalizeStep(Source.QuantityStep, Source.AllowsFractional);
-    public decimal IncrementStep => 1m % QuantityStep == 0 ? 1 : QuantityStep;
 
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private decimal _quantity;

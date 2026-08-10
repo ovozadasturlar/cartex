@@ -7,8 +7,7 @@ public enum QuantityInputError
     None,
     Invalid,
     MustBePositive,
-    FractionNotAllowed,
-    StepMismatch
+    FractionNotAllowed
 }
 
 public static class QuantityInput
@@ -17,7 +16,6 @@ public static class QuantityInput
 
     public static bool TryParse(
         string? input,
-        decimal quantityStep,
         bool allowsFractional,
         out decimal quantity,
         out QuantityInputError error)
@@ -55,22 +53,15 @@ public static class QuantityInput
             return false;
         }
 
-        var step = NormalizeStep(quantityStep, allowsFractional);
-        if (quantity % step != 0)
-        {
-            error = QuantityInputError.StepMismatch;
-            return false;
-        }
-
         error = QuantityInputError.None;
         return true;
     }
 
-    public static bool IsValid(decimal quantity, decimal quantityStep, bool allowsFractional) =>
-        TryParse(Format(quantity), quantityStep, allowsFractional, out _, out _);
+    public static bool IsValid(decimal quantity, bool allowsFractional) =>
+        quantity > 0 && quantity == decimal.Round(quantity, MaxDecimalDigits) &&
+        (allowsFractional || quantity == decimal.Truncate(quantity));
 
-    public static decimal NormalizeStep(decimal step, bool allowsFractional) =>
-        step > 0 ? step : allowsFractional ? 0.001m : 1m;
+    public static decimal NormalizeStep(bool allowsFractional) => allowsFractional ? 0.001m : 1m;
 
     public static string Format(decimal quantity) => quantity.ToString("0.###", CultureInfo.CurrentCulture);
 }

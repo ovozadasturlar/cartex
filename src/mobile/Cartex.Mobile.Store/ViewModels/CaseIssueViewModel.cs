@@ -89,19 +89,19 @@ public partial class CaseIssueViewModel(
     {
         var product = row.Product;
         AddLine(product.DefaultVariantId, product.Name, product.UnitName,
-            product.QuantityStep, product.AllowsFractional, 1, row.BasePrice, product.ImageKey);
+            product.AllowsFractional, 1, row.BasePrice, product.ImageKey);
         SearchText = "";
         SearchResults.Clear();
         Recalculate();
     }
 
     [RelayCommand]
-    private void Increment(CartEditLine line) { line.Quantity += line.IncrementStep; Recalculate(); }
+    private void Increment(CartEditLine line) { line.Quantity += 1m; Recalculate(); }
 
     [RelayCommand]
     private void Decrement(CartEditLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity) line.Quantity = next;
         Recalculate();
     }
@@ -109,7 +109,7 @@ public partial class CaseIssueViewModel(
     [RelayCommand]
     private void CommitQuantity(CartEditLine line)
     {
-        if (QuantityInput.TryParse(line.QuantityText, line.QuantityStep, line.AllowsFractional,
+        if (QuantityInput.TryParse(line.QuantityText, line.AllowsFractional,
                 out var quantity, out var error))
         {
             line.Quantity = quantity;
@@ -120,7 +120,6 @@ public partial class CaseIssueViewModel(
         Ui.Toast(Loc.Instance[error switch
         {
             QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-            QuantityInputError.StepMismatch => "quantity_step_invalid",
             QuantityInputError.MustBePositive => "quantity_positive_required",
             _ => "quantity_invalid"
         }]);
@@ -150,25 +149,20 @@ public partial class CaseIssueViewModel(
     }
 
     private void AddLookup(ProductLookupDto product) => AddLine(
-        product.VariantId, product.ProductName, product.UnitName, product.QuantityStep,
+        product.VariantId, product.ProductName, product.UnitName,
         product.AllowsFractional, product.PackQty > 0 ? product.PackQty : 1,
         product.SellingPrice, product.ImageKey);
 
-    private void AddLine(long variantId, string name, string unit, decimal stepValue,
+    private void AddLine(long variantId, string name, string unit,
         bool fractional, decimal initial, decimal price, string? imageKey)
     {
-        var step = QuantityInput.NormalizeStep(stepValue, fractional);
-        var requestedIncrement = initial > 0 ? initial : 1;
-        var increment = requestedIncrement % step == 0
-            ? requestedIncrement
-            : 1m % step == 0 ? 1 : step;
-        var firstQuantity = initial > 0 && initial % step == 0 ? initial : Math.Max(step, increment);
+        var firstQuantity = initial > 0 ? initial : 1;
         var existing = Lines.FirstOrDefault(x => x.VariantId == variantId);
         if (existing is null)
             Lines.Add(new CartEditLine(variantId, name, unit, firstQuantity, price,
-                step, increment, fractional, imageKey));
+                fractional, imageKey));
         else
-            existing.Quantity += increment;
+            existing.Quantity += firstQuantity;
         Recalculate();
     }
 

@@ -42,9 +42,8 @@ public record ProductDto(
     string? PriceSymbol = null,
     string? PriceSymbolPosition = null,
     int? PriceDecimalDigits = null,
-    decimal QuantityStep = 1,
     bool AllowsFractional = false,
-    decimal? QuantityStepOverride = null,
+    bool? FractionalOverride = null,
     bool? AmountEntryEnabled = null);
 
 public sealed class GetProductsQueryHandler(
@@ -102,8 +101,8 @@ public sealed class GetProductsQueryHandler(
                     p.ManufacturerId,
                     p.IsEnabled,
                     p.AmountEntryEnabled,
-                    p.QuantityStepOverride,
-                    p.Unit.DefaultQuantityStep,
+                    p.FractionalOverride,
+                    p.Unit.AllowFractional,
                     p.Unit.DefaultAllowAmountEntry
                 },
                 writer, cancellationToken);
@@ -138,9 +137,8 @@ public sealed class GetProductsQueryHandler(
                 r.Price?.Symbol,
                 r.Price?.SymbolPosition,
                 r.Price?.DecimalDigits,
-                r.QuantityStepOverride ?? r.DefaultQuantityStep,
-                (r.QuantityStepOverride ?? r.DefaultQuantityStep) != decimal.Truncate(r.QuantityStepOverride ?? r.DefaultQuantityStep),
-                r.QuantityStepOverride,
+                r.FractionalOverride ?? r.AllowFractional,
+                r.FractionalOverride,
                 r.AmountEntryEnabled))
             .ToList();
 

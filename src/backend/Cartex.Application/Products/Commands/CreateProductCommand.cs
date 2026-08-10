@@ -29,7 +29,7 @@ public record CreateProductCommand(
     string? PriceCurrency = null,
     long? ManufacturerId = null,
     bool? AmountEntryEnabled = null,
-    decimal? QuantityStepOverride = null) : ICommand<long>;
+    bool? FractionalOverride = null) : ICommand<long>;
 
 public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateProductCommand, long>
 {
@@ -58,7 +58,7 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             IkpuCode = request.IkpuCode,
             VatRate = request.VatRate,
             AmountEntryEnabled = request.AmountEntryEnabled,
-            QuantityStepOverride = request.QuantityStepOverride
+            FractionalOverride = request.FractionalOverride
         };
 
         db.Products.Add(product);
@@ -107,11 +107,5 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
     {
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.MinStock).GreaterThanOrEqualTo(0).When(x => x.MinStock.HasValue);
-        RuleFor(x => x.QuantityStepOverride)
-            .InclusiveBetween(QuantityPolicyService.MinimumStep, QuantityPolicyService.MaximumStep)
-            .When(x => x.QuantityStepOverride.HasValue);
-        RuleFor(x => x.QuantityStepOverride)
-            .Must(x => !x.HasValue || x.Value == decimal.Round(x.Value, 3))
-            .WithMessage("Miqdor qadami ko'pi bilan 3 kasr xonasiga ega bo'lishi kerak.");
     }
 }

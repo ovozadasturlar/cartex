@@ -15,7 +15,7 @@ namespace Cartex.Application.Stocks.Queries;
 public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
     : IRequest<StockOnHandPageDto>;
 
-public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null, bool AllowsAmountEntry = false, decimal QuantityStep = 1, bool AllowsFractional = false);
+public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null, bool AllowsAmountEntry = false, bool AllowsFractional = false);
 
 public record StockOnHandPageDto(IReadOnlyCollection<StockOnHandDto> Items, int TotalCount, decimal TotalQuantity, decimal TotalValue);
 
@@ -120,8 +120,8 @@ public sealed class GetStockOnHandQueryHandler(
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
                 v.Product.AmountEntryEnabled,
-                v.Product.QuantityStepOverride,
-                v.Product.Unit.DefaultQuantityStep,
+                v.Product.FractionalOverride,
+                v.Product.Unit.AllowFractional,
                 v.Product.Unit.DefaultAllowAmountEntry,
                 ImageKey = v.ImageKey ?? v.Product.ImageKey,
                 Price = db.ProductPrices
@@ -239,8 +239,8 @@ public sealed class GetStockOnHandQueryHandler(
                     : null;
                 var barcodes = barcodesByVariant.TryGetValue(o.VariantId, out var values) ? values : [];
                 var allowsAmountEntry = o.AmountEntryEnabled ?? o.DefaultAllowAmountEntry;
-                var quantityStep = o.QuantityStepOverride ?? o.DefaultQuantityStep;
-                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes, allowsAmountEntry, quantityStep, quantityStep != decimal.Truncate(quantityStep));
+                var allowsFractional = o.FractionalOverride ?? o.AllowFractional;
+                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes, allowsAmountEntry, allowsFractional);
             })
             .ToList();
 

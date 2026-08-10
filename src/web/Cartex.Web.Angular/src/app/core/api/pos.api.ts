@@ -23,7 +23,7 @@ export interface StockOnHand {
   discountPct: number | null;
   dimension: string;
   allowsAmountEntry: boolean;
-  quantityStep: number;
+  allowsFractional: boolean;
 }
 
 export interface StockOnHandPage {
@@ -40,7 +40,7 @@ export interface ProductLookup {
   onHand: number;
   dimension: string;
   allowsAmountEntry: boolean;
-  quantityStep: number;
+  allowsFractional: boolean;
 }
 
 export interface CreateSalePayload {

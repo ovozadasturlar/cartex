@@ -29,7 +29,6 @@ public record ProductDto(
     string? PriceSymbol = null,
     string? PriceSymbolPosition = null,
     int? PriceDecimalDigits = null,
-    decimal QuantityStep = 1,
     bool AllowsFractional = false,
-    decimal? QuantityStepOverride = null,
+    bool? FractionalOverride = null,
     bool? AmountEntryEnabled = null);

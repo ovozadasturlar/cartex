@@ -5,5 +5,5 @@ public record UpdateUnitRequest(
     string ShortName,
     string Dimension,
     decimal Factor,
-    decimal? DefaultQuantityStep = null,
+    bool? AllowFractional = null,
     bool? DefaultAllowAmountEntry = null);

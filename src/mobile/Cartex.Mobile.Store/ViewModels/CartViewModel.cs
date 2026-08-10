@@ -146,12 +146,12 @@ public partial class CartViewModel : ObservableObject
 
     [RelayCommand]
     private void Increment(CartLine line) =>
-        _cart.SetQuantity(line.VariantId, line.Quantity + line.IncrementStep);
+        _cart.SetQuantity(line.VariantId, line.Quantity + 1m);
 
     [RelayCommand]
     private void Decrement(CartLine line)
     {
-        var next = Math.Max(line.QuantityStep, line.Quantity - line.IncrementStep);
+        var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity)
             _cart.SetQuantity(line.VariantId, next);
     }
@@ -341,7 +341,6 @@ public partial class CartViewModel : ObservableObject
         if (SelectedProduct is null) return;
         if (QuantityInput.TryParse(
                 SelectedQuantityText,
-                SelectedProduct.QuantityStep,
                 SelectedProduct.AllowsFractional,
                 out var quantity,
                 out var error))
@@ -356,7 +355,6 @@ public partial class CartViewModel : ObservableObject
             {
                 QuantityInputError.MustBePositive => "quantity_positive_required",
                 QuantityInputError.FractionNotAllowed => "quantity_integer_required",
-                QuantityInputError.StepMismatch => "quantity_step_invalid",
                 _ => "quantity_invalid"
             }]);
         }

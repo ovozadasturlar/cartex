@@ -109,7 +109,7 @@ public partial class CartItem : ObservableObject
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity = 1;
     public bool AllowsAmountEntry { get; init; }
-    public decimal QuantityStep { get; init; } = 1;
+    public bool AllowsFractional { get; init; }
 
     [ObservableProperty] private decimal? _available;
 
@@ -126,7 +126,7 @@ public partial class CartItem : ObservableObject
         {
             if (!AllowsAmountEntry || UnitPrice <= 0 || value <= 0) return;
             if (Math.Abs(value - LineTotal) < 0.005m) return;
-            var step = QuantityStep > 0 ? QuantityStep : 0.001m;
+            var step = AllowsFractional ? 0.001m : 1m;
             var quantity = Math.Floor(value / UnitPrice / step) * step;
             if (quantity <= 0 || quantity == Quantity) return;
             Quantity = quantity;
@@ -1009,8 +1009,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 Products.Add(new StockOnHandDto(p.VariantId, p.ProductName, null, p.CategoryName,
                     p.UnitName, "", p.Quantity, p.SellingPrice, null,
                     AllowsAmountEntry: p.AllowsAmountEntry,
-                    QuantityStep: p.QuantityStep,
-                    AllowsFractional: p.QuantityStep < 1));
+                    AllowsFractional: p.AllowsFractional));
             ProductsTotal = Products.Count;
             OnPropertyChanged(nameof(HasMoreProducts));
             return;
@@ -1073,7 +1072,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     ? w
                     : cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
                 AddToCart(cachedProduct.VariantId, cachedProduct.ProductName, cachedProduct.SellingPrice, qty, cachedProduct.Quantity,
-                    allowsAmountEntry: cachedProduct.AllowsAmountEntry, quantityStep: cachedProduct.QuantityStep);
+                    allowsAmountEntry: cachedProduct.AllowsAmountEntry, allowsFractional: cachedProduct.AllowsFractional);
                 return;
             }
             if (await Offline.GetCustomerByCardAsync(code) is { } cachedCustomer)
@@ -1094,7 +1093,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 ? weight
                 : product.PackQty > 1 ? product.PackQty : 1;
             AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand,
-                allowsAmountEntry: product.AllowsAmountEntry, quantityStep: product.QuantityStep);
+                allowsAmountEntry: product.AllowsAmountEntry, allowsFractional: product.AllowsFractional);
             return;
         }
         catch (ApiException)
@@ -1421,7 +1420,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         decimal? available = null,
         StockOnHandDto? detail = null,
         bool allowsAmountEntry = false,
-        decimal quantityStep = 1,
+        bool allowsFractional = true,
         bool enforceCreatePermission = true)
     {
         if (enforceCreatePermission && !CanCreateCart)
@@ -1452,7 +1451,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             Available = available,
             ProductDetail = detail,
             AllowsAmountEntry = detail?.AllowsAmountEntry ?? allowsAmountEntry,
-            QuantityStep = detail?.QuantityStep ?? quantityStep
+            AllowsFractional = detail?.AllowsFractional ?? allowsFractional
         });
         NotifyTotals();
     }
@@ -1461,7 +1460,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void Increment(CartItem item)
     {
         if (item.IsPrepack) return;
-        item.Quantity += item.QuantityStep;
+        item.Quantity += 1m;
         NotifyTotals();
     }
 
@@ -1469,8 +1468,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void Decrement(CartItem item)
     {
         if (item.IsPrepack) { RemoveItem(item); return; }
-        if (item.Quantity <= item.QuantityStep) { RemoveItem(item); return; }
-        else item.Quantity -= item.QuantityStep;
+        if (item.Quantity <= 1m) { RemoveItem(item); return; }
+        else item.Quantity -= 1m;
         NotifyTotals();
     }
 
@@ -1665,7 +1664,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
         var seq = HeldSales.Select(HoldNumber).DefaultIfEmpty(0).Max() + 1;
         var label = $"#{seq} · {TotalAmount:N0}";
-        var items = CartItems.Select(c => new CartItem { VariantId = c.VariantId, PrepackId = c.PrepackId, ProductName = c.ProductName, OriginalPrice = c.OriginalPrice, UnitPrice = c.UnitPrice, Quantity = c.Quantity, Available = c.Available, AllowsAmountEntry = c.AllowsAmountEntry, QuantityStep = c.QuantityStep }).ToList();
+        var items = CartItems.Select(c => new CartItem { VariantId = c.VariantId, PrepackId = c.PrepackId, ProductName = c.ProductName, OriginalPrice = c.OriginalPrice, UnitPrice = c.UnitPrice, Quantity = c.Quantity, Available = c.Available, AllowsAmountEntry = c.AllowsAmountEntry, AllowsFractional = c.AllowsFractional }).ToList();
         HeldSales.Add(new HeldSale(label, items, PaidCash, PaidCard, PaidBonus, SelectedCustomer, DateTime.Now));
         _heldStore.Save(HeldSales);
         ClearCart();

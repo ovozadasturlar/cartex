@@ -92,7 +92,7 @@
                                             </StackPanel>
                                             <NumericUpDown Grid.Column="1" VerticalAlignment="Center" Margin="4"
                                                            Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
-                                                           Minimum="0" Increment="{Binding QuantityStep}" FormatString="{Binding QtyFormat}"
+                                                           Minimum="0" Increment="1" FormatString="{Binding QtyFormat}"
                                                            ShowButtonSpinner="False" />
                                             <NumericUpDown Grid.Column="2" VerticalAlignment="Center" Margin="4"
                                                            Value="{Binding UnitPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"

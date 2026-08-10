@@ -10,7 +10,6 @@ public record ProductLookupDto(
     string Dimension,
     string? ImageKey = null,
     bool AllowsAmountEntry = false,
-    decimal QuantityStep = 1,
     decimal? OriginalSellingPrice = null,
     string? PriceCurrency = null,
     string? BaseCurrency = null,

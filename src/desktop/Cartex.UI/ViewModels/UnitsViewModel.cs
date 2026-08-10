@@ -26,6 +26,7 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editShortName = "";
     [ObservableProperty] private string _editDimension = "Count";
     [ObservableProperty] private decimal _editFactor = 1;
+    [ObservableProperty] private bool _editAllowFractional;
     [ObservableProperty] private string? _searchText;
 
     public string[] DimensionOptions { get; } = ["Count", "Weight", "Volume", "Length"];
@@ -101,6 +102,7 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
         EditShortName = "";
         EditDimension = "Count";
         EditFactor = 1;
+        EditAllowFractional = false;
         IsEditOpen = true;
     }
 
@@ -115,6 +117,7 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
         EditShortName = unit.ShortName;
         EditDimension = unit.Dimension;
         EditFactor = unit.Factor;
+        EditAllowFractional = unit.AllowFractional;
         IsEditOpen = true;
     }
 
@@ -155,9 +158,9 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 if (IsNew)
-                    await _api.CreateAsync(new CreateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor));
+                    await _api.CreateAsync(new CreateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor, AllowFractional: EditAllowFractional));
                 else
-                    await _api.UpdateAsync(_editId, new UpdateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor));
+                    await _api.UpdateAsync(_editId, new UpdateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor, AllowFractional: EditAllowFractional));
             }
             IsEditOpen = false;
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Units);

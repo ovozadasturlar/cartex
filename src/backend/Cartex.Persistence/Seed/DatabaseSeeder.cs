@@ -148,7 +148,7 @@ public static class DatabaseSeeder
                 ShortName = u.ShortName,
                 Dimension = u.Dimension,
                 Factor = u.Factor,
-                DefaultQuantityStep = u.Dimension == UnitDimension.Count ? 1m : 0.001m,
+                AllowFractional = u.Dimension != UnitDimension.Count,
                 DefaultAllowAmountEntry = u.Dimension != UnitDimension.Count,
                 IsSystem = true,
                 IsDefault = u.IsDefault
@@ -158,6 +158,15 @@ public static class DatabaseSeeder
         if (missing.Count > 0)
         {
             await context.Units.AddRangeAsync(missing);
+            await context.SaveChangesAsync();
+        }
+
+        var misconfigured = await context.Units.IgnoreQueryFilters()
+            .Where(u => u.Dimension == UnitDimension.Count && u.AllowFractional)
+            .ToListAsync();
+        if (misconfigured.Count > 0)
+        {
+            foreach (var unit in misconfigured) unit.AllowFractional = false;
             await context.SaveChangesAsync();
         }
     }
@@ -547,7 +556,7 @@ public static class DatabaseSeeder
                 ShortName = u.ShortName,
                 Dimension = u.Dimension,
                 Factor = u.Factor,
-                DefaultQuantityStep = u.Dimension == UnitDimension.Count ? 1m : 0.001m,
+                AllowFractional = u.Dimension != UnitDimension.Count,
                 DefaultAllowAmountEntry = u.Dimension != UnitDimension.Count,
                 IsSystem = true,
                 IsDefault = u.IsDefault

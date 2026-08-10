@@ -9,5 +9,5 @@ public record UnitDto(
     bool IsSystem,
     bool IsEnabled = true,
     bool IsDefault = false,
-    decimal DefaultQuantityStep = 1,
+    bool AllowFractional = true,
     bool DefaultAllowAmountEntry = false);
