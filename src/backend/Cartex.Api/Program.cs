@@ -105,7 +105,7 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Host.UseWindowsService();
-builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5015");
+builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://127.0.0.1:5015;http://localhost:5015");
 
 var app = builder.Build();
 
@@ -151,7 +151,7 @@ if (hasWebUi)
 
 app.UseSerilogRequestLogging(options => options.GetLevel = (ctx, _, ex) =>
     ex is not null || ctx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
-    : ctx.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
+    : ctx.Request.Path.StartsWithSegments("/health") || ctx.Request.Path.StartsWithSegments("/api/printing/nodes/heartbeat") ? Serilog.Events.LogEventLevel.Verbose
     : Serilog.Events.LogEventLevel.Information);
 
 app.UseMiddleware<CorrelationIdMiddleware>();

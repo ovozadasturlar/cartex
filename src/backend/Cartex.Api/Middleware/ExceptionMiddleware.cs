@@ -22,6 +22,12 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        if (exception is OperationCanceledException || context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogDebug("Request was canceled by the client: {Path}", context.Request.Path);
+            return;
+        }
+
         var (statusCode, code, title, extensions) = exception switch
         {
             ValidationException validationEx => (
