@@ -1296,5 +1296,15 @@
   "tc_create_and_link": "Create & link",
   "tc_none_open": "No open projects",
   "tc_case_label": "Project:",
-  "case_linked_fmt": "Sale linked to project {0}"
+  "case_linked_fmt": "Sale linked to project {0}",
+  "case_customer_required": "A customer must be selected to link with a project",
+  "attach_customer": "Attach customer",
+  "customer_assigned_fmt": "Sale linked to customer ({0})",
+  "pick_customer_title": "Select customer",
+  "pick_customer_subtitle": "Select a customer or create a new one to link with this sale",
+  "search_customer_placeholder": "Customer name or phone number...",
+  "allow_retroactive_cashback": "Award cashback on retroactive customer assignment",
+  "tc_events_history": "Project event and operations history",
+  "date_time": "Date and time",
+  "event_type": "Event type"
 }

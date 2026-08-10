@@ -1,5 +1,7 @@
 {
   "access_key": "Ключ доступа",
+  "return_qty": "Кол-во возврата",
+  "sale_details": "Детали продажи",
   "accessible_branches": "Доступные филиалы",
   "accounts": "Счета",
   "acct_bonus": "Бонус",
@@ -1296,5 +1298,15 @@
   "tc_create_and_link": "Создать и привязать",
   "tc_none_open": "Нет открытых проектов",
   "tc_case_label": "Проект:",
-  "case_linked_fmt": "Продажа привязана к проекту {0}"
+  "case_linked_fmt": "Продажа привязана к проекту {0}",
+  "case_customer_required": "Для привязки к проекту необходимо выбрать клиента",
+  "attach_customer": "Привязать клиента",
+  "customer_assigned_fmt": "Продажа привязана к клиенту ({0})",
+  "pick_customer_title": "Выбор клиента",
+  "pick_customer_subtitle": "Выберите клиента или создайте нового для привязки",
+  "search_customer_placeholder": "Имя клиента или номер телефона...",
+  "allow_retroactive_cashback": "Начислять кэшбэк при поздней привязке клиента",
+  "tc_events_history": "История событий и операций проекта",
+  "date_time": "Дата и время",
+  "event_type": "Тип события"
 }
