@@ -5,6 +5,7 @@
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:sales="using:Cartex.Shared.Models.Sales"
+             xmlns:vm="using:Cartex.UI.ViewModels"
              x:Class="Cartex.UI.Views.SalesHistoryView"
              x:CompileBindings="False">
 
@@ -111,7 +112,7 @@
         <Border IsVisible="{Binding IsReceiptOpen}" Background="#44000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseReceiptCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="740" MinHeight="530" MaxHeight="600"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     BoxShadow="0 24 80 0 #44000000">
                 <DockPanel>
@@ -253,21 +254,22 @@
                         <!-- RIGHT PANEL: products list -->
                         <DockPanel Grid.Column="2">
                             <!-- Header row -->
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,70,80,90"
-                                  Background="{DynamicResource SidebarItemHover}">
-                                <TextBlock Grid.Column="0" Text="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}"
-                                           Padding="20,10,8,10" FontWeight="SemiBold" FontSize="12"
-                                           Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Grid.Column="1" Text="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}"
-                                           Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
-                                           Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Grid.Column="2" Text="{Binding [price], Source={x:Static svc:LocalizationManager.Instance}}"
-                                           Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
-                                           Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Grid.Column="3" Text="{Binding [amount], Source={x:Static svc:LocalizationManager.Instance}}"
-                                           Padding="8,10,20,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
-                                           Foreground="{DynamicResource TextSecondary}" />
-                            </Grid>
+                            <Border DockPanel.Dock="Top" Background="{DynamicResource SidebarItemHover}" CornerRadius="0,16,0,0">
+                                <Grid ColumnDefinitions="*,70,80,90">
+                                    <TextBlock Grid.Column="0" Text="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="20,10,8,10" FontWeight="SemiBold" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding [price], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding [amount], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10,20,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                </Grid>
+                            </Border>
 
                             <!-- Items -->
                             <ScrollViewer DataContext="{Binding Receipt}">
@@ -304,53 +306,223 @@
             </Border>
         </Border>
 
-        <!-- ===== RETURN DIALOG ===== -->
-        <Border IsVisible="{Binding IsReturnOpen}" Background="#30000000"
+        <!-- ===== RETURN DIALOG (modern 2-column) ===== -->
+        <Border IsVisible="{Binding IsReturnOpen}" Background="#44000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseReturnCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="480" MaxHeight="660"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <DockPanel Margin="24">
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[return]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,12" />
+            <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="780" MinHeight="540" MaxHeight="620"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 24 80 0 #44000000">
+                <DockPanel>
 
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10"
-                                HorizontalAlignment="Right" Margin="0,16,0,0">
-                        <Button Command="{Binding CloseReturnCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="danger" Command="{Binding ConfirmReturnCommand}" Content="{Binding L[confirm]}" />
-                    </StackPanel>
+                    <!-- Action buttons at bottom -->
+                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="24,14">
+                        <Button Grid.Column="0" Classes="outline" MinHeight="44" Padding="18,0"
+                                Command="{Binding CloseReturnCommand}" Content="{Binding L[cancel]}" />
 
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding ReturnLines}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,10">
-                                        <StackPanel Spacing="8">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource TextPrimary}" />
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding [remaining], Source={x:Static svc:LocalizationManager.Instance}}"
-                                                               Foreground="{DynamicResource TextMuted}" />
-                                                    <TextBlock Text="{Binding Remaining, StringFormat='{}{0:0.###}'}"
-                                                               Foreground="{DynamicResource TextSecondary}" />
+                        <!-- Quick select tools -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <Button Classes="outline" MinHeight="36" Padding="12,0"
+                                    Command="{Binding SelectAllReturnCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <mi:MaterialIcon Kind="CheckAll" Width="15" Height="15" />
+                                    <TextBlock Text="{Binding [select_all], Source={x:Static svc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="outline" MinHeight="36" Padding="12,0"
+                                    Command="{Binding ClearReturnQuantitiesCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <mi:MaterialIcon Kind="Close" Width="15" Height="15" />
+                                    <TextBlock Text="{Binding [clear], Source={x:Static svc:LocalizationManager.Instance}}" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Classes="danger" MinHeight="44" Padding="20,0"
+                                Command="{Binding ConfirmReturnCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="Undo" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[confirm]}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding TotalReturnAmount, StringFormat='({0:N0})'}"
+                                           FontWeight="Bold" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Thin separator -->
+                    <Border DockPanel.Dock="Bottom" Height="1" Background="{DynamicResource BorderBrush}" />
+
+                    <!-- 2-column body -->
+                    <Grid ColumnDefinitions="280,1,*">
+
+                        <!-- LEFT PANEL: Original sale details + Return summary -->
+                        <ScrollViewer Grid.Column="0" Padding="20">
+                            <StackPanel Spacing="14">
+
+                                <!-- Sale Badge Header -->
+                                <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="10" Padding="12,10"
+                                        DataContext="{Binding ReturningSale}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding [sale_details], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   FontWeight="Bold" FontSize="13" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                        <TextBlock Text="{Binding ReceiptToken}" FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Meta info -->
+                                <StackPanel Spacing="7" DataContext="{Binding ReturningSale}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [sale_date], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding SaleDate, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                   FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [cashier], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding UserName}" FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding CustomerName, Converter={x:Static conv:NullToBoolConverter.Instance}}">
+                                        <TextBlock Text="{Binding [customer], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CustomerName}" FontSize="12" FontWeight="SemiBold" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Separator -->
+                                <Border Height="1" Background="{DynamicResource BorderBrush}" />
+
+                                <!-- Original Sale Payment Summary -->
+                                <StackPanel Spacing="6" DataContext="{Binding ReturningSale}">
+                                    <TextBlock Text="{Binding [payment], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding [total], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalAmount, StringFormat='{}{0:N0}'}"
+                                                   FontWeight="Bold" FontSize="13" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidCash, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [cash], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidCash, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidCard, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [card], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidCard, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding PaidBonus, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [bonus], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource TextMuted}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding PaidBonus, StringFormat='{}{0:N0}'}" FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          IsVisible="{Binding DebtAmount, Converter={x:Static conv:NonZeroConverter.Instance}}">
+                                        <TextBlock Text="{Binding [debt], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   Foreground="{DynamicResource DangerBrush}" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DebtAmount, StringFormat='{}{0:N0}'}"
+                                                   FontSize="12" Foreground="{DynamicResource DangerBrush}" FontWeight="SemiBold" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Separator -->
+                                <Border Height="1" Background="{DynamicResource BorderBrush}" />
+
+                                <!-- Return Summary Card -->
+                                <Border Background="{DynamicResource DangerBg}" CornerRadius="10" Padding="12"
+                                        BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding [return], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                   FontWeight="Bold" FontSize="12" Foreground="{DynamicResource DangerBrush}" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding [products], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding TotalReturnItemCount}"
+                                                       FontSize="12" FontWeight="SemiBold" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding [amount], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                       FontSize="13" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding TotalReturnAmount, StringFormat='{}{0:N0}'}"
+                                                       FontSize="14" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Vertical divider -->
+                        <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+
+                        <!-- RIGHT PANEL: Return items list -->
+                        <DockPanel Grid.Column="2">
+                            <!-- Header row -->
+                            <Border DockPanel.Dock="Top" Background="{DynamicResource SidebarItemHover}" CornerRadius="0,16,0,0">
+                                <Grid ColumnDefinitions="*,80,110,90">
+                                    <TextBlock Grid.Column="0" Text="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="20,10,8,10" FontWeight="SemiBold" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding [remaining], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding [return_qty], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding [amount], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Padding="8,10,20,10" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Items -->
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding ReturnLines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ReturnLineItem">
+                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,10">
+                                                <StackPanel Spacing="8">
+                                                    <!-- Main row -->
+                                                    <Grid ColumnDefinitions="*,80,110,90">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{Binding UnitPrice, StringFormat='{}{0:N0} so\'m'}"
+                                                                       FontSize="11" Foreground="{DynamicResource TextMuted}" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Remaining, StringFormat='{}{0:0.###}'}"
+                                                                   VerticalAlignment="Center" TextAlignment="Right" Padding="8,0"
+                                                                   FontSize="13" Foreground="{DynamicResource TextSecondary}" />
+                                                        <NumericUpDown Grid.Column="2" Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                                       Minimum="0" Maximum="{Binding Remaining}" Increment="1"
+                                                                       FormatString="0.###" Width="100" HorizontalAlignment="Center" />
+                                                        <TextBlock Grid.Column="3" Text="{Binding LineTotal, StringFormat='{}{0:N0}'}"
+                                                                   VerticalAlignment="Center" TextAlignment="Right"
+                                                                   FontWeight="Bold" FontSize="13"
+                                                                   Foreground="{DynamicResource DangerBrush}" />
+                                                    </Grid>
+
+                                                    <!-- Options row: restock + reason -->
+                                                    <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                                                        <CheckBox Grid.Column="0" IsChecked="{Binding Restock}" VerticalAlignment="Center"
+                                                                  Content="{Binding [restock], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                                        <TextBox Grid.Column="1" Margin="12,0,0,0" Text="{Binding Reason}"
+                                                                 PlaceholderText="{Binding [reason], Source={x:Static svc:LocalizationManager.Instance}}"
+                                                                 Height="32" FontSize="12" />
+                                                    </Grid>
                                                 </StackPanel>
-                                            </Grid>
-                                            <Grid ColumnDefinitions="Auto,*">
-                                                <NumericUpDown Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="{Binding Remaining}"
-                                                               Increment="1" Width="140" />
-                                                <CheckBox Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center"
-                                                          IsChecked="{Binding Restock}"
-                                                          Content="{Binding [restock], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                            </Grid>
-                                            <TextBox Text="{Binding Reason}"
-                                                     PlaceholderText="{Binding [reason], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Border>

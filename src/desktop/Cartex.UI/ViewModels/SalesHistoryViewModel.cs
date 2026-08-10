@@ -202,6 +202,31 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void CloseReceipt() => IsReceiptOpen = false;
 
+    [ObservableProperty] private decimal _totalReturnAmount;
+    [ObservableProperty] private int _totalReturnItemCount;
+
+    public void RecalculateReturnTotals()
+    {
+        TotalReturnAmount = ReturnLines.Sum(l => l.LineTotal);
+        TotalReturnItemCount = ReturnLines.Count(l => l.Quantity > 0);
+    }
+
+    [RelayCommand]
+    private void SelectAllReturn()
+    {
+        foreach (var line in ReturnLines)
+            line.Quantity = line.Remaining;
+        RecalculateReturnTotals();
+    }
+
+    [RelayCommand]
+    private void ClearReturnQuantities()
+    {
+        foreach (var line in ReturnLines)
+            line.Quantity = 0;
+        RecalculateReturnTotals();
+    }
+
     [RelayCommand]
     private void ReturnSale(SaleDto sale)
     {
@@ -212,8 +237,9 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         {
             var remaining = i.Quantity - i.ReturnedQuantity;
             if (remaining > 0)
-                ReturnLines.Add(new ReturnLineItem(i.SaleItemId, i.ProductName, remaining));
+                ReturnLines.Add(new ReturnLineItem(i.SaleItemId, i.ProductName, remaining, i.UnitPrice, RecalculateReturnTotals));
         }
+        RecalculateReturnTotals();
         IsReturnOpen = true;
     }
 
@@ -244,13 +270,36 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     }
 }
 
-public partial class ReturnLineItem(long saleItemId, string productName, decimal remaining) : ObservableObject
+public partial class ReturnLineItem : ObservableObject
 {
-    public long SaleItemId { get; } = saleItemId;
-    public string ProductName { get; } = productName;
-    public decimal Remaining { get; } = remaining;
+    private readonly Action _onQuantityChanged;
 
-    [ObservableProperty] private decimal _quantity = remaining;
+    public ReturnLineItem(long saleItemId, string productName, decimal remaining, decimal unitPrice, Action onQuantityChanged)
+    {
+        SaleItemId = saleItemId;
+        ProductName = productName;
+        Remaining = remaining;
+        UnitPrice = unitPrice;
+        _quantity = remaining;
+        _onQuantityChanged = onQuantityChanged;
+    }
+
+    public long SaleItemId { get; }
+    public string ProductName { get; }
+    public decimal Remaining { get; }
+    public decimal UnitPrice { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LineTotal))]
+    private decimal _quantity;
+
     [ObservableProperty] private bool _restock = true;
     [ObservableProperty] private string? _reason;
+
+    public decimal LineTotal => Quantity * UnitPrice;
+
+    partial void OnQuantityChanged(decimal value)
+    {
+        _onQuantityChanged?.Invoke();
+    }
 }
