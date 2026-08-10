@@ -274,7 +274,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshMenuVisibility();
     }
 
-    private readonly HashSet<string> _enabledFeatures = [];
+    private readonly HashSet<string> _enabledFeatures = new(SettingsService.Instance.EnabledFeatures);
     private Cartex.ApiClient.Api.IFeaturesApi _featuresApi = null!;
 
     private async Task LoadFeaturesAsync()
@@ -282,10 +282,11 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             var enabled = await _featuresApi.GetEnabledAsync();
-            _enabledFeatures.Clear();
-            foreach (var code in enabled) _enabledFeatures.Add(code);
-            if (NavRegistry.SidebarPages.Any(p => p.Feature is not null && _enabledFeatures.Contains(p.Feature)))
+            if (enabled is { Count: > 0 })
             {
+                _enabledFeatures.Clear();
+                foreach (var code in enabled) _enabledFeatures.Add(code);
+                SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
                 BuildMenu();
                 BuildPalette();
             }
