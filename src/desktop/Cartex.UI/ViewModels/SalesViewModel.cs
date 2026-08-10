@@ -206,9 +206,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isQueuePanelOpen;
     [ObservableProperty] private int _queueCount;
     [ObservableProperty] private bool _canSeeQueue;
-    [ObservableProperty] private bool _isReceiptOpen;
     [ObservableProperty] private bool _posListMode = SettingsService.Instance.PosListMode;
-    [ObservableProperty] private ReceiptDto? _currentReceipt;
     [ObservableProperty] private bool _isProductDetailOpen;
     [ObservableProperty] private StockOnHandDto? _detailProduct;
     [ObservableProperty] private string _detailBarcodes = string.Empty;
@@ -230,10 +228,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public StockOnHandDto DetailProductDisplay => DetailProduct ?? EmptyDetailProduct;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReceiptOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsModalOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsModalOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsQueuePanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsHeldPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
@@ -464,7 +461,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         if (ProductEditor.IsEditOpen) { ProductEditor.CancelEditCommand.Execute(null); return; }
         if (IsQuickRatesOpen) { IsQuickRatesOpen = false; return; }
-        if (IsReceiptOpen) { IsReceiptOpen = false; return; }
         if (IsReceiveOpen) { IsReceiveOpen = false; return; }
         if (IsProductDetailOpen) { IsProductDetailOpen = false; return; }
         if (IsCustomerPanelOpen) { IsCustomerPanelOpen = false; return; }
@@ -478,7 +474,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         ProductEditor.OnNavigatedFrom();
         Prepack.IsOpen = false;
         IsQuickRatesOpen = false;
-        IsReceiptOpen = false;
         IsReceiveOpen = false;
         IsProductDetailOpen = false;
         IsCustomerPanelOpen = false;
@@ -1920,9 +1915,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _activeCartCode = null;
             }
 
-            var soldCustomerId = SelectedCustomer?.Id;
             ClearCart();
-            _lastSoldCustomerId = soldCustomerId;
             _toast.Success(L["sale_completed"]);
             await ShowReceiptAsync(result.ReceiptToken);
             await LoadProductsAsync();
@@ -1935,144 +1928,27 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task ShowReceiptAsync(string token)
     {
-        try
-        {
-            CurrentReceipt = await _receiptApi.GetAsync(token);
-            IsReceiptOpen = true;
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
-
-        await RefreshReceiptCaseActionsAsync();
-
-        // A successful online checkout has already written the centralized
-        // automatic PrintJob in the same server transaction. Local dispatch is
-        // only the fallback for installations without centralized routing.
-        if (!_printer.AutoPrintEnabled || _printer.AutoPrintHandledByServer) return;
-        try { await PrintCurrentReceiptAsync(); }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [ObservableProperty] private long? _receiptCaseSaleId;
-    [ObservableProperty] private string? _linkedCaseNumber;
-    [ObservableProperty] private long? _receiptCaseCustomerId;
-    [ObservableProperty] private bool _canUseTradeCases;
-
-    public bool ShowAttachCustomerToReceipt => ReceiptCaseSaleId is not null && ReceiptCaseCustomerId is null && _auth.HasPermission("sales.assignCustomer");
-    public bool ShowReceiptCaseActions => ReceiptCaseSaleId is not null && LinkedCaseNumber is null && ReceiptCaseCustomerId is not null && CanUseTradeCases;
-    public bool HasLinkedCase => LinkedCaseNumber is not null;
-
-    partial void OnReceiptCaseSaleIdChanged(long? value)
-    {
-        OnPropertyChanged(nameof(ShowReceiptCaseActions));
-        OnPropertyChanged(nameof(ShowAttachCustomerToReceipt));
-    }
-
-    partial void OnReceiptCaseCustomerIdChanged(long? value)
-    {
-        OnPropertyChanged(nameof(ShowReceiptCaseActions));
-        OnPropertyChanged(nameof(ShowAttachCustomerToReceipt));
-    }
-
-    partial void OnCanUseTradeCasesChanged(bool value) => OnPropertyChanged(nameof(ShowReceiptCaseActions));
-
-    partial void OnLinkedCaseNumberChanged(string? value)
-    {
-        OnPropertyChanged(nameof(ShowReceiptCaseActions));
-        OnPropertyChanged(nameof(HasLinkedCase));
-    }
-
-    private async Task RefreshReceiptCaseActionsAsync()
-    {
-        LinkedCaseNumber = null;
-        ReceiptCaseSaleId = null;
-        ReceiptCaseCustomerId = null;
-        CanUseTradeCases = false;
-        if (CurrentReceipt is null) return;
-        ReceiptCaseSaleId = CurrentReceipt.SaleId;
-        ReceiptCaseCustomerId = _lastSoldCustomerId;
-
-        if (_auth.HasPermission("trade_cases.create") || _auth.HasPermission("trade_cases.edit"))
-        {
-            try
-            {
-                var enabled = await _cache.GetAsync(CacheKeys.Features, _featuresApi.GetEnabledAsync);
-                if (enabled.Contains("trade_cases")) CanUseTradeCases = true;
-            }
-            catch { }
-        }
-    }
-
-    private long? _lastSoldCustomerId;
-
-    [RelayCommand]
-    private async Task AttachCustomerToReceipt()
-    {
-        if (ReceiptCaseSaleId is not { } saleId || !_auth.HasPermission("sales.assignCustomer")) return;
-        var vm = new CustomerPickerViewModel(_customersApi, _toast, _busy);
-        await vm.InitAsync();
-        var result = await _dialog.ShowAsync<CustomerPickerDialog, CustomerPickerViewModel, object>(vm);
-        if (result is not CustomerDto customer) return;
+        ReceiptDto receipt;
         try
         {
             using (_busy.Begin(L["loading"]))
-            {
-                await _salesApi.AssignCustomerAsync(saleId, customer.Id);
-            }
-            ReceiptCaseCustomerId = customer.Id;
-            _lastSoldCustomerId = customer.Id;
-            _toast.Success(string.Format(L["customer_assigned_fmt"], $"{customer.FullName} {customer.LastName}".Trim()));
+                receipt = await _receiptApi.GetAsync(token);
         }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [RelayCommand]
-    private async Task AttachReceiptToCase()
-    {
-        if (ReceiptCaseSaleId is not { } saleId) return;
-        if (ReceiptCaseCustomerId is not { } customerId)
-        {
-            _toast.Warning(L["case_customer_required"] ?? "Loyihaga biriktirish uchun mijoz tanlangan bo'lishi kerak.");
-            return;
-        }
-        CustomerDto customer;
-        try { customer = await _customersApi.GetByIdAsync(customerId); }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
-        var vm = new SaleCaseAttachViewModel(_tradeCasesApi, _toast, _busy, Branch);
-        await vm.InitAsync(customerId, $"{customer.FullName} {customer.LastName}".Trim());
-        var result = await _dialog.ShowAsync<SaleCaseAttachDialog, SaleCaseAttachViewModel, object>(vm);
-        var (caseId, caseNumber) = result switch
+
+        if (_printer.AutoPrintEnabled && !_printer.AutoPrintHandledByServer)
         {
-            TradeCaseCreatedDto created => (created.Id, created.CaseNumber),
-            TradeCaseListDto existing => (existing.Id, existing.CaseNumber),
-            _ => (0L, null)
-        };
-        if (caseNumber is null) return;
-        try
-        {
-            await _tradeCasesApi.LinkSaleAsync(caseId, saleId);
-            LinkedCaseNumber = caseNumber;
-            _toast.Success(string.Format(L["case_linked_fmt"], caseNumber));
+            try { await _printDispatch.PrintReceiptAsync(receipt, false); }
+            catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
         }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
 
-    [RelayCommand]
-    private async Task PrintReceipt()
-    {
-        if (CurrentReceipt is null || !_auth.HasPermission("printing.receipts.print")) return;
-        try
-        {
-            await PrintCurrentReceiptAsync();
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
+        var vm = new ReceiptDetailViewModel(
+            _receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
+            preloadedReceipt: receipt,
+            receiptToken: token,
+            saleId: receipt.SaleId,
+            isPosCheckoutMode: true);
 
-    private async Task PrintCurrentReceiptAsync()
-    {
-        if (CurrentReceipt is null) return;
-        await _printDispatch.PrintReceiptAsync(CurrentReceipt, false);
+        await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
     }
-
-    [RelayCommand]
-    private void CloseReceipt() => IsReceiptOpen = false;
 }
