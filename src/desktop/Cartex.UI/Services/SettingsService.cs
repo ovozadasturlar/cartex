@@ -51,8 +51,14 @@ public sealed class SettingsService
 
     public string ApiBaseUrl
     {
-        get => _data.ApiBaseUrl;
-        set { _data.ApiBaseUrl = value; Save(); }
+        get => NormalizeLoopback(_data.ApiBaseUrl);
+        set { _data.ApiBaseUrl = NormalizeLoopback(value); Save(); }
+    }
+
+    private static string NormalizeLoopback(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "http://127.0.0.1:5015";
+        return url.Replace("://localhost", "://127.0.0.1", StringComparison.OrdinalIgnoreCase);
     }
 
     public bool RememberMe
@@ -104,6 +110,12 @@ public sealed class SettingsService
         set { _data.PosListMode = value; Save(); }
     }
 
+    public List<string> EnabledFeatures
+    {
+        get => _data.EnabledFeatures ??= ["trade_cases", "loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
+        set { _data.EnabledFeatures = value; Save(); }
+    }
+
     private SettingsData Load()
     {
         try
@@ -135,7 +147,7 @@ public sealed class SettingsService
         public AppTheme Theme { get; set; } = AppTheme.Light;
         public AppLanguage Language { get; set; } = AppLanguage.En;
         public AppMode Mode { get; set; }
-        public string ApiBaseUrl { get; set; } = "http://localhost:5015";
+        public string ApiBaseUrl { get; set; } = "http://127.0.0.1:5015";
         public bool RememberMe { get; set; }
         public double PosCartWidth { get; set; } = 430;
         public string? DeviceId { get; set; }
@@ -143,5 +155,6 @@ public sealed class SettingsService
         public long OfflineWarehouseId { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
         public bool PosListMode { get; set; }
+        public List<string> EnabledFeatures { get; set; } = ["trade_cases", "loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
     }
 }

@@ -93,8 +93,14 @@ public sealed class PrintHostService
                 }
                 await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken);
                 await EnsureHubAsync(cancellationToken);
-                await ProcessAssignedAsync(cancellationToken);
-                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+
+                // If SignalR is disconnected, fallback to HTTP polling
+                if (_connection is null || _connection.State != HubConnectionState.Connected)
+                {
+                    await ProcessAssignedAsync(cancellationToken);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
