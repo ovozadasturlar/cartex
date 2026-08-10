@@ -151,6 +151,17 @@ public sealed record TradeCaseParticipantDto(
     string PartyName,
     string? PartyPhone);
 
+public sealed record TradeCaseEventDto(
+    DateTime Timestamp,
+    string EventType,
+    string Title,
+    string Description,
+    string? DocumentNumber = null,
+    decimal? Amount = null,
+    decimal? Quantity = null,
+    string? ActorName = null,
+    long? DocumentId = null);
+
 public sealed record TradeCaseDetailDto(
     long Id,
     string CaseNumber,
@@ -175,7 +186,8 @@ public sealed record TradeCaseDetailDto(
     IReadOnlyList<TradeCaseLineDto> Lines,
     IReadOnlyList<TradeCaseDocumentDto> Documents,
     TradeCaseAllowedActions AllowedActions,
-    IReadOnlyList<TradeCaseParticipantDto>? Participants = null);
+    IReadOnlyList<TradeCaseParticipantDto>? Participants = null,
+    IReadOnlyList<TradeCaseEventDto>? Events = null);
 
 public sealed record TradeCaseStatementEntryDto(
     DateTime OccurredAt,

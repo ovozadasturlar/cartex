@@ -149,6 +149,36 @@ public sealed class GetTradeCaseByIdQueryHandler(
             .Select(x => new TradeCaseParticipantDto(x.RoleDefinitionId, x.PartyId,
                 x.RoleLabelSnapshot, x.PartyNameSnapshot, x.PartyPhoneSnapshot))
             .ToListAsync(cancellationToken);
+
+        var events = new List<TradeCaseEventDto>
+        {
+            new(header.CreatedAt, "CaseOpened", "Loyiha ochildi",
+                $"{header.Title} ({header.CaseNumber})", header.CaseNumber, null, null, null, header.Id)
+        };
+
+        foreach (var doc in documents)
+        {
+            var (title, desc) = doc.Type switch
+            {
+                "GoodsIssue" => ("Mahsulot berildi", $"Chiqim hujjati: {doc.DocumentNumber}"),
+                "GoodsReturn" => ("Mahsulot qaytarildi", $"Qaytaruv hujjati: {doc.DocumentNumber}"),
+                "Settlement" => ("Hisob-kitob qilindi", $"Hisob hujjati: {doc.DocumentNumber}"),
+                "CustomerPayment" => ("To'lov qabul qilindi", $"To'lov: {doc.DocumentNumber}"),
+                "Sale" => ("Savdo biriktirildi", $"Chek: {doc.DocumentNumber}"),
+                _ => ("Hujjat", doc.DocumentNumber)
+            };
+            events.Add(new TradeCaseEventDto(doc.CreatedAt, doc.Type, title, desc,
+                doc.DocumentNumber, doc.Amount > 0 ? doc.Amount : null,
+                doc.Quantity > 0 ? doc.Quantity : null, null, doc.Id));
+        }
+
+        if (header.Status is TradeCaseStatus.Settled or TradeCaseStatus.Cancelled)
+        {
+            events.Add(new TradeCaseEventDto(header.UpdatedAt, "CaseStatusChanged",
+                header.Status == TradeCaseStatus.Settled ? "Loyiha hisob-kitob qilindi" : "Loyiha bekor qilindi",
+                $"Loyiha holati: {header.Status}", header.CaseNumber, null, null, null, header.Id));
+        }
+
         var allowed = new TradeCaseAllowedActions(
             isOpen && currentUser.HasPermission(AppPermissions.TradeCases.Edit),
             header.Status == TradeCaseStatus.Open && currentUser.HasPermission(AppPermissions.GoodsIssues.Create),
@@ -165,7 +195,8 @@ public sealed class GetTradeCaseByIdQueryHandler(
             header.WarehouseName, header.Workflow.ToString(), header.PricePolicy.ToString(),
             header.Status.ToString(), header.Currency, header.Note, header.Version,
             header.CreatedAt, header.UpdatedAt, lines,
-            documents.OrderByDescending(x => x.CreatedAt).ToList(), allowed, participants);
+            documents.OrderByDescending(x => x.CreatedAt).ToList(), allowed, participants,
+            events.OrderByDescending(x => x.Timestamp).ToList());
     }
 }
 

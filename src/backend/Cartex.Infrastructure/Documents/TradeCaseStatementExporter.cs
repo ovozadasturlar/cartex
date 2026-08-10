@@ -28,6 +28,20 @@ public sealed class TradeCaseStatementExporter : ITradeCaseStatementExporter
         };
     }
 
+    private static string FormatType(string type) => type switch
+    {
+        "CaseOpened" => "Loyiha ochildi",
+        "GoodsIssue" => "Mahsulot berildi",
+        "GoodsReturn" => "Mahsulot qaytdi",
+        "Settlement" => "Hisob-kitob",
+        "DirectSale" => "Kassa savdosi",
+        "SalePayment" => "Savdo to'lovi",
+        "CustomerPayment" => "Mijoz to'lovi",
+        "SaleReturn" => "Savdo qaytaruvi",
+        "CustomerRefund" => "Pul qaytarildi",
+        _ => type
+    };
+
     private static byte[] Excel(TradeCaseStatementDto value, string mode)
     {
         using var workbook = new XLWorkbook();
@@ -38,21 +52,29 @@ public sealed class TradeCaseStatementExporter : ITradeCaseStatementExporter
             var headers = new[] { "Sana", "Hujjat", "Turi", "Izoh", "Debet", "Kredit", "Qoldiq", "Valyuta" };
             WriteHeaders(sheet, 6, headers);
             var row = 7;
-            foreach (var item in value.Timeline)
+            if (value.Timeline.Count == 0)
             {
-                sheet.Cell(row, 1).Value = item.OccurredAt.ToLocalTime();
-                sheet.Cell(row, 1).Style.DateFormat.Format = "dd.MM.yyyy HH:mm";
-                sheet.Cell(row, 2).Value = item.DocumentNumber;
-                sheet.Cell(row, 3).Value = item.Type;
-                sheet.Cell(row, 4).Value = item.Summary;
-                sheet.Cell(row, 5).Value = item.Debit;
-                sheet.Cell(row, 6).Value = item.Credit;
-                sheet.Cell(row, 7).Value = item.RunningBalance;
-                sheet.Cell(row, 8).Value = item.Currency;
+                sheet.Cell(row, 1).Value = "Harakatlar mavjud emas";
                 row++;
             }
-            sheet.Cell(row + 1, 6).Value = "Yakuniy qoldiq";
-            sheet.Cell(row + 1, 7).Value = value.ClosingBalance;
+            else
+            {
+                foreach (var item in value.Timeline)
+                {
+                    sheet.Cell(row, 1).Value = item.OccurredAt.ToLocalTime();
+                    sheet.Cell(row, 1).Style.DateFormat.Format = "dd.MM.yyyy HH:mm";
+                    sheet.Cell(row, 2).Value = item.DocumentNumber;
+                    sheet.Cell(row, 3).Value = FormatType(item.Type);
+                    sheet.Cell(row, 4).Value = item.Summary;
+                    sheet.Cell(row, 5).Value = item.Debit;
+                    sheet.Cell(row, 6).Value = item.Credit;
+                    sheet.Cell(row, 7).Value = item.RunningBalance;
+                    sheet.Cell(row, 8).Value = item.Currency;
+                    row++;
+                }
+                sheet.Cell(row + 1, 6).Value = "Yakuniy qoldiq";
+                sheet.Cell(row + 1, 7).Value = value.ClosingBalance;
+            }
             Finish(sheet, 8);
         }
 
@@ -63,18 +85,26 @@ public sealed class TradeCaseStatementExporter : ITradeCaseStatementExporter
             var headers = new[] { "Mahsulot", "Birlik", "Berildi", "Yaroqli qaytdi", "Boshqa qaytdi", "Hisoblandi", "Saqlovda", "O'rtacha narx", "Hisob summa" };
             WriteHeaders(sheet, 6, headers);
             var row = 7;
-            foreach (var item in value.Products)
+            if (value.Products.Count == 0)
             {
-                sheet.Cell(row, 1).Value = item.ProductName;
-                sheet.Cell(row, 2).Value = item.UnitName;
-                sheet.Cell(row, 3).Value = item.Issued;
-                sheet.Cell(row, 4).Value = item.ReturnedSellable;
-                sheet.Cell(row, 5).Value = item.ReturnedNonSellable;
-                sheet.Cell(row, 6).Value = item.Settled;
-                sheet.Cell(row, 7).Value = item.OutstandingCustody;
-                sheet.Cell(row, 8).Value = item.AverageUnitPrice;
-                sheet.Cell(row, 9).Value = item.ChargedAmount;
+                sheet.Cell(row, 1).Value = "Mahsulotlar mavjud emas";
                 row++;
+            }
+            else
+            {
+                foreach (var item in value.Products)
+                {
+                    sheet.Cell(row, 1).Value = item.ProductName;
+                    sheet.Cell(row, 2).Value = item.UnitName;
+                    sheet.Cell(row, 3).Value = item.Issued;
+                    sheet.Cell(row, 4).Value = item.ReturnedSellable;
+                    sheet.Cell(row, 5).Value = item.ReturnedNonSellable;
+                    sheet.Cell(row, 6).Value = item.Settled;
+                    sheet.Cell(row, 7).Value = item.OutstandingCustody;
+                    sheet.Cell(row, 8).Value = item.AverageUnitPrice;
+                    sheet.Cell(row, 9).Value = item.ChargedAmount;
+                    row++;
+                }
             }
             Finish(sheet, 9);
         }
@@ -101,52 +131,66 @@ public sealed class TradeCaseStatementExporter : ITradeCaseStatementExporter
             {
                 if (mode is "timeline" or "both")
                 {
-                    column.Item().Text("Harakatlar").FontSize(12).Bold();
-                    column.Item().PaddingTop(5).Table(table =>
+                    column.Item().Text("Harakatlar va operatsiyalar").FontSize(12).Bold();
+                    if (value.Timeline.Count == 0)
                     {
-                        table.ColumnsDefinition(c =>
+                        column.Item().PaddingTop(5).Text("Harakatlar mavjud emas").Italic().FontColor(Colors.Grey.Darken1);
+                    }
+                    else
+                    {
+                        column.Item().PaddingTop(5).Table(table =>
                         {
-                            c.ConstantColumn(70); c.ConstantColumn(85); c.RelativeColumn();
-                            c.ConstantColumn(60); c.ConstantColumn(60); c.ConstantColumn(65);
+                            table.ColumnsDefinition(c =>
+                            {
+                                c.ConstantColumn(70); c.ConstantColumn(85); c.RelativeColumn();
+                                c.ConstantColumn(60); c.ConstantColumn(60); c.ConstantColumn(65);
+                            });
+                            PdfHeader(table, ["Sana", "Hujjat", "Izoh", "Debet", "Kredit", "Qoldiq"]);
+                            foreach (var row in value.Timeline)
+                            {
+                                Cell(table, row.OccurredAt.ToLocalTime().ToString("dd.MM.yy HH:mm"));
+                                Cell(table, row.DocumentNumber);
+                                Cell(table, row.Summary);
+                                Cell(table, row.Debit == 0 ? "" : row.Debit.ToString("N2"), true);
+                                Cell(table, row.Credit == 0 ? "" : row.Credit.ToString("N2"), true);
+                                Cell(table, row.RunningBalance.ToString("N2"), true);
+                            }
                         });
-                        PdfHeader(table, ["Sana", "Hujjat", "Izoh", "Debet", "Kredit", "Qoldiq"]);
-                        foreach (var row in value.Timeline)
-                        {
-                            Cell(table, row.OccurredAt.ToLocalTime().ToString("dd.MM.yy HH:mm"));
-                            Cell(table, row.DocumentNumber);
-                            Cell(table, row.Summary);
-                            Cell(table, row.Debit == 0 ? "" : row.Debit.ToString("N2"), true);
-                            Cell(table, row.Credit == 0 ? "" : row.Credit.ToString("N2"), true);
-                            Cell(table, row.RunningBalance.ToString("N2"), true);
-                        }
-                    });
-                    column.Item().PaddingTop(7).AlignRight().Text($"Yakuniy qoldiq: {value.ClosingBalance:N2} {value.Currency}").Bold();
+                        column.Item().PaddingTop(7).AlignRight().Text($"Yakuniy qoldiq: {value.ClosingBalance:N2} {value.Currency}").Bold();
+                    }
                 }
 
                 if (mode == "both") column.Item().PaddingVertical(12).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten1);
                 if (mode is "consolidated" or "both")
                 {
-                    column.Item().Text("Yakuniy hisob").FontSize(12).Bold();
-                    column.Item().PaddingTop(5).Table(table =>
+                    column.Item().Text("Mahsulotlar bo'yicha hisob-kitob").FontSize(12).Bold();
+                    if (value.Products.Count == 0)
                     {
-                        table.ColumnsDefinition(c =>
+                        column.Item().PaddingTop(5).Text("Mahsulotlar mavjud emas").Italic().FontColor(Colors.Grey.Darken1);
+                    }
+                    else
+                    {
+                        column.Item().PaddingTop(5).Table(table =>
                         {
-                            c.RelativeColumn(2); c.ConstantColumn(40); c.ConstantColumn(48);
-                            c.ConstantColumn(48); c.ConstantColumn(48); c.ConstantColumn(48);
-                            c.ConstantColumn(60);
+                            table.ColumnsDefinition(c =>
+                            {
+                                c.RelativeColumn(2); c.ConstantColumn(40); c.ConstantColumn(48);
+                                c.ConstantColumn(48); c.ConstantColumn(48); c.ConstantColumn(48);
+                                c.ConstantColumn(60);
+                            });
+                            PdfHeader(table, ["Mahsulot", "Birlik", "Berildi", "Qaytdi", "Hisob", "Saqlov", "Summa"]);
+                            foreach (var row in value.Products)
+                            {
+                                Cell(table, row.ProductName);
+                                Cell(table, row.UnitName);
+                                Cell(table, row.Issued.ToString("0.###"), true);
+                                Cell(table, (row.ReturnedSellable + row.ReturnedNonSellable).ToString("0.###"), true);
+                                Cell(table, row.Settled.ToString("0.###"), true);
+                                Cell(table, row.OutstandingCustody.ToString("0.###"), true);
+                                Cell(table, row.ChargedAmount.ToString("N2"), true);
+                            }
                         });
-                        PdfHeader(table, ["Mahsulot", "Birlik", "Berildi", "Qaytdi", "Hisob", "Saqlov", "Summa"]);
-                        foreach (var row in value.Products)
-                        {
-                            Cell(table, row.ProductName);
-                            Cell(table, row.UnitName);
-                            Cell(table, row.Issued.ToString("0.###"), true);
-                            Cell(table, (row.ReturnedSellable + row.ReturnedNonSellable).ToString("0.###"), true);
-                            Cell(table, row.Settled.ToString("0.###"), true);
-                            Cell(table, row.OutstandingCustody.ToString("0.###"), true);
-                            Cell(table, row.ChargedAmount.ToString("N2"), true);
-                        }
-                    });
+                    }
                 }
             });
             page.Footer().DefaultTextStyle(x => x.FontSize(8).FontColor(Colors.Grey.Medium)).AlignCenter().Text(text =>

@@ -40,12 +40,14 @@ public sealed class GetTradeCaseStatementQueryHandler(
             {
                 x.Id, x.CaseNumber, x.Title, x.CustomerId,
                 CustomerName = x.Customer.FullName,
-                BaseCurrency = x.Branch.Business.Currency
+                BaseCurrency = x.Branch.Business.Currency,
+                x.CreatedAt
             })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Trade case not found.", "trade_case_not_found");
 
         var all = new List<RawEntry>();
+
         var issues = await db.GoodsIssueDocuments.AsNoTracking()
             .Where(x => x.TradeCaseId == request.TradeCaseId && x.Status == BusinessDocumentStatus.Posted)
             .Select(x => new
@@ -80,6 +82,27 @@ public sealed class GetTradeCaseStatementQueryHandler(
                 all.Add(new RawEntry(row.CreatedAt, 31, "SalePayment", row.Id, row.DocumentNumber,
                     "Hisob paytida qabul qilingan to'lov", 0, directPayment, header.BaseCurrency,
                     row.SaleId, row.ReceiptToken));
+        }
+
+        var directSales = await db.Sales.AsNoTracking()
+            .Where(x => x.TradeCaseId == request.TradeCaseId
+                        && !db.TradeCaseSettlements.Any(s => s.SaleId == x.Id)
+                        && x.Status == SaleStatus.Completed)
+            .Select(x => new
+            {
+                x.Id, x.ReceiptToken, x.CreatedAt,
+                x.TotalAmount, x.PaidCash, x.PaidCard, x.PaidBonus
+            }).ToListAsync(cancellationToken);
+        foreach (var row in directSales)
+        {
+            all.Add(new RawEntry(row.CreatedAt, 35, "DirectSale", row.Id, row.ReceiptToken,
+                "Savdo amalga oshirildi (Kassa)", row.TotalAmount, 0, header.BaseCurrency,
+                row.Id, row.ReceiptToken));
+            var directPayment = row.PaidCash + row.PaidCard + row.PaidBonus;
+            if (directPayment > 0)
+                all.Add(new RawEntry(row.CreatedAt, 36, "SalePayment", row.Id, row.ReceiptToken,
+                    "Kassada qabul qilingan to'lov", 0, directPayment, header.BaseCurrency,
+                    row.Id, row.ReceiptToken));
         }
 
         var payments = await db.CustomerPaymentDocuments.AsNoTracking()
@@ -140,6 +163,7 @@ public sealed class GetTradeCaseStatementQueryHandler(
                 UnitName = x.Variant.Product.Unit.ShortName,
                 x.Quantity, x.UnitPrice
             }).ToListAsync(cancellationToken);
+
         var returned = await db.GoodsReturnLines.AsNoTracking()
             .Where(x => x.Document.TradeCaseId == request.TradeCaseId
                         && x.Document.Status == BusinessDocumentStatus.Posted
@@ -152,38 +176,70 @@ public sealed class GetTradeCaseStatementQueryHandler(
                 Sellable = x.Where(l => l.Disposition == InventoryDisposition.SellableRestock).Sum(l => l.Quantity),
                 NonSellable = x.Where(l => l.Disposition != InventoryDisposition.SellableRestock).Sum(l => l.Quantity)
             }).ToListAsync(cancellationToken);
+
         var settled = await db.SaleItems.AsNoTracking()
             .Where(x => x.Sale.TradeCaseId == request.TradeCaseId
+                        && x.Sale.Status == SaleStatus.Completed
                         && (!from.HasValue || x.Sale.CreatedAt >= from.Value)
                         && (!to.HasValue || x.Sale.CreatedAt < to.Value))
-            .GroupBy(x => x.VariantId)
+            .GroupBy(x => new { x.VariantId, ProductName = x.Variant.Product.Name, UnitName = x.Variant.Product.Unit.ShortName })
             .Select(x => new
             {
-                VariantId = x.Key,
+                x.Key.VariantId,
+                x.Key.ProductName,
+                x.Key.UnitName,
                 Quantity = x.Sum(l => l.Quantity),
                 Amount = x.Sum(l => l.Quantity * l.UnitPrice)
             }).ToListAsync(cancellationToken);
 
         var returnedByVariant = returned.ToDictionary(x => x.VariantId);
         var settledByVariant = settled.ToDictionary(x => x.VariantId);
-        var products = issueLines.GroupBy(x => new { x.VariantId, x.ProductName, x.UnitName })
-            .Select(group =>
+        var issueByVariant = issueLines.GroupBy(x => new { x.VariantId, x.ProductName, x.UnitName })
+            .ToDictionary(g => g.Key.VariantId, g => new
             {
-                returnedByVariant.TryGetValue(group.Key.VariantId, out var ret);
-                settledByVariant.TryGetValue(group.Key.VariantId, out var sale);
-                var issued = group.Sum(x => x.Quantity);
-                var sellable = ret?.Sellable ?? 0;
-                var nonSellable = ret?.NonSellable ?? 0;
-                var settledQty = sale?.Quantity ?? 0;
-                var weighted = group.Sum(x => x.Quantity * x.UnitPrice);
-                return new TradeCaseStatementProductDto(group.Key.VariantId, group.Key.ProductName,
-                    group.Key.UnitName, issued, sellable, nonSellable, settledQty,
-                    issued - sellable - nonSellable - settledQty,
-                    issued == 0 ? 0 : Math.Round(weighted / issued, 2), sale?.Amount ?? 0);
-            }).OrderBy(x => x.ProductName).ToList();
+                g.Key.ProductName,
+                g.Key.UnitName,
+                Issued = g.Sum(x => x.Quantity),
+                Weighted = g.Sum(x => x.Quantity * x.UnitPrice)
+            });
+
+        var allVariantIds = issueByVariant.Keys
+            .Union(settledByVariant.Keys)
+            .Union(returnedByVariant.Keys)
+            .Distinct()
+            .ToList();
+
+        var products = new List<TradeCaseStatementProductDto>();
+        foreach (var variantId in allVariantIds)
+        {
+            issueByVariant.TryGetValue(variantId, out var issueInfo);
+            settledByVariant.TryGetValue(variantId, out var saleInfo);
+            returnedByVariant.TryGetValue(variantId, out var retInfo);
+
+            var productName = issueInfo?.ProductName ?? saleInfo?.ProductName ?? "Mahsulot";
+            var unitName = issueInfo?.UnitName ?? saleInfo?.UnitName ?? "dona";
+            var issued = issueInfo?.Issued ?? 0;
+            var sellable = retInfo?.Sellable ?? 0;
+            var nonSellable = retInfo?.NonSellable ?? 0;
+            var settledQty = saleInfo?.Quantity ?? 0;
+            var chargedAmount = saleInfo?.Amount ?? 0;
+
+            decimal avgPrice;
+            if (issued > 0)
+                avgPrice = Math.Round((issueInfo?.Weighted ?? 0) / issued, 2);
+            else if (settledQty > 0)
+                avgPrice = Math.Round(chargedAmount / settledQty, 2);
+            else
+                avgPrice = 0;
+
+            var custody = issued - sellable - nonSellable - settledQty;
+            products.Add(new TradeCaseStatementProductDto(
+                variantId, productName, unitName, issued, sellable, nonSellable, settledQty,
+                custody, avgPrice, chargedAmount));
+        }
 
         return new TradeCaseStatementDto(header.Id, header.CaseNumber, header.Title,
             header.CustomerId, header.CustomerName, request.From, request.To,
-            header.BaseCurrency, opening, running, timeline, products, DateTime.UtcNow);
+            header.BaseCurrency, opening, running, timeline, products.OrderBy(x => x.ProductName).ToList(), DateTime.UtcNow);
     }
 }
