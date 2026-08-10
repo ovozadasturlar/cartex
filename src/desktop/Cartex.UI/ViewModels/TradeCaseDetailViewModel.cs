@@ -28,7 +28,6 @@ public partial class TradeCaseDetailViewModel : ViewModelBase, ILoadable
     private readonly PrintDispatchService _print;
     private readonly IFilePickerService _filePicker;
     private long _caseId;
-    private long? _currentSaleId;
 
     public TradeCaseDetailViewModel(ITradeCasesApi api, IStocksApi stocksApi, IReceiptApi receiptApi,
         ISalesApi salesApi, NavigationService navigation, IDialogService dialog, IToastService toast,
@@ -48,20 +47,8 @@ public partial class TradeCaseDetailViewModel : ViewModelBase, ILoadable
     }
 
     [ObservableProperty] private TradeCaseDetailDto? _detail;
-    [ObservableProperty] private ReceiptDto? _receipt;
-    [ObservableProperty] private bool _isReceiptOpen;
-    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _receiptQrCode;
-    [ObservableProperty] private SaleDetailDto? _returningSale;
-    [ObservableProperty] private bool _isReturnOpen;
-    [ObservableProperty] private decimal _totalReturnAmount;
-    [ObservableProperty] private int _totalReturnItemCount;
-
-    public bool IsModalOpen => IsReceiptOpen || IsReturnOpen;
-    partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    partial void OnIsReturnOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public ObservableCollection<TradeCaseLineRow> Lines { get; } = [];
-    public ObservableCollection<ReturnLineItem> ReturnLines { get; } = [];
 
     private static readonly TradeCaseDetailDto EmptyDetail = new(
         0, "", DateOnly.MinValue, "", null, 0, "", null, 0, "", 0, "", "", "", "", "",
@@ -217,138 +204,22 @@ public partial class TradeCaseDetailViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    public bool CanReturnSale => _auth.HasPermission("sales.return") && _currentSaleId is not null;
-    public bool CanPrintReceipt => _auth.HasPermission("printing.receipts.reprint");
-
-    public void RecalculateReturnTotals()
-    {
-        TotalReturnAmount = ReturnLines.Sum(l => l.LineTotal);
-        TotalReturnItemCount = ReturnLines.Count(l => l.Quantity > 0);
-    }
-
-    [RelayCommand]
-    private void SelectAllReturn()
-    {
-        foreach (var line in ReturnLines)
-            line.Quantity = line.Remaining;
-        RecalculateReturnTotals();
-    }
-
-    [RelayCommand]
-    private void ClearReturnQuantities()
-    {
-        foreach (var line in ReturnLines)
-            line.Quantity = 0;
-        RecalculateReturnTotals();
-    }
-
     [RelayCommand]
     private async Task OpenDocumentDetailAsync(TradeCaseDocumentDto doc)
     {
         if (doc is null) return;
         if (doc.Type is "Sale" or "Settlement" && !string.IsNullOrEmpty(doc.ReceiptToken))
         {
-            try
-            {
-                using (_busy.Begin(L["loading"]))
-                {
-                    Receipt = await _receiptApi.GetAsync(doc.ReceiptToken);
-                    _currentSaleId = doc.Id;
-                    OnPropertyChanged(nameof(CanReturnSale));
-                }
-
-                var baseUrl = Cartex.UI.Services.SettingsService.Instance.ApiBaseUrl?.TrimEnd('/');
-                ReceiptQrCode = Cartex.UI.Services.QrService.Generate($"{baseUrl}/r/{doc.ReceiptToken}");
-                IsReceiptOpen = true;
-            }
-            catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+            var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _print, _dialog, _toast, _busy,
+                receiptToken: doc.ReceiptToken, saleId: doc.Id);
+            await vm.InitAsync();
+            var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
+            if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)
+                await LoadAsync();
         }
         else if (doc.Type == "GoodsIssue")
         {
             await PrintIssueAsync(doc);
         }
-    }
-
-    [RelayCommand]
-    private void CloseReceipt()
-    {
-        IsReceiptOpen = false;
-        _currentSaleId = null;
-        OnPropertyChanged(nameof(CanReturnSale));
-    }
-
-    [RelayCommand]
-    private async Task ReturnSaleFromReceiptAsync()
-    {
-        if (_currentSaleId is null || !CanReturnSale) return;
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-            {
-                ReturningSale = await _salesApi.GetByIdAsync(_currentSaleId.Value);
-            }
-
-            if (ReturningSale is null || ReturningSale.Status == "Returned")
-            {
-                _toast.Warning(L["sale_already_returned"]);
-                return;
-            }
-
-            ReturnLines.Clear();
-            foreach (var i in ReturningSale.Items)
-            {
-                var remaining = i.ReturnableQuantity > 0 ? i.ReturnableQuantity : (i.Quantity - i.ReturnedQuantity);
-                if (remaining > 0)
-                    ReturnLines.Add(new ReturnLineItem(i.SaleItemId, i.ProductName, remaining, i.UnitPrice, RecalculateReturnTotals));
-            }
-
-            if (ReturnLines.Count == 0)
-            {
-                _toast.Warning(L["no_returnable_items"]);
-                return;
-            }
-
-            RecalculateReturnTotals();
-            IsReceiptOpen = false;
-            IsReturnOpen = true;
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [RelayCommand]
-    private void CloseReturn() => IsReturnOpen = false;
-
-    [RelayCommand]
-    private async Task ConfirmReturnAsync()
-    {
-        if (ReturningSale is null) return;
-        var lines = ReturnLines
-            .Where(l => l.Quantity > 0)
-            .Select(l => new ReturnLineRequest(l.SaleItemId, l.Quantity, l.Restock, l.Reason))
-            .ToList();
-        if (lines.Count == 0) { _toast.Error(L["return_select_qty"]); return; }
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                await _salesApi.ReturnAsync(ReturningSale.Id, new ReturnSaleRequest(ReturningSale.Id, lines));
-            _toast.Success(L["success"]);
-            IsReturnOpen = false;
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-    }
-
-    [RelayCommand]
-    private async Task PrintReceiptAsync()
-    {
-        if (Receipt is null || !_auth.HasPermission("printing.receipts.reprint")) return;
-        try
-        {
-            await _print.PrintReceiptAsync(Receipt, true);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 }
