@@ -19,6 +19,10 @@ public partial class CustomersViewModel(
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private bool _hasAccess;
+    [ObservableProperty] private bool _canCreate;
+    [ObservableProperty] private bool _isCreateModalOpen;
+    [ObservableProperty] private string _newCustomerName = "";
+    [ObservableProperty] private string _newCustomerPhone = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoadingMore;
@@ -35,6 +39,7 @@ public partial class CustomersViewModel(
     {
         await offline.StartAsync();
         HasAccess = permissions.Has("customers.view");
+        CanCreate = permissions.Has("customers.create");
         if (!HasAccess) return;
         if (Customers.Count == 0 || DateTime.UtcNow - _lastLoadedAt > TimeSpan.FromSeconds(20))
             await LoadAsync(reset: true, CancellationToken.None);
@@ -80,6 +85,48 @@ public partial class CustomersViewModel(
             return Task.CompletedTask;
         }
         return Shell.Current.GoToAsync($"customer/detail?id={row.Customer.Id}");
+    }
+
+    [RelayCommand]
+    private void OpenCreateModal()
+    {
+        if (!CanCreate) return;
+        if (offline.ShouldUseOffline)
+        {
+            Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
+            return;
+        }
+        NewCustomerName = "";
+        NewCustomerPhone = "";
+        IsCreateModalOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseCreateModal() => IsCreateModalOpen = false;
+
+    [RelayCommand]
+    private async Task SaveCustomerAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewCustomerName) || string.IsNullOrWhiteSpace(NewCustomerPhone))
+        {
+            Ui.Toast(Loc.Instance["err_fill_all"]);
+            return;
+        }
+        if (offline.ShouldUseOffline)
+        {
+            Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            var name = NewCustomerName.Trim();
+            var id = await customersApi.CreateAsync(new CreateCustomerRequest(name, NewCustomerPhone.Trim(), null, 0));
+            IsCreateModalOpen = false;
+            await Shell.Current.GoToAsync($"customer/detail?id={id}");
+        }
+        catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
+        finally { IsBusy = false; }
     }
 
     private async Task LoadAsync(bool reset, CancellationToken cancellationToken)

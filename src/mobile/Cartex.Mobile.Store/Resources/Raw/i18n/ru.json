@@ -102,6 +102,7 @@
   "cart_title": "Корзина",
   "cart_empty": "Корзина пуста",
   "customer": "Клиент",
+  "customer_full_name": "Имя Фамилия",
   "customer_debt": "Текущий долг",
   "customer_details": "Данные клиента",
   "no_debt": "Долга нет",
@@ -376,5 +377,6 @@
   "filter_week": "7 дней",
   "filter_month": "30 дней",
   "filter_all": "Все",
-  "search_sales": "Поиск продаж (чек, клиент, кассир, товар)..."
+  "search_sales": "Поиск продаж (чек, клиент, кассир, товар)...",
+  "phone": "Телефон"
 }

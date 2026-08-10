@@ -102,6 +102,7 @@
   "cart_title": "Сават",
   "cart_empty": "Сават бўш",
   "customer": "Мижоз",
+  "customer_full_name": "Исм Фамилия",
   "customer_debt": "Жорий қарз",
   "customer_details": "Мижоз маълумотлари",
   "no_debt": "Қарз йўқ",
@@ -376,5 +377,6 @@
   "filter_week": "7 кун",
   "filter_month": "30 кун",
   "filter_all": "Барчаси",
-  "search_sales": "Савдоларни қидириш (чек, мижоз, ходим, товар)..."
+  "search_sales": "Савдоларни қидириш (чек, мижоз, ходим, товар)...",
+  "phone": "Телефон"
 }

@@ -102,6 +102,7 @@
   "cart_title": "Savat",
   "cart_empty": "Savat bo'sh",
   "customer": "Mijoz",
+  "customer_full_name": "Ism Familiya",
   "customer_debt": "Joriy qarz",
   "customer_details": "Mijoz ma'lumotlari",
   "no_debt": "Qarz yo'q",
@@ -376,5 +377,6 @@
   "filter_week": "7 kun",
   "filter_month": "30 kun",
   "filter_all": "Barchasi",
-  "search_sales": "Savdolarni qidirish (chek, mijoz, xodim, tovar)..."
+  "search_sales": "Savdolarni qidirish (chek, mijoz, xodim, tovar)...",
+  "phone": "Telefon"
 }

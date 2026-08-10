@@ -332,12 +332,12 @@ public partial class TradeViewModel(
             queryBuilder = queryBuilder.Filter("FromDate", fromDate.Value.ToString("o"));
         if (toDate.HasValue)
             queryBuilder = queryBuilder.Filter("ToDate", toDate.Value.ToString("o"));
-        if (warehouse.WarehouseId > 0)
-            queryBuilder = queryBuilder.Filter("WarehouseId", warehouse.WarehouseId.ToString());
+        if (warehouse.WarehouseId is { } salesWarehouseId)
+            queryBuilder = queryBuilder.Filter("WarehouseId", salesWarehouseId.ToString());
 
         var listTask = salesApi.QueryListAsync(queryBuilder.Build());
         var totalsTask = salesApi.GetTotalsAsync(
-            warehouseId: warehouse.WarehouseId > 0 ? warehouse.WarehouseId : null,
+            warehouseId: warehouse.WarehouseId,
             fromDate: fromDate,
             toDate: toDate,
             search: string.IsNullOrWhiteSpace(SalesSearch) ? null : SalesSearch.Trim());

@@ -47,7 +47,7 @@ public partial class HomeViewModel(
         try
         {
             var queueTask = ShowQueue
-                ? ordering.GetAllAsync("Open", warehouse.WarehouseId)
+                ? ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue")
                 : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
             var totalsTask = ShowStats
                 ? sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1))

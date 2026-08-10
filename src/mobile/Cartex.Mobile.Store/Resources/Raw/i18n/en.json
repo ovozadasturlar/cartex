@@ -102,6 +102,7 @@
   "cart_title": "Cart",
   "cart_empty": "Cart is empty",
   "customer": "Customer",
+  "customer_full_name": "Full name",
   "customer_debt": "Current debt",
   "customer_details": "Customer details",
   "no_debt": "No debt",
@@ -376,5 +377,6 @@
   "filter_week": "7 Days",
   "filter_month": "30 Days",
   "filter_all": "All",
-  "search_sales": "Search sales (receipt, customer, cashier, item)..."
+  "search_sales": "Search sales (receipt, customer, cashier, item)...",
+  "phone": "Phone"
 }
