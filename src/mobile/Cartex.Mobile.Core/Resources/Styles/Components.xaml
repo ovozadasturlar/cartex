@@ -60,8 +60,11 @@
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="HeightRequest" Value="56" />
-        <Setter Property="FontSize" Value="17" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>
                 <VisualStateGroup x:Name="CommonStates">
@@ -94,12 +97,29 @@
     <Style x:Key="BtnOutline" TargetType="Button">
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
-        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource StrokeStrong}, Dark={StaticResource StrokeStrongDark}}" />
-        <Setter Property="BorderWidth" Value="1.4" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+        <Setter Property="BorderWidth" Value="1" />
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="HeightRequest" Value="48" />
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontSize" Value="13.5" />
+    </Style>
+
+    <Style x:Key="TabChip" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkSoft}, Dark={StaticResource InkSoftDark}}" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource StrokeStrong}, Dark={StaticResource StrokeStrongDark}}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="Padding" Value="16,0" />
     </Style>
 
     <Style x:Key="BtnGhost" TargetType="Button">

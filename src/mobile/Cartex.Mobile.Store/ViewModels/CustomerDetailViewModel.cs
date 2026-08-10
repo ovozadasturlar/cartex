@@ -41,7 +41,7 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private string? _error;
     [ObservableProperty] private CustomerDto? _customer;
     [ObservableProperty] private string _initials = "";
-    [ObservableProperty] private string _selectedTab = "overview";
+    [ObservableProperty] private string _selectedTab = "activity";
     [ObservableProperty] private bool _isPaymentOpen;
     [ObservableProperty] private string _paymentAmount = "";
     [ObservableProperty] private string _paymentNote = "";
@@ -53,11 +53,11 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private bool _canRefund;
     [ObservableProperty] private bool _canViewStatement;
 
-    public bool IsOverview => SelectedTab == "overview";
+    public bool IsActivity => SelectedTab == "activity";
     public bool IsCases => SelectedTab == "cases";
-    public bool IsTimeline => SelectedTab == "timeline";
     public bool IsSales => SelectedTab == "sales";
-    public bool IsFinance => SelectedTab == "finance";
+    public bool IsPayments => SelectedTab == "payments";
+    public bool IsReturns => SelectedTab == "returns";
     public bool HasPhone => !string.IsNullOrWhiteSpace(Customer?.Phone);
     public bool HasEmail => !string.IsNullOrWhiteSpace(Customer?.Email);
     public bool HasAddress => !string.IsNullOrWhiteSpace(Customer?.Address);
@@ -89,11 +89,11 @@ public partial class CustomerDetailViewModel(
 
     partial void OnSelectedTabChanged(string value)
     {
-        OnPropertyChanged(nameof(IsOverview));
+        OnPropertyChanged(nameof(IsActivity));
         OnPropertyChanged(nameof(IsCases));
-        OnPropertyChanged(nameof(IsTimeline));
         OnPropertyChanged(nameof(IsSales));
-        OnPropertyChanged(nameof(IsFinance));
+        OnPropertyChanged(nameof(IsPayments));
+        OnPropertyChanged(nameof(IsReturns));
     }
 
     partial void OnPaymentMethodChanged(string value)
