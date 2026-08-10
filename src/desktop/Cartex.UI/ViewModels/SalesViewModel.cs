@@ -1814,8 +1814,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (warehouseId is null) { _toast.Warning(L["select_warehouse"]); return; }
         if (!IsOfflineMode) await RefreshPreviewNowAsync();
         if (PaidBonusBase > 0 && SelectedCustomer is null) { _toast.Warning(L["bonus_customer_required"]); return; }
-        if (PaidBonusBase > (SelectedCustomer?.CashbackBalance ?? 0)) { _toast.Warning(L["bonus_insufficient"]); return; }
-        if (DebtAmount > 0 && SelectedCustomer is null) { _toast.Warning(L["debt_customer_required"]); return; }
+
+        if (DebtAmount > 0 && SelectedCustomer is null && !DebtCoveredByCredit) { _toast.Warning(L["debt_customer_required"]); return; }
+        
         if (DebtAmount > 0 && !DebtCoveredByCredit && !_allowDebtSales) { _toast.Warning(L["debt_sales_disabled"]); return; }
         if (DebtAmount > 0 && !DebtCoveredByCredit && _requireDebtDueDate && DebtDueDate is null)
         {
