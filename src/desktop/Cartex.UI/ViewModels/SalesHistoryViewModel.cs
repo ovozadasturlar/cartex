@@ -7,6 +7,7 @@ using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Sales;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
+using Cartex.UI.Views;
 
 namespace Cartex.UI.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private readonly ISalesApi _salesApi;
     private readonly IReceiptApi _receiptApi;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
@@ -28,18 +30,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-7);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;
-
-    [ObservableProperty] private bool _isReceiptOpen;
-    [ObservableProperty] private ReceiptDto? _receipt;
     [ObservableProperty] private SalesTotalsDto _totals = new(0, 0, 0, 0);
-
-    [ObservableProperty] private bool _isReturnOpen;
-    [ObservableProperty] private SaleDto? _returningSale;
-    public ObservableCollection<ReturnLineItem> ReturnLines { get; } = [];
-
-    public bool IsModalOpen => IsReceiptOpen || IsReturnOpen;
-    partial void OnIsReceiptOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    partial void OnIsReturnOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsEmpty => Sales.Count == 0;
 
@@ -47,6 +38,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         ISalesApi salesApi,
         IReceiptApi receiptApi,
         AuthService auth,
+        IDialogService dialog,
         IToastService toast,
         IBusyService busy,
         IExportService export,
@@ -56,6 +48,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         _salesApi = salesApi;
         _receiptApi = receiptApi;
         _auth = auth;
+        _dialog = dialog;
         _toast = toast;
         _busy = busy;
         _export = export;
@@ -70,28 +63,12 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private void ResetState()
     {
         Sales.Clear();
-        ReturnLines.Clear();
-        Receipt = null;
-        _receiptSale = null;
-        ReturningSale = null;
-        IsReceiptOpen = false;
-        IsReturnOpen = false;
-        Totals = new SalesTotalsDto(0, 0, 0, 0);
-        DateFrom = DateTimeOffset.Now.AddDays(-7);
-        DateTo = DateTimeOffset.Now;
-        Paging.Page = 1;
-        OnPropertyChanged(nameof(IsEmpty));
-    }
-
-    public override void OnNavigatedFrom()
-    {
-        IsReceiptOpen = false;
-        IsReturnOpen = false;
     }
 
     [RelayCommand]
     private async Task Export(string format)
     {
+        if (!CanExport) return;
         try
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
@@ -113,15 +90,8 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    private void RaisePermissions()
-    {
-        OnPropertyChanged(nameof(CanReturn));
-        OnPropertyChanged(nameof(CanExport));
-    }
-
     public async Task LoadAsync()
     {
-        RaisePermissions();
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -153,153 +123,22 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private async Task OpenReceiptAsync(SaleDto sale)
     {
         if (sale is null || string.IsNullOrEmpty(sale.ReceiptToken)) return;
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                Receipt = await _receiptApi.GetAsync(sale.ReceiptToken);
-            _receiptSale = sale;
-            
-            // Generate QR Code
-            var baseUrl = Cartex.UI.Services.SettingsService.Instance.ApiBaseUrl?.TrimEnd('/');
-            ReceiptQrCode = Cartex.UI.Services.QrService.Generate($"{baseUrl}/r/{sale.ReceiptToken}");
-            
-            OnPropertyChanged(nameof(CanResendReceipt));
-            IsReceiptOpen = true;
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _receiptQrCode;
-
-    private SaleDto? _receiptSale;
-    public bool CanResendReceipt =>
-        _auth.HasPermission("customers.message") && _receiptSale?.CanResendReceipt == true;
-
-    [RelayCommand]
-    private async Task PrintReceiptAsync()
-    {
-        if (Receipt is null || !_auth.HasPermission("printing.receipts.reprint")) return;
-        try
-        {
-            await _printDispatch.PrintReceiptAsync(Receipt, true);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
+            receiptToken: sale.ReceiptToken, saleId: sale.Id);
+        await vm.InitAsync();
+        var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
+        if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)
+            await LoadAsync();
     }
 
     [RelayCommand]
-    private async Task ResendReceiptAsync()
-    {
-        if (_receiptSale is null) return;
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                await _salesApi.ResendReceiptAsync(_receiptSale.Id);
-            _toast.Success(L["receipt_resent"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    [RelayCommand]
-    private void CloseReceipt() => IsReceiptOpen = false;
-
-    [ObservableProperty] private decimal _totalReturnAmount;
-    [ObservableProperty] private int _totalReturnItemCount;
-
-    public void RecalculateReturnTotals()
-    {
-        TotalReturnAmount = ReturnLines.Sum(l => l.LineTotal);
-        TotalReturnItemCount = ReturnLines.Count(l => l.Quantity > 0);
-    }
-
-    [RelayCommand]
-    private void SelectAllReturn()
-    {
-        foreach (var line in ReturnLines)
-            line.Quantity = line.Remaining;
-        RecalculateReturnTotals();
-    }
-
-    [RelayCommand]
-    private void ClearReturnQuantities()
-    {
-        foreach (var line in ReturnLines)
-            line.Quantity = 0;
-        RecalculateReturnTotals();
-    }
-
-    [RelayCommand]
-    private void ReturnSale(SaleDto sale)
+    private async Task ReturnSaleAsync(SaleDto sale)
     {
         if (sale is null || sale.Status == "Returned") return;
-        ReturningSale = sale;
-        ReturnLines.Clear();
-        foreach (var i in sale.Items)
-        {
-            var remaining = i.Quantity - i.ReturnedQuantity;
-            if (remaining > 0)
-                ReturnLines.Add(new ReturnLineItem(i.SaleItemId, i.ProductName, remaining, i.UnitPrice, RecalculateReturnTotals));
-        }
-        RecalculateReturnTotals();
-        IsReturnOpen = true;
-    }
-
-    [RelayCommand]
-    private void CloseReturn() => IsReturnOpen = false;
-
-    [RelayCommand]
-    private async Task ConfirmReturnAsync()
-    {
-        if (ReturningSale is null) return;
-        var lines = ReturnLines
-            .Where(l => l.Quantity > 0)
-            .Select(l => new ReturnLineRequest(l.SaleItemId, l.Quantity, l.Restock, l.Reason))
-            .ToList();
-        if (lines.Count == 0) { _toast.Error(L["return_select_qty"]); return; }
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                await _salesApi.ReturnAsync(ReturningSale.Id, new ReturnSaleRequest(ReturningSale.Id, lines));
-            _toast.Success(L["success"]);
-            IsReturnOpen = false;
+        var vm = new ReturnSaleViewModel(sale.Id, _salesApi, _toast, _busy, preloadedSale: sale);
+        await vm.InitAsync();
+        var returned = await _dialog.ShowAsync<ReturnSaleDialog, ReturnSaleViewModel, bool>(vm);
+        if (returned)
             await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-    }
-}
-
-public partial class ReturnLineItem : ObservableObject
-{
-    private readonly Action _onQuantityChanged;
-
-    public ReturnLineItem(long saleItemId, string productName, decimal remaining, decimal unitPrice, Action onQuantityChanged)
-    {
-        SaleItemId = saleItemId;
-        ProductName = productName;
-        Remaining = remaining;
-        UnitPrice = unitPrice;
-        _quantity = remaining;
-        _onQuantityChanged = onQuantityChanged;
-    }
-
-    public long SaleItemId { get; }
-    public string ProductName { get; }
-    public decimal Remaining { get; }
-    public decimal UnitPrice { get; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LineTotal))]
-    private decimal _quantity;
-
-    [ObservableProperty] private bool _restock = true;
-    [ObservableProperty] private string? _reason;
-
-    public decimal LineTotal => Quantity * UnitPrice;
-
-    partial void OnQuantityChanged(decimal value)
-    {
-        _onQuantityChanged?.Invoke();
     }
 }
