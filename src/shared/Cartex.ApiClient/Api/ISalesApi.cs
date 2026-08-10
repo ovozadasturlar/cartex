@@ -28,4 +28,7 @@ public interface ISalesApi
 
     [Post("/api/sales/{id}/resend-receipt")]
     Task ResendReceiptAsync(long id);
+
+    [Put("/api/sales/{id}/customer/{customerId}")]
+    Task AssignCustomerAsync(long id, long customerId);
 }

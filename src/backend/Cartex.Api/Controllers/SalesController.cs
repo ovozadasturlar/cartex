@@ -71,4 +71,12 @@ public class SalesController(ISender sender) : ControllerBase
         await sender.Send(new ReturnSaleCommand(id, lines));
         return NoContent();
     }
+
+    [HttpPut("{id:long}/customer/{customerId:long}")]
+    [HasPermission(AppPermissions.Sales.AssignCustomer)]
+    public async Task<IActionResult> AssignCustomer(long id, long customerId)
+    {
+        await sender.Send(new AssignCustomerToSaleCommand(id, customerId));
+        return NoContent();
+    }
 }

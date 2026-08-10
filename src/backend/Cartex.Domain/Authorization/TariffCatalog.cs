@@ -11,7 +11,8 @@ public static class TariffCatalog
         [Free] =
         [
             FeatureCatalog.Supplies, FeatureCatalog.Suppliers,
-            FeatureCatalog.StockTransfers, FeatureCatalog.Accounts
+            FeatureCatalog.StockTransfers, FeatureCatalog.Accounts,
+            FeatureCatalog.TradeCases
         ],
         [Standard] =
         [
