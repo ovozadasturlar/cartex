@@ -4,7 +4,7 @@ namespace Cartex.Application.Common.Settings;
 
 public sealed class TradeCaseSettings
 {
-    public bool Enabled { get; set; }
+    public bool Enabled { get; set; } = true;
     public string SingularLabel { get; set; } = "Loyiha";
     public string PluralLabel { get; set; } = "Loyihalar";
     public TradeCaseWorkflow DefaultWorkflow { get; set; } = TradeCaseWorkflow.CustodyUntilSettlement;

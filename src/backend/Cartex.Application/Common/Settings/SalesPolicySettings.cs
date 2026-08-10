@@ -13,4 +13,5 @@ public sealed class SalesPolicySettings
     public bool ShowOutOfStock { get; set; }
     public bool ShowUnlistedProducts { get; set; } = true;
     public bool AllowInsufficientStockSales { get; set; }
+    public bool AllowRetroactiveCashback { get; set; }
 }

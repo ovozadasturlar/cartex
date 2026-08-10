@@ -132,6 +132,7 @@ public static class AppPermissions
         public const string DiscountOverride = "sales.discountOverride";
         public const string CashOut = "sales.cashout";
         public const string Prepack = "sales.prepack";
+        public const string AssignCustomer = "sales.assignCustomer";
     }
 
     public static class Currencies
@@ -402,6 +403,7 @@ public static class AppPermissions
             P(Sales.DiscountOverride, "Exceed discount limit", true, Sales.Discount),
             P(Sales.CashOut, "Withdraw cash from register", true, Shifts.Open, ExpenseCategories.View),
             P(Sales.Prepack, "Create or cancel prepack labels", true, Products.View, Stocks.View),
+            P(Sales.AssignCustomer, "Assign or reassign customer to completed sales", true, Sales.View, Customers.View),
             P(Currencies.View, "View currencies"),
             P(Currencies.Create, "Create currencies", false, Currencies.View),
             P(Currencies.Edit, "Edit currencies", false, Currencies.View),

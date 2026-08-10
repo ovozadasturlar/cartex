@@ -94,8 +94,8 @@ public record UpdateBarcodeLabelSettingsRequest(
     string CurrencyDisplay,
     string CurrencyCase,
     string PriceCurrencyMode);
-public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
-public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false);
+public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false);
+public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false);
 
 public record TradeCaseSettingsDto(
     bool Enabled,

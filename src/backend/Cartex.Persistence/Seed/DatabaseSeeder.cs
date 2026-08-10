@@ -13,7 +13,7 @@ public static class DatabaseSeeder
     public static readonly string[] SellerPermissions =
     [
         AppPermissions.Products.View, AppPermissions.Categories.View, AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
-        AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack,
+        AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount, AppPermissions.Sales.Prepack, AppPermissions.Sales.AssignCustomer,
         AppPermissions.Shifts.Open, AppPermissions.Shifts.Close, AppPermissions.Shifts.View,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.Customers.ReceivePayment, AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Create,
@@ -71,7 +71,7 @@ public static class DatabaseSeeder
     [
         AppPermissions.Accounts.View, AppPermissions.Transactions.View,
         AppPermissions.Reports.View, AppPermissions.Reports.Export,
-        AppPermissions.Sales.View, AppPermissions.Sales.ViewAll,
+        AppPermissions.Sales.View, AppPermissions.Sales.ViewAll, AppPermissions.Sales.AssignCustomer,
         AppPermissions.Shifts.View, AppPermissions.Shifts.ViewAll,
         AppPermissions.Customers.View, AppPermissions.Customers.ViewAll,
         AppPermissions.CustomerPayments.View, AppPermissions.CustomerPayments.Void,
