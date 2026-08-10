@@ -274,6 +274,7 @@
   "document_return": "Товар возвращён",
   "document_settlement": "Итоговый расчёт",
   "document_payment": "Платёж принят",
+  "document_sale": "Продажа",
   "document": "Документ",
   "statement_mode": "Вид отчёта",
   "statement_both": "Операции + итоговый расчёт",

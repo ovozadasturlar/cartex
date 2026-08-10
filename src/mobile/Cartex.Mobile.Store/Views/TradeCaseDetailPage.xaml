@@ -111,7 +111,7 @@
                                 <DataTemplate x:DataType="vm:TradeCaseDocumentRow">
                                     <Border Style="{StaticResource Card}" Padding="12">
                                         <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding OpenDocumentCommand, Source={RelativeSource AncestorType={x:Type vm:TradeCaseDetailViewModel}}}" CommandParameter="{Binding .}" /></Border.GestureRecognizers>
-                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                                             <Border WidthRequest="36" HeightRequest="36" StrokeThickness="0" StrokeShape="RoundRectangle 18"
                                                     BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
                                                 <Label Text="{StaticResource IcHistory}" FontFamily="MDI" Style="{StaticResource Icon}" />
@@ -124,6 +124,13 @@
                                                 <Label Text="{Binding Amount}" FontAttributes="Bold" HorizontalTextAlignment="End" />
                                                 <Label Text="{Binding Date}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
                                             </VerticalStackLayout>
+                                            <Button Grid.Column="3" Text="{StaticResource IcPrinter}" FontFamily="MDI" FontSize="15"
+                                                    WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="10"
+                                                    BackgroundColor="Transparent"
+                                                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                                    IsVisible="{Binding CanPrint}"
+                                                    Command="{Binding PrintIssueNoteCommand, Source={RelativeSource AncestorType={x:Type vm:TradeCaseDetailViewModel}}}"
+                                                    CommandParameter="{Binding .}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

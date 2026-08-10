@@ -11,7 +11,8 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class TradeCaseDetailViewModel(
     ITradeCasesApi tradeCasesApi,
-    ISettingsApi settingsApi) : ObservableObject, IQueryAttributable
+    ISettingsApi settingsApi,
+    MobilePrintDispatcher printDispatcher) : ObservableObject, IQueryAttributable
 {
     public ObservableCollection<TradeCaseLineRow> Lines { get; } = [];
     public ObservableCollection<TradeCaseDocumentRow> Documents { get; } = [];
@@ -91,6 +92,22 @@ public partial class TradeCaseDetailViewModel(
     private Task OpenDocumentAsync(TradeCaseDocumentRow row) => row.Document.SaleId is long saleId
         ? Shell.Current.GoToAsync($"sale/detail?id={saleId}")
         : Task.CompletedTask;
+
+    [ObservableProperty] private bool _canPrintIssueNote;
+
+    [RelayCommand]
+    private async Task PrintIssueNoteAsync(TradeCaseDocumentRow row)
+    {
+        if (!row.IsGoodsIssue || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            await printDispatcher.PrintIssueNoteAsync(row.Document.Id);
+            Ui.Toast(Loc.Instance["print_sent"]);
+        }
+        catch (Exception ex) { Ui.Toast(ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]); }
+        finally { IsBusy = false; }
+    }
 
     [RelayCommand]
     private async Task ExportAsync()
@@ -195,7 +212,8 @@ public partial class TradeCaseDetailViewModel(
             OutstandingText = $"{value.Lines.Sum(x => x.CustodyQuantity * x.UnitPrice):N0} {value.Currency}";
 
             Replace(Lines, value.Lines.Where(x => x.CustodyQuantity > 0).Select(x => new TradeCaseLineRow(x)));
-            Replace(Documents, value.Documents.OrderByDescending(x => x.CreatedAt).Select(x => new TradeCaseDocumentRow(x)));
+            Replace(Documents, value.Documents.OrderByDescending(x => x.CreatedAt)
+                .Select(x => new TradeCaseDocumentRow(x) { PrintAllowed = printDispatcher.CanPrintReceipt }));
             Replace(Participants, value.Participants ?? []);
 
             CanIssue = value.AllowedActions.CanIssue;
@@ -205,6 +223,7 @@ public partial class TradeCaseDetailViewModel(
             CanExport = value.AllowedActions.CanExportStatement;
             CanClose = value.AllowedActions.CanClose;
             CanCancel = value.AllowedActions.CanCancel;
+            CanPrintIssueNote = printDispatcher.CanPrintReceipt;
             IsLoaded = true;
         }
         catch (Exception ex) { Error = Describe(ex); }
@@ -247,9 +266,13 @@ public sealed record TradeCaseDocumentRow(TradeCaseDocumentDto Document)
         "GoodsReturn" => "document_return",
         "Settlement" => "document_settlement",
         "CustomerPayment" => "document_payment",
+        "Sale" => "document_sale",
         _ => "document"
     }];
     public string Date => $"{Document.BusinessDate:dd.MM.yyyy}";
     public string Amount => Document.Amount > 0 ? $"{Document.Amount:N0}" : $"{Document.Quantity:0.###}";
     public bool CanOpen => Document.SaleId.HasValue;
+    public bool IsGoodsIssue => Document.Type == "GoodsIssue";
+    public bool CanPrint => IsGoodsIssue && PrintAllowed;
+    internal bool PrintAllowed { get; init; }
 }

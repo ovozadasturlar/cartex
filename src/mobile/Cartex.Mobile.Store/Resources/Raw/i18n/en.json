@@ -274,6 +274,7 @@
   "document_return": "Goods returned",
   "document_settlement": "Final settlement",
   "document_payment": "Payment received",
+  "document_sale": "Sale",
   "document": "Document",
   "statement_mode": "Statement view",
   "statement_both": "Timeline + consolidated",

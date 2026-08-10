@@ -55,6 +55,17 @@ public sealed class MobilePrintDispatcher(
             "mobile_reprint",
             $"z-report:{shiftId}:mobile:{Guid.NewGuid():N}");
 
+    public Task PrintIssueNoteAsync(long issueId) =>
+        CreateAsync(
+            PrintJobKind.Receipt,
+            "goods_issue",
+            issueId.ToString(),
+            new { issueId },
+            1,
+            false,
+            null,
+            $"issue-note:{issueId}:mobile:{Guid.NewGuid():N}");
+
     private bool Allowed(string permission) =>
         permissions.Has("printing.remote.use") && permissions.Has(permission);
 
