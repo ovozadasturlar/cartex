@@ -163,3 +163,49 @@ public sealed class GetTradeCaseByIdQueryHandler(
             documents.OrderByDescending(x => x.CreatedAt).ToList(), allowed, participants);
     }
 }
+
+public sealed record GetGoodsIssuePrintQuery(long IssueId) : IRequest<GoodsIssuePrintDto>;
+
+public sealed class GetGoodsIssuePrintQueryHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser) : IRequestHandler<GetGoodsIssuePrintQuery, GoodsIssuePrintDto>
+{
+    public async Task<GoodsIssuePrintDto> Handle(GetGoodsIssuePrintQuery request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.HasPermission(AppPermissions.GoodsIssues.View))
+            throw new ForbiddenException("Berish hujjatlarini ko'rishga ruxsat yo'q.");
+
+        var header = await db.GoodsIssueDocuments.AsNoTracking()
+            .Where(x => x.Id == request.IssueId)
+            .Select(x => new
+            {
+                x.Id, x.DocumentNumber, x.BusinessDate, x.CreatedAt,
+                x.TradeCaseId, CaseNumber = x.TradeCase.CaseNumber, CaseTitle = x.TradeCase.Title,
+                CustomerName = x.Customer.FullName, x.Customer.Phone,
+                BranchName = x.TradeCase.Branch.Name, WarehouseName = x.Warehouse.Name,
+                SellerName = x.User.FullName, x.Note, x.Currency, x.EstimatedAmount,
+                x.BranchId
+            })
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Issue document not found.", "goods_issue_not_found");
+        if (!currentUser.CanAccessAllBranches && !currentUser.BranchIds.Contains(header.BranchId))
+            throw new NotFoundException("Issue document not found.", "goods_issue_not_found");
+
+        var lines = await db.GoodsIssueLines.AsNoTracking()
+            .Where(x => x.GoodsIssueDocumentId == request.IssueId)
+            .OrderBy(x => x.Id)
+            .Select(x => new GoodsIssuePrintLineDto(
+                x.Variant.Product.Name,
+                x.Variant.Product.Unit.ShortName,
+                x.Variant.Barcodes.OrderBy(b => b.Id).Select(b => b.Code).FirstOrDefault(),
+                x.Quantity,
+                x.UnitPrice,
+                x.Quantity * x.UnitPrice))
+            .ToListAsync(cancellationToken);
+
+        return new GoodsIssuePrintDto(header.Id, header.DocumentNumber, header.BusinessDate,
+            header.CreatedAt, header.TradeCaseId, header.CaseNumber, header.CaseTitle,
+            header.CustomerName, header.Phone, header.BranchName, header.WarehouseName,
+            header.SellerName, header.Note, header.Currency, header.EstimatedAmount, lines);
+    }
+}

@@ -29,6 +29,15 @@ public interface ITradeCasesApi
     [Post("/api/trade-cases/{id}/cancel")]
     Task CancelAsync(long id, [Body] ChangeTradeCaseStatusRequest request);
 
+    [Put("/api/trade-cases/{id}/sales/{saleId}")]
+    Task LinkSaleAsync(long id, long saleId);
+
+    [Delete("/api/trade-cases/{id}/sales/{saleId}")]
+    Task UnlinkSaleAsync(long id, long saleId);
+
+    [Get("/api/trade-cases/issues/{issueId}/print")]
+    Task<GoodsIssuePrintDto> GetIssuePrintAsync(long issueId);
+
     [Post("/api/trade-cases/{id}/issues")]
     Task<GoodsIssueCreatedDto> IssueAsync(long id, [Body] CreateGoodsIssueRequest request);
 

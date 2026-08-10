@@ -217,3 +217,29 @@ public sealed record TradeCaseStatementDto(
     IReadOnlyList<TradeCaseStatementEntryDto> Timeline,
     IReadOnlyList<TradeCaseStatementProductDto> Products,
     DateTime GeneratedAt);
+
+public sealed record GoodsIssuePrintLineDto(
+    string ProductName,
+    string UnitShortName,
+    string? Barcode,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal Amount);
+
+public sealed record GoodsIssuePrintDto(
+    long IssueId,
+    string DocumentNumber,
+    DateOnly BusinessDate,
+    DateTime CreatedAt,
+    long TradeCaseId,
+    string CaseNumber,
+    string CaseTitle,
+    string CustomerName,
+    string? CustomerPhone,
+    string BranchName,
+    string WarehouseName,
+    string SellerName,
+    string? Note,
+    string Currency,
+    decimal TotalAmount,
+    IReadOnlyList<GoodsIssuePrintLineDto> Lines);

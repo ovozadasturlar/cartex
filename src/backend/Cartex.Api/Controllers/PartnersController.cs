@@ -14,6 +14,7 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/partners")]
 [Authorize]
+[RequiresFeature(FeatureCatalog.Partners)]
 public sealed class PartnersController(ISender sender) : ControllerBase
 {
     [HttpGet]
