@@ -124,7 +124,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     {
         if (sale is null || string.IsNullOrEmpty(sale.ReceiptToken)) return;
         var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
-            receiptToken: sale.ReceiptToken, saleId: sale.Id);
+            receiptToken: sale.ReceiptToken, saleId: sale.Id, customerId: sale.CustomerId);
         await vm.InitAsync();
         var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
         if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)

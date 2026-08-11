@@ -17,16 +17,15 @@
 
             <!-- Action buttons at bottom -->
             <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="24,14">
-                <!-- Left: Close or New Sale -->
+                <!-- Left: Close and New Sale -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                    <Button Classes="outline" MinHeight="44" Padding="18,0"
-                            IsVisible="{Binding !IsPosCheckoutMode}"
+                    <Button Classes="outline" MinHeight="42" Padding="16,0"
                             Command="{Binding CloseModalCommand}" Content="{Binding L[close]}" />
-                    <Button Classes="brand" MinHeight="44" Padding="20,0"
+                    <Button Classes="brand" MinHeight="42" Padding="18,0"
                             IsVisible="{Binding IsPosCheckoutMode}"
                             Command="{Binding NewSaleCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <mi:MaterialIcon Kind="Plus" Width="17" Height="17" />
+                            <mi:MaterialIcon Kind="Plus" Width="16" Height="16" />
                             <TextBlock Text="{Binding L[new_sale]}" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -44,7 +43,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Classes="outline" MinHeight="40" Padding="12,0"
+                    <Button Classes="outline" MinHeight="40" Padding="14,0"
                             Command="{Binding AttachCaseCommand}"
                             IsVisible="{Binding CanAttachCase}"
                             ToolTip.Tip="{Binding L[tc_attach_title]}">

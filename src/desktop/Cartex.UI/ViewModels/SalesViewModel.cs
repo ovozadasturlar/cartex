@@ -1947,6 +1947,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             preloadedReceipt: receipt,
             receiptToken: token,
             saleId: receipt.SaleId,
+            customerId: SelectedCustomer?.Id,
             isPosCheckoutMode: true);
 
         await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);

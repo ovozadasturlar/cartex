@@ -43,6 +43,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         ReceiptDto? preloadedReceipt = null,
         string? receiptToken = null,
         long? saleId = null,
+        long? customerId = null,
         bool isPosCheckoutMode = false)
     {
         _receiptApi = receiptApi;
@@ -55,6 +56,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
 
         _receiptToken = receiptToken ?? preloadedReceipt?.ReceiptToken;
         _saleId = saleId ?? preloadedReceipt?.SaleId;
+        _customerId = customerId;
         IsPosCheckoutMode = isPosCheckoutMode;
 
         if (preloadedReceipt is not null)
@@ -68,7 +70,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
 
     public bool HasReceipt => Receipt is not null;
     public bool CanAttachCustomer => _auth.HasPermission("sales.edit") && Receipt is not null && string.IsNullOrEmpty(Receipt.CustomerName);
-    public bool CanAttachCase => _auth.HasPermission("trade_cases.edit") && Receipt is not null && !IsPosCheckoutMode;
+    public bool CanAttachCase => _auth.HasPermission("trade_cases.edit") && Receipt is not null;
     public bool CanReturnSale => _auth.HasPermission("sales.return") && !IsPosCheckoutMode && Receipt is not null;
     public bool CanPrint => _auth.HasPermission("printing.receipts.reprint") && Receipt is not null;
 
@@ -160,10 +162,27 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         if (Receipt is null || !CanAttachCase) return;
         if (_saleId is not { } saleId || saleId == 0) return;
 
-        if (string.IsNullOrEmpty(Receipt.CustomerName) && _customerId is null)
+        if (string.IsNullOrEmpty(Receipt.CustomerName) && (_customerId is null || _customerId == 0))
         {
-            _toast.Warning(L["case_customer_required"] ?? "Loyihaga biriktirish uchun mijoz tanlangan bo'lishi kerak.");
-            return;
+            var custVm = ServiceLocator.Resolve<CustomerPickerViewModel>();
+            await custVm.InitAsync();
+            var customer = await _dialog.ShowAsync<CustomerPickerDialog, CustomerPickerViewModel, CustomerDto>(custVm);
+            if (customer is null) return;
+
+            try
+            {
+                using (_busy.Begin(L["loading"]))
+                    await _salesApi.AssignCustomerAsync(saleId, customer.Id);
+                _toast.Success(L["customer_attached_to_sale"]);
+                _customerId = customer.Id;
+                Receipt = Receipt with { CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                OnPropertyChanged(nameof(CanAttachCustomer));
+            }
+            catch (Exception ex)
+            {
+                _toast.Error(ApiErrors.Describe(ex));
+                return;
+            }
         }
 
         try
