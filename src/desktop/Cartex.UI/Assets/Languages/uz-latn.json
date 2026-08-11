@@ -1301,6 +1301,7 @@
   "case_linked_fmt": "Savdo {0} loyihaga biriktirildi",
   "case_customer_required": "Loyihaga biriktirish uchun mijoz tanlangan bo'lishi kerak",
   "attach_customer": "Mijozni biriktirish",
+  "customer_attached_to_sale": "Savdo mijozga biriktirildi",
   "customer_assigned_fmt": "Savdo mijozga ({0}) biriktirildi",
   "pick_customer_title": "Mijozni tanlash",
   "pick_customer_subtitle": "Savdoga biriktirish uchun mijozni tanlang yoki yangi qo'shing",

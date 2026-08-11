@@ -1299,6 +1299,7 @@
   "case_linked_fmt": "Sale linked to project {0}",
   "case_customer_required": "A customer must be selected to link with a project",
   "attach_customer": "Attach customer",
+  "customer_attached_to_sale": "Sale attached to customer",
   "customer_assigned_fmt": "Sale linked to customer ({0})",
   "pick_customer_title": "Select customer",
   "pick_customer_subtitle": "Select a customer or create a new one to link with this sale",

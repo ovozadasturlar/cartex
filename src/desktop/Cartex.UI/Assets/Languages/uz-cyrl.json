@@ -1301,6 +1301,7 @@
   "case_linked_fmt": "Савдо {0} лойиҳага боғланди",
   "case_customer_required": "Лойиҳага боғлаш учун мижоз танланган бўлиши керак",
   "attach_customer": "Мижозни бириктириш",
+  "customer_attached_to_sale": "Савдо мижозга бириктирилди",
   "customer_assigned_fmt": "Савдо мижозга ({0}) бириктирилди",
   "pick_customer_title": "Мижозни танлаш",
   "pick_customer_subtitle": "Савдога бириктириш учун мижозни танланг ёки янги қўшинг",

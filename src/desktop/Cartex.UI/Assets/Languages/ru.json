@@ -1301,6 +1301,7 @@
   "case_linked_fmt": "Продажа привязана к проекту {0}",
   "case_customer_required": "Для привязки к проекту необходимо выбрать клиента",
   "attach_customer": "Привязать клиента",
+  "customer_attached_to_sale": "Продажа привязана к клиенту",
   "customer_assigned_fmt": "Продажа привязана к клиенту ({0})",
   "pick_customer_title": "Выбор клиента",
   "pick_customer_subtitle": "Выберите клиента или создайте нового для привязки",

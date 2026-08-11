@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Ursa.Controls;
 
@@ -16,7 +17,7 @@ public sealed class DialogService : IDialogService
 {
     public event Action<bool>? OpenChanged;
     private int _openCount;
-    private CancellationTokenSource? _overlayCancellation;
+    private readonly ConcurrentStack<CancellationTokenSource> _cancellations = new();
 
     private async Task<T> TrackAsync<T>(Task<T> task)
     {
@@ -37,7 +38,7 @@ public sealed class DialogService : IDialogService
     public async Task<TResult?> ShowAsync<TView, TViewModel, TResult>(TViewModel vm) where TView : Control, new()
     {
         var cancellation = new CancellationTokenSource();
-        Interlocked.Exchange(ref _overlayCancellation, cancellation)?.Cancel();
+        _cancellations.Push(cancellation);
 
         try
         {
@@ -56,10 +57,26 @@ public sealed class DialogService : IDialogService
         }
         finally
         {
-            Interlocked.CompareExchange(ref _overlayCancellation, null, cancellation);
+            // Remove our cancellation from stack
+            var remaining = new System.Collections.Generic.List<CancellationTokenSource>();
+            while (_cancellations.TryPop(out var item))
+            {
+                if (item == cancellation) break;
+                remaining.Add(item);
+            }
+            for (int i = remaining.Count - 1; i >= 0; i--)
+            {
+                _cancellations.Push(remaining[i]);
+            }
             cancellation.Dispose();
         }
     }
 
-    public void CloseOverlay() => Volatile.Read(ref _overlayCancellation)?.Cancel();
+    public void CloseOverlay()
+    {
+        if (_cancellations.TryPeek(out var top))
+        {
+            top.Cancel();
+        }
+    }
 }

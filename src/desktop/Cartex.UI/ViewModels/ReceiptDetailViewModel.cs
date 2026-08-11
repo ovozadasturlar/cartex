@@ -145,12 +145,13 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         {
             if (_saleId is not null && _saleId.Value > 0)
             {
+                var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
                 using (_busy.Begin(L["loading"]))
                     await _salesApi.AssignCustomerAsync(_saleId.Value, customer.Id);
-                _toast.Success(L["customer_attached_to_sale"]);
+                _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
                 _customerId = customer.Id;
                 _hasCustomerAssigned = true;
-                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
                 OnPropertyChanged(nameof(Receipt));
                 OnPropertyChanged(nameof(CanAttachCustomer));
                 OnPropertyChanged(nameof(CanAttachCase));
@@ -180,12 +181,15 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
 
             try
             {
+                var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
                 using (_busy.Begin(L["loading"]))
                     await _salesApi.AssignCustomerAsync(saleId, customer.Id);
-                _toast.Success(L["customer_attached_to_sale"]);
+                _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
                 _customerId = customer.Id;
-                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
+                OnPropertyChanged(nameof(Receipt));
                 OnPropertyChanged(nameof(CanAttachCustomer));
+                OnPropertyChanged(nameof(CanAttachCase));
             }
             catch (Exception ex)
             {
