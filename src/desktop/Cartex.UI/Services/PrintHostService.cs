@@ -86,6 +86,12 @@ public sealed class PrintHostService
         {
             try
             {
+                if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host"))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                    continue;
+                }
+
                 if (_branch.CurrentBranchId is null)
                 {
                     await Task.Delay(1000, cancellationToken);
@@ -108,7 +114,7 @@ public sealed class PrintHostService
             }
             catch
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
             }
         }
     }
