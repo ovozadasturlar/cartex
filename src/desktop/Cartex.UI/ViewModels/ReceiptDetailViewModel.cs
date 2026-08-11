@@ -242,9 +242,9 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
             CaseAttachVm = null;
             var (caseId, caseNumber, caseTitle) = resultObj switch
             {
-                TradeCaseCreatedDto created => (created.Id, created.CaseNumber, created.Title),
-                TradeCaseListDto existing => (existing.Id, existing.CaseNumber, existing.Title),
-                _ => (0L, null, null)
+                TradeCaseCreatedDto created => (created.Id, created.CaseNumber, (string?)null),
+                TradeCaseListDto existing => (existing.Id, existing.CaseNumber, (string?)existing.Title),
+                _ => (0L, (string?)null, (string?)null)
             };
 
             if (caseNumber is not null && caseId > 0)
