@@ -23,7 +23,6 @@ public record ReceiptDto(
     List<ReceiptItemDto> Items,
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
-    long? CustomerId = null,
     string? CustomerName = null,
     string? CustomerPhone = null,
     string? CustomerEmail = null,
@@ -35,7 +34,8 @@ public record ReceiptDto(
     decimal CreditAmount = 0,
     string? BaseCurrency = null,
     decimal PaidAdvance = 0,
-    string? MonochromeLogoImageKey = null)
+    string? MonochromeLogoImageKey = null,
+    long? CustomerId = null)
 {
     public bool HasPayments => Payments.Count > 0;
 }

@@ -29,7 +29,6 @@ public record ReceiptDto(
     List<ReceiptItemDto> Items,
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
-    long? CustomerId = null,
     string? CustomerName = null,
     string? CustomerPhone = null,
     string? CustomerEmail = null,
@@ -41,7 +40,8 @@ public record ReceiptDto(
     decimal CreditAmount = 0,
     string? BaseCurrency = null,
     decimal PaidAdvance = 0,
-    string? MonochromeLogoImageKey = null)
+    string? MonochromeLogoImageKey = null,
+    long? CustomerId = null)
 {
     // Rendering-only data. It is populated only for PDF/image generation so the
     // normal receipt API remains lightweight and never serializes a base64 logo.
@@ -77,7 +77,6 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList(),
                 sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount, p.Rate, p.AmountBase, p.Currency != business.Currency)).ToList(),
                 sale.Id,
-                sale.CustomerId,
                 sale.Customer != null ? sale.Customer.FullName : null,
                 sale.Customer != null ? sale.Customer.Phone : null,
                 sale.Customer != null ? sale.Customer.Email : null,
@@ -89,7 +88,8 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.CreditAmount,
                 business.Currency,
                 sale.PaidAdvance,
-                business.MonochromeLogoImageKey))
+                business.MonochromeLogoImageKey,
+                sale.CustomerId))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }
