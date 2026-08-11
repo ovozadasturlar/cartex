@@ -4,6 +4,7 @@
              xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:views="using:Cartex.UI.Views"
              xmlns:c="using:Cartex.Shared.Models.Customers"
+             xmlns:conv="using:Cartex.UI.Converters"
              x:Class="Cartex.UI.Views.CustomerPickerDialog"
              x:Name="RootPicker"
              x:DataType="vm:CustomerPickerViewModel"
@@ -62,17 +63,13 @@
                                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                                <TextBlock FontWeight="SemiBold">
-                                                    <Run Text="{Binding FullName}" />
-                                                    <Run Text="{Binding LastName}" />
-                                                </TextBlock>
+                                                <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" />
                                                 <TextBlock Text="{Binding Phone}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
                                             </StackPanel>
                                             <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="12"
                                                        Foreground="{DynamicResource DangerBrush}"
-                                                       IsVisible="{Binding DebtBalance, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                <Run Text="{Binding DebtBalance, StringFormat=\{0:N0\}}" />
-                                            </TextBlock>
+                                                       Text="{Binding DebtBalance, StringFormat='{}{0:N0}'}"
+                                                       IsVisible="{Binding DebtBalance, Converter={x:Static conv:NonZeroConverter.Instance}}" />
                                         </Grid>
                                     </Button>
                                 </DataTemplate>

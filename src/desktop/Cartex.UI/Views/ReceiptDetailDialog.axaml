@@ -323,17 +323,13 @@
                                                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                         </Border>
                                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                                            <TextBlock FontWeight="SemiBold">
-                                                                <Run Text="{Binding FullName}" />
-                                                                <Run Text="{Binding LastName}" />
-                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" />
                                                             <TextBlock Text="{Binding Phone}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
                                                         </StackPanel>
                                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="12"
                                                                    Foreground="{DynamicResource DangerBrush}"
-                                                                   IsVisible="{Binding DebtBalance, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Run Text="{Binding DebtBalance, StringFormat=\{0:N0\}}" />
-                                                        </TextBlock>
+                                                                   Text="{Binding DebtBalance, StringFormat='{}{0:N0}'}"
+                                                                   IsVisible="{Binding DebtBalance, Converter={x:Static conv:NonZeroConverter.Instance}}" />
                                                     </Grid>
                                                 </Button>
                                             </DataTemplate>
@@ -416,17 +412,18 @@
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <StackPanel Spacing="2">
                                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                                            <TextBlock Foreground="{DynamicResource TextMuted}" FontSize="12">
-                                                                <Run Text="{Binding CaseNumber}" />
-                                                                <Run Text="·" />
-                                                                <Run Text="{Binding BusinessDate, StringFormat='dd.MM.yyyy'}" />
-                                                            </TextBlock>
+                                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                <TextBlock Text="{Binding CaseNumber}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                                                                <TextBlock Text="·" Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                                                                <TextBlock Text="{Binding BusinessDate, StringFormat='{}{0:dd.MM.yyyy}'}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                                                            </StackPanel>
                                                         </StackPanel>
-                                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12"
-                                                                   Foreground="{DynamicResource TextSecondary}">
-                                                            <Run Text="{Binding EstimatedOutstandingAmount, StringFormat=\{0:N0\}}" />
-                                                            <Run Text="{Binding Currency}" />
-                                                        </TextBlock>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                                                            <TextBlock Text="{Binding EstimatedOutstandingAmount, StringFormat='{}{0:N0}'}"
+                                                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                                                            <TextBlock Text="{Binding Currency}"
+                                                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Button>
                                             </DataTemplate>
