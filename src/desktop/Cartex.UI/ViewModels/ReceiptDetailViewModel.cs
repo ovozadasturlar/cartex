@@ -67,12 +67,20 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _receiptQrCode;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isPosCheckoutMode;
+    [ObservableProperty] private bool _isCustomerPickerOpen;
+    [ObservableProperty] private bool _isCaseAttachOpen;
+    [ObservableProperty] private CustomerPickerViewModel? _customerPickerVm;
+    [ObservableProperty] private SaleCaseAttachViewModel? _caseAttachVm;
 
     public bool HasReceipt => Receipt is not null;
     public bool CanAttachCustomer => _auth.HasPermission("sales.edit") && Receipt is not null && string.IsNullOrEmpty(Receipt.CustomerName);
-    public bool CanAttachCase => _auth.HasPermission("trade_cases.edit") && Receipt is not null;
+    public bool CanAttachCase => _auth.HasPermission("trade_cases.edit") && Receipt is not null && !Receipt.HasTradeCase;
     public bool CanReturnSale => _auth.HasPermission("sales.return") && !IsPosCheckoutMode && Receipt is not null;
     public bool CanPrint => _auth.HasPermission("printing.receipts.reprint") && Receipt is not null;
+    public bool IsAnySubPanelOpen => IsCustomerPickerOpen || IsCaseAttachOpen;
+
+    partial void OnIsCustomerPickerOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
+    partial void OnIsCaseAttachOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
 
     public async Task InitAsync()
     {
@@ -138,29 +146,33 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         if (Receipt is null || !CanAttachCustomer) return;
         var vm = ServiceLocator.Resolve<CustomerPickerViewModel>();
         await vm.InitAsync();
-        var customer = await _dialog.ShowAsync<CustomerPickerDialog, CustomerPickerViewModel, CustomerDto>(vm);
-        if (customer is null) return;
-
-        try
+        vm.RequestClose += async (s, customerObj) =>
         {
-            if (_saleId is not null && _saleId.Value > 0)
+            IsCustomerPickerOpen = false;
+            CustomerPickerVm = null;
+            if (customerObj is CustomerDto customer && _saleId is not null && _saleId.Value > 0)
             {
-                var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
-                using (_busy.Begin(L["loading"]))
-                    await _salesApi.AssignCustomerAsync(_saleId.Value, customer.Id);
-                _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
-                _customerId = customer.Id;
-                _hasCustomerAssigned = true;
-                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
-                OnPropertyChanged(nameof(Receipt));
-                OnPropertyChanged(nameof(CanAttachCustomer));
-                OnPropertyChanged(nameof(CanAttachCase));
+                try
+                {
+                    var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
+                    using (_busy.Begin(L["loading"]))
+                        await _salesApi.AssignCustomerAsync(_saleId.Value, customer.Id);
+                    _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
+                    _customerId = customer.Id;
+                    _hasCustomerAssigned = true;
+                    Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
+                    OnPropertyChanged(nameof(Receipt));
+                    OnPropertyChanged(nameof(CanAttachCustomer));
+                    OnPropertyChanged(nameof(CanAttachCase));
+                }
+                catch (Exception ex)
+                {
+                    _toast.Error(ApiErrors.Describe(ex));
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
+        };
+        CustomerPickerVm = vm;
+        IsCustomerPickerOpen = true;
     }
 
     [RelayCommand]
@@ -176,26 +188,35 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         {
             var custVm = ServiceLocator.Resolve<CustomerPickerViewModel>();
             await custVm.InitAsync();
-            var customer = await _dialog.ShowAsync<CustomerPickerDialog, CustomerPickerViewModel, CustomerDto>(custVm);
-            if (customer is null) return;
-
-            try
+            custVm.RequestClose += async (s, customerObj) =>
             {
-                var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
-                using (_busy.Begin(L["loading"]))
-                    await _salesApi.AssignCustomerAsync(saleId, customer.Id);
-                _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
-                _customerId = customer.Id;
-                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
-                OnPropertyChanged(nameof(Receipt));
-                OnPropertyChanged(nameof(CanAttachCustomer));
-                OnPropertyChanged(nameof(CanAttachCase));
-            }
-            catch (Exception ex)
-            {
-                _toast.Error(ApiErrors.Describe(ex));
-                return;
-            }
+                IsCustomerPickerOpen = false;
+                CustomerPickerVm = null;
+                if (customerObj is CustomerDto customer)
+                {
+                    try
+                    {
+                        var custFullName = $"{customer.FullName} {customer.LastName}".Trim();
+                        using (_busy.Begin(L["loading"]))
+                            await _salesApi.AssignCustomerAsync(saleId, customer.Id);
+                        _toast.Success(string.Format(L["customer_assigned_fmt"] ?? "Savdo mijozga ({0}) biriktirildi", custFullName));
+                        _customerId = customer.Id;
+                        _hasCustomerAssigned = true;
+                        Receipt = Receipt with { CustomerId = customer.Id, CustomerName = custFullName };
+                        OnPropertyChanged(nameof(Receipt));
+                        OnPropertyChanged(nameof(CanAttachCustomer));
+                        OnPropertyChanged(nameof(CanAttachCase));
+                        await OpenCaseAttachPanelAsync(customer.Id, custFullName, saleId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _toast.Error(ApiErrors.Describe(ex));
+                    }
+                }
+            };
+            CustomerPickerVm = custVm;
+            IsCustomerPickerOpen = true;
+            return;
         }
 
         if (_customerId is null or <= 0)
@@ -204,36 +225,55 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
             return;
         }
 
-        try
-        {
-            long custId = _customerId.Value;
-            string custName = Receipt.CustomerName ?? "";
-            var vm = new SaleCaseAttachViewModel(
-                ServiceLocator.Resolve<ITradeCasesApi>(),
-                _toast,
-                _busy,
-                ServiceLocator.Resolve<BranchContextService>());
-            await vm.InitAsync(custId, custName);
+        await OpenCaseAttachPanelAsync(_customerId.Value, Receipt.CustomerName ?? "", saleId);
+    }
 
-            var result = await _dialog.ShowAsync<SaleCaseAttachDialog, SaleCaseAttachViewModel, object>(vm);
-            var (caseId, caseNumber) = result switch
+    private async Task OpenCaseAttachPanelAsync(long custId, string custName, long saleId)
+    {
+        var vm = new SaleCaseAttachViewModel(
+            ServiceLocator.Resolve<ITradeCasesApi>(),
+            _toast,
+            _busy,
+            ServiceLocator.Resolve<BranchContextService>());
+        await vm.InitAsync(custId, custName);
+        vm.RequestClose += async (s, resultObj) =>
+        {
+            IsCaseAttachOpen = false;
+            CaseAttachVm = null;
+            var (caseId, caseNumber, caseTitle) = resultObj switch
             {
-                TradeCaseCreatedDto created => (created.Id, created.CaseNumber),
-                TradeCaseListDto existing => (existing.Id, existing.CaseNumber),
-                _ => (0L, null)
+                TradeCaseCreatedDto created => (created.Id, created.CaseNumber, created.Title),
+                TradeCaseListDto existing => (existing.Id, existing.CaseNumber, existing.Title),
+                _ => (0L, null, null)
             };
 
             if (caseNumber is not null && caseId > 0)
             {
-                using (_busy.Begin(L["loading"]))
-                    await ServiceLocator.Resolve<ITradeCasesApi>().LinkSaleAsync(caseId, saleId);
-                _toast.Success(string.Format(L["case_linked_fmt"], caseNumber));
+                try
+                {
+                    using (_busy.Begin(L["loading"]))
+                        await ServiceLocator.Resolve<ITradeCasesApi>().LinkSaleAsync(caseId, saleId);
+                    _toast.Success(string.Format(L["case_linked_fmt"], caseNumber));
+                    if (Receipt is not null)
+                    {
+                        Receipt = Receipt with
+                        {
+                            TradeCaseId = caseId,
+                            TradeCaseNumber = caseNumber,
+                            TradeCaseTitle = caseTitle
+                        };
+                        OnPropertyChanged(nameof(Receipt));
+                        OnPropertyChanged(nameof(CanAttachCase));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _toast.Error(ApiErrors.Describe(ex));
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
+        };
+        CaseAttachVm = vm;
+        IsCaseAttachOpen = true;
     }
 
     [RelayCommand]

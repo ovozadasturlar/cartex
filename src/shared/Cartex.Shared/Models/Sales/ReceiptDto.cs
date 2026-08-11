@@ -35,7 +35,11 @@ public record ReceiptDto(
     string? BaseCurrency = null,
     decimal PaidAdvance = 0,
     string? MonochromeLogoImageKey = null,
-    long? CustomerId = null)
+    long? CustomerId = null,
+    long? TradeCaseId = null,
+    string? TradeCaseNumber = null,
+    string? TradeCaseTitle = null)
 {
     public bool HasPayments => Payments.Count > 0;
+    public bool HasTradeCase => TradeCaseId is not null && TradeCaseId > 0;
 }

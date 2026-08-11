@@ -1293,6 +1293,7 @@
   "table_rolepermission": "Role Permission",
   "table_taxrate": "Tax Rate",
   "tc_attach": "Link to project",
+  "tc_attach_title": "Link to project",
   "tc_create_and_link": "Create & link",
   "tc_none_open": "No open projects",
   "tc_case_label": "Project:",

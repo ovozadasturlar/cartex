@@ -1295,6 +1295,7 @@
   "table_rolepermission": "Права роли",
   "table_taxrate": "Ставка НДС",
   "tc_attach": "Привязать к проекту",
+  "tc_attach_title": "Привязать к проекту",
   "tc_create_and_link": "Создать и привязать",
   "tc_none_open": "Нет открытых проектов",
   "tc_case_label": "Проект:",
