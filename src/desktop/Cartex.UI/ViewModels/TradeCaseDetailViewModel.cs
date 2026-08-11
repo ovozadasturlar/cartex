@@ -211,7 +211,7 @@ public partial class TradeCaseDetailViewModel : ViewModelBase, ILoadable
         if (doc.Type is "Sale" or "Settlement" && !string.IsNullOrEmpty(doc.ReceiptToken))
         {
             var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _print, _dialog, _toast, _busy,
-                receiptToken: doc.ReceiptToken, saleId: doc.Id, customerId: _case?.CustomerId);
+                receiptToken: doc.ReceiptToken, saleId: doc.Id, customerId: Detail?.CustomerId);
             await vm.InitAsync();
             var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
             if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)
