@@ -1915,9 +1915,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 _activeCartCode = null;
             }
 
+            var customerId = SelectedCustomer?.Id;
             ClearCart();
             _toast.Success(L["sale_completed"]);
-            await ShowReceiptAsync(result.ReceiptToken);
+            await ShowReceiptAsync(result.ReceiptToken, customerId);
             await LoadProductsAsync();
         }
         catch (Exception ex)
@@ -1926,7 +1927,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
     }
 
-    private async Task ShowReceiptAsync(string token)
+    private async Task ShowReceiptAsync(string token, long? customerId = null)
     {
         ReceiptDto receipt;
         try
@@ -1947,7 +1948,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             preloadedReceipt: receipt,
             receiptToken: token,
             saleId: receipt.SaleId,
-            customerId: SelectedCustomer?.Id,
+            customerId: customerId ?? receipt.CustomerId,
             isPosCheckoutMode: true);
 
         await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);

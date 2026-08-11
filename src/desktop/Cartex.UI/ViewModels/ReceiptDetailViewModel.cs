@@ -104,6 +104,8 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         Receipt = r;
         if (_saleId is null or 0 && r.SaleId > 0)
             _saleId = r.SaleId;
+        if ((_customerId is null or 0) && r.CustomerId is { } cid && cid > 0)
+            _customerId = cid;
 
         var baseUrl = SettingsService.Instance.ApiBaseUrl?.TrimEnd('/');
         ReceiptQrCode = QrService.Generate($"{baseUrl}/r/{r.ReceiptToken}");
@@ -162,7 +164,10 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         if (Receipt is null || !CanAttachCase) return;
         if (_saleId is not { } saleId || saleId == 0) return;
 
-        if (string.IsNullOrEmpty(Receipt.CustomerName) && (_customerId is null || _customerId == 0))
+        if ((_customerId is null or 0) && Receipt.CustomerId is { } rcId && rcId > 0)
+            _customerId = rcId;
+
+        if (string.IsNullOrEmpty(Receipt.CustomerName) && (_customerId is null or <= 0))
         {
             var custVm = ServiceLocator.Resolve<CustomerPickerViewModel>();
             await custVm.InitAsync();
@@ -175,7 +180,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
                     await _salesApi.AssignCustomerAsync(saleId, customer.Id);
                 _toast.Success(L["customer_attached_to_sale"]);
                 _customerId = customer.Id;
-                Receipt = Receipt with { CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
                 OnPropertyChanged(nameof(CanAttachCustomer));
             }
             catch (Exception ex)
@@ -185,9 +190,15 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
             }
         }
 
+        if (_customerId is null or <= 0)
+        {
+            _toast.Warning(L["case_customer_required"] ?? "Loyihaga biriktirish uchun mijoz tanlangan bo'lishi kerak.");
+            return;
+        }
+
         try
         {
-            long custId = _customerId ?? 0;
+            long custId = _customerId.Value;
             string custName = Receipt.CustomerName ?? "";
             var vm = new SaleCaseAttachViewModel(
                 ServiceLocator.Resolve<ITradeCasesApi>(),

@@ -23,6 +23,7 @@ public record ReceiptDto(
     List<ReceiptItemDto> Items,
     List<ReceiptPaymentDto> Payments,
     long SaleId = 0,
+    long? CustomerId = null,
     string? CustomerName = null,
     string? CustomerPhone = null,
     string? CustomerEmail = null,

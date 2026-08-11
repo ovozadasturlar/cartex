@@ -103,6 +103,9 @@ public static class DependencyInjection
         services.AddTransient<HardwareKeysViewModel>();
         services.AddTransient<DevicesViewModel>();
         services.AddTransient<OnboardingViewModel>();
+        services.AddTransient<CustomerPickerViewModel>();
+        services.AddTransient<SaleCaseAttachViewModel>();
+        services.AddTransient<AdjustStockDialogViewModel>();
     }
 
     private static void OnUnauthorized() =>
