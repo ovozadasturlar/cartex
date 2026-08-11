@@ -130,6 +130,8 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         }
     }
 
+    private bool _hasCustomerAssigned;
+
     [RelayCommand]
     private async Task AttachCustomerAsync()
     {
@@ -147,9 +149,11 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
                     await _salesApi.AssignCustomerAsync(_saleId.Value, customer.Id);
                 _toast.Success(L["customer_attached_to_sale"]);
                 _customerId = customer.Id;
-                Receipt = Receipt with { CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                _hasCustomerAssigned = true;
+                Receipt = Receipt with { CustomerId = customer.Id, CustomerName = $"{customer.FullName} {customer.LastName}".Trim() };
+                OnPropertyChanged(nameof(Receipt));
                 OnPropertyChanged(nameof(CanAttachCustomer));
-                RequestClose?.Invoke(this, ReceiptDialogResult.CustomerAssigned);
+                OnPropertyChanged(nameof(CanAttachCase));
             }
         }
         catch (Exception ex)
@@ -247,7 +251,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     [RelayCommand]
     private void CloseModal() => Close();
 
-    public void Close() => RequestClose?.Invoke(this, ReceiptDialogResult.Closed);
+    public void Close() => RequestClose?.Invoke(this, _hasCustomerAssigned ? ReceiptDialogResult.CustomerAssigned : ReceiptDialogResult.Closed);
 
     [RelayCommand]
     private void NewSale() => RequestClose?.Invoke(this, ReceiptDialogResult.NewSale);
