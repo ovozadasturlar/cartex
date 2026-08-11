@@ -23,9 +23,10 @@
 
                 <!-- Action buttons at bottom -->
                 <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="24,14">
-                    <!-- Left: Close and New Sale -->
+                    <!-- Left: Close or New Sale -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                        <Button Classes="outline" MinHeight="42" Padding="16,0"
+                        <Button Classes="outline" MinHeight="42" Padding="18,0"
+                                IsVisible="{Binding !IsPosCheckoutMode}"
                                 Command="{Binding CloseModalCommand}" Content="{Binding L[close]}" />
                         <Button Classes="brand" MinHeight="42" Padding="18,0"
                                 IsVisible="{Binding IsPosCheckoutMode}"
