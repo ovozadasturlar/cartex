@@ -71,13 +71,14 @@ public partial class SaleCaseAttachViewModel : ViewModelBase, IDialogContext
     private async Task CreateAndPickAsync()
     {
         if (string.IsNullOrWhiteSpace(Title)) { _toast.Error(L["required_fields_hint"]); return; }
-        if (_branch.CurrentWarehouseId is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+        var warehouseId = _branch.CurrentWarehouseId ?? _branch.Warehouses.FirstOrDefault()?.Id;
+        if (warehouseId is not { } wid || wid <= 0) { _toast.Warning(L["select_warehouse"]); return; }
         try
         {
             TradeCaseCreatedDto created;
             using (_busy.Begin(L["loading"]))
                 created = await _api.CreateAsync(new CreateTradeCaseRequest(
-                    _customerId, warehouseId, Title.Trim(),
+                    _customerId, wid, Title.Trim(),
                     string.IsNullOrWhiteSpace(SiteAddress) ? null : SiteAddress.Trim(),
                     IdempotencyKey: Guid.NewGuid().ToString("N")));
             RequestClose?.Invoke(this, created);
