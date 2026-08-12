@@ -421,3 +421,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Installer build outputs
+deploy/installer/output/
