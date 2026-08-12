@@ -1,9 +1,11 @@
+using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -22,9 +24,9 @@ internal static class SaleQueryFilters
             query = query.Where(s => s.UserId == currentUser.UserId);
 
         if (fromDate is { } from)
-            query = query.Where(s => s.CreatedAt >= AsUtc(from));
+            query = query.Where(s => s.CreatedAt >= from.AsUtc());
         if (toDate is { } to)
-            query = query.Where(s => s.CreatedAt < AsUtc(to));
+            query = query.Where(s => s.CreatedAt < to.AsUtc());
         if (warehouseId is { } warehouse)
             query = query.Where(s => s.WarehouseId == warehouse);
         if (customerId is { } customer)
@@ -50,13 +52,6 @@ internal static class SaleQueryFilters
         request.Search = null;
         return request;
     }
-
-    private static DateTime AsUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
 
     private static IEnumerable<string> SearchTokens(string? search) =>
         string.IsNullOrWhiteSpace(search)
