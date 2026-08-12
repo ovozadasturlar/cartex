@@ -87,7 +87,6 @@
                             Content="{Binding CurrentSection}"
                             HorizontalContentAlignment="Stretch"
                             VerticalContentAlignment="Stretch" />
-            <u:OverlayDialogHost />
         </Panel>
 
     </Grid>

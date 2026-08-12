@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Ursa.Controls;
 
@@ -10,20 +9,29 @@ public interface IDialogService
     Task<bool> ConfirmDangerAsync(string message, string? title = null);
     Task AlertAsync(string message, string? title = null);
     Task<TResult?> ShowAsync<TView, TViewModel, TResult>(TViewModel vm) where TView : Control, new();
+    Task<string?> PromptAsync(string title, string? message = null, string? placeholder = null);
     void CloseOverlay();
 }
 
 public sealed class DialogService : IDialogService
 {
     public event Action<bool>? OpenChanged;
+
+    /// <summary>
+    /// Dialogs are shown in the named shell host. Ursa resolves an unnamed host by
+    /// registration order, so a second host would silently steal every dialog.
+    /// </summary>
+    public const string HostId = "app";
+
+    private readonly Lock _gate = new();
+    private readonly List<CancellationTokenSource> _open = [];
     private int _openCount;
-    private readonly ConcurrentStack<CancellationTokenSource> _cancellations = new();
 
     private async Task<T> TrackAsync<T>(Task<T> task)
     {
-        if (++_openCount == 1) OpenChanged?.Invoke(true);
+        if (Interlocked.Increment(ref _openCount) == 1) OpenChanged?.Invoke(true);
         try { return await task; }
-        finally { if (--_openCount == 0) OpenChanged?.Invoke(false); }
+        finally { if (Interlocked.Decrement(ref _openCount) == 0) OpenChanged?.Invoke(false); }
     }
 
     public async Task<bool> ConfirmAsync(string message, string? title = null) =>
@@ -38,14 +46,15 @@ public sealed class DialogService : IDialogService
     public async Task<TResult?> ShowAsync<TView, TViewModel, TResult>(TViewModel vm) where TView : Control, new()
     {
         var cancellation = new CancellationTokenSource();
-        _cancellations.Push(cancellation);
+        lock (_gate) _open.Add(cancellation);
 
         try
         {
             return await TrackAsync(OverlayDialog.ShowCustomAsync<TView, TViewModel, TResult>(
                 vm,
-                options: new OverlayDialogOptions 
-                { 
+                hostId: HostId,
+                options: new OverlayDialogOptions
+                {
                     CanLightDismiss = true,
                     Buttons = DialogButton.None
                 },
@@ -57,26 +66,21 @@ public sealed class DialogService : IDialogService
         }
         finally
         {
-            // Remove our cancellation from stack
-            var remaining = new System.Collections.Generic.List<CancellationTokenSource>();
-            while (_cancellations.TryPop(out var item))
-            {
-                if (item == cancellation) break;
-                remaining.Add(item);
-            }
-            for (int i = remaining.Count - 1; i >= 0; i--)
-            {
-                _cancellations.Push(remaining[i]);
-            }
+            lock (_gate) _open.Remove(cancellation);
             cancellation.Dispose();
         }
     }
 
+    public Task<string?> PromptAsync(string title, string? message = null, string? placeholder = null) =>
+        ShowAsync<Views.PromptDialog, ViewModels.PromptViewModel, string>(
+            new ViewModels.PromptViewModel(title, message, placeholder));
+
     public void CloseOverlay()
     {
-        if (_cancellations.TryPeek(out var top))
-        {
-            top.Cancel();
-        }
+        CancellationTokenSource? top;
+        lock (_gate) top = _open.Count > 0 ? _open[^1] : null;
+        if (top is null) return;
+        try { top.Cancel(); }
+        catch (ObjectDisposedException) { }
     }
 }

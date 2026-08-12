@@ -362,7 +362,7 @@
                 </Panel>
 
                 <!-- Overlay dialog scoped to content frame (does not block sidebar or navbar) -->
-                <u:OverlayDialogHost />
+                <u:OverlayDialogHost HostId="app" />
             </Panel>
 
         </DockPanel>
