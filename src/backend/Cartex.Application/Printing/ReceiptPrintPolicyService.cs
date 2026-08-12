@@ -151,11 +151,14 @@ public sealed class ReceiptPrintPolicyService(
     }
 
     public static string SerializeReceiptPayload(string token, ReceiptSettings configured) =>
-        JsonSerializer.Serialize(new
+        JsonSerializer.Serialize(new { receiptToken = token, receiptSettings = Settings(configured) }, Json);
+
+    public static string SerializeReturnPayload(long returnId, ReceiptSettings configured) =>
+        JsonSerializer.Serialize(new { returnId, receiptSettings = Settings(configured) }, Json);
+
+    private static object Settings(ReceiptSettings configured) =>
+        new
         {
-            receiptToken = token,
-            receiptSettings = new
-            {
                 headerText = configured.HeaderText,
                 footerText = configured.FooterText,
                 paperWidth = configured.PaperWidth,
@@ -172,10 +175,9 @@ public sealed class ReceiptPrintPolicyService(
                 showElectronicLink = configured.ShowElectronicLink,
                 publicReceiptBaseUrl = configured.PublicReceiptBaseUrl,
                 showLogo = configured.ShowLogo,
-                showCustomerPhone = configured.ShowCustomerPhone,
-                showCustomerEmail = configured.ShowCustomerEmail
-            }
-        }, Json);
+            showCustomerPhone = configured.ShowCustomerPhone,
+            showCustomerEmail = configured.ShowCustomerEmail
+        };
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

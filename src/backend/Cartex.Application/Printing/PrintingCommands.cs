@@ -470,7 +470,8 @@ public sealed class CreatePrintJobCommandHandler(
         }
 
         job.PayloadJson = await PrintingPayloadValidator.ValidateAsync(
-            db, settings, request.BranchId, kind, request.SourceId, request.Payload, cancellationToken);
+            db, settings, request.BranchId, kind, request.SourceType, request.SourceId, request.Payload,
+            cancellationToken);
         db.PrintJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome(job.IsReprint ? "print.reprint_requested" : "print.requested", "print_jobs", job.Id, new
@@ -500,6 +501,7 @@ internal static class PrintingPayloadValidator
         ISettingsService settings,
         long branchId,
         DomainJobKind kind,
+        string sourceType,
         string sourceId,
         JsonElement payload,
         CancellationToken cancellationToken)
@@ -507,7 +509,7 @@ internal static class PrintingPayloadValidator
         if (payload.GetRawText().Length > 32768) throw new BusinessRuleException("Print payload is too large.");
         return kind switch
         {
-            DomainJobKind.Receipt => await ReceiptAsync(db, settings, branchId, sourceId, payload, cancellationToken),
+            DomainJobKind.Receipt => await ReceiptAsync(db, settings, branchId, sourceType, sourceId, payload, cancellationToken),
             DomainJobKind.BarcodeLabel => await BarcodeAsync(db, settings, payload, cancellationToken),
             DomainJobKind.ZReport => await ZReportAsync(db, branchId, sourceId, payload, cancellationToken),
             DomainJobKind.Document => await DocumentAsync(db, branchId, payload, cancellationToken),
@@ -519,10 +521,23 @@ internal static class PrintingPayloadValidator
         IApplicationDbContext db,
         ISettingsService settings,
         long branchId,
+        string sourceType,
         string sourceId,
         JsonElement payload,
         CancellationToken cancellationToken)
     {
+        // A return receipt is printed on the same paper as a sale receipt, so it shares this
+        // kind — but it must be validated against the return document, not against Sales.
+        if (sourceType == "customer_return")
+        {
+            var returnId = Number(payload, "returnId") ?? (long.TryParse(sourceId, out var id) ? id : 0);
+            if (returnId <= 0 || !await db.CustomerReturnDocuments
+                    .AnyAsync(x => x.Id == returnId && x.BranchId == branchId, cancellationToken))
+                throw new NotFoundException("Return document not found.");
+            return ReceiptPrintPolicyService.SerializeReturnPayload(
+                returnId, await ReceiptConfigAsync(db, settings, branchId, cancellationToken));
+        }
+
         var token = Text(payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -535,6 +550,16 @@ internal static class PrintingPayloadValidator
             token = null;
         }
         if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException("Receipt not found.");
+        return ReceiptPrintPolicyService.SerializeReceiptPayload(
+            token, await ReceiptConfigAsync(db, settings, branchId, cancellationToken));
+    }
+
+    private static async Task<ReceiptSettings> ReceiptConfigAsync(
+        IApplicationDbContext db,
+        ISettingsService settings,
+        long branchId,
+        CancellationToken cancellationToken)
+    {
         var configured = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken) ?? new();
         var policy = await db.PrintRoutingPolicies.AsNoTracking()
             .FirstOrDefaultAsync(x => x.BranchId == branchId && x.Kind == DomainJobKind.Receipt,
@@ -543,7 +568,7 @@ internal static class PrintingPayloadValidator
             configured = ReceiptPrintPolicyService.FromDto(branchOverride);
         var notification = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken);
         configured.PublicReceiptBaseUrl = notification?.PublicBaseUrl;
-        return ReceiptPrintPolicyService.SerializeReceiptPayload(token, configured);
+        return configured;
     }
 
     private static async Task<string> BarcodeAsync(IApplicationDbContext db, ISettingsService settings, JsonElement payload, CancellationToken cancellationToken)

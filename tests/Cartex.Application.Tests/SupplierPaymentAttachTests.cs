@@ -16,7 +16,9 @@ namespace Cartex.Application.Tests;
 [Collection("database")]
 public class SupplierPaymentAttachTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow.Date);
+    // GetSupplierPaymentsQuery treats the date as local, so a UTC date silently queries the
+    // wrong day whenever the two calendars disagree (00:00-05:00 in UTC+5).
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now.Date);
 
     private async Task<(long warehouseId, long variantId)> SetupAsync()
     {
