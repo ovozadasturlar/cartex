@@ -631,9 +631,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (CartItems.Count == 0) { _toast.Error(L["no_items"]); return; }
         try
         {
-            Cartex.Shared.Models.Business.BusinessDto? business = null;
-            try { business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync); } catch { }
-            _printer.PrintPreview(new PreviewDocument(
+            await _printDispatch.PrintPreviewAsync(new PreviewDocument(
                 DateTime.Now,
                 _auth.UserInfo?.FullName,
                 SelectedCustomer?.FullName,
@@ -641,8 +639,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
                 DiscountAmount + AutoDiscountAmount,
                 TotalAmount,
-                string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()), business);
-            _toast.Success(L["preview_print"]);
+                string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -1781,9 +1778,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (held is null || held.Items.Count == 0) return;
         try
         {
-            Cartex.Shared.Models.Business.BusinessDto? business = null;
-            try { business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync); } catch { }
-            _printer.PrintPreview(new PreviewDocument(
+            await _printDispatch.PrintPreviewAsync(new PreviewDocument(
                 held.HeldAt,
                 _auth.UserInfo?.FullName,
                 held.CustomerName,
@@ -1791,8 +1786,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
                 0,
                 held.Total,
-                held.Label), business);
-            _toast.Success(L["preview_print"]);
+                held.Label));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

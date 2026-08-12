@@ -436,6 +436,9 @@ public sealed class PrintHostService
 
     private async Task<Action> PrepareDocumentAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
+        if (job.Payload.TryGetProperty("preview", out var preview) && preview.ValueKind == JsonValueKind.Object)
+            return await PreparePreviewAsync(job, preview, cancellationToken);
+
         var receiptToken = Text(job.Payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(receiptToken))
             throw new InvalidOperationException("Unsupported document source.");
@@ -447,6 +450,31 @@ public sealed class PrintHostService
         var pdfPath = await GetPdfOutputPathAsync(job.PrinterSystemName, $"Hujjat_{receiptToken}");
         return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies, pdfPath);
     }
+
+    private async Task<Action> PreparePreviewAsync(
+        AssignedPrintJobDto job,
+        JsonElement preview,
+        CancellationToken cancellationToken)
+    {
+        var document = preview.Deserialize<PreviewDocument>(PreviewJson)
+            ?? throw new InvalidOperationException("Preview payload is invalid.");
+        var printer = string.IsNullOrWhiteSpace(job.PrinterSystemName)
+            ? _printer.GetSettings().ReceiptPrinter
+            : job.PrinterSystemName;
+        if (string.IsNullOrWhiteSpace(printer))
+            throw new InvalidOperationException("Chek printeri tanlanmagan.");
+
+        BusinessDto? business = null;
+        try { business = await _businessApi.GetAsync(); } catch { }
+        var options = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
+        var path = await GetPdfOutputPathAsync(printer, $"Oldindan_{job.Id}");
+        var bytes = _printer.FormatPreview(document, options, business);
+        await Task.CompletedTask;
+        return () => _printer.PrintRawBytes(printer, bytes, path);
+    }
+
+    private static readonly JsonSerializerOptions PreviewJson =
+        new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
     private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(
         string token,

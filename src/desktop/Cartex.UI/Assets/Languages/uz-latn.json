@@ -1279,6 +1279,7 @@
   "settlement_customeradvance": "Mijoz haqdorligi",
   "settlement_nocharge": "Hisobsiz",
   "print_kind_return": "Qaytarish cheki",
+  "print_kind_preview": "Oldindan ko'rish",
   "perm_returns.freeLine": "Savdoga bog'lanmagan mahsulotni qaytarish",
   "statement": "Hisobot",
   "statement_period": "Davr",

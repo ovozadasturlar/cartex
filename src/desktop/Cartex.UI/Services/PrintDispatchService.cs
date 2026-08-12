@@ -51,6 +51,20 @@ public sealed class PrintDispatchService(
             branchId: branchId,
             kindLabel: LocalizationManager.Instance["print_kind_return"]);
 
+    /// A preview has no server-side document, so the cart contents travel in the payload and
+    /// the node that owns the paper formats them with its own receipt settings.
+    public Task PrintPreviewAsync(PreviewDocument document, CancellationToken cancellationToken = default) =>
+        CreateAsync(
+            PrintJobKind.Document,
+            "preview",
+            _auth.DeviceId,
+            JsonSerializer.SerializeToElement(new { preview = document }),
+            false,
+            null,
+            $"preview:{_auth.DeviceId}:{Guid.NewGuid():N}",
+            cancellationToken,
+            kindLabel: LocalizationManager.Instance["print_kind_preview"]);
+
     public Task PrintBarcodeAsync(
         string code,
         string name,

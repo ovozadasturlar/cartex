@@ -294,7 +294,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
             if (remaining <= 0 || Lines.Any(x => x.SaleItemId == item.SaleItemId)) continue;
             Lines.Add(new ReturnEditorLine(
                 item.VariantId, item.ProductName, item.UnitName, remaining, item.UnitPrice,
-                item.SaleItemId, detail.Id, NotifyEditor));
+                item.SaleItemId, detail.Id, quantity: 0m, NotifyEditor));
         }
         NotifyEditor();
     }
@@ -354,7 +354,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
 
         Lines.Add(new ReturnEditorLine(
             product.DefaultVariantId, product.Name, product.UnitName, LineQuantity, LinePrice,
-            null, null, NotifyEditor));
+            null, null, LineQuantity, NotifyEditor));
         ClearLineDraft();
         NotifyEditor();
     }
@@ -434,13 +434,14 @@ public partial class ReturnEditorLine : ObservableObject
         decimal unitPrice,
         long? saleItemId,
         long? saleId,
+        decimal quantity,
         Action onChanged)
     {
         VariantId = variantId;
         ProductName = productName;
         UnitName = unitName;
         MaxQuantity = maxQuantity;
-        _quantity = maxQuantity;
+        _quantity = quantity;
         _unitPrice = unitPrice;
         SaleItemId = saleItemId;
         SaleId = saleId;

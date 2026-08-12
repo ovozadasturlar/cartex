@@ -1279,6 +1279,7 @@
   "settlement_customeradvance": "Customer credit",
   "settlement_nocharge": "No charge",
   "print_kind_return": "Return receipt",
+  "print_kind_preview": "Preview",
   "perm_returns.freeLine": "Return products outside a recorded sale",
   "statement": "Statement",
   "statement_period": "Period",

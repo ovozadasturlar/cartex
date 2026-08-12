@@ -1279,6 +1279,7 @@
   "settlement_customeradvance": "Мижоз ҳақдорлиги",
   "settlement_nocharge": "Ҳисобсиз",
   "print_kind_return": "Қайтариш чеки",
+  "print_kind_preview": "Олдиндан кўриш",
   "perm_returns.freeLine": "Савдога боғланмаган маҳсулотни қайтариш",
   "statement": "Ҳисобот",
   "statement_period": "Давр",

@@ -1279,6 +1279,7 @@
   "settlement_customeradvance": "Переплата клиента",
   "settlement_nocharge": "Без расчёта",
   "print_kind_return": "Чек возврата",
+  "print_kind_preview": "Предпросмотр",
   "perm_returns.freeLine": "Возврат товара вне продажи",
   "statement": "Отчёт",
   "statement_period": "Период",
