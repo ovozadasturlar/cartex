@@ -21,6 +21,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
     private readonly IExportService _export;
+    private readonly ReceiptDialogService _receiptDialog;
     private long _editId;
 
     public ObservableCollection<CustomerDto> Customers { get; } = [];
@@ -163,8 +164,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Take(2)
             .Select(w => char.ToUpperInvariant(w[0])));
 
-    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
+    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog)
     {
+        _receiptDialog = receiptDialog;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _cache = cache;
@@ -179,6 +181,16 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
         LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
         SalesPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadSalesAsync(_ledgerCustomerId));
+    }
+
+    [RelayCommand]
+    private async Task OpenReceiptAsync(SaleDto sale)
+    {
+        if (sale is null || !CanViewSales) return;
+        var result = await _receiptDialog.ShowAsync(sale);
+        if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned
+            or ReceiptDialogResult.Corrected)
+            await LoadSalesAsync(_ledgerCustomerId);
     }
 
     private void ResetState()

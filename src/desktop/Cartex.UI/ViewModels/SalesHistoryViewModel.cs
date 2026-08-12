@@ -23,6 +23,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private readonly IPrinterService _printer;
     private readonly PrintDispatchService _printDispatch;
     private readonly NavigationService _navigation;
+    private readonly ReceiptDialogService _receiptDialog;
 
     public ObservableCollection<SaleDto> Sales { get; } = [];
     public PaginationState Paging { get; } = new();
@@ -45,8 +46,10 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         IExportService export,
         IPrinterService printer,
         PrintDispatchService printDispatch,
+        ReceiptDialogService receiptDialog,
         NavigationService navigation)
     {
+        _receiptDialog = receiptDialog;
         _salesApi = salesApi;
         _receiptApi = receiptApi;
         _auth = auth;
@@ -126,10 +129,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private async Task OpenReceiptAsync(SaleDto sale)
     {
         if (sale is null) return;
-        var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
-            receiptToken: sale.ReceiptToken, saleId: sale.Id);
-        _ = vm.InitAsync();
-        var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
+        var result = await _receiptDialog.ShowAsync(sale);
         if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)
             await LoadAsync();
     }

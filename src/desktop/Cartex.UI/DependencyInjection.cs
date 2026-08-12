@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddSingleton<PrintHostService>();
         services.AddSingleton<PrintStatusHubService>();
         services.AddSingleton<PrintDispatchService>();
+        services.AddSingleton<ReceiptDialogService>();
         services.AddSingleton<OfflineStore>();
         services.AddSingleton<OfflineLeaseCredentialStore>();
         services.AddSingleton<OfflineSyncService>();
