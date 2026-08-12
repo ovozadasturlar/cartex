@@ -14,4 +14,6 @@ public sealed class SalesPolicySettings
     public bool ShowUnlistedProducts { get; set; } = true;
     public bool AllowInsufficientStockSales { get; set; }
     public bool AllowRetroactiveCashback { get; set; }
+    public string SaleCorrectionWindow { get; set; } = "Shift";
+    public int SaleCorrectionDays { get; set; } = 1;
 }

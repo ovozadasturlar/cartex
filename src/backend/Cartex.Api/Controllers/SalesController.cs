@@ -63,12 +63,19 @@ public class SalesController(ISender sender) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{id:long}/return")]
-    [HasPermission(AppPermissions.Sales.Return)]
-    public async Task<IActionResult> ReturnSale(long id, [FromBody] ReturnSaleRequest request)
+    [HttpGet("variant-prices/{variantId:long}")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<ActionResult<IReadOnlyCollection<VariantSalePriceDto>>> VariantPrices(
+        long variantId,
+        [FromQuery] long? customerId = null,
+        [FromQuery] int take = 10) =>
+        Ok(await sender.Send(new GetVariantSalePricesQuery(variantId, customerId, take)));
+
+    [HttpPost("{id:long}/void")]
+    [HasPermission(AppPermissions.Sales.Void)]
+    public async Task<IActionResult> VoidSale(long id, [FromBody] VoidSaleRequest request)
     {
-        var lines = request.Lines.Select(l => new ReturnLineDto(l.SaleItemId, l.Quantity, l.Restock, l.Reason)).ToList();
-        await sender.Send(new ReturnSaleCommand(id, lines));
+        await sender.Send(new VoidSaleCommand(id, request.Reason));
         return NoContent();
     }
 

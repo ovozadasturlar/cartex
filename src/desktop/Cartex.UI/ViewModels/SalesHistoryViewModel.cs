@@ -22,10 +22,11 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     private readonly IExportService _export;
     private readonly IPrinterService _printer;
     private readonly PrintDispatchService _printDispatch;
+    private readonly NavigationService _navigation;
 
     public ObservableCollection<SaleDto> Sales { get; } = [];
     public PaginationState Paging { get; } = new();
-    public bool CanReturn => _auth.HasPermission("sales.return");
+    public bool CanReturn => _auth.HasPermission("returns.create");
     public bool CanExport => _auth.HasPermission("reports.export");
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-7);
@@ -43,7 +44,8 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         IBusyService busy,
         IExportService export,
         IPrinterService printer,
-        PrintDispatchService printDispatch)
+        PrintDispatchService printDispatch,
+        NavigationService navigation)
     {
         _salesApi = salesApi;
         _receiptApi = receiptApi;
@@ -54,6 +56,7 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
         _export = export;
         _printer = printer;
         _printDispatch = printDispatch;
+        _navigation = navigation;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["total"], "TotalAmount")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
@@ -122,23 +125,20 @@ public partial class SalesHistoryViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenReceiptAsync(SaleDto sale)
     {
-        if (sale is null || string.IsNullOrEmpty(sale.ReceiptToken)) return;
+        if (sale is null) return;
         var vm = new ReceiptDetailViewModel(_receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
             receiptToken: sale.ReceiptToken, saleId: sale.Id);
-        await vm.InitAsync();
+        _ = vm.InitAsync();
         var result = await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
         if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned)
             await LoadAsync();
     }
 
     [RelayCommand]
-    private async Task ReturnSaleAsync(SaleDto sale)
+    private void ReturnSale(SaleDto sale)
     {
-        if (sale is null || sale.Status == "Returned") return;
-        var vm = new ReturnSaleViewModel(sale.Id, _salesApi, _toast, _busy, preloadedSale: sale);
-        await vm.InitAsync();
-        var returned = await _dialog.ShowAsync<ReturnSaleDialog, ReturnSaleViewModel, bool>(vm);
-        if (returned)
-            await LoadAsync();
+        if (sale is null || sale.Status == "Returned" || !CanReturn) return;
+        ServiceLocator.Resolve<ReturnsViewModel>().StartForSale(sale.Id);
+        _navigation.RequestMenuNavigation("returns");
     }
 }

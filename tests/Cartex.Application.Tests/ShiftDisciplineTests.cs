@@ -99,8 +99,8 @@ public class ShiftDisciplineTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         var db = scope2.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)])));
+        var command = await TestReturns.ForItemAsync(db, item.Id, 1);
+        await Assert.ThrowsAsync<BusinessRuleException>(() => sender2.Send(command));
     }
 
     [Fact]

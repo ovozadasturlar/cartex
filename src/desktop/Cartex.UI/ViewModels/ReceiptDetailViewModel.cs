@@ -7,7 +7,6 @@ using Cartex.ApiClient;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Sales;
-using Cartex.Shared.Models.TradeCases;
 using Cartex.UI.Services;
 using Cartex.UI.Views;
 
@@ -18,7 +17,8 @@ public enum ReceiptDialogResult
     Closed,
     NewSale,
     Returned,
-    CustomerAssigned
+    CustomerAssigned,
+    Corrected
 }
 
 public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
@@ -69,11 +69,11 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     [ObservableProperty] private ReceiptDto? _receipt;
     [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _receiptQrCode;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string? _loadError;
     [ObservableProperty] private bool _isPosCheckoutMode;
 
     // --- Sub-panel states ---
     [ObservableProperty] private bool _isCustomerPickerOpen;
-    [ObservableProperty] private bool _isCaseAttachOpen;
 
     // --- Customer Picker State ---
     public ObservableCollection<CustomerDto> CustomerResults { get; } = [];
@@ -85,47 +85,52 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     public bool HasCustomerResults => CustomerResults.Count > 0;
     private CancellationTokenSource? _customerSearchCts;
 
-    // --- Trade Case Attach State ---
-    public ObservableCollection<TradeCaseListDto> OpenCases { get; } = [];
-    [ObservableProperty] private bool _hasOpenCases;
-    [ObservableProperty] private bool _isCreatingCase;
-    [ObservableProperty] private string _newCaseTitle = "";
-    [ObservableProperty] private string _newCaseSiteAddress = "";
-    [ObservableProperty] private string _caseCustomerDisplay = "";
-
     public bool HasReceipt => Receipt is not null;
-    public bool CanAttachCustomer => _auth.HasPermission("sales.edit") && Receipt is not null && string.IsNullOrEmpty(Receipt.CustomerName);
-    public bool CanAttachCase => _auth.HasPermission("trade_cases.edit") && Receipt is not null && !Receipt.HasTradeCase;
-    public bool CanReturnSale => _auth.HasPermission("sales.return") && !IsPosCheckoutMode && Receipt is not null;
-    public bool CanPrint => _auth.HasPermission("printing.receipts.reprint") && Receipt is not null;
-    public bool IsAnySubPanelOpen => IsCustomerPickerOpen || IsCaseAttachOpen;
+    public bool HasLoadError => !string.IsNullOrWhiteSpace(LoadError);
+    public bool CanAttachCustomer => (_auth.HasPermission("sales.assignCustomer") || _auth.HasPermission("sales.create") || _auth.HasPermission("customers.create") || _auth.HasPermission("customers.edit")) && Receipt is not null && string.IsNullOrEmpty(Receipt.CustomerName);
+    public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null;
+    public bool CanPrint => (_auth.HasPermission("printing.receipts.print") || _auth.HasPermission("printing.receipts.reprint")) && Receipt is not null;
+    public bool CanCorrect => _auth.HasPermission("sales.void") && _saleId is > 0 && Receipt is not null;
+    public bool IsAnySubPanelOpen => IsCustomerPickerOpen;
 
     partial void OnIsCustomerPickerOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
-    partial void OnIsCaseAttachOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
 
     public async Task InitAsync()
     {
         if (Receipt is not null) return;
-        if (string.IsNullOrEmpty(_receiptToken)) return;
+        if (string.IsNullOrEmpty(_receiptToken))
+        {
+            LoadError = L["receipt_missing_token"];
+            OnPropertyChanged(nameof(HasLoadError));
+            return;
+        }
 
         try
         {
             IsLoading = true;
-            using (_busy.Begin(L["loading"]))
-            {
-                var r = await _receiptApi.GetAsync(_receiptToken);
-                ApplyReceipt(r);
-            }
+            LoadError = null;
+            OnPropertyChanged(nameof(HasLoadError));
+            var r = await _receiptApi.GetAsync(_receiptToken);
+            ApplyReceipt(r);
         }
         catch (Exception ex)
         {
-            _toast.Error(ApiErrors.Describe(ex));
-            RequestClose?.Invoke(this, ReceiptDialogResult.Closed);
+            // The dialog stays open with a retry action: a failed fetch must never look
+            // like the button did nothing.
+            LoadError = ApiErrors.Describe(ex);
         }
         finally
         {
             IsLoading = false;
+            OnPropertyChanged(nameof(HasLoadError));
         }
+    }
+
+    [RelayCommand]
+    private Task RetryAsync()
+    {
+        Receipt = null;
+        return InitAsync();
     }
 
     private void ApplyReceipt(ReceiptDto r)
@@ -140,9 +145,9 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         ReceiptQrCode = QrService.Generate($"{baseUrl}/r/{r.ReceiptToken}");
         OnPropertyChanged(nameof(HasReceipt));
         OnPropertyChanged(nameof(CanAttachCustomer));
-        OnPropertyChanged(nameof(CanAttachCase));
         OnPropertyChanged(nameof(CanReturnSale));
         OnPropertyChanged(nameof(CanPrint));
+        OnPropertyChanged(nameof(CanCorrect));
     }
 
     [RelayCommand]
@@ -167,7 +172,6 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     private async Task OpenCustomerPickerAsync()
     {
         if (Receipt is null || !CanAttachCustomer) return;
-        IsCaseAttachOpen = false;
         IsCreatingCustomer = false;
         CustomerSearch = "";
         CustomerResults.Clear();
@@ -283,154 +287,6 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
                 Receipt = Receipt with { CustomerId = customerId, CustomerName = custFullName };
                 OnPropertyChanged(nameof(Receipt));
                 OnPropertyChanged(nameof(CanAttachCustomer));
-                OnPropertyChanged(nameof(CanAttachCase));
-            }
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-    }
-
-    // ==========================================
-    // TRADE CASE ATTACH ACTIONS
-    // ==========================================
-
-    [RelayCommand]
-    private async Task AttachCaseAsync()
-    {
-        if (Receipt is null || !CanAttachCase) return;
-        if (_saleId is not { } saleId || saleId <= 0) return;
-
-        if ((_customerId is null or 0) && Receipt.CustomerId is { } rcId && rcId > 0)
-            _customerId = rcId;
-
-        // If no customer attached yet, prompt to pick customer first
-        if (string.IsNullOrEmpty(Receipt.CustomerName) || (_customerId is null or <= 0))
-        {
-            await OpenCustomerPickerAsync();
-            return;
-        }
-
-        await LoadAndOpenCaseAttachPanelAsync(_customerId.Value, Receipt.CustomerName ?? "");
-    }
-
-    private async Task LoadAndOpenCaseAttachPanelAsync(long custId, string custName)
-    {
-        IsCustomerPickerOpen = false;
-        CaseCustomerDisplay = custName;
-        NewCaseTitle = $"{custName} — {DateTime.Today:dd.MM.yyyy}";
-        NewCaseSiteAddress = "";
-        IsCreatingCase = false;
-        OpenCases.Clear();
-        HasOpenCases = false;
-
-        try
-        {
-            var tradeCasesApi = ServiceLocator.Resolve<ITradeCasesApi>();
-            using (_busy.Begin(L["loading"]))
-            {
-                var open = await tradeCasesApi.GetAsync(customerId: custId, status: "Open", pageSize: 50);
-                var pending = await tradeCasesApi.GetAsync(customerId: custId, status: "SettlementPending", pageSize: 50);
-                foreach (var c in open.Concat(pending).OrderByDescending(x => x.UpdatedAt))
-                    OpenCases.Add(c);
-            }
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-
-        HasOpenCases = OpenCases.Count > 0;
-        if (!HasOpenCases)
-            IsCreatingCase = true;
-
-        IsCaseAttachOpen = true;
-    }
-
-    [RelayCommand]
-    private void StartCreateCase() => IsCreatingCase = true;
-
-    [RelayCommand]
-    private void BackToCaseList() => IsCreatingCase = false;
-
-    [RelayCommand]
-    private void CloseCaseAttach() => IsCaseAttachOpen = false;
-
-    [RelayCommand]
-    private async Task SelectCaseAsync(TradeCaseListDto caseItem)
-    {
-        if (caseItem is null || _saleId is not { } saleId || saleId <= 0) return;
-        CloseCaseAttach();
-        await LinkSaleToCaseAsync(caseItem.Id, caseItem.CaseNumber, caseItem.Title, saleId);
-    }
-
-    [RelayCommand]
-    private async Task CreateAndLinkCaseAsync()
-    {
-        if (string.IsNullOrWhiteSpace(NewCaseTitle))
-        {
-            _toast.Error(L["required_fields_hint"]);
-            return;
-        }
-
-        var branchService = ServiceLocator.Resolve<BranchContextService>();
-        var warehouseId = branchService.CurrentWarehouseId ?? branchService.Warehouses.FirstOrDefault()?.Id;
-        if (warehouseId is not { } wid || wid <= 0)
-        {
-            _toast.Warning(L["select_warehouse"]);
-            return;
-        }
-
-        if (_customerId is not { } custId || custId <= 0)
-        {
-            _toast.Warning(L["case_customer_required"] ?? "Mijoz tanlanmagan.");
-            return;
-        }
-
-        if (_saleId is not { } saleId || saleId <= 0) return;
-
-        try
-        {
-            TradeCaseCreatedDto created;
-            var tradeCasesApi = ServiceLocator.Resolve<ITradeCasesApi>();
-            using (_busy.Begin(L["loading"]))
-            {
-                created = await tradeCasesApi.CreateAsync(new CreateTradeCaseRequest(
-                    custId,
-                    wid,
-                    NewCaseTitle.Trim(),
-                    string.IsNullOrWhiteSpace(NewCaseSiteAddress) ? null : NewCaseSiteAddress.Trim(),
-                    IdempotencyKey: Guid.NewGuid().ToString("N")));
-            }
-            CloseCaseAttach();
-            await LinkSaleToCaseAsync(created.Id, created.CaseNumber, NewCaseTitle.Trim(), saleId);
-        }
-        catch (Exception ex)
-        {
-            _toast.Error(ApiErrors.Describe(ex));
-        }
-    }
-
-    private async Task LinkSaleToCaseAsync(long caseId, string caseNumber, string? caseTitle, long saleId)
-    {
-        try
-        {
-            var tradeCasesApi = ServiceLocator.Resolve<ITradeCasesApi>();
-            using (_busy.Begin(L["loading"]))
-                await tradeCasesApi.LinkSaleAsync(caseId, saleId);
-
-            _toast.Success(string.Format(L["case_linked_fmt"] ?? "Savdo {0}-sonli loyihaga muvaffaqiyatli biriktirildi", caseNumber));
-            if (Receipt is not null)
-            {
-                Receipt = Receipt with
-                {
-                    TradeCaseId = caseId,
-                    TradeCaseNumber = caseNumber,
-                    TradeCaseTitle = caseTitle
-                };
-                OnPropertyChanged(nameof(Receipt));
-                OnPropertyChanged(nameof(CanAttachCase));
             }
         }
         catch (Exception ex)
@@ -444,14 +300,36 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     // ==========================================
 
     [RelayCommand]
-    private async Task ReturnSaleAsync()
+    private async Task CorrectSaleAsync()
+    {
+        if (!CanCorrect || _saleId is not { } saleId) return;
+        var reason = await _dialog.PromptAsync(L["correct_sale"], L["correct_sale_confirm"], L["correct_sale_reason"]);
+        if (string.IsNullOrWhiteSpace(reason)) return;
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _salesApi.VoidAsync(saleId, new VoidSaleRequest(reason));
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+
+        ServiceLocator.Resolve<PosHandoffService>().PendingCorrectionSaleId = saleId;
+        ServiceLocator.Resolve<NavigationService>().RequestMenuNavigation("pos");
+        _toast.Success(L["sale_voided"]);
+        RequestClose?.Invoke(this, ReceiptDialogResult.Corrected);
+    }
+
+    [RelayCommand]
+    private void ReturnSale()
     {
         if (Receipt is null || !CanReturnSale) return;
-        var returnVm = new ReturnSaleViewModel(Receipt.SaleId, _salesApi, _toast, _busy);
-        await returnVm.InitAsync();
-        var returned = await _dialog.ShowAsync<ReturnSaleDialog, ReturnSaleViewModel, bool>(returnVm);
-        if (returned)
-            RequestClose?.Invoke(this, ReceiptDialogResult.Returned);
+        ServiceLocator.Resolve<ReturnsViewModel>().StartForSale(Receipt.SaleId);
+        ServiceLocator.Resolve<NavigationService>().RequestMenuNavigation("returns");
+        RequestClose?.Invoke(this, ReceiptDialogResult.Returned);
     }
 
     [RelayCommand]

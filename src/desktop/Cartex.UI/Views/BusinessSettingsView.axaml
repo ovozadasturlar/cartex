@@ -138,6 +138,19 @@
                                     <NumericUpDown Value="{Binding StaleRateDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
                                 </StackPanel>
                             </Grid>
+                            <Grid ColumnDefinitions="*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="{Binding L[sale_correction_window]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <ComboBox ItemsSource="{Binding CorrectionWindows}" SelectedIndex="{Binding CorrectionWindowIndex}" HorizontalAlignment="Stretch" MinHeight="38" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5" IsVisible="{Binding ShowCorrectionDays}">
+                                    <TextBlock Text="{Binding L[sale_correction_days]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                                    <NumericUpDown Value="{Binding SaleCorrectionDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Maximum="365" Increment="1" FormatString="0" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding L[sale_correction_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="11.5" TextWrapping="Wrap" />
+
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Text="{Binding L[allow_debt_sales]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" VerticalAlignment="Center" />
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtSales}" />

@@ -10,7 +10,7 @@
              x:CompileBindings="False">
 
     <Panel>
-        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
+        <DockPanel Margin="24">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[sale_history]}" Margin="0,0,0,16">
                 <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
             </c:PageHeader>
@@ -41,17 +41,17 @@
             <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}">
                 <StackPanel Orientation="Horizontal" Spacing="20">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding L[total]}" Foreground="{DynamicResource TextSecondary}" />
-                        <TextBlock Text="{Binding Totals.TotalAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding [total], Source={x:Static svc:LocalizationManager.Instance}}" Foreground="{DynamicResource TextSecondary}" />
+                        <TextBlock Text="{Binding $parent[UserControl].DataContext.Totals.TotalAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource BrandPrimaryBrush}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}" />
-                        <TextBlock Text="{Binding Totals.TotalDiscount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding [discount], Source={x:Static svc:LocalizationManager.Instance}}" Foreground="{DynamicResource TextSecondary}" />
+                        <TextBlock Text="{Binding $parent[UserControl].DataContext.Totals.TotalDiscount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="{Binding L[debt]}" Foreground="{DynamicResource TextSecondary}" />
-                        <TextBlock Text="{Binding Totals.TotalDebt, StringFormat='{}{0:N0}'}" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding [debt], Source={x:Static svc:LocalizationManager.Instance}}" Foreground="{DynamicResource TextSecondary}" />
+                        <TextBlock Text="{Binding $parent[UserControl].DataContext.Totals.TotalDebt, StringFormat='{}{0:N0}'}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource DangerBrush}" />
                     </StackPanel>
                 </StackPanel>

@@ -94,30 +94,10 @@ public record UpdateBarcodeLabelSettingsRequest(
     string CurrencyDisplay,
     string CurrencyCase,
     string PriceCurrencyMode);
-public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false);
-public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false);
+public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1);
+public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1);
 
-public record TradeCaseSettingsDto(
-    bool Enabled,
-    string SingularLabel,
-    string PluralLabel,
-    string DefaultWorkflow,
-    string DefaultPricePolicy,
-    bool AllowWorkflowOverride,
-    bool AllowPricePolicyOverride,
-    bool RequireSiteAddress,
-    bool AutoUseCustomerAdvance);
 
-public record UpdateTradeCaseSettingsRequest(
-    bool Enabled,
-    string SingularLabel,
-    string PluralLabel,
-    string DefaultWorkflow,
-    string DefaultPricePolicy,
-    bool AllowWorkflowOverride = true,
-    bool AllowPricePolicyOverride = true,
-    bool RequireSiteAddress = false,
-    bool AutoUseCustomerAdvance = true);
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
 public record UpdateLoginMethodsRequest(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
 public record StorageSettingsDto(bool Enabled, string Provider, string? Endpoint, string? AccessKey, string? Bucket, bool UseSsl, bool HasSecretKey, int SecretKeyLength = 0);

@@ -36,8 +36,16 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> Currencies { get; } = new(CurrencyCatalog.All);
     public ObservableCollection<string> ShiftPolicies { get; } = [];
     private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
+    public ObservableCollection<string> CorrectionWindows { get; } = [];
+    private static readonly string[] CorrectionWindowCodes = ["Off", "Shift", "BusinessDay", "Days", "Always"];
 
     [ObservableProperty] private int _shiftPolicyIndex = 1;
+    [ObservableProperty] private int _correctionWindowIndex = 1;
+    [ObservableProperty] private decimal _saleCorrectionDays = 1;
+
+    public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
+
+    partial void OnCorrectionWindowIndexChanged(int value) => OnPropertyChanged(nameof(ShowCorrectionDays));
     [ObservableProperty] private decimal _maxDiscountPercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
@@ -69,16 +77,22 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         _filePicker = filePicker;
         _toast = toast;
         _busy = busy;
+        // A ComboBox bound to an empty ItemsSource coerces SelectedIndex to -1 and writes it
+        // back, so the options must exist before the view binds — not once loading finishes.
+        FillOptions(ShiftPolicies, ShiftPolicyCodes, code => L[$"shift_policy_{code.ToLowerInvariant()}"]);
+        FillOptions(CorrectionWindows, CorrectionWindowCodes, code => L[$"correction_{code.ToLowerInvariant()}"]);
     }
 
     public async Task LoadAsync()
     {
-        ShiftPolicies.Clear();
-        foreach (var code in ShiftPolicyCodes) ShiftPolicies.Add(L[$"shift_policy_{code.ToLowerInvariant()}"]);
         try
         {
             var policy = await _settingsApi.GetSalesPolicyAsync();
+            _loadedShiftPolicy = policy.ShiftPolicy;
+            _loadedCorrectionWindow = policy.SaleCorrectionWindow;
             ShiftPolicyIndex = Math.Max(0, Array.IndexOf(ShiftPolicyCodes, policy.ShiftPolicy));
+            CorrectionWindowIndex = Math.Max(0, Array.IndexOf(CorrectionWindowCodes, policy.SaleCorrectionWindow));
+            SaleCorrectionDays = policy.SaleCorrectionDays;
             MaxDiscountPercent = policy.MaxDiscountPercent;
             DefaultMinStock = policy.DefaultMinStock;
             StaleRateDays = policy.StaleRateDays;
@@ -132,6 +146,23 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             return new Bitmap(new MemoryStream(bytes));
         }
         catch { return null; }
+    }
+
+    private string _loadedShiftPolicy = "CashOnly";
+    private string _loadedCorrectionWindow = "Shift";
+
+    private static string CodeAt(string[] codes, int index, string fallback) =>
+        index >= 0 && index < codes.Length ? codes[index] : fallback;
+
+    private static void FillOptions(ObservableCollection<string> target, string[] codes, Func<string, string> label)
+    {
+        for (var i = 0; i < codes.Length; i++)
+        {
+            var text = label(codes[i]);
+            if (i >= target.Count) target.Add(text);
+            else if (target[i] != text) target[i] = text;
+        }
+        while (target.Count > codes.Length) target.RemoveAt(target.Count - 1);
     }
 
     [RelayCommand]
@@ -195,9 +226,11 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     MonochromeLogoImageKey));
                 if (_policyLoaded)
                     await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
-                        ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
+                        CodeAt(ShiftPolicyCodes, ShiftPolicyIndex, _loadedShiftPolicy), MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
                         AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier, ShowOutOfStock,
-                        ShowUnlistedProducts, AllowInsufficientStockSales, AllowRetroactiveCashback));
+                        ShowUnlistedProducts, AllowInsufficientStockSales, AllowRetroactiveCashback,
+                        CodeAt(CorrectionWindowCodes, CorrectionWindowIndex, _loadedCorrectionWindow),
+                        (int)Math.Clamp(SaleCorrectionDays, 1, 365)));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));
