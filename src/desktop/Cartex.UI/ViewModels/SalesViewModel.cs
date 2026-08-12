@@ -8,7 +8,6 @@ using Cartex.Shared.Models.Prepacks;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
-using Cartex.Shared.Models.TradeCases;
 using Cartex.UI.Views;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
@@ -24,7 +23,13 @@ using Refit;
 
 namespace Cartex.UI.ViewModels;
 
-public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt);
+public record HeldSale(string Label, List<CartItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt)
+{
+    [System.Text.Json.Serialization.JsonIgnore] public int ItemCount => Items.Count;
+    [System.Text.Json.Serialization.JsonIgnore] public decimal Total => Items.Sum(x => x.LineTotal);
+    [System.Text.Json.Serialization.JsonIgnore] public string? CustomerName => Customer?.FullName;
+    [System.Text.Json.Serialization.JsonIgnore] public bool HasCustomer => Customer is not null;
+}
 
 public record QueueRow(Cartex.Shared.Models.Ordering.CartListDto Cart)
 {
@@ -173,7 +178,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IHeldSaleStore _heldStore;
     private readonly IPrinterService _printer;
     private readonly PrintDispatchService _printDispatch;
-    private readonly ITradeCasesApi _tradeCasesApi;
     private readonly IDialogService _dialog;
     private readonly IScannedCodeParser _scannedCodeParser;
     private readonly IScanFeedbackService _scanFeedback;
@@ -197,6 +201,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paidCard;
     [ObservableProperty] private decimal _paidBonus;
     [ObservableProperty] private decimal _discountAmount;
+    [ObservableProperty] private string _saleNote = "";
     [ObservableProperty] private decimal _discountPercent;
     [ObservableProperty] private bool _isPaymentPanelOpen;
     private bool _syncingDiscount;
@@ -204,6 +209,14 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isCustomerPanelOpen;
     [ObservableProperty] private bool _isHeldPanelOpen;
     [ObservableProperty] private bool _isQueuePanelOpen;
+    [ObservableProperty] private HeldSale? _selectedHeld;
+    [ObservableProperty] private QueueRow? _selectedQueueRow;
+
+    public bool HasSelectedHeld => SelectedHeld is not null;
+    public bool HasSelectedQueueRow => SelectedQueueRow is not null;
+
+    partial void OnSelectedHeldChanged(HeldSale? value) => OnPropertyChanged(nameof(HasSelectedHeld));
+    partial void OnSelectedQueueRowChanged(QueueRow? value) => OnPropertyChanged(nameof(HasSelectedQueueRow));
     [ObservableProperty] private int _queueCount;
     [ObservableProperty] private bool _canSeeQueue;
     [ObservableProperty] private bool _posListMode = SettingsService.Instance.PosListMode;
@@ -390,11 +403,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
         IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
         ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi,
-        PrintDispatchService printDispatch, ITradeCasesApi tradeCasesApi, IDialogService dialog)
+        PrintDispatchService printDispatch, IDialogService dialog)
     {
         _shiftsApi = shiftsApi;
         _printDispatch = printDispatch;
-        _tradeCasesApi = tradeCasesApi;
         _dialog = dialog;
         _cache = cache;
         _suppliersApi = suppliersApi;
@@ -575,6 +587,64 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _handoff.PendingCartCode = null;
             await TryLoadCartAsync(pending);
         }
+
+        if (_handoff.PendingCorrectionSaleId is { } correctionSaleId)
+        {
+            _handoff.PendingCorrectionSaleId = null;
+            await LoadCorrectionCartAsync(correctionSaleId);
+        }
+    }
+
+    // A correction voids the original sale and hands its cart back so the cashier can
+    // fix the mistake and check out again.
+    private async Task LoadCorrectionCartAsync(long saleId)
+    {
+        try
+        {
+            SaleDetailDto detail;
+            using (_busy.Begin(L["loading"]))
+                detail = await _salesApi.GetByIdAsync(saleId);
+
+            ClearCart();
+            foreach (var item in detail.Items)
+            {
+                var stock = Products.FirstOrDefault(p => p.VariantId == item.VariantId);
+                AddToCart(item.VariantId, item.ProductName, item.UnitPrice, item.Quantity,
+                    stock?.Quantity, stock, allowsFractional: item.AllowsFractional,
+                    enforceCreatePermission: false);
+            }
+            DiscountAmount = detail.DiscountAmount;
+            SaleNote = detail.Note ?? "";
+            if (detail.CustomerId is { } customerId)
+            {
+                try { SelectedCustomer = await _customersApi.GetByIdAsync(customerId); }
+                catch { }
+            }
+            NotifyTotals();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task PrintPreviewAsync()
+    {
+        if (CartItems.Count == 0) { _toast.Error(L["no_items"]); return; }
+        try
+        {
+            Cartex.Shared.Models.Business.BusinessDto? business = null;
+            try { business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync); } catch { }
+            _printer.PrintPreview(new PreviewDocument(
+                DateTime.Now,
+                _auth.UserInfo?.FullName,
+                SelectedCustomer?.FullName,
+                [.. CartItems.Select(x => new PreviewLine(
+                    x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
+                DiscountAmount + AutoDiscountAmount,
+                TotalAmount,
+                string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()), business);
+            _toast.Success(L["preview_print"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     private async Task<bool> TryLoadCartAsync(string code)
@@ -1507,6 +1577,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _ = CancelActiveCartAsync(activeCode);
         CartItems.Clear();
         _activeCartCode = null;
+        SaleNote = "";
         DebtDueDate = null;
         DueDateMissing = false;
         PaidCash = PaidCard = PaidBonus = DiscountAmount = 0;
@@ -1678,6 +1749,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         SelectedCustomer = held.Customer;
         HeldSales.Remove(held);
         _heldStore.Save(HeldSales);
+        SelectedHeld = null;
         IsHeldPanelOpen = false;
         NotifyTotals();
     }
@@ -1687,10 +1759,43 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         HeldSales.Remove(held);
         _heldStore.Save(HeldSales);
+        if (ReferenceEquals(SelectedHeld, held)) SelectedHeld = HeldSales.FirstOrDefault();
     }
 
     [RelayCommand]
-    private void ToggleHeldPanel() => IsHeldPanelOpen = !IsHeldPanelOpen;
+    private void ToggleHeldPanel()
+    {
+        IsHeldPanelOpen = !IsHeldPanelOpen;
+        if (IsHeldPanelOpen) SelectedHeld = HeldSales.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void SelectHeld(HeldSale held) => SelectedHeld = held;
+
+    [RelayCommand]
+    private void SelectQueueRow(QueueRow row) => SelectedQueueRow = row;
+
+    [RelayCommand]
+    private async Task PrintHeldPreviewAsync(HeldSale held)
+    {
+        if (held is null || held.Items.Count == 0) return;
+        try
+        {
+            Cartex.Shared.Models.Business.BusinessDto? business = null;
+            try { business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync); } catch { }
+            _printer.PrintPreview(new PreviewDocument(
+                held.HeldAt,
+                _auth.UserInfo?.FullName,
+                held.CustomerName,
+                [.. held.Items.Select(x => new PreviewLine(
+                    x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
+                0,
+                held.Total,
+                held.Label), business);
+            _toast.Success(L["preview_print"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task ToggleQueuePanelAsync()
@@ -1904,7 +2009,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
                     DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
                     IdempotencyKey: _saleIdempotencyKey,
-                    CreditAmount: CreditAmount);
+                    CreditAmount: CreditAmount,
+                    Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim());
                 result = await _salesApi.CreateAsync(request);
             }
 
@@ -1929,27 +2035,26 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task ShowReceiptAsync(string token, long? customerId = null)
     {
-        ReceiptDto receipt;
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                receipt = await _receiptApi.GetAsync(token);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+        ReceiptDto? receipt = null;
+        try { receipt = await _receiptApi.GetAsync(token); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
 
-        if (_printer.AutoPrintEnabled && !_printer.AutoPrintHandledByServer)
+        if (receipt is not null && _printer.AutoPrintEnabled && !_printer.AutoPrintHandledByServer)
         {
             try { await _printDispatch.PrintReceiptAsync(receipt, false); }
             catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
         }
 
+        // The checkout must always end with the receipt dialog, even if the fetch failed:
+        // it retries inside instead of leaving the cashier with a blank screen.
         var vm = new ReceiptDetailViewModel(
             _receiptApi, _salesApi, _auth, _printDispatch, _dialog, _toast, _busy,
             preloadedReceipt: receipt,
             receiptToken: token,
-            saleId: receipt.SaleId,
-            customerId: customerId ?? receipt.CustomerId,
+            saleId: receipt?.SaleId,
+            customerId: customerId ?? receipt?.CustomerId,
             isPosCheckoutMode: true);
+        if (receipt is null) _ = vm.InitAsync();
 
         await _dialog.ShowAsync<ReceiptDetailDialog, ReceiptDetailViewModel, ReceiptDialogResult>(vm);
     }

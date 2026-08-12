@@ -17,7 +17,7 @@ public sealed class PrintHostService
     private readonly IPrintingApi _printingApi;
     private readonly IReceiptApi _receiptApi;
     private readonly IShiftsApi _shiftsApi;
-    private readonly ITradeCasesApi _tradeCasesApi;
+    private readonly ICustomerReturnsApi _returnsApi;
     private readonly IBusinessApi _businessApi;
     private readonly IPrinterService _printer;
     private readonly IBarcodeLabelService _labels;
@@ -37,7 +37,7 @@ public sealed class PrintHostService
         IPrintingApi printingApi,
         IReceiptApi receiptApi,
         IShiftsApi shiftsApi,
-        ITradeCasesApi tradeCasesApi,
+        ICustomerReturnsApi returnsApi,
         IBusinessApi businessApi,
         IPrinterService printer,
         IBarcodeLabelService labels,
@@ -50,7 +50,7 @@ public sealed class PrintHostService
         _printingApi = printingApi;
         _receiptApi = receiptApi;
         _shiftsApi = shiftsApi;
-        _tradeCasesApi = tradeCasesApi;
+        _returnsApi = returnsApi;
         _businessApi = businessApi;
         _printer = printer;
         _labels = labels;
@@ -326,8 +326,8 @@ public sealed class PrintHostService
                             actualPrinter.Contains("XPS", StringComparison.OrdinalIgnoreCase) ||
                             actualPrinter.Contains("OneNote", StringComparison.OrdinalIgnoreCase));
 
-        if (job.SourceType == "goods_issue")
-            return await PrepareIssueNoteAsync(job, actualPrinter, cancellationToken);
+        if (job.SourceType == "customer_return")
+            return await PrepareReturnAsync(job, actualPrinter, cancellationToken);
 
         if (settings.ReceiptMode is "a4" or "a5" || isPdfPrinter)
         {
@@ -370,11 +370,11 @@ public sealed class PrintHostService
         return () => _printer.PrintReceipt(receipt, actualPrinter ?? "", job.Copies, receiptOptions);
     }
 
-    private async Task<Action> PrepareIssueNoteAsync(AssignedPrintJobDto job, string? actualPrinter, CancellationToken cancellationToken)
+    private async Task<Action> PrepareReturnAsync(AssignedPrintJobDto job, string? actualPrinter, CancellationToken cancellationToken)
     {
-        if (!long.TryParse(job.SourceId, out var issueId) || issueId <= 0)
-            throw new InvalidOperationException("Issue is required.");
-        var issue = await _tradeCasesApi.GetIssuePrintAsync(issueId);
+        if (!long.TryParse(job.SourceId, out var returnId) || returnId <= 0)
+            throw new InvalidOperationException("Return document is required.");
+        var document = await _returnsApi.GetByIdAsync(returnId);
         var receiptOptions = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
 
         BusinessDto? business = null;
@@ -401,11 +401,11 @@ public sealed class PrintHostService
             catch { }
         }
 
-        var issueFilePath = await GetPdfOutputPathAsync(actualPrinter, $"Chek_{issueId}");
+        var returnFilePath = await GetPdfOutputPathAsync(actualPrinter, $"Qaytarish_{returnId}");
         if (receiptOptions != null)
-            receiptOptions = receiptOptions with { OutputFilePath = issueFilePath };
+            receiptOptions = receiptOptions with { OutputFilePath = returnFilePath };
 
-        return () => _printer.PrintIssueNote(issue, actualPrinter ?? "", job.Copies, receiptOptions, business);
+        return () => _printer.PrintReturn(document, actualPrinter ?? "", job.Copies, receiptOptions, business);
     }
 
     private Action PrepareBarcode(AssignedPrintJobDto job)

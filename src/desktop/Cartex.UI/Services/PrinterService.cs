@@ -8,7 +8,6 @@ using Cartex.Shared.Models.Printing;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Settings;
 using Cartex.Shared.Models.Shifts;
-using Cartex.Shared.Models.TradeCases;
 
 namespace Cartex.UI.Services;
 
@@ -136,6 +135,17 @@ public static class LabelSize
     }
 }
 
+public sealed record PreviewLine(string Name, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount);
+
+public sealed record PreviewDocument(
+    DateTime CreatedAt,
+    string? UserName,
+    string? CustomerName,
+    IReadOnlyList<PreviewLine> Lines,
+    decimal Discount,
+    decimal Total,
+    string? Note);
+
 public interface IPrinterService
 {
     IReadOnlyList<string> GetInstalledPrinters();
@@ -151,8 +161,10 @@ public interface IPrinterService
     void PrintReceipt(ReceiptDto receipt);
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies);
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options);
-    void PrintIssueNote(GoodsIssuePrintDto issue, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null);
-    byte[] FormatIssueNote(GoodsIssuePrintDto issue, ReceiptPrintOptions? options, BusinessDto? business = null);
+    void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null);
+    byte[] FormatReturn(CustomerReturnDocumentDto document, ReceiptPrintOptions? options, BusinessDto? business = null);
+    void PrintPreview(PreviewDocument document, BusinessDto? business = null);
+    byte[] FormatPreview(PreviewDocument document, ReceiptPrintOptions? options, BusinessDto? business = null);
     void PrintZReport(ZReportDto report);
     void PrintZReport(ZReportDto report, string printerName, int copies, string? outputFilePath = null);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
@@ -280,18 +292,65 @@ public sealed class PrinterService : IPrinterService
         }
     }
 
-    public void PrintIssueNote(GoodsIssuePrintDto issue, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null)
+    public void PrintPreview(PreviewDocument document, BusinessDto? business = null)
+    {
+        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
+            ? ReceiptOptions is null
+                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
+                : ReceiptOptions with { Width = _settings.ReceiptPaperWidth }
+            : ReceiptOptions;
+        var printerName = _settings.ReceiptPrinter ?? "";
+        var bytes = FormatPreview(document, opts, business);
+        if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
+            RawPrinter.Send(printerName, bytes, "Cartex Preview", opts?.OutputFilePath);
+    }
+
+    public byte[] FormatPreview(PreviewDocument document, ReceiptPrintOptions? opts, BusinessDto? business = null)
+    {
+        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        var sb = new StringBuilder();
+        if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
+        if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
+        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        sb.AppendLine(new string('=', w));
+        sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
+        sb.AppendLine(new string('=', w));
+        sb.AppendLine(document.CreatedAt.ToString("dd.MM.yyyy HH:mm"));
+        if (!string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Sotuvchi: {document.UserName}");
+        if (!string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
+        sb.AppendLine(new string('-', w));
+        foreach (var line in document.Lines)
+        {
+            sb.AppendLine(line.Name);
+            sb.AppendLine(Row($"  {line.Quantity:0.###} {line.Unit} x {line.UnitPrice:N0}", $"{line.Amount:N0}", w));
+        }
+        sb.AppendLine(new string('-', w));
+        if (document.Discount > 0) sb.AppendLine(Row("Chegirma", $"-{document.Discount:N0}", w));
+        sb.AppendLine(Row("JAMI", $"{document.Total:N0}", w));
+        if (!string.IsNullOrWhiteSpace(document.Note))
+        {
+            sb.AppendLine(new string('-', w));
+            sb.AppendLine($"Izoh: {document.Note}");
+        }
+        sb.AppendLine();
+        sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
+        sb.AppendLine();
+        sb.AppendLine();
+        return BuildEscPosReceipt(sb.ToString(), null, opts?.LogoRasterBytes);
+    }
+
+    public void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null)
     {
         var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
             ? options is null
                 ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
                 : options with { Width = _settings.ReceiptPaperWidth }
             : options;
-        var bytes = FormatIssueNote(issue, opts, business);
+        var bytes = FormatReturn(document, opts, business);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
             if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
-                RawPrinter.Send(printerName, bytes, "Cartex Issue Note", opts?.OutputFilePath);
+                RawPrinter.Send(printerName, bytes, "Cartex Return", opts?.OutputFilePath);
         }
     }
 
@@ -514,46 +573,53 @@ public sealed class PrinterService : IPrinterService
         return sb.ToString();
     }
 
-    public byte[] FormatIssueNote(GoodsIssuePrintDto issue, ReceiptPrintOptions? opts, BusinessDto? business = null)
+    public byte[] FormatReturn(CustomerReturnDocumentDto document, ReceiptPrintOptions? opts, BusinessDto? business = null)
     {
         var w = opts?.Width is 42 or 48 ? opts.Width : 32;
         var sb = new StringBuilder();
         if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
-        if (opts?.ShowBranchName != false && !string.IsNullOrWhiteSpace(issue.BranchName)) sb.AppendLine(Center(issue.BranchName, w));
         if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
         if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
         if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
-        sb.AppendLine(Center("VAQTINCHALIK CHEK", w));
+        sb.AppendLine(Center("MAHSULOT QAYTARISH", w));
         sb.AppendLine(new string('=', w));
-        sb.AppendLine(Center("YAKUNILANMAGAN", w));
-        sb.AppendLine(new string('=', w));
-        sb.AppendLine(issue.CreatedAt.ToString("dd.MM.yyyy HH:mm"));
-        sb.AppendLine($"Hujjat № {issue.DocumentNumber}");
-        sb.AppendLine($"Ish: {issue.CaseNumber} {issue.CaseTitle}".TrimEnd());
-        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(issue.SellerName)) sb.AppendLine($"Sotuvchi: {issue.SellerName}");
-        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(issue.CustomerName)) sb.AppendLine($"Mijoz: {issue.CustomerName}");
-        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(issue.CustomerPhone)) sb.AppendLine($"Tel: {issue.CustomerPhone}");
+        sb.AppendLine(document.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+        sb.AppendLine($"Hujjat № {document.DocumentNumber}");
+        sb.AppendLine($"Ombor: {document.WarehouseName}");
+        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Xodim: {document.UserName}");
+        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
         sb.AppendLine(new string('-', w));
-        foreach (var line in issue.Lines)
+        foreach (var line in document.Lines)
         {
             sb.AppendLine(line.ProductName);
-            sb.AppendLine(Row($"  {line.Quantity:0.###} {line.UnitShortName} x {line.UnitPrice:N0}", $"{line.Amount:N0}", w));
+            sb.AppendLine(Row($"  {line.Quantity:0.###} {line.UnitName} x {line.UnitPrice:N0}", $"{line.LineAmount:N0}", w));
         }
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Row("JAMI", $"{issue.TotalAmount:N0} {issue.Currency}", w));
-        if (!string.IsNullOrWhiteSpace(issue.Note))
+        sb.AppendLine(Row("JAMI", $"{document.RefundAmount:N0}", w));
+        foreach (var settlement in document.Settlements)
+            sb.AppendLine(Row($"  {SettlementLabel(settlement.Method)}", $"{settlement.AmountBase:N0}", w));
+        if (!string.IsNullOrWhiteSpace(document.Note))
         {
             sb.AppendLine(new string('-', w));
-            sb.AppendLine($"Izoh: {issue.Note}");
+            sb.AppendLine($"Izoh: {document.Note}");
         }
-        sb.AppendLine(new string('-', w));
-        sb.AppendLine("Mijoz zimmasidagi tovar qoldig'i cheki");
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(opts?.FooterText)) sb.AppendLine(Center(opts.FooterText, w));
         sb.AppendLine();
         sb.AppendLine();
         return BuildEscPosReceipt(sb.ToString(), null, opts?.LogoRasterBytes);
     }
+
+    private static string SettlementLabel(string method) => method switch
+    {
+        "ReduceDebt" => "Qarzdan",
+        "Cash" => "Naqd",
+        "Card" => "Karta",
+        "Bonus" => "Bonus",
+        "CustomerAdvance" => "Avansga",
+        "NoCharge" => "Hisobsiz",
+        _ => method
+    };
 
     private static byte[] BuildEscPosReceipt(string text, string? qrContent, byte[]? logoRasterBytes = null)
     {

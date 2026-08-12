@@ -38,18 +38,18 @@ public sealed class PrintDispatchService(
             reprint ? $"z-reprint:{report.ShiftId}:{Guid.NewGuid():N}" : $"z:{report.ShiftId}",
             cancellationToken);
 
-    public Task PrintIssueNoteAsync(long issueId, long? branchId = null, CancellationToken cancellationToken = default) =>
+    public Task PrintReturnAsync(long returnId, long? branchId = null, CancellationToken cancellationToken = default) =>
         CreateAsync(
             PrintJobKind.Receipt,
-            "goods_issue",
-            issueId.ToString(),
-            JsonSerializer.SerializeToElement(new { issueId }),
+            "customer_return",
+            returnId.ToString(),
+            JsonSerializer.SerializeToElement(new { returnId }),
             false,
             null,
-            $"issue-note:{issueId}:{Guid.NewGuid():N}",
+            $"return:{returnId}:{Guid.NewGuid():N}",
             cancellationToken,
             branchId: branchId,
-            kindLabel: LocalizationManager.Instance["print_kind_issue_note"]);
+            kindLabel: LocalizationManager.Instance["print_kind_return"]);
 
     public Task PrintBarcodeAsync(
         string code,
