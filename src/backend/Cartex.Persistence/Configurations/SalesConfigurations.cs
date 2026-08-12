@@ -53,6 +53,10 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.ReceiptToken).IsUnique();
+        builder.Property(x => x.Note).HasMaxLength(1000);
+        builder.Property(x => x.VoidReason).HasMaxLength(500);
+        builder.HasOne(x => x.Shift).WithMany().HasForeignKey(x => x.ShiftId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.ShiftId);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
         builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => x.BranchId);
@@ -72,12 +76,6 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
             .WithMany(c => c.Sales)
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(x => x.TradeCase)
-            .WithMany(x => x.Sales)
-            .HasForeignKey(x => x.TradeCaseId)
-            .OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => x.TradeCaseId);
     }
 }
 

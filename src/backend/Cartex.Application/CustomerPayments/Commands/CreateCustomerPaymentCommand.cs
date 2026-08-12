@@ -25,8 +25,7 @@ public sealed record CreateCustomerPaymentCommand(
     bool AutoAllocateDebt = true,
     DateOnly? BusinessDate = null,
     string? Note = null,
-    string? IdempotencyKey = null,
-    long? TradeCaseId = null) : ICommand<CustomerPaymentCreatedDto>;
+    string? IdempotencyKey = null) : ICommand<CustomerPaymentCreatedDto>;
 
 public sealed class CreateCustomerPaymentCommandHandler(
     IApplicationDbContext db,
@@ -66,17 +65,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll)
             && customer.AssignedUserId != currentUser.UserId)
             throw new NotFoundException("Customer not found.", "customer_not_found");
-
-        if (request.TradeCaseId is { } tradeCaseId)
-        {
-            var validCase = await db.TradeCases.AnyAsync(x =>
-                x.Id == tradeCaseId
-                && x.CustomerId == request.CustomerId
-                && x.BranchId == branchId
-                && x.Status != TradeCaseStatus.Cancelled, cancellationToken);
-            if (!validCase)
-                throw new BusinessRuleException("To'lov bog'lanayotgan loyiha mos emas.", "invalid_trade_case_payment");
-        }
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var normalizedTenders = request.Tenders.Select(x => new CustomerPaymentTenderInput(
@@ -217,7 +205,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
         {
             BranchId = branchId,
             CustomerId = request.CustomerId,
-            TradeCaseId = request.TradeCaseId,
             UserId = userId,
             DocumentNumber = await DocumentNumbers.NextAsync(db, "PAY", businessDate, cancellationToken),
             BusinessDate = businessDate,
@@ -232,7 +219,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
             var account = await ledger.BranchAccountAsync(branchId, AccountTypeFor(tender.Method), cancellationToken, tender.Currency);
             var transaction = ledger.Post(OperationType.CustomerPayment, tender.Amount, null, account, userId, shiftId, tender.Rate);
             transaction.CustomerPaymentDocument = document;
-            transaction.TradeCaseId = request.TradeCaseId;
             transaction.Description = document.DocumentNumber;
         }
 
@@ -258,7 +244,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
             document.Allocations.Add(row);
             var transaction = ledger.Post(OperationType.DebtPay, allocation.Amount, debt, null, userId, shiftId, rate);
             transaction.CustomerPaymentDocument = document;
-            transaction.TradeCaseId = request.TradeCaseId;
             transaction.SaleId = allocation.SaleId;
             transaction.Description = document.DocumentNumber;
             allocatedBase += amountBase;
@@ -273,7 +258,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
             var transaction = ledger.Post(
                 OperationType.CustomerAdvance, document.AdvanceBaseAmount, null, advance, userId, shiftId);
             transaction.CustomerPaymentDocument = document;
-            transaction.TradeCaseId = request.TradeCaseId;
             transaction.Description = document.DocumentNumber;
         }
 
@@ -285,7 +269,6 @@ public sealed class CreateCustomerPaymentCommandHandler(
         {
             document.DocumentNumber,
             document.CustomerId,
-            document.TradeCaseId,
             document.TotalBaseAmount,
             document.AllocatedBaseAmount,
             document.AdvanceBaseAmount,

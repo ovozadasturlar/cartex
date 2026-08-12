@@ -59,7 +59,7 @@ public sealed class PartnersController(ISender sender) : ControllerBase
         Ok(await sender.Send(new SaveParticipantRoleCommand(request.Id, request.Key,
             request.SingularLabel, request.PluralLabel, request.IsEnabled, request.IsRequired,
             request.CanEqualBuyer, request.MaxCount, request.AppliesToCart, request.AppliesToSale,
-            request.AppliesToTradeCase, request.SortOrder)));
+            request.SortOrder)));
 
     [HttpGet("programs")]
     [HasPermission(AppPermissions.PartnerRewards.View)]

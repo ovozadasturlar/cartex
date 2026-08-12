@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Sales;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
@@ -9,8 +10,10 @@ namespace Cartex.Application.Sales.Queries;
 
 public sealed record GetSaleByIdQuery(long Id) : IRequest<SaleDetailDto>;
 
-public sealed class GetSaleByIdQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<GetSaleByIdQuery, SaleDetailDto>
+public sealed class GetSaleByIdQueryHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    ISaleCorrectionPolicy correctionPolicy) : IRequestHandler<GetSaleByIdQuery, SaleDetailDto>
 {
     public async Task<SaleDetailDto> Handle(GetSaleByIdQuery request, CancellationToken cancellationToken)
     {
@@ -34,8 +37,6 @@ public sealed class GetSaleByIdQueryHandler(IApplicationDbContext db, ICurrentUs
             x.CustomerId,
             x.Customer != null ? x.Customer.FullName : null,
             x.Customer != null ? x.Customer.Phone : null,
-            x.TradeCaseId,
-            x.TradeCase != null ? x.TradeCase.CaseNumber : null,
             x.TotalAmount,
             x.DiscountAmount,
             x.PaidCash,
@@ -68,11 +69,13 @@ public sealed class GetSaleByIdQueryHandler(IApplicationDbContext db, ICurrentUs
             x.Participants.OrderBy(p => p.Id).Select(p => new SaleDetailParticipantDto(
                 p.RoleDefinitionId, p.PartyId, p.RoleLabelSnapshot, p.PartyNameSnapshot,
                 p.PartyPhoneSnapshot, p.Source.ToString())).ToList(),
-            db.CustomerReturnDocuments.Where(r => r.SaleId == x.Id)
+            db.CustomerReturnDocuments.Where(r => r.Lines.Any(line => line.SaleId == x.Id))
                 .OrderByDescending(r => r.BusinessDate).ThenByDescending(r => r.Id)
                 .Select(r => new SaleReturnSummaryDto(r.Id, r.DocumentNumber, r.BusinessDate,
-                    r.RefundAmount, r.IsFullReturn, r.Status.ToString())).ToList(),
-            new List<string>()))
+                    r.RefundAmount, r.Status.ToString())).ToList(),
+            new List<string>(),
+            x.Note,
+            x.VoidReason))
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Sale not found.", "sale_not_found");
 
@@ -82,13 +85,13 @@ public sealed class GetSaleByIdQueryHandler(IApplicationDbContext db, ICurrentUs
         if (sale.CustomerId.HasValue && currentUser.HasPermission(AppPermissions.Customers.Message))
             actions.Add("resendReceipt");
         if (sale.Items.Any(x => x.ReturnableQuantity > 0)
-            && (currentUser.HasPermission(AppPermissions.Returns.Create)
-                || currentUser.HasPermission(AppPermissions.Sales.Return)))
+            && currentUser.HasPermission(AppPermissions.Returns.Create))
             actions.Add("createReturn");
         if (sale.CustomerId.HasValue && currentUser.HasPermission(AppPermissions.Customers.View))
             actions.Add("openCustomer");
-        if (sale.TradeCaseId.HasValue && currentUser.HasPermission(AppPermissions.TradeCases.View))
-            actions.Add("openCase");
+        if (currentUser.HasPermission(AppPermissions.Sales.Void)
+            && await correctionPolicy.CanCorrectAsync(sale.Id, cancellationToken))
+            actions.Add("correctSale");
         return sale with { AllowedActions = actions };
     }
 }

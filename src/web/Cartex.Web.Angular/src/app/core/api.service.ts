@@ -3,18 +3,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
   CashierSales,
-  ChangeTradeCaseStatusRequest,
-  CreateGoodsIssueRequest,
-  CreateGoodsReturnRequest,
-  CreateTradeCaseRequest,
   Customer,
   CustomerSales,
   CustomerTotals,
   DailyCashFlow,
   DebtAgingReport,
-  GoodsIssueCreated,
-  GoodsIssuePrint,
-  GoodsReturnCreated,
   LedgerEntry,
   LowStock,
   Product,
@@ -24,12 +17,6 @@ import {
   SalesBreakdown,
   SalesReport,
   SalesTotals,
-  SettleTradeCaseRequest,
-  TradeCaseDetail,
-  TradeCaseList,
-  TradeCaseSettlementCreated,
-  TradeCaseStatement,
-  UpdateTradeCaseRequest,
   Warehouse,
 } from './models';
 import { ListQuery, Paged, listParams, toPaged } from './paging';
@@ -208,105 +195,5 @@ export class CatalogApi {
 
   enabledFeatures(): Observable<string[]> {
     return this.http.get<string[]>('/api/features/enabled');
-  }
-}
-
-@Injectable({ providedIn: 'root' })
-export class TradeCasesApi {
-  private readonly http = inject(HttpClient);
-
-  list(params?: {
-    page?: number;
-    pageSize?: number;
-    search?: string;
-    status?: string;
-    warehouseId?: number;
-    customerId?: number;
-  }): Observable<Paged<TradeCaseList>> {
-    const queryParams: Record<string, string> = {};
-    if (params?.page) queryParams['Page'] = String(params.page);
-    if (params?.pageSize) queryParams['PageSize'] = String(params.pageSize);
-    if (params?.search) queryParams['Search'] = params.search;
-    if (params?.status) queryParams['Status'] = params.status;
-    if (params?.warehouseId) queryParams['WarehouseId'] = String(params.warehouseId);
-    if (params?.customerId) queryParams['CustomerId'] = String(params.customerId);
-
-    return this.http
-      .get<TradeCaseList[]>('/api/trade-cases', { params: queryParams, observe: 'response' })
-      .pipe(map(toPaged));
-  }
-
-  getById(id: number): Observable<TradeCaseDetail> {
-    return this.http.get<TradeCaseDetail>(`/api/trade-cases/${id}`);
-  }
-
-  create(request: CreateTradeCaseRequest): Observable<TradeCaseList> {
-    return this.http.post<TradeCaseList>('/api/trade-cases', request);
-  }
-
-  update(id: number, request: UpdateTradeCaseRequest): Observable<void> {
-    return this.http.put<void>(`/api/trade-cases/${id}`, request);
-  }
-
-  close(id: number, request: ChangeTradeCaseStatusRequest): Observable<void> {
-    return this.http.post<void>(`/api/trade-cases/${id}/close`, request);
-  }
-
-  cancel(id: number, request: ChangeTradeCaseStatusRequest): Observable<void> {
-    return this.http.post<void>(`/api/trade-cases/${id}/cancel`, request);
-  }
-
-  linkSale(id: number, saleId: number): Observable<void> {
-    return this.http.put<void>(`/api/trade-cases/${id}/sales/${saleId}`, {});
-  }
-
-  unlinkSale(id: number, saleId: number): Observable<void> {
-    return this.http.delete<void>(`/api/trade-cases/${id}/sales/${saleId}`);
-  }
-
-  issue(id: number, request: CreateGoodsIssueRequest): Observable<GoodsIssueCreated> {
-    return this.http.post<GoodsIssueCreated>(`/api/trade-cases/${id}/issues`, request);
-  }
-
-  returnGoods(id: number, request: CreateGoodsReturnRequest): Observable<GoodsReturnCreated> {
-    return this.http.post<GoodsReturnCreated>(`/api/trade-cases/${id}/returns`, request);
-  }
-
-  settle(id: number, request: SettleTradeCaseRequest): Observable<TradeCaseSettlementCreated> {
-    return this.http.post<TradeCaseSettlementCreated>(
-      `/api/trade-cases/${id}/settlements`,
-      request,
-    );
-  }
-
-  statement(
-    id: number,
-    params?: { from?: string | null; to?: string | null },
-  ): Observable<TradeCaseStatement> {
-    const queryParams: Record<string, string> = {};
-    if (params?.from) queryParams['From'] = params.from;
-    if (params?.to) queryParams['To'] = params.to;
-    return this.http.get<TradeCaseStatement>(`/api/trade-cases/${id}/statement`, {
-      params: queryParams,
-    });
-  }
-
-  exportStatement(
-    id: number,
-    format: string = 'pdf',
-    mode: string = 'both',
-    params?: { from?: string | null; to?: string | null },
-  ): Observable<Blob> {
-    const queryParams: Record<string, string> = { format, mode };
-    if (params?.from) queryParams['From'] = params.from;
-    if (params?.to) queryParams['To'] = params.to;
-    return this.http.get(`/api/trade-cases/${id}/statement/export`, {
-      params: queryParams,
-      responseType: 'blob',
-    });
-  }
-
-  getIssuePrint(issueId: number): Observable<GoodsIssuePrint> {
-    return this.http.get<GoodsIssuePrint>(`/api/trade-cases/issues/${issueId}/print`);
   }
 }

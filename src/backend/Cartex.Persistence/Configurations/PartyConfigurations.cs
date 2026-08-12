@@ -85,19 +85,6 @@ public sealed class CartParticipantConfiguration : IEntityTypeConfiguration<Cart
     }
 }
 
-public sealed class TradeCaseParticipantConfiguration : IEntityTypeConfiguration<TradeCaseParticipant>
-{
-    public void Configure(EntityTypeBuilder<TradeCaseParticipant> builder)
-    {
-        builder.ToTable("trade_case_participants");
-        SaleParticipantConfiguration.ConfigureSnapshot(builder);
-        builder.HasIndex(x => new { x.TradeCaseId, x.RoleDefinitionId, x.PartyId }).IsUnique();
-        builder.HasOne(x => x.TradeCase).WithMany(x => x.Participants).HasForeignKey(x => x.TradeCaseId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne(x => x.RoleDefinition).WithMany().HasForeignKey(x => x.RoleDefinitionId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.Party).WithMany().HasForeignKey(x => x.PartyId).OnDelete(DeleteBehavior.Restrict);
-    }
-}
-
 public sealed class PartnerProgramConfiguration : IEntityTypeConfiguration<PartnerProgram>
 {
     public void Configure(EntityTypeBuilder<PartnerProgram> builder)

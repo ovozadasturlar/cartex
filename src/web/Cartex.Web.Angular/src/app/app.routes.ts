@@ -85,13 +85,6 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/supplies/supplies').then((m) => m.Supplies),
       },
       {
-        path: 'trade-cases',
-        canActivate: [permissionGuard],
-        data: { permission: 'tradeCases.view' },
-        loadComponent: () =>
-          import('./pages/trade-cases/trade-cases-page/trade-cases-page').then((m) => m.TradeCases),
-      },
-      {
         path: 'barcode-print',
         canActivate: [permissionGuard],
         data: { permission: 'products.printBarcode' },

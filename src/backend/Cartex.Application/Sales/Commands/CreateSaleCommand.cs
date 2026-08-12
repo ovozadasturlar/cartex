@@ -62,8 +62,7 @@ public record CreateSaleCommand(
     bool FromQueuedCart = false,
     bool UseCustomerAdvance = true,
     List<ParticipantInput>? Participants = null,
-    [property: JsonIgnore] long? TradeCaseId = null,
-    [property: JsonIgnore] bool StockAlreadyIssued = false,
+    string? Note = null,
     [property: JsonIgnore] bool FromOfflineSync = false,
     [property: JsonIgnore] long? OfflineActorUserId = null) : ICommand<CreateSaleResult>;
 
@@ -92,17 +91,10 @@ public sealed class CreateSaleCommandHandler(
         if (request.OfflineActorUserId.HasValue && !request.FromOfflineSync)
             throw new ForbiddenException("Offline actor can only be used by the replay pipeline.");
         var userId = request.OfflineActorUserId ?? authenticatedUserId;
-        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout)
-            && !(request.TradeCaseId.HasValue
-                 && currentUser.HasPermission(AppPermissions.TradeCases.Settle)))
+        if (!currentUser.HasPermission(AppPermissions.Sales.Checkout))
             throw new ForbiddenException("Sale checkout permission is required.");
-        if (!request.FromQueuedCart && request.TradeCaseId is null
-            && !currentUser.HasPermission(AppPermissions.Sales.Create))
+        if (!request.FromQueuedCart && !currentUser.HasPermission(AppPermissions.Sales.Create))
             throw new ForbiddenException("Sale creation permission is required.");
-        if (request.TradeCaseId is not null && !currentUser.HasPermission(AppPermissions.TradeCases.Settle))
-            throw new ForbiddenException("Loyihani hisob-kitob qilishga ruxsat yo'q.");
-        if (request.StockAlreadyIssued != request.TradeCaseId.HasValue)
-            throw new BusinessRuleException("Saqlovdagi ombor manbasi noto'g'ri.", "invalid_custody_sale_source");
 
         var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
         if (idempotencyKey is not null)
@@ -124,20 +116,6 @@ public sealed class CreateSaleCommandHandler(
         if (warehouse.AssignedUserId != userId &&
             await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
             throw new BusinessRuleException("Sizga biriktirilgan ombor bor — savdo faqat o'sha ombordan qilinadi.");
-
-        if (request.TradeCaseId is { } tradeCaseId)
-        {
-            var validCase = await db.TradeCases.AnyAsync(x =>
-                x.Id == tradeCaseId
-                && x.WarehouseId == request.WarehouseId
-                && x.CustomerId == request.CustomerId
-                && x.Status != TradeCaseStatus.Cancelled
-                && x.Status != TradeCaseStatus.Settled, cancellationToken);
-            if (!validCase)
-                throw new BusinessRuleException("Loyiha va savdo ma'lumotlari mos emas.", "invalid_trade_case_sale");
-            if (request.Items.Any(x => x.StockId is null || x.PrepackId is not null))
-                throw new BusinessRuleException("Saqlovdagi har bir qatorning ombor manbasi bo'lishi kerak.", "custody_stock_source_required");
-        }
 
         var resolvedParticipants = await participantService.ResolveAsync(
             request.Participants, ParticipantContext.Sale, request.CustomerId, cancellationToken);
@@ -243,67 +221,41 @@ public sealed class CreateSaleCommandHandler(
                 if (item.UnitPrice is null)
                     throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (VariantId={item.VariantId}).");
 
-                if (request.TradeCaseId.HasValue)
+                var newPrice = await db.ProductPrices.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
+                if (newPrice is null)
                 {
-                    var sourceCode = string.IsNullOrWhiteSpace(item.SourceCurrency)
-                        ? baseCode
-                        : item.SourceCurrency.Trim().ToUpperInvariant();
-                    var fallbackRate = item.SourceRate is > 0 ? item.SourceRate.Value : 1m;
-                    catalogPrice = new CatalogPrice(
-                        new ProductPrice { VariantId = item.VariantId, Currency = sourceCode },
-                        item.UnitPrice.Value,
-                        sourceCode,
-                        fallbackRate);
+                    newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
+                    db.ProductPrices.Add(newPrice);
                 }
                 else
                 {
-
-                    var newPrice = await db.ProductPrices.IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
-                    if (newPrice is null)
-                    {
-                        newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
-                        db.ProductPrices.Add(newPrice);
-                    }
-                    else
-                    {
-                        newPrice.IsDeleted = false;
-                        newPrice.SellingPrice = 0;
-                        newPrice.Currency = baseCode;
-                    }
-                    prices.Add(newPrice);
-                    catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
+                    newPrice.IsDeleted = false;
+                    newPrice.SellingPrice = 0;
+                    newPrice.Currency = baseCode;
                 }
+                prices.Add(newPrice);
+                catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
             }
 
             var enteredPrice = item.UnitPrice ?? catalogPrice.Amount;
-            var priceDiscount = request.TradeCaseId.HasValue
-                ? 0
-                : Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
-            var unitPrice = request.TradeCaseId.HasValue
-                ? enteredPrice
-                : Math.Max(catalogPrice.Amount, enteredPrice);
+            var priceDiscount = Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
+            var unitPrice = Math.Max(catalogPrice.Amount, enteredPrice);
 
-            if (request.TradeCaseId is null && item.UnitPrice is not null && enteredPrice != catalogPrice.Amount)
+            if (item.UnitPrice is not null && enteredPrice != catalogPrice.Amount)
                 priceOverrides.Add((item.VariantId, catalogPrice.Amount, enteredPrice));
 
-            if (!request.TradeCaseId.HasValue && enteredPrice > catalogPrice.Amount &&
+            if (enteredPrice > catalogPrice.Amount &&
                 (!priceIncreases.TryGetValue(catalogPrice.Source, out var increase) || enteredPrice > increase.Amount))
                 priceIncreases[catalogPrice.Source] = new CatalogPrice(catalogPrice.Source, enteredPrice, catalogPrice.Currency, catalogPrice.Rate);
 
-            var sourceCurrency = request.TradeCaseId.HasValue && !string.IsNullOrWhiteSpace(item.SourceCurrency)
-                ? item.SourceCurrency.Trim().ToUpperInvariant()
-                : catalogPrice.Currency;
-            var sourceRate = request.TradeCaseId.HasValue && item.SourceRate is > 0
-                ? item.SourceRate.Value
-                : catalogPrice.Rate;
             resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice,
-                sourceCurrency, sourceRate, priceDiscount));
+                catalogPrice.Currency, catalogPrice.Rate, priceDiscount));
         }
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
-        if (priceOverrides.Count > 0 && request.TradeCaseId is null
+        if (priceOverrides.Count > 0
             && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
@@ -485,7 +437,6 @@ public sealed class CreateSaleCommandHandler(
             WarehouseId = request.WarehouseId,
             UserId = userId,
             CustomerId = request.CustomerId,
-            TradeCaseId = request.TradeCaseId,
             TotalAmount = totalAmount,
             DiscountAmount = discountAmount,
             PaidCash = paidCash - changeAmount,
@@ -500,6 +451,8 @@ public sealed class CreateSaleCommandHandler(
             CreditAmount = creditAmount,
             Status = SaleStatus.Completed,
             ReceiptToken = Guid.NewGuid().ToString("N"),
+            ShiftId = shiftId,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             IdempotencyKey = idempotencyKey,
             Payments = payments
         };
@@ -511,49 +464,17 @@ public sealed class CreateSaleCommandHandler(
                 PartyNameSnapshot = participant.PartyName,
                 PartyPhoneSnapshot = participant.PartyPhone,
                 RoleLabelSnapshot = participant.RoleLabel,
-                Source = request.TradeCaseId.HasValue
-                    ? ParticipantAttributionSource.CaseInherited
-                    : request.FromQueuedCart
-                        ? ParticipantAttributionSource.CartInherited
-                        : ParticipantAttributionSource.Direct
+                Source = request.FromQueuedCart
+                    ? ParticipantAttributionSource.CartInherited
+                    : ParticipantAttributionSource.Direct
             });
 
         var cashbackFactor = grossAmount > 0 ? totalAmount / grossAmount : 1m;
-        Dictionary<long, Stock> issuedStocks = [];
-        if (request.StockAlreadyIssued)
-        {
-            var stockIds = resolvedItems.Select(x => x.Item.StockId!.Value).Distinct().ToList();
-            issuedStocks = await db.Stocks
-                .Where(x => stockIds.Contains(x.Id) && x.WarehouseId == request.WarehouseId)
-                .ToDictionaryAsync(x => x.Id, cancellationToken);
-            if (issuedStocks.Count != stockIds.Count
-                || resolvedItems.Any(x => issuedStocks[x.Item.StockId!.Value].VariantId != x.Item.VariantId))
-                throw new BusinessRuleException("Saqlovdagi mahsulot partiyasi mos emas.", "invalid_custody_stock_source");
-        }
-        else
-        {
-            await stockAllocator.PreloadAsync(request.WarehouseId,
-                resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
-        }
+        await stockAllocator.PreloadAsync(request.WarehouseId,
+            resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
 
         foreach (var line in resolvedItems)
         {
-            if (request.StockAlreadyIssued)
-            {
-                var stock = issuedStocks[line.Item.StockId!.Value];
-                sale.Items.Add(new SaleItem
-                {
-                    VariantId = line.Item.VariantId,
-                    StockId = stock.Id,
-                    Stock = stock,
-                    Quantity = line.Quantity,
-                    UnitPrice = line.UnitPrice,
-                    PriceCurrency = line.Currency,
-                    PriceRate = line.Rate,
-                    PurchasePrice = stock.PurchasePrice
-                });
-                continue;
-            }
 
             var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId, line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
 
@@ -610,7 +531,6 @@ public sealed class CreateSaleCommandHandler(
             sale.BranchId,
             sale.WarehouseId,
             sale.CustomerId,
-            sale.TradeCaseId,
             sale.TotalAmount,
             sale.DiscountAmount,
             sale.PaidCash,
@@ -649,7 +569,6 @@ public sealed class CreateSaleCommandHandler(
         {
             var transaction = ledger.Post(type, amount, from, to, userId, shiftId, rate);
             transaction.Sale = sale;
-            transaction.TradeCaseId = sale.TradeCaseId;
         }
 
         if (sale.Payments.Count > 0)

@@ -6,6 +6,9 @@ namespace Cartex.ApiClient.Api;
 public interface ICustomerReturnsApi
 {
     [Get("/api/customer-returns")]
+    Task<IApiResponse<List<CustomerReturnListDto>>> QueryAsync([Query] IDictionary<string, object> query);
+
+    [Get("/api/customer-returns")]
     Task<List<CustomerReturnListDto>> GetAsync(
         [Query] long? customerId = null,
         [Query] long? saleId = null,

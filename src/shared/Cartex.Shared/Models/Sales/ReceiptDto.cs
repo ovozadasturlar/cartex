@@ -36,10 +36,8 @@ public record ReceiptDto(
     decimal PaidAdvance = 0,
     string? MonochromeLogoImageKey = null,
     long? CustomerId = null,
-    long? TradeCaseId = null,
-    string? TradeCaseNumber = null,
-    string? TradeCaseTitle = null)
+    string? Note = null)
 {
     public bool HasPayments => Payments.Count > 0;
-    public bool HasTradeCase => TradeCaseId is not null && TradeCaseId > 0;
+    public bool HasNote => !string.IsNullOrWhiteSpace(Note);
 }

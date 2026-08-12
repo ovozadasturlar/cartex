@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
@@ -13,11 +14,11 @@ public sealed record GetCustomerStatementQuery(
     long CustomerId,
     DateTime? From = null,
     DateTime? To = null,
-    long? TradeCaseId = null,
     long? BranchId = null,
     string? DocumentTypes = null) : IRequest<CustomerStatementDto>;
 
 internal sealed record AccountRow(long Id, AccountType Type, string Currency);
+
 internal sealed record RawStatementEntry(
     DateTime OccurredAt,
     string Type,
@@ -27,7 +28,6 @@ internal sealed record RawStatementEntry(
     decimal Delta,
     string Currency,
     long? SaleId,
-    long? TradeCaseId,
     long Order);
 
 internal sealed class ProductAccumulator(long variantId, string name, string unit)
@@ -36,10 +36,7 @@ internal sealed class ProductAccumulator(long variantId, string name, string uni
     public string Name { get; } = name;
     public string Unit { get; } = unit;
     public decimal Sold { get; set; }
-    public decimal SaleReturned { get; set; }
-    public decimal CustodyIssued { get; set; }
-    public decimal CustodyReturned { get; set; }
-    public decimal CustodySettled { get; set; }
+    public decimal Returned { get; set; }
     public decimal Charged { get; set; }
 }
 
@@ -53,6 +50,7 @@ public sealed class GetCustomerStatementQueryHandler(
     {
         if (!currentUser.HasPermission(AppPermissions.Statements.View))
             throw new ForbiddenException("Hisob ko'chirmasini ko'rishga ruxsat yo'q.");
+        request = request with { From = request.From.AsUtc(), To = request.To.AsUtc() };
         if (request.To.HasValue && request.From.HasValue && request.To <= request.From)
             throw new BusinessRuleException("Davr sanalari noto'g'ri.", "invalid_date_range");
         if (request.BranchId is { } branchId && !currentUser.CanAccessAllBranches
@@ -66,16 +64,6 @@ public sealed class GetCustomerStatementQueryHandler(
             .Select(x => new { x.Id, x.FullName, x.Phone })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Customer not found.", "customer_not_found");
-
-        string? tradeCaseNumber = null;
-        if (request.TradeCaseId is { } tradeCaseId)
-        {
-            tradeCaseNumber = await db.TradeCases.AsNoTracking()
-                .Where(x => x.Id == tradeCaseId && x.CustomerId == request.CustomerId)
-                .Select(x => x.CaseNumber)
-                .FirstOrDefaultAsync(cancellationToken)
-                ?? throw new NotFoundException("Trade case not found.", "trade_case_not_found");
-        }
 
         var baseCurrency = (await db.Businesses.AsNoTracking().Select(x => x.Currency)
             .FirstAsync(cancellationToken)).ToUpperInvariant();
@@ -125,7 +113,7 @@ public sealed class GetCustomerStatementQueryHandler(
             var rows = await transactions.Select(x => new
             {
                 x.Id, x.CreatedAt, x.OperationType, x.Amount, x.FromAccountId, x.ToAccountId,
-                x.SaleId, x.TradeCaseId,
+                x.SaleId,
                 x.CustomerPaymentDocumentId,
                 PaymentNumber = x.CustomerPaymentDocument != null ? x.CustomerPaymentDocument.DocumentNumber : null,
                 x.CustomerReturnDocumentId,
@@ -133,7 +121,6 @@ public sealed class GetCustomerStatementQueryHandler(
                 x.CustomerRefundDocumentId,
                 RefundNumber = x.CustomerRefundDocument != null ? x.CustomerRefundDocument.DocumentNumber : null,
                 SaleReceipt = x.Sale != null ? x.Sale.ReceiptToken : null,
-                CaseNumber = x.TradeCase != null ? x.TradeCase.CaseNumber : null,
                 x.Description
             }).ToListAsync(cancellationToken);
 
@@ -144,13 +131,13 @@ public sealed class GetCustomerStatementQueryHandler(
                         row.CustomerPaymentDocumentId, row.PaymentNumber,
                         row.CustomerReturnDocumentId, row.ReturnNumber,
                         row.CustomerRefundDocumentId, row.RefundNumber,
-                        row.SaleId, row.SaleReceipt, row.TradeCaseId, row.CaseNumber, row.Description);
+                        row.SaleId, row.Description);
                 if (row.ToAccountId is long toId && accountById.TryGetValue(toId, out var to))
                     AddTransaction(row.Id, row.CreatedAt, row.OperationType, row.Amount, to,
                         row.CustomerPaymentDocumentId, row.PaymentNumber,
                         row.CustomerReturnDocumentId, row.ReturnNumber,
                         row.CustomerRefundDocumentId, row.RefundNumber,
-                        row.SaleId, row.SaleReceipt, row.TradeCaseId, row.CaseNumber, row.Description);
+                        row.SaleId, row.Description);
             }
 
             void AddTransaction(
@@ -166,9 +153,6 @@ public sealed class GetCustomerStatementQueryHandler(
                 long? refundId,
                 string? refundNumber,
                 long? saleId,
-                string? saleReceipt,
-                long? caseId,
-                string? caseNumber,
                 string? description)
             {
                 var delta = account.Type == AccountType.Debt ? accountDelta : -accountDelta;
@@ -176,24 +160,23 @@ public sealed class GetCustomerStatementQueryHandler(
                     : returnId.HasValue ? "CustomerReturn"
                     : refundId.HasValue ? "CustomerRefund"
                     : saleId.HasValue ? "Sale"
-                    : caseId.HasValue ? "TradeCase"
                     : operation.ToString();
-                var documentId = paymentId ?? returnId ?? refundId ?? saleId ?? caseId ?? transactionId;
+                var documentId = paymentId ?? returnId ?? refundId ?? saleId ?? transactionId;
                 var number = paymentNumber ?? returnNumber ?? refundNumber
                              ?? (saleId.HasValue ? $"SALE-{saleId}" : null)
-                             ?? caseNumber ?? description ?? $"TX-{transactionId}";
+                             ?? description ?? $"TX-{transactionId}";
                 raw.Add(new RawStatementEntry(occurredAt, type, documentId, number,
-                    Summary(operation), delta, account.Currency, saleId, caseId, transactionId));
+                    Summary(operation), delta, account.Currency, saleId, transactionId));
             }
         }
 
-        await AddOperationalRowsAsync(raw, request, cancellationToken);
+        var summary = await AddOperationalRowsAsync(raw, request, baseCurrency, cancellationToken);
         var grouped = raw
-            .GroupBy(x => new { x.Type, x.DocumentId, x.DocumentNumber, x.Currency, x.SaleId, x.TradeCaseId })
+            .GroupBy(x => new { x.Type, x.DocumentId, x.DocumentNumber, x.Currency, x.SaleId })
             .Select(x => new RawStatementEntry(
                 x.Min(row => row.OccurredAt), x.Key.Type, x.Key.DocumentId, x.Key.DocumentNumber,
                 x.OrderBy(row => row.Order).Select(row => row.Summary).First(),
-                x.Sum(row => row.Delta), x.Key.Currency, x.Key.SaleId, x.Key.TradeCaseId,
+                x.Sum(row => row.Delta), x.Key.Currency, x.Key.SaleId,
                 x.Min(row => row.Order)))
             .OrderBy(x => x.OccurredAt).ThenBy(x => x.Order).ToList();
 
@@ -206,7 +189,7 @@ public sealed class GetCustomerStatementQueryHandler(
             allTimeline.Add(new CustomerStatementEntryDto(
                 row.OccurredAt, row.Type, row.DocumentId, row.DocumentNumber, row.Summary,
                 Math.Max(0, row.Delta), Math.Max(0, -row.Delta), balance, row.Currency,
-                row.SaleId, row.TradeCaseId));
+                row.SaleId));
         }
 
         var requestedTypes = string.IsNullOrWhiteSpace(request.DocumentTypes)
@@ -223,71 +206,64 @@ public sealed class GetCustomerStatementQueryHandler(
         var products = await BuildProductsAsync(request, cancellationToken);
 
         return new CustomerStatementDto(customer.Id, customer.FullName, customer.Phone,
-            request.From, request.To, request.TradeCaseId, tradeCaseNumber, request.BranchId,
-            baseCurrency, balances, timeline, products, DateTime.UtcNow);
+            request.From, request.To, request.BranchId,
+            baseCurrency, summary, balances, timeline, products, DateTime.UtcNow);
     }
 
     private IQueryable<Transaction> ApplyTransactionScope(IQueryable<Transaction> query, GetCustomerStatementQuery request)
     {
         if (request.BranchId is { } branchId) query = query.Where(x => x.BranchId == branchId);
         else if (!currentUser.CanAccessAllBranches) query = query.Where(x => x.BranchId == null || currentUser.BranchIds.Contains(x.BranchId.Value));
-        if (request.TradeCaseId is { } tradeCaseId) query = query.Where(x => x.TradeCaseId == tradeCaseId);
         return query;
     }
 
-    private async Task AddOperationalRowsAsync(
+    private async Task<CustomerStatementSummaryDto> AddOperationalRowsAsync(
         List<RawStatementEntry> raw,
         GetCustomerStatementQuery request,
+        string baseCurrency,
         CancellationToken cancellationToken)
     {
         var knownSales = raw.Where(x => x.Type == "Sale" && x.SaleId.HasValue).Select(x => x.SaleId!.Value).ToHashSet();
-        var sales = db.Sales.AsNoTracking().Where(x => x.CustomerId == request.CustomerId);
-        sales = Scope(sales, x => x.BranchId, x => x.TradeCaseId, x => x.CreatedAt, request);
+        var sales = Scope(db.Sales.AsNoTracking()
+                .Where(x => x.CustomerId == request.CustomerId && x.Status != SaleStatus.Voided),
+            x => x.BranchId, x => x.CreatedAt, request);
         var saleRows = await sales.Select(x => new
         {
-            x.Id, x.CreatedAt, x.TradeCaseId, x.ReceiptToken, x.TotalAmount, x.DebtCurrency
+            x.Id, x.CreatedAt, x.ReceiptToken, x.TotalAmount, x.DebtCurrency
         }).ToListAsync(cancellationToken);
         raw.AddRange(saleRows.Where(x => !knownSales.Contains(x.Id)).Select(x => new RawStatementEntry(
             x.CreatedAt, "Sale", x.Id, $"SALE-{x.Id}", $"Savdo: {x.TotalAmount:N2}",
-            0, x.DebtCurrency, x.Id, x.TradeCaseId, x.Id)));
+            0, x.DebtCurrency, x.Id, x.Id)));
 
         var knownReturns = raw.Where(x => x.Type == "CustomerReturn" && x.DocumentId.HasValue)
             .Select(x => x.DocumentId!.Value).ToHashSet();
-        var returns = db.CustomerReturnDocuments.AsNoTracking()
-            .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted);
-        returns = Scope(returns, x => x.BranchId, x => x.Sale.TradeCaseId, x => x.CreatedAt, request);
+        var returns = Scope(db.CustomerReturnDocuments.AsNoTracking()
+                .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted),
+            x => x.BranchId, x => x.CreatedAt, request);
         var returnRows = await returns.Select(x => new
         {
-            x.Id, x.DocumentNumber, x.CreatedAt, x.SaleId, x.Sale.TradeCaseId, x.RefundAmount,
-            Currency = x.Sale.DebtCurrency
+            x.Id, x.DocumentNumber, x.CreatedAt, x.RefundAmount
         }).ToListAsync(cancellationToken);
         raw.AddRange(returnRows.Where(x => !knownReturns.Contains(x.Id)).Select(x => new RawStatementEntry(
-            x.CreatedAt, "CustomerReturn", x.Id, x.DocumentNumber, $"Savdo qaytarildi: {x.RefundAmount:N2}",
-            0, x.Currency, x.SaleId, x.TradeCaseId, x.Id)));
+            x.CreatedAt, "CustomerReturn", x.Id, x.DocumentNumber, $"Mahsulot qaytarildi: {x.RefundAmount:N2}",
+            0, baseCurrency, null, x.Id)));
 
-        var issues = db.GoodsIssueDocuments.AsNoTracking()
-            .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted);
-        issues = Scope(issues, x => x.BranchId, x => (long?)x.TradeCaseId, x => x.CreatedAt, request);
-        var issueRows = await issues.Select(x => new
-        {
-            x.Id, x.DocumentNumber, x.CreatedAt, x.TradeCaseId, x.Currency,
-            Quantity = x.Lines.Sum(line => line.Quantity)
-        }).ToListAsync(cancellationToken);
-        raw.AddRange(issueRows.Select(x => new RawStatementEntry(x.CreatedAt, "GoodsIssue", x.Id,
-            x.DocumentNumber, $"Mahsulot berildi: {x.Quantity:0.###}", 0, x.Currency,
-            null, x.TradeCaseId, x.Id)));
+        var payments = Scope(db.CustomerPaymentDocuments.AsNoTracking()
+                .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted),
+            x => x.BranchId, x => x.CreatedAt, request);
+        var refunds = Scope(db.CustomerRefundDocuments.AsNoTracking()
+                .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted),
+            x => x.BranchId, x => x.CreatedAt, request);
 
-        var goodsReturns = db.GoodsReturnDocuments.AsNoTracking()
-            .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted);
-        goodsReturns = Scope(goodsReturns, x => x.BranchId, x => (long?)x.TradeCaseId, x => x.CreatedAt, request);
-        var goodsReturnRows = await goodsReturns.Select(x => new
-        {
-            x.Id, x.DocumentNumber, x.CreatedAt, x.TradeCaseId,
-            Currency = x.TradeCase.Currency, Quantity = x.Lines.Sum(line => line.Quantity)
-        }).ToListAsync(cancellationToken);
-        raw.AddRange(goodsReturnRows.Select(x => new RawStatementEntry(x.CreatedAt, "GoodsReturn", x.Id,
-            x.DocumentNumber, $"Mahsulot qaytdi: {x.Quantity:0.###}", 0, x.Currency,
-            null, x.TradeCaseId, x.Id)));
+        return new CustomerStatementSummaryDto(
+            saleRows.Count,
+            saleRows.Sum(x => x.TotalAmount),
+            await payments.CountAsync(cancellationToken),
+            await payments.SumAsync(x => (decimal?)x.TotalBaseAmount, cancellationToken) ?? 0,
+            returnRows.Count,
+            returnRows.Sum(x => x.RefundAmount),
+            await refunds.CountAsync(cancellationToken),
+            await refunds.SumAsync(x => (decimal?)x.TotalBaseAmount, cancellationToken) ?? 0);
     }
 
     private async Task<List<CustomerStatementProductDto>> BuildProductsAsync(
@@ -302,20 +278,19 @@ public sealed class GetCustomerStatementQueryHandler(
             return value;
         }
 
-        var saleLines = db.SaleItems.AsNoTracking().Where(x => x.Sale.CustomerId == request.CustomerId);
+        var saleLines = db.SaleItems.AsNoTracking()
+            .Where(x => x.Sale.CustomerId == request.CustomerId && x.Sale.Status != SaleStatus.Voided);
         if (request.BranchId is { } branchId) saleLines = saleLines.Where(x => x.Sale.BranchId == branchId);
         else if (!currentUser.CanAccessAllBranches) saleLines = saleLines.Where(x => currentUser.BranchIds.Contains(x.Sale.BranchId));
-        if (request.TradeCaseId is { } tradeCaseId) saleLines = saleLines.Where(x => x.Sale.TradeCaseId == tradeCaseId);
         if (request.From.HasValue) saleLines = saleLines.Where(x => x.Sale.CreatedAt >= request.From.Value);
         if (request.To.HasValue) saleLines = saleLines.Where(x => x.Sale.CreatedAt < request.To.Value);
         var sold = await saleLines.GroupBy(x => new { x.VariantId, x.Variant.Product.Name, Unit = x.Variant.Product.Unit.ShortName })
-            .Select(x => new { x.Key.VariantId, x.Key.Name, x.Key.Unit, Quantity = x.Sum(line => line.Quantity), Amount = x.Sum(line => line.Quantity * line.UnitPrice), Settled = x.Where(line => line.Sale.TradeCaseId != null).Sum(line => line.Quantity) })
+            .Select(x => new { x.Key.VariantId, x.Key.Name, x.Key.Unit, Quantity = x.Sum(line => line.Quantity), Amount = x.Sum(line => line.Quantity * line.UnitPrice) })
             .ToListAsync(cancellationToken);
         foreach (var value in sold)
         {
             var row = Row(value.VariantId, value.Name, value.Unit);
             row.Sold += value.Quantity;
-            row.CustodySettled += value.Settled;
             row.Charged += value.Amount;
         }
 
@@ -323,53 +298,25 @@ public sealed class GetCustomerStatementQueryHandler(
             .Where(x => x.Document.CustomerId == request.CustomerId && x.Document.Status == BusinessDocumentStatus.Posted);
         if (request.BranchId is { } returnBranch) returnLines = returnLines.Where(x => x.Document.BranchId == returnBranch);
         else if (!currentUser.CanAccessAllBranches) returnLines = returnLines.Where(x => currentUser.BranchIds.Contains(x.Document.BranchId));
-        if (request.TradeCaseId is { } returnCase) returnLines = returnLines.Where(x => x.Document.Sale.TradeCaseId == returnCase);
         if (request.From.HasValue) returnLines = returnLines.Where(x => x.Document.CreatedAt >= request.From.Value);
         if (request.To.HasValue) returnLines = returnLines.Where(x => x.Document.CreatedAt < request.To.Value);
-        var returnedSales = await returnLines.GroupBy(x => new { x.VariantId, x.Variant.Product.Name, Unit = x.Variant.Product.Unit.ShortName })
+        var returned = await returnLines.GroupBy(x => new { x.VariantId, x.Variant.Product.Name, Unit = x.Variant.Product.Unit.ShortName })
             .Select(x => new { x.Key.VariantId, x.Key.Name, x.Key.Unit, Quantity = x.Sum(line => line.Quantity), Amount = x.Sum(line => line.LineAmount) })
             .ToListAsync(cancellationToken);
-        foreach (var value in returnedSales)
+        foreach (var value in returned)
         {
             var row = Row(value.VariantId, value.Name, value.Unit);
-            row.SaleReturned += value.Quantity;
+            row.Returned += value.Quantity;
             row.Charged -= value.Amount;
         }
 
-        var issues = db.GoodsIssueLines.AsNoTracking()
-            .Where(x => x.Document.CustomerId == request.CustomerId && x.Document.Status == BusinessDocumentStatus.Posted);
-        if (request.BranchId is { } issueBranch) issues = issues.Where(x => x.Document.BranchId == issueBranch);
-        else if (!currentUser.CanAccessAllBranches) issues = issues.Where(x => currentUser.BranchIds.Contains(x.Document.BranchId));
-        if (request.TradeCaseId is { } issueCase) issues = issues.Where(x => x.Document.TradeCaseId == issueCase);
-        if (request.From.HasValue) issues = issues.Where(x => x.Document.CreatedAt >= request.From.Value);
-        if (request.To.HasValue) issues = issues.Where(x => x.Document.CreatedAt < request.To.Value);
-        var issued = await issues.GroupBy(x => new { x.VariantId, x.Variant.Product.Name, Unit = x.Variant.Product.Unit.ShortName })
-            .Select(x => new { x.Key.VariantId, x.Key.Name, x.Key.Unit, Quantity = x.Sum(line => line.Quantity) })
-            .ToListAsync(cancellationToken);
-        foreach (var value in issued) Row(value.VariantId, value.Name, value.Unit).CustodyIssued += value.Quantity;
-
-        var goodsReturnLines = db.GoodsReturnLines.AsNoTracking()
-            .Where(x => x.Document.CustomerId == request.CustomerId && x.Document.Status == BusinessDocumentStatus.Posted);
-        if (request.BranchId is { } goodsReturnBranch) goodsReturnLines = goodsReturnLines.Where(x => x.Document.BranchId == goodsReturnBranch);
-        else if (!currentUser.CanAccessAllBranches) goodsReturnLines = goodsReturnLines.Where(x => currentUser.BranchIds.Contains(x.Document.BranchId));
-        if (request.TradeCaseId is { } goodsReturnCase) goodsReturnLines = goodsReturnLines.Where(x => x.Document.TradeCaseId == goodsReturnCase);
-        if (request.From.HasValue) goodsReturnLines = goodsReturnLines.Where(x => x.Document.CreatedAt >= request.From.Value);
-        if (request.To.HasValue) goodsReturnLines = goodsReturnLines.Where(x => x.Document.CreatedAt < request.To.Value);
-        var returnedGoods = await goodsReturnLines.GroupBy(x => new { x.VariantId, x.Variant.Product.Name, Unit = x.Variant.Product.Unit.ShortName })
-            .Select(x => new { x.Key.VariantId, x.Key.Name, x.Key.Unit, Quantity = x.Sum(line => line.Quantity) })
-            .ToListAsync(cancellationToken);
-        foreach (var value in returnedGoods) Row(value.VariantId, value.Name, value.Unit).CustodyReturned += value.Quantity;
-
         return map.Values.OrderBy(x => x.Name).Select(x => new CustomerStatementProductDto(
-            x.VariantId, x.Name, x.Unit, x.Sold, x.SaleReturned, x.Sold - x.SaleReturned,
-            x.CustodyIssued, x.CustodyReturned, x.CustodySettled,
-            x.CustodyIssued - x.CustodyReturned - x.CustodySettled, x.Charged)).ToList();
+            x.VariantId, x.Name, x.Unit, x.Sold, x.Returned, x.Sold - x.Returned, x.Charged)).ToList();
     }
 
     private IQueryable<T> Scope<T>(
         IQueryable<T> query,
         System.Linq.Expressions.Expression<Func<T, long>> branch,
-        System.Linq.Expressions.Expression<Func<T, long?>> tradeCase,
         System.Linq.Expressions.Expression<Func<T, DateTime>> occurredAt,
         GetCustomerStatementQuery request)
     {
@@ -379,11 +326,6 @@ public sealed class GetCustomerStatementQueryHandler(
             query = query.Where(Replace(branch, value => value == id));
         }
         // Branch filtering for each strongly typed query is handled by global branch filters.
-        if (request.TradeCaseId.HasValue)
-        {
-            var id = request.TradeCaseId.Value;
-            query = query.Where(Replace(tradeCase, value => value == id));
-        }
         if (request.From.HasValue)
         {
             var from = request.From.Value;

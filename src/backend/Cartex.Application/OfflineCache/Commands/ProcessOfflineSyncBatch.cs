@@ -249,8 +249,7 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             dto.AutoAllocateDebt,
             dto.BusinessDate,
             dto.Note,
-            idempotencyKey,
-            dto.TradeCaseId), cancellationToken);
+            idempotencyKey), cancellationToken);
         return (result.Id, result.DocumentNumber);
     }
 

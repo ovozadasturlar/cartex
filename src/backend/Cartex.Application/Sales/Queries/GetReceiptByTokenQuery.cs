@@ -42,9 +42,7 @@ public record ReceiptDto(
     decimal PaidAdvance = 0,
     string? MonochromeLogoImageKey = null,
     long? CustomerId = null,
-    long? TradeCaseId = null,
-    string? TradeCaseNumber = null,
-    string? TradeCaseTitle = null)
+    string? Note = null)
 {
     // Rendering-only data. It is populated only for PDF/image generation so the
     // normal receipt API remains lightweight and never serializes a base64 logo.
@@ -93,9 +91,7 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.PaidAdvance,
                 business.MonochromeLogoImageKey,
                 sale.CustomerId,
-                sale.TradeCaseId,
-                sale.TradeCase != null ? sale.TradeCase.CaseNumber : null,
-                sale.TradeCase != null ? sale.TradeCase.Title : null))
+                sale.Note))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

@@ -62,12 +62,6 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: 'supplies.view',
       },
       {
-        labelKey: 'trade_cases',
-        icon: 'description',
-        route: '/trade-cases',
-        permission: 'tradeCases.view',
-      },
-      {
         labelKey: 'barcode_print',
         icon: 'barcode_reader',
         route: '/barcode-print',

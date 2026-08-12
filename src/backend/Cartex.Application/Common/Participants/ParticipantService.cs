@@ -9,8 +9,7 @@ public sealed record ParticipantInput(long RoleDefinitionId, long PartyId);
 public enum ParticipantContext
 {
     Cart,
-    Sale,
-    TradeCase
+    Sale
 }
 
 public sealed record ResolvedParticipant(
@@ -48,7 +47,6 @@ public sealed class ParticipantService(
         {
             ParticipantContext.Cart => roleQuery.Where(x => x.AppliesToCart),
             ParticipantContext.Sale => roleQuery.Where(x => x.AppliesToSale),
-            ParticipantContext.TradeCase => roleQuery.Where(x => x.AppliesToTradeCase),
             _ => roleQuery.Where(_ => false)
         };
         var roles = await roleQuery.ToListAsync(cancellationToken);

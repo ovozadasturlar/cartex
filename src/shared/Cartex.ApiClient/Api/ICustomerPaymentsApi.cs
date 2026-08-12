@@ -8,7 +8,6 @@ public interface ICustomerPaymentsApi
     [Get("/api/customer-payments")]
     Task<List<CustomerPaymentListDto>> GetAsync(
         [Query] long? customerId = null,
-        [Query] long? tradeCaseId = null,
         [Query] DateOnly? fromDate = null,
         [Query] DateOnly? toDate = null,
         [Query] int page = 1,

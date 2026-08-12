@@ -32,7 +32,6 @@ public partial class SaleDetailViewModel(
     [ObservableProperty] private string _discountText = "";
     [ObservableProperty] private string _debtText = "";
     [ObservableProperty] private string _changeText = "";
-    [ObservableProperty] private string _caseText = "";
     [ObservableProperty] private bool _canPrint;
     [ObservableProperty] private bool _canResend;
     [ObservableProperty] private bool _canOpenCustomer;
@@ -42,7 +41,6 @@ public partial class SaleDetailViewModel(
     public bool HasDiscount => !string.IsNullOrWhiteSpace(DiscountText);
     public bool HasDebt => !string.IsNullOrWhiteSpace(DebtText);
     public bool HasChange => !string.IsNullOrWhiteSpace(ChangeText);
-    public bool HasCase => !string.IsNullOrWhiteSpace(CaseText);
     public bool HasPayments => Payments.Count > 0;
     public bool HasParticipants => Participants.Count > 0;
     public bool HasReturns => Returns.Count > 0;
@@ -138,7 +136,6 @@ public partial class SaleDetailViewModel(
             DiscountText = sale.DiscountAmount > 0 ? $"{sale.DiscountAmount:N0} UZS" : "";
             DebtText = sale.DebtAmount > 0 ? $"{sale.DebtAmount:N0} {sale.DebtCurrency}" : "";
             ChangeText = sale.ChangeAmount > 0 ? $"{sale.ChangeAmount:N0} UZS" : "";
-            CaseText = sale.TradeCaseNumber ?? "";
 
             Items.Clear();
             foreach (var item in sale.Items)
@@ -176,7 +173,6 @@ public partial class SaleDetailViewModel(
         OnPropertyChanged(nameof(HasDiscount));
         OnPropertyChanged(nameof(HasDebt));
         OnPropertyChanged(nameof(HasChange));
-        OnPropertyChanged(nameof(HasCase));
         OnPropertyChanged(nameof(HasPayments));
         OnPropertyChanged(nameof(HasParticipants));
         OnPropertyChanged(nameof(HasReturns));

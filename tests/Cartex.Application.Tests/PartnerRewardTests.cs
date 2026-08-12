@@ -104,9 +104,10 @@ public sealed class PartnerRewardTests(DatabaseFixture fixture) : DatabaseTest(f
         using (var scope = Fixture.CreateScope())
         {
             await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateCustomerReturnCommand(
-                saleId,
-                [new CustomerReturnLineInput(excludedItemId, 1m, "Mos kelmadi",
+                warehouseId,
+                [new CustomerReturnLineInput(excludedVariantId, 1m, excludedItemId, null, "Mos kelmadi",
                     ReturnItemCondition.Sellable, InventoryDisposition.SellableRestock)],
+                customerId,
                 IdempotencyKey: "partner-excluded-return"));
         }
         using (var scope = Fixture.CreateScope())
@@ -131,9 +132,10 @@ public sealed class PartnerRewardTests(DatabaseFixture fixture) : DatabaseTest(f
         using (var scope = Fixture.CreateScope())
         {
             await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateCustomerReturnCommand(
-                saleId,
-                [new CustomerReturnLineInput(eligibleItemId, 1m, "Ortiqcha",
+                warehouseId,
+                [new CustomerReturnLineInput(eligibleVariantId, 1m, eligibleItemId, null, "Ortiqcha",
                     ReturnItemCondition.Sellable, InventoryDisposition.SellableRestock)],
+                customerId,
                 IdempotencyKey: "partner-eligible-return"));
         }
 

@@ -36,8 +36,7 @@ public sealed class CustomerRefundsController(ISender sender) : ControllerBase
                 ParseMethod(x.Method), x.Currency, x.Amount)).ToList(),
             request.BusinessDate,
             request.Note,
-            request.IdempotencyKey,
-            request.TradeCaseId)));
+            request.IdempotencyKey)));
 
     private static PaymentMethod ParseMethod(string value) =>
         Enum.TryParse<PaymentMethod>(value, true, out var method)

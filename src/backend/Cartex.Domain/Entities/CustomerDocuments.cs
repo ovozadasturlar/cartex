@@ -8,8 +8,6 @@ public class CustomerPaymentDocument : AuditableEntity, IBranchScoped
     public long BranchId { get; set; }
     public long CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
-    public long? TradeCaseId { get; set; }
-    public TradeCase? TradeCase { get; set; }
     public long UserId { get; set; }
     public User User { get; set; } = null!;
     public string DocumentNumber { get; set; } = null!;
@@ -54,8 +52,6 @@ public class CustomerRefundDocument : AuditableEntity, IBranchScoped
     public long BranchId { get; set; }
     public long CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
-    public long? TradeCaseId { get; set; }
-    public TradeCase? TradeCase { get; set; }
     public long UserId { get; set; }
     public User User { get; set; } = null!;
     public string DocumentNumber { get; set; } = null!;
@@ -87,8 +83,6 @@ public class CustomerReturnDocument : AuditableEntity, IBranchScoped
     public Warehouse Warehouse { get; set; } = null!;
     public long? CustomerId { get; set; }
     public Customer? Customer { get; set; }
-    public long SaleId { get; set; }
-    public Sale Sale { get; set; } = null!;
     public long UserId { get; set; }
     public User User { get; set; } = null!;
     public string DocumentNumber { get; set; } = null!;
@@ -97,7 +91,6 @@ public class CustomerReturnDocument : AuditableEntity, IBranchScoped
     public decimal GrossAmount { get; set; }
     public decimal RefundAmount { get; set; }
     public decimal CashbackReversed { get; set; }
-    public bool IsFullReturn { get; set; }
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
 
@@ -110,11 +103,14 @@ public class CustomerReturnLine : BaseEntity
 {
     public long CustomerReturnDocumentId { get; set; }
     public CustomerReturnDocument Document { get; set; } = null!;
-    public long SaleItemId { get; set; }
-    public SaleItem SaleItem { get; set; } = null!;
+    public long? SaleId { get; set; }
+    public Sale? Sale { get; set; }
+    public long? SaleItemId { get; set; }
+    public SaleItem? SaleItem { get; set; }
     public long VariantId { get; set; }
     public ProductVariant Variant { get; set; } = null!;
-    public long StockId { get; set; }
+    public long? StockId { get; set; }
+    public Stock? Stock { get; set; }
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public string PriceCurrency { get; set; } = "UZS";

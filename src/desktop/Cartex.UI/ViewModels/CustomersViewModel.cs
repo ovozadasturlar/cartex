@@ -37,7 +37,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLedgerLoading;
     [ObservableProperty] private bool _isSalesLoading;
-    [ObservableProperty] private bool _isSalesTab;
+    [ObservableProperty] private string _profileTab = "ledger";
+    [ObservableProperty] private bool _isStatementLoading;
+    [ObservableProperty] private DateTimeOffset _statementFrom = DateTimeOffset.Now.AddMonths(-1);
+    [ObservableProperty] private DateTimeOffset _statementTo = DateTimeOffset.Now;
+    [ObservableProperty] private CustomerStatementDto? _statement;
     [ObservableProperty] private bool _isProfileOpen;
 
     [ObservableProperty] private bool _isEditOpen;
@@ -187,7 +191,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         IsMessageOpen = false;
         IsRepayOpen = false;
         IsProfileOpen = false;
-        IsSalesTab = false;
+        ProfileTab = "ledger";
         SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
     }
@@ -297,16 +301,67 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         SalesPaging.Page = 1;
         if (value is null) { _ledgerCts?.Cancel(); return; }
         _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
+        Statement = null;
         if (IsSalesTab) _ = LoadSalesAsync(value.Id);
+        if (IsStatementTab) _ = LoadStatementAsync();
     }
 
-    partial void OnIsSalesTabChanged(bool value)
+    public bool IsLedgerTab => ProfileTab == "ledger";
+    public bool IsSalesTab => ProfileTab == "sales";
+    public bool IsStatementTab => ProfileTab == "statement";
+    public bool CanViewStatement => _auth.HasPermission("statements.view");
+    public bool CanExportStatement => _auth.HasPermission("statements.export");
+
+    partial void OnProfileTabChanged(string value)
     {
-        if (value && _ledgerCustomerId != 0 && Sales.Count == 0) _ = LoadSalesAsync(_ledgerCustomerId);
+        OnPropertyChanged(nameof(IsLedgerTab));
+        OnPropertyChanged(nameof(IsSalesTab));
+        OnPropertyChanged(nameof(IsStatementTab));
+        if (_ledgerCustomerId == 0) return;
+        if (IsSalesTab && Sales.Count == 0) _ = LoadSalesAsync(_ledgerCustomerId);
+        if (IsStatementTab && Statement is null) _ = LoadStatementAsync();
     }
 
     [RelayCommand]
-    private void SetTab(string tab) => IsSalesTab = tab == "sales";
+    private void SetTab(string tab) => ProfileTab = tab;
+
+    partial void OnStatementFromChanged(DateTimeOffset value) => _ = LoadStatementAsync();
+    partial void OnStatementToChanged(DateTimeOffset value) => _ = LoadStatementAsync();
+
+    [RelayCommand]
+    private async Task LoadStatementAsync()
+    {
+        if (_ledgerCustomerId == 0 || !CanViewStatement) return;
+        IsStatementLoading = true;
+        try
+        {
+            Statement = await _api.GetStatementAsync(_ledgerCustomerId,
+                new DateTimeOffset(StatementFrom.Date).UtcDateTime,
+                new DateTimeOffset(StatementTo.Date.AddDays(1)).UtcDateTime);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { IsStatementLoading = false; }
+    }
+
+    [RelayCommand]
+    private async Task ExportStatementAsync(string format)
+    {
+        if (_ledgerCustomerId == 0 || !CanExportStatement) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                using var content = await _api.ExportStatementAsync(_ledgerCustomerId, format, "both",
+                    new DateTimeOffset(StatementFrom.Date).UtcDateTime,
+                    new DateTimeOffset(StatementTo.Date.AddDays(1)).UtcDateTime);
+                var name = $"{SelectedCustomerDisplay.FullName}-{StatementFrom:yyyyMMdd}-{StatementTo:yyyyMMdd}";
+                await using var target = await ServiceLocator.Resolve<IFilePickerService>().SaveFileAsync(name, format);
+                if (target is null) return;
+                await content.CopyToAsync(target);
+            }
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     private async Task LoadSalesAsync(long id)
     {

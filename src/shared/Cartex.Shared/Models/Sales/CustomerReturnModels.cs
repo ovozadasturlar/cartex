@@ -1,8 +1,10 @@
 namespace Cartex.Shared.Models.Sales;
 
 public record CustomerReturnLineRequest(
-    long SaleItemId,
+    long VariantId,
     decimal Quantity,
+    long? SaleItemId = null,
+    decimal? UnitPrice = null,
     string? Reason = null,
     string Condition = "Sellable",
     string Disposition = "SellableRestock");
@@ -10,8 +12,9 @@ public record CustomerReturnLineRequest(
 public record CustomerReturnSettlementRequest(string Method, string Currency, decimal Amount);
 
 public record CreateCustomerReturnRequest(
-    long SaleId,
+    long WarehouseId,
     List<CustomerReturnLineRequest> Lines,
+    long? CustomerId = null,
     List<CustomerReturnSettlementRequest>? Settlements = null,
     bool AutoSettle = true,
     DateOnly? BusinessDate = null,
@@ -21,14 +24,15 @@ public record CreateCustomerReturnRequest(
 public record CustomerReturnCreatedDto(
     long Id,
     string DocumentNumber,
-    decimal RefundAmount,
-    bool IsFullReturn);
+    decimal RefundAmount);
 
 public record CustomerReturnLineDto(
     long Id,
-    long SaleItemId,
+    long? SaleId,
+    long? SaleItemId,
     long VariantId,
     string ProductName,
+    string UnitName,
     decimal Quantity,
     decimal UnitPrice,
     decimal LineAmount,
@@ -49,9 +53,9 @@ public record CustomerReturnDocumentDto(
     string DocumentNumber,
     long BranchId,
     long WarehouseId,
+    string WarehouseName,
     long? CustomerId,
     string? CustomerName,
-    long SaleId,
     long UserId,
     string UserName,
     DateOnly BusinessDate,
@@ -60,7 +64,6 @@ public record CustomerReturnDocumentDto(
     decimal GrossAmount,
     decimal RefundAmount,
     decimal CashbackReversed,
-    bool IsFullReturn,
     string? Note,
     IReadOnlyList<CustomerReturnLineDto> Lines,
     IReadOnlyList<CustomerReturnSettlementDto> Settlements);
@@ -70,9 +73,11 @@ public record CustomerReturnListDto(
     string DocumentNumber,
     long? CustomerId,
     string? CustomerName,
-    long SaleId,
     DateOnly BusinessDate,
     DateTime CreatedAt,
     string Status,
+    int LineCount,
     decimal RefundAmount,
-    bool IsFullReturn);
+    string? Note);
+
+public record VariantSalePriceDto(decimal UnitPrice, DateTime LastSoldAt);

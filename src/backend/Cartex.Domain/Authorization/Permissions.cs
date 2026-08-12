@@ -126,13 +126,13 @@ public static class AppPermissions
         public const string Pick = "sales.pick";
         public const string Checkout = "sales.checkout";
         public const string OverrideClaim = "sales.claim.override";
-        public const string Return = "sales.return";
         public const string Discount = "sales.discount";
         public const string PriceOverride = "sales.priceOverride";
         public const string DiscountOverride = "sales.discountOverride";
         public const string CashOut = "sales.cashout";
         public const string Prepack = "sales.prepack";
         public const string AssignCustomer = "sales.assignCustomer";
+        public const string Void = "sales.void";
     }
 
     public static class Currencies
@@ -191,25 +191,9 @@ public static class AppPermissions
     {
         public const string View = "returns.view";
         public const string Create = "returns.create";
+        public const string FreeLine = "returns.freeLine";
         public const string Approve = "returns.approve";
         public const string Void = "returns.void";
-    }
-
-    public static class TradeCases
-    {
-        public const string View = "trade_cases.view";
-        public const string Create = "trade_cases.create";
-        public const string Edit = "trade_cases.edit";
-        public const string Settle = "trade_cases.settle";
-        public const string Close = "trade_cases.close";
-    }
-
-    public static class GoodsIssues
-    {
-        public const string View = "goods_issues.view";
-        public const string Create = "goods_issues.create";
-        public const string Return = "goods_issues.return";
-        public const string Void = "goods_issues.void";
     }
 
     public static class Statements
@@ -397,12 +381,12 @@ public static class AppPermissions
             P(Sales.Pick, "Pick carts", true, Products.View, Stocks.View),
             P(Sales.Checkout, "Complete queued carts and accept payments", true, Sales.Pick, Shifts.Open, Customers.View, Rates.View),
             P(Sales.OverrideClaim, "Override another cashier's cart claim", true, Sales.Checkout),
-            P(Sales.Return, "Return sales", true, Sales.View),
             P(Sales.Discount, "Apply sale discount", true, Sales.Create),
             P(Sales.PriceOverride, "Override sale item price", true, Sales.Create),
             P(Sales.DiscountOverride, "Exceed discount limit", true, Sales.Discount),
             P(Sales.CashOut, "Withdraw cash from register", true, Shifts.Open, ExpenseCategories.View),
             P(Sales.Prepack, "Create or cancel prepack labels", true, Products.View, Stocks.View),
+            P(Sales.Void, "Void (storno) a posted sale for correction", true, Sales.View, Returns.View),
             P(Sales.AssignCustomer, "Assign or reassign customer to completed sales", true, Sales.View, Customers.View),
             P(Currencies.View, "View currencies"),
             P(Currencies.Create, "Create currencies", false, Currencies.View),
@@ -434,19 +418,11 @@ public static class AppPermissions
             P(CustomerPayments.Void, "Void customer payment documents", true, CustomerPayments.View),
             P(Returns.View, "View return documents", true, Sales.View),
             P(Returns.Create, "Create product return documents", true, Returns.View, Stocks.View),
+            P(Returns.FreeLine, "Return products that are not part of a recorded sale", true, Returns.Create, Products.View),
             P(Returns.Approve, "Approve return settlements and refunds", true, Returns.Create, Customers.Refund),
             P(Returns.Void, "Void return documents", true, Returns.View),
-            P(TradeCases.View, "View business cases and projects", true, Customers.View),
-            P(TradeCases.Create, "Create business cases and projects", true, TradeCases.View, Warehouses.View),
-            P(TradeCases.Edit, "Edit open business cases", true, TradeCases.View),
-            P(TradeCases.Settle, "Settle custody cases", true, TradeCases.View),
-            P(TradeCases.Close, "Close or cancel business cases", true, TradeCases.View),
-            P(GoodsIssues.View, "View custody issue and return documents", true, TradeCases.View, Products.View),
-            P(GoodsIssues.Create, "Issue goods into customer custody", true, GoodsIssues.View, Stocks.View),
-            P(GoodsIssues.Return, "Receive goods back from customer custody", true, GoodsIssues.View, Stocks.View),
-            P(GoodsIssues.Void, "Void custody documents", true, GoodsIssues.View),
-            P(Statements.View, "View customer and case statements", true, Customers.View),
-            P(Statements.Export, "Export customer and case statements", true, Statements.View, Reports.Export),
+            P(Statements.View, "View customer statements", true, Customers.View),
+            P(Statements.Export, "Export customer statements", true, Statements.View, Reports.Export),
             P(Partners.View, "View external business partners", true),
             P(Partners.Edit, "Create and edit external business partners", true, Partners.View),
             P(Partners.ConfigureRoles, "Configure participant roles and labels", false, Partners.View),
@@ -518,7 +494,7 @@ public static class AppPermissions
                 [Supplies.Create, Supplies.Edit]),
             new PermissionBundleDefinition("cashier", "Sotuvchi / kassir",
                 [Sales.Create, Sales.Checkout, Sales.View, Shifts.Open, Shifts.Close, Sales.Discount,
-                    CustomerPayments.Create, Returns.Create, TradeCases.View, TradeCases.Settle]),
+                    CustomerPayments.Create, Returns.Create]),
             new PermissionBundleDefinition("inventory_operator", "Omborchi",
                 [Stocks.View, Stocks.Adjust, StockTransfers.View, StockTransfers.Create,
                     StockTransfers.Receive, StockTransfers.ReceiveAny]),
@@ -529,8 +505,7 @@ public static class AppPermissions
             new PermissionBundleDefinition("customer_manager", "Mijozlar menejeri",
                 [Customers.Create, Customers.Edit, Customers.Message, Customers.ReceivePayment,
                     CustomerPayments.View, CustomerPayments.Create, Returns.View,
-                    TradeCases.View, TradeCases.Create, TradeCases.Edit, GoodsIssues.View,
-                    GoodsIssues.Create, GoodsIssues.Return, Statements.View,
+                    Returns.Create, Returns.FreeLine, Statements.View,
                     Partners.View, Partners.Edit, PartnerRewards.View]),
             new PermissionBundleDefinition("supplier_accountant", "Ta'minotchi va to'lovlar",
                 [Suppliers.Create, Suppliers.Edit, Suppliers.Pay, Supplies.View, Accounts.View, Transactions.View]),
@@ -538,7 +513,7 @@ public static class AppPermissions
                 [Accounts.View, Transactions.View, Reports.View, Reports.Export,
                     Customers.ReceivePayment, Customers.Refund, CustomerPayments.View,
                     CustomerPayments.Create, CustomerPayments.Void, Returns.View, Returns.Approve,
-                    TradeCases.View, TradeCases.Settle, TradeCases.Close, Statements.View, Statements.Export,
+                    Statements.View, Statements.Export,
                     Partners.View, PartnerRewards.View, PartnerRewards.Redeem,
                     Suppliers.Pay]),
             new PermissionBundleDefinition("access_administrator", "Xodimlar va ruxsatlar",
@@ -549,6 +524,7 @@ public static class AppPermissions
     public static readonly IReadOnlyDictionary<string, string[]> LegacyReplacements =
         new Dictionary<string, string[]>
         {
+            ["sales.return"] = [Returns.View, Returns.Create],
             ["branches.manage"] = [Branches.Create, Branches.Edit],
             ["business.manage"] = [Business.Edit, ExpenseCategories.View, ExpenseCategories.Create, ExpenseCategories.Edit],
             ["users.manage"] = [Users.Create, Users.Edit, Users.Delete],
@@ -563,7 +539,7 @@ public static class AppPermissions
             ],
             ["sales.manage"] =
             [
-                Sales.Create, Sales.Pick, Sales.Checkout, Sales.OverrideClaim, Sales.Return,
+                Sales.Create, Sales.Pick, Sales.Checkout, Sales.OverrideClaim,
                 Sales.Discount, Sales.PriceOverride, Sales.DiscountOverride,
                 Sales.CashOut, Sales.Prepack
             ],
@@ -578,9 +554,7 @@ public static class AppPermissions
             ["supplies.manage"] = [Supplies.Create, Supplies.Edit, Supplies.Void, Supplies.Import],
             ["customers.manage"] = [Customers.Create, Customers.Edit, Customers.Delete, Customers.ReceivePayment,
                 Customers.Refund, CustomerPayments.View, CustomerPayments.Create, CustomerPayments.Void,
-                Returns.View, Returns.Create, Returns.Approve, Returns.Void,
-                TradeCases.View, TradeCases.Create, TradeCases.Edit, TradeCases.Settle, TradeCases.Close,
-                GoodsIssues.View, GoodsIssues.Create, GoodsIssues.Return, GoodsIssues.Void,
+                Returns.View, Returns.Create, Returns.FreeLine, Returns.Approve, Returns.Void,
                 Statements.View, Statements.Export],
             ["partners.manage"] = [Partners.View, Partners.Edit, Partners.ConfigureRoles,
                 PartnerRewards.View, PartnerRewards.Configure, PartnerRewards.Redeem, PartnerRewards.Adjust],

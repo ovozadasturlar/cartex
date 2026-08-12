@@ -70,13 +70,6 @@ public static class MauiProgram
         builder.Services.AddTransient<CustomerStatementViewModel>();
         builder.Services.AddTransient<CustomerRefundViewModel>();
         builder.Services.AddTransient<SaleReturnViewModel>();
-        builder.Services.AddTransient<TradeCaseDetailViewModel>();
-        builder.Services.AddTransient<CaseIssueViewModel>();
-        builder.Services.AddTransient<CaseReturnViewModel>();
-        builder.Services.AddTransient<CasePaymentViewModel>();
-        builder.Services.AddTransient<CaseStatementViewModel>();
-        builder.Services.AddTransient<CaseSettlementViewModel>();
-        builder.Services.AddTransient<CaseCreateViewModel>();
         builder.Services.AddTransient<CheckoutViewModel>();
         builder.Services.AddTransient<TradeViewModel>();
         builder.Services.AddTransient<CustomersViewModel>();
@@ -100,13 +93,6 @@ public static class MauiProgram
         builder.Services.AddTransient<CustomerStatementPage>();
         builder.Services.AddTransient<CustomerRefundPage>();
         builder.Services.AddTransient<SaleReturnPage>();
-        builder.Services.AddTransient<TradeCaseDetailPage>();
-        builder.Services.AddTransient<CaseIssuePage>();
-        builder.Services.AddTransient<CaseReturnPage>();
-        builder.Services.AddTransient<CasePaymentPage>();
-        builder.Services.AddTransient<CaseStatementPage>();
-        builder.Services.AddTransient<CaseSettlementPage>();
-        builder.Services.AddTransient<CaseCreatePage>();
         builder.Services.AddTransient<CheckoutPage>();
         builder.Services.AddTransient<TradePage>();
         builder.Services.AddTransient<CustomersPage>();

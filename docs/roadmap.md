@@ -1,16 +1,17 @@
 # Cartex — Professional Takomillashtirish Dasturi (Roadmap)
 
 > Holat belgilari: `[ ]` kutilmoqda · `[~]` jarayonda · `[x]` tayyor
-> Oxirgi yangilanish: 2026-08-10 (F0+F3 yakun · F1 backend/desktop/mobile-print yakun · web qoldi)
+> Oxirgi yangilanish: 2026-08-13 (Loyiha/TradeCase olib tashlandi · Qaytarish alohida hujjatga aylandi)
 
 ## Dizayn qarorlari (qulflangan)
 
-### Vaqtinchalik savdo / Loyiha
-- **Loyiha** = `TradeCase` (UI label sozlamada, default "Loyiha"). Ichida: biriktirilgan oddiy savdolar + vaqtinchalik berilgan mahsulotlar (custody) + qaytarishlar + hisob-kitob.
-- **Vaqtinchalik chek** = topshirilgan mahsulotlar dalolatnomasi (print, "YAKUNILANMAGAN" belgisi bilan).
-- **Yakuniy hisob-kitob** = `SettleTradeCase` → haqiqiy Sale + oddiy chek.
-- UX: savdo chekida "Loyihaga biriktirish" (ro'yxat + inline yaratish); checkout'da vaqtinchalik berish alohida oqim; case detail'dan qaytarish/hisob-kitob.
-- Backend: `PUT/DELETE /api/trade-cases/{id}/sales/{saleId}` link/unlink (audit bilan).
+### Savdo va qaytarish
+- **Loyiha (`TradeCase`) olib tashlandi.** Custody (vaqtinchalik berish), `GoodsIssue`/`GoodsReturn`, `TradeCaseSettlement` — hammasi o'chirildi. Mijoz mahsulot olsa — bu oddiy `Sale`.
+- **Qaytarish** = mustaqil `CustomerReturnDocument`. Bitta hujjat **bir nechta savdoni** qamrab oladi (qator darajasida `SaleId`/`SaleItemId`), mijozsiz ham rasmiylashtiriladi.
+- **Erkin qator**: savdoga bog'lanmagan mahsulot ham qaytariladi — `returns.freeLine` ruxsati talab qilinadi, narx savdo tarixidagi sof narxlardan tanlanadi (tahrirlanadi), qo'lda kiritilgani auditga yoziladi.
+- **Hisob-kitob**: har savdoga o'z sig'imi bo'yicha sharshara (qarz → bonus → karta → naqd); qolgani va erkin qatorlar mijoz qarzini kamaytiradi, ortgani mijoz haqdorligiga (avans) yoziladi. Mijozsiz qaytaruvda naqd yoki "hisobsiz" aniq ko'rsatiladi.
+- **Yo'nalish**: yaroqli → omborga, ochilgan → karantin, shikastlangan → chiqindi, nuqsonli → ta'minotchiga da'vo (`InventoryPosition`).
+- Chek: `PrintDispatchService.PrintReturnAsync` → `sourceType = customer_return`.
 
 ### Usta sodiqligi (dynamic, permission bilan boshqariladi)
 - Rejimlar: faqat hisoblab borish / Bonus / Naqd / Ball / Mahsulot-asbob.
@@ -22,7 +23,7 @@
 - Xato kodlari: `quantity_whole_required`, `quantity_precision_exceeded`.
 
 ### Mobile mijoz profili
-- Header: aylana avatar + ism + telefon/manzil/email subtext; kompakt amallar (Qo'ng'iroq/SMS/Xabar/To'lov); stats; tablar (Faoliyat/Savdolar/To'lovlar/Qaytarishlar/Bonuslar/Loyihalar); row → detail; sale detail header → profil.
+- Header: aylana avatar + ism + telefon/manzil/email subtext; kompakt amallar (Qo'ng'iroq/SMS/Xabar/To'lov); stats; tablar (Faoliyat/Savdolar/To'lovlar/Qaytarishlar/Bonuslar); row → detail; sale detail header → profil.
 
 ### Printer sozlamalari
 - Server = yagona haqiqat (chek shabloni, avto-print policy). Local = faqat qurilma detali (OS printer, PDF jild).
@@ -34,17 +35,17 @@
 
 ## Yakunlangan (build+test: Application 190 · Unit 115 · Integration 83 · Arch 9 — barchasi yashil)
 - [x] **F0**: DB migratsiyalar holati (serverda eski build sabab queue 500 — yangi build restart = auto-migrate); junk (`main.js`, `-e/`, o'lik Queue/SalesPage); HomeView kind=Queue; `TradeViewModel` nullable; CustomersPage "+" mijoz yaratish; `FeatureCatalog` + `trade_cases`/`partners` (Standard tarif, default yoqilgan; **eski litsenziyada Features sozlangan bo'lsa — developer UI'dan 2 feature'ni yoqish KERAK**).
-- [x] **F1 backend**: sale link/unlink (audit: case.sale_linked/unlinked, settlement himoyasi, testlar×5); issue print query; case detail'da biriktirilgan savdolar (tip "Sale").
-- [x] **F1 desktop**: list/detail sahifalar; dialoglar: yaratish/berish/qaytarish/hisob-kitob; hujjatda chop etish; chekda "Loyihaga biriktirish" (inline yaratish bilan).
-- [x] **F1 print**: `FormatIssueNote` (VAQTINCHALIK CHEK + YAKUNILANMAGAN), dispatch + host (goods_issue, termal, logo, PDF), mobile print ikonkasi case hujjatlarida.
+- [x] **F1 (bekor qilindi)**: Loyiha/TradeCase stack'i backend, desktop, web va mobile'dan to'liq olib tashlandi; migratsiya bitta `InitialMigration` sifatida qayta generatsiya qilindi.
+- [x] **Qaytarish**: ko'p-savdoli `CreateCustomerReturnCommand` (erkin qator, mijozsiz rejim, savdo bo'yicha hisob-kitob taqsimoti, `returns.freeLine` ruxsati); desktop "Qaytarishlar" bo'limi (ro'yxat + filtr + hujjat muharriri + chek); `GetVariantSalePricesQuery` narx tarixi.
+- [x] **Mijoz hisoboti**: `CustomerStatementSummaryDto` (savdo/to'lov/qaytarish/pul qaytarish soni va summasi); desktop mijoz profilida "Hisobot" tab'i + PDF/XLSX eksport.
+- [x] **Izoh**: `Sale.Note` qo'shildi; POS, qaytarish muharriri va chekda ko'rsatiladi.
 - [x] **F3**: AllowFractional refactor + `BooleanQuantityPolicy` migratsiyasi + seeder Count-tuzatuvi; barcha clientlar yangilandi.
 
 ## Qolgan ishlar
 
-### F1 (yakunlash)
-- [ ] **Web**: trade-case sahifalari + POS chekida biriktirish (Angular `pos` + yangi pages)
-- [ ] **Mobile**: CaseCreate minimal (title auto); savdo detail header'da mijoz kartochkasi → profilga navigate
-- [ ] Mobile offline'da vaqtinchalik berish bloklangan holda qolishini yakuniy tekshirish
+### Qaytarish (yakunlash)
+- [ ] **Web**: qaytarish sahifasi (Angular'da hozir umuman yo'q)
+- [ ] **Mobile**: savdo detail header'da mijoz kartochkasi → profilga navigate
 
 ### F2 — Usta sodiqligi UI
 - [ ] Desktop: PartnerProgram + qoidalar + entries + redemption; participant role boshqaruvi
@@ -67,5 +68,4 @@
 
 ### F8 — Yakun
 - [ ] POS summa-kiritish (AmountEntry) UI mobile/desktop
-- [ ] Loyiha to'lovi desktop UI (CanReceivePayment)
 - [ ] Web parity qoldiqlari; release oldi yagona InitialMigration

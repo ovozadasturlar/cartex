@@ -59,7 +59,7 @@ public class ReportsTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         Assert.Equal(baseline + price, await ReportRevenueAsync());

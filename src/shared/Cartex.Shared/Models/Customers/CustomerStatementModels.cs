@@ -5,6 +5,16 @@ public sealed record CustomerStatementBalanceDto(
     decimal OpeningBalance,
     decimal ClosingBalance);
 
+public sealed record CustomerStatementSummaryDto(
+    int SaleCount,
+    decimal SaleAmount,
+    int PaymentCount,
+    decimal PaymentAmount,
+    int ReturnCount,
+    decimal ReturnAmount,
+    int RefundCount,
+    decimal RefundAmount);
+
 public sealed record CustomerStatementEntryDto(
     DateTime OccurredAt,
     string Type,
@@ -15,20 +25,15 @@ public sealed record CustomerStatementEntryDto(
     decimal Credit,
     decimal RunningBalance,
     string Currency,
-    long? SaleId = null,
-    long? TradeCaseId = null);
+    long? SaleId = null);
 
 public sealed record CustomerStatementProductDto(
     long VariantId,
     string ProductName,
     string UnitName,
     decimal Sold,
-    decimal SaleReturned,
+    decimal Returned,
     decimal NetSold,
-    decimal CustodyIssued,
-    decimal CustodyReturned,
-    decimal CustodySettled,
-    decimal CustodyOutstanding,
     decimal ChargedBaseAmount);
 
 public sealed record CustomerStatementDto(
@@ -37,10 +42,9 @@ public sealed record CustomerStatementDto(
     string? CustomerPhone,
     DateTime? From,
     DateTime? To,
-    long? TradeCaseId,
-    string? TradeCaseNumber,
     long? BranchId,
     string BaseCurrency,
+    CustomerStatementSummaryDto Summary,
     IReadOnlyList<CustomerStatementBalanceDto> Balances,
     IReadOnlyList<CustomerStatementEntryDto> Timeline,
     IReadOnlyList<CustomerStatementProductDto> Products,

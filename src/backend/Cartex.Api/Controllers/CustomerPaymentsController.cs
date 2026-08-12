@@ -47,8 +47,7 @@ public class CustomerPaymentsController(ISender sender) : ControllerBase
             request.AutoAllocateDebt,
             request.BusinessDate,
             request.Note,
-            request.IdempotencyKey,
-            request.TradeCaseId));
+            request.IdempotencyKey));
         return Ok(result);
     }
 

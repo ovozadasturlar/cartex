@@ -18,7 +18,6 @@ public static class FeatureCatalog
     public const string Store = "store";
     public const string OfflineCache = "offline_cache";
     public const string RemotePrinting = "remote_printing";
-    public const string TradeCases = "trade_cases";
     public const string Partners = "partners";
 
     public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
@@ -46,11 +45,6 @@ public static class FeatureCatalog
             AppPermissions.Printing.NodesManage, AppPermissions.Printing.RoutesView,
             AppPermissions.Printing.RoutesEdit, AppPermissions.Printing.AuditView,
             AppPermissions.Printing.AuditExport],
-        [TradeCases] = [AppPermissions.TradeCases.View, AppPermissions.TradeCases.Create,
-            AppPermissions.TradeCases.Edit, AppPermissions.TradeCases.Settle,
-            AppPermissions.TradeCases.Close, AppPermissions.GoodsIssues.View,
-            AppPermissions.GoodsIssues.Create, AppPermissions.GoodsIssues.Return,
-            AppPermissions.GoodsIssues.Void],
         [Partners] = [AppPermissions.Partners.View, AppPermissions.Partners.Edit,
             AppPermissions.Partners.ConfigureRoles, AppPermissions.PartnerRewards.View,
             AppPermissions.PartnerRewards.Configure, AppPermissions.PartnerRewards.Redeem,
@@ -75,7 +69,6 @@ public static class FeatureCatalog
         [Store] = "Do'kon xodimi ilovasi",
         [OfflineCache] = "Oflayn kassa (bitta qurilma)",
         [RemotePrinting] = "Tarmoq orqali chop etish",
-        [TradeCases] = "Loyihalar (vaqtinchalik savdo)",
         [Partners] = "Hamkorlar (usta) sodiqligi",
     };
 

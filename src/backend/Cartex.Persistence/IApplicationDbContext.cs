@@ -79,18 +79,11 @@ public interface IApplicationDbContext
     DbSet<CustomerReturnSettlement> CustomerReturnSettlements { get; }
     DbSet<InventoryPosition> InventoryPositions { get; }
     DbSet<InventoryMovement> InventoryMovements { get; }
-    DbSet<TradeCase> TradeCases { get; }
-    DbSet<GoodsIssueDocument> GoodsIssueDocuments { get; }
-    DbSet<GoodsIssueLine> GoodsIssueLines { get; }
-    DbSet<GoodsReturnDocument> GoodsReturnDocuments { get; }
-    DbSet<GoodsReturnLine> GoodsReturnLines { get; }
-    DbSet<TradeCaseSettlement> TradeCaseSettlements { get; }
     DbSet<Party> Parties { get; }
     DbSet<PartnerProfile> PartnerProfiles { get; }
     DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions { get; }
     DbSet<SaleParticipant> SaleParticipants { get; }
     DbSet<CartParticipant> CartParticipants { get; }
-    DbSet<TradeCaseParticipant> TradeCaseParticipants { get; }
     DbSet<PartnerProgram> PartnerPrograms { get; }
     DbSet<PartnerRewardRule> PartnerRewardRules { get; }
     DbSet<PartnerRewardEntry> PartnerRewardEntries { get; }

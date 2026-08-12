@@ -405,10 +405,8 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var lines = await db.SaleItems.Where(i => i.SaleId == saleId)
-                .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, lines));
+            await sender.Send(await TestReturns.ForSaleAsync(db, saleId));
         }
 
         using var check = Fixture.CreateScope();

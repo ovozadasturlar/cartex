@@ -12,7 +12,6 @@ namespace Cartex.Application.CustomerPayments.Queries;
 public record GetCustomerPaymentsQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerPaymentListDto>>
 {
     public long? CustomerId { get; init; }
-    public long? TradeCaseId { get; init; }
     public DateOnly? FromDate { get; init; }
     public DateOnly? ToDate { get; init; }
 }
@@ -33,8 +32,6 @@ public sealed class GetCustomerPaymentsQueryHandler(
             query = query.Where(x => x.Customer.AssignedUserId == currentUser.UserId);
         if (request.CustomerId is { } customerId)
             query = query.Where(x => x.CustomerId == customerId);
-        if (request.TradeCaseId is { } tradeCaseId)
-            query = query.Where(x => x.TradeCaseId == tradeCaseId);
         if (request.FromDate is { } from)
             query = query.Where(x => x.BusinessDate >= from);
         if (request.ToDate is { } to)
@@ -51,8 +48,7 @@ public sealed class GetCustomerPaymentsQueryHandler(
             x.TotalBaseAmount,
             x.AllocatedBaseAmount,
             x.AdvanceBaseAmount,
-            x.Note,
-            x.TradeCaseId), writer, cancellationToken);
+            x.Note), writer, cancellationToken);
     }
 }
 
@@ -97,7 +93,6 @@ public sealed class GetCustomerPaymentByIdQueryHandler(
             document.Tenders.Select(x => new CustomerPaymentTenderDto(
                 x.Method.ToString(), x.Currency, x.Amount, x.Rate, x.AmountBase)).ToList(),
             document.Allocations.Select(x => new CustomerPaymentAllocationDto(
-                x.Id, x.SaleId, x.Currency, x.Amount, x.Rate, x.AmountBase)).ToList(),
-            document.TradeCaseId);
+                x.Id, x.SaleId, x.Currency, x.Amount, x.Rate, x.AmountBase)).ToList());
     }
 }

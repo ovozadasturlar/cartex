@@ -21,4 +21,5 @@ public record CreateSaleRequest(
     bool ApplyAutoDiscount = true,
     decimal CreditAmount = 0,
     bool UseCustomerAdvance = true,
-    List<ParticipantSelectionRequest>? Participants = null);
+    List<ParticipantSelectionRequest>? Participants = null,
+    string? Note = null);

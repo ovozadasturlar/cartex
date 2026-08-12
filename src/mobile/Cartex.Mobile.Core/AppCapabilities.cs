@@ -4,7 +4,7 @@ public sealed class AppCapabilities(MobilePermissions permissions)
 {
     public bool CanSell => permissions.Has("sales.create");
     public bool CanCheckout => permissions.Has("sales.checkout");
-    public bool CanReturn => permissions.Has("sales.return");
+    public bool CanReturn => permissions.Has("returns.create");
     public bool CanOverridePrice => permissions.Has("sales.priceOverride");
     public bool CanOverrideDiscount => permissions.Has("sales.discountOverride");
     public bool CanCashOut => permissions.Has("sales.cashout");

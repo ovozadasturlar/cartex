@@ -184,7 +184,6 @@ public sealed record SaveParticipantRoleCommand(
     int MaxCount = 1,
     bool AppliesToCart = true,
     bool AppliesToSale = true,
-    bool AppliesToTradeCase = true,
     int SortOrder = 0) : ICommand<long>;
 
 public sealed class SaveParticipantRoleCommandHandler(
@@ -217,7 +216,6 @@ public sealed class SaveParticipantRoleCommandHandler(
         entity.MaxCount = request.MaxCount;
         entity.AppliesToCart = request.AppliesToCart;
         entity.AppliesToSale = request.AppliesToSale;
-        entity.AppliesToTradeCase = request.AppliesToTradeCase;
         entity.SortOrder = request.SortOrder;
         if (entity.Id == 0) db.ParticipantRoleDefinitions.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
@@ -226,7 +224,7 @@ public sealed class SaveParticipantRoleCommandHandler(
             {
                 entity.Key, entity.SingularLabel, entity.PluralLabel, entity.IsEnabled,
                 entity.IsRequired, entity.CanEqualBuyer, entity.MaxCount,
-                entity.AppliesToCart, entity.AppliesToSale, entity.AppliesToTradeCase
+                entity.AppliesToCart, entity.AppliesToSale
             }, "Hamkor roli saqlandi");
         return entity.Id;
     }

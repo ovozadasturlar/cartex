@@ -31,8 +31,10 @@ public class CustomerReturnsController(ISender sender) : ControllerBase
     public async Task<ActionResult<CustomerReturnCreatedDto>> Create(CreateCustomerReturnRequest request)
     {
         var lines = request.Lines.Select(x => new CustomerReturnLineInput(
-            x.SaleItemId,
+            x.VariantId,
             x.Quantity,
+            x.SaleItemId,
+            x.UnitPrice,
             x.Reason,
             Parse<ReturnItemCondition>(x.Condition, "return_condition"),
             Parse<InventoryDisposition>(x.Disposition, "inventory_disposition"))).ToList();
@@ -42,8 +44,9 @@ public class CustomerReturnsController(ISender sender) : ControllerBase
             x.Amount)).ToList();
 
         return Ok(await sender.Send(new CreateCustomerReturnCommand(
-            request.SaleId,
+            request.WarehouseId,
             lines,
+            request.CustomerId,
             settlements,
             request.AutoSettle,
             request.BusinessDate,

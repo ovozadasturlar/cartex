@@ -3,7 +3,6 @@ using Cartex.ApiClient.Api;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Customers;
-using Cartex.Shared.Models.TradeCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
@@ -12,18 +11,15 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class CustomerStatementViewModel(
     ICustomersApi customersApi,
-    ITradeCasesApi tradeCasesApi,
     MobilePermissions permissions) : ObservableObject, IQueryAttributable
 {
     public ObservableCollection<CustomerStatementBalanceDto> Balances { get; } = [];
     public ObservableCollection<CustomerStatementDisplayRow> Rows { get; } = [];
-    public ObservableCollection<CustomerStatementCaseChoice> Cases { get; } = [];
     public IReadOnlyList<CustomerStatementScopeChoice> Scopes { get; } =
     [
         new(null, Loc.Instance["all_documents"]),
         new("Sale,CustomerReturn", Loc.Instance["sales_and_returns"]),
-        new("CustomerPayment,CustomerRefund", Loc.Instance["payments_and_refunds"]),
-        new("GoodsIssue,GoodsReturn", Loc.Instance["custody_documents"])
+        new("CustomerPayment,CustomerRefund", Loc.Instance["payments_and_refunds"])
     ];
 
     [ObservableProperty] private bool _isLoading;
@@ -36,7 +32,6 @@ public partial class CustomerStatementViewModel(
     [ObservableProperty] private bool _useDateFilter;
     [ObservableProperty] private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     [ObservableProperty] private DateTime _toDate = DateTime.Today;
-    [ObservableProperty] private CustomerStatementCaseChoice? _selectedCase;
     [ObservableProperty] private CustomerStatementScopeChoice? _selectedScope;
     [ObservableProperty] private bool _canExport;
 
@@ -59,17 +54,7 @@ public partial class CustomerStatementViewModel(
         Error = null;
         try
         {
-            var statementTask = GetStatementAsync();
-            var casesTask = permissions.Has("trade_cases.view")
-                ? tradeCasesApi.GetAsync(customerId: _customerId, page: 1, pageSize: 100)
-                : Task.FromResult(new List<TradeCaseListDto>());
-            await Task.WhenAll(statementTask, casesTask);
-            Cases.Clear();
-            Cases.Add(new CustomerStatementCaseChoice(null, Loc.Instance["all_cases"]));
-            foreach (var item in await casesTask)
-                Cases.Add(new CustomerStatementCaseChoice(item.Id, $"{item.CaseNumber} · {item.Title}"));
-            SelectedCase = Cases[0];
-            Apply(await statementTask);
+            Apply(await GetStatementAsync());
             IsLoaded = true;
         }
         catch (Exception ex) { Error = Describe(ex); }
@@ -102,7 +87,7 @@ public partial class CustomerStatementViewModel(
         {
             var (from, to) = Range();
             using var content = await customersApi.ExportStatementAsync(
-                _customerId, format, Mode, from, to, SelectedCase?.Id, documentTypes: SelectedScope?.DocumentTypes);
+                _customerId, format, Mode, from, to, documentTypes: SelectedScope?.DocumentTypes);
             var bytes = await content.ReadAsByteArrayAsync();
             var safe = string.Concat(CustomerName.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_'));
             var path = Path.Combine(FileSystem.CacheDirectory, $"{safe}-{Mode}.{format}");
@@ -118,8 +103,6 @@ public partial class CustomerStatementViewModel(
     {
         if (row.Entry?.SaleId is long saleId)
             return Shell.Current.GoToAsync($"sale/detail?id={saleId}");
-        if (row.Entry?.TradeCaseId is long caseId)
-            return Shell.Current.GoToAsync($"case/detail?id={caseId}");
         return Task.CompletedTask;
     }
 
@@ -127,7 +110,7 @@ public partial class CustomerStatementViewModel(
     {
         var (from, to) = Range();
         return customersApi.GetStatementAsync(
-            _customerId, from, to, SelectedCase?.Id, documentTypes: SelectedScope?.DocumentTypes);
+            _customerId, from, to, documentTypes: SelectedScope?.DocumentTypes);
     }
 
     private (DateTime? From, DateTime? To) Range() => UseDateFilter
@@ -173,7 +156,6 @@ public partial class CustomerStatementViewModel(
         : Loc.Instance["err_no_connection"];
 }
 
-public sealed record CustomerStatementCaseChoice(long? Id, string Label);
 public sealed record CustomerStatementScopeChoice(string? DocumentTypes, string Label);
 
 public sealed class CustomerStatementDisplayRow

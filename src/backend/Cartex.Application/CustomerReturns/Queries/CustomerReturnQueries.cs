@@ -26,6 +26,9 @@ public sealed class GetCustomerReturnsQueryHandler(
         GetCustomerReturnsQuery request,
         CancellationToken cancellationToken)
     {
+        if (!currentUser.HasPermission(AppPermissions.Returns.View))
+            throw new ForbiddenException("Qaytaruvlarni ko'rishga ruxsat yo'q.");
+
         var query = db.CustomerReturnDocuments.AsNoTracking();
         if (!currentUser.CanAccessAllBranches)
             query = query.Where(x => currentUser.BranchIds.Contains(x.BranchId));
@@ -34,23 +37,29 @@ public sealed class GetCustomerReturnsQueryHandler(
         if (request.CustomerId is { } customerId)
             query = query.Where(x => x.CustomerId == customerId);
         if (request.SaleId is { } saleId)
-            query = query.Where(x => x.SaleId == saleId);
+            query = query.Where(x => x.Lines.Any(line => line.SaleId == saleId));
         if (request.FromDate is { } from)
             query = query.Where(x => x.BusinessDate >= from);
         if (request.ToDate is { } to)
             query = query.Where(x => x.BusinessDate <= to);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            query = query.Where(x => EF.Functions.ILike(x.DocumentNumber, $"%{search}%")
+                                     || (x.Customer != null && EF.Functions.ILike(x.Customer.FullName, $"%{search}%")));
+        }
 
         return await query.ToPagedListAsync(request, x => new CustomerReturnListDto(
             x.Id,
             x.DocumentNumber,
             x.CustomerId,
             x.Customer == null ? null : x.Customer.FullName,
-            x.SaleId,
             x.BusinessDate,
             x.CreatedAt,
             x.Status.ToString(),
+            x.Lines.Count,
             x.RefundAmount,
-            x.IsFullReturn), writer, cancellationToken);
+            x.Note), writer, cancellationToken);
     }
 }
 
@@ -62,6 +71,9 @@ public sealed class GetCustomerReturnByIdQueryHandler(
 {
     public async Task<CustomerReturnDocumentDto> Handle(GetCustomerReturnByIdQuery request, CancellationToken cancellationToken)
     {
+        if (!currentUser.HasPermission(AppPermissions.Returns.View))
+            throw new ForbiddenException("Qaytaruvlarni ko'rishga ruxsat yo'q.");
+
         var query = db.CustomerReturnDocuments.AsNoTracking().Where(x => x.Id == request.Id);
         if (!currentUser.CanAccessAllBranches)
             query = query.Where(x => currentUser.BranchIds.Contains(x.BranchId));
@@ -70,8 +82,9 @@ public sealed class GetCustomerReturnByIdQueryHandler(
 
         var document = await query
             .Include(x => x.Customer)
+            .Include(x => x.Warehouse)
             .Include(x => x.User)
-            .Include(x => x.Lines).ThenInclude(x => x.Variant).ThenInclude(x => x.Product)
+            .Include(x => x.Lines).ThenInclude(x => x.Variant).ThenInclude(x => x.Product).ThenInclude(x => x.Unit)
             .Include(x => x.Settlements)
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken)
@@ -82,9 +95,9 @@ public sealed class GetCustomerReturnByIdQueryHandler(
             document.DocumentNumber,
             document.BranchId,
             document.WarehouseId,
+            document.Warehouse.Name,
             document.CustomerId,
             document.Customer?.FullName,
-            document.SaleId,
             document.UserId,
             document.User.FullName,
             document.BusinessDate,
@@ -93,13 +106,14 @@ public sealed class GetCustomerReturnByIdQueryHandler(
             document.GrossAmount,
             document.RefundAmount,
             document.CashbackReversed,
-            document.IsFullReturn,
             document.Note,
             document.Lines.Select(x => new CustomerReturnLineDto(
                 x.Id,
+                x.SaleId,
                 x.SaleItemId,
                 x.VariantId,
                 x.Variant.Product.Name,
+                x.Variant.Product.Unit.ShortName,
                 x.Quantity,
                 x.UnitPrice,
                 x.LineAmount,

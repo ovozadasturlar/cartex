@@ -44,12 +44,6 @@ public interface ISettingsApi
     [Put("/api/settings/sales-policy")]
     Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
 
-    [Get("/api/settings/trade-cases")]
-    Task<TradeCaseSettingsDto> GetTradeCaseSettingsAsync();
-
-    [Put("/api/settings/trade-cases")]
-    Task UpdateTradeCaseSettingsAsync([Body] UpdateTradeCaseSettingsRequest request);
-
     [Get("/api/settings/login-methods")]
     Task<LoginMethodsSettingsDto> GetLoginMethodsAsync();
 

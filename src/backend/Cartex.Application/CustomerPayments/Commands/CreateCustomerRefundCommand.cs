@@ -21,8 +21,7 @@ public sealed record CreateCustomerRefundCommand(
     List<CustomerRefundTenderInput> Tenders,
     DateOnly? BusinessDate = null,
     string? Note = null,
-    string? IdempotencyKey = null,
-    long? TradeCaseId = null) : ICommand<CustomerRefundCreatedDto>;
+    string? IdempotencyKey = null) : ICommand<CustomerRefundCreatedDto>;
 
 public sealed class CreateCustomerRefundCommandHandler(
     IApplicationDbContext db,
@@ -60,11 +59,6 @@ public sealed class CreateCustomerRefundCommandHandler(
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll)
             && customer.AssignedUserId != currentUser.UserId)
             throw new NotFoundException("Customer not found.", "customer_not_found");
-
-        if (request.TradeCaseId is { } tradeCaseId && !await db.TradeCases.AnyAsync(x =>
-                x.Id == tradeCaseId && x.CustomerId == request.CustomerId && x.BranchId == branchId,
-                cancellationToken))
-            throw new BusinessRuleException("Pul qaytarish bog'lanayotgan loyiha mos emas.", "invalid_trade_case_refund");
 
         var baseCode = (await currency.BaseAsync(cancellationToken)).ToUpperInvariant();
         var normalized = request.Tenders.Select(x => new CustomerRefundTenderInput(
@@ -108,7 +102,6 @@ public sealed class CreateCustomerRefundCommandHandler(
         {
             BranchId = branchId,
             CustomerId = request.CustomerId,
-            TradeCaseId = request.TradeCaseId,
             UserId = userId,
             DocumentNumber = await DocumentNumbers.NextAsync(db, "CRF", businessDate, cancellationToken),
             BusinessDate = businessDate,
@@ -141,13 +134,11 @@ public sealed class CreateCustomerRefundCommandHandler(
             var payout = ledger.Post(OperationType.CustomerRefund, input.Amount,
                 payoutAccount, null, userId, shiftId, rate);
             payout.CustomerRefundDocument = document;
-            payout.TradeCaseId = request.TradeCaseId;
             payout.Description = document.DocumentNumber;
 
             var advanceDebit = ledger.Post(OperationType.CustomerRefund, input.Amount,
                 advances[input.Currency], null, userId, shiftId, rate);
             advanceDebit.CustomerRefundDocument = document;
-            advanceDebit.TradeCaseId = request.TradeCaseId;
             advanceDebit.Description = document.DocumentNumber;
         }
 
@@ -158,7 +149,6 @@ public sealed class CreateCustomerRefundCommandHandler(
         {
             document.DocumentNumber,
             document.CustomerId,
-            document.TradeCaseId,
             document.TotalBaseAmount,
             tenders = document.Tenders.Select(x => new { x.Method, x.Currency, x.Amount, x.Rate, x.AmountBase }),
             document.Note

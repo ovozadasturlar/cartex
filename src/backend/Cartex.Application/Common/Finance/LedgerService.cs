@@ -13,6 +13,7 @@ public interface ILedgerService
     Task<Account?> FindCustomerAccountAsync(long customerId, AccountType type, CancellationToken cancellationToken, string? currency = null);
     Task<Account> SupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currency = null);
     Task<Account?> FindSupplierAccountAsync(long supplierId, AccountType type, CancellationToken cancellationToken, string? currency = null);
+    Task<Account> AccountAsync(long accountId, CancellationToken cancellationToken);
     Transaction Post(OperationType type, decimal amount, Account? from, Account? to, long userId, long? shiftId = null, decimal rate = 1m);
 }
 
@@ -26,6 +27,15 @@ public sealed class LedgerService(IApplicationDbContext db, ICurrencyService cur
             return;
         await db.Accounts.FromSqlInterpolated($"SELECT * FROM accounts WHERE id = {account.Id} FOR UPDATE").ToListAsync(cancellationToken);
         await db.ReloadAsync(account, cancellationToken);
+    }
+
+    public async Task<Account> AccountAsync(long accountId, CancellationToken cancellationToken)
+    {
+        var account = db.Accounts.Local.FirstOrDefault(a => a.Id == accountId)
+            ?? await db.Accounts.FirstOrDefaultAsync(a => a.Id == accountId, cancellationToken)
+            ?? throw new NotFoundException("Account not found.", "account_not_found");
+        await LockAsync(account, cancellationToken);
+        return account;
     }
 
     public async Task<Account> BranchAccountAsync(long branchId, AccountType type, CancellationToken cancellationToken, string? currencyCode = null)

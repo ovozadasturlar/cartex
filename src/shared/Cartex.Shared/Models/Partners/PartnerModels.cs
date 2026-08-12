@@ -46,7 +46,6 @@ public sealed record SaveParticipantRoleRequest(
     int MaxCount = 1,
     bool AppliesToCart = true,
     bool AppliesToSale = true,
-    bool AppliesToTradeCase = true,
     int SortOrder = 0);
 
 public sealed record ParticipantRoleDto(
@@ -60,7 +59,6 @@ public sealed record ParticipantRoleDto(
     int MaxCount,
     bool AppliesToCart,
     bool AppliesToSale,
-    bool AppliesToTradeCase,
     int SortOrder);
 
 public sealed record PartnerRewardRuleRequest(

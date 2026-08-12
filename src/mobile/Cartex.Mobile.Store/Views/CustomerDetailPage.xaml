@@ -6,7 +6,6 @@
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:customers="clr-namespace:Cartex.Shared.Models.Customers;assembly=Cartex.Shared"
     xmlns:sales="clr-namespace:Cartex.Shared.Models.Sales;assembly=Cartex.Shared"
-    xmlns:cases="clr-namespace:Cartex.Shared.Models.TradeCases;assembly=Cartex.Shared"
     xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:CustomerDetailViewModel"
@@ -71,9 +70,6 @@
                             <Button Text="{svc:T overview}" Style="{StaticResource BtnOutline}" Command="{Binding SelectTabCommand}" CommandParameter="overview">
                                 <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsOverview}" Value="True"><Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" /><Setter Property="TextColor" Value="White" /></DataTrigger></Button.Triggers>
                             </Button>
-                            <Button Text="{svc:T cases}" Style="{StaticResource BtnOutline}" Command="{Binding SelectTabCommand}" CommandParameter="cases">
-                                <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsCases}" Value="True"><Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" /><Setter Property="TextColor" Value="White" /></DataTrigger></Button.Triggers>
-                            </Button>
                             <Button Text="{svc:T timeline}" Style="{StaticResource BtnOutline}" Command="{Binding SelectTabCommand}" CommandParameter="timeline">
                                 <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsTimeline}" Value="True"><Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" /><Setter Property="TextColor" Value="White" /></DataTrigger></Button.Triggers>
                             </Button>
@@ -120,37 +116,6 @@
                         </Border>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsCases}" BindableLayout.ItemsSource="{Binding Cases}">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="cases:TradeCaseListDto">
-                                <Border Style="{StaticResource Card}" Padding="14">
-                                    <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding OpenCaseCommand, Source={RelativeSource AncestorType={x:Type vm:CustomerDetailViewModel}}}" CommandParameter="{Binding .}" /></Border.GestureRecognizers>
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                        <VerticalStackLayout Spacing="3">
-                                            <Label Text="{Binding Title}" FontSize="15" FontAttributes="Bold" />
-                                            <Label Text="{Binding CaseNumber}" Style="{StaticResource MutedLabel}" FontSize="12" />
-                                            <Label Text="{Binding WarehouseName}" Style="{StaticResource MutedLabel}" FontSize="12" />
-                                        </VerticalStackLayout>
-                                        <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                            <Label Text="{Binding EstimatedOutstandingAmount, StringFormat='{0:N0}'}" FontAttributes="Bold" HorizontalTextAlignment="End" />
-                                            <Label Text="{Binding Status}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
-                                        </VerticalStackLayout>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
-                    <Label Text="{svc:T no_cases}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" Margin="0,30" IsVisible="False">
-                        <Label.Triggers>
-                            <MultiTrigger TargetType="Label">
-                                <MultiTrigger.Conditions>
-                                    <BindingCondition Binding="{Binding IsCases}" Value="True" />
-                                    <BindingCondition Binding="{Binding HasCases}" Value="False" />
-                                </MultiTrigger.Conditions>
-                                <Setter Property="IsVisible" Value="True" />
-                            </MultiTrigger>
-                        </Label.Triggers>
-                    </Label>
 
                     <VerticalStackLayout Spacing="8" IsVisible="{Binding IsTimeline}" BindableLayout.ItemsSource="{Binding Ledger}">
                         <BindableLayout.ItemTemplate>
@@ -255,7 +220,6 @@
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
-                <Button Text="{svc:T new_case}" Style="{StaticResource BtnOutline}" Command="{Binding CreateCaseCommand}" IsVisible="{Binding CanCreateCase}" />
                 <Button Grid.Column="1" Text="{svc:T receive_payment_short}" Style="{StaticResource BtnPrimary}" FontSize="12" Command="{Binding OpenPaymentCommand}" IsVisible="{Binding CanReceivePayment}" />
                 <Button Grid.Column="2" Text="{svc:T refund}" Style="{StaticResource BtnOutline}" FontSize="12" Command="{Binding OpenRefundCommand}" IsVisible="{Binding CanRefund}" />
             </Grid>

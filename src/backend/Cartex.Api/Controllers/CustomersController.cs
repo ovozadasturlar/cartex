@@ -71,10 +71,9 @@ public class CustomersController(ISender sender) : ControllerBase
         long id,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
-        [FromQuery] long? tradeCaseId = null,
         [FromQuery] long? branchId = null,
         [FromQuery] string? documentTypes = null) =>
-        Ok(await sender.Send(new GetCustomerStatementQuery(id, from, to, tradeCaseId, branchId, documentTypes)));
+        Ok(await sender.Send(new GetCustomerStatementQuery(id, from, to, branchId, documentTypes)));
 
     [HttpGet("{id:long}/statement/export")]
     [HasPermission(AppPermissions.Statements.Export)]
@@ -84,12 +83,11 @@ public class CustomersController(ISender sender) : ControllerBase
         [FromQuery] string mode = "both",
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
-        [FromQuery] long? tradeCaseId = null,
         [FromQuery] long? branchId = null,
         [FromQuery] string? documentTypes = null)
     {
         var document = await sender.Send(new ExportCustomerStatementCommand(
-            id, format, mode, from, to, tradeCaseId, branchId, documentTypes));
+            id, format, mode, from, to, branchId, documentTypes));
         return File(document.Content, document.ContentType, document.FileName);
     }
 

@@ -79,7 +79,6 @@ public enum InventoryLocationKind
     External,
     Warehouse,
     Customer,
-    CustomerCustody,
     Quarantine,
     Scrap,
     SupplierClaim
@@ -89,33 +88,10 @@ public enum InventoryMovementKind
 {
     SaleIssue,
     SaleReturn,
-    GoodsIssue,
-    GoodsReturn,
     SupplyReceipt,
     Transfer,
     Adjustment,
-    Settlement,
     PartnerReward
-}
-
-public enum TradeCaseStatus
-{
-    Open,
-    SettlementPending,
-    Settled,
-    Cancelled
-}
-
-public enum TradeCaseWorkflow
-{
-    ImmediateInvoice,
-    CustodyUntilSettlement
-}
-
-public enum TradeCasePricePolicy
-{
-    SnapshotAtIssue,
-    PriceAtSettlement
 }
 
 public enum PartnerRewardMode
@@ -173,7 +149,8 @@ public enum SaleStatus
 {
     Completed,
     Returned,
-    PartialReturn
+    PartialReturn,
+    Voided
 }
 
 public enum CashbackScope

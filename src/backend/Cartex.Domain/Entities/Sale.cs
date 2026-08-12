@@ -16,9 +16,6 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public long? CustomerId { get; set; }
     public Customer? Customer { get; set; }
 
-    public long? TradeCaseId { get; set; }
-    public TradeCase? TradeCase { get; set; }
-
     public decimal TotalAmount { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal PaidCash { get; set; }
@@ -40,7 +37,12 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public decimal ReturnNoChargeAmount { get; set; }
     public decimal RefundedCashback { get; set; }
     public SaleStatus Status { get; set; } = SaleStatus.Completed;
+    public long? ShiftId { get; set; }
+    public Shift? Shift { get; set; }
+    public DateTime? VoidedAt { get; set; }
+    public string? VoidReason { get; set; }
     public string ReceiptToken { get; set; } = null!;
+    public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
 
     public ICollection<SaleItem> Items { get; set; } = [];

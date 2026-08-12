@@ -16,7 +16,7 @@ public sealed class GetLoyaltyStatsQueryHandler(IApplicationDbContext db) : IReq
         var to = DateTime.SpecifyKind(request.ToDate, DateTimeKind.Utc);
 
         var agg = await db.Sales
-            .Where(s => s.CreatedAt >= from && s.CreatedAt < to)
+            .Where(s => s.Status != SaleStatus.Voided && s.CreatedAt >= from && s.CreatedAt < to)
             .GroupBy(_ => 1)
             .Select(g => new
             {

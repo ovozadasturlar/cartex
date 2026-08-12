@@ -40,7 +40,6 @@ public sealed class ParticipantRoleDefinition : AuditableEntity
     public int MaxCount { get; set; } = 1;
     public bool AppliesToCart { get; set; } = true;
     public bool AppliesToSale { get; set; } = true;
-    public bool AppliesToTradeCase { get; set; } = true;
     public int SortOrder { get; set; }
 }
 
@@ -62,19 +61,6 @@ public sealed class CartParticipant : BaseEntity
 {
     public long CartId { get; set; }
     public Cart Cart { get; set; } = null!;
-    public long RoleDefinitionId { get; set; }
-    public ParticipantRoleDefinition RoleDefinition { get; set; } = null!;
-    public long PartyId { get; set; }
-    public Party Party { get; set; } = null!;
-    public string PartyNameSnapshot { get; set; } = null!;
-    public string? PartyPhoneSnapshot { get; set; }
-    public string RoleLabelSnapshot { get; set; } = null!;
-}
-
-public sealed class TradeCaseParticipant : BaseEntity
-{
-    public long TradeCaseId { get; set; }
-    public TradeCase TradeCase { get; set; } = null!;
     public long RoleDefinitionId { get; set; }
     public ParticipantRoleDefinition RoleDefinition { get; set; } = null!;
     public long PartyId { get; set; }

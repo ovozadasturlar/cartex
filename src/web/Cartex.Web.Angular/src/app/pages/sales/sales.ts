@@ -54,7 +54,7 @@ export class Sales implements OnInit {
   private readonly dialog = inject(MatDialog);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
-  readonly canReturn = inject(AuthService).hasPermission('sales.return');
+  readonly canReturn = inject(AuthService).hasPermission('returns.create');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SalesTotals | null>(null);

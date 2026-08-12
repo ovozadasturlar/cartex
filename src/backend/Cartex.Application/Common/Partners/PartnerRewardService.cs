@@ -11,6 +11,7 @@ public interface IPartnerRewardService
     Task AccrueSaleAsync(Sale sale, CancellationToken cancellationToken);
     Task AccruePaymentAsync(CustomerPaymentDocument document, CancellationToken cancellationToken);
     Task ReverseReturnAsync(CustomerReturnDocument document, CancellationToken cancellationToken);
+    Task ReverseSaleAsync(Sale sale, CancellationToken cancellationToken);
 }
 
 internal sealed record RewardSource(
@@ -36,10 +37,7 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
         if (sale.Participants.Count == 0 || sale.Items.Count == 0)
             return Task.CompletedTask;
 
-        var triggers = new HashSet<PartnerRewardTrigger>
-        {
-            sale.TradeCaseId.HasValue ? PartnerRewardTrigger.Settlement : PartnerRewardTrigger.Sale
-        };
+        var triggers = new HashSet<PartnerRewardTrigger> { PartnerRewardTrigger.Sale };
         var collectedFactor = sale.TotalAmount <= 0
             ? 0
             : Math.Clamp((sale.TotalAmount - sale.DebtAmount) / sale.TotalAmount, 0, 1);
@@ -188,9 +186,48 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
         }
     }
 
+    public async Task ReverseSaleAsync(Sale sale, CancellationToken cancellationToken)
+    {
+        var originals = await db.PartnerRewardEntries
+            .Where(x => x.SaleId == sale.Id && x.Amount > 0
+                        && (x.State == PartnerRewardState.Earned || x.State == PartnerRewardState.Pending))
+            .ToListAsync(cancellationToken);
+        if (originals.Count == 0) return;
+
+        var originalIds = originals.Select(x => x.Id).ToList();
+        var prior = await db.PartnerRewardEntries
+            .Where(x => x.OriginalEntryId != null && originalIds.Contains(x.OriginalEntryId.Value))
+            .GroupBy(x => x.OriginalEntryId!.Value)
+            .Select(x => new { OriginalId = x.Key, Amount = x.Sum(e => e.Amount) })
+            .ToDictionaryAsync(x => x.OriginalId, x => x.Amount, cancellationToken);
+
+        foreach (var original in originals)
+        {
+            var remaining = Math.Max(0, original.Amount + prior.GetValueOrDefault(original.Id));
+            if (remaining <= 0) continue;
+            db.PartnerRewardEntries.Add(new PartnerRewardEntry
+            {
+                BranchId = original.BranchId,
+                PartnerProfileId = original.PartnerProfileId,
+                PartnerProgramId = original.PartnerProgramId,
+                SaleId = original.SaleId,
+                SaleItemId = original.SaleItemId,
+                OriginalEntry = original,
+                Mode = original.Mode,
+                State = PartnerRewardState.Reversed,
+                Amount = -remaining,
+                QuantityBasis = original.QuantityBasis,
+                FinancialBasis = -original.FinancialBasis,
+                AvailableAt = DateTime.UtcNow,
+                DetailsJson = JsonSerializer.Serialize(new { reason = "sale_voided", sale.ReceiptToken })
+            });
+        }
+    }
+
     public async Task ReverseReturnAsync(CustomerReturnDocument document, CancellationToken cancellationToken)
     {
-        var itemIds = document.Lines.Select(x => x.SaleItemId).Distinct().ToList();
+        var itemIds = document.Lines.Where(x => x.SaleItemId is not null)
+            .Select(x => x.SaleItemId!.Value).Distinct().ToList();
         if (itemIds.Count == 0) return;
         var originals = await db.PartnerRewardEntries
             .Where(x => x.SaleItemId != null && itemIds.Contains(x.SaleItemId.Value)
@@ -204,14 +241,15 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
             .GroupBy(x => x.OriginalEntryId!.Value)
             .Select(x => new { OriginalId = x.Key, Amount = x.Sum(e => e.Amount) })
             .ToDictionaryAsync(x => x.OriginalId, x => x.Amount, cancellationToken);
-        var lineByItem = document.Lines.ToDictionary(x => x.SaleItemId);
+        var lineByItem = document.Lines.Where(x => x.SaleItemId is not null)
+            .ToDictionary(x => x.SaleItemId!.Value);
         var saleItems = await db.SaleItems.Where(x => itemIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
         foreach (var original in originals)
         {
             var line = lineByItem[original.SaleItemId!.Value];
-            var item = saleItems[line.SaleItemId];
+            var item = saleItems[line.SaleItemId!.Value];
             var remaining = Math.Max(0, original.Amount + prior.GetValueOrDefault(original.Id));
             if (remaining <= 0) continue;
             var isLastReturn = item.ReturnedQuantity >= item.Quantity;

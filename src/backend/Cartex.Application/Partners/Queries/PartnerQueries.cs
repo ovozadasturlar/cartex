@@ -82,7 +82,7 @@ public sealed class GetParticipantRolesQueryHandler(IApplicationDbContext db, IC
             .OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
             .Select(x => new ParticipantRoleDto(x.Id, x.Key, x.SingularLabel, x.PluralLabel,
                 x.IsEnabled, x.IsRequired, x.CanEqualBuyer, x.MaxCount,
-                x.AppliesToCart, x.AppliesToSale, x.AppliesToTradeCase, x.SortOrder))
+                x.AppliesToCart, x.AppliesToSale, x.SortOrder))
             .ToListAsync(cancellationToken);
     }
 }

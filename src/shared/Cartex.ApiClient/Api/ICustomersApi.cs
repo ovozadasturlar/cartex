@@ -46,7 +46,6 @@ public interface ICustomersApi
         long id,
         [Query] DateTime? from = null,
         [Query] DateTime? to = null,
-        [Query] long? tradeCaseId = null,
         [Query] long? branchId = null,
         [Query] string? documentTypes = null);
 
@@ -57,7 +56,6 @@ public interface ICustomersApi
         [Query] string mode = "both",
         [Query] DateTime? from = null,
         [Query] DateTime? to = null,
-        [Query] long? tradeCaseId = null,
         [Query] long? branchId = null,
         [Query] string? documentTypes = null);
 }

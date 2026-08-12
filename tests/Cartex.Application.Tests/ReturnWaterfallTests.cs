@@ -59,7 +59,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         var expectedDebtTake = Math.Min(price, debtBefore);
@@ -99,7 +99,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         using (var scope = Fixture.CreateScope())
@@ -107,7 +107,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         using var check = Fixture.CreateScope();
@@ -157,9 +157,8 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var items = await db.SaleItems.Where(i => i.SaleId == saleId).ToListAsync();
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [.. items.Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null))]));
+            await sender.Send(await TestReturns.ForSaleAsync(db, saleId));
         }
 
         var bonus = await BalanceAsync(db => db.Accounts.Where(a => a.CustomerId == customerId && a.Type == AccountType.Bonus));

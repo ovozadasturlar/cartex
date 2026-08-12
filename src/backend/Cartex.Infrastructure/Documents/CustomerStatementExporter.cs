@@ -58,7 +58,7 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
         {
             var sheet = workbook.AddWorksheet("Yakuniy hisob");
             Header(sheet, value, "Yakuniy hisob");
-            var headers = new[] { "Mahsulot", "Birlik", "Sotildi", "Savdo qaytdi", "Sof savdo", "Saqlovga berildi", "Saqlovdan qaytdi", "Hisoblandi", "Saqlov qoldig'i", $"Summa ({value.BaseCurrency})" };
+            var headers = new[] { "Mahsulot", "Birlik", "Sotildi", "Qaytdi", "Sof savdo", $"Summa ({value.BaseCurrency})" };
             WriteHeaders(sheet, 7, headers);
             var row = 8;
             foreach (var item in value.Products)
@@ -66,16 +66,12 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
                 sheet.Cell(row, 1).Value = item.ProductName;
                 sheet.Cell(row, 2).Value = item.UnitName;
                 sheet.Cell(row, 3).Value = item.Sold;
-                sheet.Cell(row, 4).Value = item.SaleReturned;
+                sheet.Cell(row, 4).Value = item.Returned;
                 sheet.Cell(row, 5).Value = item.NetSold;
-                sheet.Cell(row, 6).Value = item.CustodyIssued;
-                sheet.Cell(row, 7).Value = item.CustodyReturned;
-                sheet.Cell(row, 8).Value = item.CustodySettled;
-                sheet.Cell(row, 9).Value = item.CustodyOutstanding;
-                sheet.Cell(row, 10).Value = item.ChargedBaseAmount;
+                sheet.Cell(row, 6).Value = item.ChargedBaseAmount;
                 row++;
             }
-            Finish(sheet, 10, 7);
+            Finish(sheet, 6, 7);
         }
 
         using var stream = new MemoryStream();
@@ -95,8 +91,7 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
                 column.Item().Text(value.CustomerName).FontSize(16).Bold().FontColor(Colors.Green.Darken2);
                 column.Item().Text($"Davr: {Range(value)} · Asosiy valyuta: {value.BaseCurrency}")
                     .FontColor(Colors.Grey.Darken1);
-                if (!string.IsNullOrWhiteSpace(value.TradeCaseNumber))
-                    column.Item().Text($"Loyiha: {value.TradeCaseNumber}");
+                column.Item().Text(SummaryLine(value)).FontColor(Colors.Grey.Darken1);
                 column.Item().Text("Qoldiq: " + string.Join(" · ", value.Balances.Select(x =>
                     $"{x.ClosingBalance:N2} {x.Currency}"))).Bold();
             });
@@ -136,21 +131,16 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
                     {
                         table.ColumnsDefinition(c =>
                         {
-                            c.RelativeColumn(2); c.ConstantColumn(42); c.ConstantColumn(48);
-                            c.ConstantColumn(48); c.ConstantColumn(48); c.ConstantColumn(52);
-                            c.ConstantColumn(52); c.ConstantColumn(52); c.ConstantColumn(52); c.ConstantColumn(70);
+                            c.RelativeColumn(2); c.ConstantColumn(42); c.ConstantColumn(60);
+                            c.ConstantColumn(60); c.ConstantColumn(60); c.ConstantColumn(80);
                         });
-                        PdfHeader(table, ["Mahsulot", "Birlik", "Sotildi", "Qaytdi", "Sof", "Berildi", "Qaytdi", "Hisob", "Saqlov", "Summa"]);
+                        PdfHeader(table, ["Mahsulot", "Birlik", "Sotildi", "Qaytdi", "Sof", "Summa"]);
                         foreach (var row in value.Products)
                         {
                             Cell(table, row.ProductName); Cell(table, row.UnitName);
                             Cell(table, row.Sold.ToString("0.###"), true);
-                            Cell(table, row.SaleReturned.ToString("0.###"), true);
+                            Cell(table, row.Returned.ToString("0.###"), true);
                             Cell(table, row.NetSold.ToString("0.###"), true);
-                            Cell(table, row.CustodyIssued.ToString("0.###"), true);
-                            Cell(table, row.CustodyReturned.ToString("0.###"), true);
-                            Cell(table, row.CustodySettled.ToString("0.###"), true);
-                            Cell(table, row.CustodyOutstanding.ToString("0.###"), true);
                             Cell(table, row.ChargedBaseAmount.ToString("N2"), true);
                         }
                     });
@@ -163,6 +153,12 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
         });
     }).GeneratePdf();
 
+    private static string SummaryLine(CustomerStatementDto value) =>
+        $"Savdo: {value.Summary.SaleCount} ta / {value.Summary.SaleAmount:N2} · " +
+        $"To'lov: {value.Summary.PaymentCount} ta / {value.Summary.PaymentAmount:N2} · " +
+        $"Qaytarish: {value.Summary.ReturnCount} ta / {value.Summary.ReturnAmount:N2} · " +
+        $"Pul qaytarish: {value.Summary.RefundCount} ta / {value.Summary.RefundAmount:N2}";
+
     private static void Header(IXLWorksheet sheet, CustomerStatementDto value, string title)
     {
         sheet.Cell(1, 1).Value = value.CustomerName;
@@ -170,7 +166,7 @@ public sealed class CustomerStatementExporter : ICustomerStatementExporter
         sheet.Cell(1, 1).Style.Font.Bold = true;
         sheet.Cell(2, 1).Value = $"Davr: {Range(value)}";
         sheet.Cell(3, 1).Value = $"Asosiy valyuta: {value.BaseCurrency}";
-        sheet.Cell(4, 1).Value = string.IsNullOrWhiteSpace(value.TradeCaseNumber) ? "Barcha hujjatlar" : $"Loyiha: {value.TradeCaseNumber}";
+        sheet.Cell(4, 1).Value = SummaryLine(value);
         sheet.Cell(5, 1).Value = "Qoldiq: " + string.Join(" · ", value.Balances.Select(x => $"{x.ClosingBalance:N2} {x.Currency}"));
         sheet.Cell(6, 1).Value = title;
         sheet.Cell(6, 1).Style.Font.Bold = true;

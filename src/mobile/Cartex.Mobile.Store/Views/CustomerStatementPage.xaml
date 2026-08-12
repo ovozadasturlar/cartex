@@ -33,7 +33,6 @@
                             </BindableLayout.ItemTemplate>
                         </HorizontalStackLayout>
                     </ScrollView>
-                    <Picker ItemsSource="{Binding Cases}" SelectedItem="{Binding SelectedCase}" ItemDisplayBinding="{Binding Label}" Title="{svc:T all_cases}" />
                     <Picker ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}" ItemDisplayBinding="{Binding Label}" />
                     <Grid ColumnDefinitions="*,Auto">
                         <VerticalStackLayout><Label Text="{svc:T date_filter}" FontAttributes="Bold" /><Label Text="{svc:T all_period}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout>

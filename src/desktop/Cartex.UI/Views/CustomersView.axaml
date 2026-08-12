@@ -263,21 +263,37 @@
             <Panel DockPanel.Dock="Top" Margin="0,0,0,10">
                 <TextBlock Text="{Binding L[recent_transactions]}" FontWeight="SemiBold" FontSize="15"
                            Foreground="{DynamicResource TextPrimary}" IsVisible="{Binding !CanViewSales}" />
-                <Border Classes="segwrap" IsVisible="{Binding CanViewSales}">
-                    <StackPanel Orientation="Horizontal" Spacing="2">
-                        <Button Classes="seg" Classes.active="{Binding !IsSalesTab}" Content="{Binding L[recent_transactions]}"
-                                Command="{Binding SetTabCommand}" CommandParameter="ledger" />
-                        <Button Classes="seg" Classes.active="{Binding IsSalesTab}" Content="{Binding L[sales]}"
-                                Command="{Binding SetTabCommand}" CommandParameter="sales" />
+                <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding CanViewSales}">
+                    <Border Classes="segwrap">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="seg" Classes.active="{Binding IsLedgerTab}" Content="{Binding L[recent_transactions]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="ledger" />
+                            <Button Classes="seg" Classes.active="{Binding IsSalesTab}" Content="{Binding L[sales]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="sales" />
+                            <Button Classes="seg" Classes.active="{Binding IsStatementTab}" Content="{Binding L[statement]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="statement"
+                                    IsVisible="{Binding CanViewStatement}" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                                IsVisible="{Binding IsStatementTab}">
+                        <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <DatePicker SelectedDate="{Binding StatementFrom, Mode=TwoWay}" MinWidth="140" MinHeight="34" />
+                        <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <DatePicker SelectedDate="{Binding StatementTo, Mode=TwoWay}" MinWidth="140" MinHeight="34" />
+                        <c:ExportButton Command="{Binding ExportStatementCommand}" Text="{Binding L[export]}"
+                                        IsVisible="{Binding CanExportStatement}" />
                     </StackPanel>
-                </Border>
+                </Grid>
             </Panel>
-            <c:Pager DockPanel.Dock="Bottom" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding !IsSalesTab}" />
+            <c:Pager DockPanel.Dock="Bottom" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding IsLedgerTab}" />
             <c:Pager DockPanel.Dock="Bottom" State="{Binding SalesPaging}" Margin="0,10,0,0" IsVisible="{Binding IsSalesTab}" />
             <Panel>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        IsVisible="{Binding !IsSalesTab}">
+                        IsVisible="{Binding IsLedgerTab}">
                     <Panel>
                         <DataGrid ItemsSource="{Binding Ledger}" AutoGenerateColumns="False" IsReadOnly="True"
                                   GridLinesVisibility="Horizontal" HeadersVisibility="Column">
@@ -337,6 +353,42 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <ProgressBar IsIndeterminate="{Binding IsSalesLoading}" IsVisible="{Binding IsSalesLoading}" Height="3" VerticalAlignment="Top" />
+                    </Panel>
+                </Border>
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        IsVisible="{Binding IsStatementTab}">
+                    <Panel>
+                        <DockPanel Margin="14">
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*" ColumnSpacing="10" Margin="0,0,0,12">
+                                <c:StatCard Icon="CashRegister" Title="{Binding L[statement_sales]}"
+                                            Value="{Binding Statement.Summary.SaleAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="1" Icon="CashCheck" Title="{Binding L[statement_payments]}"
+                                            Value="{Binding Statement.Summary.PaymentAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="2" Icon="KeyboardReturn" Title="{Binding L[statement_returns]}"
+                                            Value="{Binding Statement.Summary.ReturnAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="3" Icon="CashRefund" Title="{Binding L[statement_refunds]}"
+                                            Value="{Binding Statement.Summary.RefundAmount, StringFormat='{}{0:N0}'}" />
+                            </Grid>
+                            <DataGrid ItemsSource="{Binding Statement.Timeline}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="*" Binding="{Binding OccurredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                        Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding DocumentNumber}"
+                                                        Header="{Binding [ret_document], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="1.4*" Binding="{Binding Summary}"
+                                                        Header="{Binding [operation_type], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding Debit, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [debit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding Credit, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [credit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding RunningBalance, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [balance], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                        <ProgressBar IsIndeterminate="{Binding IsStatementLoading}" IsVisible="{Binding IsStatementLoading}" Height="3" VerticalAlignment="Top" />
                     </Panel>
                 </Border>
             </Panel>

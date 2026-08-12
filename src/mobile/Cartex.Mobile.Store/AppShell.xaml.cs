@@ -16,13 +16,6 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("customer/statement", typeof(CustomerStatementPage));
         Routing.RegisterRoute("customer/refund", typeof(CustomerRefundPage));
         Routing.RegisterRoute("sale/return", typeof(SaleReturnPage));
-        Routing.RegisterRoute("case/detail", typeof(TradeCaseDetailPage));
-        Routing.RegisterRoute("case/issue", typeof(CaseIssuePage));
-        Routing.RegisterRoute("case/return", typeof(CaseReturnPage));
-        Routing.RegisterRoute("case/payment", typeof(CasePaymentPage));
-        Routing.RegisterRoute("case/statement", typeof(CaseStatementPage));
-        Routing.RegisterRoute("case/settle", typeof(CaseSettlementPage));
-        Routing.RegisterRoute("case/create", typeof(CaseCreatePage));
         Routing.RegisterRoute("checkout", typeof(CheckoutPage));
         Routing.RegisterRoute("receive_cart", typeof(ReceiveCartPage));
         Routing.RegisterRoute("product/edit", typeof(ProductEditPage));

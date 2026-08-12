@@ -23,8 +23,11 @@ public interface ISalesApi
     [Post("/api/sales")]
     Task<CreateSaleResult> CreateAsync([Body] CreateSaleRequest request);
 
-    [Post("/api/sales/{id}/return")]
-    Task ReturnAsync(long id, [Body] ReturnSaleRequest request);
+    [Post("/api/sales/{id}/void")]
+    Task VoidAsync(long id, [Body] VoidSaleRequest request);
+
+    [Get("/api/sales/variant-prices/{variantId}")]
+    Task<List<VariantSalePriceDto>> GetVariantPricesAsync(long variantId, [Query] long? customerId = null, [Query] int take = 10);
 
     [Post("/api/sales/{id}/resend-receipt")]
     Task ResendReceiptAsync(long id);

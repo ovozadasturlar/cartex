@@ -23,9 +23,7 @@ public class CustomerPaymentDocumentConfiguration : IEntityTypeConfiguration<Cus
 
         builder.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.TradeCase).WithMany(x => x.Payments).HasForeignKey(x => x.TradeCaseId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => x.TradeCaseId);
     }
 }
 
@@ -74,11 +72,9 @@ public class CustomerRefundDocumentConfiguration : IEntityTypeConfiguration<Cust
         builder.HasIndex(x => new { x.BranchId, x.IdempotencyKey }).IsUnique()
             .HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => new { x.CustomerId, x.BusinessDate, x.Id });
-        builder.HasIndex(x => x.TradeCaseId);
 
         builder.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.TradeCase).WithMany().HasForeignKey(x => x.TradeCaseId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -114,12 +110,11 @@ public class CustomerReturnDocumentConfiguration : IEntityTypeConfiguration<Cust
         builder.HasIndex(x => new { x.BranchId, x.IdempotencyKey }).IsUnique()
             .HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => new { x.CustomerId, x.BusinessDate, x.Id });
-        builder.HasIndex(x => new { x.SaleId, x.Id });
+        builder.HasIndex(x => new { x.BranchId, x.BusinessDate, x.Id });
 
         builder.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -140,9 +135,12 @@ public class CustomerReturnLineConfiguration : IEntityTypeConfiguration<Customer
         builder.Property(x => x.Disposition).HasConversion<string>().HasMaxLength(20);
         builder.HasOne(x => x.Document).WithMany(x => x.Lines)
             .HasForeignKey(x => x.CustomerReturnDocumentId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.SaleItem).WithMany().HasForeignKey(x => x.SaleItemId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Stock).WithMany().HasForeignKey(x => x.StockId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Variant).WithMany().HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.SaleItemId);
+        builder.HasIndex(x => x.SaleId);
     }
 }
 

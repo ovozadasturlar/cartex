@@ -322,7 +322,7 @@ public sealed class MobileOfflineService(
         var rows = await store.GetRolesAsync();
         return rows.Select(x => new ParticipantRoleDto(
             x.Id, x.Key, x.Label, x.Label, true, x.IsRequired, x.CanEqualBuyer,
-            x.MaxCount, true, true, true, x.SortOrder)).ToList();
+            x.MaxCount, true, true, x.SortOrder)).ToList();
     }
 
     public async Task<IReadOnlyList<PartnerDto>> SearchPartnersAsync(string term, int limit)

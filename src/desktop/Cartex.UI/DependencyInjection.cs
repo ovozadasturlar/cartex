@@ -85,8 +85,7 @@ public static class DependencyInjection
         services.AddTransient<RemindersViewModel>();
         services.AddTransient<NotificationJournalViewModel>();
         services.AddSingleton<OrdersViewModel>();
-        services.AddSingleton<TradeCasesViewModel>();
-        services.AddTransient<TradeCaseDetailViewModel>();
+        services.AddSingleton<ReturnsViewModel>();
         services.AddSingleton<PosHandoffService>();
         services.AddTransient<AccountsViewModel>();
         services.AddTransient<TransactionsViewModel>();
@@ -104,7 +103,6 @@ public static class DependencyInjection
         services.AddTransient<DevicesViewModel>();
         services.AddTransient<OnboardingViewModel>();
         services.AddTransient<CustomerPickerViewModel>();
-        services.AddTransient<SaleCaseAttachViewModel>();
         services.AddTransient<AdjustStockDialogViewModel>();
     }
 

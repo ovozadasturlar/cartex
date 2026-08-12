@@ -8,8 +8,7 @@ public sealed record CreateCustomerRefundRequest(
     List<CustomerRefundTenderRequest> Tenders,
     DateOnly? BusinessDate = null,
     string? Note = null,
-    string? IdempotencyKey = null,
-    long? TradeCaseId = null);
+    string? IdempotencyKey = null);
 
 public sealed record CustomerRefundCreatedDto(long Id, string DocumentNumber, decimal TotalBaseAmount);
 
@@ -33,8 +32,7 @@ public sealed record CustomerRefundDocumentDto(
     string Status,
     decimal TotalBaseAmount,
     string? Note,
-    IReadOnlyList<CustomerRefundTenderDto> Tenders,
-    long? TradeCaseId = null);
+    IReadOnlyList<CustomerRefundTenderDto> Tenders);
 
 public sealed record CustomerRefundListDto(
     long Id,
@@ -45,5 +43,4 @@ public sealed record CustomerRefundListDto(
     DateTime CreatedAt,
     string Status,
     decimal TotalBaseAmount,
-    string? Note,
-    long? TradeCaseId = null);
+    string? Note);

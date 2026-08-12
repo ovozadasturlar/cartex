@@ -7,7 +7,6 @@ using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Sales;
-using Cartex.Shared.Models.TradeCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
@@ -17,7 +16,6 @@ namespace Cartex.Mobile.Store.ViewModels;
 public partial class CustomerDetailViewModel(
     ICustomersApi customersApi,
     ISalesApi salesApi,
-    ITradeCasesApi tradeCasesApi,
     ICustomerPaymentsApi customerPaymentsApi,
     ICustomerRefundsApi customerRefundsApi,
     ICustomerReturnsApi customerReturnsApi,
@@ -29,7 +27,6 @@ public partial class CustomerDetailViewModel(
     public ObservableCollection<CurrencyBalanceRow> Credits { get; } = [];
     public ObservableCollection<CustomerLedgerEntryDto> Ledger { get; } = [];
     public ObservableCollection<CustomerSaleRow> Sales { get; } = [];
-    public ObservableCollection<TradeCaseListDto> Cases { get; } = [];
     public ObservableCollection<CustomerPaymentListDto> Payments { get; } = [];
     public ObservableCollection<CustomerReturnListDto> Returns { get; } = [];
     public ObservableCollection<CustomerRefundListDto> Refunds { get; } = [];
@@ -49,12 +46,10 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private CurrencyDto? _selectedCurrency;
     [ObservableProperty] private bool _canReceivePayment;
     [ObservableProperty] private bool _canMessage;
-    [ObservableProperty] private bool _canCreateCase;
     [ObservableProperty] private bool _canRefund;
     [ObservableProperty] private bool _canViewStatement;
 
     public bool IsActivity => SelectedTab == "activity";
-    public bool IsCases => SelectedTab == "cases";
     public bool IsSales => SelectedTab == "sales";
     public bool IsPayments => SelectedTab == "payments";
     public bool IsReturns => SelectedTab == "returns";
@@ -63,7 +58,6 @@ public partial class CustomerDetailViewModel(
     public bool HasAddress => !string.IsNullOrWhiteSpace(Customer?.Address);
     public bool HasDebts => Debts.Count > 0;
     public bool HasCredits => Credits.Count > 0;
-    public bool HasCases => Cases.Count > 0;
     public bool HasLedger => Ledger.Count > 0;
     public bool HasSales => Sales.Count > 0;
     public bool HasPayments => Payments.Count > 0;
@@ -90,7 +84,6 @@ public partial class CustomerDetailViewModel(
     partial void OnSelectedTabChanged(string value)
     {
         OnPropertyChanged(nameof(IsActivity));
-        OnPropertyChanged(nameof(IsCases));
         OnPropertyChanged(nameof(IsSales));
         OnPropertyChanged(nameof(IsPayments));
         OnPropertyChanged(nameof(IsReturns));
@@ -145,14 +138,6 @@ public partial class CustomerDetailViewModel(
 
     [RelayCommand]
     private Task OpenSaleAsync(CustomerSaleRow row) => Shell.Current.GoToAsync($"sale/detail?id={row.Sale.Id}");
-
-    [RelayCommand]
-    private Task OpenCaseAsync(TradeCaseListDto row) => Shell.Current.GoToAsync($"case/detail?id={row.Id}");
-
-    [RelayCommand]
-    private Task CreateCaseAsync() => CanCreateCase
-        ? Shell.Current.GoToAsync($"case/create?customerId={_customerId}")
-        : Task.CompletedTask;
 
     [RelayCommand]
     private Task OpenStatementAsync() => CanViewStatement
@@ -231,16 +216,12 @@ public partial class CustomerDetailViewModel(
         {
             CanReceivePayment = permissions.Has("customer_payments.create");
             CanMessage = permissions.Has("customers.message");
-            CanCreateCase = permissions.Has("trade_cases.create");
             CanViewStatement = permissions.Has("statements.view");
 
             var customerTask = customersApi.GetByIdAsync(_customerId);
             var ledgerTask = customersApi.GetLedgerAsync(_customerId, 1, 50);
             var salesTask = salesApi.QueryAsync(QueryRequest.Create().Page(1, 30).Sort("CreatedAt", true)
                 .With("customerId", _customerId).Build());
-            var casesTask = permissions.Has("trade_cases.view")
-                ? tradeCasesApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
-                : Task.FromResult(new List<TradeCaseListDto>());
             var paymentsTask = permissions.Has("customer_payments.view")
                 ? customerPaymentsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
                 : Task.FromResult(new List<CustomerPaymentListDto>());
@@ -252,7 +233,7 @@ public partial class CustomerDetailViewModel(
                 : Task.FromResult(new List<CustomerRefundListDto>());
             var currenciesTask = ratesApi.GetCurrenciesAsync(onlyEnabled: true);
 
-            await Task.WhenAll(customerTask, ledgerTask, salesTask, casesTask, paymentsTask, returnsTask, refundsTask, currenciesTask);
+            await Task.WhenAll(customerTask, ledgerTask, salesTask, paymentsTask, returnsTask, refundsTask, currenciesTask);
 
             Customer = await customerTask;
             Initials = string.Concat(Customer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -262,7 +243,6 @@ public partial class CustomerDetailViewModel(
             Replace(Credits, Customer.CreditBalances.Where(x => x.Amount > 0).Select(x => new CurrencyBalanceRow(x, true)));
             Replace(Ledger, (await ledgerTask).Content ?? []);
             Replace(Sales, ((await salesTask).Content ?? []).Select(x => new CustomerSaleRow(x)));
-            Replace(Cases, await casesTask);
             Replace(Payments, await paymentsTask);
             Replace(Returns, await returnsTask);
             Replace(Refunds, await refundsTask);
@@ -296,7 +276,6 @@ public partial class CustomerDetailViewModel(
         OnPropertyChanged(nameof(HasAddress));
         OnPropertyChanged(nameof(HasDebts));
         OnPropertyChanged(nameof(HasCredits));
-        OnPropertyChanged(nameof(HasCases));
         OnPropertyChanged(nameof(HasLedger));
         OnPropertyChanged(nameof(HasSales));
         OnPropertyChanged(nameof(HasPayments));

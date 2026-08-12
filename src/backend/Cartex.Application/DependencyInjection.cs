@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IDiscountCalculator, DiscountCalculator>();
 
         services.AddScoped<IStockAllocator, StockAllocator>();
+        services.AddScoped<Common.Sales.ISaleCorrectionPolicy, Common.Sales.SaleCorrectionPolicy>();
         services.AddScoped<IBranchCatalogService, BranchCatalogService>();
         services.AddScoped<PrintRoutingService>();
         services.AddScoped<ReceiptPrintPolicyService>();

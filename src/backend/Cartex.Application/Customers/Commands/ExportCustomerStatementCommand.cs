@@ -13,7 +13,6 @@ public sealed record ExportCustomerStatementCommand(
     string Mode,
     DateTime? From = null,
     DateTime? To = null,
-    long? TradeCaseId = null,
     long? BranchId = null,
     string? DocumentTypes = null) : ICommand<GeneratedDocument>;
 
@@ -30,13 +29,13 @@ public sealed class ExportCustomerStatementCommandHandler(
         if (!currentUser.HasPermission(AppPermissions.Statements.Export))
             throw new ForbiddenException("Hisob ko'chirmasini eksport qilishga ruxsat yo'q.");
         var statement = await sender.Send(new GetCustomerStatementQuery(
-            request.CustomerId, request.From, request.To, request.TradeCaseId,
+            request.CustomerId, request.From, request.To,
             request.BranchId, request.DocumentTypes), cancellationToken);
         var document = exporter.Export(statement, request.Format, request.Mode);
         audit.SetOutcome("statement.exported", "customers", request.CustomerId, new
         {
             request.Format, request.Mode, request.From, request.To,
-            request.TradeCaseId, request.BranchId, request.DocumentTypes,
+            request.BranchId, request.DocumentTypes,
             document.FileName, bytes = document.Content.Length
         }, "Mijoz hisob ko'chirmasi eksport qilindi", request.BranchId);
         return document;

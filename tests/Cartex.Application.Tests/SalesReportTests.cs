@@ -143,7 +143,7 @@ public class SalesReportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var itemId = await db.SaleItems.Where(i => i.SaleId == saleId).Select(i => i.Id).SingleAsync();
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(itemId, 1m, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, itemId, 1m));
         }
 
         var report = await ReportAsync();

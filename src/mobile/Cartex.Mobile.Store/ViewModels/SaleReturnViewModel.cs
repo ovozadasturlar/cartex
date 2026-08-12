@@ -180,13 +180,16 @@ public partial class SaleReturnViewModel(
                 settlements = [new CustomerReturnSettlementRequest(mode, currencyCode, amount)];
             }
             var result = await returnsApi.CreateAsync(new CreateCustomerReturnRequest(
-                _sale.Id,
+                _sale.WarehouseId,
                 selected.Select(x => new CustomerReturnLineRequest(
-                    x.Item.SaleItemId,
+                    x.Item.VariantId,
                     x.Quantity,
+                    x.Item.SaleItemId,
+                    null,
                     string.IsNullOrWhiteSpace(x.Reason) ? null : x.Reason.Trim(),
                     x.SelectedCondition?.Code ?? "Sellable",
                     x.SelectedDisposition?.Code ?? "SellableRestock")).ToList(),
+                _sale.CustomerId,
                 settlements,
                 AutoSettle: mode == "Auto",
                 Note: string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),

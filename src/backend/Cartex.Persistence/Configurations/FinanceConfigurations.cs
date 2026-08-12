@@ -92,10 +92,6 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .WithMany(x => x.Transactions)
             .HasForeignKey(x => x.CustomerRefundDocumentId)
             .OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.TradeCase)
-            .WithMany()
-            .HasForeignKey(x => x.TradeCaseId)
-            .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.PartnerRedemptionDocument)
             .WithMany(x => x.Transactions)
             .HasForeignKey(x => x.PartnerRedemptionDocumentId)
@@ -103,7 +99,6 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.HasIndex(x => x.CustomerPaymentDocumentId);
         builder.HasIndex(x => x.CustomerReturnDocumentId);
         builder.HasIndex(x => x.CustomerRefundDocumentId);
-        builder.HasIndex(x => x.TradeCaseId);
         builder.HasIndex(x => x.PartnerRedemptionDocumentId);
     }
 }

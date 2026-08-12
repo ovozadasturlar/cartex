@@ -167,9 +167,11 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
         }
 
         var command = new CreateCustomerReturnCommand(
-            saleId,
+            warehouseId,
             [new CustomerReturnLineInput(
-                saleItemId, 1m, "Qobig'i shikastlangan", ReturnItemCondition.Damaged, InventoryDisposition.Quarantine)],
+                variantId, 1m, saleItemId, null, "Qobig'i shikastlangan",
+                ReturnItemCondition.Damaged, InventoryDisposition.Quarantine)],
+            customerId,
             [
                 new CustomerReturnSettlementInput(ReturnSettlementMethod.Cash, "UZS", 30_000m),
                 new CustomerReturnSettlementInput(ReturnSettlementMethod.CustomerAdvance, "UZS", 20_000m)

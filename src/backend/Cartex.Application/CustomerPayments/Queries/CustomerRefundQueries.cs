@@ -12,7 +12,6 @@ namespace Cartex.Application.CustomerPayments.Queries;
 public sealed record GetCustomerRefundsQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerRefundListDto>>
 {
     public long? CustomerId { get; init; }
-    public long? TradeCaseId { get; init; }
     public DateOnly? FromDate { get; init; }
     public DateOnly? ToDate { get; init; }
 }
@@ -32,14 +31,13 @@ public sealed class GetCustomerRefundsQueryHandler(
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
             query = query.Where(x => x.Customer.AssignedUserId == currentUser.UserId);
         if (request.CustomerId is { } customerId) query = query.Where(x => x.CustomerId == customerId);
-        if (request.TradeCaseId is { } tradeCaseId) query = query.Where(x => x.TradeCaseId == tradeCaseId);
         if (request.FromDate is { } from) query = query.Where(x => x.BusinessDate >= from);
         if (request.ToDate is { } to) query = query.Where(x => x.BusinessDate <= to);
 
         return await query.ToPagedListAsync(request, x => new CustomerRefundListDto(
             x.Id, x.DocumentNumber, x.CustomerId, x.Customer.FullName,
             x.BusinessDate, x.CreatedAt, x.Status.ToString(), x.TotalBaseAmount,
-            x.Note, x.TradeCaseId), writer, cancellationToken);
+            x.Note), writer, cancellationToken);
     }
 }
 
@@ -63,8 +61,7 @@ public sealed class GetCustomerRefundByIdQueryHandler(IApplicationDbContext db, 
                 x.UserId, x.User.FullName, x.BusinessDate, x.CreatedAt, x.Status.ToString(),
                 x.TotalBaseAmount, x.Note,
                 x.Tenders.OrderBy(t => t.Id).Select(t => new CustomerRefundTenderDto(
-                    t.Method.ToString(), t.Currency, t.Amount, t.Rate, t.AmountBase)).ToList(),
-                x.TradeCaseId))
+                    t.Method.ToString(), t.Currency, t.Amount, t.Rate, t.AmountBase)).ToList()))
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Refund document not found.", "refund_document_not_found");
     }

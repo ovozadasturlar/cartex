@@ -112,7 +112,7 @@ public sealed class SettingsService
 
     public List<string> EnabledFeatures
     {
-        get => _data.EnabledFeatures ??= ["trade_cases", "loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
+        get => _data.EnabledFeatures ??= ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
         set { _data.EnabledFeatures = value; Save(); }
     }
 
@@ -155,6 +155,6 @@ public sealed class SettingsService
         public long OfflineWarehouseId { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
         public bool PosListMode { get; set; }
-        public List<string> EnabledFeatures { get; set; } = ["trade_cases", "loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
+        public List<string> EnabledFeatures { get; set; } = ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
     }
 }

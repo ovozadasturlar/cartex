@@ -11,14 +11,13 @@ public static class TariffCatalog
         [Free] =
         [
             FeatureCatalog.Supplies, FeatureCatalog.Suppliers,
-            FeatureCatalog.StockTransfers, FeatureCatalog.Accounts,
-            FeatureCatalog.TradeCases
+            FeatureCatalog.StockTransfers, FeatureCatalog.Accounts
         ],
         [Standard] =
         [
             FeatureCatalog.Supplies, FeatureCatalog.Suppliers, FeatureCatalog.StockTransfers,
             FeatureCatalog.Accounts, FeatureCatalog.Reports, FeatureCatalog.Loyalty, FeatureCatalog.Prepack,
-            FeatureCatalog.OfflineCache, FeatureCatalog.TradeCases, FeatureCatalog.Partners
+            FeatureCatalog.OfflineCache, FeatureCatalog.Partners
         ],
         [Pro] = [.. FeatureCatalog.AllCodes],
     };

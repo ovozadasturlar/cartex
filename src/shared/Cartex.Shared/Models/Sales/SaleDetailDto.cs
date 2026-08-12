@@ -37,7 +37,6 @@ public sealed record SaleReturnSummaryDto(
     string DocumentNumber,
     DateOnly BusinessDate,
     decimal RefundAmount,
-    bool IsFullReturn,
     string Status);
 
 public sealed record SaleDetailDto(
@@ -54,8 +53,6 @@ public sealed record SaleDetailDto(
     long? CustomerId,
     string? CustomerName,
     string? CustomerPhone,
-    long? TradeCaseId,
-    string? TradeCaseNumber,
     decimal TotalAmount,
     decimal DiscountAmount,
     decimal PaidCash,
@@ -71,4 +68,6 @@ public sealed record SaleDetailDto(
     IReadOnlyList<SaleDetailPaymentDto> Payments,
     IReadOnlyList<SaleDetailParticipantDto> Participants,
     IReadOnlyList<SaleReturnSummaryDto> Returns,
-    IReadOnlyList<string> AllowedActions);
+    IReadOnlyList<string> AllowedActions,
+    string? Note = null,
+    string? VoidReason = null);

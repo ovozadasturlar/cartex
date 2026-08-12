@@ -1,3 +1,4 @@
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +27,7 @@ public sealed class GetCashFlowQueryHandler(IApplicationDbContext db) : IRequest
             .ToListAsync(cancellationToken);
 
         var sales = await db.Sales
-            .Where(s => s.CreatedAt >= from && s.CreatedAt < to)
+            .Where(s => s.Status != SaleStatus.Voided && s.CreatedAt >= from && s.CreatedAt < to)
             .Select(s => new { s.CreatedAt, s.TotalAmount })
             .ToListAsync(cancellationToken);
 

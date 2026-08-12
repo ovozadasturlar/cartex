@@ -12,8 +12,7 @@ public record CreateCustomerPaymentRequest(
     bool AutoAllocateDebt = true,
     DateOnly? BusinessDate = null,
     string? Note = null,
-    string? IdempotencyKey = null,
-    long? TradeCaseId = null);
+    string? IdempotencyKey = null);
 
 public record CustomerPaymentCreatedDto(
     long Id,
@@ -53,8 +52,7 @@ public record CustomerPaymentDocumentDto(
     decimal AdvanceBaseAmount,
     string? Note,
     IReadOnlyList<CustomerPaymentTenderDto> Tenders,
-    IReadOnlyList<CustomerPaymentAllocationDto> Allocations,
-    long? TradeCaseId = null);
+    IReadOnlyList<CustomerPaymentAllocationDto> Allocations);
 
 public record CustomerPaymentListDto(
     long Id,
@@ -67,5 +65,4 @@ public record CustomerPaymentListDto(
     decimal TotalBaseAmount,
     decimal AllocatedBaseAmount,
     decimal AdvanceBaseAmount,
-    string? Note,
-    long? TradeCaseId = null);
+    string? Note);
