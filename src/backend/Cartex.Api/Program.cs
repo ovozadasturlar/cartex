@@ -77,6 +77,7 @@ if (trustProxyHeaders)
 
 var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 10);
 var publicPerMinute = builder.Configuration.GetValue("RateLimiting:PublicPerMinute", 60);
+var authenticatedPerMinute = builder.Configuration.GetValue("RateLimiting:AuthenticatedPerMinute", 600);
 var printingPerMinute = builder.Configuration.GetValue("RateLimiting:PrintingPerMinute", 60);
 
 builder.Services.AddRateLimiter(options =>
@@ -88,10 +89,16 @@ builder.Services.AddRateLimiter(options =>
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
 
+    // Staff terminals read receipts through the same public endpoint, so an anonymous
+    // per-IP bucket would throttle a busy till. Signed-in callers get their own bucket.
     options.AddPolicy("public", context =>
-        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = publicPerMinute, Window = TimeSpan.FromMinutes(1) }));
+        context.User.FindFirst("userId")?.Value is { Length: > 0 } userId
+            ? System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                $"user:{userId}",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = authenticatedPerMinute, Window = TimeSpan.FromMinutes(1) })
+            : System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = publicPerMinute, Window = TimeSpan.FromMinutes(1) }));
 
     options.AddPolicy("printing", context =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
@@ -105,7 +112,8 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Host.UseWindowsService();
-builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://127.0.0.1:5015;http://localhost:5015");
+// localhost already covers 127.0.0.1 and ::1 — listing both binds the same socket twice.
+builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5015");
 
 var app = builder.Build();
 
@@ -119,6 +127,18 @@ if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(adminPassword)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    // Migrations are squashed into a single InitialMigration before release, so a database
+    // stamped with a migration this build no longer contains can never be migrated forward.
+    var known = db.Database.GetMigrations().ToHashSet();
+    var orphaned = (await db.Database.GetAppliedMigrationsAsync()).Where(x => !known.Contains(x)).ToList();
+    if (orphaned.Count > 0)
+        throw new InvalidOperationException(
+            $"Bazada bu buildda mavjud bo'lmagan migratsiya(lar) qo'llangan: {string.Join(", ", orphaned)}. " +
+            "Migratsiyalar birlashtirilgan bo'lsa, dev bazani qayta yarating " +
+            "(DROP DATABASE cartex_db; CREATE DATABASE cartex_db;). " +
+            "Production'da bu eski build deploy qilinganini bildiradi.");
+
     await db.Database.MigrateAsync();
 
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
