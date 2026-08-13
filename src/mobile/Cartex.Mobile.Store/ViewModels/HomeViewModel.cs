@@ -38,8 +38,12 @@ public partial class HomeViewModel(
         WarehouseName = warehouse.WarehouseName is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
         HasCart = cart.Count > 0;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
+        if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }
+
+    private static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(30);
+    private DateTime _loadedAt;
 
     private async Task LoadAsync()
     {
@@ -59,6 +63,7 @@ public partial class HomeViewModel(
                 TodayCount = totalsTask.Result.Count;
                 TodayTotal = totalsTask.Result.TotalAmount.ToString("N0");
             }
+            _loadedAt = DateTime.UtcNow;
         }
         catch
         {
