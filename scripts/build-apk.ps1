@@ -2,7 +2,8 @@
 param(
     [ValidateSet('store', 'agent')] [string]$App = 'store',
     [switch]$Arm64Only,
-    [switch]$Install
+    [switch]$Install,
+    [string]$Device
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,10 +41,26 @@ $apk = Get-ChildItem -Path (Join-Path $repoRoot "src\mobile\Cartex.Mobile.$name\
 if (-not $apk) { throw 'Signed APK topilmadi.' }
 Write-Host ("Tayyor: {0} ({1:N0} MB)" -f $apk.FullName, ($apk.Length / 1MB))
 
-if ($Install)
+if (-not $Install) { return }
+
+$adb = Join-Path $sdk 'platform-tools\adb.exe'
+if (-not (Test-Path -LiteralPath $adb)) { throw 'adb topilmadi.' }
+
+if (-not $Device)
 {
-    $adb = Join-Path $sdk 'platform-tools\adb.exe'
-    if (-not (Test-Path -LiteralPath $adb)) { throw 'adb topilmadi.' }
-    & $adb install -r $apk.FullName
-    if ($LASTEXITCODE -ne 0) { throw 'Telefonga o''rnatish xato bilan tugadi.' }
+    $attached = @(& $adb devices | Select-Object -Skip 1 |
+        Where-Object { $_ -match '\sdevice$' } |
+        ForEach-Object { ($_ -split '\s+')[0] })
+
+    if ($attached.Count -eq 0) { throw 'Ulangan qurilma yo''q. USB va "USB debugging" ni tekshiring.' }
+    if ($attached.Count -gt 1)
+    {
+        & $adb devices -l
+        throw "Bir nechta qurilma ulangan. Qaysi biriga o'rnatishni ko'rsating: -Device $($attached[0])"
+    }
+    $Device = $attached[0]
 }
+
+Write-Host "O'rnatilmoqda: $Device"
+& $adb -s $Device install -r $apk.FullName
+if ($LASTEXITCODE -ne 0) { throw 'Qurilmaga o''rnatish xato bilan tugadi.' }
