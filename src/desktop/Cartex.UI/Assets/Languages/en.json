@@ -1323,5 +1323,7 @@
   "export_format_unsupported": "CSV is not available for this report",
   "void_payment": "Void payment",
   "void_payment_confirm": "Payment {0} for {1} on {2:dd.MM.yyyy} will be reversed. The customer debt returns to what it was.",
-  "ledger_entry_not_voidable": "Only customer payments can be voided"
+  "ledger_entry_not_voidable": "Only customer payments can be voided",
+  "open_sale": "Open sale",
+  "document": "Document"
 }

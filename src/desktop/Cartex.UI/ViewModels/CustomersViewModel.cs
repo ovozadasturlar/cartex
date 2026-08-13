@@ -201,30 +201,32 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool CanVoidPayment => _auth.HasPermission("customer_payments.void");
 
     [RelayCommand]
-    private async Task OpenLedgerEntryAsync(CustomerLedgerEntryDto entry)
+    private Task OpenLedgerEntryAsync(CustomerLedgerEntryDto entry) => entry is null
+        ? Task.CompletedTask
+        : ShowTransactionAsync(entry.Date, entry.OperationType, entry.PaymentNumber,
+            Math.Max(0, entry.Change), Math.Max(0, -entry.Change), entry.BalanceAfter,
+            entry.Currency, entry.SaleId, entry.PaymentDocumentId);
+
+    [RelayCommand]
+    private Task OpenStatementEntryAsync(CustomerStatementEntryDto entry) => entry is null
+        ? Task.CompletedTask
+        : ShowTransactionAsync(entry.OccurredAt, entry.Summary, entry.DocumentNumber,
+            entry.Debit, entry.Credit, entry.RunningBalance, entry.Currency, entry.SaleId,
+            entry.Type == "CustomerPayment" ? entry.DocumentId : null);
+
+    private async Task ShowTransactionAsync(
+        DateTime occurredAt, string operation, string? documentNumber,
+        decimal debit, decimal credit, decimal balance, string? currency,
+        long? saleId, long? paymentDocumentId)
     {
-        if (entry is null) return;
-        if (entry.PaymentDocumentId is not { } paymentId)
-        {
-            _toast.Info(L["ledger_entry_not_voidable"]);
-            return;
-        }
-        if (!CanVoidPayment) { _toast.Warning(L["ledger_entry_not_voidable"]); return; }
-
-        var details = string.Format(L["void_payment_confirm"],
-            entry.PaymentNumber ?? $"#{paymentId}", Math.Abs(entry.Change).ToString("N0"), entry.Date);
-        var reason = await _dialog.PromptAsync(L["void_payment"], details, L["reason"]);
-        if (string.IsNullOrWhiteSpace(reason)) return;
-
-        try
-        {
-            using (_busy.Begin(L["loading"]))
-                await _paymentsApi.VoidAsync(paymentId, new VoidCustomerPaymentRequest(reason.Trim()));
-            _toast.Success(L["success"]);
-            await LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken());
-            await LoadAsync();
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        var vm = new TransactionDetailViewModel(_paymentsApi, _receiptDialog, _dialog, _toast, _busy, _auth,
+            occurredAt, operation, documentNumber, debit, credit, balance, currency, saleId, paymentDocumentId);
+        var result = await _dialog.ShowAsync<Views.TransactionDetailDialog, TransactionDetailViewModel,
+            TransactionDialogResult>(vm);
+        if (result != TransactionDialogResult.Voided) return;
+        await LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken());
+        await LoadStatementAsync();
+        await LoadAsync();
     }
 
     private void ResetState()

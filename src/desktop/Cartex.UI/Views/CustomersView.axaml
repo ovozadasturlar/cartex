@@ -373,7 +373,8 @@
                                             Value="{Binding Statement.Summary.RefundAmount, StringFormat='{}{0:N0}'}" />
                             </Grid>
                             <DataGrid ItemsSource="{Binding Statement.Timeline}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  c:GridDoubleClick.Command="{Binding OpenStatementEntryCommand}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Width="*" Binding="{Binding OccurredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                                         Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
