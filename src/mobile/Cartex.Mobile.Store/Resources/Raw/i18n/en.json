@@ -378,5 +378,16 @@
   "filter_month": "30 Days",
   "filter_all": "All",
   "search_sales": "Search sales (receipt, customer, cashier, item)...",
-  "phone": "Phone"
+  "phone": "Phone",
+  "total_spent": "Total purchases",
+  "last_purchase": "Last purchase",
+  "credit_used": "Credit used",
+  "no_activity": "No activity",
+  "no_sales": "No sales",
+  "no_documents": "No documents",
+  "remaining": "Remaining",
+  "full_debt": "Full debt",
+  "address": "Address",
+  "card_barcode": "Card",
+  "call": "Call"
 }

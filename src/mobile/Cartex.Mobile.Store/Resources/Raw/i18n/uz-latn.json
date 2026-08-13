@@ -378,5 +378,16 @@
   "filter_month": "30 kun",
   "filter_all": "Barchasi",
   "search_sales": "Savdolarni qidirish (chek, mijoz, xodim, tovar)...",
-  "phone": "Telefon"
+  "phone": "Telefon",
+  "total_spent": "Jami xarid",
+  "last_purchase": "Oxirgi xarid",
+  "credit_used": "Limitdan foydalanilgan",
+  "no_activity": "Harakatlar yo'q",
+  "no_sales": "Savdolar yo'q",
+  "no_documents": "Hujjatlar yo'q",
+  "remaining": "Qolgan",
+  "full_debt": "To'liq qarz",
+  "address": "Manzil",
+  "card_barcode": "Karta",
+  "call": "Qo'ng'iroq"
 }

@@ -24,7 +24,16 @@
                                 RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:StoreCustomerRow">
-                            <Border Style="{StaticResource Card}" Margin="0,0,0,10" Padding="14,12">
+                          <SwipeView Margin="0,0,0,10">
+                            <SwipeView.RightItems>
+                                <SwipeItems Mode="Execute">
+                                    <SwipeItem Text="{svc:T call}" IsVisible="{Binding HasPhone}"
+                                               BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                               Command="{Binding CallCommand, Source={RelativeSource AncestorType={x:Type vm:CustomersViewModel}}}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <Border Style="{StaticResource Card}" Padding="14,12">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenDetailCommand, Source={RelativeSource AncestorType={x:Type vm:CustomersViewModel}}}"
                                                           CommandParameter="{Binding .}" />
@@ -51,6 +60,7 @@
                                     </Label>
                                 </Grid>
                             </Border>
+                          </SwipeView>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                     <CollectionView.EmptyView>

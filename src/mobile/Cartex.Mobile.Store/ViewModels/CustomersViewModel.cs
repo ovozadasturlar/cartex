@@ -88,6 +88,14 @@ public partial class CustomersViewModel(
     }
 
     [RelayCommand]
+    private void Call(StoreCustomerRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.Customer.Phone)) return;
+        try { PhoneDialer.Default.Open(row.Customer.Phone!); }
+        catch { Ui.Toast(Loc.Instance["phone_action_failed"]); }
+    }
+
+    [RelayCommand]
     private void OpenCreateModal()
     {
         if (!CanCreate) return;
@@ -197,5 +205,6 @@ public sealed record StoreCustomerRow(CustomerDto Customer)
     }
 
     public bool HasDebt => Customer.DebtBalances.Any(x => x.Amount > 0);
+    public bool HasPhone => !string.IsNullOrWhiteSpace(Customer.Phone);
     public string PhoneText => Customer.Phone ?? "—";
 }

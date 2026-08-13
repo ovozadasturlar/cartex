@@ -38,7 +38,7 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private string? _error;
     [ObservableProperty] private CustomerDto? _customer;
     [ObservableProperty] private string _initials = "";
-    [ObservableProperty] private string _selectedTab = "activity";
+    [ObservableProperty] private string _selectedTab = "overview";
     [ObservableProperty] private bool _isPaymentOpen;
     [ObservableProperty] private string _paymentAmount = "";
     [ObservableProperty] private string _paymentNote = "";
@@ -49,10 +49,10 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private bool _canRefund;
     [ObservableProperty] private bool _canViewStatement;
 
-    public bool IsActivity => SelectedTab == "activity";
+    public bool IsOverview => SelectedTab == "overview";
+    public bool IsTimeline => SelectedTab == "timeline";
     public bool IsSales => SelectedTab == "sales";
-    public bool IsPayments => SelectedTab == "payments";
-    public bool IsReturns => SelectedTab == "returns";
+    public bool IsFinance => SelectedTab == "finance";
     public bool HasPhone => !string.IsNullOrWhiteSpace(Customer?.Phone);
     public bool HasEmail => !string.IsNullOrWhiteSpace(Customer?.Email);
     public bool HasAddress => !string.IsNullOrWhiteSpace(Customer?.Address);
@@ -67,7 +67,54 @@ public partial class CustomerDetailViewModel(
     public bool IsCash => PaymentMethod == "Cash";
     public bool IsCard => PaymentMethod == "Card";
 
+    public int SalesCount => Sales.Count;
+    public string TotalSpentText => $"{Sales.Sum(x => x.Sale.TotalAmount):N0}";
+    public string LastPurchaseText => Sales.Count > 0 ? Sales[0].ShortDate : "—";
+    public bool HasCreditLimit => Customer is { CreditLimit: > 0 };
+    public double CreditUsedRatio => Customer is { CreditLimit: > 0 } limited
+        ? (double)Math.Clamp(limited.DebtBalance / limited.CreditLimit, 0m, 1m)
+        : 0;
+    public string CreditUsedText => Customer is { CreditLimit: > 0 } limited
+        ? $"{limited.DebtBalance:N0} / {limited.CreditLimit:N0}"
+        : "";
+    public bool IsOverLimit => Customer is { CreditLimit: > 0 } limited && limited.DebtBalance > limited.CreditLimit;
+
+    public bool HasNoLedger => _timelineLoaded && Ledger.Count == 0;
+    public bool HasNoSales => IsLoaded && Sales.Count == 0;
+    public bool HasNoFinance => _financeLoaded && Payments.Count == 0 && Returns.Count == 0 && Refunds.Count == 0;
+
+    public decimal PaymentDebt => SelectedCurrency is null
+        ? 0
+        : Customer?.DebtBalances.FirstOrDefault(x => x.Currency == SelectedCurrency.Code)?.Amount ?? 0;
+    public bool HasPaymentDebt => PaymentDebt > 0;
+    public string PaymentDebtText => $"{PaymentDebt:N0} {SelectedCurrency?.Code}";
+    public string PaymentRemainingText => $"{Math.Max(0, PaymentDebt - ParsedPaymentAmount):N0}";
+
+    private decimal ParsedPaymentAmount => decimal.TryParse(
+        PaymentAmount.Trim().Replace(',', '.'),
+        System.Globalization.NumberStyles.Number,
+        System.Globalization.CultureInfo.InvariantCulture,
+        out var amount) && amount > 0 ? amount : 0;
+
+    [RelayCommand]
+    private void FillFullDebt() => PaymentAmount = PaymentDebt > 0
+        ? PaymentDebt.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+        : "";
+
+    partial void OnPaymentAmountChanged(string value) => NotifyPaymentPreview();
+    partial void OnSelectedCurrencyChanged(CurrencyDto? value) => NotifyPaymentPreview();
+
+    private void NotifyPaymentPreview()
+    {
+        OnPropertyChanged(nameof(PaymentDebt));
+        OnPropertyChanged(nameof(HasPaymentDebt));
+        OnPropertyChanged(nameof(PaymentDebtText));
+        OnPropertyChanged(nameof(PaymentRemainingText));
+    }
+
     private long _customerId;
+    private bool _timelineLoaded;
+    private bool _financeLoaded;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -83,10 +130,12 @@ public partial class CustomerDetailViewModel(
 
     partial void OnSelectedTabChanged(string value)
     {
-        OnPropertyChanged(nameof(IsActivity));
+        OnPropertyChanged(nameof(IsOverview));
+        OnPropertyChanged(nameof(IsTimeline));
         OnPropertyChanged(nameof(IsSales));
-        OnPropertyChanged(nameof(IsPayments));
-        OnPropertyChanged(nameof(IsReturns));
+        OnPropertyChanged(nameof(IsFinance));
+        if (value == "timeline" && !_timelineLoaded) _ = LoadTimelineAsync();
+        else if (value == "finance" && !_financeLoaded) _ = LoadFinanceAsync();
     }
 
     partial void OnPaymentMethodChanged(string value)
@@ -211,6 +260,8 @@ public partial class CustomerDetailViewModel(
         if (_customerId <= 0 || IsLoading) return;
         IsLoading = true;
         Error = null;
+        _timelineLoaded = false;
+        _financeLoaded = false;
 
         try
         {
@@ -219,21 +270,11 @@ public partial class CustomerDetailViewModel(
             CanViewStatement = permissions.Has("statements.view");
 
             var customerTask = customersApi.GetByIdAsync(_customerId);
-            var ledgerTask = customersApi.GetLedgerAsync(_customerId, 1, 50);
             var salesTask = salesApi.QueryAsync(QueryRequest.Create().Page(1, 30).Sort("CreatedAt", true)
                 .With("customerId", _customerId).Build());
-            var paymentsTask = permissions.Has("customer_payments.view")
-                ? customerPaymentsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
-                : Task.FromResult(new List<CustomerPaymentListDto>());
-            var returnsTask = permissions.Has("returns.view")
-                ? customerReturnsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
-                : Task.FromResult(new List<CustomerReturnListDto>());
-            var refundsTask = permissions.Has("customers.view")
-                ? customerRefundsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
-                : Task.FromResult(new List<CustomerRefundListDto>());
             var currenciesTask = ratesApi.GetCurrenciesAsync(onlyEnabled: true);
 
-            await Task.WhenAll(customerTask, ledgerTask, salesTask, paymentsTask, returnsTask, refundsTask, currenciesTask);
+            await Task.WhenAll(customerTask, salesTask, currenciesTask);
 
             Customer = await customerTask;
             Initials = string.Concat(Customer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -241,11 +282,7 @@ public partial class CustomerDetailViewModel(
 
             Replace(Debts, Customer.DebtBalances.Where(x => x.Amount > 0).Select(x => new CurrencyBalanceRow(x, false)));
             Replace(Credits, Customer.CreditBalances.Where(x => x.Amount > 0).Select(x => new CurrencyBalanceRow(x, true)));
-            Replace(Ledger, (await ledgerTask).Content ?? []);
             Replace(Sales, ((await salesTask).Content ?? []).Select(x => new CustomerSaleRow(x)));
-            Replace(Payments, await paymentsTask);
-            Replace(Returns, await returnsTask);
-            Replace(Refunds, await refundsTask);
             Replace(Currencies, (await currenciesTask).Where(x => x.IsEnabled));
             SelectedCurrency ??= Currencies.FirstOrDefault(x => x.IsBase) ?? Currencies.FirstOrDefault();
             CanRefund = permissions.Has("customers.refund") && Customer.CreditBalances.Any(x => x.Amount > 0);
@@ -259,6 +296,66 @@ public partial class CustomerDetailViewModel(
         {
             IsLoading = false;
             NotifyAll();
+        }
+
+        if (IsTimeline) await LoadTimelineAsync();
+        else if (IsFinance) await LoadFinanceAsync();
+    }
+
+    private async Task LoadTimelineAsync()
+    {
+        if (_customerId <= 0) return;
+        _timelineLoaded = true;
+        try
+        {
+            Replace(Ledger, (await customersApi.GetLedgerAsync(_customerId, 1, 50)).Content ?? []);
+        }
+        catch (Exception ex)
+        {
+            _timelineLoaded = false;
+            Error = Describe(ex);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(HasLedger));
+            OnPropertyChanged(nameof(HasNoLedger));
+            OnPropertyChanged(nameof(HasError));
+        }
+    }
+
+    private async Task LoadFinanceAsync()
+    {
+        if (_customerId <= 0) return;
+        _financeLoaded = true;
+        try
+        {
+            var paymentsTask = permissions.Has("customer_payments.view")
+                ? customerPaymentsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
+                : Task.FromResult(new List<CustomerPaymentListDto>());
+            var returnsTask = permissions.Has("returns.view")
+                ? customerReturnsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
+                : Task.FromResult(new List<CustomerReturnListDto>());
+            var refundsTask = permissions.Has("customers.view")
+                ? customerRefundsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
+                : Task.FromResult(new List<CustomerRefundListDto>());
+
+            await Task.WhenAll(paymentsTask, returnsTask, refundsTask);
+            Replace(Payments, await paymentsTask);
+            Replace(Returns, await returnsTask);
+            Replace(Refunds, await refundsTask);
+        }
+        catch (Exception ex)
+        {
+            _financeLoaded = false;
+            Error = Describe(ex);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(HasPayments));
+            OnPropertyChanged(nameof(HasReturns));
+            OnPropertyChanged(nameof(HasRefunds));
+            OnPropertyChanged(nameof(HasNoFinance));
+            OnPropertyChanged(nameof(HasError));
         }
     }
 
@@ -282,6 +379,17 @@ public partial class CustomerDetailViewModel(
         OnPropertyChanged(nameof(HasReturns));
         OnPropertyChanged(nameof(HasRefunds));
         OnPropertyChanged(nameof(HasError));
+        OnPropertyChanged(nameof(SalesCount));
+        OnPropertyChanged(nameof(TotalSpentText));
+        OnPropertyChanged(nameof(LastPurchaseText));
+        OnPropertyChanged(nameof(HasCreditLimit));
+        OnPropertyChanged(nameof(CreditUsedRatio));
+        OnPropertyChanged(nameof(CreditUsedText));
+        OnPropertyChanged(nameof(IsOverLimit));
+        OnPropertyChanged(nameof(HasNoLedger));
+        OnPropertyChanged(nameof(HasNoSales));
+        OnPropertyChanged(nameof(HasNoFinance));
+        NotifyPaymentPreview();
     }
 
     private static string Describe(Exception exception) => exception is ApiException api
@@ -297,6 +405,7 @@ public sealed record CurrencyBalanceRow(CurrencyAmountDto Balance, bool IsCredit
 public sealed record CustomerSaleRow(SaleDto Sale)
 {
     public string Date => Sale.SaleDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    public string ShortDate => Sale.SaleDate.ToLocalTime().ToString("dd.MM.yyyy");
     public string Total => $"{Sale.TotalAmount:N0} UZS";
     public string Summary => string.Join(", ", Sale.Items.Take(2).Select(x => x.ProductName))
         + (Sale.Items.Count > 2 ? $" +{Sale.Items.Count - 2}" : "");

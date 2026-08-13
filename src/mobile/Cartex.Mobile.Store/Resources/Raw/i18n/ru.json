@@ -378,5 +378,16 @@
   "filter_month": "30 дней",
   "filter_all": "Все",
   "search_sales": "Поиск продаж (чек, клиент, кассир, товар)...",
-  "phone": "Телефон"
+  "phone": "Телефон",
+  "total_spent": "Всего покупок",
+  "last_purchase": "Последняя покупка",
+  "credit_used": "Использовано лимита",
+  "no_activity": "Операций нет",
+  "no_sales": "Продаж нет",
+  "no_documents": "Документов нет",
+  "remaining": "Остаток",
+  "full_debt": "Весь долг",
+  "address": "Адрес",
+  "card_barcode": "Карта",
+  "call": "Позвонить"
 }

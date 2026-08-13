@@ -378,5 +378,16 @@
   "filter_month": "30 кун",
   "filter_all": "Барчаси",
   "search_sales": "Савдоларни қидириш (чек, мижоз, ходим, товар)...",
-  "phone": "Телефон"
+  "phone": "Телефон",
+  "total_spent": "Жами харид",
+  "last_purchase": "Охирги харид",
+  "credit_used": "Лимитдан фойдаланилган",
+  "no_activity": "Ҳаракатлар йўқ",
+  "no_sales": "Савдолар йўқ",
+  "no_documents": "Ҳужжатлар йўқ",
+  "remaining": "Қолган",
+  "full_debt": "Тўлиқ қарз",
+  "address": "Манзил",
+  "card_barcode": "Карта",
+  "call": "Қўнғироқ"
 }
