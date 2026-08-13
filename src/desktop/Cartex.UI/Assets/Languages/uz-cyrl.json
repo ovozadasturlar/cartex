@@ -1335,5 +1335,6 @@
   "op_salereturn": "Савдо қайтариш",
   "op_cashbackrecovery": "Кешбек қайтарилди",
   "op_partnerrewardcash": "Ҳамкор мукофоти (нақд)",
-  "op_partnerrewardbonus": "Ҳамкор мукофоти (бонус)"
+  "op_partnerrewardbonus": "Ҳамкор мукофоти (бонус)",
+  "confirm_large_print_fmt": "{0} та ёрлиқ — тасдиқлаш учун Enter'ни яна босинг"
 }

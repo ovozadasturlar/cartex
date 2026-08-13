@@ -1335,5 +1335,6 @@
   "op_salereturn": "Savdo qaytarish",
   "op_cashbackrecovery": "Keshbek qaytarildi",
   "op_partnerrewardcash": "Hamkor mukofoti (naqd)",
-  "op_partnerrewardbonus": "Hamkor mukofoti (bonus)"
+  "op_partnerrewardbonus": "Hamkor mukofoti (bonus)",
+  "confirm_large_print_fmt": "{0} ta yorliq — tasdiqlash uchun Enter'ni yana bosing"
 }

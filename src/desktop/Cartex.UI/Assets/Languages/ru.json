@@ -1335,5 +1335,6 @@
   "op_salereturn": "Возврат продажи",
   "op_cashbackrecovery": "Возврат кэшбэка",
   "op_partnerrewardcash": "Вознаграждение партнёра (нал.)",
-  "op_partnerrewardbonus": "Вознаграждение партнёра (бонус)"
+  "op_partnerrewardbonus": "Вознаграждение партнёра (бонус)",
+  "confirm_large_print_fmt": "{0} этикеток — нажмите Enter ещё раз для подтверждения"
 }

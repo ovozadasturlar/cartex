@@ -1335,5 +1335,6 @@
   "op_salereturn": "Sale return",
   "op_cashbackrecovery": "Cashback recovery",
   "op_partnerrewardcash": "Partner reward (cash)",
-  "op_partnerrewardbonus": "Partner reward (bonus)"
+  "op_partnerrewardbonus": "Partner reward (bonus)",
+  "confirm_large_print_fmt": "{0} labels - press Enter again to confirm"
 }

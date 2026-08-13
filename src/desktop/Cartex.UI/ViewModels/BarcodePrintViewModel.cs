@@ -193,6 +193,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
     partial void OnQuantityChanged(int value)
     {
         if (value < 1) Quantity = 1;
+        _confirmedCopies = 0;
     }
 
     partial void OnPrintWithPriceChanged(bool value)
@@ -224,6 +225,25 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
             Preview = new Bitmap(stream);
         }
         catch { Preview = null; }
+    }
+
+    /// A scanner ends its barcode with a single Enter, so one Enter can never start a large
+    /// run: anything above a normal batch needs a second Enter on the very same number.
+    private const int CopiesNeedingConfirmation = 500;
+    private int _confirmedCopies;
+
+    [RelayCommand(CanExecute = nameof(HasCode))]
+    private void RequestPrint()
+    {
+        if (Quantity > CopiesNeedingConfirmation && _confirmedCopies != Quantity)
+        {
+            _confirmedCopies = Quantity;
+            _toast.Warning(string.Format(L["confirm_large_print_fmt"], Quantity));
+            return;
+        }
+
+        _confirmedCopies = 0;
+        if (PrintCommand.CanExecute(null)) PrintCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(HasCode))]

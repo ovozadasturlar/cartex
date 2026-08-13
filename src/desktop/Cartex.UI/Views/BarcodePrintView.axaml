@@ -140,7 +140,7 @@
                                            Minimum="1" Increment="1" FormatString="0" Width="86" Height="38"
                                            ShowButtonSpinner="False" HorizontalContentAlignment="Center">
                                 <NumericUpDown.KeyBindings>
-                                    <KeyBinding Gesture="Enter" Command="{Binding PrintCommand}" />
+                                    <KeyBinding Gesture="Enter" Command="{Binding RequestPrintCommand}" />
                                 </NumericUpDown.KeyBindings>
                             </NumericUpDown>
                             <Button Grid.Column="4" Classes="outline" Width="38" Height="38" Padding="0" Command="{Binding IncrementCommand}">
