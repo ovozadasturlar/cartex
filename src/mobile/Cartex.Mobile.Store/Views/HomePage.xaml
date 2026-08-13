@@ -114,7 +114,7 @@
                                 </Border>
                                 <VerticalStackLayout Spacing="2">
                                     <Label Text="{svc:T customers}" Style="{StaticResource StatValue}" FontSize="16" />
-                                    <Label Text="{svc:T search_customer}" Style="{StaticResource MutedLabel}" FontSize="12" LineBreakMode="TailTruncation" />
+                                    <Label Text="{svc:T customer_debt}" Style="{StaticResource MutedLabel}" FontSize="12" LineBreakMode="TailTruncation" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
