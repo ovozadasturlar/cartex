@@ -19,6 +19,7 @@ public sealed class PrintHostService
     private readonly IShiftsApi _shiftsApi;
     private readonly ICustomerReturnsApi _returnsApi;
     private readonly IBusinessApi _businessApi;
+    private readonly IOrderingApi _orderingApi;
     private readonly IPrinterService _printer;
     private readonly IBarcodeLabelService _labels;
     private readonly AuthService _auth;
@@ -39,6 +40,7 @@ public sealed class PrintHostService
         IShiftsApi shiftsApi,
         ICustomerReturnsApi returnsApi,
         IBusinessApi businessApi,
+        IOrderingApi orderingApi,
         IPrinterService printer,
         IBarcodeLabelService labels,
         AuthService auth,
@@ -52,6 +54,7 @@ public sealed class PrintHostService
         _shiftsApi = shiftsApi;
         _returnsApi = returnsApi;
         _businessApi = businessApi;
+        _orderingApi = orderingApi;
         _printer = printer;
         _labels = labels;
         _auth = auth;
@@ -436,8 +439,8 @@ public sealed class PrintHostService
 
     private async Task<Action> PrepareDocumentAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
-        if (job.Payload.TryGetProperty("preview", out var preview) && preview.ValueKind == JsonValueKind.Object)
-            return await PreparePreviewAsync(job, preview, cancellationToken);
+        if (Text(job.Payload, "cartCode") is { Length: > 0 } cartCode)
+            return await PrepareCartProformaAsync(job, cartCode, cancellationToken);
 
         var receiptToken = Text(job.Payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(receiptToken))
@@ -451,13 +454,21 @@ public sealed class PrintHostService
         return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies, pdfPath);
     }
 
-    private async Task<Action> PreparePreviewAsync(
+    private async Task<Action> PrepareCartProformaAsync(
         AssignedPrintJobDto job,
-        JsonElement preview,
+        string cartCode,
         CancellationToken cancellationToken)
     {
-        var document = preview.Deserialize<PreviewDocument>(PreviewJson)
-            ?? throw new InvalidOperationException("Preview payload is invalid.");
+        var cart = await _orderingApi.GetByCodeAsync(cartCode);
+        var document = new PreviewDocument(
+            DateTime.Now,
+            _auth.UserInfo?.FullName,
+            cart.CustomerName,
+            [.. cart.Items.Select(x => new PreviewLine(
+                x.ProductName, x.Quantity, x.UnitName, x.UnitPrice, x.LineTotal))],
+            0,
+            cart.Total,
+            cart.Note);
         var printer = string.IsNullOrWhiteSpace(job.PrinterSystemName)
             ? _printer.GetSettings().ReceiptPrinter
             : job.PrinterSystemName;
@@ -472,9 +483,6 @@ public sealed class PrintHostService
         await Task.CompletedTask;
         return () => _printer.PrintRawBytes(printer, bytes, path);
     }
-
-    private static readonly JsonSerializerOptions PreviewJson =
-        new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
     private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(
         string token,

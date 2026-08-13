@@ -156,6 +156,8 @@ public sealed class ReceiptPrintPolicyService(
     public static string SerializeReturnPayload(long returnId, ReceiptSettings configured) =>
         JsonSerializer.Serialize(new { returnId, receiptSettings = Settings(configured) }, Json);
 
+    public static object SettingsPayload(ReceiptSettings configured) => Settings(configured);
+
     private static object Settings(ReceiptSettings configured) =>
         new
         {

@@ -11,7 +11,10 @@
              xmlns:products="using:Cartex.Shared.Models.Products"
              xmlns:units="using:Cartex.Shared.Models.Units"
              x:Class="Cartex.UI.Views.ProductEditorDialog"
-             x:DataType="vm:ProductsViewModel">
+             x:DataType="vm:ProductsViewModel"
+             c:FormBehaviors.SaveShortcut="{Binding SaveCommand}"
+             c:FormBehaviors.SaveAndNewShortcut="{Binding SaveAndNewCommand}"
+             c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
 
     <UserControl.Styles>
         <Style Selector="Button.icon-sm">

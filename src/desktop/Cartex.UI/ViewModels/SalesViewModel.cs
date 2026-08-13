@@ -502,6 +502,34 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
     }
 
+    /// The proforma must exist server-side before it can be printed, so an unsaved cart is
+    /// submitted once and its code reused for later prints.
+    private async Task<string?> EnsureCartCodeAsync()
+    {
+        if (_activeCartCode is { Length: > 0 } existing)
+        {
+            await SyncActiveCartAsync();
+            return existing;
+        }
+        var code = await SubmitCartAsync(
+            [.. CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity))],
+            SelectedCustomer?.Id,
+            string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim());
+        if (code is not null) _activeCartCode = code;
+        return code;
+    }
+
+    private async Task<string?> SubmitCartAsync(List<SubmitCartItemRequest> items, long? customerId, string? note)
+    {
+        if (items.Count == 0 || Branch.CurrentWarehouseId is not { } warehouseId) return null;
+        try
+        {
+            return await _orderingApi.SubmitAsync(new SubmitCartRequest(
+                warehouseId, customerId, items, Guid.NewGuid().ToString("N"), note, "Queue"));
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return null; }
+    }
+
     private async Task SyncActiveCartAsync()
     {
         if (_activeCartCode is not { } code || CartItems.Count == 0) return;
@@ -631,15 +659,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (CartItems.Count == 0) { _toast.Error(L["no_items"]); return; }
         try
         {
-            await _printDispatch.PrintPreviewAsync(new PreviewDocument(
-                DateTime.Now,
-                _auth.UserInfo?.FullName,
-                SelectedCustomer?.FullName,
-                [.. CartItems.Select(x => new PreviewLine(
-                    x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
-                DiscountAmount + AutoDiscountAmount,
-                TotalAmount,
-                string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()));
+            var code = await EnsureCartCodeAsync();
+            if (code is null) { _toast.Error(L["error"]); return; }
+            await _printDispatch.PrintCartProformaAsync(code);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -1778,15 +1800,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (held is null || held.Items.Count == 0) return;
         try
         {
-            await _printDispatch.PrintPreviewAsync(new PreviewDocument(
-                held.HeldAt,
-                _auth.UserInfo?.FullName,
-                held.CustomerName,
-                [.. held.Items.Select(x => new PreviewLine(
-                    x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? "", x.UnitPrice, x.LineTotal))],
-                0,
-                held.Total,
-                held.Label));
+            var code = await SubmitCartAsync(
+                [.. held.Items.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity))],
+                held.Customer?.Id, held.Label);
+            if (code is null) { _toast.Error(L["error"]); return; }
+            await _printDispatch.PrintCartProformaAsync(code);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

@@ -512,7 +512,7 @@ internal static class PrintingPayloadValidator
             DomainJobKind.Receipt => await ReceiptAsync(db, settings, branchId, sourceType, sourceId, payload, cancellationToken),
             DomainJobKind.BarcodeLabel => await BarcodeAsync(db, settings, payload, cancellationToken),
             DomainJobKind.ZReport => await ZReportAsync(db, branchId, sourceId, payload, cancellationToken),
-            DomainJobKind.Document => await DocumentAsync(db, branchId, payload, cancellationToken),
+            DomainJobKind.Document => await DocumentAsync(db, settings, branchId, sourceType, sourceId, payload, cancellationToken),
             _ => throw new BusinessRuleException("Unsupported print payload.")
         };
     }
@@ -609,8 +609,31 @@ internal static class PrintingPayloadValidator
         return JsonSerializer.Serialize(new { shiftId });
     }
 
-    private static async Task<string> DocumentAsync(IApplicationDbContext db, long branchId, JsonElement payload, CancellationToken cancellationToken)
+    private static async Task<string> DocumentAsync(
+        IApplicationDbContext db,
+        ISettingsService settings,
+        long branchId,
+        string sourceType,
+        string sourceId,
+        JsonElement payload,
+        CancellationToken cancellationToken)
     {
+        // A cart proforma is printed before the sale exists, so it references the saved cart
+        // rather than carrying its contents in the payload.
+        if (sourceType == "cart")
+        {
+            var code = Text(payload, "cartCode")?.Trim() ?? sourceId;
+            if (string.IsNullOrWhiteSpace(code) || code.Length > 64
+                || !await db.Carts.AnyAsync(x => x.AggregateCode == code && x.BranchId == branchId, cancellationToken))
+                throw new NotFoundException("Cart not found.");
+            return JsonSerializer.Serialize(new
+            {
+                cartCode = code,
+                receiptSettings = ReceiptPrintPolicyService.SettingsPayload(
+                    await ReceiptConfigAsync(db, settings, branchId, cancellationToken))
+            });
+        }
+
         var token = Required(payload, "receiptToken", 128);
         if (!await db.Sales.AnyAsync(x => x.BranchId == branchId && x.ReceiptToken == token, cancellationToken))
             throw new NotFoundException("Document source not found.");

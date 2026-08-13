@@ -19,6 +19,15 @@ public static class FormBehaviors
     public static readonly AttachedProperty<ICommand?> EscCancelsProperty =
         AvaloniaProperty.RegisterAttached<Control, ICommand?>("EscCancels", typeof(FormBehaviors));
 
+    /// Ctrl+Enter saves from anywhere in the form, so plain Enter stays free for field
+    /// navigation and for multi-line notes.
+    public static readonly AttachedProperty<ICommand?> SaveShortcutProperty =
+        AvaloniaProperty.RegisterAttached<Control, ICommand?>("SaveShortcut", typeof(FormBehaviors));
+
+    /// Ctrl+Shift+Enter saves and immediately starts another entry.
+    public static readonly AttachedProperty<ICommand?> SaveAndNewShortcutProperty =
+        AvaloniaProperty.RegisterAttached<Control, ICommand?>("SaveAndNewShortcut", typeof(FormBehaviors));
+
     public static readonly AttachedProperty<bool> EnterMovesNextProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>("EnterMovesNext", typeof(FormBehaviors));
 
@@ -34,6 +43,10 @@ public static class FormBehaviors
     public static void SetEnterSubmits(Control c, ICommand? value) => c.SetValue(EnterSubmitsProperty, value);
     public static ICommand? GetEscCancels(Control c) => c.GetValue(EscCancelsProperty);
     public static void SetEscCancels(Control c, ICommand? value) => c.SetValue(EscCancelsProperty, value);
+    public static ICommand? GetSaveShortcut(Control c) => c.GetValue(SaveShortcutProperty);
+    public static void SetSaveShortcut(Control c, ICommand? value) => c.SetValue(SaveShortcutProperty, value);
+    public static ICommand? GetSaveAndNewShortcut(Control c) => c.GetValue(SaveAndNewShortcutProperty);
+    public static void SetSaveAndNewShortcut(Control c, ICommand? value) => c.SetValue(SaveAndNewShortcutProperty, value);
     public static bool GetEnterMovesNext(Control c) => c.GetValue(EnterMovesNextProperty);
     public static void SetEnterMovesNext(Control c, bool value) => c.SetValue(EnterMovesNextProperty, value);
     public static bool GetCloseOnSelect(Control c) => c.GetValue(CloseOnSelectProperty);
@@ -59,6 +72,20 @@ public static class FormBehaviors
             host.RemoveHandler(InputElement.KeyDownEvent, OnEscKeyDown);
             if (e.NewValue is ICommand)
                 host.AddHandler(InputElement.KeyDownEvent, OnEscKeyDown, RoutingStrategies.Bubble);
+        });
+
+        SaveShortcutProperty.Changed.AddClassHandler<Control>((host, e) =>
+        {
+            host.RemoveHandler(InputElement.KeyDownEvent, OnSaveShortcut);
+            if (e.NewValue is ICommand)
+                host.AddHandler(InputElement.KeyDownEvent, OnSaveShortcut, RoutingStrategies.Bubble, handledEventsToo: true);
+        });
+
+        SaveAndNewShortcutProperty.Changed.AddClassHandler<Control>((host, e) =>
+        {
+            host.RemoveHandler(InputElement.KeyDownEvent, OnSaveShortcut);
+            if (e.NewValue is ICommand)
+                host.AddHandler(InputElement.KeyDownEvent, OnSaveShortcut, RoutingStrategies.Bubble, handledEventsToo: true);
         });
 
         EnterMovesNextProperty.Changed.AddClassHandler<Control>((input, e) =>
@@ -134,6 +161,20 @@ public static class FormBehaviors
     {
         if (e.Key != Key.Escape || sender is not Control host) return;
         if (GetEscCancels(host) is not { } command || !command.CanExecute(null)) return;
+        command.Execute(null);
+        e.Handled = true;
+    }
+
+    private static void OnSaveShortcut(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Return) || sender is not Control host) return;
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
+
+        var command = e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+            ? GetSaveAndNewShortcut(host) ?? GetSaveShortcut(host)
+            : GetSaveShortcut(host);
+        if (command is null || !command.CanExecute(null)) return;
+
         command.Execute(null);
         e.Handled = true;
     }
