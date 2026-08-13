@@ -1325,5 +1325,15 @@
   "void_payment_confirm": "Платёж {0} на {1} от {2:dd.MM.yyyy} будет сторнирован. Долг клиента вернётся к прежнему значению.",
   "ledger_entry_not_voidable": "Отменить можно только платёж клиента",
   "open_sale": "Открыть продажу",
-  "document": "Документ"
+  "document": "Документ",
+  "customer_edit": "Редактировать клиента",
+  "op_change": "Сдача",
+  "op_customercredit": "Аванс клиента",
+  "op_customerpayment": "Платёж клиента",
+  "op_customeradvance": "Аванс",
+  "op_customerrefund": "Возврат денег",
+  "op_salereturn": "Возврат продажи",
+  "op_cashbackrecovery": "Возврат кэшбэка",
+  "op_partnerrewardcash": "Вознаграждение партнёра (нал.)",
+  "op_partnerrewardbonus": "Вознаграждение партнёра (бонус)"
 }
