@@ -57,6 +57,6 @@ public static class ScanFocus
             if (!target.IsEffectivelyVisible || !target.IsEffectivelyEnabled) return;
             target.Focus();
             if (target is TextBox box) box.SelectAll();
-        }, DispatcherPriority.Background);
+        }, DispatcherPriority.Input);
     }
 }
