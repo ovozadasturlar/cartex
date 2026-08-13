@@ -31,6 +31,14 @@ public class CustomerPaymentsController(ISender sender) : ControllerBase
         return Ok(await sender.Send(new GetCustomerPaymentByIdQuery(id)));
     }
 
+    [HttpPost("{id:long}/void")]
+    [HasPermission(AppPermissions.CustomerPayments.Void)]
+    public async Task<IActionResult> Void(long id, VoidCustomerPaymentRequest request)
+    {
+        await sender.Send(new VoidCustomerPaymentCommand(id, request.Reason));
+        return NoContent();
+    }
+
     [HttpPost]
     [HasPermission(AppPermissions.CustomerPayments.Create)]
     public async Task<ActionResult<CustomerPaymentCreatedDto>> Create(CreateCustomerPaymentRequest request)

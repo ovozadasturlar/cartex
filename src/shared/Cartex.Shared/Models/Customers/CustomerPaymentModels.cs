@@ -66,3 +66,5 @@ public record CustomerPaymentListDto(
     decimal AllocatedBaseAmount,
     decimal AdvanceBaseAmount,
     string? Note);
+
+public record VoidCustomerPaymentRequest(string Reason);

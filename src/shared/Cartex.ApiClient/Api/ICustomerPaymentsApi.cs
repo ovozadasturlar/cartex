@@ -18,4 +18,7 @@ public interface ICustomerPaymentsApi
 
     [Post("/api/customer-payments")]
     Task<CustomerPaymentCreatedDto> CreateAsync([Body] CreateCustomerPaymentRequest request);
+
+    [Post("/api/customer-payments/{id}/void")]
+    Task VoidAsync(long id, [Body] VoidCustomerPaymentRequest request);
 }

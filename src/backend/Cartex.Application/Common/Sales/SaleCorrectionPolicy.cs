@@ -17,6 +17,9 @@ public interface ISaleCorrectionPolicy
 {
     Task<bool> CanCorrectAsync(long saleId, CancellationToken cancellationToken);
     Task EnsureCanCorrectAsync(Sale sale, CancellationToken cancellationToken);
+
+    /// The window applies to any correctable document, not just sales.
+    Task EnsureCanCorrectAsync(long? shiftId, DateTime createdAt, CancellationToken cancellationToken);
 }
 
 public sealed class SaleCorrectionPolicy(
@@ -40,10 +43,13 @@ public sealed class SaleCorrectionPolicy(
         return await IsWithinWindowAsync(policy, sale.ShiftId, sale.CreatedAt, cancellationToken) is null;
     }
 
-    public async Task EnsureCanCorrectAsync(Sale sale, CancellationToken cancellationToken)
+    public Task EnsureCanCorrectAsync(Sale sale, CancellationToken cancellationToken) =>
+        EnsureCanCorrectAsync(sale.ShiftId, sale.CreatedAt, cancellationToken);
+
+    public async Task EnsureCanCorrectAsync(long? shiftId, DateTime createdAt, CancellationToken cancellationToken)
     {
         var policy = await LoadAsync(cancellationToken);
-        if (await IsWithinWindowAsync(policy, sale.ShiftId, sale.CreatedAt, cancellationToken) is { } failure)
+        if (await IsWithinWindowAsync(policy, shiftId, createdAt, cancellationToken) is { } failure)
             throw new BusinessRuleException(failure.Message, failure.Code);
     }
 
