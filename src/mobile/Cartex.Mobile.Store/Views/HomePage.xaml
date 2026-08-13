@@ -7,11 +7,22 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:HomeViewModel"
     Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+        <Style x:Key="TileIcon" TargetType="Border">
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            <Setter Property="WidthRequest" Value="40" />
+            <Setter Property="HeightRequest" Value="40" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}" />
+        </Style>
+    </ContentPage.Resources>
+
     <Grid>
         <VerticalStackLayout IsVisible="{Binding HasAccess, Converter={StaticResource Invert}}"
                              VerticalOptions="Center" Padding="40,0" Spacing="16">
             <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" WidthRequest="64" HeightRequest="64" HorizontalOptions="Center"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
                 <Label Text="{StaticResource IcLock}" Style="{StaticResource Icon}" FontSize="30" />
             </Border>
             <Label Text="{svc:T no_access_msg}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
@@ -19,9 +30,10 @@
         </VerticalStackLayout>
 
         <RefreshView IsVisible="{Binding HasAccess}" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}"
-                     RefreshColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                     RefreshColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
             <ScrollView>
-                <VerticalStackLayout Padding="20,18,20,24" Spacing="14">
+                <VerticalStackLayout Padding="20,18,20,28" Spacing="14">
+
                     <VerticalStackLayout Spacing="3">
                         <Label Text="{Binding Greeting}" FontSize="23" FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -35,22 +47,27 @@
                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
                     </Border>
 
-                    <Border Style="{StaticResource Card}" Padding="16">
+                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="18,16"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NewCartCommand}" />
                         </Border.GestureRecognizers>
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
-                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" WidthRequest="44" HeightRequest="44" VerticalOptions="Center"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
-                                <Label Text="{StaticResource IcScan}" Style="{StaticResource Icon}" FontSize="22" TextColor="White" />
+                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 14" WidthRequest="48" HeightRequest="48"
+                                    VerticalOptions="Center" BackgroundColor="#26FFFFFF">
+                                <Label Text="{StaticResource IcScan}" FontFamily="MDI" FontSize="24"
+                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
                             </Border>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                <Label Text="{svc:T new_cart}" FontSize="16" FontAttributes="Bold"
-                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                <Label Text="{svc:T new_cart_hint}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                <Label Text="{svc:T new_cart}" FontSize="17" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                <Label Text="{svc:T new_cart_hint}" FontSize="12.5" Opacity="0.85"
+                                       TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
                             </VerticalStackLayout>
-                            <Label Grid.Column="2" Text="{StaticResource IcChevron}" Style="{StaticResource Icon}" FontSize="18" VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                            <Label Grid.Column="2" Text="{StaticResource IcChevron}" FontFamily="MDI" FontSize="18" VerticalOptions="Center"
+                                   Opacity="0.8"
+                                   TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
                         </Grid>
                     </Border>
 
@@ -59,8 +76,7 @@
                             <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
                         </Border.GestureRecognizers>
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                            <Border Style="{StaticResource TileIcon}" VerticalOptions="Center">
                                 <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" />
                             </Border>
                             <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
@@ -73,45 +89,56 @@
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding ShowQueue}">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding OpenQueueCommand}" />
-                        </Border.GestureRecognizers>
-                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" />
-                            </Border>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                <Label Text="{Binding OpenCarts}" Style="{StaticResource StatValue}" FontSize="21" />
-                                <Label Text="{svc:T queue_open}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding ShowQueue}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenQueueCommand}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="10">
+                                <Border Style="{StaticResource TileIcon}" HorizontalOptions="Start">
+                                    <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" />
+                                </Border>
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding OpenCarts}" Style="{StaticResource StatValue}" FontSize="22" />
+                                    <Label Text="{svc:T queue_open}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </VerticalStackLayout>
                             </VerticalStackLayout>
-                            <Label Grid.Column="2" Text="{StaticResource IcChevron}" Style="{StaticResource Icon}" FontSize="18" VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                        </Grid>
-                    </Border>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="14">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenCustomersCommand}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="10">
+                                <Border Style="{StaticResource TileIcon}" HorizontalOptions="Start">
+                                    <Label Text="{StaticResource IcPeople}" Style="{StaticResource Icon}" />
+                                </Border>
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{svc:T customers}" Style="{StaticResource StatValue}" FontSize="16" />
+                                    <Label Text="{svc:T search_customer}" Style="{StaticResource MutedLabel}" FontSize="12" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding ShowStats}">
                         <Border Style="{StaticResource Card}" Padding="14">
-                            <Grid ColumnDefinitions="*,Auto" RowSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
                                 <VerticalStackLayout Spacing="2" VerticalOptions="End">
                                     <Label Text="{Binding TodayCount}" Style="{StaticResource StatValue}" FontSize="24" />
                                     <Label Text="{svc:T sales_today}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
                                 </VerticalStackLayout>
-                                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
-                                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                <Border Grid.Column="1" Style="{StaticResource TileIcon}" VerticalOptions="Start">
                                     <Label Text="{StaticResource IcHistory}" Style="{StaticResource Icon}" />
                                 </Border>
                             </Grid>
                         </Border>
                         <Border Grid.Column="1" Style="{StaticResource Card}" Padding="14">
-                            <Grid ColumnDefinitions="*,Auto" RowSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
                                 <VerticalStackLayout Spacing="2" VerticalOptions="End">
-                                    <Label Text="{Binding TodayTotal}" Style="{StaticResource StatValue}" FontSize="24" />
+                                    <Label Text="{Binding TodayTotal}" Style="{StaticResource StatValue}" FontSize="24" LineBreakMode="TailTruncation" />
                                     <Label Text="{svc:T today_total}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
                                 </VerticalStackLayout>
-                                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36" VerticalOptions="Start"
-                                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                <Border Grid.Column="1" Style="{StaticResource TileIcon}" VerticalOptions="Start">
                                     <Label Text="{StaticResource IcCash}" Style="{StaticResource Icon}" />
                                 </Border>
                             </Grid>

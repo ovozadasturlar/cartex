@@ -25,6 +25,7 @@
 		<RunAOTCompilation>true</RunAOTCompilation>
 		<AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
 		<AndroidStripILAfterAOT>true</AndroidStripILAfterAOT>
+		<AndroidEnableMarshalMethods>true</AndroidEnableMarshalMethods>
 	</PropertyGroup>
 
 	<ItemGroup>

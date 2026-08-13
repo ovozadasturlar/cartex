@@ -88,6 +88,9 @@ public partial class HomeViewModel(
     private Task OpenQueueAsync() => Shell.Current.GoToAsync("//main/trade");
 
     [RelayCommand]
+    private Task OpenCustomersAsync() => Shell.Current.GoToAsync("//main/customers");
+
+    [RelayCommand]
     private async Task LogoutAsync()
     {
         cart.Clear();
