@@ -116,7 +116,8 @@
                 </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="services:CartLine">
-                        <SwipeView Margin="0,0,0,8" SwipeStarted="OnSwipeStarted" SwipeEnded="OnSwipeEnded">
+                        <SwipeView Margin="0,0,0,8" SwipeStarted="OnSwipeStarted"
+                                   SwipeChanging="OnSwipeChanging" SwipeEnded="OnSwipeEnded">
                             <SwipeView.LeftItems>
                                 <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
                                     <SwipeItemView Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}" CommandParameter="{Binding .}">
@@ -131,11 +132,11 @@
                             <SwipeView.RightItems>
                                 <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="RemainOpen">
                                     <SwipeItemView>
-                                        <ctl:HoldRepeatButton Text="−" FontSize="20" FontAttributes="Bold"
+                                        <ctl:HoldRepeatButton Text="+" FontSize="20" FontAttributes="Bold"
                                                               WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
-                                                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
-                                                              TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
-                                                              RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                                              BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                                              TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}"
+                                                              RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
                                                               RepeatCommandParameter="{Binding .}" />
                                     </SwipeItemView>
                                     <SwipeItemView>
@@ -147,11 +148,11 @@
                                         </Border>
                                     </SwipeItemView>
                                     <SwipeItemView>
-                                        <ctl:HoldRepeatButton Text="+" FontSize="20" FontAttributes="Bold"
+                                        <ctl:HoldRepeatButton Text="−" FontSize="20" FontAttributes="Bold"
                                                               WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
-                                                              BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
-                                                              TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}"
-                                                              RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                                                              TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                                              RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
                                                               RepeatCommandParameter="{Binding .}" />
                                     </SwipeItemView>
                                 </SwipeItems>

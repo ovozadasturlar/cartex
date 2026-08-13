@@ -56,6 +56,11 @@ public partial class CartPage : ContentPage
         return base.OnBackButtonPressed();
     }
 
+    /// The totals hide behind the stepper as the row opens, so they follow the real drag
+    /// distance. SwipeEnded reports the row as open even after a swipe back, which used to
+    /// leave the totals hidden until the row was touched again.
+    private const double RevealedOffset = 4;
+
     private void OnSwipeStarted(object? sender, SwipeStartedEventArgs e)
     {
         if (sender is not SwipeView swipeView)
@@ -68,9 +73,12 @@ public partial class CartPage : ContentPage
                 oldLine.IsSwiped = false;
         }
         _openSwipeView = swipeView;
-        
-        if (swipeView.BindingContext is Services.CartLine line)
-            line.IsSwiped = true;
+    }
+
+    private void OnSwipeChanging(object? sender, SwipeChangingEventArgs e)
+    {
+        if (sender is SwipeView { BindingContext: Services.CartLine line })
+            line.IsSwiped = Math.Abs(e.Offset) > RevealedOffset;
     }
 
     private void OnSwipeEnded(object? sender, SwipeEndedEventArgs e)
@@ -78,12 +86,8 @@ public partial class CartPage : ContentPage
         if (sender is not SwipeView swipeView)
             return;
 
-        if (swipeView.BindingContext is Services.CartLine line)
-        {
-            line.IsSwiped = e.IsOpen;
-            if (!e.IsOpen && _openSwipeView == swipeView)
-                _openSwipeView = null;
-        }
+        if (swipeView.BindingContext is Services.CartLine { IsSwiped: false } && _openSwipeView == swipeView)
+            _openSwipeView = null;
     }
 
     private void OnQuantityEntryCompleted(object? sender, EventArgs e)
