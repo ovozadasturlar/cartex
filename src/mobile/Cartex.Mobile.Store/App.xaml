@@ -18,6 +18,7 @@
             <conv:PositiveConverter x:Key="Positive" />
             <conv:InvertConverter x:Key="Invert" />
             <conv:DotFillConverter x:Key="DotFill" />
+            <conv:OperationNameConverter x:Key="OpName" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

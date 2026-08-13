@@ -389,5 +389,22 @@
   "full_debt": "Full debt",
   "address": "Address",
   "card_barcode": "Card",
-  "call": "Call"
+  "call": "Call",
+  "op_sale": "Sale",
+  "op_debtcharge": "Debt charged",
+  "op_debtpay": "Debt payment",
+  "op_cashback": "Cashback",
+  "op_bonusspend": "Bonus spent",
+  "op_supplypay": "Supply payment",
+  "op_cashin": "Cash in",
+  "op_cashout": "Cash out",
+  "op_change": "Change",
+  "op_customercredit": "Customer credit",
+  "op_customerpayment": "Customer payment",
+  "op_customeradvance": "Advance",
+  "op_customerrefund": "Refund",
+  "op_salereturn": "Sale return",
+  "op_cashbackrecovery": "Cashback recovery",
+  "op_partnerrewardcash": "Partner reward (cash)",
+  "op_partnerrewardbonus": "Partner reward (bonus)"
 }

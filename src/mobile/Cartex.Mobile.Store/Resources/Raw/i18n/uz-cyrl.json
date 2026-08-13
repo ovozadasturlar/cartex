@@ -389,5 +389,22 @@
   "full_debt": "Тўлиқ қарз",
   "address": "Манзил",
   "card_barcode": "Карта",
-  "call": "Қўнғироқ"
+  "call": "Қўнғироқ",
+  "op_sale": "Сотув",
+  "op_debtcharge": "Қарз олиш",
+  "op_debtpay": "Қарз тўлаш",
+  "op_cashback": "Кешбек",
+  "op_bonusspend": "Бонус сарфлаш",
+  "op_supplypay": "Таъминот тўлови",
+  "op_cashin": "Кирим",
+  "op_cashout": "Чиқим",
+  "op_change": "Қайтим",
+  "op_customercredit": "Мижоз аванси",
+  "op_customerpayment": "Мижоз тўлови",
+  "op_customeradvance": "Аванс",
+  "op_customerrefund": "Пул қайтариш",
+  "op_salereturn": "Савдо қайтариш",
+  "op_cashbackrecovery": "Кешбек қайтарилди",
+  "op_partnerrewardcash": "Ҳамкор мукофоти (нақд)",
+  "op_partnerrewardbonus": "Ҳамкор мукофоти (бонус)"
 }

@@ -19,9 +19,23 @@ public static class OverlayBehaviors
         DismissCommandProperty.Changed.AddClassHandler<Control>((host, e) =>
         {
             host.RemoveHandler(InputElement.PointerPressedEvent, OnPointerPressed);
+            host.RemoveHandler(InputElement.KeyDownEvent, OnEscape);
             if (e.NewValue is ICommand)
+            {
                 host.AddHandler(InputElement.PointerPressedEvent, OnPointerPressed, RoutingStrategies.Bubble);
+                host.AddHandler(InputElement.KeyDownEvent, OnEscape, RoutingStrategies.Bubble);
+            }
         });
+    }
+
+    /// Every overlay already declares how it closes, so Escape reuses that command
+    /// instead of each view wiring the key itself.
+    private static void OnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || sender is not Control host || !host.IsEffectivelyVisible) return;
+        if (GetDismissCommand(host) is not { } command || !command.CanExecute(null)) return;
+        command.Execute(null);
+        e.Handled = true;
     }
 
     private static void OnPointerPressed(object? sender, PointerPressedEventArgs e)

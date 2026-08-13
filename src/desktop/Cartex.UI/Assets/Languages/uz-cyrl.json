@@ -167,7 +167,7 @@
   "customer_language": "Мижоз тили (чек/хабарлар)",
   "customer_message": "Хабар юбориш",
   "customers": "Мижозлар",
-  "customer_new": "Янги мижоз",
+  "customer_new": "Янги мижоз яратиш",
   "customer_edit": "Мижозни таҳрирлаш",
   "dark": "Қоронғу",
   "dark_theme": "Қоронғу мавзу",
@@ -1245,7 +1245,6 @@
   "event_type": "Ҳаракат тури",
   "qty": "Сони",
   "sum": "Сумма",
-  "customer_new": "Янги мижоз яратиш",
   "returns": "Қайтаришлар",
   "ret_new": "Янги қайтариш",
   "ret_document": "Ҳужжат",
@@ -1327,5 +1326,14 @@
   "void_payment_confirm": "{2:dd.MM.yyyy} санасидаги {0} тўлови ({1}) бекор қилинади. Мижоз қарзи аввалги ҳолатига қайтади.",
   "ledger_entry_not_voidable": "Фақат мижоз тўловини бекор қилиш мумкин",
   "open_sale": "Савдони очиш",
-  "document": "Ҳужжат"
+  "document": "Ҳужжат",
+  "op_change": "Қайтим",
+  "op_customercredit": "Мижоз аванси",
+  "op_customerpayment": "Мижоз тўлови",
+  "op_customeradvance": "Аванс",
+  "op_customerrefund": "Пул қайтариш",
+  "op_salereturn": "Савдо қайтариш",
+  "op_cashbackrecovery": "Кешбек қайтарилди",
+  "op_partnerrewardcash": "Ҳамкор мукофоти (нақд)",
+  "op_partnerrewardbonus": "Ҳамкор мукофоти (бонус)"
 }

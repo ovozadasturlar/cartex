@@ -389,5 +389,22 @@
   "full_debt": "Весь долг",
   "address": "Адрес",
   "card_barcode": "Карта",
-  "call": "Позвонить"
+  "call": "Позвонить",
+  "op_sale": "Продажа",
+  "op_debtcharge": "Начислен долг",
+  "op_debtpay": "Оплата долга",
+  "op_cashback": "Кэшбэк",
+  "op_bonusspend": "Списание бонуса",
+  "op_supplypay": "Оплата поставки",
+  "op_cashin": "Приход",
+  "op_cashout": "Расход",
+  "op_change": "Сдача",
+  "op_customercredit": "Аванс клиента",
+  "op_customerpayment": "Платёж клиента",
+  "op_customeradvance": "Аванс",
+  "op_customerrefund": "Возврат денег",
+  "op_salereturn": "Возврат продажи",
+  "op_cashbackrecovery": "Возврат кэшбэка",
+  "op_partnerrewardcash": "Вознаграждение партнёра (нал.)",
+  "op_partnerrewardbonus": "Вознаграждение партнёра (бонус)"
 }

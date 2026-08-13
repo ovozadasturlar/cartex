@@ -234,7 +234,7 @@
                                     <Border Style="{StaticResource CardTight}">
                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                             <VerticalStackLayout Spacing="2">
-                                                <Label Text="{Binding OperationType}" FontSize="14" FontAttributes="Bold"
+                                                <Label Text="{Binding OperationType, Converter={StaticResource OpName}}" FontSize="14" FontAttributes="Bold"
                                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                                 <Label Text="{Binding Date, StringFormat='{0:dd.MM.yyyy HH:mm}'}" Style="{StaticResource MutedLabel}" FontSize="11" />
                                             </VerticalStackLayout>

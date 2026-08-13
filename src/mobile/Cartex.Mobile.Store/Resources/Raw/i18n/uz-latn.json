@@ -389,5 +389,22 @@
   "full_debt": "To'liq qarz",
   "address": "Manzil",
   "card_barcode": "Karta",
-  "call": "Qo'ng'iroq"
+  "call": "Qo'ng'iroq",
+  "op_sale": "Sotuv",
+  "op_debtcharge": "Qarz olish",
+  "op_debtpay": "Qarz to'lash",
+  "op_cashback": "Keshbek",
+  "op_bonusspend": "Bonus sarflash",
+  "op_supplypay": "Ta'minot to'lovi",
+  "op_cashin": "Kirim",
+  "op_cashout": "Chiqim",
+  "op_change": "Qaytim",
+  "op_customercredit": "Mijoz avansi",
+  "op_customerpayment": "Mijoz to'lovi",
+  "op_customeradvance": "Avans",
+  "op_customerrefund": "Pul qaytarish",
+  "op_salereturn": "Savdo qaytarish",
+  "op_cashbackrecovery": "Keshbek qaytarildi",
+  "op_partnerrewardcash": "Hamkor mukofoti (naqd)",
+  "op_partnerrewardbonus": "Hamkor mukofoti (bonus)"
 }

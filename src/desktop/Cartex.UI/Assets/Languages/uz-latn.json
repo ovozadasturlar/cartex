@@ -167,7 +167,7 @@
   "customer_language": "Mijoz tili (chek/xabarlar)",
   "customer_message": "Xabar yuborish",
   "customers": "Mijozlar",
-  "customer_new": "Yangi mijoz",
+  "customer_new": "Yangi mijoz yaratish",
   "customer_edit": "Mijozni tahrirlash",
   "dark": "Qorong'u",
   "dark_theme": "Qorong'u mavzu",
@@ -1245,7 +1245,6 @@
   "allow_retroactive_cashback": "Keyin biriktirilgan savdolarga keshbek hisoblash",
   "date_time": "Sana va vaqt",
   "event_type": "Harakat turi",
-  "customer_new": "Yangi mijoz yaratish",
   "returns": "Qaytarishlar",
   "ret_new": "Yangi qaytarish",
   "ret_document": "Hujjat",
@@ -1327,5 +1326,14 @@
   "void_payment_confirm": "{2:dd.MM.yyyy} sanasidagi {0} to'lovi ({1}) bekor qilinadi. Mijoz qarzi avvalgi holatiga qaytadi.",
   "ledger_entry_not_voidable": "Faqat mijoz to'lovini bekor qilish mumkin",
   "open_sale": "Savdoni ochish",
-  "document": "Hujjat"
+  "document": "Hujjat",
+  "op_change": "Qaytim",
+  "op_customercredit": "Mijoz avansi",
+  "op_customerpayment": "Mijoz to'lovi",
+  "op_customeradvance": "Avans",
+  "op_customerrefund": "Pul qaytarish",
+  "op_salereturn": "Savdo qaytarish",
+  "op_cashbackrecovery": "Keshbek qaytarildi",
+  "op_partnerrewardcash": "Hamkor mukofoti (naqd)",
+  "op_partnerrewardbonus": "Hamkor mukofoti (bonus)"
 }
