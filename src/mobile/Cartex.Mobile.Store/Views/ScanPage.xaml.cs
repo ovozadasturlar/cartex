@@ -129,6 +129,8 @@ public partial class ScanPage : ContentPage
         KeyboardDismissal.Hide();
     }
 
+    private void OnSearchCompleted(object? sender, EventArgs e) => KeyboardDismissal.Hide();
+
     private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e) =>
         _vm.SetQuantityFromTextCommand.Execute(null);
 

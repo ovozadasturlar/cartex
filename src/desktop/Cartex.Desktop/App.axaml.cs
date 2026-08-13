@@ -15,6 +15,7 @@ public partial class App : Application
 	public override void Initialize()
 	{
 		AvaloniaXamlLoader.Load(this);
+		Cartex.UI.Controls.WheelGuard.Install();
 
 		ThemeManager.Instance.ThemeChanged += theme =>
 			RequestedThemeVariant = theme == AppTheme.Dark ? ThemeVariant.Dark : ThemeVariant.Light;

@@ -14,6 +14,10 @@
         <scanner:CameraView
             x:Name="Reader"
             BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
+            AimMode="True"
+            ViewfinderMode="True"
+            TapToFocusEnabled="True"
+            VibrationOnDetected="True"
             OnDetectionFinished="OnDetectionFinished" />
 
         <Border VerticalOptions="Center" HorizontalOptions="Center"
@@ -72,7 +76,8 @@
                     <Border Style="{StaticResource InputWrap}">
                         <Grid ColumnDefinitions="*,36">
                             <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
-                                   Text="{Binding SearchText}" />
+                                   Text="{Binding SearchText}" ReturnType="Search"
+                                   Completed="OnSearchCompleted" />
                             <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
                                     Padding="0" WidthRequest="36" HeightRequest="36" CornerRadius="18"
                                     BackgroundColor="Transparent"

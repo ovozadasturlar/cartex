@@ -99,7 +99,7 @@
 
                         <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8" IsVisible="{Binding CanCreateBarcode}">
                             <Border Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" VerticalOptions="Center" />
+                                <Entry Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" Keyboard="Numeric" VerticalOptions="Center" />
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource InputWrap}">
                                 <Entry Text="{Binding NewBarcodePackQtyText}" Placeholder="{svc:T pack_qty}" Keyboard="Numeric" HorizontalTextAlignment="Center" VerticalOptions="Center" />

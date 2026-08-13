@@ -131,27 +131,27 @@
                             <SwipeView.RightItems>
                                 <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="RemainOpen">
                                     <SwipeItemView>
-                                        <ctl:HoldRepeatButton Text="+" FontSize="22" FontAttributes="Bold"
-                                                              WidthRequest="52" Margin="2" Padding="0" CornerRadius="14"
-                                                              BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}"
-                                                              TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
-                                                              RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                        <ctl:HoldRepeatButton Text="−" FontSize="20" FontAttributes="Bold"
+                                                              WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
+                                                              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                                                              TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                                              RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
                                                               RepeatCommandParameter="{Binding .}" />
                                     </SwipeItemView>
                                     <SwipeItemView>
-                                        <Border WidthRequest="64" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                                BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                                        <Border WidthRequest="60" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
                                             <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" FontSize="16" FontAttributes="Bold"
                                                    HorizontalOptions="Center" VerticalOptions="Center"
-                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                                         </Border>
                                     </SwipeItemView>
                                     <SwipeItemView>
-                                        <ctl:HoldRepeatButton Text="−" FontSize="22" FontAttributes="Bold"
-                                                              WidthRequest="52" Margin="2" Padding="0" CornerRadius="14"
-                                                              BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
-                                                              TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
-                                                              RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                        <ctl:HoldRepeatButton Text="+" FontSize="20" FontAttributes="Bold"
+                                                              WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
+                                                              BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                                              TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}"
+                                                              RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
                                                               RepeatCommandParameter="{Binding .}" />
                                     </SwipeItemView>
                                 </SwipeItems>
@@ -176,15 +176,18 @@
                                             </Label.FormattedText>
                                         </Label>
                                     </VerticalStackLayout>
-                                    <Label Grid.Column="2" Text="{Binding Quantity, StringFormat='{0:0.###}'}"
-                                           FontAttributes="Bold" FontSize="15" VerticalOptions="Center"
-                                           TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
-                                        <Label.Triggers>
-                                            <DataTrigger TargetType="Label" Binding="{Binding IsSwiped}" Value="True">
+                                    <VerticalStackLayout Grid.Column="2" Spacing="1" VerticalOptions="Center" HorizontalOptions="End">
+                                        <Label Text="{Binding LineTotal, StringFormat='{0:N0}'}"
+                                               FontAttributes="Bold" FontSize="15" HorizontalTextAlignment="End"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Text="{Binding Quantity, StringFormat='× {0:0.###}'}"
+                                               Style="{StaticResource MutedLabel}" FontSize="11.5" HorizontalTextAlignment="End" />
+                                        <VerticalStackLayout.Triggers>
+                                            <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding IsSwiped}" Value="True">
                                                 <Setter Property="Opacity" Value="0" />
                                             </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
+                                        </VerticalStackLayout.Triggers>
+                                    </VerticalStackLayout>
                                 </Grid>
                             </Border>
                         </SwipeView>

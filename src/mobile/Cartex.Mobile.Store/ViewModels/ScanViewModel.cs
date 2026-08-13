@@ -110,6 +110,7 @@ public partial class ScanViewModel : ObservableObject
     public async Task HandleAsync(string value)
     {
         if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchVisible) return;
+        KeyboardDismissal.Hide();
         if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
         _lastValue = value;
@@ -401,6 +402,7 @@ public partial class ScanViewModel : ObservableObject
         SearchVisible = !SearchVisible;
         if (!SearchVisible)
         {
+            KeyboardDismissal.Hide();
             _searchCts?.Cancel();
             IsSearching = false;
             SearchText = "";
@@ -533,6 +535,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task PickResultAsync(SearchRow row)
     {
+        KeyboardDismissal.Hide();
         var p = row.Product;
         ProductActionsExpanded = false;
         try

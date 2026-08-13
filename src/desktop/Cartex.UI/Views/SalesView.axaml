@@ -744,7 +744,7 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer>
+                <ScrollViewer c:ScanFocus.Target="{Binding #ScanBox}">
                     <Panel>
                         <ItemsControl ItemsSource="{Binding CartItems}">
                             <ItemsControl.ItemTemplate>
