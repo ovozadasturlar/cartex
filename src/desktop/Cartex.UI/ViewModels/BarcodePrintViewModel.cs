@@ -229,7 +229,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 
     /// A scanner ends its barcode with a single Enter, so one Enter can never start a large
     /// run: anything above a normal batch needs a second Enter on the very same number.
-    private const int CopiesNeedingConfirmation = 500;
+    private const int CopiesNeedingConfirmation = 10;
     private int _confirmedCopies;
 
     [RelayCommand(CanExecute = nameof(HasCode))]

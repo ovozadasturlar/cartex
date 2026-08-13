@@ -138,7 +138,8 @@
                             <NumericUpDown x:Name="QuantityBox" Grid.Column="2"
                                            Value="{Binding Quantity, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}"
                                            Minimum="1" Increment="1" FormatString="0" Width="86" Height="38"
-                                           ShowButtonSpinner="False" HorizontalContentAlignment="Center">
+                                           ShowButtonSpinner="False" HorizontalContentAlignment="Center"
+                                           c:FormBehaviors.DigitsOnly="True">
                                 <NumericUpDown.KeyBindings>
                                     <KeyBinding Gesture="Enter" Command="{Binding RequestPrintCommand}" />
                                 </NumericUpDown.KeyBindings>

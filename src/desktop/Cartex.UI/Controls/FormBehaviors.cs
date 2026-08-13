@@ -37,6 +37,10 @@ public static class FormBehaviors
     public static readonly AttachedProperty<bool> SelectAllOnFocusProperty =
         AvaloniaProperty.RegisterAttached<TextBox, bool>("SelectAllOnFocus", typeof(FormBehaviors));
 
+    /// Counts are whole numbers, so letters and separators never reach the field.
+    public static readonly AttachedProperty<bool> DigitsOnlyProperty =
+        AvaloniaProperty.RegisterAttached<Control, bool>("DigitsOnly", typeof(FormBehaviors));
+
     public static bool GetAutoFocus(Control c) => c.GetValue(AutoFocusProperty);
     public static void SetAutoFocus(Control c, bool value) => c.SetValue(AutoFocusProperty, value);
     public static ICommand? GetEnterSubmits(Control c) => c.GetValue(EnterSubmitsProperty);
@@ -53,6 +57,8 @@ public static class FormBehaviors
     public static void SetCloseOnSelect(Control c, bool value) => c.SetValue(CloseOnSelectProperty, value);
     public static bool GetSelectAllOnFocus(TextBox c) => c.GetValue(SelectAllOnFocusProperty);
     public static void SetSelectAllOnFocus(TextBox c, bool value) => c.SetValue(SelectAllOnFocusProperty, value);
+    public static bool GetDigitsOnly(Control c) => c.GetValue(DigitsOnlyProperty);
+    public static void SetDigitsOnly(Control c, bool value) => c.SetValue(DigitsOnlyProperty, value);
 
     static FormBehaviors()
     {
@@ -95,6 +101,13 @@ public static class FormBehaviors
                 input.AddHandler(InputElement.KeyDownEvent, OnEnterKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
         });
 
+        DigitsOnlyProperty.Changed.AddClassHandler<Control>((host, e) =>
+        {
+            host.RemoveHandler(InputElement.TextInputEvent, OnDigitsOnlyInput);
+            if (e.NewValue is true)
+                host.AddHandler(InputElement.TextInputEvent, OnDigitsOnlyInput, RoutingStrategies.Tunnel);
+        });
+
         SelectAllOnFocusProperty.Changed.AddClassHandler<TextBox>((box, e) =>
         {
             box.GotFocus -= OnSelectAllFocus;
@@ -112,6 +125,12 @@ public static class FormBehaviors
                 box.AddHandler(InputElement.KeyUpEvent, OnCommitKeyUp, RoutingStrategies.Tunnel, handledEventsToo: true);
             }
         });
+    }
+
+    private static void OnDigitsOnlyInput(object? sender, TextInputEventArgs e)
+    {
+        if (e.Text is { Length: > 0 } text && !text.All(char.IsAsciiDigit))
+            e.Handled = true;
     }
 
     private static void OnSelectAllFocus(object? sender, FocusChangedEventArgs e)
