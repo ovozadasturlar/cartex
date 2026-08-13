@@ -399,16 +399,9 @@
 
         <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
-            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    c:FormBehaviors.AutoFocus="True"
-                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[customers]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsEditOpen}" Title="{Binding EditTitle}" CardWidth="560"
+                     CancelCommand="{Binding CancelEditCommand}" SaveCommand="{Binding SaveCommand}">
+                <StackPanel Spacing="14">
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Grid.Column="0" Spacing="5">
                             <c:FieldLabel Text="{Binding L[first_name]}" Required="True" />
@@ -466,22 +459,13 @@
                         </Grid>
                         <TextBlock Text="{Binding L[opening_balance_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
 
-        <Border IsVisible="{Binding IsMessageOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelMessageCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[customer_message]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsMessageOpen}" Title="{Binding L[customer_message]}" CardWidth="560"
+                     CancelCommand="{Binding CancelMessageCommand}" SaveCommand="{Binding SendMessageCommand}"
+                     SaveText="{Binding L[send]}">
+                <StackPanel Spacing="14">
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[channel]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <ComboBox ItemsSource="{Binding MessageChannels}" SelectedItem="{Binding MessageChannel}"
@@ -491,22 +475,30 @@
                         <TextBlock Text="{Binding L[message_text]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding MessageText}" MinHeight="90" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelMessageCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding SendMessageCommand}" Content="{Binding L[send]}" />
-                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
 
-        <Border IsVisible="{Binding IsRepayOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelRepayCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[repay_debt]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsRepayOpen}" Title="{Binding L[repay_debt]}" CardWidth="560"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelRepayCommand}" SaveCommand="{Binding RepayCommand}">
+                <StackPanel Spacing="14">
+                    <Border Classes="debtcard" CornerRadius="12" Padding="16,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[debt]}" FontSize="12.5"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Classes="debtamount" FontSize="20" FontWeight="Bold"
+                                           Text="{Binding RepayDebtTotal, StringFormat='{}{0:N0}'}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="{Binding L[remaining]}" FontSize="12.5" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding RepayRemaining, StringFormat='{}{0:N0}'}"
+                                           FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                     <Grid ColumnDefinitions="*,8,*" IsVisible="{Binding IsMulticurrency}">
                         <StackPanel Spacing="5">
                             <TextBlock Text="{Binding L[debt_currency]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -526,20 +518,22 @@
                                     ToolTip.Tip="{Binding L[repay_full_debt]}" VerticalAlignment="Stretch">
                                 <mi:MaterialIcon Kind="Sigma" Width="18" Height="18" />
                             </Button>
-                            <NumericUpDown Grid.Column="2" Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" FontSize="18" MinHeight="44" />
                         </Grid>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <ToggleSwitch IsChecked="{Binding RepayViaCard}" />
-                        <TextBlock Text="{Binding L[via_card]}" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextPrimary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[payment_method]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ToggleSwitch IsChecked="{Binding RepayViaCard}"
+                                      OffContent="{Binding L[cash]}" OnContent="{Binding L[card]}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelRepayCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding RepayCommand}" Content="{Binding L[save]}" />
-                    </StackPanel>
+                    <Border IsVisible="{Binding RepayIsOverpay}" Background="{DynamicResource SuccessBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}">
+                            <Run Text="{Binding L[advance], Mode=OneWay}" />
+                            <Run Text="{Binding RepayOverpayAmount, StringFormat='{}{0:N0}', Mode=OneWay}" />
+                        </TextBlock>
+                    </Border>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
     </Panel>
 </UserControl>

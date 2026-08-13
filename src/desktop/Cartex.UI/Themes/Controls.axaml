@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:c="using:Cartex.UI.Controls"
                     xmlns:conv="using:Cartex.UI.Converters"
+                    xmlns:svc="using:Cartex.UI.Services"
                     xmlns:vm="using:Cartex.UI.ViewModels.Common"
                     xmlns:mi="using:Material.Icons.Avalonia">
 
@@ -142,6 +143,59 @@
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
                                       HorizontalAlignment="Center" Margin="0,4,0,0" />
                 </StackPanel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type c:ModalCard}" TargetType="c:ModalCard">
+        <Setter Property="SaveText" Value="{Binding [save], Source={x:Static svc:LocalizationManager.Instance}}" />
+        <Setter Property="CancelText" Value="{Binding [cancel], Source={x:Static svc:LocalizationManager.Instance}}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="#30000000" IsVisible="{TemplateBinding IsOpen}"
+                        c:OverlayBehaviors.DismissCommand="{TemplateBinding CancelCommand}">
+                    <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Width="{TemplateBinding CardWidth}" Margin="24"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{TemplateBinding IsOpen}"
+                            c:FormBehaviors.AutoFocus="True"
+                            c:FormBehaviors.EscCancels="{TemplateBinding CancelCommand}"
+                            c:FormBehaviors.EnterSubmits="{TemplateBinding SaveCommand}"
+                            c:FormBehaviors.SaveShortcut="{TemplateBinding SaveCommand}"
+                            c:FormBehaviors.SaveAndNewShortcut="{TemplateBinding SaveAndNewCommand}">
+                        <DockPanel Margin="24">
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{TemplateBinding Title}" FontSize="18" FontWeight="Bold"
+                                               Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{TemplateBinding Subtitle}" FontSize="12.5" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               IsVisible="{Binding Subtitle, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="icon" VerticalAlignment="Top"
+                                        Command="{TemplateBinding CancelCommand}">
+                                    <mi:MaterialIcon Kind="Close" Width="18" Height="18" />
+                                </Button>
+                            </Grid>
+                            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,18,0,0"
+                                  IsVisible="{TemplateBinding ShowFooter}">
+                                <ContentPresenter Content="{TemplateBinding Footer}" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="outline" Command="{TemplateBinding CancelCommand}"
+                                            Content="{TemplateBinding CancelText}" />
+                                    <Button Classes="brand" Command="{TemplateBinding SaveCommand}"
+                                            Content="{TemplateBinding SaveText}"
+                                            IsVisible="{Binding SaveCommand, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                            </Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}" />
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </Border>
             </ControlTemplate>
         </Setter>
     </ControlTheme>

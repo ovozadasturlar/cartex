@@ -132,6 +132,36 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private decimal RateOf(string? code) => code is null || code == _baseCurrency ? 1m : _rates.GetValueOrDefault(code, 0m);
 
+    public decimal RepayDebtTotal =>
+        SelectedCustomer?.DebtBalances.FirstOrDefault(b => b.Currency == RepayDebtCurrency)?.Amount
+        ?? SelectedDebtAmount;
+
+    private decimal RepayAmountInDebtCurrency
+    {
+        get
+        {
+            var debtRate = RateOf(RepayDebtCurrency);
+            var payRate = RateOf(RepayPayCurrency);
+            return debtRate > 0 && payRate > 0 ? Math.Round(RepayAmount * payRate / debtRate, 2) : RepayAmount;
+        }
+    }
+
+    public decimal RepayRemaining => Math.Max(0, RepayDebtTotal - RepayAmountInDebtCurrency);
+    public bool RepayIsOverpay => RepayAmountInDebtCurrency > RepayDebtTotal;
+    public decimal RepayOverpayAmount => Math.Max(0, RepayAmountInDebtCurrency - RepayDebtTotal);
+
+    private void NotifyRepayPreview()
+    {
+        OnPropertyChanged(nameof(RepayDebtTotal));
+        OnPropertyChanged(nameof(RepayRemaining));
+        OnPropertyChanged(nameof(RepayIsOverpay));
+        OnPropertyChanged(nameof(RepayOverpayAmount));
+    }
+
+    partial void OnRepayAmountChanged(decimal value) => NotifyRepayPreview();
+    partial void OnRepayDebtCurrencyChanged(string? value) => NotifyRepayPreview();
+    partial void OnRepayPayCurrencyChanged(string? value) => NotifyRepayPreview();
+
     [RelayCommand]
     private void FillRepayAmount()
     {
@@ -146,6 +176,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool HasSelection => SelectedCustomer is not null;
     private static readonly CustomerDto EmptyCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
+    public string EditTitle => L[IsNew ? "customer_new" : "customer_edit"];
+    partial void OnIsNewChanged(bool value) => OnPropertyChanged(nameof(EditTitle));
     public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
