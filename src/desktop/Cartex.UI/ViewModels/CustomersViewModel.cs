@@ -359,15 +359,23 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private async Task ExportStatementAsync(string format)
     {
         if (_ledgerCustomerId == 0 || !CanExportStatement) return;
+        // ExportButton offers Excel/Pdf/PdfPortrait/Csv; the statement endpoint only knows pdf and xlsx.
+        var apiFormat = format switch
+        {
+            "Excel" => "xlsx",
+            "Pdf" or "PdfPortrait" => "pdf",
+            _ => null
+        };
+        if (apiFormat is null) { _toast.Warning(L["export_format_unsupported"]); return; }
         try
         {
             using (_busy.Begin(L["loading"]))
             {
-                using var content = await _api.ExportStatementAsync(_ledgerCustomerId, format, "both",
+                using var content = await _api.ExportStatementAsync(_ledgerCustomerId, apiFormat, "both",
                     new DateTimeOffset(StatementFrom.Date).UtcDateTime,
                     new DateTimeOffset(StatementTo.Date.AddDays(1)).UtcDateTime);
                 var name = $"{SelectedCustomerDisplay.FullName}-{StatementFrom:yyyyMMdd}-{StatementTo:yyyyMMdd}";
-                await using var target = await ServiceLocator.Resolve<IFilePickerService>().SaveFileAsync(name, format);
+                await using var target = await ServiceLocator.Resolve<IFilePickerService>().SaveFileAsync(name, apiFormat);
                 if (target is null) return;
                 await content.CopyToAsync(target);
             }

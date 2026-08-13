@@ -1319,5 +1319,6 @@
   "items": "Товары",
   "select_row_hint": "Выберите строку слева, чтобы увидеть детали",
   "scan_to_view_online": "Отсканируйте, чтобы открыть чек онлайн",
-  "select_pdf_folder": "Выберите папку для PDF-файлов"
+  "select_pdf_folder": "Выберите папку для PDF-файлов",
+  "export_format_unsupported": "CSV недоступен для этого отчёта"
 }

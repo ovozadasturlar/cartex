@@ -1319,5 +1319,6 @@
   "items": "Маҳсулотлар",
   "select_row_hint": "Тафсилотларни кўриш учун чапдан қаторни танланг",
   "scan_to_view_online": "Чекни онлайн очиш учун сканерланг",
-  "select_pdf_folder": "PDF файллар учун жилдни танланг"
+  "select_pdf_folder": "PDF файллар учун жилдни танланг",
+  "export_format_unsupported": "Бу ҳисобот учун CSV мавжуд эмас"
 }

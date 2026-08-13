@@ -1319,5 +1319,6 @@
   "items": "Items",
   "select_row_hint": "Pick a row on the left to see its details",
   "scan_to_view_online": "Scan to open the receipt online",
-  "select_pdf_folder": "Select the folder for PDF files"
+  "select_pdf_folder": "Select the folder for PDF files",
+  "export_format_unsupported": "CSV is not available for this report"
 }

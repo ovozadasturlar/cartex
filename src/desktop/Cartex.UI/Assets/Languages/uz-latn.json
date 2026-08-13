@@ -1319,5 +1319,6 @@
   "items": "Mahsulotlar",
   "select_row_hint": "Tafsilotlarni ko'rish uchun chapdan qatorni tanlang",
   "scan_to_view_online": "Chekni onlayn ochish uchun skanerlang",
-  "select_pdf_folder": "PDF fayllar uchun jildni tanlang"
+  "select_pdf_folder": "PDF fayllar uchun jildni tanlang",
+  "export_format_unsupported": "Bu hisobot uchun CSV mavjud emas"
 }
