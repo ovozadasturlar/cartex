@@ -22,6 +22,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private readonly AuthService _auth;
     private readonly IExportService _export;
     private readonly ReceiptDialogService _receiptDialog;
+    private readonly ICustomerPaymentsApi _paymentsApi;
+    private readonly IDialogService _dialog;
     private long _editId;
 
     public ObservableCollection<CustomerDto> Customers { get; } = [];
@@ -164,9 +166,12 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Take(2)
             .Select(w => char.ToUpperInvariant(w[0])));
 
-    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog)
+    public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog,
+        ICustomerPaymentsApi paymentsApi, IDialogService dialog)
     {
         _receiptDialog = receiptDialog;
+        _paymentsApi = paymentsApi;
+        _dialog = dialog;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _cache = cache;
@@ -191,6 +196,35 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         if (result is ReceiptDialogResult.Returned or ReceiptDialogResult.CustomerAssigned
             or ReceiptDialogResult.Corrected)
             await LoadSalesAsync(_ledgerCustomerId);
+    }
+
+    public bool CanVoidPayment => _auth.HasPermission("customer_payments.void");
+
+    [RelayCommand]
+    private async Task OpenLedgerEntryAsync(CustomerLedgerEntryDto entry)
+    {
+        if (entry is null) return;
+        if (entry.PaymentDocumentId is not { } paymentId)
+        {
+            _toast.Info(L["ledger_entry_not_voidable"]);
+            return;
+        }
+        if (!CanVoidPayment) { _toast.Warning(L["ledger_entry_not_voidable"]); return; }
+
+        var details = string.Format(L["void_payment_confirm"],
+            entry.PaymentNumber ?? $"#{paymentId}", Math.Abs(entry.Change).ToString("N0"), entry.Date);
+        var reason = await _dialog.PromptAsync(L["void_payment"], details, L["reason"]);
+        if (string.IsNullOrWhiteSpace(reason)) return;
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _paymentsApi.VoidAsync(paymentId, new VoidCustomerPaymentRequest(reason.Trim()));
+            _toast.Success(L["success"]);
+            await LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken());
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     private void ResetState()

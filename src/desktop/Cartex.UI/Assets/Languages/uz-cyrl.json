@@ -1320,5 +1320,8 @@
   "select_row_hint": "Тафсилотларни кўриш учун чапдан қаторни танланг",
   "scan_to_view_online": "Чекни онлайн очиш учун сканерланг",
   "select_pdf_folder": "PDF файллар учун жилдни танланг",
-  "export_format_unsupported": "Бу ҳисобот учун CSV мавжуд эмас"
+  "export_format_unsupported": "Бу ҳисобот учун CSV мавжуд эмас",
+  "void_payment": "Тўловни бекор қилиш",
+  "void_payment_confirm": "{2:dd.MM.yyyy} санасидаги {0} тўлови ({1}) бекор қилинади. Мижоз қарзи аввалги ҳолатига қайтади.",
+  "ledger_entry_not_voidable": "Фақат мижоз тўловини бекор қилиш мумкин"
 }

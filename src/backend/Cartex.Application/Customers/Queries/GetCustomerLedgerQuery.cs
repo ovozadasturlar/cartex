@@ -10,7 +10,17 @@ namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerLedgerQuery(long CustomerId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
 
-public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter, string? Currency = null);
+public record CustomerLedgerEntryDto(
+    DateTime Date,
+    string OperationType,
+    string AccountType,
+    decimal Change,
+    decimal BalanceAfter,
+    string? Currency = null,
+    long TransactionId = 0,
+    long? PaymentDocumentId = null,
+    string? PaymentNumber = null,
+    long? SaleId = null);
 
 public sealed class GetCustomerLedgerQueryHandler(
     IApplicationDbContext db,
@@ -44,7 +54,10 @@ public sealed class GetCustomerLedgerQueryHandler(
         {
             var all = await txQuery
                 .OrderBy(t => t.CreatedAt).ThenBy(t => t.Id)
-                .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
+                .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId,
+                t.CustomerPaymentDocumentId,
+                t.CustomerPaymentDocument != null ? t.CustomerPaymentDocument.DocumentNumber : null,
+                t.SaleId))
                 .ToListAsync(cancellationToken);
             var full = BuildEntries(all, typeById, currencyById, ids.ToDictionary(id => id, _ => 0m));
             full.Reverse();
@@ -59,7 +72,10 @@ public sealed class GetCustomerLedgerQueryHandler(
             .OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
+            .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId,
+                t.CustomerPaymentDocumentId,
+                t.CustomerPaymentDocument != null ? t.CustomerPaymentDocument.DocumentNumber : null,
+                t.SaleId))
             .ToListAsync(cancellationToken);
 
         if (pageTx.Count == 0)
@@ -87,7 +103,10 @@ public sealed class GetCustomerLedgerQueryHandler(
         return entries;
     }
 
-    private sealed record TxRow(long Id, DateTime CreatedAt, OperationType OperationType, decimal Amount, long? FromAccountId, long? ToAccountId);
+    private sealed record TxRow(
+        long Id, DateTime CreatedAt, OperationType OperationType, decimal Amount,
+        long? FromAccountId, long? ToAccountId,
+        long? PaymentDocumentId, string? PaymentNumber, long? SaleId);
 
     private static List<CustomerLedgerEntryDto> BuildEntries(
         List<TxRow> transactions,
@@ -102,14 +121,14 @@ public sealed class GetCustomerLedgerQueryHandler(
             {
                 var balance = running.GetValueOrDefault(from) - t.Amount;
                 running[from] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance, currencyById.GetValueOrDefault(from)));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance, currencyById.GetValueOrDefault(from), t.Id, t.PaymentDocumentId, t.PaymentNumber, t.SaleId));
             }
 
             if (t.ToAccountId is long to && typeById.TryGetValue(to, out var toType))
             {
                 var balance = running.GetValueOrDefault(to) + t.Amount;
                 running[to] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance, currencyById.GetValueOrDefault(to)));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance, currencyById.GetValueOrDefault(to), t.Id, t.PaymentDocumentId, t.PaymentNumber, t.SaleId));
             }
         }
         return entries;

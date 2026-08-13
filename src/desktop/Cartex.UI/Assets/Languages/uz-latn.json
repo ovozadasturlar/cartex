@@ -1320,5 +1320,8 @@
   "select_row_hint": "Tafsilotlarni ko'rish uchun chapdan qatorni tanlang",
   "scan_to_view_online": "Chekni onlayn ochish uchun skanerlang",
   "select_pdf_folder": "PDF fayllar uchun jildni tanlang",
-  "export_format_unsupported": "Bu hisobot uchun CSV mavjud emas"
+  "export_format_unsupported": "Bu hisobot uchun CSV mavjud emas",
+  "void_payment": "To'lovni bekor qilish",
+  "void_payment_confirm": "{2:dd.MM.yyyy} sanasidagi {0} to'lovi ({1}) bekor qilinadi. Mijoz qarzi avvalgi holatiga qaytadi.",
+  "ledger_entry_not_voidable": "Faqat mijoz to'lovini bekor qilish mumkin"
 }

@@ -1320,5 +1320,8 @@
   "select_row_hint": "Выберите строку слева, чтобы увидеть детали",
   "scan_to_view_online": "Отсканируйте, чтобы открыть чек онлайн",
   "select_pdf_folder": "Выберите папку для PDF-файлов",
-  "export_format_unsupported": "CSV недоступен для этого отчёта"
+  "export_format_unsupported": "CSV недоступен для этого отчёта",
+  "void_payment": "Отменить платёж",
+  "void_payment_confirm": "Платёж {0} на {1} от {2:dd.MM.yyyy} будет сторнирован. Долг клиента вернётся к прежнему значению.",
+  "ledger_entry_not_voidable": "Отменить можно только платёж клиента"
 }

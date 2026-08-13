@@ -296,7 +296,8 @@
                         IsVisible="{Binding IsLedgerTab}">
                     <Panel>
                         <DataGrid ItemsSource="{Binding Ledger}" AutoGenerateColumns="False" IsReadOnly="True"
-                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  c:GridDoubleClick.Command="{Binding OpenLedgerEntryCommand}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Width="*" Binding="{Binding Date, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                                     Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
