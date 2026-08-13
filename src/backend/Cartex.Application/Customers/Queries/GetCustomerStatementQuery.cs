@@ -101,6 +101,10 @@ public sealed class GetCustomerStatementQueryHandler(
         }
 
         var raw = new List<RawStatementEntry>();
+        // Payments are counted from the very rows the timeline is built from. Counting documents
+        // separately made the total disagree with the list whenever a debt was repaid without one.
+        var paymentCount = 0;
+        var paymentAmount = 0m;
         if (accountIds.Count > 0)
         {
             var transactions = db.Transactions.AsNoTracking()
@@ -123,6 +127,12 @@ public sealed class GetCustomerStatementQueryHandler(
                 SaleReceipt = x.Sale != null ? x.Sale.ReceiptToken : null,
                 x.Description
             }).ToListAsync(cancellationToken);
+
+            var payments = rows
+                .Where(x => x.OperationType is OperationType.DebtPay or OperationType.CustomerPayment)
+                .ToList();
+            paymentCount = payments.Select(x => x.Id).Distinct().Count();
+            paymentAmount = payments.DistinctBy(x => x.Id).Sum(x => x.Amount);
 
             foreach (var row in rows)
             {
@@ -170,7 +180,8 @@ public sealed class GetCustomerStatementQueryHandler(
             }
         }
 
-        var summary = await AddOperationalRowsAsync(raw, request, baseCurrency, cancellationToken);
+        var summary = await AddOperationalRowsAsync(
+            raw, request, baseCurrency, paymentCount, paymentAmount, cancellationToken);
         var grouped = raw
             .GroupBy(x => new { x.Type, x.DocumentId, x.DocumentNumber, x.Currency, x.SaleId })
             .Select(x => new RawStatementEntry(
@@ -221,6 +232,8 @@ public sealed class GetCustomerStatementQueryHandler(
         List<RawStatementEntry> raw,
         GetCustomerStatementQuery request,
         string baseCurrency,
+        int paymentCount,
+        decimal paymentAmount,
         CancellationToken cancellationToken)
     {
         var knownSales = raw.Where(x => x.Type == "Sale" && x.SaleId.HasValue).Select(x => x.SaleId!.Value).ToHashSet();
@@ -248,9 +261,6 @@ public sealed class GetCustomerStatementQueryHandler(
             x.CreatedAt, "CustomerReturn", x.Id, x.DocumentNumber, $"Mahsulot qaytarildi: {x.RefundAmount:N2}",
             0, baseCurrency, null, x.Id)));
 
-        var payments = Scope(db.CustomerPaymentDocuments.AsNoTracking()
-                .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted),
-            x => x.BranchId, x => x.CreatedAt, request);
         var refunds = Scope(db.CustomerRefundDocuments.AsNoTracking()
                 .Where(x => x.CustomerId == request.CustomerId && x.Status == BusinessDocumentStatus.Posted),
             x => x.BranchId, x => x.CreatedAt, request);
@@ -258,8 +268,8 @@ public sealed class GetCustomerStatementQueryHandler(
         return new CustomerStatementSummaryDto(
             saleRows.Count,
             saleRows.Sum(x => x.TotalAmount),
-            await payments.CountAsync(cancellationToken),
-            await payments.SumAsync(x => (decimal?)x.TotalBaseAmount, cancellationToken) ?? 0,
+            paymentCount,
+            paymentAmount,
             returnRows.Count,
             returnRows.Sum(x => x.RefundAmount),
             await refunds.CountAsync(cancellationToken),
