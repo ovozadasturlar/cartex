@@ -137,6 +137,9 @@ public sealed class PrintHostService
                     await ProcessAssignedAsync(cancellationToken);
                 }
 
+                // A full healthy cycle means whatever was shown in the settings banner
+                // (e.g. rejected while the device was still untrusted) is over.
+                ClearHostFailure();
                 await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
