@@ -55,6 +55,17 @@
     <Color x:Key="AccentBg">#FFEDD5</Color>
     <Color x:Key="AccentBgDark">#3A1F0B</Color>
 
+    <Color x:Key="GlassSurface">#E0FFFFFF</Color>
+    <Color x:Key="GlassSurfaceDark">#C41C221E</Color>
+    <Color x:Key="GlassStroke">#F0FFFFFF</Color>
+    <Color x:Key="GlassStrokeDark">#30FFFFFF</Color>
+    <Color x:Key="GlassStrokeFade">#33FFFFFF</Color>
+    <Color x:Key="GlassStrokeFadeDark">#0AFFFFFF</Color>
+    <Color x:Key="AuraTop">#DDF1E4</Color>
+    <Color x:Key="AuraTopDark">#121B15</Color>
+    <Color x:Key="AuraBottom">#F3F5F7</Color>
+    <Color x:Key="AuraBottomDark">#0A0C0B</Color>
+
     <Color x:Key="Scrim">#66000000</Color>
     <Color x:Key="ScrimDark">#99000000</Color>
     <Color x:Key="ImageBg">#F1F3F5</Color>

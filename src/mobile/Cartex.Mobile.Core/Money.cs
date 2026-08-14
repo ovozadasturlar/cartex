@@ -9,6 +9,23 @@ public static class Money
 
     public static string Text(decimal amount) => amount.ToString("N0", Format);
 
+    public static string Compact(decimal amount)
+    {
+        var abs = Math.Abs(amount);
+        return abs switch
+        {
+            >= 1_000_000_000 => Scaled(amount / 1_000_000_000) + " mlrd",
+            >= 1_000_000 => Scaled(amount / 1_000_000) + " mln",
+            _ => Text(amount),
+        };
+    }
+
+    private static string Scaled(decimal value)
+    {
+        var rounded = Math.Round(value, Math.Abs(value) >= 100 ? 0 : Math.Abs(value) >= 10 ? 1 : 2);
+        return rounded.ToString("0.##", Format);
+    }
+
     public static string Text(decimal amount, string? currency) =>
         string.IsNullOrEmpty(currency) ? Text(amount) : $"{Text(amount)} {currency}";
 

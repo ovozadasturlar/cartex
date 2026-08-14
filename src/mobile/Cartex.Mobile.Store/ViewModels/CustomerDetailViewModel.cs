@@ -68,7 +68,7 @@ public partial class CustomerDetailViewModel(
     public bool IsCard => PaymentMethod == "Card";
 
     public int SalesCount => Sales.Count;
-    public string TotalSpentText => $"{Sales.Sum(x => x.Sale.TotalAmount):N0}";
+    public string TotalSpentText => Money.Compact(Sales.Sum(x => x.Sale.TotalAmount));
     public string LastPurchaseText => Sales.Count > 0 ? Sales[0].ShortDate : "—";
     public bool HasCreditLimit => Customer is { CreditLimit: > 0 };
     public double CreditUsedRatio => Customer is { CreditLimit: > 0 } limited

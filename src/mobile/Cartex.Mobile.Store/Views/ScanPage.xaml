@@ -9,7 +9,8 @@
     xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     xmlns:local="clr-namespace:Cartex.Mobile.Store.Controls"
     x:DataType="vm:ScanViewModel"
-    Title="{svc:T scan_title}">
+    Title="{svc:T scan_title}"
+    Shell.TabBarIsVisible="False">
     <Grid>
         <scanner:CameraView
             x:Name="Reader"
@@ -61,7 +62,7 @@
             </Grid>
         </HorizontalStackLayout>
 
-        <Border VerticalOptions="End" Margin="24,0,24,32" Padding="14,10"
+        <Border VerticalOptions="End" Margin="24,0,24,112" Padding="14,10"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
                 BackgroundColor="#B3000000"
                 IsVisible="{Binding OverlayVisible, Converter={StaticResource Invert}}">
@@ -265,6 +266,8 @@
                 </VerticalStackLayout>
             </Grid>
         </Border>
+
+        <local:LiquidTabBar Index="2" IsVisible="{Binding OverlayVisible, Converter={StaticResource Invert}}" />
 
         <Grid BackgroundColor="#CC000000" IsVisible="{Binding UnknownBarcodeVisible}">
             <Grid.GestureRecognizers>

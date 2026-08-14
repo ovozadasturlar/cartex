@@ -19,8 +19,14 @@ public partial class TradeViewModel(
     MobilePermissions permissions,
     WarehouseContext warehouse,
     OrderingHubService orderingHub,
-    MobilePrintDispatcher printDispatcher) : ObservableObject
+    MobilePrintDispatcher printDispatcher) : ObservableObject, IQueryAttributable
 {
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("section", out var value) && value?.ToString() is { Length: > 0 } section && section != Section)
+            Section = section;
+    }
+
     public ObservableCollection<TradeQueueRow> Carts { get; } = [];
     public ObservableCollection<TradeSaleRow> Sales { get; } = [];
     public ObservableCollection<TradeShiftRow> Shifts { get; } = [];
@@ -347,7 +353,7 @@ public partial class TradeViewModel(
 
         var list = listResponse.Content ?? [];
         TodayCount = totals.Count;
-        TodayTotal = totals.TotalAmount.ToString("N0");
+        TodayTotal = Money.Compact(totals.TotalAmount);
 
         if (resetPaging)
             Sales.Clear();

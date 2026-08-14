@@ -5,8 +5,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
     x:DataType="vm:TradeViewModel"
-    Title="{svc:T sales}">
+    Title="{svc:T sales}"
+    Shell.TabBarIsVisible="False">
     <ContentPage.Resources>
         <Style x:Key="Section" TargetType="Button">
             <Setter Property="BackgroundColor" Value="Transparent" />
@@ -33,6 +35,7 @@
         </Style>
     </ContentPage.Resources>
 
+    <Grid>
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Padding="16,12,16,0">
         <!-- Section Selector -->
         <Grid ColumnDefinitions="*,*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
@@ -166,6 +169,9 @@
                             </SwipeView>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
+                    <CollectionView.Footer>
+                        <BoxView HeightRequest="100" Color="Transparent" />
+                    </CollectionView.Footer>
                     <CollectionView.EmptyView>
                         <VerticalStackLayout Spacing="12" Margin="0,60,0,0" HorizontalOptions="Center">
                             <Label Text="{svc:T queue_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
@@ -257,8 +263,9 @@
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                         <CollectionView.Footer>
-                            <VerticalStackLayout Padding="12" HorizontalOptions="Center" IsVisible="{Binding IsLoadingMoreSales}">
-                                <ActivityIndicator IsRunning="{Binding IsLoadingMoreSales}" WidthRequest="24" HeightRequest="24" />
+                            <VerticalStackLayout Padding="12,12,12,100" HorizontalOptions="Center">
+                                <ActivityIndicator IsRunning="{Binding IsLoadingMoreSales}" WidthRequest="24" HeightRequest="24"
+                                                   IsVisible="{Binding IsLoadingMoreSales}" />
                             </VerticalStackLayout>
                         </CollectionView.Footer>
                         <CollectionView.EmptyView>
@@ -271,7 +278,7 @@
 
                 <!-- Z-REPORTS SECTION -->
                 <ScrollView IsVisible="{Binding IsZReports}">
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,16">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,110">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="vm:TradeShiftRow">
                                 <Border Style="{StaticResource Card}" Padding="14,12">
@@ -298,5 +305,7 @@
                        VerticalOptions="Center" HorizontalOptions="Center" />
             </Grid>
         </RefreshView>
+    </Grid>
+    <ctl:LiquidTabBar Index="1" />
     </Grid>
 </ContentPage>

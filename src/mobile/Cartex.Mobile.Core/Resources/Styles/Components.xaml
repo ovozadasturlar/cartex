@@ -12,11 +12,21 @@
 
     <!-- ================= SIRTLAR ================= -->
 
+    <LinearGradientBrush x:Key="GlassEdge" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{AppThemeBinding Light={StaticResource GlassStroke}, Dark={StaticResource GlassStrokeDark}}" Offset="0" />
+        <GradientStop Color="{AppThemeBinding Light={StaticResource GlassStrokeFade}, Dark={StaticResource GlassStrokeFadeDark}}" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="PageAura" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{AppThemeBinding Light={StaticResource AuraTop}, Dark={StaticResource AuraTopDark}}" Offset="0" />
+        <GradientStop Color="{AppThemeBinding Light={StaticResource AuraBottom}, Dark={StaticResource AuraBottomDark}}" Offset="0.6" />
+    </LinearGradientBrush>
+
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassSurface}, Dark={StaticResource GlassSurfaceDark}}" />
+        <Setter Property="Stroke" Value="{StaticResource GlassEdge}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 18" />
         <Setter Property="Padding" Value="16" />
     </Style>
 
@@ -26,17 +36,18 @@
     </Style>
 
     <Style x:Key="CardFlat" TargetType="Border">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassSurface}, Dark={StaticResource GlassSurfaceDark}}" />
+        <Setter Property="Stroke" Value="{StaticResource GlassEdge}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="StrokeShape" Value="RoundRectangle 12" />
         <Setter Property="Padding" Value="12" />
     </Style>
 
     <Style x:Key="Sheet" TargetType="Border">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceRaised}, Dark={StaticResource SurfaceRaisedDark}}" />
-        <Setter Property="StrokeThickness" Value="0" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 24,24,0,0" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassSurface}, Dark={StaticResource GlassSurfaceDark}}" />
+        <Setter Property="Stroke" Value="{StaticResource GlassEdge}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 26,26,0,0" />
         <Setter Property="Padding" Value="16,12,16,20" />
     </Style>
 
@@ -291,6 +302,7 @@
 
     <Style TargetType="Page" ApplyToDerivedTypes="True">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Bg}, Dark={StaticResource BgDark}}" />
+        <Setter Property="Background" Value="{StaticResource PageAura}" />
     </Style>
 
     <Style TargetType="Shell" ApplyToDerivedTypes="True">

@@ -5,8 +5,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
     x:DataType="vm:CustomersViewModel"
-    Title="{svc:T customers}">
+    Title="{svc:T customers}"
+    Shell.TabBarIsVisible="False">
+    <Grid>
     <Grid RowDefinitions="Auto,*" Padding="16,12,16,0" RowSpacing="12">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <Border Style="{StaticResource InputWrap}">
@@ -68,7 +71,9 @@
                                HorizontalOptions="Center" Margin="0,60" />
                     </CollectionView.EmptyView>
                     <CollectionView.Footer>
-                        <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" Margin="0,8,0,16" />
+                        <VerticalStackLayout Padding="0,8,0,100">
+                            <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
                     </CollectionView.Footer>
                 </CollectionView>
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
@@ -112,5 +117,7 @@
                 </VerticalStackLayout>
             </Border>
         </Grid>
+    </Grid>
+    <ctl:LiquidTabBar Index="3" IsVisible="{Binding IsCreateModalOpen, Converter={StaticResource Invert}}" />
     </Grid>
 </ContentPage>
