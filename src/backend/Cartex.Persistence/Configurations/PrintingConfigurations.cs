@@ -11,6 +11,9 @@ public class PrintNodeConfiguration : IEntityTypeConfiguration<PrintNode>
         builder.ToTable("print_nodes");
         builder.Property(x => x.DeviceId).HasMaxLength(64).IsRequired();
         builder.Property(x => x.CredentialHash).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.PendingCredentialHash).HasMaxLength(128);
+        builder.Property(x => x.PendingClient).HasMaxLength(20);
+        builder.Property(x => x.PendingIpAddress).HasMaxLength(64);
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
         builder.Property(x => x.ClientVersion).HasMaxLength(40);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);

@@ -47,6 +47,22 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<PrintRequesterDeviceDto>>> GetRequesters(long branchId, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetPrintRequesterDevicesQuery(branchId), cancellationToken));
 
+    [HttpPost("nodes/{id:long}/approve")]
+    [HasPermission(AppPermissions.Printing.NodesManage)]
+    public async Task<IActionResult> ApproveNode(long id, CancellationToken cancellationToken)
+    {
+        await sender.Send(new ApprovePrintNodeEnrollmentCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("nodes/{id:long}/revoke")]
+    [HasPermission(AppPermissions.Printing.NodesManage)]
+    public async Task<IActionResult> RevokeNode(long id, CancellationToken cancellationToken)
+    {
+        await sender.Send(new RevokePrintNodeCredentialCommand(id), cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("requesters/{id:long}")]
     [HasPermission(AppPermissions.Printing.NodesManage)]
     public async Task<IActionResult> SetRequester(long id, SetPrintRequesterDeviceTrustRequest request, CancellationToken cancellationToken)

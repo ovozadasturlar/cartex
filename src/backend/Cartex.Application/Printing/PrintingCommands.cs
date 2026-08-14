@@ -74,9 +74,39 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
             };
             db.PrintNodes.Add(node);
         }
+        else if (!PrintingCredential.Matches(node.CredentialHash, request.HostToken))
+        {
+            // The host cannot prove it owns this node, so instead of refusing it forever we
+            // record an enrolment request. The node stays offline and unusable until an
+            // administrator approves it from the printing settings.
+            // The same waiting host keeps its request - re-issuing on every retry would
+            // change the code faster than anyone could compare it.
+            var waiting = PrintingCredential.Matches(node.PendingCredentialHash, request.HostToken);
+            string? requested = null;
+            if (!waiting)
+            {
+                requested = PrintingCredential.Issue();
+                node.PendingCredentialHash = PrintingCredential.Hash(requested);
+            }
+
+            node.PendingRequestedAt = now;
+            node.PendingClient = currentUser.Client;
+            node.PendingIpAddress = currentUser.IpAddress;
+            node.Name = request.DeviceName.Trim();
+            node.ClientVersion = request.ClientVersion;
+            await db.SaveChangesAsync(cancellationToken);
+            return new RegisterPrintNodeResult(
+                PrintingMapper.Node(node),
+                requested,
+                PrintNodeEnrollment.PendingApproval,
+                PrintingCredential.Fingerprint(node.PendingCredentialHash));
+        }
         else
         {
-            PrintingCredential.Ensure(node, request.HostToken);
+            node.PendingCredentialHash = null;
+            node.PendingRequestedAt = null;
+            node.PendingClient = null;
+            node.PendingIpAddress = null;
         }
 
         node.BranchId = request.BranchId;
@@ -153,6 +183,59 @@ public sealed class SetPrintNodeStateCommandHandler(IApplicationDbContext db, IC
         node.IsEnabled = command.Request.IsEnabled;
         node.IsTrusted = command.Request.IsEnabled;
         if (!node.IsEnabled) node.Status = DomainNodeStatus.Offline;
+        await db.SaveChangesAsync(cancellationToken);
+        return Unit.Value;
+    }
+}
+
+public record ApprovePrintNodeEnrollmentCommand(long Id) : ICommand<Unit>;
+
+public sealed class ApprovePrintNodeEnrollmentCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    : IRequestHandler<ApprovePrintNodeEnrollmentCommand, Unit>
+{
+    public async Task<Unit> Handle(ApprovePrintNodeEnrollmentCommand command, CancellationToken cancellationToken)
+    {
+        var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
+            ?? throw new NotFoundException("Print node not found.");
+        PrintingGuard.EnsureBranch(currentUser, node.BranchId);
+        if (string.IsNullOrWhiteSpace(node.PendingCredentialHash))
+            throw new BusinessRuleException("This computer is not waiting for approval.");
+
+        node.CredentialHash = node.PendingCredentialHash;
+        node.CredentialIssuedAt = DateTime.UtcNow;
+        node.PendingCredentialHash = null;
+        node.PendingRequestedAt = null;
+        node.PendingClient = null;
+        node.PendingIpAddress = null;
+        node.IsTrusted = true;
+        node.IsEnabled = true;
+        await db.SaveChangesAsync(cancellationToken);
+        return Unit.Value;
+    }
+}
+
+public record RevokePrintNodeCredentialCommand(long Id) : ICommand<Unit>;
+
+/// Clearing the credential is how a replaced or reinstalled computer is let back in: the
+/// node drops offline and the next registration arrives as a fresh enrolment request.
+public sealed class RevokePrintNodeCredentialCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    : IRequestHandler<RevokePrintNodeCredentialCommand, Unit>
+{
+    public async Task<Unit> Handle(RevokePrintNodeCredentialCommand command, CancellationToken cancellationToken)
+    {
+        var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
+            ?? throw new NotFoundException("Print node not found.");
+        PrintingGuard.EnsureBranch(currentUser, node.BranchId);
+
+        node.CredentialHash = string.Empty;
+        node.PendingCredentialHash = null;
+        node.PendingRequestedAt = null;
+        node.PendingClient = null;
+        node.PendingIpAddress = null;
+        node.IsTrusted = false;
+        node.IsEnabled = false;
+        node.Status = DomainNodeStatus.Offline;
+        node.LastSeenAt = null;
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }
@@ -936,12 +1019,22 @@ public static class PrintingCredential
 
     public static void Ensure(PrintNode node, string? token)
     {
-        if (string.IsNullOrWhiteSpace(token)) throw new ForbiddenException("Print host credential is required.");
-        var supplied = Encoding.UTF8.GetBytes(Hash(token));
-        var expected = Encoding.UTF8.GetBytes(node.CredentialHash);
-        if (supplied.Length != expected.Length || !CryptographicOperations.FixedTimeEquals(supplied, expected))
+        if (!Matches(node.CredentialHash, token))
             throw new ForbiddenException("Invalid print host credential.");
     }
+
+    public static bool Matches(string? expectedHash, string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(expectedHash)) return false;
+        var supplied = Encoding.UTF8.GetBytes(Hash(token));
+        var expected = Encoding.UTF8.GetBytes(expectedHash);
+        return supplied.Length == expected.Length && CryptographicOperations.FixedTimeEquals(supplied, expected);
+    }
+
+    /// Short, human-comparable code so an administrator approving an enrolment can check it
+    /// against the code the waiting computer shows.
+    public static string? Fingerprint(string? hash) =>
+        string.IsNullOrWhiteSpace(hash) ? null : hash[..6].ToUpperInvariant();
 }
 
 internal static class PrintingMapper
@@ -949,7 +1042,9 @@ internal static class PrintingMapper
     public static PrintNodeDto Node(PrintNode node) => new(
         node.Id, node.BranchId, node.DeviceId, node.Name, node.ClientVersion, node.IsEnabled,
         node.IsTrusted, node.HostEnabled, (Cartex.Shared.Models.Printing.PrintNodeStatus)node.Status,
-        node.LastSeenAt, node.LastClient, node.Endpoints.OrderBy(x => x.DisplayName).Select(Endpoint).ToList());
+        node.LastSeenAt, node.LastClient, node.Endpoints.OrderBy(x => x.DisplayName).Select(Endpoint).ToList(),
+        node.PendingRequestedAt, PrintingCredential.Fingerprint(node.PendingCredentialHash),
+        node.PendingClient, node.PendingIpAddress);
 
     public static PrinterEndpointDto Endpoint(PrinterEndpoint endpoint) => new(
         endpoint.Id, endpoint.PrintNodeId, endpoint.StableKey, endpoint.SystemName, endpoint.DisplayName,

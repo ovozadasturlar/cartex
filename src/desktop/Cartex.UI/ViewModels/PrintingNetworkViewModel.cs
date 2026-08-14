@@ -18,6 +18,14 @@ public sealed partial class NetworkPrintNodeItem : ObservableObject
         Status = source.Status;
         LastSeenAt = source.LastSeenAt;
         Endpoints = source.Endpoints;
+        IsWaitingForApproval = source.HasPendingEnrollment;
+        PendingFingerprint = source.PendingFingerprint;
+        PendingDetail = string.Join(" · ", new[]
+        {
+            source.PendingRequestedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm"),
+            source.PendingClient,
+            source.PendingIpAddress
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
         _isEnabled = source.IsEnabled;
         _savedIsEnabled = source.IsEnabled;
     }
@@ -28,6 +36,9 @@ public sealed partial class NetworkPrintNodeItem : ObservableObject
     public PrintNodeStatus Status { get; }
     public DateTime? LastSeenAt { get; }
     public IReadOnlyList<PrinterEndpointDto> Endpoints { get; }
+    public bool IsWaitingForApproval { get; }
+    public string? PendingFingerprint { get; }
+    public string PendingDetail { get; }
     public bool HasChanges => IsEnabled != _savedIsEnabled;
     [ObservableProperty] private bool _isEnabled;
 
@@ -113,6 +124,37 @@ public partial class PrintingViewModel
     public bool CanViewPrintJobs => _auth.HasPermission("printing.jobs.viewOwn|printing.jobs.viewBranch");
     public bool CanCancelPrintJobs => _auth.HasPermission("printing.jobs.cancel");
     public bool CanRetryPrintJobs => _auth.HasPermission("printing.jobs.retry");
+    private PrintHostService? _printHost;
+
+    /// This computer's own side of the enrolment, so the code shown here can be compared
+    /// with the one waiting for approval in the list above.
+    private PrintHostService PrintHost
+    {
+        get
+        {
+            if (_printHost is null)
+            {
+                _printHost = ServiceLocator.Resolve<PrintHostService>();
+                _printHost.StatusChanged += OnPrintHostStatusChanged;
+            }
+            return _printHost;
+        }
+    }
+
+    public bool IsThisHostWaiting => PrintHost.IsWaitingForApproval;
+    public string? ThisHostFingerprint => PrintHost.PendingFingerprint;
+    public string? ThisHostFailure => PrintHost.LastFailure;
+    public bool HasThisHostProblem => !string.IsNullOrWhiteSpace(ThisHostFailure);
+
+    private void OnPrintHostStatusChanged() =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(IsThisHostWaiting));
+            OnPropertyChanged(nameof(ThisHostFingerprint));
+            OnPropertyChanged(nameof(ThisHostFailure));
+            OnPropertyChanged(nameof(HasThisHostProblem));
+        });
+
     public ObservableCollection<NetworkPrintNodeItem> NetworkNodes { get; } = [];
     public ObservableCollection<NetworkRequesterDeviceItem> NetworkRequesterDevices { get; } = [];
     public ObservableCollection<NetworkRouteEndpointItem> NetworkEndpoints { get; } = [];
@@ -237,6 +279,38 @@ public partial class PrintingViewModel
                 await _printingApi.SetNodeAsync(node.Id, new SetPrintNodeStateRequest(node.IsEnabled));
                 node.AcceptChanges();
             }
+            await LoadNetworkPrintingAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApproveNetworkNodeAsync(NetworkPrintNodeItem? item)
+    {
+        if (item is null || !CanManagePrintNodes) return;
+        try
+        {
+            await _printingApi.ApproveNodeAsync(item.Id);
+            await LoadNetworkPrintingAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
+
+    [RelayCommand]
+    private async Task RevokeNetworkNodeAsync(NetworkPrintNodeItem? item)
+    {
+        if (item is null || !CanManagePrintNodes) return;
+        try
+        {
+            await _printingApi.RevokeNodeAsync(item.Id);
             await LoadNetworkPrintingAsync();
             _toast.Success(L["success"]);
         }

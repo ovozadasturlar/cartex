@@ -92,7 +92,17 @@ public sealed record RegisterPrintNodeRequest(
     IReadOnlyList<PrinterEndpointRegistration> Endpoints,
     string? HostToken = null);
 
-public sealed record RegisterPrintNodeResult(PrintNodeDto Node, string? HostToken);
+public enum PrintNodeEnrollment
+{
+    Active,
+    PendingApproval
+}
+
+public sealed record RegisterPrintNodeResult(
+    PrintNodeDto Node,
+    string? HostToken,
+    PrintNodeEnrollment Enrollment = PrintNodeEnrollment.Active,
+    string? Fingerprint = null);
 
 public sealed record PrintNodeHeartbeatRequest(
     string DeviceId,
@@ -126,7 +136,14 @@ public sealed record PrintNodeDto(
     PrintNodeStatus Status,
     DateTime? LastSeenAt,
     string? LastClient,
-    IReadOnlyList<PrinterEndpointDto> Endpoints);
+    IReadOnlyList<PrinterEndpointDto> Endpoints,
+    DateTime? PendingRequestedAt = null,
+    string? PendingFingerprint = null,
+    string? PendingClient = null,
+    string? PendingIpAddress = null)
+{
+    public bool HasPendingEnrollment => PendingRequestedAt is not null;
+}
 
 public sealed record SetPrintNodeStateRequest(bool IsEnabled);
 

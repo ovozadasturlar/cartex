@@ -1545,6 +1545,31 @@
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Faol qurilmalardagi mos printerlargina yo‘naltirishda qatnashadi."
                                            Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="11.5" />
+
+                                <Border IsVisible="{Binding IsThisHostWaiting}" CornerRadius="8" Padding="12"
+                                        Background="{DynamicResource InfoBg}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Bu kompyuter tasdiqlanishini kutmoqda" FontWeight="SemiBold" />
+                                        <TextBlock FontSize="11.5" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextSecondary}"
+                                                   Text="Ro‘yxatdan shu kompyuterni toping va quyidagi kod bilan solishtirib tasdiqlang." />
+                                        <Border Background="{DynamicResource CardBg}" CornerRadius="6" Padding="12,4"
+                                                HorizontalAlignment="Left">
+                                            <TextBlock Text="{Binding ThisHostFingerprint}" FontFamily="Consolas"
+                                                       FontSize="18" FontWeight="Bold" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border IsVisible="{Binding HasThisHostProblem}" CornerRadius="8" Padding="12"
+                                        Background="{DynamicResource DangerBg}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Bu kompyuterda chop etish xizmati ulanmadi" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding ThisHostFailure}" FontSize="11.5" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextSecondary}" />
+                                    </StackPanel>
+                                </Border>
+
                                 <ItemsControl ItemsSource="{Binding NetworkNodes}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:NetworkPrintNodeItem">
@@ -1557,9 +1582,50 @@
                                                             <TextBlock Text="{Binding DeviceId}" FontSize="10"
                                                                        Foreground="{DynamicResource TextSecondary}" />
                                                         </StackPanel>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource TextSecondary}" />
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                                                    VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Status}" VerticalAlignment="Center"
+                                                                       IsVisible="{Binding !IsWaitingForApproval}"
+                                                                       Foreground="{DynamicResource TextSecondary}" />
+                                                            <TextBlock Text="Tasdiqlash kutilmoqda" VerticalAlignment="Center"
+                                                                       IsVisible="{Binding IsWaitingForApproval}"
+                                                                       Foreground="{DynamicResource InfoBrush}" />
+                                                            <Button Classes="outline" FontSize="11" Padding="8,2"
+                                                                    Content="Kredensialni tiklash"
+                                                                    IsVisible="{Binding !IsWaitingForApproval}"
+                                                                    ToolTip.Tip="Kompyuter almashtirilgan yoki dastur qayta o‘rnatilgan bo‘lsa, shu tugma bilan qayta ro‘yxatdan o‘tishga ruxsat beriladi"
+                                                                    Command="{Binding $parent[UserControl].DataContext.RevokeNetworkNodeCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </StackPanel>
                                                     </Grid>
+
+                                                    <Border IsVisible="{Binding IsWaitingForApproval}" CornerRadius="8" Padding="10"
+                                                            Background="{DynamicResource InfoBg}">
+                                                        <StackPanel Spacing="8">
+                                                            <TextBlock Text="Bu kompyuter tasdiqlashni kutmoqda" FontWeight="SemiBold" />
+                                                            <TextBlock FontSize="11.5" TextWrapping="Wrap"
+                                                                       Foreground="{DynamicResource TextSecondary}"
+                                                                       Text="Kompyuterning o‘zida ko‘rsatilgan kod bilan solishtiring. Mos bo‘lsa tasdiqlang — shundan keyin uning printerlari yo‘naltirishda ishtirok etadi." />
+                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                                <Border Background="{DynamicResource CardBg}" CornerRadius="6" Padding="10,3">
+                                                                    <TextBlock Text="{Binding PendingFingerprint}" FontFamily="Consolas"
+                                                                               FontSize="15" FontWeight="Bold" />
+                                                                </Border>
+                                                                <TextBlock Grid.Column="1" Text="{Binding PendingDetail}" FontSize="11"
+                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                           Foreground="{DynamicResource TextMuted}" />
+                                                            </Grid>
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <Button Classes="brand" Content="Tasdiqlash"
+                                                                        Command="{Binding $parent[UserControl].DataContext.ApproveNetworkNodeCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Classes="outline" Content="Rad etish"
+                                                                        Command="{Binding $parent[UserControl].DataContext.RevokeNetworkNodeCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <TextBlock Text="Faol" VerticalAlignment="Center"
                                                                    ToolTip.Tip="O‘chirilsa bu kompyuterdagi printerlar avtomatik yo‘naltirishda ishlatilmaydi" />

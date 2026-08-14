@@ -38,6 +38,11 @@ public sealed class PrintHostService
     /// The host used to retry a rejected registration forever without saying anything, so
     /// a till looked healthy while nothing could ever print. The reason is surfaced once.
     public string? LastFailure { get; private set; }
+
+    /// Set while this computer waits for an administrator to approve its enrolment. The
+    /// code is shown on both sides so the approval can be matched to the right machine.
+    public string? PendingFingerprint { get; private set; }
+    public bool IsWaitingForApproval => PendingFingerprint is not null;
     public event Action? StatusChanged;
 
     private void ReportHostFailure(Exception exception)
@@ -125,7 +130,12 @@ public sealed class PrintHostService
                     await Task.Delay(1000, cancellationToken);
                     continue;
                 }
-                await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken);
+                if (!await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+                    continue;
+                }
+
                 await EnsureHubAsync(cancellationToken);
 
                 // If SignalR is disconnected, fallback to HTTP polling
@@ -148,7 +158,7 @@ public sealed class PrintHostService
         }
     }
 
-    private async Task RegisterAsync(long branchId, CancellationToken cancellationToken)
+    private async Task<bool> RegisterAsync(long branchId, CancellationToken cancellationToken)
     {
         var endpoints = BuildEndpoints();
         if (_registeredBranchId != branchId)
@@ -169,14 +179,48 @@ public sealed class PrintHostService
                 _hostToken = result.HostToken;
                 _credentialStore.Save(result.HostToken);
             }
+
+            if (result.Enrollment == PrintNodeEnrollment.PendingApproval)
+            {
+                // The token is stored but powerless until approved, so keep retrying
+                // without claiming the node is registered.
+                SetPending(result.Fingerprint);
+                return false;
+            }
+
             _registeredBranchId = branchId;
+            var wasWaiting = PendingFingerprint is not null;
+            PendingFingerprint = null;
             ClearHostFailure();
-            return;
+            if (wasWaiting) StatusChanged?.Invoke();
+            return true;
         }
-        await _printingApi.HeartbeatAsync(new PrintNodeHeartbeatRequest(
-            _auth.DeviceId,
-            endpoints,
-            _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
+
+        try
+        {
+            await _printingApi.HeartbeatAsync(new PrintNodeHeartbeatRequest(
+                _auth.DeviceId,
+                endpoints,
+                _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
+        }
+        catch (Refit.ApiException api) when (api.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            // The credential was revoked while running - enrol again on the next tick.
+            _registeredBranchId = null;
+            throw;
+        }
+
+        return true;
+    }
+
+    private void SetPending(string? fingerprint)
+    {
+        _registeredBranchId = null;
+        var changed = PendingFingerprint != fingerprint || LastFailure is not null;
+        PendingFingerprint = fingerprint;
+        LastFailure = null;
+        _reportedFailure = null;
+        if (changed) StatusChanged?.Invoke();
     }
 
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()

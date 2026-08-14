@@ -10,6 +10,14 @@ public class PrintNode : AuditableEntity, IBranchScoped
     public string DeviceId { get; set; } = null!;
     public string CredentialHash { get; set; } = null!;
     public DateTime CredentialIssuedAt { get; set; } = DateTime.UtcNow;
+
+    /// A host that lost its credential (reinstall, new profile, another server) asks to
+    /// enrol again instead of being refused for good. The request waits here until an
+    /// administrator approves it, so the node stays offline and cannot receive jobs.
+    public string? PendingCredentialHash { get; set; }
+    public DateTime? PendingRequestedAt { get; set; }
+    public string? PendingClient { get; set; }
+    public string? PendingIpAddress { get; set; }
     public string Name { get; set; } = null!;
     public string? ClientVersion { get; set; }
     public bool IsEnabled { get; set; } = true;
