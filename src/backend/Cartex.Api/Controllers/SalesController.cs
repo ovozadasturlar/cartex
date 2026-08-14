@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using CreateSaleResult = Cartex.Application.Sales.Commands.CreateSaleResult;
 using SaleDto = Cartex.Application.Sales.Queries.SaleDto;
 using SalesTotalsDto = Cartex.Application.Sales.Queries.SalesTotalsDto;
+using DailySalesPointDto = Cartex.Application.Sales.Queries.DailySalesPointDto;
 
 namespace Cartex.Api.Controllers;
 
@@ -37,6 +38,14 @@ public class SalesController(ISender sender) : ControllerBase
     [HttpGet("totals")]
     [HasPermission(AppPermissions.Sales.View)]
     public async Task<ActionResult<SalesTotalsDto>> GetTotals([FromQuery] GetSalesTotalsQuery query)
+    {
+        var result = await sender.Send(query);
+        return Ok(result);
+    }
+
+    [HttpGet("totals/daily")]
+    [HasPermission(AppPermissions.Sales.View)]
+    public async Task<ActionResult<IReadOnlyCollection<DailySalesPointDto>>> GetDailyTotals([FromQuery] GetDailySalesQuery query)
     {
         var result = await sender.Send(query);
         return Ok(result);

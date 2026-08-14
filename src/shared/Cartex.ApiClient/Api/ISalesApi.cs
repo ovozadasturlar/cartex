@@ -17,6 +17,9 @@ public interface ISalesApi
     [Get("/api/sales/totals")]
     Task<SalesTotalsDto> GetTotalsAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null, [Query] string? search = null, [Query] long? customerId = null);
 
+    [Get("/api/sales/totals/daily")]
+    Task<List<DailySalesPointDto>> GetDailyTotalsAsync([Query] long? warehouseId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null);
+
     [Get("/api/sales/{id}")]
     Task<SaleDetailDto> GetByIdAsync(long id);
 
