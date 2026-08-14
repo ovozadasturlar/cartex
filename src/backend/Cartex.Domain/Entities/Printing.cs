@@ -10,17 +10,8 @@ public class PrintNode : AuditableEntity, IBranchScoped
     public string DeviceId { get; set; } = null!;
     public string CredentialHash { get; set; } = null!;
     public DateTime CredentialIssuedAt { get; set; } = DateTime.UtcNow;
-
-    /// A host that lost its credential (reinstall, new profile, another server) asks to
-    /// enrol again instead of being refused for good. The request waits here until an
-    /// administrator approves it, so the node stays offline and cannot receive jobs.
-    public string? PendingCredentialHash { get; set; }
-    public DateTime? PendingRequestedAt { get; set; }
-    public string? PendingClient { get; set; }
-    public string? PendingIpAddress { get; set; }
     public string Name { get; set; } = null!;
     public string? ClientVersion { get; set; }
-    public bool IsEnabled { get; set; } = true;
     public bool IsTrusted { get; set; }
     public bool HostEnabled { get; set; }
     public PrintNodeStatus Status { get; set; } = PrintNodeStatus.Offline;
@@ -68,8 +59,6 @@ public class PrintRoutingPolicy : AuditableEntity, IBranchScoped
     public int MaxJobsPerMinute { get; set; } = 20;
     public int MaxCopiesPerMinute { get; set; } = 30;
     public int AssignmentTimeoutSeconds { get; set; } = 20;
-    public bool RequireTrustedNode { get; set; } = true;
-    public bool RequireTrustedRequesterDevice { get; set; }
     // The automatic trigger is a branch policy. The selected OS printer and PDF
     // folder remain device-local and must never be copied between workstations.
     public bool AutoPrintOnSale { get; set; }

@@ -33,6 +33,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPagingMetadataWriter, NoopPagingWriter>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier, NullCartNotifier>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IPrintJobNotifier, NullPrintJobNotifier>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IRemoteImageFetcher, NullRemoteImageFetcher>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IImageProcessor, NullImageProcessor>();
@@ -86,6 +87,13 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private sealed class NullCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier
     {
         public Task CartsChangedAsync(string kind, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class NullPrintJobNotifier : Cartex.Application.Common.Interfaces.IPrintJobNotifier
+    {
+        public Task NotifyJobAvailableAsync(string deviceId, long jobId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task NotifyJobStatusChangedAsync(string deviceId, Cartex.Shared.Models.Printing.PrintJobStatusUpdate update, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class NullRemoteImageFetcher : Cartex.Application.Common.Interfaces.IRemoteImageFetcher

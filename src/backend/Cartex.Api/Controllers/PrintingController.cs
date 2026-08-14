@@ -47,19 +47,24 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<PrintRequesterDeviceDto>>> GetRequesters(long branchId, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetPrintRequesterDevicesQuery(branchId), cancellationToken));
 
-    [HttpPost("nodes/{id:long}/approve")]
+    [HttpGet("devices")]
+    [HasPermission(AppPermissions.Printing.NodesView)]
+    public async Task<ActionResult<PrintDevicesDto>> GetDevices(long branchId, CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new GetPrintDevicesQuery(branchId), cancellationToken));
+
+    [HttpPut("devices/trust")]
     [HasPermission(AppPermissions.Printing.NodesManage)]
-    public async Task<IActionResult> ApproveNode(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetDeviceTrust(SetPrintDeviceTrustRequest request, CancellationToken cancellationToken)
     {
-        await sender.Send(new ApprovePrintNodeEnrollmentCommand(id), cancellationToken);
+        await sender.Send(new SetPrintDeviceTrustCommand(request), cancellationToken);
         return NoContent();
     }
 
-    [HttpPost("nodes/{id:long}/revoke")]
+    [HttpPut("devices/auto-trust")]
     [HasPermission(AppPermissions.Printing.NodesManage)]
-    public async Task<IActionResult> RevokeNode(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetAutoTrust(SetPrintAutoTrustRequest request, CancellationToken cancellationToken)
     {
-        await sender.Send(new RevokePrintNodeCredentialCommand(id), cancellationToken);
+        await sender.Send(new SetPrintAutoTrustCommand(request), cancellationToken);
         return NoContent();
     }
 

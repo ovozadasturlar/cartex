@@ -10,7 +10,8 @@ public enum PrintCapability
     Receipt = 1,
     BarcodeLabel = 2,
     ZReport = 4,
-    Document = 8
+    Document = 8,
+    CartProforma = 16
 }
 
 public enum PrintJobKind
@@ -18,7 +19,8 @@ public enum PrintJobKind
     Receipt,
     BarcodeLabel,
     ZReport,
-    Document
+    Document,
+    CartProforma
 }
 
 public enum PrintNodeStatus
@@ -92,17 +94,7 @@ public sealed record RegisterPrintNodeRequest(
     IReadOnlyList<PrinterEndpointRegistration> Endpoints,
     string? HostToken = null);
 
-public enum PrintNodeEnrollment
-{
-    Active,
-    PendingApproval
-}
-
-public sealed record RegisterPrintNodeResult(
-    PrintNodeDto Node,
-    string? HostToken,
-    PrintNodeEnrollment Enrollment = PrintNodeEnrollment.Active,
-    string? Fingerprint = null);
+public sealed record RegisterPrintNodeResult(PrintNodeDto Node, string? HostToken);
 
 public sealed record PrintNodeHeartbeatRequest(
     string DeviceId,
@@ -130,22 +122,14 @@ public sealed record PrintNodeDto(
     string DeviceId,
     string Name,
     string? ClientVersion,
-    bool IsEnabled,
     bool IsTrusted,
     bool HostEnabled,
     PrintNodeStatus Status,
     DateTime? LastSeenAt,
     string? LastClient,
-    IReadOnlyList<PrinterEndpointDto> Endpoints,
-    DateTime? PendingRequestedAt = null,
-    string? PendingFingerprint = null,
-    string? PendingClient = null,
-    string? PendingIpAddress = null)
-{
-    public bool HasPendingEnrollment => PendingRequestedAt is not null;
-}
+    IReadOnlyList<PrinterEndpointDto> Endpoints);
 
-public sealed record SetPrintNodeStateRequest(bool IsEnabled);
+public sealed record SetPrintNodeStateRequest(bool IsTrusted);
 
 public sealed record PrintRequesterDeviceDto(
     long Id,
@@ -159,6 +143,29 @@ public sealed record PrintRequesterDeviceDto(
     string? LastUsername);
 
 public sealed record SetPrintRequesterDeviceTrustRequest(bool IsTrusted);
+
+/// <summary>
+/// One row per physical device: the requester record and, when the device also
+/// hosts printers, its node joined by the shared device id. Trust is a single
+/// switch that covers both roles.
+/// </summary>
+public sealed record PrintDeviceDto(
+    string DeviceId,
+    string Name,
+    string? Client,
+    bool IsTrusted,
+    DateTime? LastSeenAt,
+    string? LastUsername,
+    long? NodeId,
+    PrintNodeStatus? NodeStatus,
+    bool HostEnabled,
+    IReadOnlyList<PrinterEndpointDto> Endpoints);
+
+public sealed record PrintDevicesDto(bool AutoTrustNewDevices, IReadOnlyList<PrintDeviceDto> Devices);
+
+public sealed record SetPrintDeviceTrustRequest(long BranchId, string DeviceId, bool IsTrusted);
+
+public sealed record SetPrintAutoTrustRequest(long BranchId, bool Enabled);
 
 public sealed record SetPrinterEndpointRequest(
     bool IsEnabled,
@@ -191,8 +198,6 @@ public sealed record PrintRoutingPolicyDto(
     int MaxJobsPerMinute,
     int MaxCopiesPerMinute,
     int AssignmentTimeoutSeconds,
-    bool RequireTrustedNode,
-    bool RequireTrustedRequesterDevice,
     IReadOnlyList<PrintRouteTargetDto> Targets,
     bool AutoPrintOnSale = false,
     int DefaultCopies = 1,
@@ -211,8 +216,6 @@ public sealed record UpdatePrintRoutingPolicyRequest(
     int MaxJobsPerMinute,
     int MaxCopiesPerMinute,
     int AssignmentTimeoutSeconds,
-    bool RequireTrustedNode,
-    bool RequireTrustedRequesterDevice,
     IReadOnlyList<PrintRouteTargetRequest> Targets);
 
 /// <summary>
@@ -248,7 +251,8 @@ public sealed record CreatePrintJobRequest(
     string? Reason = null,
     string? IdempotencyKey = null,
     string? DeviceId = null,
-    string? DeviceName = null);
+    string? DeviceName = null,
+    bool CompletedLocally = false);
 
 public sealed record PrintJobDto(
     long Id,

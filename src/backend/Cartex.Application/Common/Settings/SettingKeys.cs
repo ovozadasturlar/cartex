@@ -8,6 +8,7 @@ public static class SettingKeys
     public const string Notification = "notification";
     public const string Reminder = "reminder";
     public const string Receipt = "receipt";
+    public const string Proforma = "proforma";
     public const string BarcodeLabel = "barcodeLabel";
     public const string SalesPolicy = "salesPolicy";
     public const string Storage = "storage";

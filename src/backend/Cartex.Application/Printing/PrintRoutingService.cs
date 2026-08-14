@@ -39,7 +39,7 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
             .Include(x => x.PrintNode)
             .Where(x => x.PrintNode.BranchId == job.BranchId
                 && x.IsEnabled
-                && x.PrintNode.IsEnabled
+                && x.PrintNode.IsTrusted
                 && x.PrintNode.HostEnabled
                 && x.PrintNode.LastSeenAt >= onlineAfter
                 && (x.Capabilities & capability) == capability
@@ -86,6 +86,7 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
         PrintJobKind.BarcodeLabel => PrintCapability.BarcodeLabel,
         PrintJobKind.ZReport => PrintCapability.ZReport,
         PrintJobKind.Document => PrintCapability.Document,
+        PrintJobKind.CartProforma => PrintCapability.CartProforma,
         _ => PrintCapability.None
     };
 
@@ -96,10 +97,14 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
     {
         if (endpoints.Count == 0) return null;
 
-        if (policy.RoutingMode is PrintRoutingMode.LocalFirst or PrintRoutingMode.LocalOnly && job.OriginNodeId is not null)
+        if (policy.RoutingMode is PrintRoutingMode.LocalFirst or PrintRoutingMode.LocalOnly)
         {
-            var local = endpoints.FirstOrDefault(x => x.PrintNodeId == job.OriginNodeId);
+            var local = job.OriginNodeId is null
+                ? null
+                : endpoints.FirstOrDefault(x => x.PrintNodeId == job.OriginNodeId);
             if (local is not null) return local;
+            // LocalOnly must never leak to another machine, including for devices
+            // (phones, web) that have no print node of their own.
             if (policy.RoutingMode == PrintRoutingMode.LocalOnly) return null;
         }
 

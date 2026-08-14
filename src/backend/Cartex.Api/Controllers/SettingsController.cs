@@ -82,6 +82,18 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("proforma")]
+    public async Task<ActionResult<ProformaSettingsDto>> GetProforma() =>
+        Ok(await sender.Send(new GetProformaSettingsQuery()));
+
+    [HttpPut("proforma")]
+    [HasPermission(AppPermissions.Settings.Receipt)]
+    public async Task<IActionResult> UpdateProforma(UpdateProformaSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("barcode-label")]
     [HasPermission(AppPermissions.Printing.BarcodePrint)]
     public async Task<ActionResult<BarcodeLabelSettingsDto>> GetBarcodeLabel() =>

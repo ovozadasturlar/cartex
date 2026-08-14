@@ -32,6 +32,12 @@ public interface ISettingsApi
     [Put("/api/settings/receipt")]
     Task UpdateReceiptAsync([Body] UpdateReceiptSettingsRequest request);
 
+    [Get("/api/settings/proforma")]
+    Task<ProformaSettingsDto> GetProformaAsync();
+
+    [Put("/api/settings/proforma")]
+    Task UpdateProformaAsync([Body] UpdateProformaSettingsRequest request);
+
     [Get("/api/settings/barcode-label")]
     Task<BarcodeLabelSettingsDto> GetBarcodeLabelAsync();
 

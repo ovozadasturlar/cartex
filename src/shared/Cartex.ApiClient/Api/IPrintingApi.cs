@@ -17,17 +17,20 @@ public interface IPrintingApi
     [Put("/api/printing/nodes/{id}")]
     Task SetNodeAsync(long id, [Body] SetPrintNodeStateRequest request, CancellationToken cancellationToken = default);
 
-    [Post("/api/printing/nodes/{id}/approve")]
-    Task ApproveNodeAsync(long id, CancellationToken cancellationToken = default);
-
-    [Post("/api/printing/nodes/{id}/revoke")]
-    Task RevokeNodeAsync(long id, CancellationToken cancellationToken = default);
-
     [Get("/api/printing/requesters")]
     Task<List<PrintRequesterDeviceDto>> GetRequesterDevicesAsync([Query] long branchId, CancellationToken cancellationToken = default);
 
     [Put("/api/printing/requesters/{id}")]
     Task SetRequesterDeviceAsync(long id, [Body] SetPrintRequesterDeviceTrustRequest request, CancellationToken cancellationToken = default);
+
+    [Get("/api/printing/devices")]
+    Task<PrintDevicesDto> GetDevicesAsync([Query] long branchId, CancellationToken cancellationToken = default);
+
+    [Put("/api/printing/devices/trust")]
+    Task SetDeviceTrustAsync([Body] SetPrintDeviceTrustRequest request, CancellationToken cancellationToken = default);
+
+    [Put("/api/printing/devices/auto-trust")]
+    Task SetAutoTrustAsync([Body] SetPrintAutoTrustRequest request, CancellationToken cancellationToken = default);
 
     [Put("/api/printing/endpoints/{id}")]
     Task SetEndpointAsync(long id, [Body] SetPrinterEndpointRequest request, CancellationToken cancellationToken = default);

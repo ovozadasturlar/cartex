@@ -7,7 +7,8 @@ public enum PrintCapability
     Receipt = 1,
     BarcodeLabel = 2,
     ZReport = 4,
-    Document = 8
+    Document = 8,
+    CartProforma = 16
 }
 
 public enum PrintJobKind
@@ -15,7 +16,8 @@ public enum PrintJobKind
     Receipt,
     BarcodeLabel,
     ZReport,
-    Document
+    Document,
+    CartProforma
 }
 
 public enum PrintNodeStatus

@@ -94,6 +94,30 @@ public record UpdateBarcodeLabelSettingsRequest(
     string CurrencyDisplay,
     string CurrencyCase,
     string PriceCurrencyMode);
+public record ProformaSettingsDto(
+    string? HeaderText = null,
+    string? FooterText = null,
+    int PaperWidth = 32,
+    string PaperFormat = "Thermal",
+    bool ShowBusinessName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowSeller = true,
+    bool ShowCustomer = true,
+    bool ShowNote = true,
+    bool ShowCartCode = true);
+public record UpdateProformaSettingsRequest(
+    string? HeaderText,
+    string? FooterText,
+    int PaperWidth,
+    string PaperFormat = "Thermal",
+    bool ShowBusinessName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowSeller = true,
+    bool ShowCustomer = true,
+    bool ShowNote = true,
+    bool ShowCartCode = true);
 public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1);
 public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1);
 

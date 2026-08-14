@@ -17,7 +17,7 @@ public sealed class PrintingHub(IApplicationDbContext db, ICurrentUser currentUs
         if (!string.IsNullOrWhiteSpace(currentUser.DeviceId) && currentUser.DeviceId != deviceId)
             throw new HubException("Device identity mismatch.");
         var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.DeviceId == deviceId
-            && x.IsEnabled && x.HostEnabled && x.LastUserId == currentUser.UserId);
+            && x.IsTrusted && x.HostEnabled && x.LastUserId == currentUser.UserId);
         if (node is null) throw new HubException("Print node is not registered.");
         try { Cartex.Application.Printing.PrintingCredential.Ensure(node, hostToken); }
         catch { throw new HubException("Invalid print host credential."); }

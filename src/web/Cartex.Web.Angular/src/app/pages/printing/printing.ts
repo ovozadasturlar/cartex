@@ -26,12 +26,11 @@ interface PrintNode {
   id: number;
   deviceId: string;
   name: string;
-  isEnabled: boolean;
   isTrusted: boolean;
   status: string;
   lastSeenAt: string | null;
   endpoints: PrinterEndpoint[];
-  originalIsEnabled?: boolean;
+  originalIsTrusted?: boolean;
 }
 
 interface PrintRequesterDevice {
@@ -62,8 +61,6 @@ interface RoutingPolicy {
   maxJobsPerMinute: number;
   maxCopiesPerMinute: number;
   assignmentTimeoutSeconds: number;
-  requireTrustedNode: boolean;
-  requireTrustedRequesterDevice: boolean;
   targets: RouteTarget[];
 }
 
@@ -114,7 +111,7 @@ interface PrintJob {
               <article class="node">
                 <div class="node-title"><strong>{{ node.name }}</strong><span>{{ node.status }}</span></div>
                 <small>{{ node.deviceId }}</small>
-                <mat-slide-toggle [(ngModel)]="node.isEnabled" [disabled]="!canManageNodes" title="O‘chirilsa bu kompyuterdagi printerlar yo‘naltirishda ishlatilmaydi">Faol</mat-slide-toggle>
+                <mat-slide-toggle [(ngModel)]="node.isTrusted" [disabled]="!canManageNodes" title="O‘chirilsa bu kompyuterdagi printerlar yo‘naltirishda ishlatilmaydi">Ishonchli</mat-slide-toggle>
                 @for (endpoint of node.endpoints; track endpoint.id) {
                   <div class="endpoint"><span>{{ endpoint.displayName }}</span><small>{{ endpoint.capabilities }} · {{ endpoint.status }}</small></div>
                 }
@@ -247,7 +244,7 @@ export class Printing implements OnInit {
   readonly requesterDevices = signal<PrintRequesterDevice[]>([]);
   readonly choices = signal<EndpointChoice[]>([]);
   readonly jobs = signal<PrintJob[]>([]);
-  readonly kinds = ['Receipt', 'BarcodeLabel', 'ZReport', 'Document'];
+  readonly kinds = ['Receipt', 'CartProforma', 'BarcodeLabel', 'ZReport', 'Document'];
   readonly routingModes = ['LocalFirst', 'PriorityOnly', 'LocalOnly'];
   readonly stickyModes = ['Disabled', 'Duration', 'UntilFailure', 'Permanent'];
   private policies: RoutingPolicy[] = [];
@@ -269,7 +266,7 @@ export class Printing implements OnInit {
           lastValueFrom(this.http.get<PrintRequesterDevice[]>('/api/printing/requesters', { params: { branchId: this.branchId } })),
           lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
         ]);
-        this.nodes.set(nodes.map((node) => ({ ...node, originalIsEnabled: node.isEnabled })));
+        this.nodes.set(nodes.map((node) => ({ ...node, originalIsTrusted: node.isTrusted })));
         this.requesterDevices.set(requesterDevices.map((device) => ({ ...device, originalIsTrusted: device.isTrusted })));
         this.policies = policies;
         this.applyPolicy();
@@ -295,7 +292,7 @@ export class Printing implements OnInit {
   }
 
   selectKind(kind: string): void { this.kind = kind; this.applyPolicy(); }
-  kindLabel(kind: string): string { return ({ Receipt: 'Chek', BarcodeLabel: 'Etiketka', ZReport: 'Z-hisobot', Document: 'Hujjat' } as Record<string, string>)[kind] ?? kind; }
+  kindLabel(kind: string): string { return ({ Receipt: 'Chek', CartProforma: 'Savat', BarcodeLabel: 'Etiketka', ZReport: 'Z-hisobot', Document: 'Hujjat' } as Record<string, string>)[kind] ?? kind; }
 
   startChoiceDrag(choice: EndpointChoice, event: DragEvent): void {
     if (!choice.selected) { event.preventDefault(); return; }
@@ -332,9 +329,9 @@ export class Printing implements OnInit {
 
   async saveHosts(): Promise<void> {
     try {
-      for (const node of this.nodes().filter((item) => item.isEnabled !== item.originalIsEnabled)) {
-        await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isEnabled: node.isEnabled }));
-        node.originalIsEnabled = node.isEnabled;
+      for (const node of this.nodes().filter((item) => item.isTrusted !== item.originalIsTrusted)) {
+        await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isTrusted: node.isTrusted }));
+        node.originalIsTrusted = node.isTrusted;
       }
       this.notify.success(this.transloco.translate('success'));
     } catch (error) { this.notify.error(error); }
@@ -364,6 +361,6 @@ export class Printing implements OnInit {
   }
 
   private defaultPolicy(): RoutingPolicy {
-    return { kind: this.kind, isEnabled: true, routingMode: 'LocalFirst', allowFallback: true, stickyMode: 'Duration', stickyDurationSeconds: 600, maxCopies: 3, maxJobsPerMinute: 20, maxCopiesPerMinute: 30, assignmentTimeoutSeconds: 20, requireTrustedNode: true, requireTrustedRequesterDevice: false, targets: [] };
+    return { kind: this.kind, isEnabled: true, routingMode: 'LocalFirst', allowFallback: true, stickyMode: 'Duration', stickyDurationSeconds: 600, maxCopies: 3, maxJobsPerMinute: 20, maxCopiesPerMinute: 30, assignmentTimeoutSeconds: 20, targets: [] };
   }
 }

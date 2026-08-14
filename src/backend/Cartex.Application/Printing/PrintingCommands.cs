@@ -45,9 +45,17 @@ public sealed class RegisterPrintNodeCommandValidator : AbstractValidator<Regist
     }
 }
 
-public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+/// Authority lives in the trust flag on the device record, not in the secret: the
+/// credential is only a cache that proves "same machine as last time". When it is lost
+/// (reinstall, new Windows profile) a replacement is issued silently and the device keeps
+/// whatever trust the administrator gave it. When the machine identity itself changes but
+/// the old credential is still presented, the existing record is renamed instead of a
+/// duplicate appearing. Every such transition is written to the audit log.
+public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IAuditService audit)
     : IRequestHandler<RegisterPrintNodeCommand, RegisterPrintNodeResult>
 {
+    private static readonly TimeSpan ActiveHolderWindow = TimeSpan.FromSeconds(90);
+
     public async Task<RegisterPrintNodeResult> Handle(RegisterPrintNodeCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
@@ -58,9 +66,42 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
         var node = await db.PrintNodes.Include(x => x.Endpoints)
             .FirstOrDefaultAsync(x => x.DeviceId == request.DeviceId, cancellationToken);
 
+        if (node is null && !string.IsNullOrWhiteSpace(request.HostToken))
+        {
+            var suppliedHash = PrintingCredential.Hash(request.HostToken);
+            node = await db.PrintNodes.Include(x => x.Endpoints)
+                .FirstOrDefaultAsync(x => x.CredentialHash == suppliedHash, cancellationToken);
+            if (node is not null)
+            {
+                var previousDeviceId = node.DeviceId;
+                node.DeviceId = request.DeviceId;
+                var requesterRows = await db.PrintRequesterDevices
+                    .Where(x => x.DeviceId == previousDeviceId || x.DeviceId == request.DeviceId)
+                    .ToListAsync(cancellationToken);
+                foreach (var old in requesterRows.Where(x => x.DeviceId == previousDeviceId))
+                {
+                    var replacement = requesterRows.FirstOrDefault(x =>
+                        x.BranchId == old.BranchId && x.DeviceId == request.DeviceId);
+                    if (replacement is null)
+                    {
+                        old.DeviceId = request.DeviceId;
+                    }
+                    else
+                    {
+                        replacement.IsTrusted |= old.IsTrusted;
+                        db.PrintRequesterDevices.Remove(old);
+                    }
+                }
+                audit.Add("print.node_renamed", "print_nodes", node.Id,
+                    new { previousDeviceId, request.DeviceId, node.Name });
+            }
+        }
+
         string? issuedToken = null;
         if (node is null)
         {
+            var autoTrust = await db.Branches.Where(x => x.Id == request.BranchId)
+                .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken);
             issuedToken = PrintingCredential.Issue();
             node = new PrintNode
             {
@@ -69,44 +110,23 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
                 CredentialIssuedAt = now,
                 BranchId = request.BranchId,
                 Name = request.DeviceName,
-                IsEnabled = false,
-                IsTrusted = false
+                IsTrusted = autoTrust
             };
             db.PrintNodes.Add(node);
+            audit.Add("print.node_registered", "print_nodes", null,
+                new { request.DeviceId, request.DeviceName, node.IsTrusted });
         }
         else if (!PrintingCredential.Matches(node.CredentialHash, request.HostToken))
         {
-            // The host cannot prove it owns this node, so instead of refusing it forever we
-            // record an enrolment request. The node stays offline and unusable until an
-            // administrator approves it from the printing settings.
-            // The same waiting host keeps its request - re-issuing on every retry would
-            // change the code faster than anyone could compare it.
-            var waiting = PrintingCredential.Matches(node.PendingCredentialHash, request.HostToken);
-            string? requested = null;
-            if (!waiting)
-            {
-                requested = PrintingCredential.Issue();
-                node.PendingCredentialHash = PrintingCredential.Hash(requested);
-            }
-
-            node.PendingRequestedAt = now;
-            node.PendingClient = currentUser.Client;
-            node.PendingIpAddress = currentUser.IpAddress;
-            node.Name = request.DeviceName.Trim();
-            node.ClientVersion = request.ClientVersion;
-            await db.SaveChangesAsync(cancellationToken);
-            return new RegisterPrintNodeResult(
-                PrintingMapper.Node(node),
-                requested,
-                PrintNodeEnrollment.PendingApproval,
-                PrintingCredential.Fingerprint(node.PendingCredentialHash));
-        }
-        else
-        {
-            node.PendingCredentialHash = null;
-            node.PendingRequestedAt = null;
-            node.PendingClient = null;
-            node.PendingIpAddress = null;
+            // A machine that is alive right now still owns the credential; a second machine
+            // claiming the same identity must not be able to steal it from under it.
+            if (node.LastSeenAt > now - ActiveHolderWindow)
+                throw new BusinessRuleException("Bu qurilma nomi hozir boshqa faol kompyuter tomonidan ishlatilmoqda.");
+            issuedToken = PrintingCredential.Issue();
+            node.CredentialHash = PrintingCredential.Hash(issuedToken);
+            node.CredentialIssuedAt = now;
+            audit.Add("print.node_credential_rotated", "print_nodes", node.Id,
+                new { request.DeviceId, node.Name, currentUser.IpAddress });
         }
 
         node.BranchId = request.BranchId;
@@ -172,70 +192,68 @@ public sealed class HeartbeatPrintNodeCommandHandler(IApplicationDbContext db, I
 
 public record SetPrintNodeStateCommand(long Id, SetPrintNodeStateRequest Request) : ICommand<Unit>;
 
-public sealed class SetPrintNodeStateCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<SetPrintNodeStateCommand, Unit>
+public sealed class SetPrintNodeStateCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IAuditService audit) : IRequestHandler<SetPrintNodeStateCommand, Unit>
 {
     public async Task<Unit> Handle(SetPrintNodeStateCommand command, CancellationToken cancellationToken)
     {
         var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
             ?? throw new NotFoundException("Print node not found.");
         PrintingGuard.EnsureBranch(currentUser, node.BranchId);
-        node.IsEnabled = command.Request.IsEnabled;
-        node.IsTrusted = command.Request.IsEnabled;
-        if (!node.IsEnabled) node.Status = DomainNodeStatus.Offline;
+        node.IsTrusted = command.Request.IsTrusted;
+        audit.Add(node.IsTrusted ? "print.allow" : "print.block", "print_nodes",
+            node.Id, new { node.DeviceId, node.Name });
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }
 }
 
-public record ApprovePrintNodeEnrollmentCommand(long Id) : ICommand<Unit>;
+/// One switch for one physical device: the requester record and the host node share the
+/// device id, so the administrator never has to understand that they are two rows.
+public record SetPrintDeviceTrustCommand(SetPrintDeviceTrustRequest Request) : ICommand<Unit>;
 
-public sealed class ApprovePrintNodeEnrollmentCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<ApprovePrintNodeEnrollmentCommand, Unit>
+public sealed class SetPrintDeviceTrustCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IAuditService audit) : IRequestHandler<SetPrintDeviceTrustCommand, Unit>
 {
-    public async Task<Unit> Handle(ApprovePrintNodeEnrollmentCommand command, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(SetPrintDeviceTrustCommand command, CancellationToken cancellationToken)
     {
-        var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
-            ?? throw new NotFoundException("Print node not found.");
-        PrintingGuard.EnsureBranch(currentUser, node.BranchId);
-        if (string.IsNullOrWhiteSpace(node.PendingCredentialHash))
-            throw new BusinessRuleException("This computer is not waiting for approval.");
-
-        node.CredentialHash = node.PendingCredentialHash;
-        node.CredentialIssuedAt = DateTime.UtcNow;
-        node.PendingCredentialHash = null;
-        node.PendingRequestedAt = null;
-        node.PendingClient = null;
-        node.PendingIpAddress = null;
-        node.IsTrusted = true;
-        node.IsEnabled = true;
+        var request = command.Request;
+        PrintingGuard.EnsureBranch(currentUser, request.BranchId);
+        if (string.IsNullOrWhiteSpace(request.DeviceId) || request.DeviceId.Length > 64)
+            throw new BusinessRuleException("Invalid device id.");
+        var node = await db.PrintNodes.FirstOrDefaultAsync(
+            x => x.BranchId == request.BranchId && x.DeviceId == request.DeviceId, cancellationToken);
+        var requester = await db.PrintRequesterDevices.FirstOrDefaultAsync(
+            x => x.BranchId == request.BranchId && x.DeviceId == request.DeviceId, cancellationToken);
+        if (node is null && requester is null)
+            throw new NotFoundException("Print device not found.");
+        if (node is not null) node.IsTrusted = request.IsTrusted;
+        if (requester is not null) requester.IsTrusted = request.IsTrusted;
+        audit.Add(request.IsTrusted ? "print.allow" : "print.block", "print_devices",
+            node?.Id ?? requester!.Id, new { request.DeviceId, Name = node?.Name ?? requester!.Name });
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }
 }
 
-public record RevokePrintNodeCredentialCommand(long Id) : ICommand<Unit>;
+public record SetPrintAutoTrustCommand(SetPrintAutoTrustRequest Request) : ICommand<Unit>;
 
-/// Clearing the credential is how a replaced or reinstalled computer is let back in: the
-/// node drops offline and the next registration arrives as a fresh enrolment request.
-public sealed class RevokePrintNodeCredentialCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<RevokePrintNodeCredentialCommand, Unit>
+public sealed class SetPrintAutoTrustCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IAuditService audit) : IRequestHandler<SetPrintAutoTrustCommand, Unit>
 {
-    public async Task<Unit> Handle(RevokePrintNodeCredentialCommand command, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(SetPrintAutoTrustCommand command, CancellationToken cancellationToken)
     {
-        var node = await db.PrintNodes.FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken)
-            ?? throw new NotFoundException("Print node not found.");
-        PrintingGuard.EnsureBranch(currentUser, node.BranchId);
-
-        node.CredentialHash = string.Empty;
-        node.PendingCredentialHash = null;
-        node.PendingRequestedAt = null;
-        node.PendingClient = null;
-        node.PendingIpAddress = null;
-        node.IsTrusted = false;
-        node.IsEnabled = false;
-        node.Status = DomainNodeStatus.Offline;
-        node.LastSeenAt = null;
+        PrintingGuard.EnsureBranch(currentUser, command.Request.BranchId);
+        var branch = await db.Branches.FirstOrDefaultAsync(x => x.Id == command.Request.BranchId, cancellationToken)
+            ?? throw new NotFoundException("Branch not found.");
+        branch.AutoTrustPrintDevices = command.Request.Enabled;
+        audit.Add("print.auto_trust", "branches", branch.Id, new { command.Request.Enabled });
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }
@@ -341,8 +359,6 @@ public sealed class UpdatePrintRoutingPolicyCommandHandler(
         policy.MaxJobsPerMinute = request.MaxJobsPerMinute;
         policy.MaxCopiesPerMinute = request.MaxCopiesPerMinute;
         policy.AssignmentTimeoutSeconds = request.AssignmentTimeoutSeconds;
-        policy.RequireTrustedNode = request.RequireTrustedNode;
-        policy.RequireTrustedRequesterDevice = request.RequireTrustedRequesterDevice;
         policy.Revision++;
         if (policy.StickyMode == DomainStickyMode.Disabled)
         {
@@ -495,7 +511,9 @@ public sealed class CreatePrintJobCommandHandler(
                 {
                     BranchId = request.BranchId,
                     DeviceId = deviceId,
-                    FirstSeenAt = now
+                    FirstSeenAt = now,
+                    IsTrusted = await db.Branches.Where(x => x.Id == request.BranchId)
+                        .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken)
                 };
                 db.PrintRequesterDevices.Add(requesterDevice);
             }
@@ -555,6 +573,26 @@ public sealed class CreatePrintJobCommandHandler(
         job.PayloadJson = await PrintingPayloadValidator.ValidateAsync(
             db, settings, request.BranchId, kind, request.SourceType, request.SourceId, request.Payload,
             cancellationToken);
+        // A job printed on the requesting machine while the server was unreachable arrives
+        // later purely as history: it is stored completed and never routed again.
+        if (request.CompletedLocally)
+        {
+            job.Status = DomainJobStatus.Completed;
+            job.CompletedAt = now;
+            job.AssignedNodeId = originNodeId;
+            db.PrintJobs.Add(job);
+            await db.SaveChangesAsync(cancellationToken);
+            audit.SetOutcome("print.local_completed", "print_jobs", job.Id, new
+            {
+                job.Kind,
+                job.SourceType,
+                job.SourceId,
+                job.Copies,
+                job.RequestedDeviceId
+            }, "Chop etish serversiz lokal bajarilgan", job.BranchId);
+            return PrintingMapper.Job(job);
+        }
+
         db.PrintJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome(job.IsReprint ? "print.reprint_requested" : "print.requested", "print_jobs", job.Id, new
@@ -595,7 +633,8 @@ internal static class PrintingPayloadValidator
             DomainJobKind.Receipt => await ReceiptAsync(db, settings, branchId, sourceType, sourceId, payload, cancellationToken),
             DomainJobKind.BarcodeLabel => await BarcodeAsync(db, settings, payload, cancellationToken),
             DomainJobKind.ZReport => await ZReportAsync(db, branchId, sourceId, payload, cancellationToken),
-            DomainJobKind.Document => await DocumentAsync(db, settings, branchId, sourceType, sourceId, payload, cancellationToken),
+            DomainJobKind.Document => await DocumentAsync(db, branchId, payload, cancellationToken),
+            DomainJobKind.CartProforma => await CartProformaAsync(db, settings, branchId, sourceId, payload, cancellationToken),
             _ => throw new BusinessRuleException("Unsupported print payload.")
         };
     }
@@ -694,33 +733,50 @@ internal static class PrintingPayloadValidator
 
     private static async Task<string> DocumentAsync(
         IApplicationDbContext db,
-        ISettingsService settings,
         long branchId,
-        string sourceType,
-        string sourceId,
         JsonElement payload,
         CancellationToken cancellationToken)
     {
-        // A cart proforma is printed before the sale exists, so it references the saved cart
-        // rather than carrying its contents in the payload.
-        if (sourceType == "cart")
-        {
-            var code = Text(payload, "cartCode")?.Trim() ?? sourceId;
-            if (string.IsNullOrWhiteSpace(code) || code.Length > 64
-                || !await db.Carts.AnyAsync(x => x.AggregateCode == code && x.BranchId == branchId, cancellationToken))
-                throw new NotFoundException("Cart not found.");
-            return JsonSerializer.Serialize(new
-            {
-                cartCode = code,
-                receiptSettings = ReceiptPrintPolicyService.SettingsPayload(
-                    await ReceiptConfigAsync(db, settings, branchId, cancellationToken))
-            });
-        }
-
         var token = Required(payload, "receiptToken", 128);
         if (!await db.Sales.AnyAsync(x => x.BranchId == branchId && x.ReceiptToken == token, cancellationToken))
             throw new NotFoundException("Document source not found.");
         return JsonSerializer.Serialize(new { receiptToken = token });
+    }
+
+    /// A cart proforma is printed before the sale exists, so it references the saved cart
+    /// rather than carrying its contents. The template travels in the payload so every host
+    /// prints it the same way regardless of its local settings.
+    private static async Task<string> CartProformaAsync(
+        IApplicationDbContext db,
+        ISettingsService settings,
+        long branchId,
+        string sourceId,
+        JsonElement payload,
+        CancellationToken cancellationToken)
+    {
+        var code = Text(payload, "cartCode")?.Trim() ?? sourceId;
+        if (string.IsNullOrWhiteSpace(code) || code.Length > 64
+            || !await db.Carts.AnyAsync(x => x.AggregateCode == code && x.BranchId == branchId, cancellationToken))
+            throw new NotFoundException("Cart not found.");
+        var configured = await settings.GetAsync<ProformaSettings>(SettingKeys.Proforma, cancellationToken) ?? new();
+        return JsonSerializer.Serialize(new
+        {
+            cartCode = code,
+            proformaSettings = new
+            {
+                headerText = configured.HeaderText,
+                footerText = configured.FooterText,
+                paperWidth = configured.PaperWidth,
+                paperFormat = configured.PaperFormat,
+                showBusinessName = configured.ShowBusinessName,
+                showAddress = configured.ShowAddress,
+                showPhone = configured.ShowPhone,
+                showSeller = configured.ShowSeller,
+                showCustomer = configured.ShowCustomer,
+                showNote = configured.ShowNote,
+                showCartCode = configured.ShowCartCode
+            }
+        });
     }
 
     private static string Required(JsonElement payload, string name, int maxLength)
@@ -934,6 +990,7 @@ internal static class PrintingGuard
             Cartex.Shared.Models.Printing.PrintJobKind.BarcodeLabel => AppPermissions.Printing.BarcodePrint,
             Cartex.Shared.Models.Printing.PrintJobKind.ZReport => AppPermissions.Printing.ZReportPrint,
             Cartex.Shared.Models.Printing.PrintJobKind.Document => AppPermissions.Printing.DocumentPrint,
+            Cartex.Shared.Models.Printing.PrintJobKind.CartProforma => AppPermissions.Printing.DocumentPrint,
             _ => throw new BusinessRuleException("Unsupported print type.")
         };
         if (!currentUser.HasPermission(permission)) throw new ForbiddenException("Print permission denied.");
@@ -1030,21 +1087,14 @@ public static class PrintingCredential
         var expected = Encoding.UTF8.GetBytes(expectedHash);
         return supplied.Length == expected.Length && CryptographicOperations.FixedTimeEquals(supplied, expected);
     }
-
-    /// Short, human-comparable code so an administrator approving an enrolment can check it
-    /// against the code the waiting computer shows.
-    public static string? Fingerprint(string? hash) =>
-        string.IsNullOrWhiteSpace(hash) ? null : hash[..6].ToUpperInvariant();
 }
 
 internal static class PrintingMapper
 {
     public static PrintNodeDto Node(PrintNode node) => new(
-        node.Id, node.BranchId, node.DeviceId, node.Name, node.ClientVersion, node.IsEnabled,
+        node.Id, node.BranchId, node.DeviceId, node.Name, node.ClientVersion,
         node.IsTrusted, node.HostEnabled, (Cartex.Shared.Models.Printing.PrintNodeStatus)node.Status,
-        node.LastSeenAt, node.LastClient, node.Endpoints.OrderBy(x => x.DisplayName).Select(Endpoint).ToList(),
-        node.PendingRequestedAt, PrintingCredential.Fingerprint(node.PendingCredentialHash),
-        node.PendingClient, node.PendingIpAddress);
+        node.LastSeenAt, node.LastClient, node.Endpoints.OrderBy(x => x.DisplayName).Select(Endpoint).ToList());
 
     public static PrinterEndpointDto Endpoint(PrinterEndpoint endpoint) => new(
         endpoint.Id, endpoint.PrintNodeId, endpoint.StableKey, endpoint.SystemName, endpoint.DisplayName,
@@ -1078,6 +1128,7 @@ internal static class PrintingMapper
                 DomainJobKind.Receipt => $"Receipt #{job.SourceId}",
                 DomainJobKind.ZReport => $"Z report #{job.SourceId}",
                 DomainJobKind.Document => $"Document #{job.SourceId}",
+                DomainJobKind.CartProforma => $"Savat {job.SourceId}",
                 _ => job.SourceId
             };
         }
@@ -1102,8 +1153,7 @@ internal static class PrintingMapper
             (Cartex.Shared.Models.Printing.PrintRoutingMode)policy.RoutingMode, policy.AllowFallback,
             (Cartex.Shared.Models.Printing.PrintStickyMode)policy.StickyMode, policy.StickyDurationSeconds,
             policy.StickyEndpointId, policy.StickyUntil, policy.MaxCopies, policy.MaxJobsPerMinute,
-            policy.MaxCopiesPerMinute, policy.AssignmentTimeoutSeconds, policy.RequireTrustedNode,
-            policy.RequireTrustedRequesterDevice,
+            policy.MaxCopiesPerMinute, policy.AssignmentTimeoutSeconds,
             policy.Targets.OrderBy(x => x.Priority).Select(x => new PrintRouteTargetDto(
                 x.PrinterEndpointId, x.PrinterEndpoint.PrintNode.Name, x.PrinterEndpoint.DisplayName,
                 (Cartex.Shared.Models.Printing.PrintCapability)x.PrinterEndpoint.Capabilities, x.Priority,

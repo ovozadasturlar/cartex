@@ -45,6 +45,53 @@ public sealed class GetPrintRequesterDevicesQueryHandler(IApplicationDbContext d
     }
 }
 
+public record GetPrintDevicesQuery(long BranchId) : IRequest<PrintDevicesDto>;
+
+/// One row per physical device for the settings screen: requester record and host node
+/// joined by device id, so trust reads as a single switch.
+public sealed class GetPrintDevicesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    : IRequestHandler<GetPrintDevicesQuery, PrintDevicesDto>
+{
+    public async Task<PrintDevicesDto> Handle(GetPrintDevicesQuery request, CancellationToken cancellationToken)
+    {
+        PrintingGuard.EnsureBranch(currentUser, request.BranchId);
+        var autoTrust = await db.Branches.Where(x => x.Id == request.BranchId)
+            .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken);
+        var nodes = await db.PrintNodes.AsNoTracking().Include(x => x.Endpoints)
+            .Where(x => x.BranchId == request.BranchId).ToListAsync(cancellationToken);
+        var requesters = await db.PrintRequesterDevices.AsNoTracking().Include(x => x.LastUser)
+            .Where(x => x.BranchId == request.BranchId).ToListAsync(cancellationToken);
+
+        var staleBefore = DateTime.UtcNow.AddSeconds(-90);
+        var devices = nodes.Select(x => x.DeviceId).Union(requesters.Select(x => x.DeviceId), StringComparer.Ordinal)
+            .Select(deviceId =>
+            {
+                var node = nodes.FirstOrDefault(x => x.DeviceId == deviceId);
+                var requester = requesters.FirstOrDefault(x => x.DeviceId == deviceId);
+                var status = node is null
+                    ? (Cartex.Shared.Models.Printing.PrintNodeStatus?)null
+                    : node.Status == Cartex.Domain.Enums.PrintNodeStatus.Online && node.LastSeenAt < staleBefore
+                        ? Cartex.Shared.Models.Printing.PrintNodeStatus.Offline
+                        : (Cartex.Shared.Models.Printing.PrintNodeStatus)node.Status;
+                var lastSeen = new[] { node?.LastSeenAt, requester?.LastSeenAt }.Max();
+                return new PrintDeviceDto(
+                    deviceId,
+                    node?.Name ?? requester!.Name,
+                    requester?.Client ?? node?.LastClient,
+                    (node?.IsTrusted ?? false) || (requester?.IsTrusted ?? false),
+                    lastSeen,
+                    requester?.LastUser?.Username,
+                    node?.Id,
+                    status,
+                    node?.HostEnabled ?? false,
+                    node?.Endpoints.OrderBy(x => x.DisplayName).Select(PrintingMapper.Endpoint).ToList() ?? []);
+            })
+            .OrderByDescending(x => x.LastSeenAt)
+            .ToList();
+        return new PrintDevicesDto(autoTrust, devices);
+    }
+}
+
 public record GetPrintRoutingPoliciesQuery(long BranchId) : IRequest<IReadOnlyList<PrintRoutingPolicyDto>>;
 
 public sealed class GetPrintRoutingPoliciesQueryHandler(

@@ -39,6 +39,7 @@ public class EndpointAuthorizationTests
         "ExpenseCategoriesController.GetExpenseCategories",
         "FeaturesController.GetEnabled",
         "SettingsController.GetReceipt",
+        "SettingsController.GetProforma",
         "SettingsController.GetSalesPolicy",
         "StoreController.Me",
         "StoreController.SetLanguage",
