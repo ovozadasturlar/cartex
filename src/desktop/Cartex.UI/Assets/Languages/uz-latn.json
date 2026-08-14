@@ -1313,6 +1313,7 @@
   "cart_show_code": "Savat kodini ko'rsatish",
   "cart_note_example": "Izoh: mijoz keyinroq oladi",
   "print_offline_local": "{0} — server bilan aloqa yo'q, shu kompyuterning printerida chop etildi.",
+  "print_no_online_printer": "{0} navbatga qo'yildi, lekin bu tur uchun hozir mos printer onlayn emas. Sozlamalar → Chop etish → Tarmoq printerlari bo'limini tekshiring.",
   "print_offline_needs_thermal": "Serversiz faqat termal chek chiqarish mumkin — hujjat rejimi serverni talab qiladi.",
   "sale_correction_window": "Savdoni tuzatish muddati",
   "sale_correction_days": "Tuzatish kunlari",

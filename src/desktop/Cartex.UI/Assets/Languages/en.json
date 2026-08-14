@@ -1312,6 +1312,7 @@
   "cart_show_code": "Show cart code",
   "cart_note_example": "Note: customer will pick up later",
   "print_offline_local": "{0} — server unreachable, printed on this computer's printer.",
+  "print_no_online_printer": "{0} was queued, but no matching printer is online for this type right now. Check Settings → Printing → Network printers.",
   "print_offline_needs_thermal": "Only thermal printing works without the server — document mode requires the server.",
   "sale_correction_window": "Sale correction window",
   "sale_correction_days": "Correction days",

@@ -179,6 +179,8 @@ public sealed class PrintDispatchService
                 _auth.DeviceName), cancellationToken);
             if (job.Status == PrintJobStatus.Completed)
                 _toast.Success(string.Format(LocalizationManager.Instance["print_completed"], label, string.Empty));
+            else if (job.Status == PrintJobStatus.Pending && job.AssignedNodeId is null)
+                _toast.Warning(string.Format(LocalizationManager.Instance["print_no_online_printer"], label));
             else
                 _toast.Info(string.Format(LocalizationManager.Instance["print_queued"], label));
         }
