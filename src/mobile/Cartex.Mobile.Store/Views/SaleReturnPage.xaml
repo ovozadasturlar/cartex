@@ -57,12 +57,14 @@
                                             <VerticalStackLayout Spacing="3">
                                                 <Label Text="{svc:T condition}" Style="{StaticResource MutedLabel}" FontSize="11" />
                                                 <Picker ItemsSource="{Binding Conditions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
-                                                        SelectedItem="{Binding SelectedCondition}" ItemDisplayBinding="{Binding Label}" />
+                                                        SelectedItem="{Binding SelectedCondition}"
+                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}" />
                                             </VerticalStackLayout>
                                             <VerticalStackLayout Grid.Column="1" Spacing="3">
                                                 <Label Text="{svc:T disposition}" Style="{StaticResource MutedLabel}" FontSize="11" />
                                                 <Picker ItemsSource="{Binding Dispositions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
-                                                        SelectedItem="{Binding SelectedDisposition}" ItemDisplayBinding="{Binding Label}" />
+                                                        SelectedItem="{Binding SelectedDisposition}"
+                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}" />
                                             </VerticalStackLayout>
                                         </Grid>
                                         <Border Style="{StaticResource InputWrap}">
@@ -83,7 +85,7 @@
                                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                         </Grid>
                         <Label Text="{svc:T return_settlement}" FontSize="14" FontAttributes="Bold" />
-                        <Picker ItemsSource="{Binding SettlementModes}" SelectedItem="{Binding SelectedSettlement}" ItemDisplayBinding="{Binding Label}" />
+                        <Picker ItemsSource="{Binding SettlementModes}" SelectedItem="{Binding SelectedSettlement}" ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}" />
                         <Label Text="{svc:T settlement_auto_hint}" Style="{StaticResource MutedLabel}" FontSize="11"
                                IsVisible="{Binding IsAutomaticSettlement}" />
                     </VerticalStackLayout>

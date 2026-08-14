@@ -7,6 +7,7 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     xmlns:cat="clr-namespace:Cartex.Shared.Models.Categories;assembly=Cartex.Shared"
+    xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
     x:DataType="vm:ProductEditViewModel"
     Title="{svc:T edit_product}">
 
@@ -47,7 +48,7 @@
                                 </Border>
                                 <Border Grid.Column="1" Style="{StaticResource InputWrap}">
                                     <Picker ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding PriceCurrency}"
-                                            ItemDisplayBinding="{Binding Code}" VerticalOptions="Center" />
+                                            ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}" VerticalOptions="Center" />
                                 </Border>
                             </Grid>
                             <Border Style="{StaticResource InputWrap}" IsVisible="{Binding CanChoosePriceCurrency, Converter={StaticResource Invert}}">
