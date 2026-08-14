@@ -219,10 +219,18 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public bool IsCartPaperA5 => CartMode == "a5";
     public double CartPreviewPaperWidth => IsCartThermal ? 250 : IsCartPaperA5 ? 270 : 310;
     public double CartPreviewPaperHeight => IsCartThermal ? 470 : IsCartPaperA5 ? 380 : 438;
-    public string CartPreviewPrinterName =>
-        string.IsNullOrWhiteSpace(IsCartThermal ? ReceiptPrinter : DocumentPrinter)
-            ? L["printer_not_set"]
-            : (IsCartThermal ? ReceiptPrinter : DocumentPrinter)!;
+    private ProformaPrintOptions CartOptions() => new(
+        null, null, CartPaperWidth, IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4");
+    public string CartPreviewPrinterName => _printer.ProformaTarget(CartOptions()).Printer ?? L["printer_not_set"];
+    public bool IsCartFallbackActive
+    {
+        get
+        {
+            var target = _printer.ProformaTarget(CartOptions());
+            return target.Printer is not null && target.IsDocument == IsCartThermal;
+        }
+    }
+    public string CartFallbackText => string.Format(L["cart_fallback_hint"], CartPreviewPrinterName);
     public bool IsCartPreviewColor => IsCartDocument && DocumentPrinterSupportsColor;
     public bool IsCartPreviewMonochrome => !IsCartPreviewColor;
     public IBrush CartPreviewInkBrush => IsCartPreviewColor ? ColorInkBrush : MonochromeInkBrush;
@@ -428,6 +436,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CartPreviewPaperWidth));
         OnPropertyChanged(nameof(CartPreviewPaperHeight));
         OnPropertyChanged(nameof(CartPreviewPrinterName));
+        OnPropertyChanged(nameof(IsCartFallbackActive));
+        OnPropertyChanged(nameof(CartFallbackText));
         OnPropertyChanged(nameof(IsCartPreviewColor));
         OnPropertyChanged(nameof(IsCartPreviewMonochrome));
         OnPropertyChanged(nameof(CartPreviewInkBrush));
@@ -756,6 +766,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
+        _printer.EnsureAutoSetup();
         var s = _printer.GetSettings();
 
         _isLoadingLabelSettings = true;
@@ -1369,7 +1380,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ProformaShowSeller = CartShowSeller,
             ProformaShowCustomer = CartShowCustomer,
             ProformaShowNote = CartShowNote,
-            ProformaShowCartCode = CartShowCartCode
+            ProformaShowCartCode = CartShowCartCode,
+            AutoSetupSignature = _printer.GetSettings().AutoSetupSignature
         });
     }
 

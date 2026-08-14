@@ -11,12 +11,14 @@ public static class ProformaDocumentRenderer
 
     public static IReadOnlyList<byte[]> Render(
         PreviewDocument document,
-        string? cartCode,
+        string? reference,
         BusinessDto? business,
         ProformaPrintOptions options,
         string paperSize,
-        bool supportsColor)
+        bool supportsColor,
+        string? title = null)
     {
+        var banner = title ?? LocalizationManager.Instance["preview_not_receipt"];
         var dimensions = DocumentPrintLayout.GetPaperDimensions(paperSize, "portrait");
         var scale = (float)(Dpi / MillimetersPerInch);
         var width = Math.Max(1, (int)Math.Round(dimensions.WidthMm * scale));
@@ -38,9 +40,9 @@ public static class ProformaDocumentRenderer
             canvas.Clear(SKColors.White);
             var y = margin;
             if (pageNumber == 1)
-                DrawHeader(canvas, document, cartCode, business, options, palette, regular, bold, margin, contentWidth, scale, ref y);
+                DrawHeader(canvas, document, reference, business, options, banner, palette, regular, bold, margin, contentWidth, scale, ref y);
             else
-                DrawContinuationHeader(canvas, palette, bold, margin, contentWidth, scale, pageNumber, ref y);
+                DrawContinuationHeader(canvas, banner, palette, bold, margin, contentWidth, scale, pageNumber, ref y);
 
             DrawTableHeader(canvas, palette, bold, margin, contentWidth, scale, ref y);
             var rowHeight = 6f * scale;
@@ -58,7 +60,7 @@ public static class ProformaDocumentRenderer
 
             if (lineIndex >= document.Lines.Count)
             {
-                DrawTotals(canvas, document, options, palette, regular, bold, margin, contentWidth, scale, ref y);
+                DrawTotals(canvas, document, options, banner, palette, regular, bold, margin, contentWidth, scale, ref y);
                 pages.Add(Encode(bitmap));
                 break;
             }
@@ -70,9 +72,10 @@ public static class ProformaDocumentRenderer
     private static void DrawHeader(
         SKCanvas canvas,
         PreviewDocument document,
-        string? cartCode,
+        string? reference,
         BusinessDto? business,
         ProformaPrintOptions options,
+        string banner,
         Palette palette,
         SKTypeface regular,
         SKTypeface bold,
@@ -102,13 +105,13 @@ public static class ProformaDocumentRenderer
         }
 
         var rightY = y + 4.5f * scale;
-        DrawText(canvas, LocalizationManager.Instance["preview_not_receipt"], x + width, rightY, 3.6f * scale, palette.Accent, bold, SKTextAlign.Right);
+        DrawText(canvas, banner, x + width, rightY, 3.6f * scale, palette.Accent, bold, SKTextAlign.Right);
         rightY += 4f * scale;
         DrawText(canvas, document.CreatedAt.ToString("dd.MM.yyyy HH:mm"), x + width, rightY, 2.4f * scale, palette.Muted, regular, SKTextAlign.Right);
         rightY += 3.4f * scale;
-        if (options.ShowCartCode && !string.IsNullOrWhiteSpace(cartCode))
+        if (options.ShowCartCode && !string.IsNullOrWhiteSpace(reference))
         {
-            DrawText(canvas, $"Savat: {cartCode}", x + width, rightY, 2.8f * scale, palette.Ink, bold, SKTextAlign.Right);
+            DrawText(canvas, reference, x + width, rightY, 2.8f * scale, palette.Ink, bold, SKTextAlign.Right);
             rightY += 3.6f * scale;
         }
         if (options.ShowSeller && !string.IsNullOrWhiteSpace(document.UserName))
@@ -138,6 +141,7 @@ public static class ProformaDocumentRenderer
 
     private static void DrawContinuationHeader(
         SKCanvas canvas,
+        string banner,
         Palette palette,
         SKTypeface bold,
         float x,
@@ -146,7 +150,7 @@ public static class ProformaDocumentRenderer
         int pageNumber,
         ref float y)
     {
-        DrawText(canvas, LocalizationManager.Instance["preview_not_receipt"], x, y + 3.5f * scale, 3f * scale, palette.Accent, bold);
+        DrawText(canvas, banner, x, y + 3.5f * scale, 3f * scale, palette.Accent, bold);
         DrawText(canvas, $"{pageNumber}", x + width, y + 3.5f * scale, 2.6f * scale, palette.Muted, bold, SKTextAlign.Right);
         y += 6f * scale;
         DrawLine(canvas, x, y, x + width, y, palette.Line, 0.3f * scale);
@@ -213,6 +217,7 @@ public static class ProformaDocumentRenderer
         SKCanvas canvas,
         PreviewDocument document,
         ProformaPrintOptions options,
+        string banner,
         Palette palette,
         SKTypeface regular,
         SKTypeface bold,
@@ -247,7 +252,6 @@ public static class ProformaDocumentRenderer
             DrawText(canvas, options.FooterText, x + width / 2, y, 2.4f * scale, palette.Muted, regular, SKTextAlign.Center);
             y += 4f * scale;
         }
-        var banner = LocalizationManager.Instance["preview_not_receipt"];
         var bannerWidth = MeasureText(banner, 2.8f * scale, bold) + 8f * scale;
         var bannerRect = new SKRect(x + (width - bannerWidth) / 2, y, x + (width + bannerWidth) / 2, y + 6f * scale);
         DrawRoundRect(canvas, bannerRect, SKColors.White, palette.Accent, 0.35f * scale, 1f * scale);

@@ -202,21 +202,16 @@ public sealed class PrintHostService
 
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
     {
+        // Unconfigured roles are filled from what the machine actually has, and every
+        // capability is announced on the printer the type will really come out of.
+        _printer.EnsureAutoSetup();
         var settings = _printer.GetSettings();
         var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
         Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
         Add(endpoints, settings.DocumentPrinter, PrintCapability.Document);
-        Add(endpoints,
-            settings.ReceiptMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter,
-            PrintCapability.Receipt);
-        Add(endpoints,
-            settings.ProformaPaperFormat is "A4" or "A5" ? settings.DocumentPrinter : settings.ReceiptPrinter,
-            PrintCapability.CartProforma);
-        Add(endpoints,
-            string.IsNullOrWhiteSpace(settings.ZReportPrinter)
-                ? settings.ZReportMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter
-                : settings.ZReportPrinter,
-            PrintCapability.ZReport);
+        Add(endpoints, _printer.ReceiptTarget().Printer, PrintCapability.Receipt);
+        Add(endpoints, _printer.ProformaTarget(ProformaPrintOptions.Resolve(settings)).Printer, PrintCapability.CartProforma);
+        Add(endpoints, _printer.ZReportTarget().Printer, PrintCapability.ZReport);
 
         return endpoints.Select(x => new PrinterEndpointRegistration(
             StableKey(x.Key),
@@ -370,24 +365,22 @@ public sealed class PrintHostService
         };
     }
 
+    private bool IsDocumentPrinter(string? printerName) =>
+        !string.IsNullOrWhiteSpace(printerName)
+        && _printer.KindOf(printerName) is not (PrinterKind.ReceiptThermal or PrinterKind.Label);
+
     private async Task<Action> PrepareReceiptAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
         var token = Text(job.Payload, "receiptToken") ?? job.SourceId;
-        var settings = _printer.GetSettings();
-        var actualPrinter = string.IsNullOrWhiteSpace(job.PrinterSystemName) 
-            ? settings.ReceiptPrinter 
+        var actualPrinter = string.IsNullOrWhiteSpace(job.PrinterSystemName)
+            ? _printer.ReceiptTarget().Printer
             : job.PrinterSystemName;
-            
-        var isPdfPrinter = actualPrinter != null &&
-                           (actualPrinter.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase) ||
-                            actualPrinter.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase) ||
-                            actualPrinter.Contains("XPS", StringComparison.OrdinalIgnoreCase) ||
-                            actualPrinter.Contains("OneNote", StringComparison.OrdinalIgnoreCase));
 
         if (job.SourceType == "customer_return")
             return await PrepareReturnAsync(job, actualPrinter, cancellationToken);
 
-        if (settings.ReceiptMode is "a4" or "a5" || isPdfPrinter)
+        // The render style follows the physical printer the job will come out of.
+        if (IsDocumentPrinter(actualPrinter))
         {
             var pages = await LoadReceiptDocumentAsync(
                 token,
@@ -463,6 +456,32 @@ public sealed class PrintHostService
         if (receiptOptions != null)
             receiptOptions = receiptOptions with { OutputFilePath = returnFilePath };
 
+        // A shop whose receipts come out of a document printer gets the return on the same
+        // printer as a document page instead of raw thermal bytes it cannot render.
+        if (IsDocumentPrinter(actualPrinter))
+        {
+            var settings = _printer.GetSettings();
+            var preview = new PreviewDocument(
+                document.CreatedAt.ToLocalTime(),
+                document.UserName,
+                document.CustomerName,
+                [.. document.Lines.Select(x => new PreviewLine(
+                    x.ProductName, x.Quantity, x.UnitName, x.UnitPrice, x.LineAmount))],
+                0,
+                document.RefundAmount,
+                document.Note);
+            var paper = settings.DocumentPaperSize == "a5" ? "a5" : "a4";
+            var pages = ProformaDocumentRenderer.Render(
+                preview,
+                $"Hujjat № {document.DocumentNumber}",
+                business,
+                new ProformaPrintOptions(receiptOptions?.HeaderText, receiptOptions?.FooterText, 32, "A4"),
+                paper,
+                _printer.GetPrinterCapabilities(actualPrinter).SupportsColor,
+                "MAHSULOT QAYTARISH");
+            return () => WindowsImagePrinter.Print(actualPrinter!, pages, paper, paper, "portrait", 1, job.Copies, returnFilePath);
+        }
+
         return () => _printer.PrintReturn(document, actualPrinter ?? "", job.Copies, receiptOptions, business);
     }
 
@@ -519,22 +538,21 @@ public sealed class PrintHostService
             0,
             cart.Total,
             cart.Note);
-        var printer = string.IsNullOrWhiteSpace(job.PrinterSystemName)
-            ? _printer.GetSettings().ReceiptPrinter
-            : job.PrinterSystemName;
+        var options = ProformaOptions(job.Payload, _printer.GetSettings());
+        var target = _printer.ProformaTarget(options);
+        var printer = string.IsNullOrWhiteSpace(job.PrinterSystemName) ? target.Printer : job.PrinterSystemName;
         if (string.IsNullOrWhiteSpace(printer))
             throw new InvalidOperationException("Chek printeri tanlanmagan.");
 
         BusinessDto? business = null;
         try { business = await _businessApi.GetAsync(); } catch { }
-        var options = ProformaOptions(job.Payload, _printer.GetSettings());
         var path = await GetPdfOutputPathAsync(printer, $"Oldindan_{job.Id}");
-        if (options.PaperFormat is "A4" or "A5")
+        if (IsDocumentPrinter(printer))
         {
-            var paper = options.PaperFormat == "A5" ? "a5" : "a4";
             var pages = ProformaDocumentRenderer.Render(
-                document, cartCode, business, options, paper, _printer.GetPrinterCapabilities(printer).SupportsColor);
-            return () => WindowsImagePrinter.Print(printer, pages, paper, paper, "portrait", 1, job.Copies, path);
+                document, $"Savat: {cartCode}", business, options, target.Paper,
+                _printer.GetPrinterCapabilities(printer).SupportsColor);
+            return () => WindowsImagePrinter.Print(printer, pages, target.Paper, target.Paper, "portrait", 1, job.Copies, path);
         }
         var bytes = _printer.FormatProforma(document, cartCode, options, business);
         return () => _printer.PrintRawBytes(printer, bytes, path);

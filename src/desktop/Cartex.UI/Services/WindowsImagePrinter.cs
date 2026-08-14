@@ -39,6 +39,60 @@ internal static class WindowsImagePrinter
             ["legal"]  = 5,
         };
 
+    private const short DcPaperSize = 3;
+
+    /// Widest paper the driver can feed, in millimetres. A narrow maximum identifies a
+    /// receipt or label printer regardless of what the printer happens to be called.
+    public static double? MaxPaperWidthMm(string? printerName)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
+            return null;
+        try
+        {
+            using var printers = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\Print\Printers");
+            using var printer = printers?.OpenSubKey(printerName);
+            var port = printer?.GetValue("Port") as string;
+            var count = DeviceCapabilities(printerName, port, DcPaperSize, IntPtr.Zero, IntPtr.Zero);
+            if (count <= 0) return null;
+            var buffer = Marshal.AllocHGlobal(count * 8);
+            try
+            {
+                if (DeviceCapabilities(printerName, port, DcPaperSize, buffer, IntPtr.Zero) <= 0) return null;
+                var max = 0;
+                for (var i = 0; i < count; i++)
+                {
+                    var width = Marshal.ReadInt32(buffer, i * 8);
+                    if (width > max) max = width;
+                }
+                return max > 0 ? max / 10.0 : null;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static string? DefaultPrinter()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        try
+        {
+            var size = 256;
+            var buffer = new System.Text.StringBuilder(size);
+            return GetDefaultPrinterNative(buffer, ref size) ? buffer.ToString() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static bool SupportsColor(string? printerName)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
@@ -447,6 +501,9 @@ internal static class WindowsImagePrinter
         short capability,
         IntPtr output,
         IntPtr devMode);
+
+    [DllImport("winspool.drv", EntryPoint = "GetDefaultPrinterW", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool GetDefaultPrinterNative(System.Text.StringBuilder buffer, ref int size);
 
     [DllImport("gdi32.dll", EntryPoint = "CreateDCW", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr CreateDC(string driver, string device, string? output, IntPtr devMode);

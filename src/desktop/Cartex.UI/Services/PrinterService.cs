@@ -69,6 +69,7 @@ public sealed record PrinterSettings
     public int ProformaPaperWidth { get; init; } = 32;
     public string? ProformaHeaderText { get; init; }
     public string? ProformaFooterText { get; init; }
+    public string? AutoSetupSignature { get; init; }
     public bool ProformaShowBusinessName { get; init; } = true;
     public bool ProformaShowAddress { get; init; } = true;
     public bool ProformaShowPhone { get; init; } = true;
@@ -189,6 +190,11 @@ public interface IPrinterService
     IReadOnlyList<string> GetInstalledPrinters();
     PrinterEndpointStatus GetPrinterStatus(string? printerName);
     PrinterCapabilities GetPrinterCapabilities(string? printerName);
+    void EnsureAutoSetup();
+    PrinterKind KindOf(string printerName);
+    PrintTarget ReceiptTarget();
+    PrintTarget ProformaTarget(ProformaPrintOptions options);
+    PrintTarget ZReportTarget();
     PrinterSettings GetSettings();
     void SaveSettings(PrinterSettings settings);
     void CacheBarcodeLabelSettings(BarcodeLabelSettingsDto settings);
@@ -279,11 +285,7 @@ public sealed class PrinterService : IPrinterService
         LabelPriceCurrencyMode = settings.PriceCurrencyMode
     });
 
-    public bool AutoPrintEnabled =>
-        _settings.AutoPrintReceipt &&
-        (_settings.ReceiptMode is "a4" or "a5"
-            ? !string.IsNullOrWhiteSpace(_settings.DocumentPrinter)
-            : !string.IsNullOrWhiteSpace(_settings.ReceiptPrinter));
+    public bool AutoPrintEnabled => _settings.AutoPrintReceipt && ReceiptTarget().Printer is not null;
 
     public bool AutoPrintHandledByServer => _settings.CentralAutoPrint;
 
@@ -300,6 +302,51 @@ public sealed class PrinterService : IPrinterService
         }
         catch { return []; }
     }
+
+    private readonly Dictionary<string, PrinterKind> _kinds = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<string> _installed = [];
+    private DateTime _installedAt;
+
+    private IReadOnlyList<string> Installed()
+    {
+        if (DateTime.UtcNow - _installedAt > TimeSpan.FromSeconds(10))
+        {
+            _installed = GetInstalledPrinters();
+            _installedAt = DateTime.UtcNow;
+        }
+        return _installed;
+    }
+
+    public PrinterKind KindOf(string printerName)
+    {
+        if (_kinds.TryGetValue(printerName, out var kind)) return kind;
+        kind = PrinterClassifier.Classify(printerName, WindowsImagePrinter.MaxPaperWidthMm(printerName));
+        _kinds[printerName] = kind;
+        return kind;
+    }
+
+    private bool Exists(string? printerName) => !string.IsNullOrWhiteSpace(printerName)
+        && Installed().Contains(printerName, StringComparer.OrdinalIgnoreCase);
+
+    /// Runs only when the set of installed printers changes, so an explicit user choice -
+    /// including a deliberately cleared one - is never overridden while nothing changed.
+    public void EnsureAutoSetup()
+    {
+        var installed = Installed();
+        if (installed.Count == 0) return;
+        var signature = string.Join("|", installed.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        if (signature == _settings.AutoSetupSignature) return;
+        var updated = PrinterAutoSetup.Apply(_settings, installed, KindOf, WindowsImagePrinter.DefaultPrinter())
+            with { AutoSetupSignature = signature };
+        SaveSettings(updated);
+    }
+
+    public PrintTarget ReceiptTarget() => PrintTargetResolver.Receipt(_settings, KindOf, Exists);
+
+    public PrintTarget ProformaTarget(ProformaPrintOptions options) =>
+        PrintTargetResolver.Proforma(options, _settings, KindOf, Exists);
+
+    public PrintTarget ZReportTarget() => PrintTargetResolver.ZReport(_settings, KindOf, Exists);
 
     public PrinterEndpointStatus GetPrinterStatus(string? printerName) => WindowsPrinterHealth.GetStatus(printerName);
 
@@ -333,27 +380,24 @@ public sealed class PrinterService : IPrinterService
     public void PrintProforma(PreviewDocument document, string? cartCode = null, BusinessDto? business = null, int copies = 1)
     {
         var options = ProformaPrintOptions.Resolve(_settings);
-        if (options.PaperFormat is "A4" or "A5")
+        var target = ProformaTarget(options);
+        if (target.Printer is null)
+            throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+        if (target.IsDocument)
         {
-            var printerName = _settings.DocumentPrinter;
-            if (string.IsNullOrWhiteSpace(printerName))
-                throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
-            var paper = options.PaperFormat == "A5" ? "a5" : "a4";
             var pages = ProformaDocumentRenderer.Render(
-                document, cartCode, business, options, paper, WindowsImagePrinter.SupportsColor(printerName));
-            WindowsImagePrinter.Print(printerName, pages, paper, paper, "portrait", 1,
-                Math.Clamp(copies, 1, 100), ProformaPdfPath(printerName));
+                document, cartCode is null ? null : $"Savat: {cartCode}", business, options,
+                target.Paper, WindowsImagePrinter.SupportsColor(target.Printer));
+            WindowsImagePrinter.Print(target.Printer, pages, target.Paper, target.Paper, "portrait", 1,
+                Math.Clamp(copies, 1, 100), ProformaPdfPath(target.Printer));
             return;
         }
 
-        var thermalPrinter = _settings.ReceiptPrinter;
-        if (string.IsNullOrWhiteSpace(thermalPrinter))
-            throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
         var bytes = FormatProforma(document, cartCode, options, business);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
             if (OperatingSystem.IsWindows())
-                RawPrinter.Send(thermalPrinter, bytes, "Cartex Proforma", ProformaPdfPath(thermalPrinter));
+                RawPrinter.Send(target.Printer, bytes, "Cartex Proforma", ProformaPdfPath(target.Printer));
         }
     }
 
@@ -423,64 +467,46 @@ public sealed class PrinterService : IPrinterService
 
     public void PrintZReport(ZReportDto r)
     {
-        var configured = string.IsNullOrWhiteSpace(_settings.ZReportPrinter)
-            ? (_settings.ZReportMode is "a4" or "a5" ? _settings.DocumentPrinter : _settings.ReceiptPrinter)
-            : _settings.ZReportPrinter;
-        PrintZReport(r, configured ?? "", 1);
+        var target = ZReportTarget();
+        if (target.Printer is null)
+            throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+        PrintZReport(r, target.Printer, 1);
     }
 
     public void PrintZReport(ZReportDto r, string printerName, int copies, string? outputFilePath = null)
     {
-        var mode = DocumentPrintLayout.ResolveOutputFormat(
-            _settings.ZReportMode is "a4" or "a5" ? "document" : "thermal",
-            _settings.ZReportDocumentPaperSize ?? "a4");
-        if (mode == "thermal")
+        if (string.IsNullOrWhiteSpace(printerName)) return;
+        // The render style follows the physical printer: a narrow thermal device gets the
+        // text layout, everything else gets the document layout.
+        if (OperatingSystem.IsWindows() && KindOf(printerName) is not (PrinterKind.ReceiptThermal or PrinterKind.Label))
         {
-            var width = _settings.ZReportPaperWidth is 32 or 42 or 48
-                ? _settings.ZReportPaperWidth
-                : _settings.ReceiptPaperWidth;
-            for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
-                PrintRaw(printerName, FormatZReport(r, width), outputFilePath);
+            var paper = _settings.ZReportDocumentPaperSize == "a5" ? "a5" : "a4";
+            var physicalOrientation = _settings.ZReportDocumentOrientation == "landscape"
+                ? "landscape"
+                : "portrait";
+            var pagesPerSheet = _settings.ZReportDocumentPagesPerSheet is 2 or 4
+                ? _settings.ZReportDocumentPagesPerSheet
+                : 1;
+            var pages = ZReportDocumentRenderer.Render(
+                r,
+                new ZReportDocumentMetadata(
+                    _branch.SelectedBranch?.Name ?? LocalizationManager.Instance["z_report"],
+                    null,
+                    _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username,
+                    DateTime.Now),
+                paper,
+                DocumentPrintLayout.GetReceiptOrientation(physicalOrientation, pagesPerSheet),
+                WindowsImagePrinter.SupportsColor(printerName));
+            WindowsImagePrinter.Print(printerName, pages, paper, paper, physicalOrientation, pagesPerSheet,
+                Math.Clamp(copies, 1, 100), outputFilePath);
             return;
         }
 
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
-            return;
-
-        var physicalPaper = _settings.ZReportDocumentPaperSize == "a5" ? "a5" : "a4";
-        var physicalOrientation = _settings.ZReportDocumentOrientation == "landscape"
-            ? "landscape"
-            : "portrait";
-        var pagesPerSheet = _settings.ZReportDocumentPagesPerSheet is 2 or 4
-            ? _settings.ZReportDocumentPagesPerSheet
-            : 1;
-        var reportOrientation = DocumentPrintLayout.GetReceiptOrientation(
-            physicalOrientation,
-            pagesPerSheet);
-        var supportsColor = WindowsImagePrinter.SupportsColor(printerName);
-        var pages = ZReportDocumentRenderer.Render(
-            r,
-            new ZReportDocumentMetadata(
-                _branch.SelectedBranch?.Name ?? LocalizationManager.Instance["z_report"],
-                null,
-                _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username,
-                DateTime.Now),
-            mode,
-            reportOrientation,
-            supportsColor);
-
-        if (_settings.ReceiptMode is "a4" or "a5")
-            PrintDocumentImages(pages, printerName, copies);
-        else
-            WindowsImagePrinter.Print(
-                printerName,
-                pages,
-                "receipt",
-                _settings.ReceiptPaperWidth > 65 ? "80mm" : "58mm",
-                "portrait",
-                1,
-                copies,
-                outputFilePath);
+        var width = _settings.ZReportPaperWidth is 32 or 42 or 48
+            ? _settings.ZReportPaperWidth
+            : _settings.ReceiptPaperWidth;
+        for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
+            PrintRaw(printerName, FormatZReport(r, width), outputFilePath);
     }
 
     public string FormatZReport(ZReportDto r, int? paperWidth = null)

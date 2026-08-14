@@ -58,7 +58,7 @@ public sealed class PrintDispatchService
             cancellationToken,
             printLocally: () =>
             {
-                if (_printer.GetSettings().ReceiptMode is "a4" or "a5")
+                if (_printer.ReceiptTarget().IsDocument)
                     throw new InvalidOperationException(LocalizationManager.Instance["print_offline_needs_thermal"]);
                 _printer.PrintReceipt(receipt);
             });

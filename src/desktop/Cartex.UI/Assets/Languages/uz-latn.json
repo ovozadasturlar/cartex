@@ -1312,6 +1312,7 @@
   "cart_show_note": "Izohni ko'rsatish",
   "cart_show_code": "Savat kodini ko'rsatish",
   "cart_note_example": "Izoh: mijoz keyinroq oladi",
+  "cart_fallback_hint": "Tanlangan rejim uchun printer bu kompyuterda yo'q — mavjud printerda ({0}) chiqadi.",
   "print_offline_local": "{0} — server bilan aloqa yo'q, shu kompyuterning printerida chop etildi.",
   "print_no_online_printer": "{0} navbatga qo'yildi, lekin bu tur uchun hozir mos printer onlayn emas. Sozlamalar → Chop etish → Tarmoq printerlari bo'limini tekshiring.",
   "print_offline_needs_thermal": "Serversiz faqat termal chek chiqarish mumkin — hujjat rejimi serverni talab qiladi.",

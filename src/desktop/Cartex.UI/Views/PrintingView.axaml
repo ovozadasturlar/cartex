@@ -1440,6 +1440,9 @@
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="{Binding CartPreviewPrinterName}" FontWeight="SemiBold" FontSize="12"
                                                    Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="{Binding CartFallbackText}" IsVisible="{Binding IsCartFallbackActive}"
+                                                   Foreground="{DynamicResource WarningBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" MaxWidth="430" />
                                         <TextBlock Text="{Binding L[cart_printer_hint]}" Foreground="{DynamicResource TextMuted}"
                                                    FontSize="11" TextWrapping="Wrap" MaxWidth="430" />
                                     </StackPanel>
