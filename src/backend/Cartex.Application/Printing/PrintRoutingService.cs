@@ -42,8 +42,7 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
                 && x.PrintNode.IsTrusted
                 && x.PrintNode.HostEnabled
                 && x.PrintNode.LastSeenAt >= onlineAfter
-                && (x.Capabilities & capability) == capability
-                && (x.Status == PrinterEndpointStatus.Ready || x.Status == PrinterEndpointStatus.Busy))
+                && (x.Capabilities & capability) == capability)
             .ToListAsync(cancellationToken);
 
         var attempted = await db.PrintAttempts
@@ -53,7 +52,13 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
         endpoints.RemoveAll(endpoint => attempted.Any(attempt => attempt.PrinterEndpointId == endpoint.Id
             && (endpoint.LastSeenAt ?? DateTime.MinValue) <= attempt.FailedAt));
 
-        var endpoint = SelectEndpoint(job, policy, endpoints);
+        // A live printer is preferred, but a printer the spooler reports as away is still a
+        // valid last resort: Windows queues the job and a sleeping network printer wakes on
+        // the first byte. Refusing it would freeze the queue on a machine that can print.
+        var live = endpoints
+            .Where(x => x.Status is PrinterEndpointStatus.Ready or PrinterEndpointStatus.Busy)
+            .ToList();
+        var endpoint = SelectEndpoint(job, policy, live.Count > 0 ? live : endpoints);
         if (endpoint is null) return false;
 
         var now = DateTime.UtcNow;

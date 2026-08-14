@@ -270,6 +270,54 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
     }
 
     [Fact]
+    public async Task Assignment_falls_back_to_a_sleeping_printer_when_no_live_one_exists()
+    {
+        var (branchId, _, _) = await SeedContextAsync();
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var routing = scope.ServiceProvider.GetRequiredService<PrintRoutingService>();
+
+        var node = new PrintNode
+        {
+            BranchId = branchId,
+            DeviceId = "dev-sleepy",
+            CredentialHash = PrintingCredential.Hash(PrintingCredential.Issue()),
+            Name = "Sleepy till",
+            IsTrusted = true,
+            HostEnabled = true,
+            Status = DomainNodeStatus.Online,
+            LastSeenAt = DateTime.UtcNow,
+            Endpoints =
+            {
+                new PrinterEndpoint
+                {
+                    StableKey = "k",
+                    DisplayName = "HP LaserJet",
+                    SystemName = "HP LaserJet",
+                    Capabilities = DomainCapability.Receipt,
+                    Status = DomainEndpointStatus.Offline
+                }
+            }
+        };
+        db.PrintNodes.Add(node);
+        var adminId = await db.Users.Where(x => x.Username == "admin").Select(x => x.Id).SingleAsync();
+        var job = new PrintJob
+        {
+            BranchId = branchId,
+            Kind = DomainJobKind.Receipt,
+            SourceType = "receipt_token",
+            SourceId = "t",
+            PayloadJson = "{}",
+            RequestedByUserId = adminId
+        };
+        db.PrintJobs.Add(job);
+        await db.SaveChangesAsync();
+
+        Assert.True(await routing.AssignAsync(job, default));
+        Assert.Equal(node.Endpoints.First().Id, job.AssignedEndpointId);
+    }
+
+    [Fact]
     public async Task Offline_completed_job_is_recorded_without_routing()
     {
         var (branchId, _, _) = await SeedContextAsync();

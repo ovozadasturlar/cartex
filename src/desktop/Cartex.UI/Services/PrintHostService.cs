@@ -204,7 +204,7 @@ public sealed class PrintHostService
     {
         // Unconfigured roles are filled from what the machine actually has, and every
         // capability is announced on the printer the type will really come out of.
-        _printer.EnsureAutoSetup();
+        try { _printer.EnsureAutoSetup(); } catch { }
         var settings = _printer.GetSettings();
         var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
         Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
@@ -309,18 +309,9 @@ public sealed class PrintHostService
                 true), cancellationToken);
             return;
         }
-        var printerStatus = _printer.GetPrinterStatus(job.PrinterSystemName);
-        if (printerStatus is not (PrinterEndpointStatus.Ready or PrinterEndpointStatus.Busy))
-        {
-            await _printingApi.FailAsync(job.Id, new PrintJobFailedRequest(
-                _auth.DeviceId,
-                job.LeaseToken,
-                _hostToken!,
-                "printer_unavailable",
-                $"Printer '{job.PrinterDisplayName}' is {printerStatus}.",
-                false), cancellationToken);
-            return;
-        }
+        // The reported status is not trusted as a gate: a sleeping network printer says
+        // "offline" yet prints as soon as data arrives, and the spooler queues for the
+        // rest. Real failures still surface through the failure path below.
         var printingStarted = false;
         try
         {

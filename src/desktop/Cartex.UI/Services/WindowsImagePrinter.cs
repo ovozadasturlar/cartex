@@ -55,12 +55,16 @@ internal static class WindowsImagePrinter
             var port = printer?.GetValue("Port") as string;
             var count = DeviceCapabilities(printerName, port, DcPaperSize, IntPtr.Zero, IntPtr.Zero);
             if (count <= 0) return null;
-            var buffer = Marshal.AllocHGlobal(count * 8);
+            // Twice the reported size: a buggy driver writing more entries on the second
+            // call must corrupt slack space, not the heap.
+            var capacity = count * 2;
+            var buffer = Marshal.AllocHGlobal(capacity * 8);
             try
             {
-                if (DeviceCapabilities(printerName, port, DcPaperSize, buffer, IntPtr.Zero) <= 0) return null;
+                var written = DeviceCapabilities(printerName, port, DcPaperSize, buffer, IntPtr.Zero);
+                if (written <= 0) return null;
                 var max = 0;
-                for (var i = 0; i < count; i++)
+                for (var i = 0; i < Math.Min(written, capacity); i++)
                 {
                     var width = Marshal.ReadInt32(buffer, i * 8);
                     if (width > max) max = width;
