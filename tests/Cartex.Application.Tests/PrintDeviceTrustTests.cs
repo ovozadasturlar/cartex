@@ -169,6 +169,52 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
     }
 
     [Fact]
+    public async Task Requester_record_inherits_trust_from_the_host_node()
+    {
+        var (branchId, _, _) = await SeedContextAsync();
+        await TestShift.OpenAsync(Fixture);
+        using var scope = Fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        await sender.Send(new RegisterPrintNodeCommand(Registration("dev-inherit", branchId)));
+        await sender.Send(new SetPrintDeviceTrustCommand(new SetPrintDeviceTrustRequest(branchId, "dev-inherit", true)));
+        var shiftId = await db.Shifts.Select(x => x.Id).FirstAsync();
+
+        var job = await sender.Send(new CreatePrintJobCommand(new CreatePrintJobRequest(
+            branchId, PrintJobKind.ZReport, "shift", shiftId.ToString(),
+            System.Text.Json.JsonSerializer.SerializeToElement(new { shiftId }),
+            DeviceId: "dev-inherit", DeviceName: "Till")));
+
+        Assert.NotEqual(PrintJobStatus.Rejected, job.Status);
+        Assert.True(await db.PrintRequesterDevices.AsNoTracking()
+            .Where(x => x.BranchId == branchId && x.DeviceId == "dev-inherit")
+            .Select(x => x.IsTrusted).SingleAsync());
+    }
+
+    [Fact]
+    public async Task New_node_inherits_trust_from_the_requester_record()
+    {
+        var (branchId, _, _) = await SeedContextAsync();
+        using var scope = Fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        db.PrintRequesterDevices.Add(new PrintRequesterDevice
+        {
+            BranchId = branchId,
+            DeviceId = "dev-phone-first",
+            Name = "Till",
+            IsTrusted = true
+        });
+        await db.SaveChangesAsync();
+
+        await sender.Send(new RegisterPrintNodeCommand(Registration("dev-phone-first", branchId)));
+        Assert.True(await db.PrintNodes.AsNoTracking()
+            .Where(x => x.DeviceId == "dev-phone-first").Select(x => x.IsTrusted).SingleAsync());
+    }
+
+    [Fact]
     public async Task Offline_completed_job_is_recorded_without_routing()
     {
         var (branchId, _, _) = await SeedContextAsync();

@@ -100,8 +100,13 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
         string? issuedToken = null;
         if (node is null)
         {
+            // A device already trusted as a requester is the same physical machine, so the
+            // freshly appearing host side inherits that trust instead of asking again.
             var autoTrust = await db.Branches.Where(x => x.Id == request.BranchId)
                 .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken);
+            var trustedRequester = await db.PrintRequesterDevices.AnyAsync(
+                x => x.BranchId == request.BranchId && x.DeviceId == request.DeviceId && x.IsTrusted,
+                cancellationToken);
             issuedToken = PrintingCredential.Issue();
             node = new PrintNode
             {
@@ -110,7 +115,7 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
                 CredentialIssuedAt = now,
                 BranchId = request.BranchId,
                 Name = request.DeviceName,
-                IsTrusted = autoTrust
+                IsTrusted = autoTrust || trustedRequester
             };
             db.PrintNodes.Add(node);
             audit.Add("print.node_registered", "print_nodes", null,
@@ -507,13 +512,18 @@ public sealed class CreatePrintJobCommandHandler(
                 x => x.BranchId == request.BranchId && x.DeviceId == deviceId, cancellationToken);
             if (requesterDevice is null)
             {
+                // One physical machine, one trust decision: a device whose host node is
+                // already trusted must not be refused when its first request arrives.
                 requesterDevice = new PrintRequesterDevice
                 {
                     BranchId = request.BranchId,
                     DeviceId = deviceId,
                     FirstSeenAt = now,
                     IsTrusted = await db.Branches.Where(x => x.Id == request.BranchId)
-                        .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken)
+                            .Select(x => x.AutoTrustPrintDevices).FirstOrDefaultAsync(cancellationToken)
+                        || await db.PrintNodes.AnyAsync(
+                            x => x.BranchId == request.BranchId && x.DeviceId == deviceId && x.IsTrusted,
+                            cancellationToken)
                 };
                 db.PrintRequesterDevices.Add(requesterDevice);
             }
