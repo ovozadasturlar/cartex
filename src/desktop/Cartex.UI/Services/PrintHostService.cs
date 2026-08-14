@@ -33,6 +33,31 @@ public sealed class PrintHostService
     private HubConnection? _connection;
     private long? _registeredBranchId;
     private string? _hostToken;
+    private string? _reportedFailure;
+
+    /// The host used to retry a rejected registration forever without saying anything, so
+    /// a till looked healthy while nothing could ever print. The reason is surfaced once.
+    public string? LastFailure { get; private set; }
+    public event Action? StatusChanged;
+
+    private void ReportHostFailure(Exception exception)
+    {
+        var reason = exception is Refit.ApiException api
+            ? $"{(int)api.StatusCode} {api.ReasonPhrase}"
+            : exception.Message;
+        LastFailure = reason;
+        if (_reportedFailure == reason) return;
+        _reportedFailure = reason;
+        StatusChanged?.Invoke();
+    }
+
+    private void ClearHostFailure()
+    {
+        if (LastFailure is null && _reportedFailure is null) return;
+        LastFailure = null;
+        _reportedFailure = null;
+        StatusChanged?.Invoke();
+    }
 
     public PrintHostService(
         IPrintingApi printingApi,
@@ -115,8 +140,9 @@ public sealed class PrintHostService
             {
                 break;
             }
-            catch
+            catch (Exception exception)
             {
+                ReportHostFailure(exception);
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
             }
         }
@@ -127,6 +153,9 @@ public sealed class PrintHostService
         var endpoints = BuildEndpoints();
         if (_registeredBranchId != branchId)
         {
+            // Re-read per attempt: the credential belongs to the server the app points at,
+            // which can change between runs.
+            _hostToken = _credentialStore.Load();
             var result = await _printingApi.RegisterNodeAsync(new RegisterPrintNodeRequest(
                 _auth.DeviceId,
                 _auth.DeviceName,
@@ -141,6 +170,7 @@ public sealed class PrintHostService
                 _credentialStore.Save(result.HostToken);
             }
             _registeredBranchId = branchId;
+            ClearHostFailure();
             return;
         }
         await _printingApi.HeartbeatAsync(new PrintNodeHeartbeatRequest(
