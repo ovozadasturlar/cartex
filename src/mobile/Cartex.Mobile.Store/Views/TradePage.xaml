@@ -170,7 +170,7 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                     <CollectionView.Footer>
-                        <BoxView HeightRequest="100" Color="Transparent" />
+                        <Grid HeightRequest="100" />
                     </CollectionView.Footer>
                     <CollectionView.EmptyView>
                         <VerticalStackLayout Spacing="12" Margin="0,60,0,0" HorizontalOptions="Center">

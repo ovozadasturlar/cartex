@@ -6,14 +6,18 @@ public class LiquidTabBar : Grid
 {
     private const float BarTop = 29f;
     private const float BarHeight = 62f;
-    private const float CornerRadius = 24f;
-    private const float DropletSize = 50f;
+    private const float CornerRadius = 18f;
+    private const float DropletSize = 46f;
     private const float RaisedTop = 15f;
     private const float SunkenTop = BarTop + 10f;
-    private const float Gap = 5f;
+    private const float Gap = 9f;
     private const float CradleRadius = DropletSize / 2 + Gap;
+    private const float LipRun = 8f;
 
     private static int _travelFrom = -1;
+    private static double _settledParentHeight = -1;
+    private static readonly float HalfWFull =
+        (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
 
     private static readonly (string Route, string Glyph, string Key)[] Tabs =
     [
@@ -31,7 +35,7 @@ public class LiquidTabBar : Grid
     private readonly Label _dropletIcon;
     private readonly VerticalStackLayout[] _items = new VerticalStackLayout[Tabs.Length];
     private double _edgePad;
-    private bool _entered;
+    private bool _busy;
 
     public int Index { get; set; }
 
@@ -89,21 +93,21 @@ public class LiquidTabBar : Grid
         _dropletIcon = new Label
         {
             FontFamily = "MDI",
-            FontSize = 23,
+            FontSize = 21,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
         };
         _dropletIcon.SetAppThemeColor(Label.TextColorProperty, Colors.White, Color.FromArgb("#052E16"));
         var gloss = new Border
         {
-            WidthRequest = 16,
-            HeightRequest = 9,
+            WidthRequest = 14,
+            HeightRequest = 8,
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 5 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
             BackgroundColor = Color.FromArgb("#59FFFFFF"),
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Start,
-            Margin = new Thickness(10, 6, 0, 0),
+            Margin = new Thickness(9, 5, 0, 0),
             InputTransparent = true,
         };
         _droplet = new Border
@@ -128,6 +132,14 @@ public class LiquidTabBar : Grid
                 if (_items[i].Children[1] is Label lb)
                     lb.Text = Loc.Instance[Tabs[i].Key];
         };
+
+        Loaded += (_, _) => OnAppear();
+        Unloaded += (_, _) =>
+        {
+            this.AbortAnimation("liquid");
+            _busy = false;
+            Opacity = 0;
+        };
     }
 
     private void ApplyTheme()
@@ -147,30 +159,65 @@ public class LiquidTabBar : Grid
     {
         base.OnSizeAllocated(width, height);
         if (width <= 0) return;
-        var min = CornerRadius + CradleRadius + 14;
+        var min = CornerRadius + HalfWFull + LipRun;
         _edgePad = Math.Max(0, (min - width / (Tabs.Length * 2.0)) / (1 - 1.0 / Tabs.Length));
         _zones.Padding = new Thickness(_edgePad, 0);
-        if (_entered)
-        {
-            if (!this.AnimationIsRunning("liquid"))
-                Apply(CenterFor(Index, width), 1, 1);
-            return;
-        }
-        _entered = true;
-        var from = _travelFrom;
-        _travelFrom = -1;
-        if (from >= 0 && from != Index)
-        {
-            SetDroplet(from);
-            Apply(CenterFor(from, width), 1, 1);
-            _ = AnimateSwitchAsync(from, width);
-        }
-        else
-        {
-            SetDroplet(Index);
+        if (!_busy && !this.AnimationIsRunning("liquid"))
             Apply(CenterFor(Index, width), 1, 1);
+    }
+
+    private void OnAppear()
+    {
+        if (_busy) return;
+        _busy = true;
+        _ = EnterAsync();
+    }
+
+    private async Task EnterAsync()
+    {
+        try
+        {
+            for (var i = 0; i < 40 && Width <= 0; i++)
+                await Task.Delay(25);
+            if (Width <= 0)
+            {
+                Opacity = 1;
+                return;
+            }
+
+            var from = _travelFrom;
+            _travelFrom = -1;
+            var travelling = from >= 0 && from != Index;
+            SetDroplet(travelling ? from : Index);
+            Apply(CenterFor(travelling ? from : Index, Width), 1, 1);
+
+            double ParentHeight() => (Parent as VisualElement)?.Height ?? -1;
+            if (_settledParentHeight > 0)
+            {
+                for (var i = 0; i < 18 && Math.Abs(ParentHeight() - _settledParentHeight) >= 1; i++)
+                    await Task.Delay(50);
+            }
+            else
+            {
+                var last = double.NaN;
+                for (var i = 0; i < 18; i++)
+                {
+                    await Task.Delay(50);
+                    var h = ParentHeight();
+                    if (!double.IsNaN(last) && Math.Abs(h - last) < 0.5) break;
+                    last = h;
+                }
+            }
+            _settledParentHeight = ParentHeight();
+
+            await this.FadeTo(1, 130, Easing.CubicOut);
+            if (travelling)
+                await AnimateSwitchAsync(from, Width);
         }
-        this.FadeTo(1, 160, Easing.CubicOut);
+        finally
+        {
+            _busy = false;
+        }
     }
 
     private void SetDroplet(int index)
@@ -187,16 +234,17 @@ public class LiquidTabBar : Grid
 
         var sink = new TaskCompletionSource();
         new Animation(v => Apply(fromX, 1 - v, 1 - v), 0, 1)
-            .Commit(this, "liquid", 16, 170, Easing.CubicIn, (_, _) => sink.TrySetResult());
+            .Commit(this, "liquid", 16, 240, Easing.CubicIn, (_, _) => sink.TrySetResult());
         await sink.Task;
 
         SetDroplet(Index);
         _items[from].Opacity = 0;
-        _ = _items[from].FadeTo(1, 140);
+        _ = _items[from].FadeTo(1, 160);
+        _items[Index].Opacity = 0;
 
         var rise = new TaskCompletionSource();
         new Animation(v => Apply(toX, v, v), 0, 1)
-            .Commit(this, "liquid", 16, 320, Easing.SpringOut, (_, _) => rise.TrySetResult());
+            .Commit(this, "liquid", 16, 420, Easing.SpringOut, (_, _) => rise.TrySetResult());
         await rise.Task;
     }
 
@@ -242,23 +290,32 @@ public class LiquidTabBar : Grid
             var w = rect.Width;
             var o = Openness;
 
-            var centerY = RaisedTop + DropletSize / 2 + (SunkenTop - RaisedTop) * (1 - o);
-            var below = Math.Max(centerY - top, 1f);
-            var halfW = (float)Math.Sqrt(Math.Max(CradleRadius * CradleRadius - below * below, 30f));
-            var dip = (below + CradleRadius) * o;
-            var lift = 4.5f * o;
-            var flare = 14f;
-            var cx = Math.Clamp(NotchX, r + halfW + flare, w - r - halfW - flare);
-
             var p = new PathF();
             p.MoveTo(r, top);
-            if (o > 0.02f)
+            if (o > 0.03f)
             {
-                p.LineTo(cx - halfW - flare, top);
-                p.CurveTo(cx - halfW - flare * 0.45f, top, cx - halfW - 2f, top - lift, cx - halfW + 2.5f, top + dip * 0.14f);
-                p.CurveTo(cx - halfW + 4f, top + dip * 0.62f, cx - CradleRadius * 0.62f * o, top + dip, cx, top + dip);
-                p.CurveTo(cx + CradleRadius * 0.62f * o, top + dip, cx + halfW - 4f, top + dip * 0.62f, cx + halfW - 2.5f, top + dip * 0.14f);
-                p.CurveTo(cx + halfW + 2f, top - lift, cx + halfW + flare * 0.45f, top, cx + halfW + flare, top);
+                var cy = RaisedTop + DropletSize / 2 + (SunkenTop - RaisedTop) * (1 - o);
+                var radius = CradleRadius * (0.35f + 0.65f * o);
+                var dy = top - cy;
+                var span = radius * radius - dy * dy;
+                if (span > 4f)
+                {
+                    var halfW = (float)Math.Sqrt(span);
+                    var cx = Math.Clamp(NotchX, r + halfW + LipRun, w - r - halfW - LipRun);
+                    var lift = 3.5f * o;
+
+                    p.LineTo(cx - halfW - LipRun, top);
+                    p.CurveTo(cx - halfW - LipRun * 0.35f, top, cx - halfW - 1.5f, top - lift, cx - halfW, top);
+                    var a0 = Math.Atan2(dy, -halfW);
+                    var a1 = Math.Atan2(dy, halfW) - 2 * Math.PI;
+                    const int steps = 26;
+                    for (var i = 1; i <= steps; i++)
+                    {
+                        var a = a0 + (a1 - a0) * i / steps;
+                        p.LineTo(cx + (float)(radius * Math.Cos(a)), cy + (float)(radius * Math.Sin(a)));
+                    }
+                    p.CurveTo(cx + halfW + 1.5f, top - lift, cx + halfW + LipRun * 0.35f, top, cx + halfW + LipRun, top);
+                }
             }
             p.LineTo(w - r, top);
             p.QuadTo(w, top, w, top + r);
@@ -271,33 +328,16 @@ public class LiquidTabBar : Grid
             p.Close();
 
             canvas.SaveState();
-            canvas.SetShadow(new SizeF(0, 6), 18, Color.FromRgba(0, 0, 0, Dark ? 0.55f : 0.18f));
+            canvas.SetShadow(new SizeF(0, 6), 18, Color.FromRgba(0, 0, 0, Dark ? 0.55f : 0.2f));
             canvas.SetFillPaint(new LinearGradientPaint
             {
-                StartColor = Dark ? Color.FromArgb("#F0222925") : Color.FromArgb("#FCFFFFFF"),
-                EndColor = Dark ? Color.FromArgb("#F0161B18") : Color.FromArgb("#E0EFF6F1"),
+                StartColor = Dark ? Color.FromArgb("#F2242B27") : Color.FromArgb("#FCFFFFFF"),
+                EndColor = Dark ? Color.FromArgb("#F2151A17") : Color.FromArgb("#E4EDF4EF"),
                 StartPoint = new Point(0, 0),
                 EndPoint = new Point(0, 1),
             }, new RectF(0, top, w, BarHeight));
             canvas.FillPath(p);
             canvas.RestoreState();
-
-            canvas.StrokeSize = 1.1f;
-            canvas.StrokeColor = Dark ? Color.FromArgb("#26FFFFFF") : Color.FromArgb("#C4FFFFFF");
-            canvas.DrawPath(p);
-
-            if (o > 0.05f)
-            {
-                var rim = new PathF();
-                rim.MoveTo(cx - halfW - flare, top);
-                rim.CurveTo(cx - halfW - flare * 0.45f, top, cx - halfW - 2f, top - lift, cx - halfW + 2.5f, top + dip * 0.14f);
-                rim.CurveTo(cx - halfW + 4f, top + dip * 0.62f, cx - CradleRadius * 0.62f * o, top + dip, cx, top + dip);
-                rim.CurveTo(cx + CradleRadius * 0.62f * o, top + dip, cx + halfW - 4f, top + dip * 0.62f, cx + halfW - 2.5f, top + dip * 0.14f);
-                rim.CurveTo(cx + halfW + 2f, top - lift, cx + halfW + flare * 0.45f, top, cx + halfW + flare, top);
-                canvas.StrokeSize = 1.6f;
-                canvas.StrokeColor = (Dark ? Color.FromArgb("#8CFFFFFF") : Colors.White).WithAlpha(0.9f * o);
-                canvas.DrawPath(rim);
-            }
         }
     }
 }
