@@ -32,6 +32,9 @@ public interface IPrintingApi
     [Put("/api/printing/devices/auto-trust")]
     Task SetAutoTrustAsync([Body] SetPrintAutoTrustRequest request, CancellationToken cancellationToken = default);
 
+    [Delete("/api/printing/devices")]
+    Task DeleteDeviceAsync([Query] long branchId, [Query] string deviceId, CancellationToken cancellationToken = default);
+
     [Put("/api/printing/endpoints/{id}")]
     Task SetEndpointAsync(long id, [Body] SetPrinterEndpointRequest request, CancellationToken cancellationToken = default);
 

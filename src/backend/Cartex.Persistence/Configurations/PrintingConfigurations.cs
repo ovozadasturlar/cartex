@@ -133,7 +133,7 @@ public class PrintAttemptConfiguration : IEntityTypeConfiguration<PrintAttempt>
         builder.HasIndex(x => new { x.PrintJobId, x.AttemptNumber }).IsUnique();
         builder.HasIndex(x => new { x.PrinterEndpointId, x.Status, x.StartedAt });
         builder.HasOne(x => x.PrintJob).WithMany(x => x.Attempts).HasForeignKey(x => x.PrintJobId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne(x => x.PrintNode).WithMany().HasForeignKey(x => x.PrintNodeId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.PrinterEndpoint).WithMany().HasForeignKey(x => x.PrinterEndpointId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.PrintNode).WithMany().HasForeignKey(x => x.PrintNodeId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne(x => x.PrinterEndpoint).WithMany().HasForeignKey(x => x.PrinterEndpointId).OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -1942,6 +1942,13 @@
                                                     <TextBlock Text="Ishonchli" VerticalAlignment="Center"
                                                                ToolTip.Tip="Yoqilsa qurilma print so‘rovi yuboradi va undagi printerlar tarmoqda ishlaydi" />
                                                     <ToggleSwitch IsChecked="{Binding IsTrusted}" />
+                                                    <Button Classes="icon" Padding="6"
+                                                            ToolTip.Tip="Ro‘yxatdan o‘chirish — tarix saqlanadi, qurilma qayta ulansa yangi sifatida ko‘rinadi"
+                                                            Command="{Binding $parent[UserControl].DataContext.DeleteNetworkDeviceCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
+                                                                         Foreground="{DynamicResource TextSecondary}" />
+                                                    </Button>
                                                 </StackPanel>
                                             </Grid>
                                             <ItemsControl ItemsSource="{Binding Endpoints}" IsVisible="{Binding IsHost}">

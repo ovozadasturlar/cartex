@@ -276,6 +276,27 @@ public partial class PrintingViewModel
     }
 
     [RelayCommand]
+    private async Task DeleteNetworkDeviceAsync(NetworkDeviceItem? item)
+    {
+        if (item is null || !CanManagePrintNodes || _branch.CurrentBranchId is not long branchId) return;
+        var dialogs = ServiceLocator.Resolve<IDialogService>();
+        if (!await dialogs.ConfirmDangerAsync(
+                $"{item.Name} ro'yxatdan o'chirilsinmi? Chop etish tarixi saqlanadi. Qurilma qayta ulansa yangi qurilma sifatida ko'rinadi.",
+                "Qurilmani o'chirish"))
+            return;
+        try
+        {
+            await _printingApi.DeleteDeviceAsync(branchId, item.DeviceId);
+            await LoadNetworkPrintingAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+        }
+    }
+
+    [RelayCommand]
     private async Task SaveNetworkDevicesAsync()
     {
         if (!CanManagePrintNodes || _branch.CurrentBranchId is not long branchId) return;

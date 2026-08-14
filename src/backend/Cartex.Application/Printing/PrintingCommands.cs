@@ -245,6 +245,35 @@ public sealed class SetPrintDeviceTrustCommandHandler(
     }
 }
 
+/// Removing a device only clears the list: printing history keeps its rows and merely
+/// loses the link to the deleted device. If the machine ever connects again it simply
+/// shows up as a new device.
+public record DeletePrintDeviceCommand(long BranchId, string DeviceId) : ICommand<Unit>;
+
+public sealed class DeletePrintDeviceCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IAuditService audit) : IRequestHandler<DeletePrintDeviceCommand, Unit>
+{
+    public async Task<Unit> Handle(DeletePrintDeviceCommand command, CancellationToken cancellationToken)
+    {
+        PrintingGuard.EnsureBranch(currentUser, command.BranchId);
+        var node = await db.PrintNodes.Include(x => x.Endpoints).FirstOrDefaultAsync(
+            x => x.BranchId == command.BranchId && x.DeviceId == command.DeviceId, cancellationToken);
+        var requesters = await db.PrintRequesterDevices
+            .Where(x => x.BranchId == command.BranchId && x.DeviceId == command.DeviceId)
+            .ToListAsync(cancellationToken);
+        if (node is null && requesters.Count == 0)
+            throw new NotFoundException("Print device not found.");
+        if (node is not null) db.PrintNodes.Remove(node);
+        db.PrintRequesterDevices.RemoveRange(requesters);
+        audit.Add("print.device_deleted", "print_devices", node?.Id ?? requesters[0].Id,
+            new { command.DeviceId, Name = node?.Name ?? requesters[0].Name });
+        await db.SaveChangesAsync(cancellationToken);
+        return Unit.Value;
+    }
+}
+
 public record SetPrintAutoTrustCommand(SetPrintAutoTrustRequest Request) : ICommand<Unit>;
 
 public sealed class SetPrintAutoTrustCommandHandler(

@@ -141,10 +141,11 @@ public class PrintAttempt : BaseEntity
     public long PrintJobId { get; set; }
     public PrintJob PrintJob { get; set; } = null!;
     public int AttemptNumber { get; set; }
-    public long PrintNodeId { get; set; }
-    public PrintNode PrintNode { get; set; } = null!;
-    public long PrinterEndpointId { get; set; }
-    public PrinterEndpoint PrinterEndpoint { get; set; } = null!;
+    // Nullable so deleting a device keeps the printing history; only the link is cut.
+    public long? PrintNodeId { get; set; }
+    public PrintNode? PrintNode { get; set; }
+    public long? PrinterEndpointId { get; set; }
+    public PrinterEndpoint? PrinterEndpoint { get; set; }
     public PrintAttemptStatus Status { get; set; } = PrintAttemptStatus.Assigned;
     public string LeaseToken { get; set; } = null!;
     public string? SpoolJobId { get; set; }

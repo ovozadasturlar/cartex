@@ -68,6 +68,14 @@ public sealed class PrintingController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("devices")]
+    [HasPermission(AppPermissions.Printing.NodesManage)]
+    public async Task<IActionResult> DeleteDevice(long branchId, string deviceId, CancellationToken cancellationToken)
+    {
+        await sender.Send(new DeletePrintDeviceCommand(branchId, deviceId), cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("requesters/{id:long}")]
     [HasPermission(AppPermissions.Printing.NodesManage)]
     public async Task<IActionResult> SetRequester(long id, SetPrintRequesterDeviceTrustRequest request, CancellationToken cancellationToken)

@@ -215,6 +215,61 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
     }
 
     [Fact]
+    public async Task Deleting_a_device_keeps_history_and_lets_it_come_back()
+    {
+        var (branchId, _, _) = await SeedContextAsync();
+        using var scope = Fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        await sender.Send(new RegisterPrintNodeCommand(Registration("dev-gone", branchId)));
+        var node = await db.PrintNodes.Include(x => x.Endpoints).SingleAsync(x => x.DeviceId == "dev-gone");
+        db.PrintRequesterDevices.Add(new PrintRequesterDevice
+        {
+            BranchId = branchId,
+            DeviceId = "dev-gone",
+            Name = "Till",
+            IsTrusted = true
+        });
+        var adminId = await db.Users.Where(x => x.Username == "admin").Select(x => x.Id).SingleAsync();
+        var job = new PrintJob
+        {
+            BranchId = branchId,
+            Kind = DomainJobKind.Receipt,
+            Status = DomainJobStatus.Completed,
+            SourceType = "receipt_token",
+            SourceId = "t",
+            PayloadJson = "{}",
+            RequestedByUserId = adminId,
+            Attempts =
+            {
+                new PrintAttempt
+                {
+                    AttemptNumber = 1,
+                    PrintNodeId = node.Id,
+                    PrinterEndpointId = node.Endpoints.First().Id,
+                    LeaseToken = "lease-1"
+                }
+            }
+        };
+        db.PrintJobs.Add(job);
+        await db.SaveChangesAsync();
+
+        await sender.Send(new DeletePrintDeviceCommand(branchId, "dev-gone"));
+
+        Assert.False(await db.PrintNodes.AnyAsync(x => x.DeviceId == "dev-gone"));
+        Assert.False(await db.PrintRequesterDevices.AnyAsync(x => x.DeviceId == "dev-gone"));
+        var attempt = await db.PrintAttempts.AsNoTracking().SingleAsync(x => x.PrintJobId == job.Id);
+        Assert.Null(attempt.PrintNodeId);
+        Assert.Null(attempt.PrinterEndpointId);
+
+        var again = await sender.Send(new RegisterPrintNodeCommand(Registration("dev-gone", branchId)));
+        Assert.False(string.IsNullOrWhiteSpace(again.HostToken));
+        Assert.False(await db.PrintNodes.Where(x => x.DeviceId == "dev-gone")
+            .Select(x => x.IsTrusted).SingleAsync());
+    }
+
+    [Fact]
     public async Task Offline_completed_job_is_recorded_without_routing()
     {
         var (branchId, _, _) = await SeedContextAsync();

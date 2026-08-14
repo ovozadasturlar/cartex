@@ -188,9 +188,11 @@ public sealed class PrintHostService
                 endpoints,
                 _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
         }
-        catch (Refit.ApiException api) when (api.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        catch (Refit.ApiException api) when (api.StatusCode
+            is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.NotFound)
         {
-            // The credential was revoked while running - enrol again on the next tick.
+            // Credential revoked or the device was deleted from the list while running -
+            // enrol again on the next tick instead of looping on the same failure.
             _registeredBranchId = null;
             throw;
         }
