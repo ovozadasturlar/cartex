@@ -65,6 +65,17 @@ public sealed record PrinterSettings
     public string? DocumentPaperSize { get; init; }
     public string? DocumentOrientation { get; init; }
     public int DocumentPagesPerSheet { get; init; } = 1;
+    public string? ProformaPaperFormat { get; init; }
+    public int ProformaPaperWidth { get; init; } = 32;
+    public string? ProformaHeaderText { get; init; }
+    public string? ProformaFooterText { get; init; }
+    public bool ProformaShowBusinessName { get; init; } = true;
+    public bool ProformaShowAddress { get; init; } = true;
+    public bool ProformaShowPhone { get; init; } = true;
+    public bool ProformaShowSeller { get; init; } = true;
+    public bool ProformaShowCustomer { get; init; } = true;
+    public bool ProformaShowNote { get; init; } = true;
+    public bool ProformaShowCartCode { get; init; } = true;
     public string? ZReportMode { get; init; }
     public int ZReportPaperWidth { get; init; }
     public string? ZReportDocumentPaperSize { get; init; }
@@ -146,6 +157,33 @@ public sealed record PreviewDocument(
     decimal Total,
     string? Note);
 
+public sealed record ProformaPrintOptions(
+    string? HeaderText,
+    string? FooterText,
+    int Width,
+    string PaperFormat,
+    bool ShowBusinessName = true,
+    bool ShowAddress = true,
+    bool ShowPhone = true,
+    bool ShowSeller = true,
+    bool ShowCustomer = true,
+    bool ShowNote = true,
+    bool ShowCartCode = true)
+{
+    public static ProformaPrintOptions Resolve(PrinterSettings s) => new(
+        s.ProformaHeaderText,
+        s.ProformaFooterText,
+        s.ProformaPaperWidth is 42 or 48 ? s.ProformaPaperWidth : 32,
+        s.ProformaPaperFormat is "A4" or "A5" ? s.ProformaPaperFormat : "Thermal",
+        s.ProformaShowBusinessName,
+        s.ProformaShowAddress,
+        s.ProformaShowPhone,
+        s.ProformaShowSeller,
+        s.ProformaShowCustomer,
+        s.ProformaShowNote,
+        s.ProformaShowCartCode);
+}
+
 public interface IPrinterService
 {
     IReadOnlyList<string> GetInstalledPrinters();
@@ -163,8 +201,8 @@ public interface IPrinterService
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options);
     void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null);
     byte[] FormatReturn(CustomerReturnDocumentDto document, ReceiptPrintOptions? options, BusinessDto? business = null);
-    void PrintPreview(PreviewDocument document, BusinessDto? business = null);
-    byte[] FormatPreview(PreviewDocument document, ReceiptPrintOptions? options, BusinessDto? business = null);
+    void PrintProforma(PreviewDocument document, string? cartCode = null, BusinessDto? business = null, int copies = 1);
+    byte[] FormatProforma(PreviewDocument document, string? cartCode, ProformaPrintOptions options, BusinessDto? business = null);
     void PrintZReport(ZReportDto report);
     void PrintZReport(ZReportDto report, string printerName, int copies, string? outputFilePath = null);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
@@ -292,32 +330,60 @@ public sealed class PrinterService : IPrinterService
         }
     }
 
-    public void PrintPreview(PreviewDocument document, BusinessDto? business = null)
+    public void PrintProforma(PreviewDocument document, string? cartCode = null, BusinessDto? business = null, int copies = 1)
     {
-        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? ReceiptOptions is null
-                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
-                : ReceiptOptions with { Width = _settings.ReceiptPaperWidth }
-            : ReceiptOptions;
-        var printerName = _settings.ReceiptPrinter ?? "";
-        var bytes = FormatPreview(document, opts, business);
-        if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
-            RawPrinter.Send(printerName, bytes, "Cartex Preview", opts?.OutputFilePath);
+        var options = ProformaPrintOptions.Resolve(_settings);
+        if (options.PaperFormat is "A4" or "A5")
+        {
+            var printerName = _settings.DocumentPrinter;
+            if (string.IsNullOrWhiteSpace(printerName))
+                throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+            var paper = options.PaperFormat == "A5" ? "a5" : "a4";
+            var pages = ProformaDocumentRenderer.Render(
+                document, cartCode, business, options, paper, WindowsImagePrinter.SupportsColor(printerName));
+            WindowsImagePrinter.Print(printerName, pages, paper, paper, "portrait", 1,
+                Math.Clamp(copies, 1, 100), ProformaPdfPath(printerName));
+            return;
+        }
+
+        var thermalPrinter = _settings.ReceiptPrinter;
+        if (string.IsNullOrWhiteSpace(thermalPrinter))
+            throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+        var bytes = FormatProforma(document, cartCode, options, business);
+        for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
+        {
+            if (OperatingSystem.IsWindows())
+                RawPrinter.Send(thermalPrinter, bytes, "Cartex Proforma", ProformaPdfPath(thermalPrinter));
+        }
     }
 
-    public byte[] FormatPreview(PreviewDocument document, ReceiptPrintOptions? opts, BusinessDto? business = null)
+    private string? ProformaPdfPath(string printerName)
     {
-        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        if (!printerName.Contains("Print to PDF", StringComparison.OrdinalIgnoreCase)
+            && !printerName.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase)
+            && !printerName.Contains("XPS", StringComparison.OrdinalIgnoreCase))
+            return null;
+        var path = _settings.PdfExportPath;
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        Directory.CreateDirectory(path);
+        return Path.Combine(path, $"Oldindan_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+    }
+
+    public byte[] FormatProforma(PreviewDocument document, string? cartCode, ProformaPrintOptions options, BusinessDto? business = null)
+    {
+        var w = options.Width is 42 or 48 ? options.Width : 32;
         var sb = new StringBuilder();
-        if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
-        if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
-        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        if (options.ShowBusinessName && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
+        if (options.ShowAddress && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
+        if (options.ShowPhone && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        if (!string.IsNullOrWhiteSpace(options.HeaderText)) sb.AppendLine(Center(options.HeaderText, w));
         sb.AppendLine(new string('=', w));
         sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
         sb.AppendLine(new string('=', w));
         sb.AppendLine(document.CreatedAt.ToString("dd.MM.yyyy HH:mm"));
-        if (!string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Sotuvchi: {document.UserName}");
-        if (!string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
+        if (options.ShowCartCode && !string.IsNullOrWhiteSpace(cartCode)) sb.AppendLine($"Savat: {cartCode}");
+        if (options.ShowSeller && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Sotuvchi: {document.UserName}");
+        if (options.ShowCustomer && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
         sb.AppendLine(new string('-', w));
         foreach (var line in document.Lines)
         {
@@ -327,16 +393,17 @@ public sealed class PrinterService : IPrinterService
         sb.AppendLine(new string('-', w));
         if (document.Discount > 0) sb.AppendLine(Row("Chegirma", $"-{document.Discount:N0}", w));
         sb.AppendLine(Row("JAMI", $"{document.Total:N0}", w));
-        if (!string.IsNullOrWhiteSpace(document.Note))
+        if (options.ShowNote && !string.IsNullOrWhiteSpace(document.Note))
         {
             sb.AppendLine(new string('-', w));
             sb.AppendLine($"Izoh: {document.Note}");
         }
         sb.AppendLine();
+        if (!string.IsNullOrWhiteSpace(options.FooterText)) sb.AppendLine(Center(options.FooterText, w));
         sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
         sb.AppendLine();
         sb.AppendLine();
-        return BuildEscPosReceipt(sb.ToString(), null, opts?.LogoRasterBytes);
+        return BuildEscPosReceipt(sb.ToString(), null, null);
     }
 
     public void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null)

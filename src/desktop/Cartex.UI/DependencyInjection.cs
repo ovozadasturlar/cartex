@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddSingleton<ConnectivityService>();
         services.AddSingleton<QueueHubService>();
         services.AddSingleton<PrintHostJournal>();
+        services.AddSingleton<OfflinePrintJournal>();
         services.AddSingleton<PrintHostCredentialStore>();
         services.AddSingleton<PrintHostService>();
         services.AddSingleton<PrintStatusHubService>();

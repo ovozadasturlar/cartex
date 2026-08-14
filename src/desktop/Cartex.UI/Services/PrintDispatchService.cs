@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text.Json;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Printing;
@@ -6,15 +7,44 @@ using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.UI.Services;
 
-public sealed class PrintDispatchService(
-    IPrintingApi printing,
-    AuthService auth,
-    BranchContextService branch,
-    PrintStatusHubService statusHub,
-    IToastService toast)
+public sealed class PrintDispatchService
 {
-    private readonly AuthService _auth = auth;
-    private readonly BranchContextService _branch = branch;
+    private readonly IPrintingApi _printing;
+    private readonly IPrinterService _printer;
+    private readonly IBarcodeLabelService _labels;
+    private readonly OfflinePrintJournal _offlineJournal;
+    private readonly PrintStatusHubService _statusHub;
+    private readonly IToastService _toast;
+    private readonly AuthService _auth;
+    private readonly BranchContextService _branch;
+    private readonly SemaphoreSlim _flushLock = new(1, 1);
+
+    public PrintDispatchService(
+        IPrintingApi printing,
+        IPrinterService printer,
+        IBarcodeLabelService labels,
+        OfflinePrintJournal offlineJournal,
+        AuthService auth,
+        BranchContextService branch,
+        PrintStatusHubService statusHub,
+        ConnectivityService connectivity,
+        IToastService toast)
+    {
+        _printing = printing;
+        _printer = printer;
+        _labels = labels;
+        _offlineJournal = offlineJournal;
+        _statusHub = statusHub;
+        _toast = toast;
+        _auth = auth;
+        _branch = branch;
+        connectivity.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ConnectivityService.IsOnline)
+                && connectivity.IsOnline && _auth.IsAuthenticated)
+                _ = TryFlushOfflineAsync();
+        };
+    }
 
     public Task PrintReceiptAsync(ReceiptDto receipt, bool reprint, CancellationToken cancellationToken = default) =>
         CreateAsync(
@@ -25,7 +55,13 @@ public sealed class PrintDispatchService(
             reprint,
             reprint ? "manual_reprint" : null,
             reprint ? $"receipt-reprint:{receipt.ReceiptToken}:{Guid.NewGuid():N}" : $"receipt:{receipt.ReceiptToken}",
-            cancellationToken);
+            cancellationToken,
+            printLocally: () =>
+            {
+                if (_printer.GetSettings().ReceiptMode is "a4" or "a5")
+                    throw new InvalidOperationException(LocalizationManager.Instance["print_offline_needs_thermal"]);
+                _printer.PrintReceipt(receipt);
+            });
 
     public Task PrintZReportAsync(ZReportDto report, bool reprint, CancellationToken cancellationToken = default) =>
         CreateAsync(
@@ -36,7 +72,8 @@ public sealed class PrintDispatchService(
             reprint,
             reprint ? "manual_reprint" : null,
             reprint ? $"z-reprint:{report.ShiftId}:{Guid.NewGuid():N}" : $"z:{report.ShiftId}",
-            cancellationToken);
+            cancellationToken,
+            printLocally: () => _printer.PrintZReport(report));
 
     public Task PrintReturnAsync(long returnId, long? branchId = null, CancellationToken cancellationToken = default) =>
         CreateAsync(
@@ -52,10 +89,11 @@ public sealed class PrintDispatchService(
             kindLabel: LocalizationManager.Instance["print_kind_return"]);
 
     /// The proforma references the saved cart rather than carrying its contents, so the server
-    /// stays in control of what can be printed and the routing policy still applies.
-    public Task PrintCartProformaAsync(string cartCode, CancellationToken cancellationToken = default) =>
+    /// stays in control of what can be printed and the routing policy still applies. The local
+    /// copy of the document lets the same content print on this machine when the server is away.
+    public Task PrintCartProformaAsync(string cartCode, PreviewDocument? document = null, CancellationToken cancellationToken = default) =>
         CreateAsync(
-            PrintJobKind.Document,
+            PrintJobKind.CartProforma,
             "cart",
             cartCode,
             JsonSerializer.SerializeToElement(new { cartCode }),
@@ -63,7 +101,8 @@ public sealed class PrintDispatchService(
             null,
             $"proforma:{cartCode}:{Guid.NewGuid():N}",
             cancellationToken,
-            kindLabel: LocalizationManager.Instance["print_kind_preview"]);
+            kindLabel: LocalizationManager.Instance["print_kind_preview"],
+            printLocally: document is null ? null : () => _printer.PrintProforma(document, cartCode));
 
     public Task PrintBarcodeAsync(
         string code,
@@ -83,7 +122,14 @@ public sealed class PrintDispatchService(
             null,
             $"barcode:{_auth.DeviceId}:{Guid.NewGuid():N}",
             cancellationToken,
-            copies);
+            copies,
+            printLocally: () =>
+            {
+                var target = _printer.GetSettings().BarcodePrinter;
+                if (string.IsNullOrWhiteSpace(target))
+                    throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+                _labels.PrintLabels(code, name, copies, target, withPrice ? priceText : null, sku);
+            });
 
     private async Task CreateAsync(
         PrintJobKind kind,
@@ -96,7 +142,8 @@ public sealed class PrintDispatchService(
         CancellationToken cancellationToken,
         int copies = 1,
         long? branchId = null,
-        string? kindLabel = null)
+        string? kindLabel = null,
+        Action? printLocally = null)
     {
         var permission = kind switch
         {
@@ -113,23 +160,88 @@ public sealed class PrintDispatchService(
         if (targetBranchId is null)
             throw new InvalidOperationException("Chop etish uchun filial tanlanmagan.");
 
-        await statusHub.EnsureStartedAsync();
-        var job = await printing.CreateJobAsync(new CreatePrintJobRequest(
-            targetBranchId.Value,
-            kind,
-            sourceType,
-            sourceId,
-            payload,
-            copies,
-            reprint,
-            reason,
-            idempotencyKey,
-            _auth.DeviceId,
-            _auth.DeviceName), cancellationToken);
         var label = kindLabel ?? PrintNotificationText.Kind(kind);
-        if (job.Status == PrintJobStatus.Completed)
-            toast.Success(string.Format(LocalizationManager.Instance["print_completed"], label, string.Empty));
-        else
-            toast.Info(string.Format(LocalizationManager.Instance["print_queued"], label));
+        _ = TryFlushOfflineAsync();
+        await _statusHub.EnsureStartedAsync();
+        try
+        {
+            var job = await _printing.CreateJobAsync(new CreatePrintJobRequest(
+                targetBranchId.Value,
+                kind,
+                sourceType,
+                sourceId,
+                payload,
+                copies,
+                reprint,
+                reason,
+                idempotencyKey,
+                _auth.DeviceId,
+                _auth.DeviceName), cancellationToken);
+            if (job.Status == PrintJobStatus.Completed)
+                _toast.Success(string.Format(LocalizationManager.Instance["print_completed"], label, string.Empty));
+            else
+                _toast.Info(string.Format(LocalizationManager.Instance["print_queued"], label));
+        }
+        catch (Exception exception) when (printLocally is not null
+            && !cancellationToken.IsCancellationRequested && IsServerUnavailable(exception))
+        {
+            printLocally();
+            await _offlineJournal.AddAsync(new OfflinePrintRecord(
+                targetBranchId.Value, kind, sourceType, sourceId, payload.GetRawText(),
+                copies, reprint, reason, idempotencyKey, DateTime.UtcNow));
+            _toast.Warning(string.Format(LocalizationManager.Instance["print_offline_local"], label));
+        }
     }
+
+    /// Records left behind by offline printing are pushed to the server as completed
+    /// history. The idempotency key is the one from the original attempt, so a request
+    /// that actually reached the server never becomes a duplicate job.
+    public async Task TryFlushOfflineAsync()
+    {
+        if (!_flushLock.Wait(0)) return;
+        try
+        {
+            foreach (var record in await _offlineJournal.GetAllAsync())
+            {
+                try
+                {
+                    using var payload = JsonDocument.Parse(record.PayloadJson);
+                    await _printing.CreateJobAsync(new CreatePrintJobRequest(
+                        record.BranchId,
+                        record.Kind,
+                        record.SourceType,
+                        record.SourceId,
+                        payload.RootElement.Clone(),
+                        record.Copies,
+                        record.IsReprint,
+                        record.Reason,
+                        record.IdempotencyKey,
+                        _auth.DeviceId,
+                        _auth.DeviceName,
+                        CompletedLocally: true));
+                    await _offlineJournal.RemoveAsync(record.IdempotencyKey);
+                }
+                catch (Exception exception) when (IsServerUnavailable(exception))
+                {
+                    return;
+                }
+                catch
+                {
+                    await _offlineJournal.RemoveAsync(record.IdempotencyKey);
+                }
+            }
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
+    public static bool IsServerUnavailable(Exception exception) => exception switch
+    {
+        Refit.ApiException api => (int)api.StatusCode >= 500,
+        HttpRequestException or SocketException or TimeoutException => true,
+        TaskCanceledException => true,
+        _ => exception.InnerException is not null && IsServerUnavailable(exception.InnerException)
+    };
 }

@@ -395,6 +395,163 @@
                 </Grid>
             </Border>
         </DataTemplate>
+
+        <DataTemplate x:Key="ThermalCartPreview" x:DataType="vm:PrintingViewModel">
+            <Border Width="210" Height="470" Background="White" Padding="14">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding CartShowBusinessName}"
+                               Foreground="{Binding CartPreviewInkBrush}" FontSize="14" FontWeight="Bold" TextAlignment="Center" />
+                    <TextBlock Text="{Binding PreviewAddress}" IsVisible="{Binding CartShowAddress}"
+                               Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
+                    <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding CartShowPhone}"
+                               Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
+                    <TextBlock Text="{Binding CartHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8"
+                               TextAlignment="Center" TextWrapping="Wrap" />
+                    <Border Height="2" Background="{Binding CartPreviewInkBrush}" Margin="0,2" />
+                    <TextBlock Text="{Binding L[preview_not_receipt]}" Foreground="{Binding CartPreviewInkBrush}"
+                               FontSize="9" FontWeight="Bold" TextAlignment="Center" />
+                    <Border Height="2" Background="{Binding CartPreviewInkBrush}" Margin="0,2" />
+                    <TextBlock Text="29.07.2026 15:30" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                    <TextBlock Text="Savat: S-1024" IsVisible="{Binding CartShowCartCode}"
+                               Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding L[receipt_preview_cashier]}" IsVisible="{Binding CartShowSeller}"
+                               Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                    <TextBlock Text="{Binding L[receipt_preview_customer]}" IsVisible="{Binding CartShowCustomer}"
+                               Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                    <Border Height="1" Background="{Binding CartPreviewLineBrush}" Margin="0,2" />
+                    <TextBlock Text="{Binding L[receipt_preview_item_one]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="2 × 12 500" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="25 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_two]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1 × 8 000" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="8 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_three]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1.5 × 14 000" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="21 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_four]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="2 × 9 500" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="19 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[receipt_preview_item_five]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="1 × 11 000" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" />
+                        <TextBlock Grid.Column="1" Text="11 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="8" />
+                    </Grid>
+                    <Border Height="1" Background="{Binding CartPreviewLineBrush}" Margin="0,2" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding L[total]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="11" FontWeight="Bold" />
+                        <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="11" FontWeight="Bold" />
+                    </Grid>
+                    <TextBlock Text="{Binding L[cart_note_example]}" IsVisible="{Binding CartShowNote}"
+                               Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding CartPreviewFooterText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8"
+                               TextAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding L[preview_not_receipt]}" Foreground="{Binding CartPreviewInkBrush}"
+                               FontSize="8" FontWeight="Bold" TextAlignment="Center" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DocumentCartPreview" x:DataType="vm:PrintingViewModel">
+            <Border Width="300" Height="424" Background="White" Padding="24">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <Grid ColumnDefinitions="4,10,*,Auto">
+                        <Border Background="{Binding CartPreviewAccentBrush}" CornerRadius="2" />
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding CartShowBusinessName}"
+                                       Foreground="{Binding CartPreviewInkBrush}" FontSize="13" FontWeight="Bold" />
+                            <TextBlock Text="{Binding PreviewAddress}" IsVisible="{Binding CartShowAddress}"
+                                       Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding CartShowPhone}"
+                                       Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Spacing="2" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding L[preview_not_receipt]}" Foreground="{Binding CartPreviewAccentBrush}"
+                                       FontSize="8.5" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Text="29.07.2026 15:30" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Text="Savat: S-1024" IsVisible="{Binding CartShowCartCode}"
+                                       Foreground="{Binding CartPreviewInkBrush}" FontSize="8" FontWeight="SemiBold" TextAlignment="Right" />
+                            <TextBlock Text="{Binding L[receipt_preview_cashier]}" IsVisible="{Binding CartShowSeller}"
+                                       Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Text="{Binding L[receipt_preview_customer]}" IsVisible="{Binding CartShowCustomer}"
+                                       Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextAlignment="Right" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Spacing="3" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding CartHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
+                        <Border Height="2" Background="{Binding CartPreviewInkBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0" Spacing="5">
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="№" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" FontWeight="Bold" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[product]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" FontWeight="Bold" />
+                            <TextBlock Grid.Column="2" Text="{Binding L[quantity]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="{Binding L[price]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="{Binding L[amount]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" FontWeight="Bold" TextAlignment="Right" />
+                        </Grid>
+                        <Border Height="1" Background="{Binding CartPreviewLineBrush}" />
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="1" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_one]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="2" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="12 500" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="25 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55" Background="{Binding CartPreviewFaintBrush}">
+                            <TextBlock Text="2" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_two]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="8 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="8 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="3" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_three]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1.5" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="14 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="21 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55" Background="{Binding CartPreviewFaintBrush}">
+                            <TextBlock Text="4" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_four]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="2" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="9 500" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="19 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Grid ColumnDefinitions="24,*,45,55,55">
+                            <TextBlock Text="5" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="1" Text="{Binding L[receipt_preview_item_five]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" />
+                            <TextBlock Grid.Column="2" Text="1" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="11 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="11 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="7" TextAlignment="Right" />
+                        </Grid>
+                        <Border Height="1" Background="{Binding CartPreviewLineBrush}" />
+                        <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Right" Width="140">
+                            <TextBlock Text="{Binding L[total]}" Foreground="{Binding CartPreviewInkBrush}" FontSize="10" FontWeight="Bold" />
+                            <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding CartPreviewInkBrush}" FontSize="10" FontWeight="Bold" />
+                        </Grid>
+                        <TextBlock Text="{Binding L[cart_note_example]}" IsVisible="{Binding CartShowNote}"
+                                   Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding CartPreviewFooterText}" Foreground="{Binding CartPreviewMutedBrush}"
+                                   FontSize="7" TextWrapping="Wrap" VerticalAlignment="Bottom" />
+                        <Border Grid.Column="1" BorderBrush="{Binding CartPreviewAccentBrush}" BorderThickness="1"
+                                CornerRadius="3" Padding="8,2" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding L[preview_not_receipt]}" Foreground="{Binding CartPreviewAccentBrush}"
+                                       FontSize="7" FontWeight="Bold" />
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -502,6 +659,13 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="ReceiptTextOutline" Width="18" Height="18" />
                         <TextBlock Text="{Binding L[print_section_receipt]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="printtab" Classes.active="{Binding IsCartSection}"
+                        Command="{Binding SelectSectionCommand}" CommandParameter="cart">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="BasketOutline" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[print_section_cart]}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button Classes="printtab" Classes.active="{Binding IsBarcodeSection}"
@@ -1210,6 +1374,201 @@
             </Border>
         </Grid>
 
+        <Grid Grid.Row="2" IsVisible="{Binding IsCartSection}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="560" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0">
+                <StackPanel Spacing="12">
+                    <Border Classes="printcard">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="sectiontitle" Text="{Binding L[print_section_cart]}" />
+                                <TextBlock Text="{Binding L[cart_print_hint]}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Spacing="7">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[print_output_type]}" />
+                                <Grid ColumnDefinitions="*,8,*">
+                                    <Button Classes="printchoice" Classes.active="{Binding IsCartThermal}"
+                                            Command="{Binding SelectCartModeCommand}" CommandParameter="thermal">
+                                        <StackPanel Spacing="5">
+                                            <mi:MaterialIcon Kind="ReceiptRollOutline" Width="24" Height="24" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding L[format_thermal]}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsCartDocument}"
+                                            Command="{Binding SelectCartModeCommand}" CommandParameter="document">
+                                        <StackPanel Spacing="5">
+                                            <mi:MaterialIcon Kind="FileDocument" Width="24" Height="24" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding L[format_document]}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Spacing="5" IsVisible="{Binding IsCartThermal}">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
+                                <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding CartPaperWidth}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="7" IsVisible="{Binding IsCartDocument}">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[document_paper_size]}" />
+                                <Grid ColumnDefinitions="*,8,*">
+                                    <Button Classes="printchoice" Classes.active="{Binding IsCartPaperA4}"
+                                            Command="{Binding SelectCartModeCommand}" CommandParameter="a4">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                            <mi:MaterialIcon Kind="FileDocument" Width="22" Height="22" />
+                                            <TextBlock Text="A4 · 210×297 mm" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="printchoice" Classes.active="{Binding IsCartPaperA5}"
+                                            Command="{Binding SelectCartModeCommand}" CommandParameter="a5">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                            <mi:MaterialIcon Kind="FileDocumentOutline" Width="19" Height="19" />
+                                            <TextBlock Text="A5 · 148×210 mm" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="8" Padding="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <mi:MaterialIcon Kind="PrinterOutline" Width="16" Height="16"
+                                                     Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" />
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding CartPreviewPrinterName}" FontWeight="SemiBold" FontSize="12"
+                                                   Foreground="{DynamicResource TextPrimary}" />
+                                        <TextBlock Text="{Binding L[cart_printer_hint]}" Foreground="{DynamicResource TextMuted}"
+                                                   FontSize="11" TextWrapping="Wrap" MaxWidth="430" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="printcard" IsVisible="{Binding CanEditReceiptContent}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[receipt_content]}" />
+                            <Grid ColumnDefinitions="*,12,*">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
+                                    <TextBox Text="{Binding CartHeaderText}" MinHeight="36" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
+                                    <TextBox Text="{Binding CartFooterText}" MinHeight="36" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowBusinessName}" />
+                                    <TextBlock Text="{Binding L[receipt_show_business]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowAddress}" />
+                                    <TextBlock Text="{Binding L[receipt_show_address]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowPhone}" />
+                                    <TextBlock Text="{Binding L[receipt_show_phone]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowSeller}" />
+                                    <TextBlock Text="{Binding L[cart_show_seller]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowCustomer}" />
+                                    <TextBlock Text="{Binding L[receipt_show_customer]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowNote}" />
+                                    <TextBlock Text="{Binding L[cart_show_note]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding CartShowCartCode}" />
+                                    <TextBlock Text="{Binding L[cart_show_code]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="printcard">
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                            <Button Classes="outline" Command="{Binding TestProformaPrintCommand}" Content="{Binding L[printer_test]}" />
+                            <Button Classes="brand" MinWidth="130" HorizontalContentAlignment="Center"
+                                    Command="{Binding SaveCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <mi:MaterialIcon Kind="ContentSave" Width="17" Height="17" />
+                                    <TextBlock Text="{Binding L[save]}" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Column="1" Classes="printcard" Padding="16" HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto" Margin="2,0,2,12">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[print_preview]}" />
+                            <TextBlock Text="{Binding CartPreviewPrinterName}" Foreground="{DynamicResource TextSecondary}"
+                                       FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding L[preview_zoom_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="10.5" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Top">
+                            <Border Classes="previewchip live">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <mi:MaterialIcon Kind="EyeOutline" Width="14" Height="14"
+                                                     Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                    <TextBlock Text="{Binding L[live]}" Classes="previewchiplabel"
+                                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <Border Grid.Row="1" Background="{DynamicResource AppBg}" CornerRadius="10"
+                            MinHeight="520" HorizontalAlignment="Stretch" ClipToBounds="True">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <c:PreviewZoomHost HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                               MinWidth="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                               MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                               ToolTip.Tip="{Binding L[preview_zoom_hint]}">
+                                <Viewbox Width="{Binding $parent[ScrollViewer].Viewport.Width}"
+                                         Height="{Binding $parent[ScrollViewer].Viewport.Height}"
+                                         Stretch="Uniform">
+                                    <Border Padding="22">
+                                        <Grid>
+                                            <Border Width="{Binding CartPreviewPaperWidth}" Height="{Binding CartPreviewPaperHeight}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Background="White" BorderBrush="#CBD5E1" BorderThickness="1"
+                                                    IsVisible="{Binding IsCartThermal}">
+                                                <Viewbox Stretch="Uniform" Margin="10">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ThermalCartPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                            <Border Width="{Binding CartPreviewPaperWidth}" Height="{Binding CartPreviewPaperHeight}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Background="White" BorderBrush="#94A3B8" BorderThickness="1"
+                                                    IsVisible="{Binding IsCartDocument}">
+                                                <Viewbox Stretch="Uniform">
+                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource DocumentCartPreview}" />
+                                                </Viewbox>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Viewbox>
+                            </c:PreviewZoomHost>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
         <Grid Grid.Row="2" IsVisible="{Binding IsZSection}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="560" />
@@ -1518,174 +1877,92 @@
 
         <Grid Grid.Row="2" IsVisible="{Binding IsNetworkSection}" ColumnDefinitions="Auto,16,*">
             <Border Grid.Column="0" Classes="printcard" Width="420" IsVisible="{Binding CanViewPrintRoutes}">
-                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                     <StackPanel Spacing="4">
-                        <TextBlock Classes="sectiontitle" Text="Tarmoq qurilmalari" />
-                        <TextBlock Text="Printer ulangan kompyuterlar va print so‘rovi yuboradigan qurilmalarni boshqaring."
+                        <TextBlock Classes="sectiontitle" Text="Qurilmalar" />
+                        <TextBlock Text="Bir marta ishonchli deb belgilang — qurilma print so‘rovi yuborishi va o‘z printerlarini tarmoqqa berishi mumkin bo‘ladi. Dastur qayta o‘rnatilsa ham ishonch saqlanadi."
                                    Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="12" />
                     </StackPanel>
-                    <Border Grid.Row="1" Margin="0,12" Padding="10" CornerRadius="8"
+                    <Border Grid.Row="1" Margin="0,12,0,0" Padding="10" CornerRadius="8"
                             Background="{DynamicResource SidebarItemActive}" IsVisible="{Binding !NetworkAvailable}">
                         <TextBlock Text="Tarmoq orqali chop etish imkoniyati yoqilmagan yoki ruxsat mavjud emas."
                                     TextWrapping="Wrap" />
                     </Border>
-                    <Border Grid.Row="2" Margin="0,12,0,10" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="0,0,0,1">
-                        <Grid ColumnDefinitions="*,*">
-                            <Button Classes="kindtab" Classes.active="{Binding IsNetworkHostsTab}"
-                                    Content="Printerlar" Command="{Binding SelectNetworkDevicesTabCommand}"
-                                    CommandParameter="hosts" />
-                            <Button Grid.Column="1" Classes="kindtab" Classes.active="{Binding IsNetworkRequestersTab}"
-                                    Content="So‘rov qurilmalari" Command="{Binding SelectNetworkDevicesTabCommand}"
-                                    CommandParameter="requesters" />
+                    <Border Grid.Row="2" Margin="0,12,0,0" Padding="12" CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            IsVisible="{Binding CanManagePrintNodes}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Yangi qurilmalarga avtomatik ruxsat" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="Yoqilsa birinchi marta ko‘ringan qurilma so‘rovsiz ishonchli bo‘ladi. Faqat sozlash paytida yoqib turish tavsiya etiladi."
+                                           Foreground="{DynamicResource TextMuted}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoTrustNewDevices}" />
                         </Grid>
                     </Border>
-                    <Grid Grid.Row="3">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsNetworkHostsTab}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Faol qurilmalardagi mos printerlargina yo‘naltirishda qatnashadi."
-                                           Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="11.5" />
-
-                                <Border IsVisible="{Binding IsThisHostWaiting}" CornerRadius="8" Padding="12"
-                                        Background="{DynamicResource InfoBg}">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock Text="Bu kompyuter tasdiqlanishini kutmoqda" FontWeight="SemiBold" />
-                                        <TextBlock FontSize="11.5" TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource TextSecondary}"
-                                                   Text="Ro‘yxatdan shu kompyuterni toping va quyidagi kod bilan solishtirib tasdiqlang." />
-                                        <Border Background="{DynamicResource CardBg}" CornerRadius="6" Padding="12,4"
-                                                HorizontalAlignment="Left">
-                                            <TextBlock Text="{Binding ThisHostFingerprint}" FontFamily="Consolas"
-                                                       FontSize="18" FontWeight="Bold" />
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border IsVisible="{Binding HasThisHostProblem}" CornerRadius="8" Padding="12"
-                                        Background="{DynamicResource DangerBg}">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="Bu kompyuterda chop etish xizmati ulanmadi" FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding ThisHostFailure}" FontSize="11.5" TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource TextSecondary}" />
-                                    </StackPanel>
-                                </Border>
-
-                                <ItemsControl ItemsSource="{Binding NetworkNodes}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:NetworkPrintNodeItem">
-                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                                    CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                                <StackPanel Spacing="9">
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                                            <TextBlock Text="{Binding DeviceId}" FontSize="10"
-                                                                       Foreground="{DynamicResource TextSecondary}" />
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
-                                                                    VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Status}" VerticalAlignment="Center"
-                                                                       IsVisible="{Binding !IsWaitingForApproval}"
-                                                                       Foreground="{DynamicResource TextSecondary}" />
-                                                            <TextBlock Text="Tasdiqlash kutilmoqda" VerticalAlignment="Center"
-                                                                       IsVisible="{Binding IsWaitingForApproval}"
-                                                                       Foreground="{DynamicResource InfoBrush}" />
-                                                            <Button Classes="outline" FontSize="11" Padding="8,2"
-                                                                    Content="Kredensialni tiklash"
-                                                                    IsVisible="{Binding !IsWaitingForApproval}"
-                                                                    ToolTip.Tip="Kompyuter almashtirilgan yoki dastur qayta o‘rnatilgan bo‘lsa, shu tugma bilan qayta ro‘yxatdan o‘tishga ruxsat beriladi"
-                                                                    Command="{Binding $parent[UserControl].DataContext.RevokeNetworkNodeCommand}"
-                                                                    CommandParameter="{Binding}" />
-                                                        </StackPanel>
-                                                    </Grid>
-
-                                                    <Border IsVisible="{Binding IsWaitingForApproval}" CornerRadius="8" Padding="10"
-                                                            Background="{DynamicResource InfoBg}">
-                                                        <StackPanel Spacing="8">
-                                                            <TextBlock Text="Bu kompyuter tasdiqlashni kutmoqda" FontWeight="SemiBold" />
-                                                            <TextBlock FontSize="11.5" TextWrapping="Wrap"
-                                                                       Foreground="{DynamicResource TextSecondary}"
-                                                                       Text="Kompyuterning o‘zida ko‘rsatilgan kod bilan solishtiring. Mos bo‘lsa tasdiqlang — shundan keyin uning printerlari yo‘naltirishda ishtirok etadi." />
-                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                                <Border Background="{DynamicResource CardBg}" CornerRadius="6" Padding="10,3">
-                                                                    <TextBlock Text="{Binding PendingFingerprint}" FontFamily="Consolas"
-                                                                               FontSize="15" FontWeight="Bold" />
-                                                                </Border>
-                                                                <TextBlock Grid.Column="1" Text="{Binding PendingDetail}" FontSize="11"
-                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                           Foreground="{DynamicResource TextMuted}" />
-                                                            </Grid>
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <Button Classes="brand" Content="Tasdiqlash"
-                                                                        Command="{Binding $parent[UserControl].DataContext.ApproveNetworkNodeCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                                <Button Classes="outline" Content="Rad etish"
-                                                                        Command="{Binding $parent[UserControl].DataContext.RevokeNetworkNodeCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                            </StackPanel>
-                                                        </StackPanel>
-                                                    </Border>
-
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <TextBlock Text="Faol" VerticalAlignment="Center"
-                                                                   ToolTip.Tip="O‘chirilsa bu kompyuterdagi printerlar avtomatik yo‘naltirishda ishlatilmaydi" />
-                                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" />
-                                                    </Grid>
-                                                    <ItemsControl ItemsSource="{Binding Endpoints}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="print:PrinterEndpointDto">
-                                                                <Grid ColumnDefinitions="*,Auto" Margin="8,3,0,0">
-                                                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-                                                                    <TextBlock Grid.Column="1" Text="{Binding Capabilities}" FontSize="11"
-                                                                               Foreground="{DynamicResource TextSecondary}" />
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsNetworkRequestersTab}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Faqat ruxsat berilgan telefon, web va desktop qurilmalardan print so‘rovi qabul qilinadi."
-                                           Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="11.5" />
-                                <ItemsControl ItemsSource="{Binding NetworkRequesterDevices}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:NetworkRequesterDeviceItem">
-                                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                                    CornerRadius="8" Padding="10" Margin="0,0,0,7">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Spacing="2">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{Binding Detail}" FontSize="10.5"
-                                                                   Foreground="{DynamicResource TextSecondary}" />
-                                                        <TextBlock Text="{Binding LastSeenText}" FontSize="10"
+                    <Border Grid.Row="3" Margin="0,12,0,0" CornerRadius="8" Padding="12"
+                            Background="{DynamicResource DangerBg}" IsVisible="{Binding HasThisHostProblem}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Bu kompyuterda chop etish xizmati ulanmadi" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding ThisHostFailure}" FontSize="11.5" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                    </Border>
+                    <ScrollViewer Grid.Row="4" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding NetworkDevices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NetworkDeviceItem">
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                        <StackPanel Spacing="7">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                                        <mi:MaterialIcon Kind="MonitorSmall" Width="16" Height="16"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="{DynamicResource TextSecondary}"
+                                                                         IsVisible="{Binding !IsHost}" />
+                                                        <mi:MaterialIcon Kind="Printer" Width="16" Height="16"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="{DynamicResource TextSecondary}"
+                                                                         IsVisible="{Binding IsHost}"
+                                                                         ToolTip.Tip="Bu qurilmada printer bor" />
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"
                                                                    Foreground="{DynamicResource TextMuted}" />
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7"
-                                                                VerticalAlignment="Center">
-                                                        <TextBlock Text="Printga ruxsat" VerticalAlignment="Center"
-                                                                   ToolTip.Tip="Yoqilsa ushbu qurilmadan kelgan masofaviy print so‘rovlari qabul qilinadi" />
-                                                        <ToggleSwitch IsChecked="{Binding IsTrusted}" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                    <Grid Grid.Row="4" Margin="0,12,0,0" IsVisible="{Binding CanManagePrintNodes}">
-                        <Button Classes="primary" Content="Printerlarni saqlash"
-                                Command="{Binding SaveNetworkHostsCommand}" IsVisible="{Binding IsNetworkHostsTab}" />
-                        <Button Classes="primary" Content="Ruxsatlarni saqlash"
-                                Command="{Binding SaveNetworkRequestersCommand}" IsVisible="{Binding IsNetworkRequestersTab}" />
-                    </Grid>
+                                                    <TextBlock Text="{Binding Detail}" FontSize="10.5"
+                                                               Foreground="{DynamicResource TextSecondary}" />
+                                                    <TextBlock Text="{Binding LastSeenText}" FontSize="10"
+                                                               Foreground="{DynamicResource TextMuted}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="Ishonchli" VerticalAlignment="Center"
+                                                               ToolTip.Tip="Yoqilsa qurilma print so‘rovi yuboradi va undagi printerlar tarmoqda ishlaydi" />
+                                                    <ToggleSwitch IsChecked="{Binding IsTrusted}" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Endpoints}" IsVisible="{Binding IsHost}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="print:PrinterEndpointDto">
+                                                        <Grid ColumnDefinitions="*,Auto" Margin="23,2,0,0">
+                                                            <TextBlock Text="{Binding DisplayName}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="10.5"
+                                                                       Foreground="{DynamicResource TextSecondary}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Button Grid.Row="5" Margin="0,12,0,0" Classes="primary" Content="Saqlash"
+                            Command="{Binding SaveNetworkDevicesCommand}" IsVisible="{Binding CanManagePrintNodes}" />
                 </Grid>
             </Border>
 
@@ -1695,16 +1972,23 @@
                         <StackPanel Spacing="14" IsVisible="{Binding CanViewPrintRoutes}">
                         <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" VerticalAlignment="Center" />
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                            <Grid ColumnDefinitions="*,*,*,*">
+                            <Grid ColumnDefinitions="*,*,*,*,*">
                                 <Button Classes="kindtab" Classes.active="{Binding IsNetworkReceipt}" Content="Chek"
                                         Command="{Binding SelectNetworkKindCommand}" CommandParameter="Receipt" />
-                                <Button Grid.Column="1" Classes="kindtab" Classes.active="{Binding IsNetworkBarcode}" Content="Etiketka"
+                                <Button Grid.Column="1" Classes="kindtab" Classes.active="{Binding IsNetworkProforma}" Content="Savat"
+                                        Command="{Binding SelectNetworkKindCommand}" CommandParameter="CartProforma" />
+                                <Button Grid.Column="2" Classes="kindtab" Classes.active="{Binding IsNetworkBarcode}" Content="Etiketka"
                                         Command="{Binding SelectNetworkKindCommand}" CommandParameter="BarcodeLabel" />
-                                <Button Grid.Column="2" Classes="kindtab" Classes.active="{Binding IsNetworkZReport}" Content="Z-hisobot"
+                                <Button Grid.Column="3" Classes="kindtab" Classes.active="{Binding IsNetworkZReport}" Content="Z-hisobot"
                                         Command="{Binding SelectNetworkKindCommand}" CommandParameter="ZReport" />
-                                <Button Grid.Column="3" Classes="kindtab" Classes.active="{Binding IsNetworkDocument}" Content="Hujjat"
+                                <Button Grid.Column="4" Classes="kindtab" Classes.active="{Binding IsNetworkDocument}" Content="Hujjat"
                                         Command="{Binding SelectNetworkKindCommand}" CommandParameter="Document" />
                             </Grid>
+                        </Border>
+                        <Border IsVisible="{Binding HasNoOnlineHostForKind}" CornerRadius="8" Padding="10"
+                                Background="{DynamicResource DangerBg}">
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5"
+                                       Text="Hozir bu tur uchun printerli birorta ishonchli kompyuter onlayn emas — topshiriqlar navbatda kutib turadi. Printer ulangan kompyuterni yoqing yoki qurilmani ishonchli qiling." />
                         </Border>
                         <StackPanel Spacing="6">
                                 <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
@@ -1716,7 +2000,7 @@
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkPolicyEnabled}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="Ro‘yxatdagi printer ishlamasa mos printerni avtomatik izlash"
+                            <TextBlock Text="Avtomatik rejim: ro‘yxat bo‘sh yoki tanlangan printer ishlamasa, mos keladigan istalgan onlayn printer ishlatiladi"
                                        VerticalAlignment="Center" TextWrapping="Wrap" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding NetworkAllowFallback}" />
                         </Grid>
@@ -1752,10 +2036,15 @@
                         </Grid>
                         <TextBlock Classes="fieldlabel" Text="Printerlar tartibi"
                                    ToolTip.Tip="Tanlangan printerni tutqichidan ushlab kerakli joyga suring" />
-                        <Border IsVisible="{Binding HasNoRouteTarget}" CornerRadius="8" Padding="10"
+                        <Border IsVisible="{Binding IsAutomaticRouting}" CornerRadius="8" Padding="10"
+                                Background="{DynamicResource SidebarItemActive}">
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5"
+                                       Text="Avtomatik — mos keladigan istalgan onlayn printer ishlatiladi. Printer boshqa kompyuterga ulansa ham hech narsani sozlash shart emas. Muayyan printerni afzal qilish uchun quyidan belgilang." />
+                        </Border>
+                        <Border IsVisible="{Binding HasNoRouteAndNoFallback}" CornerRadius="8" Padding="10"
                                 Background="{DynamicResource DangerBg}">
                             <TextBlock TextWrapping="Wrap" FontSize="11.5"
-                                       Text="Bu print turi uchun birorta printer belgilanmagan — bunday hujjatlar chop etilmay navbatda qoladi. Quyidagi ro‘yxatdan kerakli printerni belgilang va saqlang." />
+                                       Text="Birorta printer belgilanmagan va avtomatik rejim o‘chiq — bu turdagi topshiriqlar chop etilmay navbatda qoladi. Printer belgilang yoki avtomatik rejimni yoqing." />
                         </Border>
                         <ItemsControl ItemsSource="{Binding NetworkEndpoints}" MaxHeight="520">
                             <ItemsControl.ItemTemplate>

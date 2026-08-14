@@ -6,47 +6,46 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.UI.ViewModels;
 
-public sealed partial class NetworkPrintNodeItem : ObservableObject
+/// One row per physical device. Trust is a single switch that covers both sending print
+/// requests and serving the printers attached to the device.
+public sealed partial class NetworkDeviceItem : ObservableObject
 {
-    private bool _savedIsEnabled;
+    private bool _savedIsTrusted;
 
-    public NetworkPrintNodeItem(PrintNodeDto source)
+    public NetworkDeviceItem(PrintDeviceDto source)
     {
-        Id = source.Id;
-        Name = source.Name;
         DeviceId = source.DeviceId;
-        Status = source.Status;
-        LastSeenAt = source.LastSeenAt;
+        Name = source.Name;
+        NodeId = source.NodeId;
+        NodeStatus = source.NodeStatus;
+        HostEnabled = source.HostEnabled;
         Endpoints = source.Endpoints;
-        IsWaitingForApproval = source.HasPendingEnrollment;
-        PendingFingerprint = source.PendingFingerprint;
-        PendingDetail = string.Join(" · ", new[]
-        {
-            source.PendingRequestedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm"),
-            source.PendingClient,
-            source.PendingIpAddress
-        }.Where(x => !string.IsNullOrWhiteSpace(x)));
-        _isEnabled = source.IsEnabled;
-        _savedIsEnabled = source.IsEnabled;
+        Detail = string.Join(" · ", new[] { source.LastUsername, source.Client }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+        LastSeenText = source.LastSeenAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? string.Empty;
+        _isTrusted = source.IsTrusted;
+        _savedIsTrusted = source.IsTrusted;
     }
 
-    public long Id { get; }
-    public string Name { get; }
     public string DeviceId { get; }
-    public PrintNodeStatus Status { get; }
-    public DateTime? LastSeenAt { get; }
+    public string Name { get; }
+    public long? NodeId { get; }
+    public PrintNodeStatus? NodeStatus { get; }
+    public bool HostEnabled { get; }
     public IReadOnlyList<PrinterEndpointDto> Endpoints { get; }
-    public bool IsWaitingForApproval { get; }
-    public string? PendingFingerprint { get; }
-    public string PendingDetail { get; }
-    public bool HasChanges => IsEnabled != _savedIsEnabled;
-    [ObservableProperty] private bool _isEnabled;
+    public string Detail { get; }
+    public string LastSeenText { get; }
+    public bool IsHost => NodeId is not null && HostEnabled && Endpoints.Count > 0;
+    public bool IsOnlineHost => IsHost && NodeStatus == PrintNodeStatus.Online;
+    public string StatusText => NodeStatus?.ToString() ?? string.Empty;
+    public bool HasChanges => IsTrusted != _savedIsTrusted;
+    [ObservableProperty] private bool _isTrusted;
 
-    partial void OnIsEnabledChanged(bool value) => OnPropertyChanged(nameof(HasChanges));
+    partial void OnIsTrustedChanged(bool value) => OnPropertyChanged(nameof(HasChanges));
 
     public void AcceptChanges()
     {
-        _savedIsEnabled = IsEnabled;
+        _savedIsTrusted = IsTrusted;
         OnPropertyChanged(nameof(HasChanges));
     }
 }
@@ -61,39 +60,6 @@ public sealed partial class NetworkRouteEndpointItem(PrinterEndpointDto endpoint
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isEnabled = true;
     [ObservableProperty] private int _priority;
-}
-
-public sealed partial class NetworkRequesterDeviceItem : ObservableObject
-{
-    private bool _savedIsTrusted;
-
-    public NetworkRequesterDeviceItem(PrintRequesterDeviceDto source)
-    {
-        Id = source.Id;
-        Name = source.Name;
-        DeviceId = source.DeviceId;
-        Detail = string.Join(" · ", new[] { source.LastUsername, source.Client }
-            .Where(x => !string.IsNullOrWhiteSpace(x)));
-        LastSeenText = source.LastSeenAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
-        _isTrusted = source.IsTrusted;
-        _savedIsTrusted = source.IsTrusted;
-    }
-
-    public long Id { get; }
-    public string Name { get; }
-    public string DeviceId { get; }
-    public string Detail { get; }
-    public string LastSeenText { get; }
-    public bool HasChanges => IsTrusted != _savedIsTrusted;
-    [ObservableProperty] private bool _isTrusted;
-
-    partial void OnIsTrustedChanged(bool value) => OnPropertyChanged(nameof(HasChanges));
-
-    public void AcceptChanges()
-    {
-        _savedIsTrusted = IsTrusted;
-        OnPropertyChanged(nameof(HasChanges));
-    }
 }
 
 public sealed class NetworkPrintJobItem(PrintJobDto job, bool allowCancel, bool allowRetry)
@@ -125,9 +91,8 @@ public partial class PrintingViewModel
     public bool CanCancelPrintJobs => _auth.HasPermission("printing.jobs.cancel");
     public bool CanRetryPrintJobs => _auth.HasPermission("printing.jobs.retry");
     private PrintHostService? _printHost;
+    private bool _isApplyingNetworkState;
 
-    /// This computer's own side of the enrolment, so the code shown here can be compared
-    /// with the one waiting for approval in the list above.
     private PrintHostService PrintHost
     {
         get
@@ -141,25 +106,19 @@ public partial class PrintingViewModel
         }
     }
 
-    public bool IsThisHostWaiting => PrintHost.IsWaitingForApproval;
-    public string? ThisHostFingerprint => PrintHost.PendingFingerprint;
     public string? ThisHostFailure => PrintHost.LastFailure;
     public bool HasThisHostProblem => !string.IsNullOrWhiteSpace(ThisHostFailure);
 
     private void OnPrintHostStatusChanged() =>
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            OnPropertyChanged(nameof(IsThisHostWaiting));
-            OnPropertyChanged(nameof(ThisHostFingerprint));
             OnPropertyChanged(nameof(ThisHostFailure));
             OnPropertyChanged(nameof(HasThisHostProblem));
         });
 
-    public ObservableCollection<NetworkPrintNodeItem> NetworkNodes { get; } = [];
-    public ObservableCollection<NetworkRequesterDeviceItem> NetworkRequesterDevices { get; } = [];
+    public ObservableCollection<NetworkDeviceItem> NetworkDevices { get; } = [];
     public ObservableCollection<NetworkRouteEndpointItem> NetworkEndpoints { get; } = [];
     public ObservableCollection<NetworkPrintJobItem> NetworkJobs { get; } = [];
-    public IReadOnlyList<PrintJobKind> NetworkKinds { get; } = Enum.GetValues<PrintJobKind>();
     public IReadOnlyList<PrintRoutingMode> NetworkRoutingModes { get; } = Enum.GetValues<PrintRoutingMode>();
     public IReadOnlyList<PrintStickyMode> NetworkStickyModes { get; } = Enum.GetValues<PrintStickyMode>();
     private List<PrintRoutingPolicyDto> _networkPolicies = [];
@@ -169,31 +128,19 @@ public partial class PrintingViewModel
     [ObservableProperty] private PrintStickyMode _networkStickyMode = PrintStickyMode.Duration;
     [ObservableProperty] private bool _networkPolicyEnabled = true;
     [ObservableProperty] private bool _networkAllowFallback = true;
-    [ObservableProperty] private bool _networkRequireTrusted = true;
-    [ObservableProperty] private bool _networkRequireTrustedRequester;
     [ObservableProperty] private decimal _networkStickyMinutes = 10;
     [ObservableProperty] private decimal _networkMaxCopies = 3;
     [ObservableProperty] private decimal _networkMaxJobsPerMinute = 20;
     [ObservableProperty] private decimal _networkMaxCopiesPerMinute = 30;
     [ObservableProperty] private decimal _networkAssignmentTimeoutSeconds = 20;
     [ObservableProperty] private bool _networkAvailable;
-    [ObservableProperty] private string _networkDevicesTab = "hosts";
+    [ObservableProperty] private bool _autoTrustNewDevices;
 
     public bool IsNetworkReceipt => SelectedNetworkKind == PrintJobKind.Receipt;
     public bool IsNetworkBarcode => SelectedNetworkKind == PrintJobKind.BarcodeLabel;
     public bool IsNetworkZReport => SelectedNetworkKind == PrintJobKind.ZReport;
     public bool IsNetworkDocument => SelectedNetworkKind == PrintJobKind.Document;
-    public bool IsNetworkHostsTab => NetworkDevicesTab == "hosts";
-    public bool IsNetworkRequestersTab => NetworkDevicesTab == "requesters";
-
-    partial void OnNetworkDevicesTabChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsNetworkHostsTab));
-        OnPropertyChanged(nameof(IsNetworkRequestersTab));
-    }
-
-    [RelayCommand]
-    private void SelectNetworkDevicesTab(string value) => NetworkDevicesTab = value;
+    public bool IsNetworkProforma => SelectedNetworkKind == PrintJobKind.CartProforma;
 
     partial void OnSelectedNetworkKindChanged(PrintJobKind value)
     {
@@ -201,7 +148,32 @@ public partial class PrintingViewModel
         OnPropertyChanged(nameof(IsNetworkBarcode));
         OnPropertyChanged(nameof(IsNetworkZReport));
         OnPropertyChanged(nameof(IsNetworkDocument));
+        OnPropertyChanged(nameof(IsNetworkProforma));
         ApplyNetworkPolicy();
+    }
+
+    /// The switch applies straight away: it is a one-time installer decision, not part of
+    /// the per-device editing flow.
+    partial void OnAutoTrustNewDevicesChanged(bool value)
+    {
+        if (_isApplyingNetworkState || !CanManagePrintNodes || _branch.CurrentBranchId is not long branchId) return;
+        _ = SetAutoTrustAsync(branchId, value);
+    }
+
+    private async Task SetAutoTrustAsync(long branchId, bool value)
+    {
+        try
+        {
+            await _printingApi.SetAutoTrustAsync(new SetPrintAutoTrustRequest(branchId, value));
+            _toast.Success(L["success"]);
+        }
+        catch (Exception exception)
+        {
+            _isApplyingNetworkState = true;
+            AutoTrustNewDevices = !value;
+            _isApplyingNetworkState = false;
+            _toast.Error(ApiErrors.Describe(exception));
+        }
     }
 
     [RelayCommand]
@@ -218,13 +190,18 @@ public partial class PrintingViewModel
         {
             if (_auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view"))
             {
-                var nodes = await _printingApi.GetNodesAsync(branchId);
-                var requesterDevices = await _printingApi.GetRequesterDevicesAsync(branchId);
+                var devices = await _printingApi.GetDevicesAsync(branchId);
                 _networkPolicies = await _printingApi.GetRoutesAsync(branchId);
-                NetworkNodes.Clear();
-                foreach (var node in nodes) NetworkNodes.Add(new NetworkPrintNodeItem(node));
-                NetworkRequesterDevices.Clear();
-                foreach (var device in requesterDevices) NetworkRequesterDevices.Add(new NetworkRequesterDeviceItem(device));
+                _isApplyingNetworkState = true;
+                AutoTrustNewDevices = devices.AutoTrustNewDevices;
+                _isApplyingNetworkState = false;
+                NetworkDevices.Clear();
+                foreach (var device in devices.Devices)
+                {
+                    var item = new NetworkDeviceItem(device);
+                    item.PropertyChanged += (_, _) => NotifyRouteHealthChanged();
+                    NetworkDevices.Add(item);
+                }
                 ApplyNetworkPolicy();
             }
             NetworkAvailable = true;
@@ -244,8 +221,6 @@ public partial class PrintingViewModel
         NetworkRoutingMode = policy.RoutingMode;
         NetworkStickyMode = policy.StickyMode;
         NetworkAllowFallback = policy.AllowFallback;
-        NetworkRequireTrusted = policy.RequireTrustedNode;
-        NetworkRequireTrustedRequester = policy.RequireTrustedRequesterDevice;
         NetworkStickyMinutes = Math.Max(0, policy.StickyDurationSeconds / 60m);
         NetworkMaxCopies = policy.MaxCopies;
         NetworkMaxJobsPerMinute = policy.MaxJobsPerMinute;
@@ -254,88 +229,61 @@ public partial class PrintingViewModel
         var capability = CapabilityFor(SelectedNetworkKind);
         NetworkEndpoints.Clear();
         var configured = policy.Targets.ToDictionary(x => x.EndpointId);
-        foreach (var node in NetworkNodes)
-        foreach (var endpoint in node.Endpoints.Where(x => (x.Capabilities & capability) == capability))
+        foreach (var device in NetworkDevices.Where(x => x.NodeId is not null))
+        foreach (var endpoint in device.Endpoints.Where(x => (x.Capabilities & capability) == capability))
         {
             configured.TryGetValue(endpoint.Id, out var target);
-            var item = new NetworkRouteEndpointItem(endpoint, node.Name)
+            var item = new NetworkRouteEndpointItem(endpoint, device.Name)
             {
                 IsSelected = target is not null,
                 IsEnabled = target?.IsEnabled ?? true,
                 Priority = target?.Priority ?? 1000
             };
-            item.PropertyChanged += (_, _) => OnPropertyChanged(nameof(HasNoRouteTarget));
+            item.PropertyChanged += (_, _) => NotifyRouteHealthChanged();
             NetworkEndpoints.Add(item);
         }
         SortNetworkEndpoints();
-        OnPropertyChanged(nameof(HasNoRouteTarget));
+        NotifyRouteHealthChanged();
     }
 
-    /// Without a target the jobs of this type queue up with nothing to print them, which
-    /// used to look exactly like a broken printer.
-    public bool HasNoRouteTarget => !NetworkEndpoints.Any(x => x is { IsSelected: true, IsEnabled: true });
+    private void NotifyRouteHealthChanged()
+    {
+        OnPropertyChanged(nameof(IsAutomaticRouting));
+        OnPropertyChanged(nameof(HasNoRouteAndNoFallback));
+        OnPropertyChanged(nameof(HasNoOnlineHostForKind));
+    }
+
+    partial void OnNetworkAllowFallbackChanged(bool value) => NotifyRouteHealthChanged();
+
+    private bool HasSelectedRouteTarget => NetworkEndpoints.Any(x => x is { IsSelected: true, IsEnabled: true });
+
+    /// With fallback on, an empty list is a normal setup: the system simply picks any
+    /// online matching printer, so moving the printer to another computer needs no edits.
+    public bool IsAutomaticRouting => !HasSelectedRouteTarget && NetworkAllowFallback;
+
+    public bool HasNoRouteAndNoFallback => !HasSelectedRouteTarget && !NetworkAllowFallback;
+
+    /// The one situation that really stops printing: nothing trusted is online with a
+    /// matching printer right now.
+    public bool HasNoOnlineHostForKind
+    {
+        get
+        {
+            var capability = CapabilityFor(SelectedNetworkKind);
+            return !NetworkDevices.Any(device => device.IsTrusted && device.IsOnlineHost
+                && device.Endpoints.Any(x => x.IsEnabled && (x.Capabilities & capability) == capability));
+        }
+    }
 
     [RelayCommand]
-    private async Task SaveNetworkHostsAsync()
+    private async Task SaveNetworkDevicesAsync()
     {
-        if (!CanManagePrintNodes) return;
+        if (!CanManagePrintNodes || _branch.CurrentBranchId is not long branchId) return;
         try
         {
-            foreach (var node in NetworkNodes.Where(x => x.HasChanges))
+            foreach (var device in NetworkDevices.Where(x => x.HasChanges))
             {
-                await _printingApi.SetNodeAsync(node.Id, new SetPrintNodeStateRequest(node.IsEnabled));
-                node.AcceptChanges();
-            }
-            await LoadNetworkPrintingAsync();
-            _toast.Success(L["success"]);
-        }
-        catch (Exception exception)
-        {
-            _toast.Error(ApiErrors.Describe(exception));
-        }
-    }
-
-    [RelayCommand]
-    private async Task ApproveNetworkNodeAsync(NetworkPrintNodeItem? item)
-    {
-        if (item is null || !CanManagePrintNodes) return;
-        try
-        {
-            await _printingApi.ApproveNodeAsync(item.Id);
-            await LoadNetworkPrintingAsync();
-            _toast.Success(L["success"]);
-        }
-        catch (Exception exception)
-        {
-            _toast.Error(ApiErrors.Describe(exception));
-        }
-    }
-
-    [RelayCommand]
-    private async Task RevokeNetworkNodeAsync(NetworkPrintNodeItem? item)
-    {
-        if (item is null || !CanManagePrintNodes) return;
-        try
-        {
-            await _printingApi.RevokeNodeAsync(item.Id);
-            await LoadNetworkPrintingAsync();
-            _toast.Success(L["success"]);
-        }
-        catch (Exception exception)
-        {
-            _toast.Error(ApiErrors.Describe(exception));
-        }
-    }
-
-    [RelayCommand]
-    private async Task SaveNetworkRequestersAsync()
-    {
-        if (!CanManagePrintNodes) return;
-        try
-        {
-            foreach (var device in NetworkRequesterDevices.Where(x => x.HasChanges))
-            {
-                await _printingApi.SetRequesterDeviceAsync(device.Id, new SetPrintRequesterDeviceTrustRequest(device.IsTrusted));
+                await _printingApi.SetDeviceTrustAsync(new SetPrintDeviceTrustRequest(branchId, device.DeviceId, device.IsTrusted));
                 device.AcceptChanges();
             }
             await LoadNetworkPrintingAsync();
@@ -404,8 +352,6 @@ public partial class PrintingViewModel
                     (int)Math.Clamp(NetworkMaxJobsPerMinute, 1, 1000),
                     (int)Math.Clamp(NetworkMaxCopiesPerMinute, 1, 5000),
                     (int)Math.Clamp(NetworkAssignmentTimeoutSeconds, 5, 300),
-                    NetworkRequireTrusted,
-                    NetworkRequireTrustedRequester,
                     targets));
             var index = _networkPolicies.FindIndex(x => x.Kind == updated.Kind);
             if (index >= 0) _networkPolicies[index] = updated;
@@ -425,6 +371,7 @@ public partial class PrintingViewModel
         PrintJobKind.BarcodeLabel => PrintCapability.BarcodeLabel,
         PrintJobKind.ZReport => PrintCapability.ZReport,
         PrintJobKind.Document => PrintCapability.Document,
+        PrintJobKind.CartProforma => PrintCapability.CartProforma,
         _ => PrintCapability.None
     };
 

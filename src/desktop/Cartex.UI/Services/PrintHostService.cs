@@ -38,18 +38,11 @@ public sealed class PrintHostService
     /// The host used to retry a rejected registration forever without saying anything, so
     /// a till looked healthy while nothing could ever print. The reason is surfaced once.
     public string? LastFailure { get; private set; }
-
-    /// Set while this computer waits for an administrator to approve its enrolment. The
-    /// code is shown on both sides so the approval can be matched to the right machine.
-    public string? PendingFingerprint { get; private set; }
-    public bool IsWaitingForApproval => PendingFingerprint is not null;
     public event Action? StatusChanged;
 
     private void ReportHostFailure(Exception exception)
     {
-        var reason = exception is Refit.ApiException api
-            ? $"{(int)api.StatusCode} {api.ReasonPhrase}"
-            : exception.Message;
+        var reason = ApiErrors.Describe(exception);
         LastFailure = reason;
         if (_reportedFailure == reason) return;
         _reportedFailure = reason;
@@ -180,19 +173,8 @@ public sealed class PrintHostService
                 _credentialStore.Save(result.HostToken);
             }
 
-            if (result.Enrollment == PrintNodeEnrollment.PendingApproval)
-            {
-                // The token is stored but powerless until approved, so keep retrying
-                // without claiming the node is registered.
-                SetPending(result.Fingerprint);
-                return false;
-            }
-
             _registeredBranchId = branchId;
-            var wasWaiting = PendingFingerprint is not null;
-            PendingFingerprint = null;
             ClearHostFailure();
-            if (wasWaiting) StatusChanged?.Invoke();
             return true;
         }
 
@@ -213,16 +195,6 @@ public sealed class PrintHostService
         return true;
     }
 
-    private void SetPending(string? fingerprint)
-    {
-        _registeredBranchId = null;
-        var changed = PendingFingerprint != fingerprint || LastFailure is not null;
-        PendingFingerprint = fingerprint;
-        LastFailure = null;
-        _reportedFailure = null;
-        if (changed) StatusChanged?.Invoke();
-    }
-
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
     {
         var settings = _printer.GetSettings();
@@ -232,6 +204,9 @@ public sealed class PrintHostService
         Add(endpoints,
             settings.ReceiptMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter,
             PrintCapability.Receipt);
+        Add(endpoints,
+            settings.ProformaPaperFormat is "A4" or "A5" ? settings.DocumentPrinter : settings.ReceiptPrinter,
+            PrintCapability.CartProforma);
         Add(endpoints,
             string.IsNullOrWhiteSpace(settings.ZReportPrinter)
                 ? settings.ZReportMode is "a4" or "a5" ? settings.DocumentPrinter : settings.ReceiptPrinter
@@ -385,6 +360,7 @@ public sealed class PrintHostService
             PrintJobKind.BarcodeLabel => Task.FromResult(PrepareBarcode(job)),
             PrintJobKind.ZReport => PrepareZReportAsync(job),
             PrintJobKind.Document => PrepareDocumentAsync(job, cancellationToken),
+            PrintJobKind.CartProforma => PrepareCartProformaAsync(job, cancellationToken),
             _ => throw new InvalidOperationException("Unsupported print type.")
         };
     }
@@ -513,9 +489,6 @@ public sealed class PrintHostService
 
     private async Task<Action> PrepareDocumentAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
-        if (Text(job.Payload, "cartCode") is { Length: > 0 } cartCode)
-            return await PrepareCartProformaAsync(job, cartCode, cancellationToken);
-
         var receiptToken = Text(job.Payload, "receiptToken");
         if (string.IsNullOrWhiteSpace(receiptToken))
             throw new InvalidOperationException("Unsupported document source.");
@@ -528,11 +501,9 @@ public sealed class PrintHostService
         return () => _printer.PrintDocumentImages(pages, job.PrinterSystemName, job.Copies, pdfPath);
     }
 
-    private async Task<Action> PrepareCartProformaAsync(
-        AssignedPrintJobDto job,
-        string cartCode,
-        CancellationToken cancellationToken)
+    private async Task<Action> PrepareCartProformaAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
+        var cartCode = Text(job.Payload, "cartCode") ?? job.SourceId;
         var cart = await _orderingApi.GetByCodeAsync(cartCode);
         var document = new PreviewDocument(
             DateTime.Now,
@@ -551,11 +522,35 @@ public sealed class PrintHostService
 
         BusinessDto? business = null;
         try { business = await _businessApi.GetAsync(); } catch { }
-        var options = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
+        var options = ProformaOptions(job.Payload, _printer.GetSettings());
         var path = await GetPdfOutputPathAsync(printer, $"Oldindan_{job.Id}");
-        var bytes = _printer.FormatPreview(document, options, business);
-        await Task.CompletedTask;
+        if (options.PaperFormat is "A4" or "A5")
+        {
+            var paper = options.PaperFormat == "A5" ? "a5" : "a4";
+            var pages = ProformaDocumentRenderer.Render(
+                document, cartCode, business, options, paper, _printer.GetPrinterCapabilities(printer).SupportsColor);
+            return () => WindowsImagePrinter.Print(printer, pages, paper, paper, "portrait", 1, job.Copies, path);
+        }
+        var bytes = _printer.FormatProforma(document, cartCode, options, business);
         return () => _printer.PrintRawBytes(printer, bytes, path);
+    }
+
+    private static ProformaPrintOptions ProformaOptions(JsonElement payload, PrinterSettings fallback)
+    {
+        if (!payload.TryGetProperty("proformaSettings", out var settings) || settings.ValueKind != JsonValueKind.Object)
+            return ProformaPrintOptions.Resolve(fallback);
+        return new ProformaPrintOptions(
+            Text(settings, "headerText"),
+            Text(settings, "footerText"),
+            (int)Math.Clamp(Number(settings, "paperWidth") ?? 32, 24, 120),
+            Text(settings, "paperFormat") ?? "Thermal",
+            Boolean(settings, "showBusinessName") ?? true,
+            Boolean(settings, "showAddress") ?? true,
+            Boolean(settings, "showPhone") ?? true,
+            Boolean(settings, "showSeller") ?? true,
+            Boolean(settings, "showCustomer") ?? true,
+            Boolean(settings, "showNote") ?? true,
+            Boolean(settings, "showCartCode") ?? true);
     }
 
     private async Task<IReadOnlyList<byte[]>> LoadReceiptDocumentAsync(

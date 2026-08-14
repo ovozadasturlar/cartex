@@ -67,6 +67,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private string _sectionKey = "receipt";
     public bool IsReceiptSection => SectionKey == "receipt";
+    public bool IsCartSection => SectionKey == "cart";
     public bool IsBarcodeSection => SectionKey == "barcode";
     public bool IsZSection => SectionKey == "zreport";
     public bool IsNetworkSection => SectionKey == "network";
@@ -74,6 +75,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     partial void OnSectionKeyChanged(string value)
     {
         OnPropertyChanged(nameof(IsReceiptSection));
+        OnPropertyChanged(nameof(IsCartSection));
         OnPropertyChanged(nameof(IsBarcodeSection));
         OnPropertyChanged(nameof(IsZSection));
         OnPropertyChanged(nameof(IsNetworkSection));
@@ -101,6 +103,14 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void SelectPagesPerSheet(string value) =>
         DocumentPagesPerSheet = int.TryParse(value, out var pages) && pages is 2 or 4 ? pages : 1;
+
+    [RelayCommand]
+    private void SelectCartMode(string mode) => CartMode = mode switch
+    {
+        "a4" or "a5" => mode,
+        "document" => IsCartDocument ? CartMode : "a4",
+        _ => "thermal"
+    };
 
     [RelayCommand]
     private void SelectZReportMode(string mode) =>
@@ -151,6 +161,17 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
     [ObservableProperty] private string _receiptPaperWidth = "default";
+    [ObservableProperty] private string _cartMode = "thermal";
+    [ObservableProperty] private int _cartPaperWidth = 32;
+    [ObservableProperty] private string _cartHeaderText = string.Empty;
+    [ObservableProperty] private string _cartFooterText = string.Empty;
+    [ObservableProperty] private bool _cartShowBusinessName = true;
+    [ObservableProperty] private bool _cartShowAddress = true;
+    [ObservableProperty] private bool _cartShowPhone = true;
+    [ObservableProperty] private bool _cartShowSeller = true;
+    [ObservableProperty] private bool _cartShowCustomer = true;
+    [ObservableProperty] private bool _cartShowNote = true;
+    [ObservableProperty] private bool _cartShowCartCode = true;
     [ObservableProperty] private string _documentPaperSize = "a4";
     [ObservableProperty] private string _documentOrientation = "portrait";
     [ObservableProperty] private int _documentPagesPerSheet = 1;
@@ -192,6 +213,25 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public bool IsThermal => ReceiptMode == "thermal";
     public bool IsDocument => !IsThermal;
     public bool IsPdfReceiptOutput => IsDocument && IsPdfPrinter(DocumentPrinter);
+    public bool IsCartThermal => CartMode == "thermal";
+    public bool IsCartDocument => !IsCartThermal;
+    public bool IsCartPaperA4 => CartMode == "a4";
+    public bool IsCartPaperA5 => CartMode == "a5";
+    public double CartPreviewPaperWidth => IsCartThermal ? 250 : IsCartPaperA5 ? 270 : 310;
+    public double CartPreviewPaperHeight => IsCartThermal ? 470 : IsCartPaperA5 ? 380 : 438;
+    public string CartPreviewPrinterName =>
+        string.IsNullOrWhiteSpace(IsCartThermal ? ReceiptPrinter : DocumentPrinter)
+            ? L["printer_not_set"]
+            : (IsCartThermal ? ReceiptPrinter : DocumentPrinter)!;
+    public bool IsCartPreviewColor => IsCartDocument && DocumentPrinterSupportsColor;
+    public bool IsCartPreviewMonochrome => !IsCartPreviewColor;
+    public IBrush CartPreviewInkBrush => IsCartPreviewColor ? ColorInkBrush : MonochromeInkBrush;
+    public IBrush CartPreviewMutedBrush => IsCartPreviewColor ? ColorMutedBrush : MonochromeMutedBrush;
+    public IBrush CartPreviewLineBrush => IsCartPreviewColor ? ColorLineBrush : MonochromeLineBrush;
+    public IBrush CartPreviewFaintBrush => IsCartPreviewColor ? ColorFaintBrush : MonochromeFaintBrush;
+    public IBrush CartPreviewAccentBrush => IsCartPreviewColor ? ColorAccentBrush : MonochromeInkBrush;
+    public string CartPreviewFooterText =>
+        string.IsNullOrWhiteSpace(CartFooterText) ? L["receipt_footer_example"] : CartFooterText;
     public string PrintingSyncText => PrintingSettingsOffline
         ? PrintingLastSyncedAt is { } cached
             ? $"Offline · oxirgi sinxronizatsiya {cached.ToLocalTime():dd.MM HH:mm}"
@@ -376,12 +416,34 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(IsPdfReceiptOutput));
     }
 
+    partial void OnCartModeChanged(string value) => NotifyCartPreviewChanged();
+    partial void OnCartFooterTextChanged(string value) => OnPropertyChanged(nameof(CartPreviewFooterText));
+
+    private void NotifyCartPreviewChanged()
+    {
+        OnPropertyChanged(nameof(IsCartThermal));
+        OnPropertyChanged(nameof(IsCartDocument));
+        OnPropertyChanged(nameof(IsCartPaperA4));
+        OnPropertyChanged(nameof(IsCartPaperA5));
+        OnPropertyChanged(nameof(CartPreviewPaperWidth));
+        OnPropertyChanged(nameof(CartPreviewPaperHeight));
+        OnPropertyChanged(nameof(CartPreviewPrinterName));
+        OnPropertyChanged(nameof(IsCartPreviewColor));
+        OnPropertyChanged(nameof(IsCartPreviewMonochrome));
+        OnPropertyChanged(nameof(CartPreviewInkBrush));
+        OnPropertyChanged(nameof(CartPreviewMutedBrush));
+        OnPropertyChanged(nameof(CartPreviewLineBrush));
+        OnPropertyChanged(nameof(CartPreviewFaintBrush));
+        OnPropertyChanged(nameof(CartPreviewAccentBrush));
+    }
+
     partial void OnReceiptPrinterChanged(string? value)
     {
         if (IsThermal)
             OnPropertyChanged(nameof(PreviewPrinterName));
         if (IsZReportThermal)
             RefreshZReportPrinterPreview();
+        OnPropertyChanged(nameof(CartPreviewPrinterName));
     }
 
     partial void OnZReportPrinterChanged(string? value) => RefreshZReportPrinterPreview();
@@ -394,6 +456,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         if (IsZReportDocument && string.IsNullOrWhiteSpace(ZReportPrinter))
             RefreshZReportPrinterPreview();
         OnPropertyChanged(nameof(IsPdfReceiptOutput));
+        NotifyCartPreviewChanged();
     }
 
     partial void OnPrintingSettingsOfflineChanged(bool value) => OnPropertyChanged(nameof(PrintingSyncText));
@@ -766,6 +829,18 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelAllowPriceOverride = s.LabelAllowPriceOverride;
             LabelShowSku = s.LabelShowSku;
             SelectedLabelPreset = LabelPresets.FirstOrDefault(p => p == $"{label.WidthMm:0}×{label.HeightMm:0}") ?? "custom";
+            ApplyProformaSettings(new ProformaSettingsDto(
+                s.ProformaHeaderText,
+                s.ProformaFooterText,
+                s.ProformaPaperWidth,
+                s.ProformaPaperFormat ?? "Thermal",
+                s.ProformaShowBusinessName,
+                s.ProformaShowAddress,
+                s.ProformaShowPhone,
+                s.ProformaShowSeller,
+                s.ProformaShowCustomer,
+                s.ProformaShowNote,
+                s.ProformaShowCartCode));
         }
         finally
         {
@@ -821,6 +896,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         {
             var cfg = await _settingsApi.GetReceiptAsync();
             ApplyReceiptSettings(cfg);
+        }
+        catch { }
+
+        try
+        {
+            ApplyProformaSettings(await _settingsApi.GetProformaAsync());
+            SaveLocalPrinterSettings();
         }
         catch { }
 
@@ -881,6 +963,27 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 LabelCurrencyDisplay,
                 LabelCurrencyCase,
                 LabelPriceCurrencyMode));
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+        if (CanEditReceiptContent)
+        try
+        {
+            await _settingsApi.UpdateProformaAsync(new UpdateProformaSettingsRequest(
+                string.IsNullOrWhiteSpace(CartHeaderText) ? null : CartHeaderText.Trim(),
+                string.IsNullOrWhiteSpace(CartFooterText) ? null : CartFooterText.Trim(),
+                CartPaperWidth,
+                IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4",
+                CartShowBusinessName,
+                CartShowAddress,
+                CartShowPhone,
+                CartShowSeller,
+                CartShowCustomer,
+                CartShowNote,
+                CartShowCartCode));
         }
         catch (Exception ex)
         {
@@ -1255,9 +1358,64 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ZReportPaperWidth = int.TryParse(ZReportPaperWidth, out var zWidth) ? zWidth : 0,
             ZReportDocumentPaperSize = ZReportDocumentPaperSize,
             ZReportDocumentOrientation = ZReportDocumentOrientation,
-            ZReportDocumentPagesPerSheet = ZReportDocumentPagesPerSheet
+            ZReportDocumentPagesPerSheet = ZReportDocumentPagesPerSheet,
+            ProformaPaperFormat = IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4",
+            ProformaPaperWidth = CartPaperWidth,
+            ProformaHeaderText = string.IsNullOrWhiteSpace(CartHeaderText) ? null : CartHeaderText.Trim(),
+            ProformaFooterText = string.IsNullOrWhiteSpace(CartFooterText) ? null : CartFooterText.Trim(),
+            ProformaShowBusinessName = CartShowBusinessName,
+            ProformaShowAddress = CartShowAddress,
+            ProformaShowPhone = CartShowPhone,
+            ProformaShowSeller = CartShowSeller,
+            ProformaShowCustomer = CartShowCustomer,
+            ProformaShowNote = CartShowNote,
+            ProformaShowCartCode = CartShowCartCode
         });
     }
+
+    private void ApplyProformaSettings(ProformaSettingsDto cfg)
+    {
+        CartMode = cfg.PaperFormat == "A4" ? "a4" : cfg.PaperFormat == "A5" ? "a5" : "thermal";
+        CartPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
+        CartHeaderText = cfg.HeaderText ?? string.Empty;
+        CartFooterText = cfg.FooterText ?? string.Empty;
+        CartShowBusinessName = cfg.ShowBusinessName;
+        CartShowAddress = cfg.ShowAddress;
+        CartShowPhone = cfg.ShowPhone;
+        CartShowSeller = cfg.ShowSeller;
+        CartShowCustomer = cfg.ShowCustomer;
+        CartShowNote = cfg.ShowNote;
+        CartShowCartCode = cfg.ShowCartCode;
+    }
+
+    [RelayCommand]
+    private async Task TestProformaPrintAsync()
+    {
+        try
+        {
+            SaveLocalPrinterSettings();
+            Cartex.Shared.Models.Business.BusinessDto? business = null;
+            try { business = await _businessApi.GetAsync(); } catch { }
+            _printer.PrintProforma(CreatePreviewProforma(), "S-1024", business);
+            _toast.Info(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private PreviewDocument CreatePreviewProforma() => new(
+        DateTime.Now,
+        PreviewCashierName,
+        "Dilshod",
+        [
+            new PreviewLine(L["receipt_preview_item_one"], 2, L["unit"], 12_500, 25_000),
+            new PreviewLine(L["receipt_preview_item_two"], 1, L["unit"], 8_000, 8_000),
+            new PreviewLine(L["receipt_preview_item_three"], 1.5m, L["unit"], 14_000, 21_000),
+            new PreviewLine(L["receipt_preview_item_four"], 2, L["unit"], 9_500, 19_000),
+            new PreviewLine(L["receipt_preview_item_five"], 1, L["unit"], 11_000, 11_000)
+        ],
+        0,
+        84_000,
+        null);
 
     private void ApplyReceiptSettings(ReceiptSettingsDto cfg)
     {

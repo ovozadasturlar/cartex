@@ -657,14 +657,39 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private async Task PrintPreviewAsync()
     {
         if (CartItems.Count == 0) { _toast.Error(L["no_items"]); return; }
+        var document = BuildProformaDocument();
         try
         {
             var code = await EnsureCartCodeAsync();
             if (code is null) { _toast.Error(L["error"]); return; }
-            await _printDispatch.PrintCartProformaAsync(code);
+            await _printDispatch.PrintCartProformaAsync(code, document);
+        }
+        catch (Exception ex) when (PrintDispatchService.IsServerUnavailable(ex))
+        {
+            // The cart cannot even be saved without the server, so the pre-check is
+            // printed straight from the local basket instead of failing silently.
+            try
+            {
+                _printer.PrintProforma(document);
+                _toast.Warning(string.Format(L["print_offline_local"], L["print_kind_preview"]));
+            }
+            catch (Exception localError)
+            {
+                _toast.Error(ApiErrors.Describe(localError));
+            }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
+
+    private PreviewDocument BuildProformaDocument() => new(
+        DateTime.Now,
+        _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username,
+        SelectedCustomer?.FullName,
+        [.. CartItems.Select(x => new PreviewLine(
+            x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? string.Empty, x.UnitPrice, x.LineTotal))],
+        DiscountAmount + AutoDiscountAmount,
+        TotalAmount,
+        string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote);
 
     private async Task<bool> TryLoadCartAsync(string code)
     {
@@ -1804,7 +1829,15 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 [.. held.Items.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity))],
                 held.Customer?.Id, held.Label);
             if (code is null) { _toast.Error(L["error"]); return; }
-            await _printDispatch.PrintCartProformaAsync(code);
+            await _printDispatch.PrintCartProformaAsync(code, new PreviewDocument(
+                DateTime.Now,
+                _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username,
+                held.Customer?.FullName,
+                [.. held.Items.Select(x => new PreviewLine(
+                    x.ProductName, x.Quantity, x.ProductDetail?.UnitName ?? string.Empty, x.UnitPrice, x.LineTotal))],
+                0,
+                held.Total,
+                held.Label));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

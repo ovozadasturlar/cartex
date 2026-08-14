@@ -72,6 +72,7 @@ internal static class PrintNotificationText
         PrintJobKind.Receipt => LocalizationManager.Instance["print_kind_receipt"],
         PrintJobKind.BarcodeLabel => LocalizationManager.Instance["print_kind_barcode"],
         PrintJobKind.ZReport => LocalizationManager.Instance["print_kind_zreport"],
+        PrintJobKind.CartProforma => LocalizationManager.Instance["print_kind_preview"],
         _ => LocalizationManager.Instance["print_kind_document"]
     };
 }

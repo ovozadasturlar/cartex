@@ -73,10 +73,30 @@ public sealed class SettingsService
         set { _data.PosCartWidth = value; Save(); }
     }
 
+    private string? _machineDeviceId;
+
+    /// The identity must survive reinstalls and profile changes, so it is derived from the
+    /// machine instead of being stored in a file. MachineGuid alone is not enough because
+    /// cloned Windows images share it - the machine name is mixed in.
     public string DeviceId
     {
         get
         {
+            if (_machineDeviceId is not null) return _machineDeviceId;
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+                    if (key?.GetValue("MachineGuid") is string machineGuid && machineGuid.Length > 0)
+                    {
+                        var bytes = System.Security.Cryptography.SHA256.HashData(
+                            System.Text.Encoding.UTF8.GetBytes($"{machineGuid}|{Environment.MachineName}"));
+                        return _machineDeviceId = Convert.ToHexString(bytes)[..32].ToLowerInvariant();
+                    }
+                }
+                catch { }
+            }
             if (string.IsNullOrEmpty(_data.DeviceId))
             {
                 _data.DeviceId = Guid.NewGuid().ToString("N");
