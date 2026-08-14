@@ -1752,6 +1752,11 @@
                         </Grid>
                         <TextBlock Classes="fieldlabel" Text="Printerlar tartibi"
                                    ToolTip.Tip="Tanlangan printerni tutqichidan ushlab kerakli joyga suring" />
+                        <Border IsVisible="{Binding HasNoRouteTarget}" CornerRadius="8" Padding="10"
+                                Background="{DynamicResource DangerBg}">
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5"
+                                       Text="Bu print turi uchun birorta printer belgilanmagan — bunday hujjatlar chop etilmay navbatda qoladi. Quyidagi ro‘yxatdan kerakli printerni belgilang va saqlang." />
+                        </Border>
                         <ItemsControl ItemsSource="{Binding NetworkEndpoints}" MaxHeight="520">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:NetworkRouteEndpointItem">

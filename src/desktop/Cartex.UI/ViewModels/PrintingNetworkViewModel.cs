@@ -258,15 +258,22 @@ public partial class PrintingViewModel
         foreach (var endpoint in node.Endpoints.Where(x => (x.Capabilities & capability) == capability))
         {
             configured.TryGetValue(endpoint.Id, out var target);
-            NetworkEndpoints.Add(new NetworkRouteEndpointItem(endpoint, node.Name)
+            var item = new NetworkRouteEndpointItem(endpoint, node.Name)
             {
                 IsSelected = target is not null,
                 IsEnabled = target?.IsEnabled ?? true,
                 Priority = target?.Priority ?? 1000
-            });
+            };
+            item.PropertyChanged += (_, _) => OnPropertyChanged(nameof(HasNoRouteTarget));
+            NetworkEndpoints.Add(item);
         }
         SortNetworkEndpoints();
+        OnPropertyChanged(nameof(HasNoRouteTarget));
     }
+
+    /// Without a target the jobs of this type queue up with nothing to print them, which
+    /// used to look exactly like a broken printer.
+    public bool HasNoRouteTarget => !NetworkEndpoints.Any(x => x is { IsSelected: true, IsEnabled: true });
 
     [RelayCommand]
     private async Task SaveNetworkHostsAsync()
