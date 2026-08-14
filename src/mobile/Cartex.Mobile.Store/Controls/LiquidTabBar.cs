@@ -15,17 +15,17 @@ public class LiquidTabBar : Grid
     private const float LipRun = 8f;
 
     private static int _travelFrom = -1;
-    private static double _settledParentHeight = -1;
+    private static readonly List<WeakReference<LiquidTabBar>> Registry = [];
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
 
-    private static readonly (string Route, string Glyph, string Key)[] Tabs =
+    private static readonly (string Glyph, string Key)[] Tabs =
     [
-        ("home", "\U000F02DC", "tab_home"),
-        ("trade", "\U000F02DA", "tab_trade"),
-        ("scan", "\U000F0433", "scan"),
-        ("customers", "\U000F0849", "tab_customer"),
-        ("profile", "\U000F0004", "tab_profile"),
+        ("\U000F02DC", "tab_home"),
+        ("\U000F02DA", "tab_trade"),
+        ("\U000F0433", "scan"),
+        ("\U000F0849", "tab_customer"),
+        ("\U000F0004", "tab_profile"),
     ];
 
     private readonly BarDrawable _drawable = new();
@@ -35,14 +35,14 @@ public class LiquidTabBar : Grid
     private readonly Label _dropletIcon;
     private readonly VerticalStackLayout[] _items = new VerticalStackLayout[Tabs.Length];
     private double _edgePad;
-    private bool _busy;
+    private int _shownIndex;
+    private bool _animating;
 
-    public int Index { get; set; }
+    public int Index { get; set; } = -1;
 
     public LiquidTabBar()
     {
         HeightRequest = BarTop + BarHeight;
-        Margin = new Thickness(14, 0, 14, 12);
         VerticalOptions = LayoutOptions.End;
         Opacity = 0;
 
@@ -124,6 +124,8 @@ public class LiquidTabBar : Grid
         ApplyTheme();
         Children.Add(_droplet);
 
+        Registry.Add(new WeakReference<LiquidTabBar>(this));
+
         if (Application.Current is { } app)
             app.RequestedThemeChanged += (_, _) => ApplyTheme();
         Loc.Instance.PropertyChanged += (_, _) =>
@@ -133,13 +135,73 @@ public class LiquidTabBar : Grid
                     lb.Text = Loc.Instance[Tabs[i].Key];
         };
 
-        Loaded += (_, _) => OnAppear();
+        Loaded += (_, _) => Activate();
         Unloaded += (_, _) =>
         {
             this.AbortAnimation("liquid");
-            _busy = false;
-            Opacity = 0;
+            _animating = false;
         };
+    }
+
+    private static int CurrentSection()
+    {
+        var item = Shell.Current?.CurrentItem;
+        if (item is null || item.Items.Count == 0) return 0;
+        return Math.Max(0, item.Items.IndexOf(item.CurrentItem));
+    }
+
+    private int ResolvedIndex => Index >= 0 ? Index : CurrentSection();
+
+    private static void ActivateVisible()
+    {
+        for (var i = Registry.Count - 1; i >= 0; i--)
+        {
+            if (!Registry[i].TryGetTarget(out var bar))
+            {
+                Registry.RemoveAt(i);
+                continue;
+            }
+            if (bar.Window is not null)
+                bar.Activate();
+        }
+    }
+
+    private void Activate()
+    {
+        if (_animating) return;
+        _ = ActivateAsync();
+    }
+
+    private async Task ActivateAsync()
+    {
+        _animating = true;
+        try
+        {
+            for (var i = 0; i < 40 && Width <= 0; i++)
+                await Task.Delay(25);
+            if (Width <= 0) return;
+
+            _shownIndex = ResolvedIndex;
+            var from = _travelFrom;
+            if (from >= 0 && from != _shownIndex &&
+                Interlocked.CompareExchange(ref _travelFrom, -1, from) == from)
+            {
+                SetDroplet(from);
+                Apply(CenterFor(from, Width), 1, 1);
+                Opacity = 1;
+                await AnimateSwitchAsync(from);
+            }
+            else
+            {
+                SetDroplet(_shownIndex);
+                Apply(CenterFor(_shownIndex, Width), 1, 1);
+                Opacity = 1;
+            }
+        }
+        finally
+        {
+            _animating = false;
+        }
     }
 
     private void ApplyTheme()
@@ -162,61 +224,13 @@ public class LiquidTabBar : Grid
         var min = CornerRadius + HalfWFull + LipRun;
         _edgePad = Math.Max(0, (min - width / (Tabs.Length * 2.0)) / (1 - 1.0 / Tabs.Length));
         _zones.Padding = new Thickness(_edgePad, 0);
-        if (!_busy && !this.AnimationIsRunning("liquid"))
-            Apply(CenterFor(Index, width), 1, 1);
-    }
-
-    private void OnAppear()
-    {
-        if (_busy) return;
-        _busy = true;
-        _ = EnterAsync();
-    }
-
-    private async Task EnterAsync()
-    {
-        try
+        if (!_animating && !this.AnimationIsRunning("liquid"))
         {
-            for (var i = 0; i < 40 && Width <= 0; i++)
-                await Task.Delay(25);
-            if (Width <= 0)
-            {
-                Opacity = 1;
-                return;
-            }
-
-            var from = _travelFrom;
-            _travelFrom = -1;
-            var travelling = from >= 0 && from != Index;
-            SetDroplet(travelling ? from : Index);
-            Apply(CenterFor(travelling ? from : Index, Width), 1, 1);
-
-            double ParentHeight() => (Parent as VisualElement)?.Height ?? -1;
-            if (_settledParentHeight > 0)
-            {
-                for (var i = 0; i < 18 && Math.Abs(ParentHeight() - _settledParentHeight) >= 1; i++)
-                    await Task.Delay(50);
-            }
-            else
-            {
-                var last = double.NaN;
-                for (var i = 0; i < 18; i++)
-                {
-                    await Task.Delay(50);
-                    var h = ParentHeight();
-                    if (!double.IsNaN(last) && Math.Abs(h - last) < 0.5) break;
-                    last = h;
-                }
-            }
-            _settledParentHeight = ParentHeight();
-
-            await this.FadeTo(1, 130, Easing.CubicOut);
-            if (travelling)
-                await AnimateSwitchAsync(from, Width);
-        }
-        finally
-        {
-            _busy = false;
+            _shownIndex = ResolvedIndex;
+            if (_travelFrom >= 0 && _travelFrom != _shownIndex) return;
+            SetDroplet(_shownIndex);
+            Apply(CenterFor(_shownIndex, width), 1, 1);
+            Opacity = 1;
         }
     }
 
@@ -227,20 +241,20 @@ public class LiquidTabBar : Grid
             _items[i].Opacity = i == index ? 0 : 1;
     }
 
-    private async Task AnimateSwitchAsync(int from, double width)
+    private async Task AnimateSwitchAsync(int from)
     {
-        var fromX = CenterFor(from, width);
-        var toX = CenterFor(Index, width);
+        var fromX = CenterFor(from, Width);
+        var toX = CenterFor(_shownIndex, Width);
 
         var sink = new TaskCompletionSource();
         new Animation(v => Apply(fromX, 1 - v, 1 - v), 0, 1)
-            .Commit(this, "liquid", 16, 240, Easing.CubicIn, (_, _) => sink.TrySetResult());
+            .Commit(this, "liquid", 16, 220, Easing.CubicIn, (_, _) => sink.TrySetResult());
         await sink.Task;
 
-        SetDroplet(Index);
+        SetDroplet(_shownIndex);
         _items[from].Opacity = 0;
         _ = _items[from].FadeTo(1, 160);
-        _items[Index].Opacity = 0;
+        _items[_shownIndex].Opacity = 0;
 
         var rise = new TaskCompletionSource();
         new Animation(v => Apply(toX, v, v), 0, 1)
@@ -265,11 +279,22 @@ public class LiquidTabBar : Grid
 
     private async void OnTap(int index)
     {
-        if (index == Index) return;
-        _travelFrom = Index;
         try
         {
-            await Shell.Current.GoToAsync($"//main/{Tabs[index].Route}");
+            var shell = Shell.Current;
+            var tabBar = shell?.CurrentItem;
+            if (shell is null || tabBar is null || tabBar.Items.Count <= index) return;
+            var current = CurrentSection();
+            if (index == current)
+            {
+                if (shell.Navigation.NavigationStack.Count > 1)
+                    await shell.Navigation.PopToRootAsync();
+                return;
+            }
+            _travelFrom = current;
+            tabBar.CurrentItem = tabBar.Items[index];
+            await Task.Delay(40);
+            ActivateVisible();
         }
         catch
         {
@@ -319,16 +344,14 @@ public class LiquidTabBar : Grid
             }
             p.LineTo(w - r, top);
             p.QuadTo(w, top, w, top + r);
-            p.LineTo(w, bottom - r);
-            p.QuadTo(w, bottom, w - r, bottom);
-            p.LineTo(r, bottom);
-            p.QuadTo(0, bottom, 0, bottom - r);
+            p.LineTo(w, bottom);
+            p.LineTo(0, bottom);
             p.LineTo(0, top + r);
             p.QuadTo(0, top, r, top);
             p.Close();
 
             canvas.SaveState();
-            canvas.SetShadow(new SizeF(0, 6), 18, Color.FromRgba(0, 0, 0, Dark ? 0.55f : 0.2f));
+            canvas.SetShadow(new SizeF(0, -4), 16, Color.FromRgba(0, 0, 0, Dark ? 0.5f : 0.16f));
             canvas.SetFillPaint(new LinearGradientPaint
             {
                 StartColor = Dark ? Color.FromArgb("#F2242B27") : Color.FromArgb("#FCFFFFFF"),

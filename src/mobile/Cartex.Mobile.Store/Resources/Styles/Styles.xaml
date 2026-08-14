@@ -49,6 +49,10 @@
     <x:String x:Key="IcMessageText">&#xF0369;</x:String>
     <x:String x:Key="IcEmail">&#xF01F0;</x:String>
 
+    <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
+        <Setter Property="Shell.TabBarIsVisible" Value="False" />
+    </Style>
+
     <Style x:Key="Icon" TargetType="Label">
         <Setter Property="FontFamily" Value="MDI" />
         <Setter Property="FontSize" Value="20" />
