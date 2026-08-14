@@ -6,8 +6,9 @@ public class LiquidTabBar : Grid
 {
     private const float BarTop = 29f;
     private const float BarHeight = 62f;
-    private const float Dip = 30f;
-    private const float NotchRadius = 36f;
+    private const float Dip = 28f;
+    private const float NotchRadius = 33f;
+    private const float CornerRadius = 24f;
     private const double DropletSize = 54;
 
     private static int _travelFrom = -1;
@@ -18,15 +19,17 @@ public class LiquidTabBar : Grid
         ("trade", "\U000F02DA", "tab_trade"),
         ("scan", "\U000F0433", "scan"),
         ("customers", "\U000F0849", "tab_customer"),
-        ("profile", "\U000F0004", "settings"),
+        ("profile", "\U000F0004", "tab_profile"),
     ];
 
     private readonly BarDrawable _drawable = new();
     private readonly GraphicsView _canvas;
+    private readonly Grid _zones;
     private readonly Border _droplet;
     private readonly Label _dropletIcon;
     private readonly VerticalStackLayout[] _items = new VerticalStackLayout[Tabs.Length];
     private double _center = -1;
+    private double _edgePad;
 
     public int Index { get; set; }
 
@@ -39,7 +42,7 @@ public class LiquidTabBar : Grid
         _canvas = new GraphicsView { Drawable = _drawable, InputTransparent = true };
         Children.Add(_canvas);
 
-        var zones = new Grid
+        _zones = new Grid
         {
             Margin = new Thickness(0, BarTop, 0, 0),
             HeightRequest = BarHeight,
@@ -47,7 +50,7 @@ public class LiquidTabBar : Grid
         };
         for (var i = 0; i < Tabs.Length; i++)
         {
-            zones.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            _zones.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             var icon = new Label
             {
                 FontFamily = "MDI",
@@ -76,9 +79,9 @@ public class LiquidTabBar : Grid
             var captured = i;
             tap.Tapped += (_, _) => OnTap(captured);
             zone.GestureRecognizers.Add(tap);
-            zones.Add(zone, captured);
+            _zones.Add(zone, captured);
         }
-        Children.Add(zones);
+        Children.Add(_zones);
 
         _dropletIcon = new Label
         {
@@ -129,6 +132,9 @@ public class LiquidTabBar : Grid
     {
         base.OnSizeAllocated(width, height);
         if (width <= 0) return;
+        var min = CornerRadius + NotchRadius;
+        _edgePad = Math.Max(0, (min - width / (Tabs.Length * 2.0)) / (1 - 1.0 / Tabs.Length));
+        _zones.Padding = new Thickness(_edgePad, 0);
         _dropletIcon.Text = Tabs[Index].Glyph;
         _items[Index].Opacity = 0;
         if (_travelFrom >= 0 && _travelFrom != Index)
@@ -144,7 +150,8 @@ public class LiquidTabBar : Grid
         }
     }
 
-    private static double CenterFor(int index, double width) => width / Tabs.Length * (index + 0.5);
+    private double CenterFor(int index, double width) =>
+        _edgePad + (width - 2 * _edgePad) / Tabs.Length * (index + 0.5);
 
     private void Apply(double cx)
     {
@@ -181,7 +188,7 @@ public class LiquidTabBar : Grid
 
         public void Draw(ICanvas canvas, RectF rect)
         {
-            const float r = 31f;
+            const float r = CornerRadius;
             var top = BarTop;
             var bottom = BarTop + BarHeight;
             var w = rect.Width;

@@ -336,6 +336,7 @@
   "sales_count_fmt": "{0} sales",
   "week_total_fmt": "7 days: {0}",
   "days_short": "Mo,Tu,We,Th,Fr,Sa,Su",
+  "tab_profile": "Profile",
   "sales_empty": "No sales yet",
   "search_product": "Search products...",
   "add_new": "Add new",

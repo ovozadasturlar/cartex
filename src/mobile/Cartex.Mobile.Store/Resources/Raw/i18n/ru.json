@@ -336,6 +336,7 @@
   "sales_count_fmt": "Продаж: {0}",
   "week_total_fmt": "7 дней: {0}",
   "days_short": "Пн,Вт,Ср,Чт,Пт,Сб,Вс",
+  "tab_profile": "Профиль",
   "sales_empty": "Продаж пока нет",
   "search_product": "Поиск товара...",
   "add_new": "Добавить новый",
