@@ -18,7 +18,7 @@ public partial class CartViewModel : ObservableObject
     private readonly MobilePermissions _permissions;
     private readonly MobileOfflineService _offline;
 
-    public ObservableCollection<CartLine> Lines { get; } = [];
+    public RangeObservableCollection<CartLine> Lines { get; } = [];
     public ObservableCollection<CustomerDto> Customers { get; } = [];
     public ObservableCollection<ParticipantRoleSelectionRow> ParticipantRoles { get; } = [];
     public ObservableCollection<PartnerDto> PartnerResults { get; } = [];
@@ -127,11 +127,7 @@ public partial class CartViewModel : ObservableObject
     private void Refresh()
     {
         if (!Lines.SequenceEqual(_cart.Lines))
-        {
-            Lines.Clear();
-            foreach (var line in _cart.Lines)
-                Lines.Add(line);
-        }
+            Lines.ReplaceAll(_cart.Lines);
         IsEmpty = Lines.Count == 0;
         TotalText = $"{_cart.Total:N0} UZS";
         CustomerName = _cart.CustomerName;

@@ -121,7 +121,8 @@ public partial class HomeViewModel(
             values.Add((float)amount);
             days.Add(names.Length == 7 ? names[((int)date.DayOfWeek + 6) % 7] : date.Day.ToString());
         }
-        WeekValues = values;
+        if (!values.SequenceEqual(WeekValues))
+            WeekValues = values;
         WeekDays = days;
         WeekTotal = string.Format(Loc.Instance["week_total_fmt"], Money.Compact(sum));
         HasChart = sum > 0;

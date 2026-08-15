@@ -27,9 +27,9 @@ public partial class TradeViewModel(
             Section = section;
     }
 
-    public ObservableCollection<TradeQueueRow> Carts { get; } = [];
-    public ObservableCollection<TradeSaleRow> Sales { get; } = [];
-    public ObservableCollection<TradeShiftRow> Shifts { get; } = [];
+    public RangeObservableCollection<TradeQueueRow> Carts { get; } = [];
+    public RangeObservableCollection<TradeSaleRow> Sales { get; } = [];
+    public RangeObservableCollection<TradeShiftRow> Shifts { get; } = [];
     public ObservableCollection<QueueStatusChip> QueueStatuses { get; } =
     [
         new("Open", Loc.Instance["queue_open"]) { IsSelected = true },
@@ -300,9 +300,7 @@ public partial class TradeViewModel(
         }
 
         var items = await orderingApi.GetAllAsync(SelectedStatus, warehouse.WarehouseId, "Queue");
-        Carts.Clear();
-        foreach (var cart in items)
-            Carts.Add(new TradeQueueRow(cart));
+        Carts.ReplaceAll(items.Select(cart => new TradeQueueRow(cart)));
         OnPropertyChanged(nameof(IsQueueEmpty));
     }
 
@@ -360,10 +358,10 @@ public partial class TradeViewModel(
         TodayTotal = Money.Compact(totals.TotalAmount);
 
         if (resetPaging)
-            Sales.Clear();
-
-        foreach (var sale in list)
-            Sales.Add(new TradeSaleRow(sale, printDispatcher.CanReprintReceipt, sale.CanResendReceipt));
+            Sales.ReplaceAll(list.Select(sale => new TradeSaleRow(sale, printDispatcher.CanReprintReceipt, sale.CanResendReceipt)));
+        else
+            foreach (var sale in list)
+                Sales.Add(new TradeSaleRow(sale, printDispatcher.CanReprintReceipt, sale.CanResendReceipt));
 
         _hasMoreSales = list.Count >= 30;
         OnPropertyChanged(nameof(IsSalesEmpty));
@@ -372,9 +370,7 @@ public partial class TradeViewModel(
     private async Task LoadZReportsCoreAsync()
     {
         var response = await shiftsApi.GetHistoryAsync(1, 30);
-        Shifts.Clear();
-        foreach (var shift in response.Content?.Where(x => !x.IsOpen) ?? [])
-            Shifts.Add(new TradeShiftRow(shift));
+        Shifts.ReplaceAll((response.Content?.Where(x => !x.IsOpen) ?? []).Select(shift => new TradeShiftRow(shift)));
         OnPropertyChanged(nameof(IsZReportsEmpty));
     }
 

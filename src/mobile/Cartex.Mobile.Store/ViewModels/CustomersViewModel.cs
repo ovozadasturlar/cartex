@@ -15,7 +15,7 @@ public partial class CustomersViewModel(
     MobileOfflineService offline) : ObservableObject
 {
     private const int PageSize = 30;
-    public ObservableCollection<StoreCustomerRow> Customers { get; } = [];
+    public RangeObservableCollection<StoreCustomerRow> Customers { get; } = [];
 
     [ObservableProperty] private string _search = "";
     [ObservableProperty] private bool _hasAccess;
@@ -156,10 +156,18 @@ public partial class CustomersViewModel(
                 rows = response.Content ?? [];
             }
             if (cancellationToken.IsCancellationRequested) return;
-            if (reset) Customers.Clear();
-            var existing = Customers.Select(x => x.Customer.Id).ToHashSet();
-            foreach (var customer in rows.Where(x => existing.Add(x.Id)))
-                Customers.Add(new StoreCustomerRow(customer));
+            if (reset)
+            {
+                Customers.ReplaceAll(rows
+                    .DistinctBy(x => x.Id)
+                    .Select(customer => new StoreCustomerRow(customer)));
+            }
+            else
+            {
+                var existing = Customers.Select(x => x.Customer.Id).ToHashSet();
+                foreach (var customer in rows.Where(x => existing.Add(x.Id)))
+                    Customers.Add(new StoreCustomerRow(customer));
+            }
             _page = nextPage;
             _hasMore = rows.Count >= PageSize;
             _lastLoadedAt = DateTime.UtcNow;
@@ -171,9 +179,8 @@ public partial class CustomersViewModel(
             offline.MarkServerUnavailable();
             if (offline.IsEnabled && reset)
             {
-                Customers.Clear();
-                foreach (var customer in await offline.SearchCustomersAsync(Search, 200))
-                    Customers.Add(new StoreCustomerRow(customer));
+                Customers.ReplaceAll((await offline.SearchCustomersAsync(Search, 200))
+                    .Select(customer => new StoreCustomerRow(customer)));
                 _hasMore = false;
                 OnPropertyChanged(nameof(HasCustomers));
             }

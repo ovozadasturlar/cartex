@@ -189,7 +189,8 @@ public partial class ScanViewModel : ObservableObject
             PriceText = FormatPrice(product);
             StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
             OverlayVisible = true;
-            
+            Ui.Vibrate();
+
             ImageUrl = _images.FromKey(product.ImageKey, thumb: false);
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -228,10 +229,12 @@ public partial class ScanViewModel : ObservableObject
         StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
         ImageUrl = null;
         OverlayVisible = true;
+        Ui.Vibrate();
     }
 
     private Task HandleUnknownBarcodeAsync(string barcode)
     {
+        Ui.Vibrate(2);
         UnknownBarcode = barcode;
         UnknownBarcodeVisible = true;
         return Task.CompletedTask;
@@ -760,7 +763,7 @@ public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
         Product.PriceSymbolPosition,
         Product.PriceDecimalDigits);
     public string StockText => $"{Product.OnHand:0.###} {Product.UnitName}";
-    public string? ImageUrl => Images.FromKey(Product.ImageKey, thumb: true) ?? Images.Full(Product.ImageUrl);
+    public string? ImageUrl { get; } = Images.FromKey(Product.ImageKey, thumb: true) ?? Images.Full(Product.ImageUrl);
     public string FullInfo => $"{Product.Name} | {Product.UnitName} | {Product.Dimension ?? ""}";
 }
 
