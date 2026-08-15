@@ -33,9 +33,10 @@ public partial class ProfileViewModel(
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
     private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
 
+    private DateTime _offlineLoadedAt;
+
     public async Task AppearAsync()
     {
-        await offline.StartAsync();
         FullName = auth.FullName is { Length: > 0 } name ? name : "—";
         Initials = string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
         Subtitle = auth.Role;
@@ -44,8 +45,11 @@ public partial class ProfileViewModel(
         Footer = $"Cartex Do'kon {AppInfo.Current.VersionString} • {session.ServerUrl}";
         ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
         OfflineVisible = permissions.Has("devices.revoke") && permissions.HasAny("sales.create", "sales.checkout");
-        if (OfflineVisible)
-            await RefreshOfflineAsync();
+        if (!OfflineVisible) return;
+        if (_offlineState is not null && DateTime.UtcNow - _offlineLoadedAt < TimeSpan.FromSeconds(30)) return;
+        await offline.StartAsync();
+        await RefreshOfflineAsync();
+        _offlineLoadedAt = DateTime.UtcNow;
     }
 
     [RelayCommand]

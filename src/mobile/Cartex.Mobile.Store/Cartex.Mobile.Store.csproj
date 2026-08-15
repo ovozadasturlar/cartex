@@ -26,6 +26,8 @@
 		<AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
 		<AndroidStripILAfterAOT>true</AndroidStripILAfterAOT>
 		<AndroidEnableMarshalMethods>true</AndroidEnableMarshalMethods>
+		<AndroidLinkTool>r8</AndroidLinkTool>
+		<AndroidLinkResources>true</AndroidLinkResources>
 	</PropertyGroup>
 
 	<ItemGroup>

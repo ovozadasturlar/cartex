@@ -86,7 +86,7 @@ public partial class TradeViewModel(
         if (!HasQueueAccess && HasSalesAccess)
             Section = "sales";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
-        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(5)) return;
+        if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(45)) return;
         await LoadAsync();
     }
 
@@ -253,12 +253,15 @@ public partial class TradeViewModel(
         }
     }
 
+    private bool _loading;
+
     private async Task LoadAsync()
     {
-        if (IsBusy) return;
+        if (_loading) return;
         if (IsQueue && !HasQueueAccess || IsSales && !HasSalesAccess || IsZReports && !HasZReportAccess) return;
 
-        IsBusy = true;
+        _loading = true;
+        IsBusy = IsQueue ? Carts.Count == 0 : IsSales ? Sales.Count == 0 : Shifts.Count == 0;
         Error = null;
         try
         {
@@ -277,6 +280,7 @@ public partial class TradeViewModel(
         finally
         {
             IsBusy = false;
+            _loading = false;
         }
     }
 

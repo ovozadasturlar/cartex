@@ -37,7 +37,7 @@ public partial class CustomersViewModel(
 
     public async Task AppearAsync()
     {
-        await offline.StartAsync();
+        _ = offline.StartAsync();
         HasAccess = permissions.Has("customers.view");
         CanCreate = permissions.Has("customers.create");
         if (!HasAccess) return;
@@ -140,7 +140,7 @@ public partial class CustomersViewModel(
     private async Task LoadAsync(bool reset, CancellationToken cancellationToken)
     {
         if (!HasAccess || IsBusy || (!reset && !_hasMore)) return;
-        if (reset) IsBusy = true;
+        if (reset) IsBusy = Customers.Count == 0;
         else IsLoadingMore = true;
         Error = null;
         try

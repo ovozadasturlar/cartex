@@ -72,7 +72,7 @@ public partial class LoginViewModel(
             if (!restored) IsChecking = false;
         }
         if (!restored) return;
-        await offline.StartAsync();
+        _ = offline.StartAsync();
         await Shell.Current.GoToAsync("//home", false);
         _ = auth.ValidateSessionAsync();
         if (AppLock.PinEnabled)

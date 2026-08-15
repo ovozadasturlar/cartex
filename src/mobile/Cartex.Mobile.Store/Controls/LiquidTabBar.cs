@@ -14,7 +14,7 @@ public class LiquidTabBar : Grid
     private const float CradleRadius = DropletSize / 2 + Gap;
     private const float LipRun = 8f;
     private const int TabCount = 5;
-    private const float IconLift = 21f;
+    private const float DropletCenterY = RaisedTop + DropletSize / 2;
 
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
@@ -29,6 +29,16 @@ public class LiquidTabBar : Grid
     private readonly Label[] _labels = new Label[TabCount];
     private readonly Label[] _icons = new Label[TabCount];
     private bool _animating;
+
+    private double IconLift
+    {
+        get
+        {
+            var icon = _icons[0];
+            if (icon.Height <= 0) return 13;
+            return BarTop + icon.Y + icon.Height / 2 - DropletCenterY;
+        }
+    }
 
     public int Index { get; set; } = -1;
 
@@ -122,6 +132,7 @@ public class LiquidTabBar : Grid
         _animating = false;
     }
 
+
     private static int CurrentSection()
     {
         var item = Shell.Current?.CurrentItem;
@@ -138,11 +149,13 @@ public class LiquidTabBar : Grid
         var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
         var muted = dark ? Color.FromArgb("#9CA3AF") : Color.FromArgb("#6B7280");
         var onDroplet = dark ? Color.FromArgb("#052E16") : Colors.White;
+        var lift = IconLift;
         for (var i = 0; i < TabCount; i++)
         {
             var selected = i == index;
             _labels[i].Opacity = selected ? 1 - presence : 1;
-            _icons[i].TranslationY = selected ? -IconLift * presence : 0;
+            _icons[i].TranslationY = selected ? -lift * presence : 0;
+            _icons[i].Scale = selected ? 1 + 0.18 * presence : 1;
             _icons[i].TextColor = selected && presence > 0.5f ? onDroplet : muted;
         }
         _canvas.Invalidate();
