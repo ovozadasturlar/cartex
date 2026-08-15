@@ -15,6 +15,7 @@ public class LiquidTabBar : Grid
     private const float LipRun = 8f;
 
     private static int _travelFrom = -1;
+    private static double _settledParentHeight = -1;
     private static readonly List<WeakReference<LiquidTabBar>> Registry = [];
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
@@ -135,7 +136,14 @@ public class LiquidTabBar : Grid
                     lb.Text = Loc.Instance[Tabs[i].Key];
         };
 
-        Loaded += (_, _) => Activate();
+        Loaded += (_, _) =>
+        {
+#if ANDROID
+            if (Handler?.PlatformView is Android.Views.View pv && pv.RootView is { } root)
+                AndroidX.Core.View.ViewCompat.RequestApplyInsets(root);
+#endif
+            Activate();
+        };
         Unloaded += (_, _) =>
         {
             this.AbortAnimation("liquid");
@@ -180,6 +188,14 @@ public class LiquidTabBar : Grid
             for (var i = 0; i < 40 && Width <= 0; i++)
                 await Task.Delay(25);
             if (Width <= 0) return;
+
+            double ParentHeight() => (Parent as VisualElement)?.Height ?? -1;
+            if (_settledParentHeight > 0)
+            {
+                for (var i = 0; i < 7 && Math.Abs(ParentHeight() - _settledParentHeight) >= 1; i++)
+                    await Task.Delay(40);
+            }
+            _settledParentHeight = ParentHeight();
 
             _shownIndex = ResolvedIndex;
             var from = _travelFrom;
