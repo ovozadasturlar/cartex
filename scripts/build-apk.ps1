@@ -8,6 +8,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# MSBuild worker'lari builddan keyin ~15 daqiqa tirik qolib, Cartex.Shared kabi umumiy
+# loyihalarning .pdb fayllarini ushlab turadi — keyingi build MSB3026 retry'ga yiqiladi.
+$env:MSBUILDDISABLENODEREUSE = '1'
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $name = if ($App -eq 'store') { 'Store' } else { 'Agent' }
 $project = Join-Path $repoRoot "src\mobile\Cartex.Mobile.$name\Cartex.Mobile.$name.csproj"
@@ -32,14 +36,36 @@ $arguments = @(
 # Faqat arm64: APK ancha kichik va build tezroq, lekin eski 32-bitli telefonlarga o'rnatilmaydi.
 if ($Arm64Only) { $arguments += '-p:RuntimeIdentifiers=android-arm64' }
 
-& dotnet @arguments
-if ($LASTEXITCODE -ne 0) { throw 'APK yig''ish xato bilan tugadi.' }
+# Exe va apk buildlari umumiy loyihalarni (Cartex.Shared) bitta bin\Release'ga quradi —
+# bir vaqtda ishga tushirilsa fayl talashadi. Qulf: biri ishlayotganda ikkinchisi kutadi.
+$lockPath = Join-Path ([IO.Path]::GetTempPath()) 'cartex-release-build.lock'
+$buildLock = $null
+$waitNoted = $false
+while (-not $buildLock) {
+    try { $buildLock = [IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None') }
+    catch [System.IO.IOException] {
+        if (-not $waitNoted) { Write-Host 'Boshqa release build ketyapti — tugashini kutyapman...'; $waitNoted = $true }
+        Start-Sleep -Seconds 5
+    }
+}
+
+try {
+    & dotnet @arguments
+    if ($LASTEXITCODE -ne 0) { throw 'APK yig''ish xato bilan tugadi.' }
+}
+finally { $buildLock.Dispose() }
 
 $apk = Get-ChildItem -Path (Join-Path $repoRoot "src\mobile\Cartex.Mobile.$name\bin\Release\net10.0-android\android-arm64") `
     -Filter '*-Signed.apk' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if (-not $apk) { throw 'Signed APK topilmadi.' }
-Write-Host ("Tayyor: {0} ({1:N0} MB)" -f $apk.FullName, ($apk.Length / 1MB))
+
+$outDir = Join-Path $repoRoot 'artifacts\mobile'
+New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+$published = Join-Path $outDir $apk.Name
+Copy-Item -LiteralPath $apk.FullName -Destination $published -Force
+
+Write-Host ("Tayyor: {0} ({1:N0} MB)" -f $published, ($apk.Length / 1MB))
 
 if (-not $Install) { return }
 
@@ -62,5 +88,5 @@ if (-not $Device)
 }
 
 Write-Host "O'rnatilmoqda: $Device"
-& $adb -s $Device install -r $apk.FullName
+& $adb -s $Device install -r $published
 if ($LASTEXITCODE -ne 0) { throw 'Qurilmaga o''rnatish xato bilan tugadi.' }
