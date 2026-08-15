@@ -36,8 +36,5 @@ public partial class AppShell : Shell
     {
         base.OnNavigated(args);
         Dispatcher.Dispatch(KeyboardDismissal.HideWhenInputIsNotFocused);
-        if (args.Source is ShellNavigationSource.ShellSectionChanged or ShellNavigationSource.ShellItemChanged or ShellNavigationSource.ShellContentChanged
-            && Navigation.NavigationStack.Count > 1)
-            Dispatcher.Dispatch(async () => await Navigation.PopToRootAsync(false));
     }
 }
