@@ -15,7 +15,6 @@ public class LiquidTabBar : Grid
     private const float LipRun = 8f;
 
     private static int _travelFrom = -1;
-    private static double _settledParentHeight = -1;
     private static readonly List<WeakReference<LiquidTabBar>> Registry = [];
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
@@ -45,7 +44,6 @@ public class LiquidTabBar : Grid
     {
         HeightRequest = BarTop + BarHeight;
         VerticalOptions = LayoutOptions.End;
-        Opacity = 0;
 
         _canvas = new GraphicsView { Drawable = _drawable, InputTransparent = true };
         Children.Add(_canvas);
@@ -189,14 +187,6 @@ public class LiquidTabBar : Grid
                 await Task.Delay(25);
             if (Width <= 0) return;
 
-            double ParentHeight() => (Parent as VisualElement)?.Height ?? -1;
-            if (_settledParentHeight > 0)
-            {
-                for (var i = 0; i < 7 && Math.Abs(ParentHeight() - _settledParentHeight) >= 1; i++)
-                    await Task.Delay(40);
-            }
-            _settledParentHeight = ParentHeight();
-
             _shownIndex = ResolvedIndex;
             var from = _travelFrom;
             if (from >= 0 && from != _shownIndex &&
@@ -204,14 +194,12 @@ public class LiquidTabBar : Grid
             {
                 SetDroplet(from);
                 Apply(CenterFor(from, Width), 1, 1);
-                Opacity = 1;
                 await AnimateSwitchAsync(from);
             }
             else
             {
                 SetDroplet(_shownIndex);
                 Apply(CenterFor(_shownIndex, Width), 1, 1);
-                Opacity = 1;
             }
         }
         finally
@@ -246,7 +234,6 @@ public class LiquidTabBar : Grid
             if (_travelFrom >= 0 && _travelFrom != _shownIndex) return;
             SetDroplet(_shownIndex);
             Apply(CenterFor(_shownIndex, width), 1, 1);
-            Opacity = 1;
         }
     }
 

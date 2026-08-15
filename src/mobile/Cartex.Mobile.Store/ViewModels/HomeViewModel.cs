@@ -11,6 +11,7 @@ public partial class HomeViewModel(
     MobilePermissions perms,
     WarehouseContext warehouse,
     CartStore cart,
+    SupplyCartStore supplyCart,
     IOrderingApi ordering,
     ISalesApi sales) : ObservableObject
 {
@@ -21,6 +22,9 @@ public partial class HomeViewModel(
     [ObservableProperty] private bool _showQueue;
     [ObservableProperty] private bool _showStats;
     [ObservableProperty] private bool _hasCart;
+    [ObservableProperty] private int _cartCount;
+    [ObservableProperty] private int _supplyCount;
+    [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private string _cartSummary = "";
     [ObservableProperty] private int _openCarts;
     [ObservableProperty] private string _todayCountText = "";
@@ -45,7 +49,10 @@ public partial class HomeViewModel(
         Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);
         Initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => char.ToUpper(x[0])));
         WarehouseName = warehouse.WarehouseName is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
+        CanReceiveStock = perms.Has("supplies.create");
         HasCart = cart.Count > 0;
+        CartCount = cart.Count;
+        SupplyCount = supplyCart.Count;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
@@ -138,6 +145,9 @@ public partial class HomeViewModel(
 
     [RelayCommand]
     private Task OpenSalesAsync() => Shell.Current.GoToAsync("//main/trade?section=sales");
+
+    [RelayCommand]
+    private Task OpenSupplyCartAsync() => Shell.Current.GoToAsync("receive_cart");
 
     [RelayCommand]
     private Task OpenCustomersAsync() => Shell.Current.GoToAsync("//main/customers");

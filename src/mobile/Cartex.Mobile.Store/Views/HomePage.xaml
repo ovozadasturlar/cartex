@@ -132,7 +132,7 @@
                             <Label Text="{svc:T new_sale}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Grid.Column="1" Spacing="7" IsVisible="{Binding ShowQueue}">
+                        <VerticalStackLayout Grid.Column="2" Spacing="7" IsVisible="{Binding ShowQueue}">
                             <VerticalStackLayout.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenQueueCommand}" />
                             </VerticalStackLayout.GestureRecognizers>
@@ -150,44 +150,56 @@
                             <Label Text="{svc:T queue}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Grid.Column="2" Spacing="7">
+                        <VerticalStackLayout Grid.Column="1" Spacing="7">
                             <VerticalStackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding OpenCustomersCommand}" />
+                                <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
                             </VerticalStackLayout.GestureRecognizers>
-                            <Border Style="{StaticResource ActionIcon}">
-                                <Label Text="{StaticResource IcPeople}" Style="{StaticResource Icon}" FontSize="24" />
-                            </Border>
-                            <Label Text="{svc:T customers}" Style="{StaticResource ActionLabel}" />
+                            <Grid HorizontalOptions="Center">
+                                <Border Style="{StaticResource ActionIcon}">
+                                    <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" FontSize="24" />
+                                </Border>
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9" Padding="5,1"
+                                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-4,-4,0" InputTransparent="True"
+                                        IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                                    <Label Text="{Binding CartCount}" FontSize="10" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{svc:T cart_title}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Grid.Column="3" Spacing="7">
+                        <VerticalStackLayout Grid.Column="3" Spacing="7" IsVisible="{Binding CanReceiveStock}">
                             <VerticalStackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding OpenSalesCommand}" />
+                                <TapGestureRecognizer Command="{Binding OpenSupplyCartCommand}" />
                             </VerticalStackLayout.GestureRecognizers>
-                            <Border Style="{StaticResource ActionIcon}">
-                                <Label Text="{StaticResource IcHistory}" Style="{StaticResource Icon}" FontSize="24" />
-                            </Border>
-                            <Label Text="{svc:T sales}" Style="{StaticResource ActionLabel}" />
+                            <Grid HorizontalOptions="Center">
+                                <Border Style="{StaticResource ActionIcon}">
+                                    <Label Text="{StaticResource IcTruck}" Style="{StaticResource Icon}" FontSize="24" />
+                                </Border>
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9" Padding="5,1"
+                                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-4,-4,0" InputTransparent="True"
+                                        IsVisible="{Binding SupplyCount, Converter={StaticResource Positive}}">
+                                    <Label Text="{Binding SupplyCount}" FontSize="10" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{svc:T receive_stock}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
                     </Grid>
 
-                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasCart}">
+                    <Border Style="{StaticResource Card}" Padding="12,10" IsVisible="{Binding HasCart}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
                         </Border.GestureRecognizers>
-                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                            <Border WidthRequest="40" HeightRequest="40" StrokeThickness="0" StrokeShape="RoundRectangle 12"
-                                    VerticalOptions="Center"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
-                                <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" />
-                            </Border>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                <Label Text="{svc:T cart_resume}" FontSize="15" FontAttributes="Bold"
-                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                <Label Text="{Binding CartSummary}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
-                            </VerticalStackLayout>
-                            <Label Grid.Column="2" Text="{StaticResource IcChevron}" Style="{StaticResource Icon}" FontSize="18" VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" FontSize="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding CartSummary}" FontSize="13" VerticalOptions="Center"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light={StaticResource InkSoft}, Dark={StaticResource InkSoftDark}}" />
+                            <Label Grid.Column="2" Text="{svc:T cart_resume}" FontSize="12.5" FontFamily="OpenSansSemibold" VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                         </Grid>
                     </Border>
 

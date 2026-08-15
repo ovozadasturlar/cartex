@@ -9,7 +9,6 @@
     xmlns:partners="clr-namespace:Cartex.Shared.Models.Partners;assembly=Cartex.Shared"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
-    xmlns:store="clr-namespace:Cartex.Mobile.Store.Controls"
     x:DataType="vm:CartViewModel"
     Title="{svc:T cart_title}">
 
@@ -111,9 +110,23 @@
 
             <CollectionView Grid.Row="1" ItemsSource="{Binding Lines}" Margin="16,8"
                             ItemsLayout="VerticalList" SelectionMode="None" Scrolled="OnCartScrolled">
+                <CollectionView.Header>
+                    <Grid ColumnDefinitions="*,Auto" Padding="2,0,2,6" IsVisible="{Binding IsEmpty, Converter={StaticResource Invert}}">
+                        <Label Text="{Binding TotalText}" Style="{StaticResource MutedLabel}" FontSize="12" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="{svc:T cart_clear}" Style="{StaticResource BtnOutline}"
+                                FontSize="12" HeightRequest="34" MinimumHeightRequest="34" Padding="12,0"
+                                BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                Command="{Binding ClearCartCommand}" />
+                    </Grid>
+                </CollectionView.Header>
                 <CollectionView.EmptyView>
-                    <Label Text="{svc:T cart_empty}" Style="{StaticResource MutedLabel}" FontSize="15"
-                           HorizontalOptions="Center" Margin="0,40" />
+                    <VerticalStackLayout Spacing="14" Margin="0,40" HorizontalOptions="Center">
+                        <Label Text="{svc:T cart_empty}" Style="{StaticResource MutedLabel}" FontSize="15"
+                               HorizontalOptions="Center" />
+                        <Button Text="{svc:T cart_clear_undo}" Style="{StaticResource BtnOutline}"
+                                IsVisible="{Binding CanUndoClear}" Command="{Binding UndoClearCommand}" />
+                    </VerticalStackLayout>
                 </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="services:CartLine">
@@ -197,7 +210,7 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <Border Grid.Row="2" StrokeThickness="1" Padding="16,12" Margin="0,0,0,62"
+            <Border Grid.Row="2" StrokeThickness="1" Padding="16,12"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                     Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
                 <Border.GestureRecognizers>
@@ -216,8 +229,6 @@
                 </Grid>
             </Border>
         </Grid>
-
-        <store:LiquidTabBar />
 
         <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsCustomerModalOpen}">
             <Grid.GestureRecognizers>

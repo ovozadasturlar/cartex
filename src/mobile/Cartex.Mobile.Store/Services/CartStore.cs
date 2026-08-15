@@ -175,6 +175,14 @@ public sealed class CartStore
         Changed?.Invoke();
     }
 
+    public void Restore(IEnumerable<CartLine> lines)
+    {
+        Lines.Clear();
+        Lines.AddRange(lines);
+        Save();
+        Changed?.Invoke();
+    }
+
     public string EnsureSubmissionIdempotencyKey()
     {
         SubmissionIdempotencyKey ??= Guid.NewGuid().ToString("N");

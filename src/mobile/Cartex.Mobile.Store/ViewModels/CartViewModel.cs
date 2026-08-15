@@ -24,6 +24,10 @@ public partial class CartViewModel : ObservableObject
     public ObservableCollection<PartnerDto> PartnerResults { get; } = [];
 
     [ObservableProperty] private bool _isEmpty = true;
+    [ObservableProperty] private bool _canUndoClear;
+
+    private List<CartLine> _undo = [];
+    private CancellationTokenSource? _undoToken;
     [ObservableProperty] private string _totalText = "";
     [ObservableProperty] private string? _customerName;
     [ObservableProperty] private bool _hasCustomer;
@@ -82,6 +86,43 @@ public partial class CartViewModel : ObservableObject
     }
 
     public void Disappear() => _cart.Changed -= Refresh;
+
+    [RelayCommand]
+    private async Task ClearCartAsync()
+    {
+        if (IsEmpty) return;
+        var page = Shell.Current?.CurrentPage;
+        if (page is null) return;
+        var confirmed = await page.DisplayAlertAsync(
+            Loc.Instance["cart_clear_title"],
+            string.Format(Loc.Instance["cart_clear_body"], Lines.Count),
+            Loc.Instance["cart_clear_confirm"],
+            Loc.Instance["cancel"]);
+        if (!confirmed) return;
+
+        _undo = [.. _cart.Lines];
+        _cart.Clear();
+        CanUndoClear = true;
+        var token = _undoToken = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), token.Token);
+            CanUndoClear = false;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    [RelayCommand]
+    private void UndoClear()
+    {
+        _undoToken?.Cancel();
+        CanUndoClear = false;
+        if (_undo.Count == 0) return;
+        _cart.Restore(_undo);
+        _undo = [];
+    }
 
     private void Refresh()
     {
