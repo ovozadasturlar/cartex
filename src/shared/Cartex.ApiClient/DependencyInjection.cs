@@ -20,6 +20,14 @@ public static class DependencyInjection
             })
         };
 
+        // One shared connection pool for every Refit client. The infinite handler lifetime is
+        // required — the factory's cleanup timer must never dispose the shared primary handler;
+        // connection recycling (and DNS refresh) is done by PooledConnectionLifetime instead.
+        var primary = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) };
+        services.ConfigureHttpClientDefaults(http => http
+            .ConfigurePrimaryHttpMessageHandler(() => primary)
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan));
+
         services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, onUnauthorized));
         services.AddTransient<NoContentHandler>();
         services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
