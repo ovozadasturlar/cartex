@@ -124,17 +124,24 @@ public partial class CartItem : ObservableObject
 
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
     public decimal LineTotal => UnitPrice * Quantity;
+
+    private decimal? _enteredAmount;
+    private bool _applyingAmount;
+
     public decimal AmountInput
     {
-        get => LineTotal;
+        get => _enteredAmount ?? LineTotal;
         set
         {
             if (!AllowsAmountEntry || UnitPrice <= 0 || value <= 0) return;
-            if (Math.Abs(value - LineTotal) < 0.005m) return;
             var step = AllowsFractional ? 0.001m : 1m;
             var quantity = Math.Floor(value / UnitPrice / step) * step;
-            if (quantity <= 0 || quantity == Quantity) return;
+            if (quantity <= 0) return;
+
+            _enteredAmount = value;
+            _applyingAmount = true;
             Quantity = quantity;
+            _applyingAmount = false;
             OnPropertyChanged();
         }
     }
@@ -142,6 +149,7 @@ public partial class CartItem : ObservableObject
 
     partial void OnQuantityChanged(decimal value)
     {
+        if (!_applyingAmount) _enteredAmount = null;
         OnPropertyChanged(nameof(LineTotal));
         OnPropertyChanged(nameof(AmountInput));
         OnPropertyChanged(nameof(IsOverStock));
@@ -149,6 +157,7 @@ public partial class CartItem : ObservableObject
 
     partial void OnUnitPriceChanged(decimal value)
     {
+        _enteredAmount = null;
         OnPropertyChanged(nameof(LineTotal));
         OnPropertyChanged(nameof(AmountInput));
     }
