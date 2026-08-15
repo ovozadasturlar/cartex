@@ -278,7 +278,7 @@
 
                 <!-- Z-REPORTS SECTION -->
                 <ScrollView IsVisible="{Binding IsZReports}">
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,110">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,104">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="vm:TradeShiftRow">
                                 <Border Style="{StaticResource Card}" Padding="14,12">
