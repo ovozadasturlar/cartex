@@ -109,7 +109,7 @@ public partial class CartItem : ObservableObject
     public long VariantId { get; init; }
     public long? PrepackId { get; init; }
     public bool IsPrepack => PrepackId is not null;
-    public string ProductName { get; init; } = string.Empty;
+    [ObservableProperty] private string _productName = string.Empty;
     public decimal OriginalPrice { get; set; }
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity = 1;
@@ -1383,11 +1383,20 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     DetailProduct = updated;
                     DetailBarcodes = string.Join(", ", product.Barcodes);
                     foreach (var item in CartItems.Where(item => item.VariantId == updated.VariantId))
+                    {
                         item.ProductDetail = updated;
+                        if (!item.IsPrepack) item.ProductName = updated.ProductName;
+                    }
                 }
             }
 
             await LoadProductsAsync();
+            foreach (var item in CartItems.Where(item => !item.IsPrepack))
+                if (Products.FirstOrDefault(p => p.VariantId == item.VariantId) is { } fresh)
+                {
+                    item.ProductName = fresh.ProductName;
+                    item.ProductDetail = fresh;
+                }
         }
         catch { }
     }
