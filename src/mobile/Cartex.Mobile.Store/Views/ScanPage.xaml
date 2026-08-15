@@ -16,9 +16,8 @@
             x:Name="Reader"
             BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
             AimMode="True"
-            ViewfinderMode="True"
             TapToFocusEnabled="True"
-            VibrationOnDetected="True"
+            PauseScanning="{Binding IsDetecting, Converter={StaticResource Invert}}"
             OnDetectionFinished="OnDetectionFinished" />
 
         <Border VerticalOptions="Center" HorizontalOptions="Center"

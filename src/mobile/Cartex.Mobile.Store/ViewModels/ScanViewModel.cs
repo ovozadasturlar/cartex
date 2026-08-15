@@ -232,6 +232,7 @@ public partial class ScanViewModel : ObservableObject
         var product = await _offline.FindProductAsync(barcode);
         if (product is null)
         {
+            Ui.Vibrate(2);
             await FlashAsync(Loc.Instance["offline_product_not_cached"]);
             return;
         }

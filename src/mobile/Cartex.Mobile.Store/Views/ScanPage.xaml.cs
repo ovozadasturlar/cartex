@@ -7,8 +7,9 @@ namespace Cartex.Mobile.Store.Views;
 
 public partial class ScanPage : ContentPage
 {
+    private static bool _cameraPermissionGranted;
+
     private readonly ScanViewModel _vm;
-    private CancellationTokenSource? _cameraCts;
 
     public ScanPage(ScanViewModel vm)
     {
@@ -21,23 +22,22 @@ public partial class ScanPage : ContentPage
     {
         base.OnAppearing();
 
-        if (!await Methods.AskForRequiredPermissionAsync())
+        if (!_cameraPermissionGranted && !(_cameraPermissionGranted = await Methods.AskForRequiredPermissionAsync()))
         {
             await DisplayAlertAsync(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
             await Shell.Current.GoToAsync("//home");
             return;
         }
 
-        _cameraCts?.Cancel();
-        _cameraCts = new CancellationTokenSource();
-        await _vm.RefreshVisibleProductAsync();
-        await RestartCameraAsync(_cameraCts.Token);
+        _vm.Appear();
+        Reader.CameraEnabled = true;
+        _ = _vm.RefreshVisibleProductAsync();
     }
 
     protected override void OnDisappearing()
     {
-        _cameraCts?.Cancel();
         Reader.CameraEnabled = false;
+        _vm.Disappear();
         HideProductActionsImmediately();
         base.OnDisappearing();
     }
@@ -71,9 +71,12 @@ public partial class ScanPage : ContentPage
 
     private void OnDetectionFinished(object? sender, OnDetectionFinishedEventArg e)
     {
-        var value = e.BarcodeResults.FirstOrDefault()?.RawValue;
-        if (string.IsNullOrEmpty(value)) return;
-        MainThread.BeginInvokeOnMainThread(() => _ = _vm.HandleAsync(value));
+        foreach (var result in e.BarcodeResults)
+        {
+            if (!string.IsNullOrEmpty(result.RawValue))
+                _ = _vm.HandleAsync(result.RawValue);
+            break;
+        }
     }
 
     private async void OnProductActionToggleClicked(object? sender, EventArgs e)
@@ -133,13 +136,4 @@ public partial class ScanPage : ContentPage
 
     private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e) =>
         _vm.SetQuantityFromTextCommand.Execute(null);
-
-    private async Task RestartCameraAsync(CancellationToken cancellationToken)
-    {
-        Reader.CameraEnabled = false;
-        try { await Task.Delay(220, cancellationToken); }
-        catch (OperationCanceledException) { return; }
-        if (!cancellationToken.IsCancellationRequested)
-            Reader.CameraEnabled = true;
-    }
 }
