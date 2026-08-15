@@ -314,7 +314,9 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 Payments: BuildPaymentRequests(),
                 DebtCurrency: SelectedDebtCurrency?.Code,
                 CreditAmount: creditAmount,
-                UseCustomerAdvance: UseCustomerAdvance));
+                UseCustomerAdvance: UseCustomerAdvance,
+                CustomerId: _customerId,
+                Note: string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim()));
 
             if (string.IsNullOrEmpty(_code))
                 _localCart.Clear();

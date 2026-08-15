@@ -22,7 +22,10 @@ public record CheckoutCartCommand(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     decimal? CreditAmount = null,
-    bool? UseCustomerAdvance = null) : ICommand<long>;
+    bool? UseCustomerAdvance = null,
+    long? CustomerId = null,
+    decimal? DiscountAmount = null,
+    string? Note = null) : ICommand<long>;
 
 public sealed class CheckoutCartCommandHandler(
     IApplicationDbContext db,
@@ -70,6 +73,7 @@ public sealed class CheckoutCartCommandHandler(
                 cart.Version++;
             }
 
+            cart.CustomerId = request.CustomerId ?? cart.CustomerId;
             var saleItems = request.Items is { Count: > 0 }
                 ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)).ToList()
                 : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList();
@@ -84,6 +88,7 @@ public sealed class CheckoutCartCommandHandler(
                 request.PaidCard,
                 request.PaidBonus,
                 saleItems,
+                DiscountAmount: request.DiscountAmount ?? 0,
                 Payments: payments,
                 DebtCurrency: request.DebtCurrency ?? cart.DebtCurrency,
                 DebtDueDate: request.DebtDueDate ?? cart.DebtDueDate,
@@ -92,7 +97,8 @@ public sealed class CheckoutCartCommandHandler(
                 FromQueuedCart: true,
                 UseCustomerAdvance: request.UseCustomerAdvance ?? cart.UseCustomerAdvance,
                 Participants: cart.Participants.Select(x =>
-                    new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList()), cancellationToken);
+                    new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
+                Note: request.Note ?? cart.Note), cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;
             cart.SaleId = result.SaleId;
@@ -113,6 +119,8 @@ public sealed class CheckoutCartCommandHandler(
                 request.DebtCurrency,
                 request.DebtDueDate,
                 request.CreditAmount,
+                request.CustomerId,
+                request.DiscountAmount,
                 payments = request.Payments,
                 items = request.Items
             }, "Savat savdo sifatida yakunlandi", completed.BranchId);

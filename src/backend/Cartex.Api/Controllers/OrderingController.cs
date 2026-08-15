@@ -100,7 +100,8 @@ public class OrderingController(ISender sender) : ControllerBase
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
         var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard,
             request.PaidBonus, request.IdempotencyKey, items, payments, request.DebtCurrency,
-            request.DebtDueDate, request.CreditAmount, request.UseCustomerAdvance));
+            request.DebtDueDate, request.CreditAmount, request.UseCustomerAdvance,
+            request.CustomerId, request.DiscountAmount, request.Note));
         return Ok(saleId);
     }
 

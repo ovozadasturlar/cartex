@@ -467,6 +467,16 @@ export class Pos implements OnInit {
           this.cash(),
           this.card(),
           this.bonus(),
+          {
+            customerId: this.customer()?.id ?? null,
+            items: this.cart().map((l) => ({
+              variantId: l.variantId,
+              quantity: l.qty,
+              unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+            })),
+            discountAmount: this.discount(),
+            debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
+          },
         ));
         this.activeQueueCode = null;
         this.state.clearAll();

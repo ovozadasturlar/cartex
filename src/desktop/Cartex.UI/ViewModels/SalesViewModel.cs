@@ -2053,7 +2053,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
                     await _orderingApi.CheckoutAsync(
                         queuedCode,
-                        new CheckoutCartRequest(cash, card, bonus, _saleIdempotencyKey, checkoutItems));
+                        new CheckoutCartRequest(cash, card, bonus, _saleIdempotencyKey, checkoutItems, MulticurrencyPayments(),
+                            IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
+                            DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
+                            CreditAmount,
+                            CustomerId: SelectedCustomer?.Id,
+                            DiscountAmount: DiscountAmount,
+                            Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()));
                 }
                 _activeCartCode = null;
                 ClearCart();

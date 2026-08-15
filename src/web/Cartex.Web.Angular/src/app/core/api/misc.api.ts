@@ -175,11 +175,18 @@ export class OrderingApi {
     paidCash: number,
     paidCard: number,
     paidBonus: number,
+    extra?: {
+      customerId: number | null;
+      items: { variantId: number; quantity: number; unitPrice: number | null }[];
+      discountAmount: number;
+      debtDueDate: string | null;
+    },
   ): Observable<number> {
     return this.http.post<number>(`/api/ordering/carts/${code}/checkout`, {
       paidCash,
       paidCard,
       paidBonus,
+      ...extra,
     });
   }
 

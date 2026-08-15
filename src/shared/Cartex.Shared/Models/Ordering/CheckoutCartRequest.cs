@@ -14,4 +14,7 @@ public record CheckoutCartRequest(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     decimal? CreditAmount = null,
-    bool? UseCustomerAdvance = null);
+    bool? UseCustomerAdvance = null,
+    long? CustomerId = null,
+    decimal? DiscountAmount = null,
+    string? Note = null);
