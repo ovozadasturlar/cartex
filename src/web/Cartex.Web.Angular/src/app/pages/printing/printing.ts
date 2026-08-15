@@ -233,7 +233,7 @@ export class Printing implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly auth = inject(AuthService);
-  readonly canManageNodes = this.auth.hasPermission('printing.nodes.manage');
+  readonly canManageNodes = this.auth.hasPermission('printing.nodes.edit');
   readonly canEditRoutes = this.auth.hasPermission('printing.routes.edit');
   readonly canViewRoutes = this.auth.hasPermission('printing.nodes.view') && this.auth.hasPermission('printing.routes.view');
   readonly canViewJobs = this.auth.hasPermission('printing.jobs.viewOwn|printing.jobs.viewBranch');

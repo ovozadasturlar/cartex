@@ -25,7 +25,7 @@ public sealed class AppCapabilities(MobilePermissions permissions)
 
     public bool CanManageShift => permissions.HasAny("shifts.open", "shifts.close");
     public bool CanViewReports => permissions.Has("reports.view");
-    public bool CanViewOrders => permissions.HasAny("ordering.view", "sales.view");
+    public bool CanViewOrders => permissions.HasAny("sales.pick", "sales.view");
 
     public bool IsManager => CanManageProducts || CanViewReports;
 }

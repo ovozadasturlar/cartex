@@ -84,7 +84,7 @@ public partial class PrintingViewModel
 {
     public bool CanViewPrintNetwork => (_auth.HasPermission("printing.nodes.view")
         && _auth.HasPermission("printing.routes.view")) || CanViewPrintJobs;
-    public bool CanManagePrintNodes => _auth.HasPermission("printing.nodes.manage");
+    public bool CanManagePrintNodes => _auth.HasPermission("printing.nodes.edit");
     public bool CanEditPrintRoutes => _auth.HasPermission("printing.routes.edit");
     public bool CanViewPrintRoutes => _auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view");
     public bool CanViewPrintJobs => _auth.HasPermission("printing.jobs.viewOwn|printing.jobs.viewBranch");
