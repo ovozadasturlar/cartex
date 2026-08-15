@@ -6,7 +6,7 @@ public partial class App : Application
 {
 	public App()
 	{
-		Loc.Instance.InitAsync().GetAwaiter().GetResult();
+		MauiProgram.LocInit.GetAwaiter().GetResult();
 		InitializeComponent();
 		ViewModels.ProfileViewModel.ApplyTheme();
 	}

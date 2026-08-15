@@ -30,7 +30,9 @@ public static class MobileDeviceIdentity
         }
     }
 
-    public static string DeviceName => DeviceInfo.Current.Name is { Length: > 0 } name
+    private static string? _name;
+
+    public static string DeviceName => _name ??= DeviceInfo.Current.Name is { Length: > 0 } name
         ? name
         : DeviceInfo.Current.Model;
 }

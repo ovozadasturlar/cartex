@@ -9,8 +9,11 @@ namespace Cartex.Mobile.Store;
 
 public static class MauiProgram
 {
+    internal static Task LocInit { get; private set; } = Task.CompletedTask;
+
     public static MauiApp CreateMauiApp()
     {
+        LocInit = Loc.Instance.InitAsync();
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()

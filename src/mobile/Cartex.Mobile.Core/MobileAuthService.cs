@@ -6,7 +6,10 @@ namespace Cartex.Mobile.Core;
 
 public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 {
+    private sealed record TokenClaims(string Token, long? UserId, long? BranchId, DateTime ValidTo);
+
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private TokenClaims? _claims;
 
     public string DeviceName => MobileDeviceIdentity.DeviceName;
     public string DeviceId => MobileDeviceIdentity.DeviceId;
@@ -14,21 +17,37 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
     public string FullName => Preferences.Get("user_fullname", "");
     public string Role => Preferences.Get("user_role", "");
 
-    public long? UserId => ClaimId("userId");
-    public long? DefaultBranchId => ClaimId("defaultBranchId");
+    public long? UserId => Claims()?.UserId;
+    public long? DefaultBranchId => Claims()?.BranchId;
 
-    private long? ClaimId(string type)
+    private TokenClaims? Claims()
     {
+        var token = session.AccessToken;
+        return token is null ? null : ClaimsFor(token);
+    }
+
+    private TokenClaims ClaimsFor(string token)
+    {
+        var cached = _claims;
+        if (cached is not null && cached.Token == token) return cached;
+
         try
         {
-            var value = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken)
-                .Claims.FirstOrDefault(c => c.Type == type)?.Value;
-            return long.TryParse(value, out var id) ? id : null;
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            cached = new TokenClaims(token, ClaimId(jwt, "userId"), ClaimId(jwt, "defaultBranchId"), jwt.ValidTo);
         }
         catch
         {
-            return null;
+            cached = new TokenClaims(token, null, null, DateTime.MinValue);
         }
+        _claims = cached;
+        return cached;
+    }
+
+    private static long? ClaimId(JwtSecurityToken jwt, string type)
+    {
+        var value = jwt.Claims.FirstOrDefault(c => c.Type == type)?.Value;
+        return long.TryParse(value, out var id) ? id : null;
     }
 
     public async Task LoginAsync(string username, string password)
@@ -124,15 +143,6 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         catch { }
     }
 
-    private static bool IsExpiringSoon(string token)
-    {
-        try
-        {
-            return new JwtSecurityTokenHandler().ReadJwtToken(token).ValidTo <= DateTime.UtcNow.AddSeconds(60);
-        }
-        catch
-        {
-            return true;
-        }
-    }
+    private bool IsExpiringSoon(string token) =>
+        ClaimsFor(token).ValidTo <= DateTime.UtcNow.AddSeconds(60);
 }

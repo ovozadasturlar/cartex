@@ -151,21 +151,29 @@ public class LiquidTabBar : Grid
 
     private int ResolvedIndex => Index >= 0 ? Index : CurrentSection();
 
+    private static readonly Color MutedLight = Color.FromArgb("#6B7280");
+    private static readonly Color MutedDark = Color.FromArgb("#9CA3AF");
+    private static readonly Color OnDropletDark = Color.FromArgb("#052E16");
+
     private void SetSelected(int index, float presence)
     {
         _drawable.SelectedIndex = index;
         _drawable.Presence = presence;
         var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        var muted = dark ? Color.FromArgb("#9CA3AF") : Color.FromArgb("#6B7280");
-        var onDroplet = dark ? Color.FromArgb("#052E16") : Colors.White;
+        var muted = dark ? MutedDark : MutedLight;
+        var onDroplet = dark ? OnDropletDark : Colors.White;
         var lift = IconLift;
         for (var i = 0; i < TabCount; i++)
         {
             var selected = i == index;
-            _labels[i].Opacity = selected ? 1 - presence : 1;
-            _icons[i].TranslationY = selected ? -lift * presence : 0;
-            _icons[i].Scale = selected ? 1 + 0.18 * presence : 1;
-            _icons[i].TextColor = selected && presence > 0.5f ? onDroplet : muted;
+            var opacity = selected ? 1 - presence : 1;
+            var translation = selected ? -lift * presence : 0;
+            var scale = selected ? 1 + 0.18 * presence : 1;
+            var color = selected && presence > 0.5f ? onDroplet : muted;
+            if (_labels[i].Opacity != opacity) _labels[i].Opacity = opacity;
+            if (_icons[i].TranslationY != translation) _icons[i].TranslationY = translation;
+            if (_icons[i].Scale != scale) _icons[i].Scale = scale;
+            if (!Equals(_icons[i].TextColor, color)) _icons[i].TextColor = color;
         }
         _canvas.Invalidate();
     }
@@ -221,7 +229,7 @@ public class LiquidTabBar : Grid
         _travelFrom = ResolvedIndex;
         try
         {
-            await Shell.Current.GoToAsync($"//main/{Routes[index]}");
+            await Shell.Current.GoToAsync($"//main/{Routes[index]}", animate: false);
         }
         catch
         {
@@ -236,6 +244,38 @@ public class LiquidTabBar : Grid
 
     private sealed class BarDrawable : IDrawable
     {
+        private static readonly LinearGradientPaint BarLight = new()
+        {
+            StartColor = Color.FromArgb("#FCFFFFFF"),
+            EndColor = Color.FromArgb("#E9EDF4EF"),
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(0, 1),
+        };
+
+        private static readonly LinearGradientPaint BarDark = new()
+        {
+            StartColor = Color.FromArgb("#F7242B27"),
+            EndColor = Color.FromArgb("#F7151A17"),
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(0, 1),
+        };
+
+        private static readonly LinearGradientPaint DropletLight = new()
+        {
+            StartColor = Color.FromArgb("#348354"),
+            EndColor = Color.FromArgb("#1A4A2D"),
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(0, 1),
+        };
+
+        private static readonly LinearGradientPaint DropletDark = new()
+        {
+            StartColor = Color.FromArgb("#52E68C"),
+            EndColor = Color.FromArgb("#1E9C54"),
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(0, 1),
+        };
+
         public int SelectedIndex;
         public float Presence = 1f;
         public float EdgePad;
@@ -257,13 +297,7 @@ public class LiquidTabBar : Grid
 
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, -4), 16, Color.FromRgba(0, 0, 0, Dark ? 0.5f : 0.16f));
-            canvas.SetFillPaint(new LinearGradientPaint
-            {
-                StartColor = Dark ? Color.FromArgb("#F7242B27") : Color.FromArgb("#FCFFFFFF"),
-                EndColor = Dark ? Color.FromArgb("#F7151A17") : Color.FromArgb("#E9EDF4EF"),
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(0, 1),
-            }, new RectF(0, top, w, bottom - top));
+            canvas.SetFillPaint(Dark ? BarDark : BarLight, new RectF(0, top, w, bottom - top));
             canvas.FillPath(path);
             canvas.RestoreState();
 
@@ -271,13 +305,7 @@ public class LiquidTabBar : Grid
             var r = DropletSize / 2f;
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, 4), 10, Color.FromRgba(0, 0, 0, 0.35f * o));
-            canvas.SetFillPaint(new LinearGradientPaint
-            {
-                StartColor = Dark ? Color.FromArgb("#52E68C") : Color.FromArgb("#348354"),
-                EndColor = Dark ? Color.FromArgb("#1E9C54") : Color.FromArgb("#1A4A2D"),
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(0, 1),
-            }, new RectF(cx - r, dropletCy - r, DropletSize, DropletSize));
+            canvas.SetFillPaint(Dark ? DropletDark : DropletLight, new RectF(cx - r, dropletCy - r, DropletSize, DropletSize));
             canvas.FillCircle(cx, dropletCy, r);
             canvas.RestoreState();
 

@@ -70,7 +70,7 @@ public sealed class SupplyCartStore
         if (line is null) return;
         if (quantity <= 0) Lines.Remove(line);
         else line.Quantity = quantity;
-        Save();
+        Save(debouncePersistence: true);
     }
 
     public void Remove(long variantId)
@@ -82,15 +82,55 @@ public sealed class SupplyCartStore
     public void Clear()
     {
         Lines.Clear();
+        var pending = Interlocked.Exchange(ref _persistCts, null);
+        pending?.Cancel();
+        pending?.Dispose();
         Preferences.Remove(Key);
         Changed?.Invoke();
     }
 
-    private void Save()
+    private CancellationTokenSource? _persistCts;
+
+    private void Save(bool debouncePersistence = false)
     {
+        Changed?.Invoke();
+        if (debouncePersistence)
+        {
+            SchedulePersistence();
+            return;
+        }
+        PersistNow();
+    }
+
+    private void PersistNow()
+    {
+        var pending = Interlocked.Exchange(ref _persistCts, null);
+        pending?.Cancel();
+        pending?.Dispose();
         var draft = Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey)).ToList();
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
-        Changed?.Invoke();
+    }
+
+    private void SchedulePersistence()
+    {
+        var next = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(ref _persistCts, next);
+        previous?.Cancel();
+        previous?.Dispose();
+        _ = PersistAfterQuietPeriodAsync(next);
+    }
+
+    private async Task PersistAfterQuietPeriodAsync(CancellationTokenSource owner)
+    {
+        try
+        {
+            await Task.Delay(140, owner.Token);
+            if (ReferenceEquals(_persistCts, owner))
+                PersistNow();
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity, string? ImageKey = null);
