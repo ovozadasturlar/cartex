@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -14,7 +13,7 @@ public partial class AuditActionLengthTests
     [Fact]
     public void Audit_actions_fit_the_column()
     {
-        var root = SolutionRoot();
+        var root = SolutionRoot.Find();
         var offenders = Directory
             .EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
@@ -27,29 +26,5 @@ public partial class AuditActionLengthTests
             .ToList();
 
         Assert.Empty(offenders);
-    }
-
-    private static string SolutionRoot([CallerFilePath] string sourceFile = "")
-    {
-        var startDirectories = new[]
-        {
-            Path.GetDirectoryName(sourceFile),
-            Directory.GetCurrentDirectory(),
-            AppContext.BaseDirectory
-        };
-
-        foreach (var startDirectory in startDirectories.Where(Directory.Exists).Distinct())
-        {
-            for (var directory = new DirectoryInfo(startDirectory!);
-                 directory is not null;
-                 directory = directory.Parent)
-            {
-                if (File.Exists(Path.Combine(directory.FullName, "Cartex.slnx")))
-                    return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Solution root not found from: {string.Join(", ", startDirectories)}.");
     }
 }
