@@ -6,6 +6,44 @@ export interface SaleLine {
   unitPrice: number;
 }
 
+export interface SaleDetailLine {
+  saleItemId: number;
+  variantId: number;
+  productName: string;
+  returnableQuantity: number;
+  unitPrice: number;
+}
+
+export interface SaleDetail {
+  id: number;
+  warehouseId: number;
+  customerId: number | null;
+  items: SaleDetailLine[];
+}
+
+export interface CustomerReturnLine {
+  variantId: number;
+  saleItemId: number;
+  quantity: number;
+  reason: string | null;
+  condition: string;
+  disposition: string;
+}
+
+export interface CreateCustomerReturn {
+  warehouseId: number;
+  lines: CustomerReturnLine[];
+  customerId: number | null;
+  autoSettle: boolean;
+  idempotencyKey: string;
+}
+
+export interface CustomerReturnCreated {
+  id: number;
+  documentNumber: string;
+  refundAmount: number;
+}
+
 export interface Sale {
   id: number;
   saleDate: string;

@@ -12,8 +12,8 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { SalesApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe, utcRange } from '../../core/format';
-import { Receipt, Sale, SalesTotals } from '../../core/models';
+import { CxDatePipe, CxMoneyPipe, newUuid, utcRange } from '../../core/format';
+import { Receipt, Sale, SaleDetail, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
@@ -331,6 +331,7 @@ export class ReceiptDialog {
 
 interface ReturnLine {
   saleItemId: number;
+  variantId: number;
   productName: string;
   remaining: number;
   quantity: number;
@@ -340,15 +341,18 @@ interface ReturnLine {
 
 @Component({
   selector: 'app-return-dialog',
-  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, TranslocoModule],
   template: `
     <div class="dlg" *transloco="let t">
       <div class="head">
         <h2>{{ t('return') }}</h2>
         <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
       </div>
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
       <mat-dialog-content>
-        @for (line of lines; track line.saleItemId) {
+        @for (line of lines(); track line.saleItemId) {
           <div class="line">
             <div class="top">
               <span class="name">{{ line.productName }}</span>
@@ -428,26 +432,51 @@ export class ReturnDialog {
   private readonly ref = inject(MatDialogRef<ReturnDialog>);
   private readonly sale = inject<Sale>(MAT_DIALOG_DATA);
 
-  readonly busy = signal(false);
-  readonly lines: ReturnLine[] = this.sale.items
-    .filter((i) => i.quantity - i.returnedQuantity > 0)
-    .map((i) => ({
-      saleItemId: i.saleItemId,
-      productName: i.productName,
-      remaining: i.quantity - i.returnedQuantity,
-      quantity: i.quantity - i.returnedQuantity,
-      restock: true,
-      reason: '',
-    }));
+  private readonly idempotencyKey = newUuid();
+  private detail: SaleDetail | null = null;
+
+  readonly busy = signal(true);
+  readonly lines = signal<ReturnLine[]>([]);
+
+  constructor() {
+    this.load();
+  }
+
+  private async load(): Promise<void> {
+    try {
+      this.detail = await lastValueFrom(this.api.detail(this.sale.id));
+      this.lines.set(
+        this.detail.items
+          .filter((i) => i.returnableQuantity > 0)
+          .map((i) => ({
+            saleItemId: i.saleItemId,
+            variantId: i.variantId,
+            productName: i.productName,
+            remaining: i.returnableQuantity,
+            quantity: i.returnableQuantity,
+            restock: true,
+            reason: '',
+          })),
+      );
+    } catch (e) {
+      this.notify.error(e);
+      this.ref.close(false);
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   async confirm(): Promise<void> {
-    const lines = this.lines
+    if (!this.detail) return;
+    const lines = this.lines()
       .filter((l) => l.quantity > 0)
       .map((l) => ({
+        variantId: l.variantId,
         saleItemId: l.saleItemId,
         quantity: Math.min(l.quantity, l.remaining),
-        restock: l.restock,
         reason: l.reason.trim() || null,
+        condition: 'Sellable',
+        disposition: l.restock ? 'SellableRestock' : 'Quarantine',
       }));
     if (!lines.length) {
       this.notify.error(this.transloco.translate('return_select_qty'));
@@ -455,7 +484,15 @@ export class ReturnDialog {
     }
     this.busy.set(true);
     try {
-      await lastValueFrom(this.api.returnSale(this.sale.id, lines));
+      await lastValueFrom(
+        this.api.createReturn({
+          warehouseId: this.detail.warehouseId,
+          customerId: this.detail.customerId,
+          lines,
+          autoSettle: true,
+          idempotencyKey: this.idempotencyKey,
+        }),
+      );
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

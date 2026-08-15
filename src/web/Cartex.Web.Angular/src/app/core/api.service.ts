@@ -3,7 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
   CashierSales,
+  CreateCustomerReturn,
   Customer,
+  CustomerReturnCreated,
   CustomerSales,
   CustomerTotals,
   DailyCashFlow,
@@ -14,6 +16,7 @@ import {
   ProductsTotals,
   Receipt,
   Sale,
+  SaleDetail,
   SalesBreakdown,
   SalesReport,
   SalesTotals,
@@ -46,11 +49,12 @@ export class SalesApi {
     return this.http.post<void>(`/api/sales/${id}/resend-receipt`, {});
   }
 
-  returnSale(
-    id: number,
-    lines: { saleItemId: number; quantity: number; restock: boolean; reason: string | null }[],
-  ): Observable<void> {
-    return this.http.post<void>(`/api/sales/${id}/return`, { saleId: id, lines });
+  detail(id: number): Observable<SaleDetail> {
+    return this.http.get<SaleDetail>(`/api/sales/${id}`);
+  }
+
+  createReturn(request: CreateCustomerReturn): Observable<CustomerReturnCreated> {
+    return this.http.post<CustomerReturnCreated>('/api/customer-returns', request);
   }
 }
 
