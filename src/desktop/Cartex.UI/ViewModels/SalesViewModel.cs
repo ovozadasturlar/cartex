@@ -41,7 +41,7 @@ public record QueueRow(Cartex.Shared.Models.Ordering.CartListDto Cart)
     public bool HasCustomer => !string.IsNullOrWhiteSpace(Cart.CustomerName);
 }
 
-public record PayMethodOption(string Key, string Label);
+public record PayMethodOption(string Key, string Label, string Code);
 
 public partial class PaymentRow : ObservableObject
 {
@@ -326,8 +326,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> Currencies { get; } = [];
     public ObservableCollection<PayMethodOption> PayMethods { get; } = [];
 
+    private static readonly string[] CashlessKeys = ["card", "transfer", "bank"];
+
     private decimal RateOf(string? code) => code == _baseCurrency ? 1m : code is null ? 0m : _rates.GetValueOrDefault(code, 0m);
     private decimal PaidBonusBase => IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
+
+    private List<SalePaymentRequest>? MulticurrencyPayments()
+    {
+        if (!IsMulticurrency) return null;
+        var rows = PaymentRows.Where(r => r.Amount > 0)
+            .Select(r => new SalePaymentRequest(r.Method.Code, r.Currency, r.Amount)).ToList();
+        return rows.Count > 0 ? rows : null;
+    }
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
     public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
@@ -798,7 +808,14 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 }
             }
 
-            var methods = new List<PayMethodOption> { new("cash", L["cash"]), new("card", L["card"]), new("bonus", L["bonus"]) };
+            var methods = new List<PayMethodOption>
+            {
+                new("cash", L["cash"], "Cash"),
+                new("card", L["card"], "Card"),
+                new("transfer", L["pay_transfer"], "Transfer"),
+                new("bank", L["pay_bank"], "Bank"),
+                new("bonus", L["bonus"], "Bonus")
+            };
             if (!methods.SequenceEqual(PayMethods))
             {
                 var methodKeys = PaymentRows.Select(r => r.Method.Key).ToList();
@@ -819,7 +836,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void AddPayment()
     {
-        var row = new PaymentRow(_defaultCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"]),
+        var row = new PaymentRow(_defaultCurrency, PayMethods.FirstOrDefault() ?? new PayMethodOption("cash", L["cash"], "Cash"),
             Currencies, PayMethods, NotifyTotals, RateOf, _baseCurrency);
         PaymentRows.Add(row);
     }
@@ -2026,7 +2043,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 {
                     await SyncActiveCartAsync();
                     var cash = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "cash").Sum(r => r.AmountBase) : PaidCash;
-                    var card = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "card").Sum(r => r.AmountBase) : PaidCard;
+                    var card = IsMulticurrency ? PaymentRows.Where(r => CashlessKeys.Contains(r.Method.Key)).Sum(r => r.AmountBase) : PaidCard;
                     var bonus = IsMulticurrency ? PaymentRows.Where(r => r.Method.Key == "bonus").Sum(r => r.AmountBase) : PaidBonus;
 
                     var checkoutItems = CartItems
@@ -2054,12 +2071,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             {
                 var items = CartItems.Select(c => new CreateSaleItemRequest(c.VariantId, c.Quantity,
                     c.IsPrepack ? null : CanOverridePrice ? c.PriceOverride : null, c.PrepackId)).ToList();
-                var payments = IsMulticurrency
-                    ? PaymentRows.Where(r => r.Amount > 0)
-                        .Select(r => new SalePaymentRequest(r.Method.Key switch { "card" => "Card", "bonus" => "Bonus", _ => "Cash" }, r.Currency, r.Amount)).ToList()
-                    : null;
                 var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items, DiscountAmount,
-                    payments is { Count: > 0 } ? payments : null,
+                    MulticurrencyPayments(),
                     IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
                     DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
                     IdempotencyKey: _saleIdempotencyKey,

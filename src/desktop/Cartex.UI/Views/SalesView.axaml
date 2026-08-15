@@ -597,7 +597,7 @@
                             <ItemsControl ItemsSource="{Binding PaymentRows}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ColumnDefinitions="106,6,84,6,*,6,Auto" Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="132,6,84,6,*,6,Auto" Margin="0,0,0,6">
                                             <ComboBox ItemsSource="{Binding Methods}"
                                                       SelectedItem="{Binding Method}" MinHeight="36" VerticalAlignment="Top"
                                                       HorizontalAlignment="Stretch">
