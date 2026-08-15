@@ -14,6 +14,7 @@ public partial class ProfileViewModel(
     WarehouseContext warehouseContext,
     MobileOfflineService offline,
     IOfflineCacheApi offlineApi,
+    OrderingHubService orderingHub,
     MobilePermissions permissions) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
@@ -111,6 +112,7 @@ public partial class ProfileViewModel(
             return;
         AppLock.Disable();
         await auth.LogoutAsync();
+        await orderingHub.StopAsync();
         cart.Clear();
         warehouseContext.Reset();
         await Shell.Current.GoToAsync("//login");

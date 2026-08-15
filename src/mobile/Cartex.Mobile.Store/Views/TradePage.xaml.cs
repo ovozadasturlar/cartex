@@ -17,4 +17,10 @@ public partial class TradePage : ContentPage
         base.OnAppearing();
         await _vm.AppearAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        _vm.Disappear();
+        base.OnDisappearing();
+    }
 }

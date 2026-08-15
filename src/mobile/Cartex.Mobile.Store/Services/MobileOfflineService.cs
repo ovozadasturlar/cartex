@@ -26,6 +26,7 @@ public sealed class MobileOfflineService(
     private const string EnabledKey = "offline_enabled_v2";
     private readonly SemaphoreSlim _syncLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
+    private CancellationTokenSource? _loopCts;
     private bool _started;
     private MobileOfflineCredential? _credential;
     private DateTime _lastSnapshotAttempt;
@@ -49,9 +50,25 @@ public sealed class MobileOfflineService(
         if (_credential is not null)
             await store.PrepareLeaseAsync(_credential);
         Connectivity.Current.ConnectivityChanged += OnConnectivityChanged;
-        _ = RunLoopAsync(_lifetime.Token);
-        if (IsEnabled && Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
+        if (!IsEnabled) return;
+        StartLoop();
+        if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
             _ = Task.Run(() => SyncAsync(), _lifetime.Token);
+    }
+
+    private void StartLoop()
+    {
+        if (_loopCts is not null) return;
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _loopCts = cts;
+        _ = RunLoopAsync(cts.Token);
+    }
+
+    private void StopLoop()
+    {
+        var cts = Interlocked.Exchange(ref _loopCts, null);
+        cts?.Cancel();
+        cts?.Dispose();
     }
 
     public void MarkServerUnavailable()
@@ -99,6 +116,7 @@ public sealed class MobileOfflineService(
         await PullSnapshotAsync(credential);
         Preferences.Set(EnabledKey, true);
         ServerReachable = true;
+        StartLoop();
         StateChanged?.Invoke();
     }
 
@@ -113,6 +131,7 @@ public sealed class MobileOfflineService(
 
     public async Task DeactivateLocalAsync()
     {
+        StopLoop();
         Preferences.Set(EnabledKey, false);
         SecureStorage.Remove(CredentialKey);
         _credential = null;

@@ -100,12 +100,28 @@ public partial class ScanViewModel : ObservableObject
         _offline = offline;
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
-        cart.Changed += () => CartCount = _cart.Count;
-        supplyCart.Changed += OnSupplyCartChanged;
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
         CanEditProduct = permissions.Has("products.edit");
         CanReceiveStock = permissions.Has("supplies.create");
     }
+
+    public void Appear()
+    {
+        _cart.Changed -= OnCartChanged;
+        _cart.Changed += OnCartChanged;
+        _supplyCart.Changed -= OnSupplyCartChanged;
+        _supplyCart.Changed += OnSupplyCartChanged;
+        CartCount = _cart.Count;
+        SupplyCartCount = _supplyCart.Count;
+    }
+
+    public void Disappear()
+    {
+        _cart.Changed -= OnCartChanged;
+        _supplyCart.Changed -= OnSupplyCartChanged;
+    }
+
+    private void OnCartChanged() => CartCount = _cart.Count;
 
     public async Task HandleAsync(string value)
     {
@@ -718,8 +734,7 @@ public partial class ScanViewModel : ObservableObject
     {
         Status = Loc.Instance["scan_hint_store"];
         _handled = false;
-        _lastValue = null;
-        _lastAt = DateTime.MinValue;
+        _lastAt = DateTime.UtcNow;
         OverlayVisible = false;
         IsBarcodeMode = false;
         ProductActionsExpanded = false;

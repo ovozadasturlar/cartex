@@ -17,9 +17,27 @@ public class LineChartView : GraphicsView
     public LineChartView()
     {
         Drawable = _drawable;
-        if (Application.Current is { } app)
-            app.RequestedThemeChanged += (_, _) => Invalidate();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        if (Application.Current is { } app)
+        {
+            app.RequestedThemeChanged -= OnThemeChanged;
+            app.RequestedThemeChanged += OnThemeChanged;
+        }
+        Invalidate();
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        if (Application.Current is { } app)
+            app.RequestedThemeChanged -= OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, AppThemeChangedEventArgs e) => Invalidate();
 
     private void OnValuesChanged(IList<float>? values)
     {

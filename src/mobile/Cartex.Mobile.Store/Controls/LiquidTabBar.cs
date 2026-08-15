@@ -95,10 +95,6 @@ public class LiquidTabBar : Grid
 
         ApplyTheme();
 
-        if (Application.Current is { } app)
-            app.RequestedThemeChanged += OnThemeChanged;
-        Loc.Instance.PropertyChanged += OnLanguageChanged;
-
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -113,6 +109,16 @@ public class LiquidTabBar : Grid
 
     private void OnLoaded(object? sender, EventArgs e)
     {
+        if (Application.Current is { } app)
+        {
+            app.RequestedThemeChanged -= OnThemeChanged;
+            app.RequestedThemeChanged += OnThemeChanged;
+        }
+        Loc.Instance.PropertyChanged -= OnLanguageChanged;
+        Loc.Instance.PropertyChanged += OnLanguageChanged;
+        ApplyTheme();
+        OnLanguageChanged(null, new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+
         var index = ResolvedIndex;
         var from = _travelFrom;
         if (from >= 0 && from != index && Interlocked.CompareExchange(ref _travelFrom, -1, from) == from)
@@ -128,6 +134,9 @@ public class LiquidTabBar : Grid
 
     private void OnUnloaded(object? sender, EventArgs e)
     {
+        if (Application.Current is { } app)
+            app.RequestedThemeChanged -= OnThemeChanged;
+        Loc.Instance.PropertyChanged -= OnLanguageChanged;
         this.AbortAnimation("liquid");
         _animating = false;
     }

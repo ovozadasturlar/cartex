@@ -59,7 +59,6 @@ public partial class TradeViewModel(
     [ObservableProperty] private int _todayCount;
     [ObservableProperty] private string _todayTotal = "0";
 
-    private bool _hubWired;
     private DateTime _lastLoadedAt;
     private int _salesPage = 1;
     private bool _hasMoreSales = true;
@@ -73,12 +72,10 @@ public partial class TradeViewModel(
 
     public async Task AppearAsync()
     {
-        if (!_hubWired)
-        {
-            _hubWired = true;
-            orderingHub.CartsChanged += OnCartsChanged;
-            orderingHub.Resynced += OnHubResynced;
-        }
+        orderingHub.CartsChanged -= OnCartsChanged;
+        orderingHub.CartsChanged += OnCartsChanged;
+        orderingHub.Resynced -= OnHubResynced;
+        orderingHub.Resynced += OnHubResynced;
         _ = orderingHub.EnsureStartedAsync();
         HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
@@ -88,6 +85,13 @@ public partial class TradeViewModel(
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
         if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(45)) return;
         await LoadAsync();
+    }
+
+    public void Disappear()
+    {
+        orderingHub.CartsChanged -= OnCartsChanged;
+        orderingHub.Resynced -= OnHubResynced;
+        _lastLoadedAt = DateTime.MinValue;
     }
 
     private void OnCartsChanged(string kind)
