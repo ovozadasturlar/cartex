@@ -2117,13 +2117,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task ShowReceiptAsync(string token, long? customerId = null)
     {
+        var receiptFetch = _receiptApi.GetAsync(token);
+        var autoPrint = _printer.AutoPrintEnabled && !_printer.AutoPrintHandledByServer
+            ? _printDispatch.PrintReceiptAsync(token, receiptFetch)
+            : null;
+
         ReceiptDto? receipt = null;
-        try { receipt = await _receiptApi.GetAsync(token); }
+        try { receipt = await receiptFetch; }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
 
-        if (receipt is not null && _printer.AutoPrintEnabled && !_printer.AutoPrintHandledByServer)
+        if (autoPrint is not null)
         {
-            try { await _printDispatch.PrintReceiptAsync(receipt, false); }
+            try { await autoPrint; }
             catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
         }
 

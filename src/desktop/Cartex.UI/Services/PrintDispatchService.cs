@@ -63,6 +63,28 @@ public sealed class PrintDispatchService
                 _printer.PrintReceipt(receipt);
             });
 
+    /// The job payload needs only the token, so checkout auto-print is dispatched without
+    /// waiting for the receipt fetch; the fetch is awaited only for the local fallback.
+    public async Task PrintReceiptAsync(string receiptToken, Task<ReceiptDto> receiptFetch, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await CreateAsync(
+                PrintJobKind.Receipt,
+                "receipt_token",
+                receiptToken,
+                JsonSerializer.SerializeToElement(new { receiptToken }),
+                false,
+                null,
+                $"receipt:{receiptToken}",
+                cancellationToken);
+        }
+        catch (Exception exception) when (IsServerUnavailable(exception))
+        {
+            await PrintReceiptAsync(await receiptFetch, false, cancellationToken);
+        }
+    }
+
     public Task PrintZReportAsync(ZReportDto report, bool reprint, CancellationToken cancellationToken = default) =>
         CreateAsync(
             PrintJobKind.ZReport,
