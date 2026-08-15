@@ -30,8 +30,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     public ObservableCollection<CheckoutPaymentRow> Payments { get; } = [];
     public IReadOnlyList<CheckoutPaymentMethod> PaymentMethods { get; } =
     [
-        new("Cash", Loc.Instance["cash"]),
-        new("Card", Loc.Instance["card"]),
+        new("Cash", Loc.Instance["pay_cash"]),
+        new("Card", Loc.Instance["pay_card"]),
         new("Transfer", Loc.Instance["transfer"]),
         new("Bank", Loc.Instance["bank"]),
         new("Bonus", Loc.Instance["bonus"])
@@ -483,6 +483,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     {
         var row = new CheckoutPaymentRow
         {
+            Methods = PaymentMethods,
+            CurrencyOptions = Currencies,
             SelectedMethod = PaymentMethods.FirstOrDefault(x => string.Equals(x.Code, method, StringComparison.OrdinalIgnoreCase))
                              ?? PaymentMethods[0],
             SelectedCurrency = FindCurrency(currency) ?? FindCurrency(BaseCurrency),
@@ -495,11 +497,14 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private void OnPaymentPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_initializingPayments || sender is not CheckoutPaymentRow row) return;
+        if (e.PropertyName is not (nameof(CheckoutPaymentRow.SelectedMethod)
+            or nameof(CheckoutPaymentRow.SelectedCurrency)
+            or nameof(CheckoutPaymentRow.AmountText))) return;
+
         if (e.PropertyName == nameof(CheckoutPaymentRow.SelectedMethod)
             && row.SelectedMethod?.Code == "Bonus"
             && row.SelectedCurrency?.IsBase != true)
             row.SelectedCurrency = FindCurrency(BaseCurrency);
-        row.NotifyCalculated();
         Recalc();
     }
 
@@ -638,6 +643,9 @@ public sealed record CheckoutPaymentMethod(string Code, string Label);
 
 public partial class CheckoutPaymentRow : ObservableObject
 {
+    public required IReadOnlyList<CheckoutPaymentMethod> Methods { get; init; }
+    public required IReadOnlyList<CurrencyDto> CurrencyOptions { get; init; }
+
     [ObservableProperty] private CheckoutPaymentMethod? _selectedMethod;
     [ObservableProperty] private CurrencyDto? _selectedCurrency;
     [ObservableProperty] private string _amountText = "";
@@ -652,7 +660,7 @@ public partial class CheckoutPaymentRow : ObservableObject
     public bool IsRateStale => SelectedCurrency is { IsBase: false, RateAt: { } at }
                                && DateTime.UtcNow - at.ToUniversalTime() > TimeSpan.FromHours(36);
 
-    public void NotifyCalculated()
+    private void NotifyCalculated()
     {
         OnPropertyChanged(nameof(Amount));
         OnPropertyChanged(nameof(EffectiveRate));

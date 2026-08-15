@@ -56,15 +56,15 @@
                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                             <VerticalStackLayout Spacing="3">
                                                 <Label Text="{svc:T condition}" Style="{StaticResource MutedLabel}" FontSize="11" />
-                                                <Picker ItemsSource="{Binding Conditions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
-                                                        SelectedItem="{Binding SelectedCondition}"
-                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}" />
+                                                <Picker ItemsSource="{Binding Conditions}"
+                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}"
+                                                        SelectedItem="{Binding SelectedCondition}" />
                                             </VerticalStackLayout>
                                             <VerticalStackLayout Grid.Column="1" Spacing="3">
                                                 <Label Text="{svc:T disposition}" Style="{StaticResource MutedLabel}" FontSize="11" />
-                                                <Picker ItemsSource="{Binding Dispositions, Source={RelativeSource AncestorType={x:Type vm:SaleReturnViewModel}}}"
-                                                        SelectedItem="{Binding SelectedDisposition}"
-                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}" />
+                                                <Picker ItemsSource="{Binding Dispositions}"
+                                                        ItemDisplayBinding="{Binding Label, x:DataType=vm:ReturnOption}"
+                                                        SelectedItem="{Binding SelectedDisposition}" />
                                             </VerticalStackLayout>
                                         </Grid>
                                         <Border Style="{StaticResource InputWrap}">

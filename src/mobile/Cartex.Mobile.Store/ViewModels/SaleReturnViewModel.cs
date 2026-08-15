@@ -88,7 +88,7 @@ public partial class SaleReturnViewModel(
             Lines.Clear();
             foreach (var item in sale.Items.Where(x => x.ReturnableQuantity > 0))
             {
-                var line = new SaleReturnLine(item, Conditions[0], Dispositions[0]);
+                var line = new SaleReturnLine(item, Conditions, Dispositions);
                 line.PropertyChanged += OnLineChanged;
                 Lines.Add(line);
             }
@@ -242,6 +242,8 @@ public sealed record ReturnOption(string Code, string Label);
 public partial class SaleReturnLine : ObservableObject
 {
     public SaleDetailItemDto Item { get; }
+    public IReadOnlyList<ReturnOption> Conditions { get; }
+    public IReadOnlyList<ReturnOption> Dispositions { get; }
 
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private decimal _quantity;
@@ -250,13 +252,16 @@ public partial class SaleReturnLine : ObservableObject
     [ObservableProperty] private ReturnOption? _selectedCondition;
     [ObservableProperty] private ReturnOption? _selectedDisposition;
 
-    public SaleReturnLine(SaleDetailItemDto item, ReturnOption condition, ReturnOption disposition)
+    public SaleReturnLine(SaleDetailItemDto item,
+        IReadOnlyList<ReturnOption> conditions, IReadOnlyList<ReturnOption> dispositions)
     {
         Item = item;
+        Conditions = conditions;
+        Dispositions = dispositions;
         _quantity = item.ReturnableQuantity;
         _quantityText = QuantityInput.Format(_quantity);
-        _selectedCondition = condition;
-        _selectedDisposition = disposition;
+        _selectedCondition = conditions[0];
+        _selectedDisposition = dispositions[0];
     }
 
     partial void OnQuantityChanged(decimal value) => QuantityText = QuantityInput.Format(value);

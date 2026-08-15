@@ -110,12 +110,12 @@
                                                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
                                             <VerticalStackLayout Spacing="8">
                                                 <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6">
-                                                    <Picker ItemsSource="{Binding PaymentMethods, Source={RelativeSource AncestorType={x:Type vm:CheckoutViewModel}}}"
-                                                            SelectedItem="{Binding SelectedMethod}"
-                                                            ItemDisplayBinding="{Binding Label, x:DataType=vm:CheckoutPaymentMethod}" />
-                                                    <Picker Grid.Column="1" ItemsSource="{Binding Currencies, Source={RelativeSource AncestorType={x:Type vm:CheckoutViewModel}}}"
-                                                            SelectedItem="{Binding SelectedCurrency}"
-                                                            ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}" />
+                                                    <Picker ItemsSource="{Binding Methods}"
+                                                            ItemDisplayBinding="{Binding Label, x:DataType=vm:CheckoutPaymentMethod}"
+                                                            SelectedItem="{Binding SelectedMethod}" />
+                                                    <Picker Grid.Column="1" ItemsSource="{Binding CurrencyOptions}"
+                                                            ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}"
+                                                            SelectedItem="{Binding SelectedCurrency}" />
                                                     <Button Grid.Column="2" Text="{StaticResource IcClose}" FontFamily="MDI" Padding="0"
                                                             WidthRequest="38" HeightRequest="38" BackgroundColor="Transparent"
                                                             Command="{Binding RemovePaymentCommand, Source={RelativeSource AncestorType={x:Type vm:CheckoutViewModel}}}"

@@ -23,8 +23,8 @@ public partial class CustomerRefundViewModel(
     public ObservableCollection<CheckoutPaymentRow> Tenders { get; } = [];
     public IReadOnlyList<CheckoutPaymentMethod> PaymentMethods { get; } =
     [
-        new("Cash", Loc.Instance["cash"]),
-        new("Card", Loc.Instance["card"]),
+        new("Cash", Loc.Instance["pay_cash"]),
+        new("Card", Loc.Instance["pay_card"]),
         new("Transfer", Loc.Instance["transfer"]),
         new("Bank", Loc.Instance["bank"])
     ];
@@ -97,6 +97,8 @@ public partial class CustomerRefundViewModel(
         if (!CanAdd || _defaultCurrency is null) return;
         var row = new CheckoutPaymentRow
         {
+            Methods = PaymentMethods,
+            CurrencyOptions = Currencies,
             SelectedMethod = PaymentMethods[0],
             SelectedCurrency = _defaultCurrency
         };
