@@ -63,8 +63,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 1)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "USD", 10m)])));
+            sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 1)])
+            {
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "USD", 10m)]
+            }));
     }
 
     [Fact]
@@ -84,12 +86,13 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments:
-                [
+            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [
                     new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount),
                     new SalePaymentDto(PaymentMethod.Cash, "UZS", uzsAmount)
-                ]))).ReceiptToken;
+                ]
+            })).ReceiptToken;
         }
 
         using var check = Fixture.CreateScope();
@@ -123,8 +126,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount)]))).ReceiptToken;
+            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount)]
+            })).ReceiptToken;
         }
 
         using var check = Fixture.CreateScope();
@@ -149,8 +154,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             customerId = await sender.Send(new CreateCustomerCommand("USD Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: 100_000_000m));
-            await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                DebtCurrency: "USD"));
+            await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                DebtCurrency = "USD"
+            });
         }
 
         var total = price * 2;
@@ -249,12 +256,13 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var total = price * 2;
             var usdAmount = 1m;
             var uzsAmount = total - Math.Round(usdAmount * 12600m, 2);
-            await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments:
-                [
+            await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [
                     new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount),
                     new SalePaymentDto(PaymentMethod.Cash, "UZS", uzsAmount)
-                ]));
+                ]
+            });
         }
 
         using var scope2 = Fixture.CreateScope();

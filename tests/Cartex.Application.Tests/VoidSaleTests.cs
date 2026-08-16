@@ -102,9 +102,10 @@ public class VoidSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             saleId = (await scope.ServiceProvider.GetRequiredService<ISender>().Send(
-                new CreateSaleCommand(setup.WarehouseId, customerId, 0, 0, 0,
-                    [new CreateSaleItemDto(setup.VariantId, 1)],
-                    DebtDueDate: DateOnly.FromDateTime(DateTime.Today.AddDays(30))))).SaleId;
+                new CreateSaleCommand(setup.WarehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(setup.VariantId, 1)])
+                {
+                    DebtDueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30))
+                })).SaleId;
         }
 
         using (var scope = Fixture.CreateScope())

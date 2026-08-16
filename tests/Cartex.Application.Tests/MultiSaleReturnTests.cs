@@ -40,9 +40,10 @@ public class MultiSaleReturnTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     {
         using var scope = Fixture.CreateScope();
         return (await scope.ServiceProvider.GetRequiredService<ISender>().Send(
-            new CreateSaleCommand(warehouseId, customerId, 0, 0, 0,
-                [new CreateSaleItemDto(variantId, quantity)],
-                DebtDueDate: DateOnly.FromDateTime(DateTime.Today.AddDays(30))))).SaleId;
+            new CreateSaleCommand(warehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, quantity)])
+            {
+                DebtDueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30))
+            })).SaleId;
     }
 
     private async Task<decimal> DebtAsync(long customerId)

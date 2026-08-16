@@ -32,8 +32,10 @@ public class CartKindTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var variantId = await db.ProductVariants.Select(v => v.Id).FirstAsync();
-        return await sender.Send(new SubmitCartCommand(warehouseId, null,
-            [new SubmitCartItemDto(variantId, 1m)], Kind: kind));
+        return await sender.Send(new SubmitCartCommand(warehouseId, null, [new SubmitCartItemDto(variantId, 1m)])
+        {
+            Kind = kind
+        });
     }
 
     [Fact]

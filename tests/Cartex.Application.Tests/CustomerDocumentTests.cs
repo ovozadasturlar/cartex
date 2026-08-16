@@ -53,10 +53,10 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(
-                warehouseId, customerId, 0, 0, 0,
-                [new CreateSaleItemDto(variantId, 1, 50_000m)],
-                UseCustomerAdvance: false))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1, 50_000m)])
+            {
+                UseCustomerAdvance = false
+            })).SaleId;
         }
 
         var command = new CreateCustomerPaymentCommand(
@@ -117,10 +117,11 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
         long saleId;
         using (var scope = Fixture.CreateScope())
         {
-            saleId = (await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateSaleCommand(
-                warehouseId, customerId, 0, 0, 0,
-                [new CreateSaleItemDto(variantId, 1, 50_000m)],
-                DebtCurrency: "usd", UseCustomerAdvance: false))).SaleId;
+            saleId = (await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateSaleCommand(warehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1, 50_000m)])
+            {
+                DebtCurrency = "usd",
+                UseCustomerAdvance = false
+            })).SaleId;
         }
 
         using (var scope = Fixture.CreateScope())

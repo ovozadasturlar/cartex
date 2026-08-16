@@ -94,13 +94,13 @@ public class DebtWriteOffTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
     private Task<long> SellOnDebtAsync(Setup s, long variantId, long customerId,
         DateOnly? due = null, List<ParticipantInput>? participants = null) =>
-        Send(async x => (await x.Send(new CreateSaleCommand(
-            s.Warehouse, customerId, 0, 0, 0,
-            [new CreateSaleItemDto(variantId, 1m)],
-            DebtDueDate: due,
-            ApplyAutoDiscount: false,
-            UseCustomerAdvance: false,
-            Participants: participants))).SaleId);
+        Send(async x => (await x.Send(new CreateSaleCommand(s.Warehouse, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1m)])
+        {
+            DebtDueDate = due,
+            ApplyAutoDiscount = false,
+            UseCustomerAdvance = false,
+            Participants = participants
+        })).SaleId);
 
     private Task<CustomerPaymentCreatedDto> PayAsync(Setup s, long customerId, decimal cash, decimal writeOff,
         string? reason = Reason)

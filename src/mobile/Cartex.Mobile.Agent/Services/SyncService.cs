@@ -117,8 +117,12 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             {
                 var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
                 var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
-                var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items,
-                    DebtDueDate: d.DebtDueDate, IdempotencyKey: item.Key, ApplyAutoDiscount: false));
+                var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items)
+                {
+                    DebtDueDate = d.DebtDueDate,
+                    IdempotencyKey = item.Key,
+                    ApplyAutoDiscount = false
+                });
                 item.ReceiptToken = result.ReceiptToken;
                 break;
             }
@@ -132,7 +136,10 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             {
                 var o = JsonSerializer.Deserialize<OrderDraft>(item.PayloadJson)!;
                 var req = new SubmitCartRequest(o.WarehouseId, o.CustomerId,
-                    o.Items.Select(i => new SubmitCartItemRequest(i.VariantId, i.Quantity)).ToList(), IdempotencyKey: item.Key);
+                    o.Items.Select(i => new SubmitCartItemRequest(i.VariantId, i.Quantity)).ToList())
+                {
+                    IdempotencyKey = item.Key
+                };
                 var code = await orderingApi.SubmitAsync(req);
                 await db.SetOrderCodeAsync(o.LocalId, code);
                 break;
@@ -140,7 +147,10 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             case "checkout":
             {
                 var c = JsonSerializer.Deserialize<CheckoutDraft>(item.PayloadJson)!;
-                await orderingApi.CheckoutAsync(c.Code, new CheckoutCartRequest(c.PaidCash, 0, 0, IdempotencyKey: item.Key));
+                await orderingApi.CheckoutAsync(c.Code, new CheckoutCartRequest(c.PaidCash, 0, 0)
+                {
+                    IdempotencyKey = item.Key
+                });
                 await db.SetOrderStatusByCodeAsync(c.Code, "delivered");
                 break;
             }

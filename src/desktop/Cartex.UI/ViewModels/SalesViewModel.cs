@@ -550,8 +550,12 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (items.Count == 0 || Branch.CurrentWarehouseId is not { } warehouseId) return null;
         try
         {
-            return await _orderingApi.SubmitAsync(new SubmitCartRequest(
-                warehouseId, customerId, items, Guid.NewGuid().ToString("N"), note, "Queue"));
+            return await _orderingApi.SubmitAsync(new SubmitCartRequest(warehouseId, customerId, items)
+            {
+                IdempotencyKey = Guid.NewGuid().ToString("N"),
+                Note = note,
+                Kind = "Queue"
+            });
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return null; }
     }
@@ -2043,15 +2047,22 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 // A cart resumed from the queue already exists, so the discount typed since has to
                 // be written back; submitting again would leave a second row for the same basket.
                 if (_activeCartCode is { } code)
-                    await _orderingApi.UpdateAsync(code, new UpdateCartRequest(
-                        SelectedCustomer?.Id, queueItems, queueNote,
-                        DiscountAmount: DiscountAmount, RoundingAmount: RoundingAmount));
+                    await _orderingApi.UpdateAsync(code, new UpdateCartRequest(SelectedCustomer?.Id, queueItems)
+                    {
+                        Note = queueNote,
+                        DiscountAmount = DiscountAmount,
+                        RoundingAmount = RoundingAmount
+                    });
                 else
                 {
                     _queueIdempotencyKey ??= Guid.NewGuid().ToString("N");
-                    await _orderingApi.SubmitAsync(new SubmitCartRequest(
-                        warehouseId, SelectedCustomer?.Id, queueItems, _queueIdempotencyKey, queueNote,
-                        DiscountAmount: DiscountAmount, RoundingAmount: RoundingAmount));
+                    await _orderingApi.SubmitAsync(new SubmitCartRequest(warehouseId, SelectedCustomer?.Id, queueItems)
+                    {
+                        IdempotencyKey = _queueIdempotencyKey,
+                        Note = queueNote,
+                        DiscountAmount = DiscountAmount,
+                        RoundingAmount = RoundingAmount
+                    });
                 }
             }
 
@@ -2155,14 +2166,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
                     queuedSaleId = await _orderingApi.CheckoutAsync(
                         queuedCode,
-                        new CheckoutCartRequest(cash, card, bonus, _saleIdempotencyKey, checkoutItems, MulticurrencyPayments(),
-                            IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
-                            DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
-                            CreditAmount,
-                            CustomerId: SelectedCustomer?.Id,
-                            DiscountAmount: DiscountAmount,
-                            Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
-                            RoundingAmount: RoundingAmount));
+                        new CheckoutCartRequest(cash, card, bonus)
+                        {
+                            IdempotencyKey = _saleIdempotencyKey,
+                            Items = checkoutItems,
+                            Payments = MulticurrencyPayments(),
+                            DebtCurrency = IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
+                            DebtDueDate = DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
+                            CreditAmount = CreditAmount,
+                            CustomerId = SelectedCustomer?.Id,
+                            DiscountAmount = DiscountAmount,
+                            Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
+                            RoundingAmount = RoundingAmount
+                        });
                 }
                 _activeCartCode = null;
                 var queuedCustomerId = SelectedCustomer?.Id;
@@ -2182,14 +2198,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             {
                 var items = CartItems.Select(c => new CreateSaleItemRequest(c.VariantId, c.Quantity,
                     c.IsPrepack ? null : CanOverridePrice ? c.PriceOverride : null, c.PrepackId)).ToList();
-                var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items, DiscountAmount,
-                    MulticurrencyPayments(),
-                    IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
-                    DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
-                    IdempotencyKey: _saleIdempotencyKey,
-                    CreditAmount: CreditAmount,
-                    Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
-                    RoundingAmount: RoundingAmount);
+                var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items)
+                {
+                    DiscountAmount = DiscountAmount,
+                    Payments = MulticurrencyPayments(),
+                    DebtCurrency = IsMulticurrency && SelectedDebtCurrency != _baseCurrency ? SelectedDebtCurrency : null,
+                    DebtDueDate = DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
+                    IdempotencyKey = _saleIdempotencyKey,
+                    CreditAmount = CreditAmount,
+                    Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
+                    RoundingAmount = RoundingAmount
+                };
                 result = await _salesApi.CreateAsync(request);
             }
 

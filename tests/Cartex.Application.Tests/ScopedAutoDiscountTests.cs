@@ -81,8 +81,10 @@ public class ScopedAutoDiscountTests(DatabaseFixture fixture) : DatabaseTest(fix
     {
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var result = await sender.Send(new CreateSaleCommand(
-            s.Warehouse, null, gross, 0, 0, [.. items], manualDiscount));
+        var result = await sender.Send(new CreateSaleCommand(s.Warehouse, null, gross, 0, 0, [.. items])
+        {
+            DiscountAmount = manualDiscount
+        });
         return result.SaleId;
     }
 

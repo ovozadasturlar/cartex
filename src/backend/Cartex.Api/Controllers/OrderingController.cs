@@ -62,18 +62,20 @@ public class OrderingController(ISender sender) : ControllerBase
         await sender.Send(new UpdateCartCommand(
             code,
             request.CustomerId,
-            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
-            request.Note,
-            request.Participants?.Select(x => new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
-            request.Payments?.Select(x => new SalePaymentDto(
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList())
+        {
+            Note = request.Note,
+            Participants = request.Participants?.Select(x => new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
+            Payments = request.Payments?.Select(x => new SalePaymentDto(
                 ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList(),
-            request.DebtCurrency,
-            request.DebtDueDate,
-            request.CreditAmount,
-            request.UseCustomerAdvance,
-            request.ExpectedVersion,
-            request.DiscountAmount,
-            request.RoundingAmount));
+            DebtCurrency = request.DebtCurrency,
+            DebtDueDate = request.DebtDueDate,
+            CreditAmount = request.CreditAmount,
+            UseCustomerAdvance = request.UseCustomerAdvance,
+            ExpectedVersion = request.ExpectedVersion,
+            DiscountAmount = request.DiscountAmount,
+            RoundingAmount = request.RoundingAmount
+        });
         return NoContent();
     }
 
@@ -100,10 +102,20 @@ public class OrderingController(ISender sender) : ControllerBase
         var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList();
         var payments = request.Payments?.Select(x => new SalePaymentDto(
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
-        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard,
-            request.PaidBonus, request.IdempotencyKey, items, payments, request.DebtCurrency,
-            request.DebtDueDate, request.CreditAmount, request.UseCustomerAdvance,
-            request.CustomerId, request.DiscountAmount, request.Note, request.RoundingAmount));
+        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus)
+        {
+            IdempotencyKey = request.IdempotencyKey,
+            Items = items,
+            Payments = payments,
+            DebtCurrency = request.DebtCurrency,
+            DebtDueDate = request.DebtDueDate,
+            CreditAmount = request.CreditAmount,
+            UseCustomerAdvance = request.UseCustomerAdvance,
+            CustomerId = request.CustomerId,
+            DiscountAmount = request.DiscountAmount,
+            Note = request.Note,
+            RoundingAmount = request.RoundingAmount
+        });
         return Ok(saleId);
     }
 

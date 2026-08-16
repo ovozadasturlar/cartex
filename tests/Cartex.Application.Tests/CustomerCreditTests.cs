@@ -104,8 +104,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 20_000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 20_000m))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 20_000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 20_000m
+            })).SaleId;
         }
 
         using var check = Fixture.CreateScope();
@@ -141,8 +143,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 30_000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 30_000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            })).SaleId;
         }
 
         using var check = Fixture.CreateScope();
@@ -170,8 +174,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, customerId, price * 2 + 5000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m)));
+            sender.Send(new CreateSaleCommand(warehouse1, customerId, price * 2 + 5000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            }));
     }
 
     [Fact]
@@ -185,8 +191,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, null, price * 2 + 10_000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m)));
+            sender.Send(new CreateSaleCommand(warehouse1, null, price * 2 + 10_000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            }));
     }
 
     [Fact]
@@ -202,8 +210,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, customerId, price * 2 + 10_000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m)));
+            sender.Send(new CreateSaleCommand(warehouse1, customerId, price * 2 + 10_000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            }));
     }
 
     [Fact]
@@ -254,8 +264,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, total + 10_000m, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, total + 10_000m, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            })).SaleId;
         }
 
         using var check = Fixture.CreateScope();
@@ -286,8 +298,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, price * 2 + 10_000m, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 5000m)));
+            sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, price * 2 + 10_000m, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 5000m
+            }));
     }
 
     [Fact]
@@ -310,8 +324,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using var check = Fixture.CreateScope();
         var sender2 = check.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, total + 10_000m,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 10_000m)));
+            sender2.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, total + 10_000m, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 10_000m
+            }));
     }
 
     [Fact]
@@ -398,8 +414,10 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 20_000m, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)], CreditAmount: 20_000m))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, total + 20_000m, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                CreditAmount = 20_000m
+            })).SaleId;
         }
 
         using (var scope = Fixture.CreateScope())
@@ -437,10 +455,11 @@ public class CustomerCreditTests(DatabaseFixture fixture) : DatabaseTest(fixture
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0,
-                [new CreateSaleItemDto(variantId, 2)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "UZS", total + 20_000m)],
-                CreditAmount: 20_000m))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "UZS", total + 20_000m)],
+                CreditAmount = 20_000m
+            })).SaleId;
         }
 
         using var check = Fixture.CreateScope();

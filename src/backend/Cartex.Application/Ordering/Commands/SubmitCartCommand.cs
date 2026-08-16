@@ -15,24 +15,23 @@ namespace Cartex.Application.Ordering.Commands;
 
 public record SubmitCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null);
 
-public record SubmitCartCommand(
-    long WarehouseId,
-    long? CustomerId,
-    List<SubmitCartItemDto> Items,
-    string? IdempotencyKey = null,
-    string? Note = null,
-    CartKind? Kind = null,
-    decimal PaidCash = 0,
-    decimal PaidCard = 0,
-    decimal PaidBonus = 0,
-    List<ParticipantInput>? Participants = null,
-    List<SalePaymentDto>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true,
-    decimal DiscountAmount = 0,
-    decimal RoundingAmount = 0) : ICommand<string>;
+public sealed record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items) : ICommand<string>
+{
+    public string? IdempotencyKey { get; init; }
+    public string? Note { get; init; }
+    public CartKind? Kind { get; init; }
+    public decimal PaidCash { get; init; }
+    public decimal PaidCard { get; init; }
+    public decimal PaidBonus { get; init; }
+    public List<ParticipantInput>? Participants { get; init; }
+    public List<SalePaymentDto>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public decimal CreditAmount { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public decimal DiscountAmount { get; init; }
+    public decimal RoundingAmount { get; init; }
+}
 
 public sealed class SubmitCartCommandHandler(
     IApplicationDbContext db,

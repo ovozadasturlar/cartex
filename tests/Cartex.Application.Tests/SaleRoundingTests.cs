@@ -82,8 +82,12 @@ public class SaleRoundingTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
     private static CreateSaleCommand Command(Setup s, decimal paid, decimal discount, decimal rounding) =>
         new(s.Warehouse, null, paid, 0, 0,
-            [new CreateSaleItemDto(s.VariantA, 1), new CreateSaleItemDto(s.VariantB, 1)],
-            discount, ApplyAutoDiscount: false, RoundingAmount: rounding);
+            [new CreateSaleItemDto(s.VariantA, 1), new CreateSaleItemDto(s.VariantB, 1)])
+        {
+            DiscountAmount = discount,
+            ApplyAutoDiscount = false,
+            RoundingAmount = rounding
+        };
 
     private async Task<long> SellAsync(Setup s, decimal paid, decimal discount, decimal rounding)
     {

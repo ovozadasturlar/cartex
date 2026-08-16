@@ -11,22 +11,20 @@ using Cartex.Application.Common.Participants;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public record CheckoutCartCommand(
-    string Code,
-    decimal PaidCash,
-    decimal PaidCard,
-    decimal PaidBonus,
-    string? IdempotencyKey = null,
-    List<CheckoutCartItemDto>? Items = null,
-    List<SalePaymentDto>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    decimal? CreditAmount = null,
-    bool? UseCustomerAdvance = null,
-    long? CustomerId = null,
-    decimal? DiscountAmount = null,
-    string? Note = null,
-    decimal? RoundingAmount = null) : ICommand<long>;
+public sealed record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus) : ICommand<long>
+{
+    public string? IdempotencyKey { get; init; }
+    public List<CheckoutCartItemDto>? Items { get; init; }
+    public List<SalePaymentDto>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public decimal? CreditAmount { get; init; }
+    public bool? UseCustomerAdvance { get; init; }
+    public long? CustomerId { get; init; }
+    public decimal? DiscountAmount { get; init; }
+    public string? Note { get; init; }
+    public decimal? RoundingAmount { get; init; }
+}
 
 public sealed class CheckoutCartCommandHandler(
     IApplicationDbContext db,
@@ -91,22 +89,24 @@ public sealed class CheckoutCartCommandHandler(
                 request.PaidCash,
                 request.PaidCard,
                 request.PaidBonus,
-                saleItems,
-                DiscountAmount: request.DiscountAmount ?? cart.DiscountAmount,
-                Payments: payments,
-                DebtCurrency: request.DebtCurrency ?? cart.DebtCurrency,
-                DebtDueDate: request.DebtDueDate ?? cart.DebtDueDate,
-                IdempotencyKey: idempotencyKey,
-                CreditAmount: request.CreditAmount ?? cart.CreditAmount,
-                FromQueuedCart: true,
-                UseCustomerAdvance: request.UseCustomerAdvance ?? cart.UseCustomerAdvance,
-                Participants: cart.Participants.Select(x =>
+                saleItems)
+            {
+                DiscountAmount = request.DiscountAmount ?? cart.DiscountAmount,
+                Payments = payments,
+                DebtCurrency = request.DebtCurrency ?? cart.DebtCurrency,
+                DebtDueDate = request.DebtDueDate ?? cart.DebtDueDate,
+                IdempotencyKey = idempotencyKey,
+                CreditAmount = request.CreditAmount ?? cart.CreditAmount,
+                FromQueuedCart = true,
+                UseCustomerAdvance = request.UseCustomerAdvance ?? cart.UseCustomerAdvance,
+                Participants = cart.Participants.Select(x =>
                     new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
-                Note: request.Note ?? cart.Note,
-                PreauthorizedPrices: preauthorizedPrices.Count > 0 ? preauthorizedPrices : null,
-                RoundingAmount: request.RoundingAmount ?? cart.RoundingAmount,
-                PreauthorizedDiscountAmount: cart.DiscountAmount,
-                PreauthorizedRoundingAmount: cart.RoundingAmount), cancellationToken);
+                Note = request.Note ?? cart.Note,
+                PreauthorizedPrices = preauthorizedPrices.Count > 0 ? preauthorizedPrices : null,
+                RoundingAmount = request.RoundingAmount ?? cart.RoundingAmount,
+                PreauthorizedDiscountAmount = cart.DiscountAmount,
+                PreauthorizedRoundingAmount = cart.RoundingAmount
+            }, cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;
             cart.SaleId = result.SaleId;

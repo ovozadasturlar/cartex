@@ -55,10 +55,10 @@ public class VoidCustomerPaymentTests(DatabaseFixture fixture) : DatabaseTest(fi
     {
         var (branchId, warehouseId, variantId) = await SetupAsync();
         var customerId = await CreateCustomerAsync();
-        await Send(s => s.Send(new CreateSaleCommand(
-            warehouseId, customerId, 0, 0, 0,
-            [new CreateSaleItemDto(variantId, 1, 50_000m)],
-            UseCustomerAdvance: false)));
+        await Send(s => s.Send(new CreateSaleCommand(warehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1, 50_000m)])
+        {
+            UseCustomerAdvance = false
+        }));
 
         var payment = await Send(s => s.Send(new CreateCustomerPaymentCommand(
             customerId, branchId,

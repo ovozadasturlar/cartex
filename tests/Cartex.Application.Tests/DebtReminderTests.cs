@@ -29,7 +29,10 @@ public class DebtReminderTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var customerId = await sender.Send(new CreateCustomerCommand("Eslatma Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m,
             CreditLimit: 10_000_000m, NotificationsOptOut: optOut));
-        await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)], DebtDueDate: dueDate));
+        await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+        {
+            DebtDueDate = dueDate
+        });
         return customerId;
     }
 

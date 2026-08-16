@@ -67,19 +67,19 @@ public record UpdateCartStatusRequest(string Status, string? Reason = null);
 
 public record UpdateCartItemsRequest(List<SubmitCartItemRequest> Items, int? ExpectedVersion = null);
 
-public sealed record UpdateCartRequest(
-    long? CustomerId,
-    List<SubmitCartItemRequest> Items,
-    string? Note = null,
-    List<ParticipantSelectionRequest>? Participants = null,
-    List<SalePaymentRequest>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true,
-    int? ExpectedVersion = null,
-    decimal? DiscountAmount = null,
-    decimal? RoundingAmount = null);
+public sealed record UpdateCartRequest(long? CustomerId, List<SubmitCartItemRequest> Items)
+{
+    public string? Note { get; init; }
+    public List<ParticipantSelectionRequest>? Participants { get; init; }
+    public List<SalePaymentRequest>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public decimal CreditAmount { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public int? ExpectedVersion { get; init; }
+    public decimal? DiscountAmount { get; init; }
+    public decimal? RoundingAmount { get; init; }
+}
 
 public sealed record RequeueCartRequest(string? Note = null, string? IdempotencyKey = null);
 public sealed record RequeueCartResult(string AggregateCode, int Version);

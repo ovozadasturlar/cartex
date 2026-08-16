@@ -50,8 +50,11 @@ public class SaleDiscountAllocationTests(DatabaseFixture fixture) : DatabaseTest
     {
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var result = await sender.Send(new CreateSaleCommand(
-            s.Warehouse, null, paid, 0, 0, [.. items], discount, ApplyAutoDiscount: false));
+        var result = await sender.Send(new CreateSaleCommand(s.Warehouse, null, paid, 0, 0, [.. items])
+        {
+            DiscountAmount = discount,
+            ApplyAutoDiscount = false
+        });
         return result.SaleId;
     }
 

@@ -64,20 +64,23 @@ public sealed class OrderingCheckoutDraftTests(DatabaseFixture fixture) : Databa
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            code = await sender.Send(new SubmitCartCommand(warehouseId, customerId,
-                [new SubmitCartItemDto(variantId, 1m)],
-                IdempotencyKey: "queue-payment-partner-submit",
-                Participants: [new ParticipantInput(roleId, partyId)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "usd", 1m)],
-                DebtCurrency: "uzs",
-                UseCustomerAdvance: false));
+            code = await sender.Send(new SubmitCartCommand(warehouseId, customerId, [new SubmitCartItemDto(variantId, 1m)])
+            {
+                IdempotencyKey = "queue-payment-partner-submit",
+                Participants = [new ParticipantInput(roleId, partyId)],
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "usd", 1m)],
+                DebtCurrency = "uzs",
+                UseCustomerAdvance = false
+            });
         }
 
         long saleId;
         using (var scope = Fixture.CreateScope())
         {
-            saleId = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CheckoutCartCommand(
-                code, 0, 0, 0, "queue-payment-partner-checkout"));
+            saleId = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CheckoutCartCommand(code, 0, 0, 0)
+            {
+                IdempotencyKey = "queue-payment-partner-checkout"
+            });
         }
 
         using var check = Fixture.CreateScope();

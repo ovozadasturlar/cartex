@@ -74,14 +74,14 @@ public sealed class PartnerRewardTests(DatabaseFixture fixture) : DatabaseTest(f
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             partyId = await db.PartnerProfiles.Where(x => x.Id == partnerId).Select(x => x.PartyId).SingleAsync();
-            var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateSaleCommand(
-                warehouseId, customerId, 150_000m, 0, 0,
-                [
+            var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateSaleCommand(warehouseId, customerId, 150_000m, 0, 0, [
                     new CreateSaleItemDto(eligibleVariantId, 2m, 50_000m),
                     new CreateSaleItemDto(excludedVariantId, 1m, 50_000m)
-                ],
-                ApplyAutoDiscount: false,
-                Participants: [new ParticipantInput(roleId, partyId)]));
+                ])
+            {
+                ApplyAutoDiscount = false,
+                Participants = [new ParticipantInput(roleId, partyId)]
+            });
             saleId = result.SaleId;
             var rows = await db.SaleItems.Where(x => x.SaleId == saleId)
                 .Select(x => new { x.Id, x.VariantId }).ToListAsync();
@@ -195,11 +195,12 @@ public sealed class PartnerRewardTests(DatabaseFixture fixture) : DatabaseTest(f
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = (await sender.Send(new CreateSaleCommand(warehouseId, customerId, 0, 0, 0,
-                [new CreateSaleItemDto(variantId, 1m, 100_000m)],
-                ApplyAutoDiscount: false,
-                UseCustomerAdvance: false,
-                Participants: [new ParticipantInput(roleId, partyId)]))).SaleId;
+            saleId = (await sender.Send(new CreateSaleCommand(warehouseId, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 1m, 100_000m)])
+            {
+                ApplyAutoDiscount = false,
+                UseCustomerAdvance = false,
+                Participants = [new ParticipantInput(roleId, partyId)]
+            })).SaleId;
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             total = await db.Sales.Where(x => x.Id == saleId).Select(x => x.TotalAmount).SingleAsync();
             Assert.Equal(0, await db.PartnerRewardEntries.CountAsync(x => x.PartnerProfileId == partnerId));

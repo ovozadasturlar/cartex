@@ -14,20 +14,19 @@ using Unit = Cartex.Application.Common.Messaging.Unit;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public sealed record UpdateCartCommand(
-    string Code,
-    long? CustomerId,
-    List<SubmitCartItemDto> Items,
-    string? Note = null,
-    List<ParticipantInput>? Participants = null,
-    List<SalePaymentDto>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true,
-    int? ExpectedVersion = null,
-    decimal? DiscountAmount = null,
-    decimal? RoundingAmount = null) : ICommand<Unit>;
+public sealed record UpdateCartCommand(string Code, long? CustomerId, List<SubmitCartItemDto> Items) : ICommand<Unit>
+{
+    public string? Note { get; init; }
+    public List<ParticipantInput>? Participants { get; init; }
+    public List<SalePaymentDto>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public decimal CreditAmount { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public int? ExpectedVersion { get; init; }
+    public decimal? DiscountAmount { get; init; }
+    public decimal? RoundingAmount { get; init; }
+}
 
 public sealed class UpdateCartCommandHandler(
     IApplicationDbContext db,

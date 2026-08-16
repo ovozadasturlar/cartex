@@ -285,13 +285,14 @@ public sealed class OfflineSyncService(
             draft.PaidCash,
             draft.PaidCard,
             0,
-            draft.Items.Select(x => new CreateSaleItemRequest(
-                x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
-            draft.DiscountAmount,
-            DebtDueDate: draft.DebtDueDate,
-            IdempotencyKey: idempotencyKey,
-            ApplyAutoDiscount: false,
-            UseCustomerAdvance: false);
+            draft.Items.Select(x => new CreateSaleItemRequest(x.VariantId, x.Quantity, x.UnitPrice)).ToList())
+        {
+            DiscountAmount = draft.DiscountAmount,
+            DebtDueDate = draft.DebtDueDate,
+            IdempotencyKey = idempotencyKey,
+            ApplyAutoDiscount = false,
+            UseCustomerAdvance = false
+        };
         var payload = JsonSerializer.Serialize(request,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         await store.EnqueueSaleAndAdjustStockAsync(payload, idempotencyKey, credential, actorId,

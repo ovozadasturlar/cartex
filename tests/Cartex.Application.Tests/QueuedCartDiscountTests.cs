@@ -86,8 +86,11 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
     private static SubmitCartCommand Submit(Setup s, decimal discount, decimal rounding) =>
         new(s.Warehouse, null,
-            [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)],
-            DiscountAmount: discount, RoundingAmount: rounding);
+            [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
+        {
+            DiscountAmount = discount,
+            RoundingAmount = rounding
+        };
 
     private async Task<string> QueueAsync(Setup s, decimal discount, decimal rounding)
     {
@@ -193,7 +196,10 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         // 10 000 is not the queued 3 450. The payment matches what the sale would come to
         // (115 000 - (10 000 + 1 550) = 103 450), so only the missing permission can refuse it.
         await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CheckoutAsync(new CheckoutCartCommand(code, 103_450m, 0, 0, DiscountAmount: 10_000m)));
+            CheckoutAsync(new CheckoutCartCommand(code, 103_450m, 0, 0)
+            {
+                DiscountAmount = 10_000m
+            }));
     }
 
     /// NAVBAT-05: the rounding is guarded exactly like the discount it belongs to.
@@ -210,7 +216,10 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
         // 3 000 is not the queued 1 550; 115 000 - (3 450 + 3 000) = 108 550.
         await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CheckoutAsync(new CheckoutCartCommand(code, 108_550m, 0, 0, RoundingAmount: 3_000m)));
+            CheckoutAsync(new CheckoutCartCommand(code, 108_550m, 0, 0)
+            {
+                RoundingAmount = 3_000m
+            }));
     }
 
     /// NAVBAT-02: "request if given, cart otherwise" — per field, in the same call.
@@ -225,7 +234,10 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
         // The cashier has the permission and raises the discount to 6 000; he says nothing about the
         // rounding, so the queued 1 550 stays. 6 000 + 1 550 = 7 550 -> 115 000 - 7 550 = 107 450.
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, 107_450m, 0, 0, DiscountAmount: 6_000m));
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, 107_450m, 0, 0)
+        {
+            DiscountAmount = 6_000m
+        });
         var sale = await SaleAsync(s, saleId);
 
         Assert.Equal(7_550m, sale.Discount);
@@ -301,10 +313,11 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
         using (var scope = Fixture.CreateScope())
         {
-            await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartCommand(
-                code, null,
-                [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)],
-                DiscountAmount: Manual, RoundingAmount: Rounding));
+            await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartCommand(code, null, [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
+            {
+                DiscountAmount = Manual,
+                RoundingAmount = Rounding
+            });
         }
 
         var edited = await CartAsync(code);
@@ -364,9 +377,10 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(new UpdateCartCommand(
-            code, null,
-            [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)],
-            DiscountAmount: Manual, RoundingAmount: Rounding)));
+        await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(new UpdateCartCommand(code, null, [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
+        {
+            DiscountAmount = Manual,
+            RoundingAmount = Rounding
+        }));
     }
 }

@@ -63,30 +63,33 @@ file sealed class SaleRow(int lineIndex, Stock batch, decimal quantity, Resolved
 
 internal sealed record AdvanceUse(Account Account, decimal Amount, decimal Rate, decimal AmountBase);
 
-public record CreateSaleCommand(
+public sealed record CreateSaleCommand(
     long WarehouseId,
     long? CustomerId,
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
-    List<CreateSaleItemDto> Items,
-    decimal DiscountAmount = 0,
-    List<SalePaymentDto>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    string? IdempotencyKey = null,
-    bool ApplyAutoDiscount = true,
-    decimal CreditAmount = 0,
-    bool FromQueuedCart = false,
-    bool UseCustomerAdvance = true,
-    List<ParticipantInput>? Participants = null,
-    string? Note = null,
-    [property: JsonIgnore] bool FromOfflineSync = false,
-    [property: JsonIgnore] long? OfflineActorUserId = null,
-    [property: JsonIgnore] IReadOnlyDictionary<long, decimal>? PreauthorizedPrices = null,
-    decimal RoundingAmount = 0,
-    [property: JsonIgnore] decimal? PreauthorizedDiscountAmount = null,
-    [property: JsonIgnore] decimal? PreauthorizedRoundingAmount = null) : ICommand<CreateSaleResult>;
+    List<CreateSaleItemDto> Items) : ICommand<CreateSaleResult>
+{
+    public decimal DiscountAmount { get; init; }
+    public List<SalePaymentDto>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public bool ApplyAutoDiscount { get; init; } = true;
+    public decimal CreditAmount { get; init; }
+    public bool FromQueuedCart { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public List<ParticipantInput>? Participants { get; init; }
+    public string? Note { get; init; }
+    public decimal RoundingAmount { get; init; }
+
+    [JsonIgnore] public bool FromOfflineSync { get; init; }
+    [JsonIgnore] public long? OfflineActorUserId { get; init; }
+    [JsonIgnore] public IReadOnlyDictionary<long, decimal>? PreauthorizedPrices { get; init; }
+    [JsonIgnore] public decimal? PreauthorizedDiscountAmount { get; init; }
+    [JsonIgnore] public decimal? PreauthorizedRoundingAmount { get; init; }
+}
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,

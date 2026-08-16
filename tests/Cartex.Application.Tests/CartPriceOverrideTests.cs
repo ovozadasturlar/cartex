@@ -112,9 +112,10 @@ public sealed class CartPriceOverrideTests(DatabaseFixture fixture) : DatabaseTe
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            var forbidden = await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(new CheckoutCartCommand(
-                code, seed.CatalogPrice, 0, 0,
-                Items: [new CheckoutCartItemDto(seed.VariantId, 1, seed.CatalogPrice - 500)])));
+            var forbidden = await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(new CheckoutCartCommand(code, seed.CatalogPrice, 0, 0)
+            {
+                Items = [new CheckoutCartItemDto(seed.VariantId, 1, seed.CatalogPrice - 500)]
+            }));
             Assert.Contains("narxni o'zgartirish", forbidden.Message);
         }
     }

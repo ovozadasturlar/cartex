@@ -377,9 +377,9 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 |---|---|---|
 | Pul, aniqlik, yaxlitlash | ✅ | `MoneyAllocatorTests`, `MulticurrencyTests` |
 | Narx aniqlash va o'zgartirish | ✅ | `CreateSaleTests`, `CartPriceOverrideTests` |
-| Chegirma va taqsimot | ✅ | `SaleDiscountAllocationTests` |
+| Chegirma va taqsimot | ✅ | `SaleDiscountAllocationTests`, `ScopedAutoDiscountTests` |
 | Qaytarish | ✅ | `ReturnSaleTests`, `ReturnWaterfallTests`, `MultiSaleReturnTests`, `CustomerDocumentTests` |
-| Qarz va to'lov | 🟡 kechirim rejalashtirilgan | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests` |
+| Qarz va to'lov | 🟡 kechirim bor, qarzga pul berish yo'q | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests`, `DebtWriteOffTests` |
 | **Mijozga qarzga pul berish** | ⬜ qoida yozilgan, kod yo'q | — |
 | **Hujjatlar** | 🟡 to'lov/chiqim hujjati chop etilmaydi | `CustomerDocumentTests` |
 | **Yig'ma dalolatnoma** | ⬜ yangi imkoniyat | — |

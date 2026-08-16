@@ -251,20 +251,19 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         {
             var aggregates = PaymentAggregates();
             var creditAmount = CreditAmount();
-            var request = new SubmitCartRequest(
-                _warehouse.WarehouseId!.Value,
-                _customerId,
-                _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList(),
-                _localCart.EnsureSubmissionIdempotencyKey(),
-                string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
-                PaidCash: aggregates.Cash,
-                PaidCard: aggregates.Card,
-                PaidBonus: aggregates.Bonus,
-                Participants: BuildParticipantRequests(),
-                Payments: BuildPaymentRequests(),
-                DebtCurrency: SelectedDebtCurrency?.Code,
-                CreditAmount: creditAmount,
-                UseCustomerAdvance: UseCustomerAdvance);
+            var request = new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList())
+            {
+                IdempotencyKey = _localCart.EnsureSubmissionIdempotencyKey(),
+                Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
+                PaidCash = aggregates.Cash,
+                PaidCard = aggregates.Card,
+                PaidBonus = aggregates.Bonus,
+                Participants = BuildParticipantRequests(),
+                Payments = BuildPaymentRequests(),
+                DebtCurrency = SelectedDebtCurrency?.Code,
+                CreditAmount = creditAmount,
+                UseCustomerAdvance = UseCustomerAdvance
+            };
 
             var code = await _orderingApi.SubmitAsync(request);
             _localCart.MarkSubmitted(code);
@@ -306,17 +305,16 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
             var aggregates = PaymentAggregates();
             var creditAmount = CreditAmount();
-            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(
-                aggregates.Cash,
-                aggregates.Card,
-                aggregates.Bonus,
-                CheckoutIdempotencyKey(),
-                Payments: BuildPaymentRequests(),
-                DebtCurrency: SelectedDebtCurrency?.Code,
-                CreditAmount: creditAmount,
-                UseCustomerAdvance: UseCustomerAdvance,
-                CustomerId: _customerId,
-                Note: string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim()));
+            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(aggregates.Cash, aggregates.Card, aggregates.Bonus)
+            {
+                IdempotencyKey = CheckoutIdempotencyKey(),
+                Payments = BuildPaymentRequests(),
+                DebtCurrency = SelectedDebtCurrency?.Code,
+                CreditAmount = creditAmount,
+                UseCustomerAdvance = UseCustomerAdvance,
+                CustomerId = _customerId,
+                Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim()
+            });
 
             if (string.IsNullOrEmpty(_code))
                 _localCart.Clear();
@@ -346,21 +344,17 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             throw new InvalidOperationException(Loc.Instance["warehouse_none"]);
 
         var aggregates = PaymentAggregates();
-        await _offline.EnqueueSaleAsync(new CreateSaleRequest(
-            _warehouse.WarehouseId.Value,
-            _customerId,
-            aggregates.Cash,
-            aggregates.Card,
-            0,
-            _localCart.Lines.Select(x => new CreateSaleItemRequest(
-                x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
-            Payments: null,
-            DebtCurrency: BaseCurrency,
-            IdempotencyKey: CheckoutIdempotencyKey(),
-            ApplyAutoDiscount: false,
-            CreditAmount: CreditAmount(),
-            UseCustomerAdvance: false,
-            Participants: BuildParticipantRequests()));
+        await _offline.EnqueueSaleAsync(new CreateSaleRequest(_warehouse.WarehouseId.Value, _customerId, aggregates.Cash, aggregates.Card, 0, _localCart.Lines.Select(x => new CreateSaleItemRequest(
+                x.VariantId, x.Quantity, x.UnitPrice)).ToList())
+        {
+            Payments = null,
+            DebtCurrency = BaseCurrency,
+            IdempotencyKey = CheckoutIdempotencyKey(),
+            ApplyAutoDiscount = false,
+            CreditAmount = CreditAmount(),
+            UseCustomerAdvance = false,
+            Participants = BuildParticipantRequests()
+        });
         _localCart.Clear();
         Ui.Toast(Loc.Instance["offline_saved"]);
         await Shell.Current.GoToAsync("..");
@@ -380,20 +374,19 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
         var aggregates = PaymentAggregates();
         var creditAmount = CreditAmount();
-        var code = await _orderingApi.SubmitAsync(new SubmitCartRequest(
-            _warehouse.WarehouseId!.Value,
-            _customerId,
-            _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList(),
-            _localCart.EnsureSubmissionIdempotencyKey(),
-            string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
-            PaidCash: aggregates.Cash,
-            PaidCard: aggregates.Card,
-            PaidBonus: aggregates.Bonus,
-            Participants: BuildParticipantRequests(),
-            Payments: BuildPaymentRequests(),
-            DebtCurrency: SelectedDebtCurrency?.Code,
-            CreditAmount: creditAmount,
-            UseCustomerAdvance: UseCustomerAdvance));
+        var code = await _orderingApi.SubmitAsync(new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList())
+        {
+            IdempotencyKey = _localCart.EnsureSubmissionIdempotencyKey(),
+            Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
+            PaidCash = aggregates.Cash,
+            PaidCard = aggregates.Card,
+            PaidBonus = aggregates.Bonus,
+            Participants = BuildParticipantRequests(),
+            Payments = BuildPaymentRequests(),
+            DebtCurrency = SelectedDebtCurrency?.Code,
+            CreditAmount = creditAmount,
+            UseCustomerAdvance = UseCustomerAdvance
+        });
         _localCart.MarkSubmitted(code);
         return code;
     }

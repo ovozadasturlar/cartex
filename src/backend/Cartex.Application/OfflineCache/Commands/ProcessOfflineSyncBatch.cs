@@ -218,19 +218,21 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             PaidCard: dto.PaidCard,
             PaidBonus: dto.PaidBonus,
             Items: dto.Items.Select(x => new CreateSaleItemDto(
-                x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList(),
-            DiscountAmount: dto.DiscountAmount,
-            Payments: payments,
-            DebtCurrency: dto.DebtCurrency,
-            DebtDueDate: dto.DebtDueDate,
-            IdempotencyKey: idempotencyKey,
-            ApplyAutoDiscount: dto.ApplyAutoDiscount,
-            CreditAmount: dto.CreditAmount,
-            UseCustomerAdvance: dto.UseCustomerAdvance,
-            Participants: participants,
-            FromOfflineSync: true,
-            OfflineActorUserId: actorUserId,
-            RoundingAmount: dto.RoundingAmount), cancellationToken);
+                x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList())
+        {
+            DiscountAmount = dto.DiscountAmount,
+            Payments = payments,
+            DebtCurrency = dto.DebtCurrency,
+            DebtDueDate = dto.DebtDueDate,
+            IdempotencyKey = idempotencyKey,
+            ApplyAutoDiscount = dto.ApplyAutoDiscount,
+            CreditAmount = dto.CreditAmount,
+            UseCustomerAdvance = dto.UseCustomerAdvance,
+            Participants = participants,
+            FromOfflineSync = true,
+            OfflineActorUserId = actorUserId,
+            RoundingAmount = dto.RoundingAmount
+        }, cancellationToken);
         return (result.SaleId, result.ReceiptToken);
     }
 

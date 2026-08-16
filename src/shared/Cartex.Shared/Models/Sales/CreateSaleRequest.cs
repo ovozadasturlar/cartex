@@ -6,21 +6,23 @@ public record CreateSaleItemRequest(long VariantId, decimal Quantity, decimal? U
 
 public record SalePaymentRequest(string Method, string Currency, decimal Amount);
 
-public record CreateSaleRequest(
+public sealed record CreateSaleRequest(
     long WarehouseId,
     long? CustomerId,
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
-    List<CreateSaleItemRequest> Items,
-    decimal DiscountAmount = 0,
-    List<SalePaymentRequest>? Payments = null,
-    string? DebtCurrency = null,
-    DateOnly? DebtDueDate = null,
-    string? IdempotencyKey = null,
-    bool ApplyAutoDiscount = true,
-    decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true,
-    List<ParticipantSelectionRequest>? Participants = null,
-    string? Note = null,
-    decimal RoundingAmount = 0);
+    List<CreateSaleItemRequest> Items)
+{
+    public decimal DiscountAmount { get; init; }
+    public List<SalePaymentRequest>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public bool ApplyAutoDiscount { get; init; } = true;
+    public decimal CreditAmount { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public List<ParticipantSelectionRequest>? Participants { get; init; }
+    public string? Note { get; init; }
+    public decimal RoundingAmount { get; init; }
+}

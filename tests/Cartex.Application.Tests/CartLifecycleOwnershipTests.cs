@@ -40,8 +40,10 @@ public sealed class CartLifecycleOwnershipTests(DatabaseFixture fixture) : Datab
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            code = await sender.Send(new SubmitCartCommand(warehouseId, null,
-                [new SubmitCartItemDto(variantId, 1)], IdempotencyKey: "owned-cart-submit"));
+            code = await sender.Send(new SubmitCartCommand(warehouseId, null, [new SubmitCartItemDto(variantId, 1)])
+            {
+                IdempotencyKey = "owned-cart-submit"
+            });
             await sender.Send(new UpdateCartStatusCommand(code, CartStatus.Confirmed));
         }
         using (var scope = Fixture.CreateScope())

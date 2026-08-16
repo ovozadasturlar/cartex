@@ -165,15 +165,17 @@ public partial class CartEditViewModel(
         {
             await orderingApi.UpdateAsync(_code, new UpdateCartRequest(
                 _customerId,
-                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride)).ToList(),
-                string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),
-                _cart.Participants?.Select(x => new ParticipantSelectionRequest(x.RoleDefinitionId, x.PartyId)).ToList(),
-                _cart.Payments?.Select(x => new SalePaymentRequest(x.Method, x.Currency, x.Amount)).ToList(),
-                _cart.DebtCurrency,
-                _cart.DebtDueDate,
-                _cart.CreditAmount,
-                _cart.UseCustomerAdvance,
-                _cart.Version));
+                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride)).ToList())
+            {
+                Note = string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),
+                Participants = _cart.Participants?.Select(x => new ParticipantSelectionRequest(x.RoleDefinitionId, x.PartyId)).ToList(),
+                Payments = _cart.Payments?.Select(x => new SalePaymentRequest(x.Method, x.Currency, x.Amount)).ToList(),
+                DebtCurrency = _cart.DebtCurrency,
+                DebtDueDate = _cart.DebtDueDate,
+                CreditAmount = _cart.CreditAmount,
+                UseCustomerAdvance = _cart.UseCustomerAdvance,
+                ExpectedVersion = _cart.Version
+            });
             Ui.Toast(Loc.Instance["saved_successfully"]);
             await Shell.Current.GoToAsync("..");
         }

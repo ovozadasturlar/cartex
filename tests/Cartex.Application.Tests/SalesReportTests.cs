@@ -45,7 +45,10 @@ public class SalesReportTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var result = await sender.Send(new CreateSaleCommand(warehouseId, null, cash, 0, 0,
-            [.. items.Select(i => new CreateSaleItemDto(i.VariantId, i.Qty))], discount));
+            [.. items.Select(i => new CreateSaleItemDto(i.VariantId, i.Qty))])
+        {
+            DiscountAmount = discount
+        });
         return result.SaleId;
     }
 
