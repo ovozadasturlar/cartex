@@ -1,0 +1,20 @@
+#-------------------------------------------------------------------------------#
+#   Qodana configuration for the MAUI mobile scopes (Store and Agent).           #
+#   Used via: qodana scan --config=qodana-mobile.yaml                            #
+#-------------------------------------------------------------------------------#
+version: "1.0"
+
+linter: qodana-dotnet
+
+profile:
+  name: qodana.starter
+
+# The mobile apps target net10.0-android and their types — BindableProperty, ContentView,
+# GraphicsView, ResourceDictionary — come from the MAUI workload. Without it the analyzer
+# cannot resolve even `System` or `object`: the 2026-08 report carried 42 "Cannot resolve
+# symbol" errors and Qodana itself flagged the run as incomplete. Every meaningful inspection
+# then produces nothing and the scope looks green while checking nothing (CI-02 / CI-03).
+#
+# Android is the only target framework, so maui-android is enough; the full maui workload
+# would also pull iOS and macCatalyst for nothing.
+bootstrap: dotnet workload install maui-android

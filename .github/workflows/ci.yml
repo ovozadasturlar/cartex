@@ -4,6 +4,11 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # The heavy analysis scopes cost far more runner minutes than they are worth on every push,
+  # so they run weekly (and on demand) instead. See the qodana job.
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -43,18 +48,53 @@ jobs:
       # Each matrix entry is an isolated GitHub runner. Keep them sequential so
       # the Qodana containers never contend for the hosted-runner resources.
       max-parallel: 1
+      # One Qodana Cloud project holds exactly one "latest report", so every scope needs its
+      # OWN token. Sharing a single token made the scopes overwrite each other and only the
+      # last one survived — see CI-01 in docs/code-quality.md.
+      #
+      # A scope whose token secret is unset is skipped, so a scope can be added or retired
+      # from Qodana Cloud alone, without touching this file.
+      #
+      # onPush: cheap scopes that guard every change. The rest run weekly / on demand, because
+      # a .NET solution scan costs ~30 runner minutes and five of them per push would burn the
+      # whole monthly budget in a handful of commits.
       matrix:
         include:
           - scope: Backend
-            project: qodana.net.solution=Cartex.Backend.slnx
+            token: QODANA_TOKEN
+            onPush: true
+            args: |
+              --linter qodana-dotnet
+              --property=qodana.net.solution=Cartex.Backend.slnx
+          - scope: Web
+            token: QODANA_TOKEN_WEB
+            onPush: true
+            args: |
+              --linter qodana-js
+              --config=qodana-web.yaml
           - scope: Desktop
-            project: qodana.net.solution=Cartex.Desktop.slnx
-          - scope: Mobile Core
-            project: qodana.net.solution=Cartex.Mobile.Core.slnx
-          - scope: Mobile Agent
-            project: qodana.net.solution=Cartex.Mobile.Agent.slnx
+            token: QODANA_TOKEN_DESKTOP
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --property=qodana.net.solution=Cartex.Desktop.slnx
+          # The mobile scopes need the MAUI workload inside the container, otherwise the
+          # analyzer cannot resolve even System/object and the report is noise dressed up as
+          # green (CI-02). qodana-mobile.yaml installs it in the bootstrap step.
           - scope: Mobile Store
-            project: qodana.net.solution=Cartex.Mobile.Store.slnx
+            token: QODANA_TOKEN_MOBILE_STORE
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --config=qodana-mobile.yaml
+              --property=qodana.net.solution=Cartex.Mobile.Store.slnx
+          - scope: Mobile Agent
+            token: QODANA_TOKEN_MOBILE_AGENT
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --config=qodana-mobile.yaml
+              --property=qodana.net.solution=Cartex.Mobile.Agent.slnx
     permissions:
       contents: read
       pull-requests: write
@@ -66,18 +106,18 @@ jobs:
       - name: Qodana Scan
         # Each scope runs in its own Docker container and GitHub-hosted runner.
         # Rider/local Qodana remains native, as configured in qodana.yaml.
+        if: ${{ secrets[matrix.token] != '' && (matrix.onPush || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         uses: JetBrains/qodana-action@v2026.1.3
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+          QODANA_TOKEN: ${{ secrets[matrix.token] }}
         with:
           # Qodana defaults to 80% of runner RAM. Reserve memory for the GitHub runner
           # and Docker itself so the analysis process cannot terminate the runner agent.
+          # --no-build is deliberately absent: without a restore the analyzer resolves nothing.
           args: |
             -e _JAVA_OPTIONS=-Xmx4g
-            --linter qodana-dotnet
             --within-docker true
-            --no-build
-            --property=${{ matrix.project }}
+            ${{ matrix.args }}
           pr-mode: false
           # Do not persist Qodana caches while validating the new CI execution mode.
           use-caches: false

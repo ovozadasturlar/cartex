@@ -1,0 +1,25 @@
+#-------------------------------------------------------------------------------#
+#   Qodana configuration for the Angular client.                                 #
+#   Used via: qodana scan --config=qodana-web.yaml                               #
+#-------------------------------------------------------------------------------#
+version: "1.0"
+
+# qodana-js is a Community linter, so this scope keeps working after the Ultimate trial ends.
+linter: qodana-js
+
+profile:
+  name: qodana.starter
+
+# The JS linter has business only in the Angular client; the rest of the repository is .NET
+# and would just slow the scan down without producing anything.
+exclude:
+  - name: All
+    paths:
+      - src/backend
+      - src/desktop
+      - src/mobile
+      - src/shared
+      - tests
+      - docs
+      - src/web/Cartex.Web.Angular/node_modules
+      - src/web/Cartex.Web.Angular/dist
