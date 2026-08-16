@@ -38,6 +38,22 @@ Loyiha real biznesning real ma'lumotlari bilan ishlaydi. Ma'lumot oshkor bo'lmas
 - **Transport:** tashqi aloqa HTTPS. Tokenlar qisqa muddatli, xavfsiz saqlanadi.
 - Har yangi feature'da: "bu ma'lumotni kim ko'ra oladi va u qanday yo'qolishi mumkin?" deb baholanadi.
 
+## Majburiy hujjatlar
+Ish boshlashdan oldin o'qiladi. Kod bilan ziddiyat chiqsa — **hujjat ustun**, kod tuzatiladi.
+- **`docs/domain-rules.md`** — biznes mantiqning yagona haqiqat manbai. Har qoidaning ID'si bor (`CHEG-05`, `QAYT-01`...), testlar shu ID'ga bog'lanadi. Qoida noaniq bo'lsa — taxmin qilma, so'ra.
+- **`docs/code-quality.md`** — kod sifati standarti (asboblardan mustaqil) va suppression siyosati. Global inspeksiya o'chirish taqiqlanadi.
+
+## Test yozish tartibi (qat'iy)
+Kodni yozgan agent testni ham yozsa, test kodni emas — o'sha agentning tushunchasini tekshiradi. Tushuncha xato bo'lsa, ikkalasi ham xato bo'ladi va test yashil o'tadi.
+- Test **`docs/domain-rules.md` dagi qoidadan** yoziladi, implementatsiya kodiga qaramasdan.
+- Testni o'tkazish uchun **testning o'zi o'zgartirilmaydi**. Test noto'g'ri deb hisoblasang — avval hujjat qoidasini muhokama qil.
+- Yangi test avval **yiqilishi** ko'rsatiladi.
+- Tartib xavfga qarab tanlanadi (batafsil `docs/domain-rules.md` §0):
+  - **pul/qarz/chegirma/ruxsat/sxema** → test yozuvchi alohida agent;
+  - **o'rta** → bitta agent yozadi, keyin *mantiq tekshiruvi* (kod o'qilmaydi, faqat qoida↔test mosligi);
+  - **matn/rang/refaktor** → oddiy ish.
+- Bitta agent ikkala rolni bajarayotgan bo'lsa — buni ochiq ayt va testni koddan oldin, hujjatga qarab yoz.
+
 ## Ish tartibi
 - Katta o'zgarish yoki yangi feature'dan oldin qisqa reja ber, tasdiqlangach yoz.
 - Yangi NuGet qo'shishdan oldin (shubha bo'lsa) so'ra; ishonchli, bepul, unumdor, barqaror bo'lsin.
