@@ -21,7 +21,10 @@ public sealed record CatalogSearchTerm(CatalogSearchField Field, string Value)
 
 public sealed record CatalogSearch(IReadOnlyList<CatalogSearchTerm> Terms)
 {
-    private static readonly Regex FieldPattern = new("(?<field>[^\\s:]+):(?<value>\"[^\"]+\"|[^\\s]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    // The search box is user input: a pathological pattern must give up rather than spin a
+    // request thread until it times out somewhere less obvious.
+    private static readonly Regex FieldPattern = new("(?<field>[^\\s:]+):(?<value>\"[^\"]+\"|[^\\s]+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(200));
 
     public static CatalogSearch Parse(string? text)
     {

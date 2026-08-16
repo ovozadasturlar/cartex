@@ -190,6 +190,6 @@ public sealed partial class AuditService(
     private static string? Limit(string? value, int maxLength) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Length <= maxLength ? value : value[..maxLength];
 
-    [GeneratedRegex("(?<!^)([A-Z])")]
+    [GeneratedRegex("(?<!^)([A-Z])", RegexOptions.None, matchTimeoutMilliseconds: 200)]
     private static partial Regex PascalBoundary();
 }

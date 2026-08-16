@@ -17,10 +17,10 @@ public partial class ClientPermissionTests
 
     private static readonly string[] SourcePatterns = ["*.cs", "*.xaml", "*.axaml", "*.ts", "*.html"];
 
-    [GeneratedRegex("""(?:(?:permissions|perms)\.Has(?:Any)?|\.[Hh]asPermission)\(\s*((?:["'][^"']+["']\s*,?\s*)+)\)""")]
+    [GeneratedRegex("""(?:(?:permissions|perms)\.Has(?:Any)?|\.[Hh]asPermission)\(\s*((?:["'][^"']+["']\s*,?\s*)+)\)""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PermissionCall();
 
-    [GeneratedRegex("""["']([^"']+)["']""")]
+    [GeneratedRegex("""["']([^"']+)["']""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Literal();
 
     [Fact]

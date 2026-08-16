@@ -284,7 +284,46 @@ sessiya yopildi deb o'ylardi, aslida u ochiq qolardi. Endi muvaffaqiyatsizlar sa
 xabari beriladi. Bu aynan `empty_general_catch_clause` ni yoqib qo'yish nima uchun kerakligining
 misoli.
 
+### .NET analizator stack o'rnatildi (2026-08-17)
+
+`Directory.Build.props` orqali butun yechimga Roslynator va Meziantou qo'shildi — analizator-only,
+runtime bog'liqliksiz, litsenziyasiz. Bu Qodana trialidan keyin ham ishlaydigan qism.
+
+**Roslynator** deyarli toza chiqdi (2 ta). **Meziantou** esa boshida **8160** ta berdi — va bu
+o'z-o'zidan muhim natija: qoidalar to'plamini o'ylamasdan yoqish shovqin beradi, foyda emas.
+Har bir o'chirilgan qoida yonida **nega** o'chirilgani yozilgan (`.editorconfig`), chunki
+"kelishmagan qoidani o'chirish" bilan "topilmani yashirish" boshqa narsa (§2).
+
+| Qoida | Soni | Qaror |
+|---|---|---|
+| `MA0004` ConfigureAwait | 3984 | O'chirildi — Avalonia VM'lariga UI konteksti **kerak**, ASP.NET Core'da esa deadlock beradigan kontekst yo'q |
+| `MA0048` fayl nomi = tur nomi | 2246 | O'chirildi — use-case o'z command/handler/validator'i bilan bitta faylda turishi ataylab tanlangan |
+| `MA0016/06/02/11/74` | 1500+ | O'chirildi — uslub fikri |
+| `MA0040` CancellationToken | 2732 | **`suggestion`** — haqiqiy sinf, lekin alohida ish. Yashirilmadi, qarz sifatida qayd etildi |
+| `MA0009` ReDoS | 6 | **Tuzatildi** — pastda |
+| `MA0045` sync-over-async | 6 | Faqat testlarda; o'sha yerda so'rov oqimi yo'q, o'chirildi |
+| Qolgan mayda | ~20 | Tuzatildi yoki sabab bilan o'chirildi |
+
+Yakuniy holat: **0 ogohlantirish**.
+
+**Topilgan haqiqiy nuqson — ReDoS.** Uchta regex foydalanuvchi kiritishi ustidan vaqt chegarasiz
+ishlardi: skanerlangan shtrixkod (`GeneratedPackCodes`), qidiruv qatori (`CatalogSearch`) va audit
+yozuvi. Patologik kiritish so'rov oqimini cheksiz band qilishi mumkin edi — kassada esa bu
+"tizim qotdi" degani. Uchalasiga 200 ms chegara qo'yildi.
+
+### Mobil scope'lar: Qodana bilan skanerlash mumkin emas
+
+Mobil hisobotlar 11 000 va 15 000 muammo ko'rsatgan edi. Sabab kodda emas: Qodana konteynerida
+**Android SDK yo'q**, shuning uchun `net10.0-android` loyihasi umuman baholanmaydi —
+`Cannot resolve symbol 'float'` shundan. MAUI workload o'rnatilishi bu masalani yechmaydi.
+
+Konteynerga Android SDK qo'shish qimmat va bir marta runnerni diskdan o'ldirgan. Shuning uchun
+mobil kod **analizator stack orqali** qoplanadi: u oddiy `dotnet build` ichida ishlaydi, u yerda
+Android SDK bor. Qodana mobil scope'lari shu sababdan ishonchli signal bermaydi.
+
 ## 7. Hozirgi qarz
+
+- **`MA0040`** — ~2700 joyda `CancellationToken` mavjud bo'la turib uzatilmagan. Uzoq so'rovni bekor qilib bo'lmasligi ulanishni band qiladi. `suggestion` darajasida ko'rinib turibdi; alohida ish sifatida rejalashtiriladi.
 
 Standart joriy qilinganda tozalanadigan ro'yxat:
 

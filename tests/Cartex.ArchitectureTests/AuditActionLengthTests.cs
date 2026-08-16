@@ -7,7 +7,7 @@ public partial class AuditActionLengthTests
 {
     private const int MaxLength = 80;
 
-    [GeneratedRegex("""audit\.Add\(\s*"(?<action>[^"]+)"|Add\(\s*"(?<action>[^"]+)"\s*,\s*"[^"]+"\s*,""")]
+    [GeneratedRegex("""audit\.Add\(\s*"(?<action>[^"]+)"|Add\(\s*"(?<action>[^"]+)"\s*,\s*"[^"]+"\s*,""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AuditCall();
 
     [Fact]

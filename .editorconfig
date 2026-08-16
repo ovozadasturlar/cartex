@@ -135,3 +135,67 @@ resharper_parameter_only_used_for_precondition_check_local_highlighting = none
 resharper_not_accessed_positional_property_local_highlighting = none
 resharper_unused_auto_property_accessor_local_highlighting = none
 resharper_access_to_disposed_closure_highlighting = none
+
+# ---------------------------------------------------------------------------
+# Meziantou.Analyzer — enabled for the traps, not for the opinions.
+#
+# The package ships hundreds of rules. The ones kept below are defect classes the project has
+# actually been bitten by or explicitly worries about (async voids, swallowed cancellation,
+# culture-dependent parsing). The ones switched off are house-style disagreements, and each says
+# why: turning a rule off because it disagrees with a deliberate decision is not the same as
+# hiding a finding, which docs/code-quality.md §2 forbids.
+# ---------------------------------------------------------------------------
+[*.cs]
+
+# ConfigureAwait(false) is wrong here: Avalonia view models need the UI context back, and ASP.NET
+# Core has no synchronisation context to deadlock on.
+dotnet_diagnostic.MA0004.severity = none
+
+# One file per type is not this codebase's shape: a use case keeps its command, handler and
+# validator together on purpose, which is the whole point of the vertical-slice layout.
+dotnet_diagnostic.MA0048.severity = none
+
+# Returning List<T> from an internal projection is deliberate; the abstraction adds nothing.
+dotnet_diagnostic.MA0016.severity = none
+
+# String.Equals over == : the codebase compares ordinal strings everywhere; == is clearer.
+dotnet_diagnostic.MA0006.severity = none
+dotnet_diagnostic.MA0002.severity = none
+dotnet_diagnostic.MA0011.severity = none
+dotnet_diagnostic.MA0074.severity = none
+
+# Method length is a smell, not a rule; the pricing path is long because the arithmetic is.
+dotnet_diagnostic.MA0051.severity = none
+
+# Kept ON deliberately — these are the reasons the analyzer is here at all:
+#   MA0045  sync-over-async (Result/Wait) — deadlocks a UI thread
+#   MA0045  sync-over-async (Result/Wait) — deadlocks a UI thread
+#   MA0079/MA0080  awaiting without a token in a loop
+#   MA0134  observing a Task without awaiting it
+# MA0040 (a CancellationToken was in scope and not passed) reports ~2700 sites. It is a real
+# class — a long query nobody can cancel ties up a connection — but fixing it is its own piece of
+# work, not something to smuggle into an unrelated change. Left visible as a suggestion and
+# recorded as debt in docs/code-quality.md §7 rather than switched off.
+dotnet_diagnostic.MA0040.severity = suggestion
+dotnet_diagnostic.MA0045.severity = warning
+dotnet_diagnostic.MA0134.severity = warning
+
+# StructLayout on a small readonly struct is a micro-optimisation the profiler has never pointed
+# at; it would add attribute noise to plain value types for no measured gain.
+# A domain exception without its code cannot be mapped to a response, so the parameterless and
+# message-only constructors this rule asks for would create objects the API cannot serialise.
+dotnet_diagnostic.RCS1194.severity = none
+
+dotnet_diagnostic.MA0008.severity = none
+
+# ExplicitCapture would silently break these patterns: they read their groups by number.
+dotnet_diagnostic.MA0023.severity = none
+
+# EF value comparers run inside expression trees, where the analyzer's suggested overloads are
+# not translatable. The comparison is ordinal by construction.
+dotnet_diagnostic.MA0021.severity = none
+
+[tests/**/*.cs]
+# Architecture tests read files synchronously on purpose: there is no request thread to block and
+# the async ceremony would only obscure what the test asserts.
+dotnet_diagnostic.MA0045.severity = none

@@ -15,7 +15,7 @@ public static class DynamicOrderingExtensions
         var param = Expression.Parameter(typeof(T), "x");
         var prop = typeof(T).GetProperties()
             .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException($"Property '{propertyName}' not found on {typeof(T).Name}");
+            ?? throw new ArgumentException($"Property '{propertyName}' not found on {typeof(T).Name}", nameof(propertyName));
 
         var property = Expression.Property(param, prop.Name);
         var lambda = Expression.Lambda(property, param);
