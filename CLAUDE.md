@@ -14,8 +14,8 @@ Loyiha production'ga chiqmagan — bu mukammal qilish uchun to'liq erkinlik. O'z
 
 ## Commit qoidalari (qat'iy)
 - Xabar bir qatorlik, ingliz tilida, sodda.
-- Hech qanday trailer qo'shilmaydi (Co-Authored-By, Claude-Session, Generated-with va h.k.).
-- Commitlar faqat `muqimjon` profili nomidan.
+- Hech qanday trailer qo'shilmaydi (Co-Authored-By, Claude-Session, Generated-with va h.k.) — hech qachon.
+- Muallif — o'zgartirishni kiritayotgan odam (o'sha mashinadagi git profili). Sen hech qachon muallif yoki hammuallif sifatida ko'rsatilmaysan.
 
 ## Arxitektura qoidalari
 - Bog'liqlik yo'nalishi ichkariga: `Api/Infrastructure/Persistence → Application → Domain`. Domain hech narsaga bog'lanmaydi.

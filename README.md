@@ -44,5 +44,7 @@ bajarilganidan qat'i nazar.
 - Xabar bir qatorlik, ingliz tilida, sodda va aniq.
 - **Hech qanday trailer yozilmaydi.** Jumladan `Co-Authored-By`, `Generated-with`,
   `Claude-Session` va shunga o'xshash har qanday qator — hech qachon, hech qanday holatda.
-- Barcha commitlar **faqat `muqimjon` profili nomidan**. Boshqa muallif ko'rsatilmaydi.
+- Commit muallifi — **o'zgartirishni kiritayotgan odam**, ya'ni o'sha mashinadagi git
+  profili. Vosita (AI yordamchisi va h.k.) hech qachon muallif yoki hammuallif sifatida
+  ko'rsatilmaydi.
 - Xuddi shu qoida PR tavsiflari, tag va relizlarga ham tegishli.

@@ -99,6 +99,10 @@ jobs:
       contents: read
       pull-requests: write
       checks: write
+    # The secrets context is not available in a step-level `if`, so the token is lifted to the
+    # job environment: that is both what the action reads and what the skip condition tests.
+    env:
+      QODANA_TOKEN: ${{ secrets[matrix.token] }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -106,10 +110,8 @@ jobs:
       - name: Qodana Scan
         # Each scope runs in its own Docker container and GitHub-hosted runner.
         # Rider/local Qodana remains native, as configured in qodana.yaml.
-        if: ${{ secrets[matrix.token] != '' && (matrix.onPush || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        if: ${{ env.QODANA_TOKEN != '' && (matrix.onPush || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         uses: JetBrains/qodana-action@v2026.1.3
-        env:
-          QODANA_TOKEN: ${{ secrets[matrix.token] }}
         with:
           # Qodana defaults to 80% of runner RAM. Reserve memory for the GitHub runner
           # and Docker itself so the analysis process cannot terminate the runner agent.
