@@ -78,6 +78,22 @@ Har qoidaning ID'si bor. Suppression yozilsa, sababda shu ID ko'rsatiladi.
 | `KS-42` | Migratsiya **hech qachon qo'lda yozilmaydi**. Faqat `dotnet ef migrations add`. Natija kutilgandek chiqmasa — model tuzatiladi va qayta generatsiya qilinadi. |
 | `KS-43` | Pul ustunlarida aniqlik (`HasPrecision`) majburiy. Aniqliksiz `numeric` — nuqson. |
 
+### Izohlar
+
+Loyiha tarixida izohlar haddan tashqari ko'payib ketgan va tozalangan. Hozirgi holat sog'lom:
+backend'da **0.39%** (36 450 qatorda 141 izoh). Maqsad — shu darajani saqlash, nolga tushirish
+emas: shovqin zararli, lekin koddan tiklab bo'lmaydigan bilim ham yo'qolmasligi kerak.
+
+| ID | Qoida |
+|---|---|
+| `KS-60` | Izoh kod aytayotgan narsani **takrorlamaydi**. `// i ni oshiramiz` kabi qator taqiqlanadi. |
+| `KS-61` | Izoh faqat **koddan tiklab bo'lmaydigan** bilimni tashiydi: nega shu yechim tanlangan (muqobil to'g'riroq ko'rinsa), tartib/cheklov minasi, ataylab qilingan va xatoga o'xshaydigan narsa, o'lchov birligi yoki aniqlik taxmini. |
+| `KS-62` | Biznes sababi bo'lsa, matn o'rniga **qoida ID'si** yoziladi: `// CHEG-05`. U eskirmaydi, chunki haqiqat manbai `domain-rules.md`. |
+| `KS-63` | Kommentga olingan kod, bo'lim bannerlari (`// ==== Helpers ====`) va egasiz `TODO` taqiqlanadi. |
+| `KS-64` | **Tekshiruv:** izohni o'chir. O'qigan odam bir daqiqada koddan tiklay olmaydigan narsa yo'qoldimi? Yo'q bo'lsa — o'chirilsin. |
+| `KS-65` | Izoh o'zi tushuntirayotgan qatorning yonida turadi, fayl boshidagi paragrafda emas. |
+| `KS-66` | Zichlik 1% dan oshsa — bu signal: yo kod noaniq yozilgan, yo izohlar ortiqcha. Izoh qo'shish emas, kodni aniqlashtirish afzal. |
+
 ### Testlar
 
 | ID | Qoida |
