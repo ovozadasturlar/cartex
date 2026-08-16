@@ -59,7 +59,7 @@ public sealed class GetCustomerRefundByIdQueryHandler(IApplicationDbContext db, 
         return await query.Select(x => new CustomerRefundDocumentDto(
                 x.Id, x.DocumentNumber, x.BranchId, x.CustomerId, x.Customer.FullName,
                 x.UserId, x.User.FullName, x.BusinessDate, x.CreatedAt, x.Status.ToString(),
-                x.TotalBaseAmount, x.AdvanceBaseAmount, x.LoanBaseAmount, x.Note,
+                x.TotalBaseAmount, x.AdvanceBaseAmount, x.LoanBaseAmount, x.BalanceAfterBase, x.Note,
                 x.Tenders.OrderBy(t => t.Id).Select(t => new CustomerRefundTenderDto(
                     t.Method.ToString(), t.Currency, t.Amount, t.Rate, t.AmountBase)).ToList()))
             .FirstOrDefaultAsync(cancellationToken)

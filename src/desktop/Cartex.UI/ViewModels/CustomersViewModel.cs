@@ -23,6 +23,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private readonly IExportService _export;
     private readonly ReceiptDialogService _receiptDialog;
     private readonly ICustomerPaymentsApi _paymentsApi;
+    private readonly PrintDispatchService _print;
     private readonly IDialogService _dialog;
     private long _editId;
 
@@ -199,8 +200,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Select(w => char.ToUpperInvariant(w[0])));
 
     public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog,
-        ICustomerPaymentsApi paymentsApi, IDialogService dialog)
+        ICustomerPaymentsApi paymentsApi, IDialogService dialog, PrintDispatchService print)
     {
+        _print = print;
         _receiptDialog = receiptDialog;
         _paymentsApi = paymentsApi;
         _dialog = dialog;
@@ -251,7 +253,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         decimal debit, decimal credit, decimal balance, string? currency,
         long? saleId, long? paymentDocumentId)
     {
-        var vm = new TransactionDetailViewModel(_paymentsApi, _receiptDialog, _dialog, _toast, _busy, _auth,
+        var vm = new TransactionDetailViewModel(_paymentsApi, _receiptDialog, _dialog, _toast, _busy, _auth, _print,
             occurredAt, operation, documentNumber, debit, credit, balance, currency, saleId, paymentDocumentId);
         var result = await _dialog.ShowAsync<Views.TransactionDetailDialog, TransactionDetailViewModel,
             TransactionDialogResult>(vm);

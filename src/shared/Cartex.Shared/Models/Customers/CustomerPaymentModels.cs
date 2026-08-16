@@ -50,6 +50,9 @@ public record CustomerPaymentDocumentDto(
     decimal TotalBaseAmount,
     decimal AllocatedBaseAmount,
     decimal AdvanceBaseAmount,
+    decimal WriteOffBaseAmount,
+    string? WriteOffReason,
+    decimal BalanceAfterBase,
     string? Note,
     IReadOnlyList<CustomerPaymentTenderDto> Tenders,
     IReadOnlyList<CustomerPaymentAllocationDto> Allocations);

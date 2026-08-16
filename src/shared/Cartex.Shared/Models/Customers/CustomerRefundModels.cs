@@ -38,6 +38,7 @@ public sealed record CustomerRefundDocumentDto(
     decimal TotalBaseAmount,
     decimal AdvanceBaseAmount,
     decimal LoanBaseAmount,
+    decimal BalanceAfterBase,
     string? Note,
     IReadOnlyList<CustomerRefundTenderDto> Tenders);
 

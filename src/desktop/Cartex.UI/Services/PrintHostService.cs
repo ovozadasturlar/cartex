@@ -18,6 +18,8 @@ public sealed class PrintHostService
     private readonly IReceiptApi _receiptApi;
     private readonly IShiftsApi _shiftsApi;
     private readonly ICustomerReturnsApi _returnsApi;
+    private readonly ICustomerPaymentsApi _paymentsApi;
+    private readonly ICustomerRefundsApi _refundsApi;
     private readonly IBusinessApi _businessApi;
     private readonly IOrderingApi _orderingApi;
     private readonly IPrinterService _printer;
@@ -62,6 +64,8 @@ public sealed class PrintHostService
         IReceiptApi receiptApi,
         IShiftsApi shiftsApi,
         ICustomerReturnsApi returnsApi,
+        ICustomerPaymentsApi paymentsApi,
+        ICustomerRefundsApi refundsApi,
         IBusinessApi businessApi,
         IOrderingApi orderingApi,
         IPrinterService printer,
@@ -76,6 +80,8 @@ public sealed class PrintHostService
         _receiptApi = receiptApi;
         _shiftsApi = shiftsApi;
         _returnsApi = returnsApi;
+        _paymentsApi = paymentsApi;
+        _refundsApi = refundsApi;
         _businessApi = businessApi;
         _orderingApi = orderingApi;
         _printer = printer;
@@ -370,6 +376,9 @@ public sealed class PrintHostService
         if (job.SourceType == "customer_return")
             return await PrepareReturnAsync(job, actualPrinter, cancellationToken);
 
+        if (job.SourceType is "customer_payment" or "customer_refund")
+            return await PrepareMoneyDocumentAsync(job, actualPrinter, cancellationToken);
+
         // The render style follows the physical printer the job will come out of.
         if (IsDocumentPrinter(actualPrinter))
         {
@@ -474,6 +483,47 @@ public sealed class PrintHostService
         }
 
         return () => _printer.PrintReturn(document, actualPrinter ?? "", job.Copies, receiptOptions, business);
+    }
+
+    /// A payment and a payout are the same slip with opposite signs, so both are rendered from one
+    /// shape instead of two near-identical formatters that would drift apart.
+    private async Task<Action> PrepareMoneyDocumentAsync(
+        AssignedPrintJobDto job, string? actualPrinter, CancellationToken cancellationToken)
+    {
+        if (!long.TryParse(job.SourceId, out var documentId) || documentId <= 0)
+            throw new InvalidOperationException("Money document is required.");
+
+        var isPayout = job.SourceType == "customer_refund";
+        MoneyDocument document;
+        if (isPayout)
+        {
+            var refund = await _refundsApi.GetByIdAsync(documentId);
+            document = new MoneyDocument(
+                refund.DocumentNumber, refund.CreatedAt, refund.UserName, refund.CustomerName,
+                refund.TotalBaseAmount, refund.BalanceAfterBase, refund.Note,
+                [.. refund.Tenders.Select(x => new MoneyLine(x.Method, x.Currency, x.Amount, x.AmountBase))],
+                refund.AdvanceBaseAmount, refund.LoanBaseAmount, 0);
+        }
+        else
+        {
+            var payment = await _paymentsApi.GetByIdAsync(documentId);
+            document = new MoneyDocument(
+                payment.DocumentNumber, payment.CreatedAt, payment.UserName, payment.CustomerName,
+                payment.TotalBaseAmount, payment.BalanceAfterBase, payment.Note,
+                [.. payment.Tenders.Select(x => new MoneyLine(x.Method, x.Currency, x.Amount, x.AmountBase))],
+                payment.AdvanceBaseAmount, 0, payment.WriteOffBaseAmount);
+        }
+
+        var receiptOptions = ReceiptOptions(job.Payload, _printer.ReceiptOptions);
+        BusinessDto? business = null;
+        try { business = await _businessApi.GetAsync(); } catch { }
+
+        var path = await GetPdfOutputPathAsync(actualPrinter, $"{(isPayout ? "Chiqim" : "Tolov")}_{document.Number}");
+        if (receiptOptions != null)
+            receiptOptions = receiptOptions with { OutputFilePath = path };
+
+        return () => _printer.PrintMoneyDocument(
+            document, isPayout, actualPrinter ?? "", job.Copies, receiptOptions, business);
     }
 
     private Action PrepareBarcode(AssignedPrintJobDto job)

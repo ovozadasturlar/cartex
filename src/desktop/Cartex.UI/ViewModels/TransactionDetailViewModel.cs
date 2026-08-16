@@ -19,6 +19,7 @@ public partial class TransactionDetailViewModel : ViewModelBase, IDialogContext
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
+    private readonly PrintDispatchService _print;
 
     public TransactionDetailViewModel(
         ICustomerPaymentsApi paymentsApi,
@@ -27,6 +28,7 @@ public partial class TransactionDetailViewModel : ViewModelBase, IDialogContext
         IToastService toast,
         IBusyService busy,
         AuthService auth,
+        PrintDispatchService print,
         DateTime occurredAt,
         string operation,
         string? documentNumber,
@@ -43,6 +45,7 @@ public partial class TransactionDetailViewModel : ViewModelBase, IDialogContext
         _toast = toast;
         _busy = busy;
         _auth = auth;
+        _print = print;
         OccurredAt = occurredAt;
         Operation = operation;
         DocumentNumber = documentNumber;
@@ -67,7 +70,8 @@ public partial class TransactionDetailViewModel : ViewModelBase, IDialogContext
     public bool HasDocumentNumber => !string.IsNullOrWhiteSpace(DocumentNumber);
     public bool CanOpenSale => SaleId is > 0 && _auth.HasPermission("sales.view");
     public bool CanVoidPayment => PaymentDocumentId is > 0 && _auth.HasPermission("customer_payments.void");
-    public bool HasActions => CanOpenSale || CanVoidPayment;
+    public bool CanPrintPayment => PaymentDocumentId is > 0 && _auth.HasPermission("printing.receipts.print");
+    public bool HasActions => CanOpenSale || CanVoidPayment || CanPrintPayment;
     public string AmountText => Debit > 0 ? $"+{Debit:N0}" : $"-{Credit:N0}";
     public bool IsIncrease => Debit > 0;
 
@@ -77,6 +81,17 @@ public partial class TransactionDetailViewModel : ViewModelBase, IDialogContext
         if (SaleId is not { } saleId || !CanOpenSale) return;
         RequestClose?.Invoke(this, TransactionDialogResult.SaleOpened);
         await _receiptDialog.ShowAsync(null, saleId);
+    }
+
+    [RelayCommand]
+    private async Task PrintPaymentAsync()
+    {
+        if (PaymentDocumentId is not { } paymentId || !CanPrintPayment) return;
+        try
+        {
+            await _print.PrintCustomerPaymentAsync(paymentId);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]

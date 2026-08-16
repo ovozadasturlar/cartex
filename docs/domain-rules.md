@@ -324,7 +324,7 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `HUJJ-01` | Pul yoki tovar harakatlantiradigan har operatsiya **raqamlangan hujjat** yaratadi: savdo, qaytarish, to'lov, chiqim. |
 | `HUJJ-02` | Hujjat raqami o'z turi ichida takrorlanmaydi va qayta ishlatilmaydi. |
 | `HUJJ-03` | Hujjatda bo'lishi shart: raqam, sana, filial, mijoz (bo'lsa), qatorlar/summalar, kim rasmiylashtirgani va **operatsiyadan keyingi mijoz balansi**. |
-| `HUJJ-04` | *(rejalashtirilgan)* To'lov va chiqim hujjatlari ham chop etiladi. Hozir faqat savdo cheki, qaytarish, Z-hisobot va savat proformasi chop etiladi — mijoz pul topshirganda qo'lida hech narsa qolmaydi. |
+| `HUJJ-04` | To'lov va chiqim hujjatlari ham chop etiladi — mijoz pul topshirganda yoki olganda qo'lida qog'oz qoladi. Kvitansiyada tender qatorlari, pulning **nima qilgani** (avansga/avansdan, qarzga berildi, kechirildi) va **operatsiyadan keyingi balans** ko'rsatiladi. Balans hujjatga yozilgan qiymatdan olinadi, joriy balansdan emas: keyin qayta chop etilganda ham o'sha kungi holatni ko'rsatadi (`HUJJ-05`). |
 | `HUJJ-05` | Hujjat yaratilgandan keyin **tahrirlanmaydi**. Tuzatish — teskari hujjat (bekor qilish yoki qaytarish). |
 | `HUJJ-06` | Bekor qilingan hujjat yo'qolmaydi, statusi bilan ko'rinib turadi. |
 
@@ -394,9 +394,9 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | Narx aniqlash va o'zgartirish | ✅ | `CreateSaleTests`, `CartPriceOverrideTests` |
 | Chegirma va taqsimot | ✅ | `SaleDiscountAllocationTests`, `ScopedAutoDiscountTests` |
 | Qaytarish | ✅ | `ReturnSaleTests`, `ReturnWaterfallTests`, `MultiSaleReturnTests`, `CustomerDocumentTests` |
-| Qarz va to'lov | 🟡 kechirim bor, qarzga pul berish yo'q | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests`, `DebtWriteOffTests` |
-| **Mijozga qarzga pul berish** | ⬜ qoida yozilgan, kod yo'q | — |
-| **Hujjatlar** | 🟡 to'lov/chiqim hujjati chop etilmaydi | `CustomerDocumentTests` |
+| Qarz va to'lov | ✅ | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests`, `DebtWriteOffTests` |
+| **Mijozga qarzga pul berish** | ✅ | `CustomerCashLoanTests` |
+| **Hujjatlar** | ✅ | `CustomerDocumentTests` |
 | **Yig'ma dalolatnoma** | ⬜ yangi imkoniyat | — |
 | **Sozlamalar** | 🟡 ikkita ma'lum og'ish bor | — |
 | Cashback va hamkor mukofoti | 🟡 test juda kam (2 ta) | `PartnerRewardTests` |

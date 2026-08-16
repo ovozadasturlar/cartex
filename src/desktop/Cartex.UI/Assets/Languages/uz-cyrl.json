@@ -935,6 +935,8 @@
   "print_failed": "{0} чоп этилмади: {1}",
   "print_kind_barcode": "Баркод ёрлиғи",
   "print_kind_document": "Ҳужжат",
+  "print_kind_payment": "Тўлов квитанцияси",
+  "print_kind_payout": "Чиқим квитанцияси",
   "print_kind_preview": "Олдиндан кўриш",
   "print_kind_receipt": "Чек",
   "print_kind_return": "Қайтариш чеки",

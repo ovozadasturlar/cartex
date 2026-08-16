@@ -110,6 +110,35 @@ public sealed class PrintDispatchService
             branchId: branchId,
             kindLabel: LocalizationManager.Instance["print_kind_return"]);
 
+    /// HUJJ-04: money moving without paper is the one gap a customer actually feels — they hand
+    /// over cash and walk out with nothing. Payment and payout slips go through the same routing
+    /// and permission path as every other document.
+    public Task PrintCustomerPaymentAsync(long paymentId, long? branchId = null, CancellationToken cancellationToken = default) =>
+        CreateAsync(
+            PrintJobKind.Receipt,
+            "customer_payment",
+            paymentId.ToString(),
+            JsonSerializer.SerializeToElement(new { paymentId }),
+            false,
+            null,
+            $"payment:{paymentId}:{Guid.NewGuid():N}",
+            cancellationToken,
+            branchId: branchId,
+            kindLabel: LocalizationManager.Instance["print_kind_payment"]);
+
+    public Task PrintCustomerRefundAsync(long refundId, long? branchId = null, CancellationToken cancellationToken = default) =>
+        CreateAsync(
+            PrintJobKind.Receipt,
+            "customer_refund",
+            refundId.ToString(),
+            JsonSerializer.SerializeToElement(new { refundId }),
+            false,
+            null,
+            $"refund:{refundId}:{Guid.NewGuid():N}",
+            cancellationToken,
+            branchId: branchId,
+            kindLabel: LocalizationManager.Instance["print_kind_payout"]);
+
     /// The proforma references the saved cart rather than carrying its contents, so the server
     /// stays in control of what can be printed and the routing policy still applies. The local
     /// copy of the document lets the same content print on this machine when the server is away.

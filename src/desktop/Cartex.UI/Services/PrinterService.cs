@@ -149,6 +149,23 @@ public static class LabelSize
 
 public sealed record PreviewLine(string Name, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount);
 
+public sealed record MoneyLine(string Method, string Currency, decimal Amount, decimal AmountBase);
+
+/// A payment or a payout slip. BalanceAfter is the customer's position at the moment the document
+/// was issued, not now — a reprint months later must still say what the customer was told.
+public sealed record MoneyDocument(
+    string Number,
+    DateTime CreatedAt,
+    string? UserName,
+    string? CustomerName,
+    decimal TotalBase,
+    decimal BalanceAfter,
+    string? Note,
+    IReadOnlyList<MoneyLine> Tenders,
+    decimal AdvanceBase,
+    decimal LoanBase,
+    decimal WriteOffBase);
+
 public sealed record PreviewDocument(
     DateTime CreatedAt,
     string? UserName,
@@ -206,6 +223,7 @@ public interface IPrinterService
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies);
     void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options);
     void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null);
+    void PrintMoneyDocument(MoneyDocument document, bool isPayout, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null);
     byte[] FormatReturn(CustomerReturnDocumentDto document, ReceiptPrintOptions? options, BusinessDto? business = null);
     void PrintProforma(PreviewDocument document, string? cartCode = null, BusinessDto? business = null, int copies = 1);
     byte[] FormatProforma(PreviewDocument document, string? cartCode, ProformaPrintOptions options, BusinessDto? business = null);
@@ -465,6 +483,22 @@ public sealed class PrinterService : IPrinterService
         }
     }
 
+    public void PrintMoneyDocument(MoneyDocument document, bool isPayout, string printerName, int copies,
+        ReceiptPrintOptions? options, BusinessDto? business = null)
+    {
+        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
+            ? options is null
+                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
+                : options with { Width = _settings.ReceiptPaperWidth }
+            : options;
+        var bytes = FormatMoneyDocument(document, isPayout, opts, business);
+        for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
+        {
+            if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
+                RawPrinter.Send(printerName, bytes, "Cartex Money", opts?.OutputFilePath);
+        }
+    }
+
     public void PrintZReport(ZReportDto r)
     {
         var target = ZReportTarget();
@@ -697,6 +731,48 @@ public sealed class PrinterService : IPrinterService
         {
             sb.AppendLine(new string('-', w));
             sb.AppendLine($"Izoh: {document.Note}");
+        }
+        sb.AppendLine();
+        if (!string.IsNullOrWhiteSpace(opts?.FooterText)) sb.AppendLine(Center(opts.FooterText, w));
+        sb.AppendLine();
+        sb.AppendLine();
+        return BuildEscPosReceipt(sb.ToString(), null, opts?.LogoRasterBytes);
+    }
+
+    public byte[] FormatMoneyDocument(MoneyDocument doc, bool isPayout, ReceiptPrintOptions? opts, BusinessDto? business = null)
+    {
+        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        var sb = new StringBuilder();
+        if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
+        if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
+        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
+        sb.AppendLine(Center(isPayout ? "PUL CHIQIMI" : "TO'LOV QABUL QILINDI", w));
+        sb.AppendLine(new string('=', w));
+        sb.AppendLine(doc.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+        sb.AppendLine($"Hujjat № {doc.Number}");
+        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(doc.UserName)) sb.AppendLine($"Xodim: {doc.UserName}");
+        if (!string.IsNullOrWhiteSpace(doc.CustomerName)) sb.AppendLine($"Mijoz: {doc.CustomerName}");
+        sb.AppendLine(new string('-', w));
+
+        foreach (var tender in doc.Tenders)
+            sb.AppendLine(Row(SettlementLabel(tender.Method), $"{tender.AmountBase:N0}", w));
+
+        sb.AppendLine(new string('-', w));
+        sb.AppendLine(Row(isPayout ? "BERILDI" : "QABUL QILINDI", $"{doc.TotalBase:N0}", w));
+
+        // The customer's copy has to say what the money did, not just how much moved.
+        if (doc.AdvanceBase > 0) sb.AppendLine(Row(isPayout ? "  Avansdan" : "  Avansga", $"{doc.AdvanceBase:N0}", w));
+        if (doc.LoanBase > 0) sb.AppendLine(Row("  Qarzga berildi", $"{doc.LoanBase:N0}", w));
+        if (doc.WriteOffBase > 0) sb.AppendLine(Row("  Kechirildi", $"{doc.WriteOffBase:N0}", w));
+
+        sb.AppendLine(new string('=', w));
+        sb.AppendLine(Row(doc.BalanceAfter >= 0 ? "QARZ QOLDIG'I" : "AVANS QOLDIG'I", $"{Math.Abs(doc.BalanceAfter):N0}", w));
+
+        if (!string.IsNullOrWhiteSpace(doc.Note))
+        {
+            sb.AppendLine(new string('-', w));
+            sb.AppendLine($"Izoh: {doc.Note}");
         }
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(opts?.FooterText)) sb.AppendLine(Center(opts.FooterText, w));

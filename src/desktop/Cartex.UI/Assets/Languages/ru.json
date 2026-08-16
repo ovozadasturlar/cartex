@@ -935,6 +935,8 @@
   "print_failed": "Не удалось напечатать {0}: {1}",
   "print_kind_barcode": "Этикетка штрихкода",
   "print_kind_document": "Документ",
+  "print_kind_payment": "Квитанция об оплате",
+  "print_kind_payout": "Квитанция о выдаче",
   "print_kind_preview": "Предпросмотр",
   "print_kind_receipt": "Чек",
   "print_kind_return": "Чек возврата",

@@ -65,15 +65,22 @@
                 <TextBlock Text="{Binding DocumentNumber}" Classes="value" />
             </StackPanel>
 
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" IsVisible="{Binding HasActions}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10" IsVisible="{Binding HasActions}">
                 <Button Grid.Column="1" Classes="outline" MinHeight="42" Padding="16,0"
+                        Command="{Binding PrintPaymentCommand}" IsVisible="{Binding CanPrintPayment}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <mi:MaterialIcon Kind="Printer" Width="16" Height="16" />
+                        <TextBlock Text="{Binding L[print]}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Classes="outline" MinHeight="42" Padding="16,0"
                         Command="{Binding OpenSaleCommand}" IsVisible="{Binding CanOpenSale}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="ReceiptTextOutline" Width="16" Height="16" />
                         <TextBlock Text="{Binding L[open_sale]}" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="2" Classes="danger" MinHeight="42" Padding="16,0"
+                <Button Grid.Column="3" Classes="danger" MinHeight="42" Padding="16,0"
                         Command="{Binding VoidPaymentCommand}" IsVisible="{Binding CanVoidPayment}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="UndoVariant" Width="16" Height="16" />

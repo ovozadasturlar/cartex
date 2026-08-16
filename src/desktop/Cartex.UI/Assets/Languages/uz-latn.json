@@ -935,6 +935,8 @@
   "print_failed": "{0} chop etilmadi: {1}",
   "print_kind_barcode": "Barkod yorlig'i",
   "print_kind_document": "Hujjat",
+  "print_kind_payment": "To'lov kvitansiyasi",
+  "print_kind_payout": "Chiqim kvitansiyasi",
   "print_kind_preview": "Oldindan ko'rish",
   "print_kind_receipt": "Chek",
   "print_kind_return": "Qaytarish cheki",

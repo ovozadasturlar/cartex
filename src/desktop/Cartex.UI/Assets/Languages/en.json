@@ -935,6 +935,8 @@
   "print_failed": "Failed to print {0}: {1}",
   "print_kind_barcode": "Barcode label",
   "print_kind_document": "Document",
+  "print_kind_payment": "Payment slip",
+  "print_kind_payout": "Payout slip",
   "print_kind_preview": "Preview",
   "print_kind_receipt": "Receipt",
   "print_kind_return": "Return receipt",

@@ -89,6 +89,9 @@ public sealed class GetCustomerPaymentByIdQueryHandler(
             document.TotalBaseAmount,
             document.AllocatedBaseAmount,
             document.AdvanceBaseAmount,
+            document.WriteOffBaseAmount,
+            document.WriteOffReason,
+            document.BalanceAfterBase,
             document.Note,
             document.Tenders.Select(x => new CustomerPaymentTenderDto(
                 x.Method.ToString(), x.Currency, x.Amount, x.Rate, x.AmountBase)).ToList(),
