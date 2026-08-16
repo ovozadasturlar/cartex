@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { from, switchMap, catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
-import { webDeviceId, webDeviceName } from './device-identity';
+import { asciiHeader, webDeviceId, webDeviceName } from './device-identity';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith('/api')) return next(req);
@@ -11,7 +11,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   req = req.clone({ setHeaders: {
     'X-Client': 'web',
     'X-Device-Id': webDeviceId(),
-    'X-Device-Name': webDeviceName(),
+    'X-Device-Name': asciiHeader(webDeviceName()),
   } });
   const anonymous = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout', '/api/auth/qr/'];
   if (anonymous.some((p) => req.url.startsWith(p))) return next(req);
