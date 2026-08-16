@@ -22,4 +22,5 @@ public record CreateSaleRequest(
     decimal CreditAmount = 0,
     bool UseCustomerAdvance = true,
     List<ParticipantSelectionRequest>? Participants = null,
-    string? Note = null);
+    string? Note = null,
+    decimal RoundingAmount = 0);

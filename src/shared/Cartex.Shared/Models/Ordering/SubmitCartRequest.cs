@@ -20,4 +20,6 @@ public record SubmitCartRequest(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true);
+    bool UseCustomerAdvance = true,
+    decimal DiscountAmount = 0,
+    decimal RoundingAmount = 0);

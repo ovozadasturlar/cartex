@@ -17,4 +17,5 @@ public record CheckoutCartRequest(
     bool? UseCustomerAdvance = null,
     long? CustomerId = null,
     decimal? DiscountAmount = null,
-    string? Note = null);
+    string? Note = null,
+    decimal? RoundingAmount = null);

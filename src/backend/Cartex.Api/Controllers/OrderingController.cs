@@ -71,7 +71,9 @@ public class OrderingController(ISender sender) : ControllerBase
             request.DebtDueDate,
             request.CreditAmount,
             request.UseCustomerAdvance,
-            request.ExpectedVersion));
+            request.ExpectedVersion,
+            request.DiscountAmount,
+            request.RoundingAmount));
         return NoContent();
     }
 
@@ -101,7 +103,7 @@ public class OrderingController(ISender sender) : ControllerBase
         var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard,
             request.PaidBonus, request.IdempotencyKey, items, payments, request.DebtCurrency,
             request.DebtDueDate, request.CreditAmount, request.UseCustomerAdvance,
-            request.CustomerId, request.DiscountAmount, request.Note));
+            request.CustomerId, request.DiscountAmount, request.Note, request.RoundingAmount));
         return Ok(saleId);
     }
 

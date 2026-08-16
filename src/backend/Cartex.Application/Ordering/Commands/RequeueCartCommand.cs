@@ -60,6 +60,8 @@ public sealed class RequeueCartCommandHandler(
             IdempotencyKey = key,
             Note = string.IsNullOrWhiteSpace(request.Note) ? source.Note : request.Note.Trim(),
             Kind = source.Kind,
+            DiscountAmount = source.DiscountAmount,
+            RoundingAmount = source.RoundingAmount,
             PaidCash = source.PaidCash,
             PaidCard = source.PaidCard,
             PaidBonus = source.PaidBonus,

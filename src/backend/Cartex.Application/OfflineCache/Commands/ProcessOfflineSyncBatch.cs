@@ -229,7 +229,8 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             UseCustomerAdvance: dto.UseCustomerAdvance,
             Participants: participants,
             FromOfflineSync: true,
-            OfflineActorUserId: actorUserId), cancellationToken);
+            OfflineActorUserId: actorUserId,
+            RoundingAmount: dto.RoundingAmount), cancellationToken);
         return (result.SaleId, result.ReceiptToken);
     }
 

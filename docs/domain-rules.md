@@ -241,10 +241,20 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 
 | ID | Qoida |
 |---|---|
-| `NAVBAT-01` | **Sotuvchi kiritgan hech narsa navbatda yo'qolmaydi:** mahsulotlar, miqdorlar, o'zgartirilgan narxlar, mijoz, izoh, to'lov qatorlari, ishtirokchilar, qarz valyutasi va muddati, kredit/avans sozlamalari. *(rejalashtirilgan: chegirma va yaxlitlash ham).* |
+| `NAVBAT-01` | **Sotuvchi kiritgan hech narsa navbatda yo'qolmaydi:** mahsulotlar, miqdorlar, o'zgartirilgan narxlar, **chegirma**, **yaxlitlash**, mijoz, izoh, to'lov qatorlari, ishtirokchilar, qarz valyutasi va muddati, kredit/avans sozlamalari. |
+| `NAVBAT-05` | Navbatdagi savatga ruxsatli sotuvchi kiritgan **chegirma va yaxlitlash** yakunlovchidan qayta ruxsat talab qilmaydi — narx o'zgartirish (`NARX-04`) bilan bir xil mantiq. Yakunlovchi ularni **o'zgartirsa**, o'zgartirilgan qiymat uchun ruxsat talab qilinadi. |
 | `NAVBAT-02` | Yakunlashda har maydon uchun "so'rovda bo'lsa — so'rovdan, bo'lmasa — savatdan" qoidasi amal qiladi. Maydon uchun bu qoida yozilmasa — u jimgina yo'qoladi; shuning uchun yangi maydon qo'shilganda **navbat orqali o'tish testi majburiy**. |
 | `NAVBAT-03` | Savatni qayta navbatga qo'yish (requeue) barcha maydonlarni ko'chiradi. |
 | `NAVBAT-04` | Savat yakunlangach yopiladi; bekor qilingan savat navbatda ko'rinmaydi. Bo'sh "arvoh" savat qolmaydi. |
+
+**Qabul mezoni — `NAVBAT-01` / `NAVBAT-05`**
+
+> **Berilgan:** sotuvchi telefonda 115 000 lik savat yig'di, 3 450 chegirma va 1 550 yaxlitlash
+> kiritdi va navbatga yubordi.
+> **Qachonki:** kassir savatni navbatdan olib, hech narsa o'zgartirmasdan yakunlasa,
+> **U holda:** savdoda chegirma **5 000**, yaxlitlash **1 550**, jami **110 000** bo'ladi —
+> ya'ni kiritilgan qiymatlar aynan saqlanadi.
+> Kassirda `sales.discount` ruxsati bo'lmasa ham shunday bo'ladi: chegirmani u kiritmagan.
 
 ---
 

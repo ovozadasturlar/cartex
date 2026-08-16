@@ -84,7 +84,9 @@ public record CreateSaleCommand(
     [property: JsonIgnore] bool FromOfflineSync = false,
     [property: JsonIgnore] long? OfflineActorUserId = null,
     [property: JsonIgnore] IReadOnlyDictionary<long, decimal>? PreauthorizedPrices = null,
-    decimal RoundingAmount = 0) : ICommand<CreateSaleResult>;
+    decimal RoundingAmount = 0,
+    [property: JsonIgnore] decimal? PreauthorizedDiscountAmount = null,
+    [property: JsonIgnore] decimal? PreauthorizedRoundingAmount = null) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -283,7 +285,12 @@ public sealed class CreateSaleCommandHandler(
             && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
-        if ((request.DiscountAmount > 0 || request.RoundingAmount > 0)
+        // Navbatdagi savatga ruxsatli sotuvchi kiritgan chegirma yakunlovchidan qayta ruxsat
+        // talab qilmaydi — narx o'zgartirish bilan bir xil mantiq. Faqat o'zgartirilgani tekshiriladi.
+        var preauthorizedDiscount = request.PreauthorizedDiscountAmount ?? 0m;
+        var preauthorizedRounding = request.PreauthorizedRoundingAmount ?? 0m;
+        if ((request.DiscountAmount != preauthorizedDiscount || request.RoundingAmount != preauthorizedRounding)
+            && (request.DiscountAmount > 0 || request.RoundingAmount > 0)
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 

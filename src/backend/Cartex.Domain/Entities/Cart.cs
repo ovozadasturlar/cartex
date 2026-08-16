@@ -32,6 +32,11 @@ public class Cart : SoftDeleteEntity, IBranchScoped
     public long? RequeuedFromCartId { get; set; }
     public Cart? RequeuedFromCart { get; set; }
 
+    /// Entered by whoever filled the cart. Carried into the sale untouched, so a discount
+    /// agreed with the customer on the shop floor is not lost at the till.
+    public decimal DiscountAmount { get; set; }
+    public decimal RoundingAmount { get; set; }
+
     public decimal PaidCash { get; set; }
     public decimal PaidCard { get; set; }
     public decimal PaidBonus { get; set; }

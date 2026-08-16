@@ -25,7 +25,8 @@ public record CheckoutCartCommand(
     bool? UseCustomerAdvance = null,
     long? CustomerId = null,
     decimal? DiscountAmount = null,
-    string? Note = null) : ICommand<long>;
+    string? Note = null,
+    decimal? RoundingAmount = null) : ICommand<long>;
 
 public sealed class CheckoutCartCommandHandler(
     IApplicationDbContext db,
@@ -91,7 +92,7 @@ public sealed class CheckoutCartCommandHandler(
                 request.PaidCard,
                 request.PaidBonus,
                 saleItems,
-                DiscountAmount: request.DiscountAmount ?? 0,
+                DiscountAmount: request.DiscountAmount ?? cart.DiscountAmount,
                 Payments: payments,
                 DebtCurrency: request.DebtCurrency ?? cart.DebtCurrency,
                 DebtDueDate: request.DebtDueDate ?? cart.DebtDueDate,
@@ -102,7 +103,10 @@ public sealed class CheckoutCartCommandHandler(
                 Participants: cart.Participants.Select(x =>
                     new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
                 Note: request.Note ?? cart.Note,
-                PreauthorizedPrices: preauthorizedPrices.Count > 0 ? preauthorizedPrices : null), cancellationToken);
+                PreauthorizedPrices: preauthorizedPrices.Count > 0 ? preauthorizedPrices : null,
+                RoundingAmount: request.RoundingAmount ?? cart.RoundingAmount,
+                PreauthorizedDiscountAmount: cart.DiscountAmount,
+                PreauthorizedRoundingAmount: cart.RoundingAmount), cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;
             cart.SaleId = result.SaleId;

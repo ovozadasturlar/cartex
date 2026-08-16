@@ -108,6 +108,7 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
                 ? await db.Users.Where(x => x.Id == cart.CreatedBy).Select(x => x.FullName).FirstOrDefaultAsync(cancellationToken)
                 : null,
             cart.ClaimedByUserId, cart.ClaimedByUser?.FullName, cart.ClaimedAt, cart.SaleId,
-            cart.CancelledAt, cart.CancellationReason, cart.RequeuedFromCartId, actions);
+            cart.CancelledAt, cart.CancellationReason, cart.RequeuedFromCartId, actions,
+            cart.DiscountAmount, cart.RoundingAmount);
     }
 }

@@ -30,7 +30,9 @@ public record SubmitCartCommand(
     string? DebtCurrency = null,
     DateOnly? DebtDueDate = null,
     decimal CreditAmount = 0,
-    bool UseCustomerAdvance = true) : ICommand<string>;
+    bool UseCustomerAdvance = true,
+    decimal DiscountAmount = 0,
+    decimal RoundingAmount = 0) : ICommand<string>;
 
 public sealed class SubmitCartCommandHandler(
     IApplicationDbContext db,
@@ -65,6 +67,13 @@ public sealed class SubmitCartCommandHandler(
             && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
+        // Ruxsat kiritilayotgan joyda tekshiriladi: yakunlashda savatdagi chegirma allaqachon
+        // ruxsat berilgan deb qabul qilinadi, shuning uchun bu yerda o'tkazib yuborilsa
+        // ruxsatsiz sotuvchi chegirmani kassir orqali o'tkazib yuborishi mumkin bo'lardi.
+        if ((request.DiscountAmount > 0 || request.RoundingAmount > 0)
+            && !currentUser.HasPermission(AppPermissions.Sales.Discount))
+            throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
+
         await quantityPolicy.ValidateAsync(
             request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
         var resolvedParticipants = await participantService.ResolveAsync(
@@ -96,6 +105,8 @@ public sealed class SubmitCartCommandHandler(
             IdempotencyKey = idempotencyKey,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             Kind = request.Kind ?? await ResolveKindAsync(cancellationToken),
+            DiscountAmount = request.DiscountAmount,
+            RoundingAmount = request.RoundingAmount,
             PaidCash = request.PaidCash,
             PaidCard = request.PaidCard,
             PaidBonus = request.PaidBonus,
@@ -179,6 +190,8 @@ public sealed class SubmitCartCommandValidator : AbstractValidator<SubmitCartCom
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.RoundingAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DebtCurrency).MaximumLength(3);
         RuleFor(x => x.Payments).Must(x => x is null || x.Count <= 20);
         RuleForEach(x => x.Payments!).ChildRules(row =>
