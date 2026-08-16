@@ -106,6 +106,9 @@ export class Pos implements OnInit {
   readonly card = this.state.card;
   readonly bonus = this.state.bonus;
   readonly discountPercent = this.state.discountPercent;
+  readonly rounding = this.state.rounding;
+  readonly note = this.state.note;
+  readonly roundingTarget = signal(0);
   readonly dueDate = this.state.dueDate;
   readonly paying = signal(false);
   readonly minDueDate = isoDay(new Date());
@@ -123,7 +126,8 @@ export class Pos implements OnInit {
       : this.state.discountManual();
     return Math.min(sub, Math.max(0, raw));
   });
-  readonly total = computed(() => Math.max(0, this.subTotal() - this.discount()));
+  readonly payableBeforeRounding = computed(() => Math.max(0, this.subTotal() - this.discount()));
+  readonly total = computed(() => Math.max(0, this.payableBeforeRounding() - this.rounding()));
   readonly paid = computed(() => this.cash() + this.card() + this.bonus());
   readonly change = computed(() => Math.max(0, this.paid() - this.total()));
   readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
@@ -387,6 +391,16 @@ export class Pos implements OnInit {
     this.state.discountByPercent.set(true);
   }
 
+  // The cashier types what the customer will actually hand over; the shortfall becomes a
+  // rounding discount so the sale still adds up and a refund comes off the right lines.
+  applyRounding(target: number): void {
+    this.state.rounding.set(Math.max(0, this.payableBeforeRounding() - Math.max(0, target)));
+  }
+
+  clearRounding(): void {
+    this.state.rounding.set(0);
+  }
+
   onDiscountAmount(v: number): void {
     this.state.discountManual.set(v);
     this.state.discountByPercent.set(false);
@@ -475,6 +489,8 @@ export class Pos implements OnInit {
               unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
             })),
             discountAmount: this.discount(),
+            roundingAmount: this.rounding(),
+            note: this.note().trim() || null,
             debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
           },
         ));
@@ -498,6 +514,8 @@ export class Pos implements OnInit {
           unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
         })),
         discountAmount: this.discount(),
+        roundingAmount: this.rounding(),
+        note: this.note().trim() || null,
         debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
         idempotencyKey: newUuid(),
         applyAutoDiscount: true,
@@ -536,7 +554,9 @@ export class Pos implements OnInit {
           customerId: this.customer()?.id ?? null,
           items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
           idempotencyKey: newUuid(),
-          note: null,
+          note: this.note().trim() || null,
+          discountAmount: this.discount(),
+          roundingAmount: this.rounding(),
         }));
       }
       this.activeQueueCode = null;

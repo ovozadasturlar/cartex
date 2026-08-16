@@ -94,61 +94,6 @@
         }
       </div>
 
-      <div class="cx-card form">
-        <h3>{{ t('sales_policy') }}</h3>
-        <div class="row2">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ t('shift_policy') }}</mat-label>
-            <mat-select [(ngModel)]="shiftPolicy" [disabled]="!canManage">
-              @for (p of shiftPolicies; track p) {
-                <mat-option [value]="p">{{ t('shift_policy_' + p.toLowerCase()) }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ t('max_discount') }}</mat-label>
-            <input matInput type="number" min="0" max="100" [(ngModel)]="maxDiscountPercent" [disabled]="!canManage" />
-          </mat-form-field>
-        </div>
-        <div class="row2">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ t('default_min_stock') }}</mat-label>
-            <input matInput type="number" min="0" [(ngModel)]="defaultMinStock" [disabled]="!canManage" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ t('stale_rate_days') }}</mat-label>
-            <input matInput type="number" min="1" max="30" [(ngModel)]="staleRateDays" [disabled]="!canManage" />
-          </mat-form-field>
-        </div>
-        <div class="policy-toggles">
-          <mat-slide-toggle [(ngModel)]="allowDebtSales" [disabled]="!canManage">
-            {{ t('allow_debt_sales') }}
-          </mat-slide-toggle>
-          @if (allowDebtSales) {
-            <mat-slide-toggle class="nested" [(ngModel)]="requireDebtDueDate" [disabled]="!canManage">
-              {{ t('require_debt_due_date') }}
-            </mat-slide-toggle>
-          }
-          <mat-slide-toggle [(ngModel)]="allowCustomerCredit" [disabled]="!canManage">
-            {{ t('allow_customer_credit') }}
-          </mat-slide-toggle>
-          <mat-slide-toggle [(ngModel)]="requireSupplier" [disabled]="!canManage">
-            {{ t('require_supplier') }}
-          </mat-slide-toggle>
-          <mat-slide-toggle [(ngModel)]="showOutOfStock" [disabled]="!canManage">
-            {{ t('show_out_of_stock') }}
-          </mat-slide-toggle>
-        </div>
-        <p class="hint">{{ t('sales_policy_hint') }}</p>
-        @if (canManage) {
-          <div class="actions">
-            <button matButton="filled" [disabled]="busy()" (click)="savePolicy(t('success'))">
-              <mat-icon>save</mat-icon>
-              {{ t('save') }}
-            </button>
-          </div>
-        }
-      </div>
 
       <div class="cx-card form">
         <h3>{{ t('login_methods') }}</h3>

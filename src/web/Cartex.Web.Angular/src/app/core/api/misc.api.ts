@@ -166,6 +166,8 @@ export class OrderingApi {
     items: { variantId: number; quantity: number }[];
     idempotencyKey: string;
     note: string | null;
+    discountAmount?: number;
+    roundingAmount?: number;
   }): Observable<string> {
     return this.http.post<string>('/api/ordering/carts', body);
   }
@@ -179,6 +181,8 @@ export class OrderingApi {
       customerId: number | null;
       items: { variantId: number; quantity: number; unitPrice: number | null }[];
       discountAmount: number;
+      roundingAmount: number;
+      note: string | null;
       debtDueDate: string | null;
     },
   ): Observable<number> {

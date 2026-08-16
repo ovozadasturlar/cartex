@@ -72,6 +72,9 @@ export interface ReceiptSettings {
 export interface SalesPolicy {
   shiftPolicy: string;
   maxDiscountPercent: number;
+  maxRoundingAmount: number;
+  maxDebtWriteOffAmount: number;
+  maxDebtWriteOffPercent: number;
   defaultMinStock: number;
   staleRateDays: number;
   allowDebtSales: boolean;
@@ -79,6 +82,13 @@ export interface SalesPolicy {
   requireDebtDueDate: boolean;
   requireSupplier: boolean;
   showOutOfStock: boolean;
+  showUnlistedProducts: boolean;
+  allowInsufficientStockSales: boolean;
+  allowRetroactiveCashback: boolean;
+  saleCorrectionWindow: string;
+  saleCorrectionDays: number;
+  updateCatalogPriceOnSale: boolean;
+  maxPriceIncreasePercent: number;
 }
 
 export interface LoginMethods {

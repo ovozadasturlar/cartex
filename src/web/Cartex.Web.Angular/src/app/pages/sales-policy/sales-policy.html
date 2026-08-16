@@ -1,0 +1,129 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('sales_policy')" [subtitle]="t('sales_policy_hint')" />
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <div class="cx-card section">
+      <h2>{{ t('sales_policy_limits') }}</h2>
+      <div class="grid">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('max_discount') }}</mat-label>
+          <input matInput type="number" min="0" max="100" [(ngModel)]="model.maxDiscountPercent" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('max_rounding_amount') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.maxRoundingAmount" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('max_write_off_amount') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.maxDebtWriteOffAmount" [disabled]="!canManage" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('max_write_off_percent') }}</mat-label>
+          <input matInput type="number" min="0" max="100" [(ngModel)]="model.maxDebtWriteOffPercent" [disabled]="!canManage" />
+        </mat-form-field>
+      </div>
+      <p class="hint">{{ t('limit_zero_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('catalog_price_section') }}</h2>
+      <mat-slide-toggle [(ngModel)]="model.updateCatalogPriceOnSale" [disabled]="!canManage">
+        {{ t('update_catalog_price_on_sale') }}
+      </mat-slide-toggle>
+      @if (model.updateCatalogPriceOnSale) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+          <mat-label>{{ t('max_price_increase_percent') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.maxPriceIncreasePercent" [disabled]="!canManage" />
+        </mat-form-field>
+      }
+      <p class="hint">{{ t('catalog_price_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('debt_and_shift') }}</h2>
+      <div class="grid">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('shift_policy') }}</mat-label>
+          <mat-select [(ngModel)]="model.shiftPolicy" [disabled]="!canManage">
+            @for (p of shiftPolicies; track p) {
+              <mat-option [value]="p">{{ t('shift_policy_' + p.toLowerCase()) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('stale_rate_days') }}</mat-label>
+          <input matInput type="number" min="1" max="30" [(ngModel)]="model.staleRateDays" [disabled]="!canManage" />
+        </mat-form-field>
+      </div>
+      <mat-slide-toggle [(ngModel)]="model.allowDebtSales" [disabled]="!canManage">
+        {{ t('allow_debt_sales') }}
+      </mat-slide-toggle>
+      @if (model.allowDebtSales) {
+        <mat-slide-toggle [(ngModel)]="model.requireDebtDueDate" [disabled]="!canManage">
+          {{ t('require_debt_due_date') }}
+        </mat-slide-toggle>
+      }
+      <mat-slide-toggle [(ngModel)]="model.allowCustomerCredit" [disabled]="!canManage">
+        {{ t('allow_customer_credit') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowRetroactiveCashback" [disabled]="!canManage">
+        {{ t('allow_retroactive_cashback') }}
+      </mat-slide-toggle>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('sale_correction') }}</h2>
+      <div class="grid">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('sale_correction_window') }}</mat-label>
+          <mat-select [(ngModel)]="model.saleCorrectionWindow" [disabled]="!canManage">
+            @for (w of correctionWindows; track w) {
+              <mat-option [value]="w">{{ t('correction_' + w.toLowerCase()) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (model.saleCorrectionWindow === 'Days') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('sale_correction_days') }}</mat-label>
+            <input matInput type="number" min="1" max="365" [(ngModel)]="model.saleCorrectionDays" [disabled]="!canManage" />
+          </mat-form-field>
+        }
+      </div>
+      <p class="hint">{{ t('sale_correction_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('stock_and_catalog') }}</h2>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+        <mat-label>{{ t('default_min_stock') }}</mat-label>
+        <input matInput type="number" min="0" [(ngModel)]="model.defaultMinStock" [disabled]="!canManage" />
+      </mat-form-field>
+      <mat-slide-toggle [(ngModel)]="model.requireSupplier" [disabled]="!canManage">
+        {{ t('require_supplier') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.showOutOfStock" [disabled]="!canManage">
+        {{ t('show_out_of_stock') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.showUnlistedProducts" [disabled]="!canManage">
+        {{ t('show_unlisted_products') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowInsufficientStockSales" [disabled]="!canManage">
+        {{ t('allow_insufficient_stock_sales') }}
+      </mat-slide-toggle>
+    </div>
+
+    @if (canManage) {
+      <div class="actions">
+        <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+          {{ t('save') }}
+        </button>
+      </div>
+    }
+  }
+</ng-container>

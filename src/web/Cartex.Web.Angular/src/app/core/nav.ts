@@ -131,6 +131,12 @@ export const SETTINGS_SECTIONS: NavSection[] = [
         permission: 'business.edit',
       },
       {
+        labelKey: 'sales_policy',
+        icon: 'balance',
+        route: '/settings/sales-policy',
+        permission: 'settings.salesPolicy',
+      },
+      {
         labelKey: 'branch',
         icon: 'apartment',
         route: '/settings/branches',

@@ -159,6 +159,12 @@ export const routes: Routes = [
               import('./pages/business/business').then((m) => m.BusinessSettings),
           },
           {
+            path: 'sales-policy',
+            data: { permission: 'settings.salesPolicy' },
+            loadComponent: () =>
+              import('./pages/sales-policy/sales-policy').then((m) => m.SalesPolicySettings),
+          },
+          {
             path: 'branches',
             data: { permission: 'branches.view' },
             loadComponent: () => import('./pages/branches/branches').then((m) => m.Branches),

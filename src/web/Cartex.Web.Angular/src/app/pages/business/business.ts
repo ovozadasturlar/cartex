@@ -51,7 +51,6 @@ export class BusinessSettings implements OnInit {
   readonly canFeatures = this.auth.hasPermission('features.edit');
   readonly canSecurity = this.auth.hasPermission('settings.security');
 
-  readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
 
   name = '';
   legalName = '';
@@ -62,36 +61,12 @@ export class BusinessSettings implements OnInit {
   address = '';
   private logoImageKey: string | null = null;
 
-  shiftPolicy = 'CashOnly';
-  maxDiscountPercent = 0;
-  defaultMinStock = 0;
-  staleRateDays = 3;
-  allowDebtSales = true;
-  allowCustomerCredit = false;
-  requireDebtDueDate = true;
-  requireSupplier = false;
-  showOutOfStock = false;
-  private policyLoaded = false;
-
   qrEnabled = false;
   qrRefreshSeconds = 120;
   keyEnabled = true;
   private loginLoaded = false;
 
   async ngOnInit(): Promise<void> {
-    try {
-      const policy = await lastValueFrom(this.settings.salesPolicy());
-      this.shiftPolicy = policy.shiftPolicy;
-      this.maxDiscountPercent = policy.maxDiscountPercent;
-      this.defaultMinStock = policy.defaultMinStock;
-      this.staleRateDays = policy.staleRateDays;
-      this.allowDebtSales = policy.allowDebtSales;
-      this.allowCustomerCredit = policy.allowCustomerCredit;
-      this.requireDebtDueDate = policy.requireDebtDueDate;
-      this.requireSupplier = policy.requireSupplier;
-      this.showOutOfStock = policy.showOutOfStock;
-      this.policyLoaded = true;
-    } catch {}
     if (this.canSecurity) {
       try {
         const login = await lastValueFrom(this.settings.loginMethods());
@@ -140,31 +115,6 @@ export class BusinessSettings implements OnInit {
           website: this.website.trim() || null,
           address: this.address.trim() || null,
           logoImageKey: this.logoImageKey,
-        }),
-      );
-      this.notify.success(message);
-    } catch (e) {
-      this.notify.error(e);
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async savePolicy(message: string): Promise<void> {
-    if (!this.policyLoaded) return;
-    this.busy.set(true);
-    try {
-      await lastValueFrom(
-        this.settings.updateSalesPolicy({
-          shiftPolicy: this.shiftPolicy,
-          maxDiscountPercent: this.maxDiscountPercent || 0,
-          defaultMinStock: this.defaultMinStock || 0,
-          staleRateDays: Math.round(this.staleRateDays) || 3,
-          allowDebtSales: this.allowDebtSales,
-          allowCustomerCredit: this.allowCustomerCredit,
-          requireDebtDueDate: this.requireDebtDueDate,
-          requireSupplier: this.requireSupplier,
-          showOutOfStock: this.showOutOfStock,
         }),
       );
       this.notify.success(message);
