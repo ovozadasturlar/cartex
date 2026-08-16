@@ -1947,7 +1947,7 @@
                                                     <ToggleSwitch IsChecked="{Binding IsTrusted}" />
                                                     <Button Classes="icon" Padding="6"
                                                             ToolTip.Tip="Ro‘yxatdan o‘chirish — tarix saqlanadi, qurilma qayta ulansa yangi sifatida ko‘rinadi"
-                                                            Command="{Binding $parent[UserControl].DataContext.DeleteNetworkDeviceCommand}"
+                                                            Command="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).DeleteNetworkDeviceCommand}"
                                                             CommandParameter="{Binding}">
                                                         <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16"
                                                                          Foreground="{DynamicResource TextSecondary}" />

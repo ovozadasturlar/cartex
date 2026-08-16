@@ -237,23 +237,33 @@ Trial davomida tekshirilgan topilmalarning bir qismi **noto'g'ri signal** bo'lib
 | Topilma | Haqiqat |
 |---|---|
 | Mobil skopdagi 10 ta muammo (`OnHandlerChanged`, unreachable switch, null dereference) | Hammasi buzuq tahlildan — MAUI bog'liqliklari yechilmagan |
-| `PrintingView.axaml`: "Unable to resolve `DeleteNetworkDeviceCommand`" | Komanda **mavjud**. Fayl nomi `PrintingNetworkViewModel.cs` bo'lsa-da, u `partial class PrintingViewModel` ni e'lon qiladi. Analizator `$parent[UserControl].DataContext` ni `object` deb ko'rgan |
+| Angular'dagi "unused import" toifasi | Haqiqiy, lekin past ustuvorlikdagi tozalik |
 | Angular'dagi "ignored promise" | Har `load()` o'zi `try/catch` bilan himoyalangan, hech narsa yutilmaydi |
 
-**Xulosa va oldingi bahoning tuzatilishi.** `.axaml` uchun XAML binding inspeksiyasini o'chirish
-dastlab "haqiqiy bug sinfini yashiradi" deb baholangan edi. Bu **to'liq to'g'ri emas**:
-`{Binding $parent[UserControl].DataContext.X}` ko'rinishidagi bindinglar **printsipial ravishda**
-tekshirilmaydi — ota-elementning DataContext turi kompilyatsiya paytida ma'lum emas, hatto
-compiled bindings bilan ham. Bunday joylarda inspeksiya doim noto'g'ri signal beradi.
+**Ammo XAML topilmasi noto'g'ri signal emas edi — men xato baholadim.**
+`PrintingView.axaml` da Qodana `DeleteNetworkDeviceCommand` ni yecha olmasligini aytdi. Avval
+buni "komanda bor, demak noto'g'ri signal" deb yopdim. Tekshirganda ma'lum bo'ldi:
 
-Shuning uchun to'g'ri yechim — o'chirishni butunlay olib tashlash emas, balki:
+- Fayl `x:CompileBindings="True"` bilan ishlaydi va 14 ta `x:DataType` ga ega;
+- o'sha bo'limdagi qo'shni tugmalar **turi ko'rsatilgan** shaklda yozilgan:
+  `$parent[UserControl].((vm:PrintingViewModel)DataContext).RetryNetworkJobCommand`;
+- faqat shu bitta qator eski, turi ko'rsatilmagan shaklda qolgan edi.
 
-1. `x:DataType` qo'shish — u **to'g'ridan-to'g'ri** bindinglarni haqiqatan kompilyatsiya
-   xatosiga aylantiradi (`KS-30`);
-2. `$parent[...]` naqshi tekshirilmasligini **bilib turish** va shu sababni suppression yoniga
-   yozib qo'yish (`KS-63` emas, 2-bo'limdagi "sabab bilan" talabi);
-3. Har topilmani kodda tekshirmasdan tuzatmaslik — trial davridagi uch holatdan uchtasi ham
-   kodni buzishga olib kelishi mumkin edi.
+Ya'ni binding ishlaydi, lekin **yagona tekshirilmaydigan qator** edi. Bir qatorlik tuzatish bilan
+yopildi, hech narsa yashirilmadi. Endi kompilyatorning o'zi a'zoni tekshiradi — build o'tishi
+komandaning mavjudligiga dalil.
+
+**Bundan chiqadigan qoida:**
+
+1. `$parent[...]` orqali bog'lanishda **tur doim ko'rsatiladi** (`((vm:X)DataContext)`), aks holda
+   qator hech qanday asbob bilan tekshirilmaydi (`KS-31` ga qo'shimcha).
+2. `x:CompileBindings="True"` bo'lgan fayllarda turi ko'rsatilmagan `$parent` bindingi
+   qolmasligi kerak. Hozir: **0 ta** (o'lchangan).
+3. Qolgan ~193 ta bunday binding compiled bindings yoqilmagan fayllarda — ular `KS-30`
+   migratsiyasining bir qismi.
+4. Va asosiysi: **topilmani koddan tasdiqlamasdan na tuzatish, na yopish kerak.** Bu holatda
+   men ikkalasini ham noto'g'ri qildim — avval buzuq deb tuzatmoqchi bo'ldim, keyin noto'g'ri
+   signal deb yopdim. Faqat uchinchi tekshiruvda haqiqat chiqdi.
 
 ## 7. Hozirgi qarz
 
