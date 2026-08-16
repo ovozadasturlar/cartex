@@ -43,6 +43,7 @@ Har qoidaning ID'si bor. Suppression yozilsa, sababda shu ID ko'rsatiladi.
 | `KS-11` | `catch (Exception)` faqat aniq chegaralangan joyda (fon vazifasi, best-effort chop etish) va sababi yozilgan holda. |
 | `KS-12` | `async void` faqat haqiqiy event handler'da. Boshqa hamma joyda `async Task`. Lambda'da `async void` taqiqlanadi. |
 | `KS-13` | Fire-and-forget (`_ = FooAsync()`) faqat ichida to'liq `try/catch` bo'lsa. |
+| `KS-14` | **TypeScript'da ham xuddi shunday:** `await` qo'yilmagan async chaqiruv yoki e'tiborsiz qoldirilgan `Promise` taqiqlanadi. Yuklash muvaffaqiyatsiz bo'lsa foydalanuvchi hech narsa ko'rmaydi va ekranda eski ma'lumot qolib ketadi. |
 
 ### Mantiqiy tuzoqlar
 
@@ -190,6 +191,19 @@ Skoplar ajratilgandan keyin Backend birinchi marta o'z hisobotini oldi. Natija:
 
 Xulosa: Backend kutilganidan ancha toza. Bu shuni ham anglatadiki, oldingi "10 ta muammo"
 degan hisobot Backend haqida umuman ma'lumot bermagan — u boshqa skopniki edi.
+
+### Angular klientning birinchi tahlili
+
+Web hech qachon tahlil qilinmagan edi. Birinchi skan **110 ta muammo, 47 ta faylda** topdi.
+Ikki toifaga bo'linadi:
+
+- **Tozalik:** ishlatilmagan importlar va lokal o'zgaruvchilar (`KS-23`).
+- **Haqiqiy nuqson:** `Missing await for an async function call` va `Promise returned from
+  load is ignored` — bir necha ekranda (`suppliers.ts`, `supplies.ts`, `orders.ts`). Yuklash
+  xatosi hech qayerda ko'rinmaydi, ekranda eski ma'lumot qolaveradi. Bu `KS-14` bo'lib
+  muhrlandi.
+
+Ular alohida ish sifatida tozalanadi — bu yerda ochiq qarz sifatida qayd etiladi.
 
 ## 7. Hozirgi qarz
 
