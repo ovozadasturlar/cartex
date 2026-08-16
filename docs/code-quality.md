@@ -230,6 +230,31 @@ Ikki toifaga bo'linadi:
 `KS-14` qoida sifatida kuchda qoladi, lekin bu toifa **past ustuvorlikdagi tozalash** — qarz
 sifatida qayd etiladi, shoshilinch emas.
 
+### Noto'g'ri signal darajasi — o'lchangan tuzatish
+
+Trial davomida tekshirilgan topilmalarning bir qismi **noto'g'ri signal** bo'lib chiqdi:
+
+| Topilma | Haqiqat |
+|---|---|
+| Mobil skopdagi 10 ta muammo (`OnHandlerChanged`, unreachable switch, null dereference) | Hammasi buzuq tahlildan — MAUI bog'liqliklari yechilmagan |
+| `PrintingView.axaml`: "Unable to resolve `DeleteNetworkDeviceCommand`" | Komanda **mavjud**. Fayl nomi `PrintingNetworkViewModel.cs` bo'lsa-da, u `partial class PrintingViewModel` ni e'lon qiladi. Analizator `$parent[UserControl].DataContext` ni `object` deb ko'rgan |
+| Angular'dagi "ignored promise" | Har `load()` o'zi `try/catch` bilan himoyalangan, hech narsa yutilmaydi |
+
+**Xulosa va oldingi bahoning tuzatilishi.** `.axaml` uchun XAML binding inspeksiyasini o'chirish
+dastlab "haqiqiy bug sinfini yashiradi" deb baholangan edi. Bu **to'liq to'g'ri emas**:
+`{Binding $parent[UserControl].DataContext.X}` ko'rinishidagi bindinglar **printsipial ravishda**
+tekshirilmaydi — ota-elementning DataContext turi kompilyatsiya paytida ma'lum emas, hatto
+compiled bindings bilan ham. Bunday joylarda inspeksiya doim noto'g'ri signal beradi.
+
+Shuning uchun to'g'ri yechim — o'chirishni butunlay olib tashlash emas, balki:
+
+1. `x:DataType` qo'shish — u **to'g'ridan-to'g'ri** bindinglarni haqiqatan kompilyatsiya
+   xatosiga aylantiradi (`KS-30`);
+2. `$parent[...]` naqshi tekshirilmasligini **bilib turish** va shu sababni suppression yoniga
+   yozib qo'yish (`KS-63` emas, 2-bo'limdagi "sabab bilan" talabi);
+3. Har topilmani kodda tekshirmasdan tuzatmaslik — trial davridagi uch holatdan uchtasi ham
+   kodni buzishga olib kelishi mumkin edi.
+
 ## 7. Hozirgi qarz
 
 Standart joriy qilinganda tozalanadigan ro'yxat:
