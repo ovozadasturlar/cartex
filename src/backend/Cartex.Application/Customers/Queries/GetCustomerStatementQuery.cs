@@ -353,7 +353,7 @@ public sealed class GetCustomerStatementQueryHandler(
         System.Linq.Expressions.Expression<Func<T, TValue>> selector,
         System.Linq.Expressions.Expression<Func<TValue, bool>> predicate)
     {
-        var body = new ReplaceParameterVisitor(predicate.Parameters[0], selector.Body).Visit(predicate.Body)!;
+        var body = new ReplaceParameterVisitor(predicate.Parameters[0], selector.Body).Visit(predicate.Body);
         return System.Linq.Expressions.Expression.Lambda<Func<T, bool>>(body, selector.Parameters);
     }
 

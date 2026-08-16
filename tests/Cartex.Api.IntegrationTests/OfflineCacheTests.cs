@@ -8,10 +8,6 @@ namespace Cartex.Api.IntegrationTests;
 public class OfflineCacheTests(CartexApiFactory factory)
 {
     private sealed record IdName(long Id, string Name);
-    private sealed record StateDto(string? DeviceId, string? DeviceName, DateTime? ClaimedAt);
-    private sealed record SnapshotDto(string BaseCurrency, List<SnapshotProduct> Products, List<SnapshotCustomer> Customers);
-    private sealed record SnapshotProduct(long VariantId, string ProductName, decimal Quantity, decimal SellingPrice);
-    private sealed record SnapshotCustomer(long Id, string FullName, decimal DebtBalance);
 
     [Fact]
     public async Task Claim_IsExclusive_PerBusiness_And_Snapshot_RequiresHolder()

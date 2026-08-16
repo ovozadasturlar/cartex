@@ -56,7 +56,6 @@ public sealed class PrintingPolicyTests(DatabaseFixture fixture) : DatabaseTest(
                 "FILIAL",
                 "Rahmat",
                 42,
-                "Thermal",
                 ShowLogo: false,
                 ShowCustomerPhone: false,
                 ShowCustomerEmail: true);

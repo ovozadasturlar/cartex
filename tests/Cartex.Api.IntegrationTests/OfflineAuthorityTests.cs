@@ -70,7 +70,7 @@ public sealed class OfflineAuthorityTests(CartexApiFactory factory)
         });
         var offlineEvent = new OfflineSyncEventRequest(
             Guid.NewGuid(), 1, "sale.create", $"offline-sale-{suffix}", DateTime.UtcNow, payload);
-        var batch = new OfflineSyncBatchRequest(grant!.LeaseId, grant.Epoch, grant.LeaseToken, [offlineEvent]);
+        var batch = new OfflineSyncBatchRequest(grant.LeaseId, grant.Epoch, grant.LeaseToken, [offlineEvent]);
 
         var firstPush = await winner.PostAsJsonAsync("/api/offline-cache/sync/batches", batch);
         firstPush.EnsureSuccessStatusCode();
