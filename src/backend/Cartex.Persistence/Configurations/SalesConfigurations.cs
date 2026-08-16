@@ -53,6 +53,8 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.RefundedAdvance).HasPrecision(18, 2);
         builder.Property(x => x.ReturnNoChargeAmount).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.DocumentNumber).HasMaxLength(40).IsRequired();
+        builder.HasIndex(x => x.DocumentNumber).IsUnique();
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.ReceiptToken).IsUnique();
         builder.Property(x => x.Note).HasMaxLength(1000);

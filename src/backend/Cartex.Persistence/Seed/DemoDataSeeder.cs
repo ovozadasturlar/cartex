@@ -425,7 +425,8 @@ public static class DemoDataSeeder
                 var sale = new Sale
                 {
                     BranchId = branch1.Id, WarehouseId = wh1.Id, UserId = rnd.Next(5) == 0 ? admin.Id : seller.Id,
-                    Status = SaleStatus.Completed, ReceiptToken = Guid.NewGuid().ToString("N"), CreatedAt = time
+                    Status = SaleStatus.Completed, ReceiptToken = Guid.NewGuid().ToString("N"), CreatedAt = time,
+                    DocumentNumber = $"SAL-{time:yyMMdd}-{Guid.NewGuid().ToString("N")[..8]}"
                 };
 
                 var lines = rnd.Next(1, 4);
@@ -554,6 +555,7 @@ public static class DemoDataSeeder
             {
                 BranchId = branch1.Id, WarehouseId = wh1.Id, UserId = seller.Id, Customer = cust,
                 Status = SaleStatus.Completed, ReceiptToken = Guid.NewGuid().ToString("N"), CreatedAt = time,
+                DocumentNumber = $"SAL-{time:yyMMdd}-{Guid.NewGuid().ToString("N")[..8]}",
                 DebtDueDate = DateOnly.FromDateTime(Day(dueOffset))
             };
             var made = Allocate(dueSale, vid, 3, prices[vid]);

@@ -576,6 +576,8 @@ public sealed class CreateSaleCommandHandler(
             ChangeAmount = changeAmount,
             CreditAmount = creditAmount,
             Status = SaleStatus.Completed,
+            DocumentNumber = await Cartex.Application.Common.Documents.DocumentNumbers.NextAsync(
+                db, "SAL", DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken),
             ReceiptToken = Guid.NewGuid().ToString("N"),
             ShiftId = shiftId,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),

@@ -322,13 +322,13 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | ID | Qoida |
 |---|---|
 | `HUJJ-01` | Pul yoki tovar harakatlantiradigan har operatsiya **raqamlangan hujjat** yaratadi: savdo, qaytarish, to'lov, chiqim. |
-| `HUJJ-02` | Hujjat raqami o'z turi ichida takrorlanmaydi va qayta ishlatilmaydi. |
+| `HUJJ-02` | Hujjat raqami o'z turi ichida takrorlanmaydi va qayta ishlatilmaydi. **Savdo ham hujjat** — uning ham raqami bo'ladi (`SAL-` prefiksi). Chek tokeni ommaviy havola uchun, hujjat raqami esa odam o'qiydigan identifikator. |
 | `HUJJ-03` | Hujjatda bo'lishi shart: raqam, sana, filial, mijoz (bo'lsa), qatorlar/summalar, kim rasmiylashtirgani va **operatsiyadan keyingi mijoz balansi**. |
 | `HUJJ-04` | To'lov va chiqim hujjatlari ham chop etiladi — mijoz pul topshirganda yoki olganda qo'lida qog'oz qoladi. Kvitansiyada tender qatorlari, pulning **nima qilgani** (avansga/avansdan, qarzga berildi, kechirildi) va **operatsiyadan keyingi balans** ko'rsatiladi. Balans hujjatga yozilgan qiymatdan olinadi, joriy balansdan emas: keyin qayta chop etilganda ham o'sha kungi holatni ko'rsatadi (`HUJJ-05`). |
 | `HUJJ-05` | Hujjat yaratilgandan keyin **tahrirlanmaydi**. Tuzatish — teskari hujjat (bekor qilish yoki qaytarish). |
 | `HUJJ-06` | Bekor qilingan hujjat yo'qolmaydi, statusi bilan ko'rinib turadi. |
 
-## 10. Yig'ma dalolatnoma *(yangi imkoniyat, rejalashtirilgan)*
+## 10. Yig'ma dalolatnoma
 
 Amaliy ehtiyoj: mijoz mahsulot olib ketadi va bir qism pul to'laydi; ish tugagach ortganini
 qaytarib keladi. Ikki alohida hujjat paydo bo'ladi. Yakunda **aynan qancha mahsulot
@@ -347,6 +347,9 @@ ishlatilgani va qancha qarz qolgani** bitta qog'ozda ko'rinishi kerak.
 | `DAL-09` | "To'langan" — mijoz haqiqatan bergan pul: savdolarning o'z to'lovlari **va** tanlangan to'lov hujjatlari, minus qaytarib berilgan pul (chiqim hujjatlari va naqd qaytarilgan qaytarishlar). Qarzni kamaytirgan qaytarish pul emas — u tovar tomonida hisobga olinadi. |
 | `DAL-10` | Qaytarish faqat **tanlangan** hujjatlar ichida hisobga olinadi. Tanlanmagan qaytarish sof tovarni kamaytirmaydi — foydalanuvchi nimani tanlagan bo'lsa, dalolatnoma o'shani ko'rsatadi. |
 | `DAL-11` | Dalolatnoma `customers.act` ruxsatini va savdo siyosatidagi `AllowConsolidatedAct` kalitini talab qiladi (`SOZ-08`). |
+| `DAL-12` | Davr — tanlangan hujjatlarning eng erta va eng kech ish sanasi. |
+| `DAL-13` | Boshqaruvchi tenglik: **sof tovar − yopilgan = qolgan qarz**. Har bir hujjat turi shu tenglikni saqlaydigan qilib qo'shiladi: savdo → yopilgan `+= Jami − QarzSummasi` (naqd, karta, bonus, avans va kredit — qanday yopilganidan qat'i nazar); qaytarish → sof tovar kamayadi, va naqd qaytarilgan qismi yopilgandan ayiriladi (qarzdan yopilgani esa emas); to'lov hujjati → yopilgan `+= taqsimlangan + kechirilgan` (avansga qolgani emas, u tovar qarzini yopmaydi); chiqim hujjati → yopilgan `−= qarzga berilgan qism` (avansdan berilgani mijozning o'z puli, tovar qarziga aloqasi yo'q). |
+| `DAL-14` | "Yopilgan" — bu sof "naqd berilgan pul" emas: bonus, avans va kechirim ham qarzni yopadi, shuning uchun ular ham kiradi. Aks holda `DAL-13` tengligi buzilardi va dalolatnoma mijozning haqiqiy qarzi bilan mos kelmasdi. |
 
 **Qabul mezoni — `DAL-02`**
 
@@ -404,7 +407,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | Qarz va to'lov | ✅ | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests`, `DebtWriteOffTests` |
 | **Mijozga qarzga pul berish** | ✅ | `CustomerCashLoanTests` |
 | **Hujjatlar** | ✅ | `CustomerDocumentTests` |
-| **Yig'ma dalolatnoma** | ⬜ yangi imkoniyat | — |
+| **Yig'ma dalolatnoma** | ✅ hisob tayyor, chop etish qoldi | `ConsolidatedActTests` |
 | **Sozlamalar** | 🟡 ikkita ma'lum og'ish bor | — |
 | Cashback va hamkor mukofoti | 🟡 test juda kam (2 ta) | `PartnerRewardTests` |
 | Navbat (savat) | 🟡 egalik/claim qoidalari yo'q | `CartKindTests`, `CartLifecycleOwnershipTests`, `OrderingCheckoutDraftTests` |

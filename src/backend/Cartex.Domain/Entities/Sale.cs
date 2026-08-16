@@ -44,6 +44,9 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public Shift? Shift { get; set; }
     public DateTime? VoidedAt { get; set; }
     public string? VoidReason { get; set; }
+    /// HUJJ-02: the human-readable number of the sale document. The receipt token is a random
+    /// public link; this is what a customer and an accountant quote at each other.
+    public string DocumentNumber { get; set; } = null!;
     public string ReceiptToken { get; set; } = null!;
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
