@@ -163,7 +163,7 @@ export class SupplyCreate implements OnInit {
   }
 
   back(): void {
-    this.router.navigate(['/supplies']);
+    void this.router.navigate(['/supplies']);
   }
 
   onProductText(value: string): void {
@@ -184,7 +184,9 @@ export class SupplyCreate implements OnInit {
       const info = await lastValueFrom(this.api.priceInfo(p.defaultVariantId, warehouseId));
       if (this.product()?.defaultVariantId !== p.defaultVariantId) return;
       this.applyPriceInfo(info);
-    } catch {}
+    } catch {
+      // Price hints are advisory: the buyer types the price either way.
+    }
   }
 
   private applyPriceInfo(info: VariantPriceInfo): void {

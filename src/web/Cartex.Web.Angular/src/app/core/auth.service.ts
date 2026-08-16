@@ -35,7 +35,13 @@ const REFRESH = 'cartex.refresh';
 
 function decodePayload(token: string): Record<string, unknown> {
   const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(atob(part));
+  return JSON.parse(atob(part)) as Record<string, unknown>;
+}
+
+/// A claim that is not a string is not a name: turning an object into "[object Object]" would put
+/// nonsense on screen, so anything unexpected becomes empty instead.
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '';
 }
 
 function parseToken(token: string): UserInfo {
@@ -46,8 +52,8 @@ function parseToken(token: string): UserInfo {
   };
   return {
     userId: Number(claims['userId'] ?? 0),
-    username: String(claims['username'] ?? ''),
-    fullName: String(claims['fullName'] ?? claims['username'] ?? ''),
+    username: text(claims['username']),
+    fullName: text(claims['fullName']) || text(claims['username']),
     roles: many('role'),
     permissions: many('permission'),
     startPage: (claims['startPage'] as string) ?? null,
@@ -145,7 +151,7 @@ export class AuthService {
     } catch (e) {
       if (e instanceof HttpErrorResponse && e.status === 401) {
         this.logout();
-        this.router.navigate(['/login']);
+        void this.router.navigate(['/login']);
         return null;
       }
     }

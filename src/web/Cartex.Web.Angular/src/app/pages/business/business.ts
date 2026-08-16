@@ -74,7 +74,9 @@ export class BusinessSettings implements OnInit {
         this.qrRefreshSeconds = login.qrRefreshSeconds;
         this.keyEnabled = login.keyEnabled;
         this.loginLoaded = true;
-      } catch {}
+      } catch {
+        // Login methods are optional here: the page still works without them.
+      }
     }
     try {
       this.apply(await lastValueFrom(this.api.get()));

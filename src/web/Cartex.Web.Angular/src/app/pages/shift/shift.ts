@@ -136,18 +136,19 @@ export class Shift implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reloadHistory();
+    void this.reloadHistory();
   }
 
   onFilter(): void {
     this.page = 1;
-    this.reloadHistory();
+    void this.reloadHistory();
   }
 
   async open(): Promise<void> {
     if (!this.canOpen) return;
-    const opened = await lastValueFrom(this.dialog.open(OpenShiftDialog, { width: '400px', maxWidth: '88vw' }).afterClosed());
-    if (opened) this.load();
+    const opened: boolean | undefined = await lastValueFrom(
+this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '400px', maxWidth: '88vw' }).afterClosed());
+    if (opened) void this.load();
   }
 
   async close(): Promise<void> {
@@ -161,11 +162,11 @@ export class Shift implements OnInit {
       currencies: this.currencies(),
     };
     const report: ZReport | undefined = await lastValueFrom(
-      this.dialog.open(CloseShiftDialog, { data, width: '440px', maxWidth: '94vw' }).afterClosed(),
+this.dialog.open<CloseShiftDialog, unknown, ZReport>(CloseShiftDialog, { data, width: '440px', maxWidth: '94vw' }).afterClosed(),
     );
     if (report) {
       this.showReport(report, `${this.auth.currentUser()?.fullName ?? ''} · ${date.transform(shift.openedAt)}`);
-      this.load();
+      void this.load();
     }
   }
 
@@ -219,7 +220,7 @@ export class Shift implements OnInit {
         }),
       );
       this.showReport(closed, `${r.userName} · ${date.transform(r.openedAt)}`);
-      this.load();
+      void this.load();
     } catch (e) {
       this.notify.error(e);
     }
@@ -269,16 +270,22 @@ export class Shift implements OnInit {
         const currencies = await lastValueFrom(this.ratesApi.currencies(true));
         this.currencies.set(currencies.filter((c) => !c.isBase).map((c) => c.code).sort());
       }
-    } catch {}
+    } catch {
+      // Multicurrency is optional: the shift screen works on the base currency alone.
+    }
     if (this.canCashOut) {
       try {
         this.expenseCategories.set(await lastValueFrom(this.expenseApi.list()));
-      } catch {}
+      } catch {
+        // Cash-out still works without a category list.
+      }
     }
     if (this.canViewAll) {
       try {
         this.cashiers.set((await lastValueFrom(this.adminApi.users({ page: 0, pageSize: 0 }))).items);
-      } catch {}
+      } catch {
+        // The cashier filter is a convenience; its absence does not block the report.
+      }
     }
   }
 }
@@ -340,7 +347,9 @@ export class OpenShiftDialog implements OnInit {
           .sort()
           .map((code) => ({ currency: code, amount: signal(0) })),
       );
-    } catch {}
+    } catch {
+      // Falls back to the base currency row, which is the common case anyway.
+    }
   }
 
   async confirm(): Promise<void> {

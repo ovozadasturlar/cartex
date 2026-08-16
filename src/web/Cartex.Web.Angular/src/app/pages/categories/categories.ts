@@ -50,7 +50,7 @@ export class Categories implements OnInit {
   readonly columns = ['name', 'parent', 'description'];
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
@@ -72,7 +72,7 @@ export class Categories implements OnInit {
       })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 

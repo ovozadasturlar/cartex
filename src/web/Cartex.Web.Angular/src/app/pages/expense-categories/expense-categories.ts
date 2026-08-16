@@ -52,7 +52,7 @@ export class ExpenseCategories implements OnInit {
       .open(ExpenseCategoryDialog, { data: category ?? null, width: '420px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.reload();
+        if (saved) void this.reload();
       });
   }
 

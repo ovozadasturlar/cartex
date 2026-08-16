@@ -74,7 +74,7 @@ export class Login implements OnDestroy {
     this.error.set(null);
     try {
       await this.auth.login(this.username.trim(), this.password, this.rememberMe);
-      this.router.navigate(['/']);
+      void this.router.navigate(['/']);
     } catch {
       this.error.set('login_failed');
     } finally {
@@ -85,7 +85,7 @@ export class Login implements OnDestroy {
   openQr(): void {
     this.error.set(null);
     this.qrOpen.set(true);
-    this.runQr(++this.qrSession);
+    void this.runQr(++this.qrSession);
   }
 
   closeQr(): void {
@@ -127,10 +127,12 @@ export class Login implements OnDestroy {
           if (await this.auth.pollQr(start.code)) {
             if (session !== this.qrSession) return;
             this.closeQr();
-            this.router.navigate(['/']);
+            void this.router.navigate(['/']);
             return;
           }
-        } catch {}
+        } catch {
+          // A stored session that no longer works just means the user signs in again.
+        }
       }
     }
   }

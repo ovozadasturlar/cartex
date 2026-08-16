@@ -69,14 +69,14 @@ export class Suppliers implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search.set(value.trim());
       this.page.set(1);
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   async openEdit(supplier?: Supplier): Promise<void> {
@@ -88,8 +88,8 @@ export class Suppliers implements OnInit {
       autoFocus: false,
     });
     if (await lastValueFrom(ref.afterClosed())) {
-      this.load();
-      this.loadTotals();
+      void this.load();
+      void this.loadTotals();
     }
   }
 
@@ -102,8 +102,8 @@ export class Suppliers implements OnInit {
       autoFocus: false,
     });
     if (await lastValueFrom(ref.afterClosed())) {
-      this.load();
-      this.loadTotals();
+      void this.load();
+      void this.loadTotals();
     }
   }
 
@@ -361,18 +361,18 @@ export class SupplierLedgerDialog implements OnInit {
   private readonly pageSize = 20;
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   prev(): void {
     if (this.page() === 1) return;
     this.page.update((p) => p - 1);
-    this.load();
+    void this.load();
   }
 
   next(): void {
     this.page.update((p) => p + 1);
-    this.load();
+    void this.load();
   }
 
   private async load(): Promise<void> {

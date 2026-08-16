@@ -182,12 +182,12 @@ export class CustomerPickerDialog implements OnInit {
   constructor() {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed()).subscribe((v) => {
       this.search = v;
-      this.load();
+      void this.load();
     });
   }
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   onSearch(value: string): void {

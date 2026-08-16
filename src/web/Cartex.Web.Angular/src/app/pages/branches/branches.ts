@@ -52,7 +52,9 @@ export class Branches implements OnInit {
     this.dialog
       .open(BranchDialog, { data: branch, width: '460px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   private async reload(): Promise<void> {

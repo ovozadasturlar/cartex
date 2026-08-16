@@ -70,7 +70,9 @@ export class Warehouses implements OnInit {
         autoFocus: false,
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   private async reload(): Promise<void> {

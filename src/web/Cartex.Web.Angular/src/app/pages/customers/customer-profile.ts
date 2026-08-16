@@ -96,29 +96,29 @@ export class CustomerProfile implements OnInit {
   private salesPageSize = 20;
 
   ngOnInit(): void {
-    this.load();
-    this.loadLedger();
+    void this.load();
+    void this.loadLedger();
   }
 
   back(): void {
-    this.router.navigate(['/customers']);
+    void this.router.navigate(['/customers']);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.loadLedger();
+    void this.loadLedger();
   }
 
   onSalesPage(e: { page: number; pageSize: number }): void {
     this.salesPage = e.page;
     this.salesPageSize = e.pageSize;
-    this.loadSales();
+    void this.loadSales();
   }
 
   setTab(tab: 'ledger' | 'sales'): void {
     this.tab.set(tab);
-    if (tab === 'sales' && !this.sales()) this.loadSales();
+    if (tab === 'sales' && !this.sales()) void this.loadSales();
   }
 
   statusKey(status: string): string {
@@ -141,40 +141,39 @@ export class CustomerProfile implements OnInit {
 
   async edit(): Promise<void> {
     if (!this.canEdit) return;
-    const saved = await lastValueFrom(
-      this.dialog
-        .open(CustomerEditDialog, { data: this.customer(), width: '560px', maxWidth: '94vw', autoFocus: false })
+    const saved: boolean | undefined = await lastValueFrom(
+this.dialog.open<CustomerEditDialog, unknown, boolean>(CustomerEditDialog, { data: this.customer(), width: '560px', maxWidth: '94vw', autoFocus: false })
         .afterClosed(),
     );
-    if (saved) this.load();
+    if (saved) void this.load();
   }
 
   async repay(): Promise<void> {
     if (!this.canRepay) return;
-    const done = await lastValueFrom(
-      this.dialog.open(RepayDebtDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
+    const done: boolean | undefined = await lastValueFrom(
+this.dialog.open<RepayDebtDialog, unknown, boolean>(RepayDebtDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
     );
     if (done) {
-      this.load();
-      this.loadLedger();
+      void this.load();
+      void this.loadLedger();
     }
   }
 
   async payOut(): Promise<void> {
     if (!this.canPayOut) return;
-    const done = await lastValueFrom(
-      this.dialog.open(PayOutDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
+    const done: boolean | undefined = await lastValueFrom(
+this.dialog.open<PayOutDialog, unknown, boolean>(PayOutDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
     );
     if (done) {
-      this.load();
-      this.loadLedger();
+      void this.load();
+      void this.loadLedger();
     }
   }
 
   async remove(): Promise<void> {
     if (!this.canDelete) return;
-    const ok = await lastValueFrom(
-      this.dialog.open(ConfirmDialog, { data: 'delete_confirm', width: '380px' }).afterClosed(),
+    const ok: boolean | undefined = await lastValueFrom(
+this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete_confirm', width: '380px' }).afterClosed(),
     );
     if (!ok) return;
     try {
@@ -411,7 +410,9 @@ export class RepayDebtDialog implements OnInit {
       this.debtCurrency = this.debtCurrencies()[0];
       this.payCurrency = this.debtCurrency;
       this.multicurrency.set(true);
-    } catch {}
+    } catch {
+      // Multicurrency is optional; falling back to the base currency is correct.
+    }
   }
 
   async save(message: string): Promise<void> {

@@ -177,7 +177,8 @@ export class PermissionsMatrix implements OnInit {
       const stack = [name];
       while (stack.length) {
         const current = stack.pop()!;
-        checked ? selected.add(current) : selected.delete(current);
+        if (checked) selected.add(current);
+        else selected.delete(current);
         stack.push(...relation(current));
       }
     };

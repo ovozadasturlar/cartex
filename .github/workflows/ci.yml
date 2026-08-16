@@ -39,6 +39,16 @@ jobs:
       - name: API integration tests
         run: dotnet test tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj -c Release
 
+      # The web client has no compiler to catch dead imports or a promise nobody waits on, so the
+      # linter is the guard. It is free and survives the Qodana trial (CI-05 in docs/code-quality.md).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Web lint
+        working-directory: src/web/Cartex.Web.Angular
+        run: npm ci && npm run lint
+
       # Screens are built and laid out headlessly so a binding that only breaks when the view is
       # shown fails here, not in front of a cashier.
       - name: Desktop UI render tests

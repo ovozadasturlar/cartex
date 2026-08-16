@@ -50,7 +50,7 @@ export class ProductTypes implements OnInit {
   readonly columns = ['name', 'tracksExpiry'];
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
@@ -67,7 +67,7 @@ export class ProductTypes implements OnInit {
       .open(ProductTypeDialog, { data: type, width: '440px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 

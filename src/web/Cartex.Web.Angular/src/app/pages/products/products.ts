@@ -71,7 +71,7 @@ export class Products implements OnInit, OnDestroy {
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   ngOnDestroy(): void {
@@ -83,14 +83,14 @@ export class Products implements OnInit, OnDestroy {
     this.searchTimer = setTimeout(() => {
       this.search = value.trim();
       this.page = 1;
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
@@ -104,7 +104,7 @@ export class Products implements OnInit, OnDestroy {
       this.minPrice = min === '' ? undefined : Number(min);
       this.maxPrice = max === '' ? undefined : Number(max);
       this.page = 1;
-      this.load();
+      void this.load();
     }, 350);
   }
 
@@ -125,7 +125,7 @@ export class Products implements OnInit, OnDestroy {
       .open(ProductImportDialog, { width: '1000px', maxWidth: '96vw', autoFocus: false })
       .afterClosed()
       .subscribe((imported) => {
-        if (imported) this.load();
+        if (imported) void this.load();
       });
   }
 
@@ -143,7 +143,7 @@ export class Products implements OnInit, OnDestroy {
       }));
     } catch (error) {
       this.notify.error(error);
-      this.load();
+      void this.load();
     }
   }
 
@@ -163,7 +163,7 @@ export class Products implements OnInit, OnDestroy {
       .open(ProductDialog, { data: product, width: '760px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 

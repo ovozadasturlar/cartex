@@ -59,13 +59,13 @@ export class Dashboard implements OnInit {
   );
 
   ngOnInit(): void {
-    this.loadPeriod();
-    this.loadOverview();
+    void this.loadPeriod();
+    void this.loadOverview();
   }
 
   setDays(days: number): void {
     this.days.set(days);
-    this.loadPeriod();
+    void this.loadPeriod();
   }
 
   money(value: number | null | undefined): string {

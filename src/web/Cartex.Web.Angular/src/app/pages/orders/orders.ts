@@ -52,7 +52,7 @@ export class Orders implements OnInit, OnDestroy {
     if (document.visibilityState !== 'visible') return;
     clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => {
-      if (this.enabled() && !this.loading() && !this.busy()) this.load();
+      if (this.enabled() && !this.loading() && !this.busy()) void this.load();
     }, 400);
   };
 
@@ -88,7 +88,7 @@ export class Orders implements OnInit, OnDestroy {
 
   setStatus(value: string): void {
     this.status.set(value);
-    this.load();
+    void this.load();
   }
 
   statusKey(status: string): string {
@@ -104,7 +104,9 @@ export class Orders implements OnInit, OnDestroy {
     this.dialog
       .open(OrderDialog, { data: row.aggregateCode, width: '640px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
-      .subscribe((changed) => changed && this.load());
+      .subscribe((changed) => {
+        if (changed) void this.load();
+      });
   }
 
   openLoad(): void {
@@ -281,7 +283,9 @@ export class OrderDialog implements OnInit {
     this.dialog
       .open(ConfirmDialog, { data: 'order_cancel_confirm', width: '380px' })
       .afterClosed()
-      .subscribe((ok) => ok && this.setStatus('Cancelled', message));
+      .subscribe((ok) => {
+        if (ok) void this.setStatus('Cancelled', message);
+      });
   }
 
   async checkout(message: string): Promise<void> {

@@ -71,13 +71,13 @@ export class Transfers implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   async openCreate(): Promise<void> {
     if (!this.canCreate) return;
     const ref = this.dialog.open(TransferCreateDialog, { width: '480px', maxWidth: '94vw', autoFocus: false });
-    if (await lastValueFrom(ref.afterClosed())) this.load();
+    if (await lastValueFrom(ref.afterClosed())) void this.load();
   }
 
   async receive(row: StockTransfer): Promise<void> {

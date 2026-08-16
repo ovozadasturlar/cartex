@@ -92,7 +92,7 @@ export class Shell {
   });
 
   constructor() {
-    if (this.canPickWarehouse) this.wh.load();
+    if (this.canPickWarehouse) void this.wh.load();
     lastValueFrom(this.featuresApi.enabled())
       .then((features) => this.enabledFeatures.set(new Set(features)))
       .catch(() => this.enabledFeatures.set(new Set()));
@@ -129,7 +129,7 @@ export class Shell {
 
   openSearchItem(item: NavItem): void {
     this.searchQuery.set('');
-    this.router.navigateByUrl(item.route);
+    void this.router.navigateByUrl(item.route);
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -142,6 +142,6 @@ export class Shell {
 
   logout(): void {
     this.auth.logout();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 }

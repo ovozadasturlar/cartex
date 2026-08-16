@@ -83,14 +83,14 @@ export class Sales implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search.set(value.trim());
       this.page.set(1);
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   statusKey(status: string): string {
@@ -103,10 +103,10 @@ export class Sales implements OnInit {
 
   async openReturn(row: Sale, event: Event): Promise<void> {
     event.stopPropagation();
-    const done = await lastValueFrom(
-      this.dialog.open(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+    const done: boolean | undefined = await lastValueFrom(
+this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
     );
-    if (done) this.load();
+    if (done) void this.load();
   }
 
   async openReceipt(row: Sale): Promise<void> {
@@ -439,7 +439,7 @@ export class ReturnDialog {
   readonly lines = signal<ReturnLine[]>([]);
 
   constructor() {
-    this.load();
+    void this.load();
   }
 
   private async load(): Promise<void> {

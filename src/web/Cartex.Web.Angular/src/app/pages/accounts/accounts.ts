@@ -65,14 +65,14 @@ export class Accounts implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search = value.trim();
       this.page = 1;
-      this.reload();
+      void this.reload();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reload();
+    void this.reload();
   }
 
   typeKey(type: string): string | null {

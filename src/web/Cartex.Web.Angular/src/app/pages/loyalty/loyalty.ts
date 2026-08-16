@@ -112,7 +112,7 @@ export class Loyalty implements OnInit {
 
   setPeriod(days: number): void {
     this.period.set(days);
-    this.loadStats();
+    void this.loadStats();
   }
 
   share(s: LoyaltyStats): string {
@@ -160,7 +160,9 @@ export class Loyalty implements OnInit {
         autoFocus: false,
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reloadDiscounts());
+      .subscribe((saved) => {
+        if (saved) void this.reloadDiscounts();
+      });
   }
 
   deleteDiscount(rule: DiscountRule, message: string): void {
@@ -180,7 +182,9 @@ export class Loyalty implements OnInit {
         autoFocus: false,
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reloadProgram());
+      .subscribe((saved) => {
+        if (saved) void this.reloadProgram();
+      });
   }
 
   deleteRule(rule: CashbackRule, message: string): void {

@@ -240,13 +240,13 @@ export class NotificationJournal implements OnInit {
 
   refresh(): void {
     this.page = 1;
-    this.load();
+    void this.load();
   }
 
   onPage(event: { page: number; pageSize: number }): void {
     this.page = event.page;
     this.pageSize = event.pageSize;
-    this.load();
+    void this.load();
   }
 
   openDetail(delivery: NotificationDelivery): void {
@@ -260,7 +260,16 @@ export class NotificationJournal implements OnInit {
       const fields: (keyof NotificationDelivery)[] = [
         'createdAt', 'channel', 'provider', 'purpose', 'customerName', 'recipient', 'status', 'attemptCount', 'units', 'error',
       ];
-      const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+      // Only scalars belong in a CSV cell; anything else would land as "[object Object]", so it
+      // is serialised instead of stringified.
+      const escape = (value: unknown) => {
+        let text: string;
+        if (value === null || value === undefined) text = '';
+        else if (typeof value === 'string') text = value;
+        else if (typeof value === 'number' || typeof value === 'boolean') text = value.toString();
+        else text = JSON.stringify(value) ?? '';
+        return `"${text.replaceAll('"', '""')}"`;
+      };
       const csv = [fields.join(','), ...result.items.map((row) => fields.map((field) => escape(row[field])).join(','))].join('\r\n');
       const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
       const anchor = document.createElement('a');

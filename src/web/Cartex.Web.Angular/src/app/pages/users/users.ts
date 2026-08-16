@@ -65,7 +65,7 @@ export class Users implements OnInit {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => {
         this.page = 1;
-        this.reload();
+        void this.reload();
       });
   }
 
@@ -94,7 +94,7 @@ export class Users implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reload();
+    void this.reload();
   }
 
   open(user: AdminUser | null): void {
@@ -107,7 +107,9 @@ export class Users implements OnInit {
         autoFocus: false,
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   async remove(user: AdminUser): Promise<void> {

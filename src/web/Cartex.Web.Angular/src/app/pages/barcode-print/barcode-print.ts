@@ -110,7 +110,7 @@ export class BarcodePrint implements OnInit {
     this.printWithPrice = this.labelSettings.defaultWithPrice;
     this.printWithSku = this.labelSettings.showSku;
     this.allowPriceOverride = this.labelSettings.allowPriceOverride;
-    this.load();
+    void this.load();
   }
 
   labelPrice(product: CatalogProduct): string {
@@ -141,13 +141,13 @@ export class BarcodePrint implements OnInit {
 
   searchNow(): void {
     this.page = 1;
-    this.load();
+    void this.load();
   }
 
   onPage(event: { page: number; pageSize: number }): void {
     this.page = event.page;
     this.pageSize = event.pageSize;
-    this.load();
+    void this.load();
   }
 
   async choose(product: CatalogProduct): Promise<void> {
@@ -236,7 +236,7 @@ export class BarcodePrint implements OnInit {
       svg { width: 100%; height: 18mm; }
       strong { display: block; margin-top: 1mm; font: 700 11pt Arial, sans-serif; }
       @media print { .label { border-color: transparent; } }
-    </style></head><body>${labels}<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
+    </style></head><body>${labels}<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<${'/'}script></body></html>`);
     popup.document.close();
   }
 
@@ -259,7 +259,10 @@ export class BarcodePrint implements OnInit {
   private readCachedSettings(): void {
     try {
       const cached = localStorage.getItem('cartex.barcodeLabelSettings');
-      if (cached) this.labelSettings = { ...this.labelSettings, ...JSON.parse(cached) };
-    } catch {}
+      const parsed = JSON.parse(cached ?? 'null') as Partial<typeof this.labelSettings> | null;
+      if (parsed) this.labelSettings = { ...this.labelSettings, ...parsed };
+    } catch {
+      // A corrupt cache entry is not worth failing the screen for; defaults stand.
+    }
   }
 }

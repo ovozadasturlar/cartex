@@ -47,12 +47,12 @@ export class Settings {
   }
 
   navigate(event: Event): void {
-    this.router.navigateByUrl((event.target as HTMLSelectElement).value);
+    void this.router.navigateByUrl((event.target as HTMLSelectElement).value);
   }
 
   constructor() {
     if (this.router.url === '/settings' && this.sections.length) {
-      this.router.navigateByUrl(this.sections[0].items[0].route, { replaceUrl: true });
+      void this.router.navigateByUrl(this.sections[0].items[0].route, { replaceUrl: true });
     }
   }
 }

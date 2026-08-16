@@ -135,7 +135,7 @@ Trial tugaganda `qodana-dotnet` yo'qoladi. O'rniga — bepul, barqaror, analizat
 | .NET o'z analizatorlari | `<AnalysisMode>Recommended</AnalysisMode>` + `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>` | CA/IDE qoidalari, `KS-23` |
 | Formatlash | `dotnet format --verify-no-changes` | stil yagonaligi |
 | XAML binding | `x:DataType` (compiled bindings) | `KS-30` — kompilyatorning o'zi tekshiradi |
-| Angular klient | `eslint` + `tsc --noEmit` | TS tomonidagi ekvivalent |
+| Angular klient | `eslint` (`angular-eslint` + `typescript-eslint`, tip ma'lumoti bilan) + `tsc --noEmit` | TS tomonidagi ekvivalent — **2026-08-17 da o'rnatildi va CI'ga ulandi** |
 
 > Qo'shishdan oldin: uchalasi ham bepul, MIT/Apache, keng qo'llaniladi va faol
 > qo'llab-quvvatlanadi; runtime bog'liqlik qo'shmaydi. CLAUDE.md dagi kutubxona mezoniga mos.
@@ -264,6 +264,25 @@ komandaning mavjudligiga dalil.
 4. Va asosiysi: **topilmani koddan tasdiqlamasdan na tuzatish, na yopish kerak.** Bu holatda
    men ikkalasini ham noto'g'ri qildim — avval buzuq deb tuzatmoqchi bo'ldim, keyin noto'g'ri
    signal deb yopdim. Faqat uchinchi tekshiruvda haqiqat chiqdi.
+
+### Angular klient: ESLint natijasi (2026-08-17)
+
+Qodana web scope'ida 110 muammo ko'rsatgan edi. ESLint tip ma'lumoti bilan ishga tushirilganda
+**166** ta topdi (u ko'proq narsani ko'radi) va hammasi yopildi — `0` qoldi.
+
+| Sinf | Soni | Nima qilindi |
+|---|---|---|
+| Kutilmagan `Promise` | 100 | Ataylab kutilmaydigan chaqiruvlar `void` bilan belgilandi — qoida yoqiq qoladi va kelajakda unutilgan `await` ni tutadi |
+| `any` sizib chiqishi | 42 | Ildizidan: `dialog.open<Comp, unknown, TResult>()`, `JSON.parse(...) as T`, xato tanasi tiplandi |
+| Bo'sh `catch` | 12 | Har biriga **sabab yozildi**; ikkitasi haqiqiy nuqson bo'lib chiqdi (pastda) |
+| O'lik import/o'zgaruvchi | 5 | O'chirildi (`KS-01`) |
+| `!=` shablonda | 5 | Qoida `allowNullOrUndefined` bilan sozlandi — `x != null` to'g'ri idioma, uni `!==` ga aylantirish `undefined` ni tashlab ketardi |
+
+**Topilgan haqiqiy nuqson.** `devices.ts` da qurilma sessiyasini bekor qilish `catch {}` ichida
+edi: so'rov yiqilsa ham foydalanuvchiga "qurilma bekor qilindi" deb ko'rsatilardi. Ya'ni egasi
+sessiya yopildi deb o'ylardi, aslida u ochiq qolardi. Endi muvaffaqiyatsizlar sanaladi va xato
+xabari beriladi. Bu aynan `empty_general_catch_clause` ni yoqib qo'yish nima uchun kerakligining
+misoli.
 
 ## 7. Hozirgi qarz
 

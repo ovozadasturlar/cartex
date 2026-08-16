@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -87,24 +87,24 @@ export class Supplies implements OnInit {
 
   onFilter(): void {
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onSupplier(id: number | null): void {
     this.supplierId.set(id);
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
     if (!this.canCreate) return;
-    this.router.navigate(['/supplies/new']);
+    void this.router.navigate(['/supplies/new']);
   }
 
   async openDetail(row: Supply): Promise<void> {
@@ -114,7 +114,7 @@ export class Supplies implements OnInit {
       maxWidth: '94vw',
       autoFocus: false,
     });
-    if (await lastValueFrom(ref.afterClosed())) this.load();
+    if (await lastValueFrom(ref.afterClosed())) void this.load();
   }
 
   private async load(): Promise<void> {
@@ -196,7 +196,7 @@ export class SupplyDetailDialog implements OnInit {
   editSupply(): void {
     if (!this.canEdit) return;
     this.ref.close();
-    this.router.navigate(['/supplies', this.id, 'edit']);
+    void this.router.navigate(['/supplies', this.id, 'edit']);
   }
 
   async voidSupply(): Promise<void> {

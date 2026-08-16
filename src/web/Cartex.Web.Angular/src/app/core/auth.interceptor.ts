@@ -23,10 +23,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     switchMap((token) =>
       next(token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req),
     ),
-    catchError((error) => {
+    catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         auth.logout();
-        router.navigate(['/login']);
+        void router.navigate(['/login']);
       }
       return throwError(() => error);
     }),

@@ -275,7 +275,7 @@ export class Devices implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   isCurrent(s: DeviceSession): boolean {
@@ -333,13 +333,19 @@ export class Devices implements OnInit {
       ? t('devices_revoke_offline_confirm')
       : t('revoke_selected_confirm');
     if (!confirm(message)) return;
+    // One device refusing to revoke must not be reported as "all revoked": the owner would
+    // believe a session was closed while it is still alive.
+    let failed = 0;
     for (const id of this.selected()) {
       const session = rows.find((s) => s.id === id);
       try {
         if (session) await lastValueFrom(this.http.delete<void>(this.revokeUrl(session)));
-      } catch {}
+      } catch {
+        failed += 1;
+      }
     }
-    this.notify.success(this.transloco.translate('device_revoked'));
+    if (failed > 0) this.notify.error(new Error(this.transloco.translate('device_revoke_failed')));
+    else this.notify.success(this.transloco.translate('device_revoked'));
     this.editGroup.set(null);
     this.selected.set(new Set());
     await this.load();
@@ -350,12 +356,16 @@ export class Devices implements OnInit {
       ? t('devices_revoke_offline_confirm')
       : t('terminate_all_confirm');
     if (!confirm(message)) return;
-    for (const s of this.myOthers()) {
+    let failed = 0;
+    for (const other of this.myOthers()) {
       try {
-        await lastValueFrom(this.http.delete<void>(this.revokeUrl(s)));
-      } catch {}
+        await lastValueFrom(this.http.delete<void>(this.revokeUrl(other)));
+      } catch {
+        failed += 1;
+      }
     }
-    this.notify.success(this.transloco.translate('device_revoked'));
+    if (failed > 0) this.notify.error(new Error(this.transloco.translate('device_revoke_failed')));
+    else this.notify.success(this.transloco.translate('device_revoked'));
     await this.load();
   }
 

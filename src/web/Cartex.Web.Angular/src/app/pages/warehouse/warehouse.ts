@@ -101,12 +101,12 @@ export class Warehouse implements OnInit {
   onWarehouse(id: number): void {
     this.warehouseId.set(id);
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onTab(tab: 'onHand' | 'lowStock' | 'expiring'): void {
     this.tab.set(tab);
-    this.load();
+    void this.load();
   }
 
   onSearch(value: string): void {
@@ -114,20 +114,20 @@ export class Warehouse implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search.set(value.trim());
       this.page.set(1);
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onCategory(id: number | null): void {
     this.categoryId.set(id);
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   openAdjustment(stock: StockOnHand): void {
@@ -138,7 +138,9 @@ export class Warehouse implements OnInit {
       width: '430px',
       maxWidth: '94vw',
       autoFocus: false,
-    }).afterClosed().subscribe((changed) => changed && this.load());
+    }).afterClosed().subscribe((changed) => {
+        if (changed) void this.load();
+      });
   }
 
   private async load(): Promise<void> {

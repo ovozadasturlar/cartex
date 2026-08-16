@@ -84,7 +84,9 @@ export class Roles implements OnInit {
         autoFocus: false,
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   async setActive(role: Role, isActive: boolean): Promise<void> {

@@ -1,7 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
-import { Paged, toPaged } from '../paging';
+import { Observable } from 'rxjs';
 
 export interface CartListItem {
   id: number;

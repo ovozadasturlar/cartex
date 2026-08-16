@@ -54,7 +54,7 @@ export class Units implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(dimension?: string): void {
@@ -92,7 +92,7 @@ export class Units implements OnInit {
       .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 

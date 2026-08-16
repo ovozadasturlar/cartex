@@ -202,7 +202,7 @@ export class Pos implements OnInit {
     if (this.queueAvailable) {
       await this.loadQueue();
       this.destroyRef.onDestroy(this.queueHub.onQueueChanged(() => this.loadQueue()));
-      this.queueHub.ensureStarted();
+      void this.queueHub.ensureStarted();
     }
   }
 
@@ -236,7 +236,9 @@ export class Pos implements OnInit {
       if (cart.customerId) {
         try {
           this.customer.set(await lastValueFrom(this.api.customer(cart.customerId)));
-        } catch {}
+        } catch {
+          // The cart still opens without the customer card; the sale carries the id anyway.
+        }
       }
       await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Confirmed'));
       this.activeQueueCode = item.aggregateCode;
@@ -433,7 +435,7 @@ export class Pos implements OnInit {
 
   async attachCustomer(): Promise<void> {
     const picked: Customer | undefined = await lastValueFrom(
-      this.dialog.open(CustomerPickerDialog, { autoFocus: 'input' }).afterClosed(),
+this.dialog.open<CustomerPickerDialog, unknown, Customer>(CustomerPickerDialog, { autoFocus: 'input' }).afterClosed(),
     );
     if (picked) this.customer.set(picked);
     this.focusScan();
@@ -444,7 +446,8 @@ export class Pos implements OnInit {
   }
 
   async openShift(): Promise<void> {
-    const opened = await lastValueFrom(this.dialog.open(OpenShiftDialog, { width: '360px', maxWidth: '88vw' }).afterClosed());
+    const opened: boolean | undefined = await lastValueFrom(
+this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '360px', maxWidth: '88vw' }).afterClosed());
     if (opened) this.shift.set(await lastValueFrom(this.api.currentShift()));
   }
 
@@ -612,7 +615,7 @@ export class Pos implements OnInit {
 
   private reset(): void {
     this.page = 1;
-    this.loadTiles();
+    void this.loadTiles();
   }
 
   private async loadTiles(append = false): Promise<void> {

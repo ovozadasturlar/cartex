@@ -78,13 +78,13 @@ export class Audit implements OnInit {
 
   onFilter(): void {
     this.page = 1;
-    this.reload();
+    void this.reload();
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reload();
+    void this.reload();
   }
 
   open(log: AuditLog): void {

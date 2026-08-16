@@ -150,7 +150,7 @@ export class Rates implements OnInit {
       .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.reload();
+        if (saved) void this.reload();
       });
   }
 

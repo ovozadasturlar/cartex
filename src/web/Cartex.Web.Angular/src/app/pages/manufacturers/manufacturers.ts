@@ -50,7 +50,7 @@ export class Manufacturers implements OnInit {
   readonly columns = ['name', 'actions'];
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
@@ -84,7 +84,7 @@ export class Manufacturers implements OnInit {
       .open(ManufacturerDialog, { data: manufacturer, width: '400px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 

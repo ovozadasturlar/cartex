@@ -67,7 +67,7 @@ export class Customers implements OnInit {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => {
         this.page = 1;
-        this.reload();
+        void this.reload();
       });
   }
 
@@ -94,7 +94,7 @@ export class Customers implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reload();
+    void this.reload();
   }
 
   name(c: Customer): string {
@@ -102,7 +102,7 @@ export class Customers implements OnInit {
   }
 
   open(c: Customer): void {
-    this.router.navigate(['/customers', c.id]);
+    void this.router.navigate(['/customers', c.id]);
   }
 
   openCreate(): void {
@@ -111,7 +111,7 @@ export class Customers implements OnInit {
       .open(CustomerEditDialog, { data: null, width: '560px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.reload();
+        if (saved) void this.reload();
       });
   }
 
