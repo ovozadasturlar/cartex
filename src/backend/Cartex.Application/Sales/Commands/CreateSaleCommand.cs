@@ -386,6 +386,8 @@ public sealed class CreateSaleCommandHandler(
         var roundingAmount = 0m;
         if (request.RoundingAmount > 0)
         {
+            if (!policy.AllowRounding)
+                throw new BusinessRuleException("Yaxlitlash o'chirilgan.", "rounding_disabled");
             if (policy.MaxRoundingAmount > 0 && request.RoundingAmount > policy.MaxRoundingAmount
                 && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
                 throw new ForbiddenException($"Yaxlitlash {policy.MaxRoundingAmount:N0} dan osha olmaydi.");

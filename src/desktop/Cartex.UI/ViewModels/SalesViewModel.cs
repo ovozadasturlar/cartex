@@ -603,6 +603,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _allowDebtSales = policy.AllowDebtSales;
             _requireDebtDueDate = policy.RequireDebtDueDate;
             _supplierRequired = policy.RequireSupplier;
+            _roundingEnabled = policy.AllowRounding;
+            OnPropertyChanged(nameof(CanRound));
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
@@ -1128,7 +1130,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     public bool HasRounding => RoundingAmount > 0;
-    public bool CanRound => _auth.HasPermission("sales.discount");
+
+    /// Both halves matter: the shop has to have the capability switched on, and this user has to
+    /// be allowed to give money away. The server checks the same two things (SOZ-10).
+    public bool CanRound => _roundingEnabled && _auth.HasPermission("sales.discount");
+    private bool _roundingEnabled = true;
 
     /// The cashier types what the customer will actually hand over and the shortfall becomes a
     /// discount, so the sale still adds up and tomorrow's refund comes off the right lines.

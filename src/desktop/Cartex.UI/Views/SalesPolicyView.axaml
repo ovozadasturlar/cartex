@@ -42,6 +42,29 @@
 
                 <Border Classes="card">
                     <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[optional_capabilities]}" Classes="section" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_rounding]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowRounding}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_debt_write_off]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtWriteOff}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[print_money_documents]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PrintMoneyDocuments}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_consolidated_act]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowConsolidatedAct}" />
+                        </Grid>
+                        <TextBlock Text="{Binding L[optional_capabilities_hint]}" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
                         <TextBlock Text="{Binding L[sales_policy_limits]}" Classes="section" />
                         <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
                             <StackPanel Spacing="5">

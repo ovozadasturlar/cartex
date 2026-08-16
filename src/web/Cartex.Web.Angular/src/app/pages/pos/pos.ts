@@ -114,6 +114,7 @@ export class Pos implements OnInit {
   readonly minDueDate = isoDay(new Date());
   readonly policy = signal<SalesPolicy | null>(null);
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
+  readonly canRound = computed(() => this.policy()?.allowRounding !== false);
   readonly bonusAuto = signal(false);
   readonly dueDateMissing = signal(false);
   private lastCustomerId: number | null | undefined;

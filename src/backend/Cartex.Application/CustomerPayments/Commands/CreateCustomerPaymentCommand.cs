@@ -125,6 +125,8 @@ public sealed class CreateCustomerPaymentCommandHandler(
 
         if (writeOffBase > 0)
         {
+            if (!policy.AllowDebtWriteOff)
+                throw new BusinessRuleException("Qarz kechirimi o'chirilgan.", "write_off_disabled");
             if (policy.MaxDebtWriteOffAmount > 0 && writeOffBase > policy.MaxDebtWriteOffAmount)
                 throw new BusinessRuleException(
                     $"Kechirim {policy.MaxDebtWriteOffAmount:N0} dan osha olmaydi.", "write_off_limit_exceeded");

@@ -30,6 +30,13 @@ public sealed class SalesPolicySettings
     /// Savdoda katalogdan yuqori narx kiritilsa, katalog narxi yangilanadimi (NARX-06).
     public bool UpdateCatalogPriceOnSale { get; set; } = true;
 
+    /// Ixtiyoriy imkoniyatlarning kalitlari (SOZ-08). Chegara maydoni o'chirish vositasi emas:
+    /// unda 0 — "chegara yo'q" degani, shuning uchun har biriga alohida kalit kerak (SOZ-09).
+    public bool AllowRounding { get; set; } = true;
+    public bool AllowDebtWriteOff { get; set; } = true;
+    public bool PrintMoneyDocuments { get; set; } = true;
+    public bool AllowConsolidatedAct { get; set; } = true;
+
     /// Do'kon mijozga savdosiz naqd qarz bera oladimi (QARZ-09). Standart: yo'q —
     /// bu kassadan pul chiqaradigan alohida imkoniyat, ataylab yopiq turadi.
     public bool AllowCustomerLoans { get; set; }

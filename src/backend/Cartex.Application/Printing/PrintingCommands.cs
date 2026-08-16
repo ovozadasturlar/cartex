@@ -505,6 +505,13 @@ public sealed class CreatePrintJobCommandHandler(
 
         if (string.IsNullOrWhiteSpace(request.SourceType) || string.IsNullOrWhiteSpace(request.SourceId))
             throw new BusinessRuleException("Print source is required.");
+
+        // SOZ-10: a shop that does not want money slips must be refused here, not merely have
+        // the button hidden — the client is not where a policy is enforced.
+        if (request.SourceType is "customer_payment" or "customer_refund"
+            && !(await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
+                 ?? new SalesPolicySettings()).PrintMoneyDocuments)
+            throw new BusinessRuleException("To'lov hujjatini chop etish o'chirilgan.", "money_document_print_disabled");
         if (request.IsReprint && string.IsNullOrWhiteSpace(request.Reason))
             throw new BusinessRuleException("A reprint reason is required.");
         if (!string.IsNullOrWhiteSpace(request.DeviceId))

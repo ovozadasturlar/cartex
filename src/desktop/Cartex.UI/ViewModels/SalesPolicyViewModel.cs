@@ -51,6 +51,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowInsufficientStockSales;
     [ObservableProperty] private bool _allowRetroactiveCashback;
     [ObservableProperty] private bool _updateCatalogPriceOnSale = true;
+    [ObservableProperty] private bool _allowRounding = true;
+    [ObservableProperty] private bool _allowDebtWriteOff = true;
+    [ObservableProperty] private bool _printMoneyDocuments = true;
+    [ObservableProperty] private bool _allowConsolidatedAct = true;
     [ObservableProperty] private bool _allowCustomerLoans;
     [ObservableProperty] private decimal _maxCustomerLoan;
 
@@ -87,6 +91,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowInsufficientStockSales = _loaded.AllowInsufficientStockSales;
             AllowRetroactiveCashback = _loaded.AllowRetroactiveCashback;
             UpdateCatalogPriceOnSale = _loaded.UpdateCatalogPriceOnSale;
+            AllowRounding = _loaded.AllowRounding;
+            AllowDebtWriteOff = _loaded.AllowDebtWriteOff;
+            PrintMoneyDocuments = _loaded.PrintMoneyDocuments;
+            AllowConsolidatedAct = _loaded.AllowConsolidatedAct;
             AllowCustomerLoans = _loaded.AllowCustomerLoans;
             MaxCustomerLoan = _loaded.MaxCustomerLoan;
         }
@@ -122,6 +130,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 AllowInsufficientStockSales = AllowInsufficientStockSales,
                 AllowRetroactiveCashback = AllowRetroactiveCashback,
                 UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale,
+                AllowRounding = AllowRounding,
+                AllowDebtWriteOff = AllowDebtWriteOff,
+                PrintMoneyDocuments = PrintMoneyDocuments,
+                AllowConsolidatedAct = AllowConsolidatedAct,
                 AllowCustomerLoans = AllowCustomerLoans,
                 MaxCustomerLoan = MaxCustomerLoan
             };

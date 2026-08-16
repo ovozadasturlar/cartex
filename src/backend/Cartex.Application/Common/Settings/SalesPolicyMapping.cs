@@ -26,6 +26,10 @@ public static class SalesPolicyMapping
         AllowRetroactiveCashback = cfg.AllowRetroactiveCashback,
         SaleCorrectionWindow = cfg.SaleCorrectionWindow,
         SaleCorrectionDays = cfg.SaleCorrectionDays,
+        AllowRounding = cfg.AllowRounding,
+        AllowDebtWriteOff = cfg.AllowDebtWriteOff,
+        PrintMoneyDocuments = cfg.PrintMoneyDocuments,
+        AllowConsolidatedAct = cfg.AllowConsolidatedAct,
         AllowCustomerLoans = cfg.AllowCustomerLoans,
         MaxCustomerLoan = cfg.MaxCustomerLoan,
         UpdateCatalogPriceOnSale = cfg.UpdateCatalogPriceOnSale,
@@ -51,6 +55,10 @@ public static class SalesPolicyMapping
         cfg.AllowRetroactiveCashback = dto.AllowRetroactiveCashback;
         cfg.SaleCorrectionWindow = dto.SaleCorrectionWindow;
         cfg.SaleCorrectionDays = dto.SaleCorrectionDays;
+        cfg.AllowRounding = dto.AllowRounding;
+        cfg.AllowDebtWriteOff = dto.AllowDebtWriteOff;
+        cfg.PrintMoneyDocuments = dto.PrintMoneyDocuments;
+        cfg.AllowConsolidatedAct = dto.AllowConsolidatedAct;
         cfg.AllowCustomerLoans = dto.AllowCustomerLoans;
         cfg.MaxCustomerLoan = dto.MaxCustomerLoan;
         cfg.UpdateCatalogPriceOnSale = dto.UpdateCatalogPriceOnSale;

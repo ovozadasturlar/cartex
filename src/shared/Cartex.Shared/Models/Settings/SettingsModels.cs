@@ -140,6 +140,10 @@ public sealed record SalesPolicyDto
     public bool AllowRetroactiveCashback { get; init; }
     public string SaleCorrectionWindow { get; init; } = "Shift";
     public int SaleCorrectionDays { get; init; } = 1;
+    public bool AllowRounding { get; init; } = true;
+    public bool AllowDebtWriteOff { get; init; } = true;
+    public bool PrintMoneyDocuments { get; init; } = true;
+    public bool AllowConsolidatedAct { get; init; } = true;
     public bool AllowCustomerLoans { get; init; }
     public decimal MaxCustomerLoan { get; init; }
     public bool UpdateCatalogPriceOnSale { get; init; } = true;

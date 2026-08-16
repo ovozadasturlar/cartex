@@ -9,6 +9,23 @@
     }
 
     <div class="cx-card section">
+      <h2>{{ t('optional_capabilities') }}</h2>
+      <mat-slide-toggle [(ngModel)]="model.allowRounding" [disabled]="!canManage">
+        {{ t('allow_rounding') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowDebtWriteOff" [disabled]="!canManage">
+        {{ t('allow_debt_write_off') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.printMoneyDocuments" [disabled]="!canManage">
+        {{ t('print_money_documents') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowConsolidatedAct" [disabled]="!canManage">
+        {{ t('allow_consolidated_act') }}
+      </mat-slide-toggle>
+      <p class="hint">{{ t('optional_capabilities_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
       <h2>{{ t('sales_policy_limits') }}</h2>
       <div class="grid">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
