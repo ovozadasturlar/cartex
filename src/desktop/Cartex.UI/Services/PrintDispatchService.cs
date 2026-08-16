@@ -38,7 +38,7 @@ public sealed class PrintDispatchService
         _toast = toast;
         _auth = auth;
         _branch = branch;
-        connectivity.PropertyChanged += (_, args) =>
+        connectivity.PropertyChanged += (sender, args) =>
         {
             if (args.PropertyName == nameof(ConnectivityService.IsOnline)
                 && connectivity.IsOnline && _auth.IsAuthenticated)

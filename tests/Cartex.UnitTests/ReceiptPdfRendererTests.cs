@@ -52,6 +52,7 @@ public sealed class ReceiptPdfRendererTests
         var images = renderer.RenderDocumentImages(receipt, settings, a4, landscape);
 
         var image = Assert.Single(images);
+        Assert.NotNull(image);
         Assert.True(image.Length > 1000);
         Assert.Equal([0x89, 0x50, 0x4E, 0x47], image[..4]);
     }

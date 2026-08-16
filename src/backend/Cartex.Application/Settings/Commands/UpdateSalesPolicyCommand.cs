@@ -31,6 +31,7 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
         RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100);
         RuleFor(x => x.Policy.MaxPriceIncreasePercent).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Policy.MaxCustomerLoan).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.DefaultMinStock).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.StaleRateDays).InclusiveBetween(1, 30);
     }

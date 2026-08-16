@@ -87,6 +87,8 @@ export interface SalesPolicy {
   allowRetroactiveCashback: boolean;
   saleCorrectionWindow: string;
   saleCorrectionDays: number;
+  allowCustomerLoans: boolean;
+  maxCustomerLoan: number;
   updateCatalogPriceOnSale: boolean;
   maxPriceIncreasePercent: number;
 }

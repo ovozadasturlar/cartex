@@ -377,7 +377,7 @@ public sealed class GetCustomerStatementQueryHandler(
         OperationType.DebtPay => "Qarz to'landi",
         OperationType.CustomerPayment => "Mijoz to'lovi",
         OperationType.CustomerAdvance => "Mijoz avansi",
-        OperationType.CustomerCredit => "Mijoz haqdorligi",
+        OperationType.CustomerLoan => "Do'kondan qarzga pul olindi",
         OperationType.CustomerRefund => "Mijozga pul qaytarildi",
         OperationType.SaleReturn => "Mahsulot qaytarildi",
         _ => operation.ToString()

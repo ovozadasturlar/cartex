@@ -26,6 +26,8 @@ public static class SalesPolicyMapping
         AllowRetroactiveCashback = cfg.AllowRetroactiveCashback,
         SaleCorrectionWindow = cfg.SaleCorrectionWindow,
         SaleCorrectionDays = cfg.SaleCorrectionDays,
+        AllowCustomerLoans = cfg.AllowCustomerLoans,
+        MaxCustomerLoan = cfg.MaxCustomerLoan,
         UpdateCatalogPriceOnSale = cfg.UpdateCatalogPriceOnSale,
         MaxPriceIncreasePercent = cfg.MaxPriceIncreasePercent
     };
@@ -49,6 +51,8 @@ public static class SalesPolicyMapping
         cfg.AllowRetroactiveCashback = dto.AllowRetroactiveCashback;
         cfg.SaleCorrectionWindow = dto.SaleCorrectionWindow;
         cfg.SaleCorrectionDays = dto.SaleCorrectionDays;
+        cfg.AllowCustomerLoans = dto.AllowCustomerLoans;
+        cfg.MaxCustomerLoan = dto.MaxCustomerLoan;
         cfg.UpdateCatalogPriceOnSale = dto.UpdateCatalogPriceOnSale;
         cfg.MaxPriceIncreasePercent = dto.MaxPriceIncreasePercent;
     }

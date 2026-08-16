@@ -23,7 +23,7 @@ public enum OperationType
     CashIn,
     CashOut,
     Change,
-    CustomerCredit,
+    CustomerLoan,
     CustomerPayment,
     CustomerAdvance,
     CustomerRefund,

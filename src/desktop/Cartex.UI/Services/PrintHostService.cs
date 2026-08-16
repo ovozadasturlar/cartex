@@ -432,7 +432,7 @@ public sealed class PrintHostService
                 var storageApi = Avalonia.Controls.Design.IsDesignMode ? null : ServiceLocator.Resolve<IStorageApi>();
                 if (storageApi != null)
                 {
-                    var file = await storageApi.GetUrlAsync(logoKey!);
+                    var file = await storageApi.GetUrlAsync(logoKey);
                     var imageBytes = await ImageHttpClient.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
 
                     int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);

@@ -116,6 +116,16 @@
                             <TextBlock Text="{Binding L[allow_retroactive_cashback]}" Classes="field" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowRetroactiveCashback}" />
                         </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_customer_loans]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowCustomerLoans}" />
+                        </Grid>
+                        <StackPanel Spacing="5" IsVisible="{Binding AllowCustomerLoans}">
+                            <TextBlock Text="{Binding L[max_customer_loan]}" Classes="field" />
+                            <NumericUpDown Value="{Binding MaxCustomerLoan, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="0" Increment="1000" FormatString="N0" HorizontalAlignment="Left" Width="200" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding L[customer_loan_hint]}" Classes="hint" />
                     </StackPanel>
                 </Border>
 

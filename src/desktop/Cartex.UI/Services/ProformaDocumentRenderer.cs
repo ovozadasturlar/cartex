@@ -323,7 +323,9 @@ public static class ProformaDocumentRenderer
         SKTypeface typeface,
         SKTextAlign align = SKTextAlign.Left)
     {
-        using var font = new SKFont(typeface, size) { Edging = SKFontEdging.Antialias, Subpixel = false };
+        using var font = new SKFont(typeface, size);
+        font.Edging = SKFontEdging.Antialias;
+        font.Subpixel = false;
         using var paint = new SKPaint();
         paint.Color = color;
         paint.IsAntialias = true;

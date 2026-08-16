@@ -51,6 +51,8 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowInsufficientStockSales;
     [ObservableProperty] private bool _allowRetroactiveCashback;
     [ObservableProperty] private bool _updateCatalogPriceOnSale = true;
+    [ObservableProperty] private bool _allowCustomerLoans;
+    [ObservableProperty] private decimal _maxCustomerLoan;
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
@@ -85,6 +87,8 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowInsufficientStockSales = _loaded.AllowInsufficientStockSales;
             AllowRetroactiveCashback = _loaded.AllowRetroactiveCashback;
             UpdateCatalogPriceOnSale = _loaded.UpdateCatalogPriceOnSale;
+            AllowCustomerLoans = _loaded.AllowCustomerLoans;
+            MaxCustomerLoan = _loaded.MaxCustomerLoan;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -117,7 +121,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 ShowUnlistedProducts = ShowUnlistedProducts,
                 AllowInsufficientStockSales = AllowInsufficientStockSales,
                 AllowRetroactiveCashback = AllowRetroactiveCashback,
-                UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale
+                UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale,
+                AllowCustomerLoans = AllowCustomerLoans,
+                MaxCustomerLoan = MaxCustomerLoan
             };
 
             using (_busy.Begin(L["loading"]))

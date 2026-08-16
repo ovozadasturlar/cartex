@@ -98,17 +98,6 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         catch { return null; }
     }
 
-    private static void FillOptions(ObservableCollection<string> target, string[] codes, Func<string, string> label)
-    {
-        for (var i = 0; i < codes.Length; i++)
-        {
-            var text = label(codes[i]);
-            if (i >= target.Count) target.Add(text);
-            else if (target[i] != text) target[i] = text;
-        }
-        while (target.Count > codes.Length) target.RemoveAt(target.Count - 1);
-    }
-
     [RelayCommand]
     private async Task PickLogo()
     {

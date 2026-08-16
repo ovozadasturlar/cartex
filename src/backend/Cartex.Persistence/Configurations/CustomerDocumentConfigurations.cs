@@ -69,6 +69,8 @@ public class CustomerRefundDocumentConfiguration : IEntityTypeConfiguration<Cust
         builder.Property(x => x.DocumentNumber).HasMaxLength(40).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.TotalBaseAmount).HasPrecision(18, 2);
+        builder.Property(x => x.AdvanceBaseAmount).HasPrecision(18, 2);
+        builder.Property(x => x.LoanBaseAmount).HasPrecision(18, 2);
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(128);
         builder.HasIndex(x => x.DocumentNumber).IsUnique();

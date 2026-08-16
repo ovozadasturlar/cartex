@@ -67,6 +67,12 @@ public class CustomerRefundDocument : AuditableEntity, IBranchScoped
     public DateOnly BusinessDate { get; set; }
     public BusinessDocumentStatus Status { get; set; } = BusinessDocumentStatus.Posted;
     public decimal TotalBaseAmount { get; set; }
+
+    /// How the payout was funded. The customer needs to see on the paper whether the shop handed
+    /// back money it already held or lent it (QARZ-08), because only the second leaves a debt.
+    public decimal AdvanceBaseAmount { get; set; }
+    public decimal LoanBaseAmount { get; set; }
+
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
 

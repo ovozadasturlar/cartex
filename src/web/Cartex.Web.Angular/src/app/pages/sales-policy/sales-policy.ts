@@ -62,6 +62,8 @@ export class SalesPolicySettings implements OnInit {
     allowRetroactiveCashback: false,
     saleCorrectionWindow: 'Shift',
     saleCorrectionDays: 1,
+    allowCustomerLoans: false,
+    maxCustomerLoan: 0,
     updateCatalogPriceOnSale: true,
     maxPriceIncreasePercent: 0,
   };

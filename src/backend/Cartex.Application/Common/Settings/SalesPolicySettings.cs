@@ -30,6 +30,13 @@ public sealed class SalesPolicySettings
     /// Savdoda katalogdan yuqori narx kiritilsa, katalog narxi yangilanadimi (NARX-06).
     public bool UpdateCatalogPriceOnSale { get; set; } = true;
 
+    /// Do'kon mijozga savdosiz naqd qarz bera oladimi (QARZ-09). Standart: yo'q —
+    /// bu kassadan pul chiqaradigan alohida imkoniyat, ataylab yopiq turadi.
+    public bool AllowCustomerLoans { get; set; }
+
+    /// Bitta chiqimda qarzga berilishi mumkin bo'lgan eng katta summa. 0 — chegara yo'q.
+    public decimal MaxCustomerLoan { get; set; }
+
     /// Katalogni yangilash uchun ruxsat etilgan eng katta oshish, foizda (NARX-07).
     /// Oshirish chegaradan katta bo'lsa savdo baribir o'tadi, faqat katalog yangilanmaydi.
     /// 0 — chegara yo'q.
