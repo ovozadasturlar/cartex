@@ -211,6 +211,12 @@
                                 <TextBlock Text="{Binding L[repay_debt]}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Classes="outline" Command="{Binding OpenPayOutCommand}" IsVisible="{Binding CanPayOut}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="CashMinus" Width="17" Height="17" />
+                                <TextBlock Text="{Binding L[pay_out]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="outline" Command="{Binding OpenEditCommand}" CommandParameter="{Binding SelectedCustomer}"
                                 IsVisible="{Binding CanEdit}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -484,6 +490,40 @@
                         <TextBlock Text="{Binding L[message_text]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding MessageText}" MinHeight="90" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000" />
                     </StackPanel>
+                </StackPanel>
+        </c:ModalCard>
+
+        <c:ModalCard IsOpen="{Binding IsPayOutOpen}" Title="{Binding L[pay_out]}" CardWidth="520"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelPayOutCommand}" SaveCommand="{Binding PayOutCommand}">
+                <StackPanel Spacing="14">
+                    <Border Classes="debtcard" CornerRadius="12" Padding="16,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[advance]}" FontSize="12.5" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                            <TextBlock Grid.Column="1" Text="{Binding PayOutAdvance, StringFormat='{}{0:N0}'}"
+                                       FontSize="20" FontWeight="Bold" />
+                        </Grid>
+                    </Border>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <NumericUpDown Value="{Binding PayOutAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                       Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False"
+                                       FontSize="18" MinHeight="44" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[payment_method]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ToggleSwitch IsChecked="{Binding PayOutViaCard}"
+                                      OffContent="{Binding L[cash]}" OnContent="{Binding L[card]}" />
+                    </StackPanel>
+                    <TextBox Text="{Binding PayOutNote}" PlaceholderText="{Binding L[note]}" MinHeight="38" />
+                    <Border IsVisible="{Binding PayOutCreatesLoan}" Background="{DynamicResource WarningBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}">
+                            <Run Text="{Binding L[pay_out_becomes_loan]}" />
+                            <Run Text="{Binding PayOutAsLoan, StringFormat='{}{0:N0}'}" FontWeight="Bold" />
+                        </TextBlock>
+                    </Border>
                 </StackPanel>
         </c:ModalCard>
 

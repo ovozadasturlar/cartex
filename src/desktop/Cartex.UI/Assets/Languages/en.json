@@ -679,6 +679,7 @@
   "pay_in": "Pay-in",
   "pay_old_debt": "Pay old debt",
   "pay_out": "Pay-out",
+  "pay_out_becomes_loan": "Above the advance, so this much becomes a debt:",
   "pay_transfer": "Mobile transfer",
   "payable": "Payable",
   "payment": "Payment",

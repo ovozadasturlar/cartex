@@ -23,6 +23,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private readonly IExportService _export;
     private readonly ReceiptDialogService _receiptDialog;
     private readonly ICustomerPaymentsApi _paymentsApi;
+    private readonly ICustomerRefundsApi _refundsApi;
     private readonly PrintDispatchService _print;
     private readonly IDialogService _dialog;
     private long _editId;
@@ -66,6 +67,10 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public ObservableCollection<string> OpeningKinds { get; } = [];
 
     [ObservableProperty] private bool _isRepayOpen;
+    [ObservableProperty] private bool _isPayOutOpen;
+    [ObservableProperty] private decimal _payOutAmount;
+    [ObservableProperty] private bool _payOutViaCard;
+    [ObservableProperty] private string _payOutNote = "";
     [ObservableProperty] private decimal _repayAmount;
     [ObservableProperty] private bool _repayViaCard;
     [ObservableProperty] private bool _isMulticurrency;
@@ -191,6 +196,19 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool CanRepay => _auth.HasPermission("customers.receivePayment")
         && (SelectedCustomer?.DebtBalances?.Any(b => b.Amount > 0) ?? false);
     public bool SelectedIsCredit => SelectedCustomer is { DebtBalance: < 0 };
+
+    /// Paying money out is a different door from taking it in: it needs its own permission, and
+    /// the amount may exceed the customer's advance only when lending is switched on (QARZ-09).
+    public bool CanPayOut => _auth.HasPermission("customers.refund") && SelectedCustomer is not null;
+    public decimal PayOutAdvance => Math.Max(0, -(SelectedCustomer?.DebtBalance ?? 0));
+    public decimal PayOutAsLoan => Math.Max(0, PayOutAmount - PayOutAdvance);
+    public bool PayOutCreatesLoan => PayOutAsLoan > 0;
+
+    partial void OnPayOutAmountChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(PayOutAsLoan));
+        OnPropertyChanged(nameof(PayOutCreatesLoan));
+    }
     public decimal SelectedDebtAmount => Math.Abs(SelectedCustomer?.DebtBalance ?? 0);
 
     public string SelectedInitials => string.Concat(
@@ -200,8 +218,10 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             .Select(w => char.ToUpperInvariant(w[0])));
 
     public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog,
-        ICustomerPaymentsApi paymentsApi, IDialogService dialog, PrintDispatchService print)
+        ICustomerPaymentsApi paymentsApi, IDialogService dialog, PrintDispatchService print,
+        ICustomerRefundsApi refundsApi)
     {
+        _refundsApi = refundsApi;
         _print = print;
         _receiptDialog = receiptDialog;
         _paymentsApi = paymentsApi;
@@ -329,6 +349,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanExport));
         OnPropertyChanged(nameof(CanViewSales));
         OnPropertyChanged(nameof(CanRepay));
+        OnPropertyChanged(nameof(CanPayOut));
     }
 
     public async Task LoadAsync()
@@ -388,6 +409,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(SelectedCustomerDisplay));
         OnPropertyChanged(nameof(SelectedInitials));
         OnPropertyChanged(nameof(CanRepay));
+        OnPropertyChanged(nameof(CanPayOut));
         OnPropertyChanged(nameof(SelectedIsCredit));
         OnPropertyChanged(nameof(SelectedDebtAmount));
         Ledger.Clear();
@@ -650,6 +672,46 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelRepay() => IsRepayOpen = false;
+
+    [RelayCommand]
+    private void OpenPayOut()
+    {
+        if (!CanPayOut) return;
+        PayOutAmount = 0;
+        PayOutViaCard = false;
+        PayOutNote = "";
+        OnPropertyChanged(nameof(PayOutAdvance));
+        IsPayOutOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelPayOut() => IsPayOutOpen = false;
+
+    [RelayCommand]
+    private async Task PayOutAsync()
+    {
+        if (!CanPayOut || SelectedCustomer is not { } customer || PayOutAmount <= 0)
+        {
+            _toast.Error(L["error"]);
+            return;
+        }
+        var id = customer.Id;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _refundsApi.CreateAsync(new CreateCustomerRefundRequest(
+                    id,
+                    null,
+                    [new CustomerRefundTenderRequest(PayOutViaCard ? "Card" : "Cash", _baseCurrency, PayOutAmount)],
+                    Note: string.IsNullOrWhiteSpace(PayOutNote) ? null : PayOutNote.Trim(),
+                    IdempotencyKey: Guid.NewGuid().ToString("N")));
+            IsPayOutOpen = false;
+            _toast.Success(L["success"]);
+            await LoadAsync();
+            SelectedCustomer = Customers.FirstOrDefault(c => c.Id == id);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task RepayAsync()

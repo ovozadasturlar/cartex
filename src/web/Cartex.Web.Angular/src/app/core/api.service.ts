@@ -154,6 +154,24 @@ export class CustomersApi {
   ): Observable<void> {
     return this.http.post<void>(`/api/customers/${id}/repay-debt`, body);
   }
+
+  /// Money going the other way. Whatever the advance cannot cover becomes a debt, and only when
+  /// the shop switched lending on — the server decides, this just sends the request.
+  payOut(body: {
+    customerId: number;
+    branchId: number | null;
+    tenders: { method: string; currency: string; amount: number }[];
+    note: string | null;
+    idempotencyKey: string;
+  }): Observable<{ id: number; documentNumber: string; totalBaseAmount: number; advanceBaseAmount: number; loanBaseAmount: number }> {
+    return this.http.post<{
+      id: number;
+      documentNumber: string;
+      totalBaseAmount: number;
+      advanceBaseAmount: number;
+      loanBaseAmount: number;
+    }>('/api/customer-refunds', body);
+  }
 }
 
 @Injectable({ providedIn: 'root' })

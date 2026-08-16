@@ -62,6 +62,7 @@ export class CustomerProfile implements OnInit {
   readonly canEdit = this.auth.hasPermission('customers.edit');
   readonly canDelete = this.auth.hasPermission('customers.delete');
   readonly canRepay = this.auth.hasPermission('customers.receivePayment');
+  readonly canPayOut = this.auth.hasPermission('customers.refund');
   readonly canViewSales = this.auth.hasPermission('sales.view');
   readonly loading = signal(true);
   readonly customer = signal<Customer | null>(null);
@@ -152,6 +153,17 @@ export class CustomerProfile implements OnInit {
     if (!this.canRepay) return;
     const done = await lastValueFrom(
       this.dialog.open(RepayDebtDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
+    );
+    if (done) {
+      this.load();
+      this.loadLedger();
+    }
+  }
+
+  async payOut(): Promise<void> {
+    if (!this.canPayOut) return;
+    const done = await lastValueFrom(
+      this.dialog.open(PayOutDialog, { data: this.customer(), width: '420px', maxWidth: '94vw' }).afterClosed(),
     );
     if (done) {
       this.load();
@@ -411,6 +423,82 @@ export class RepayDebtDialog implements OnInit {
           viaCard: this.viaCard,
           debtCurrency: this.multicurrency() ? this.debtCurrency : null,
           payCurrency: this.multicurrency() ? this.payCurrency : null,
+          idempotencyKey: this.idempotencyKey,
+        }),
+      );
+      this.notify.success(message);
+      this.ref.close(true);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+}
+
+@Component({
+  selector: 'app-pay-out-dialog',
+  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule, TranslocoModule],
+  styleUrl: './customer-profile.scss',
+  template: `
+    <div class="edit-dlg" *transloco="let t">
+      <div class="head">
+        <h2>{{ t('pay_out') }}</h2>
+      </div>
+      <div mat-dialog-content class="form">
+        <p class="hint">{{ t('advance') }}: {{ advance }}</p>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+          <mat-label>{{ t('amount') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="amount" cdkFocusInitial />
+        </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="viaCard">{{ t('via_card') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+          <mat-label>{{ t('note') }}</mat-label>
+          <input matInput [(ngModel)]="note" />
+        </mat-form-field>
+        @if (asLoan > 0) {
+          <p class="hint warn">{{ t('pay_out_becomes_loan') }} {{ asLoan }}</p>
+        }
+      </div>
+      <div mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+        <button matButton="filled" [disabled]="!amount || amount <= 0 || busy()" (click)="save(t('success'))">
+          {{ t('save') }}
+        </button>
+      </div>
+    </div>
+  `,
+})
+export class PayOutDialog {
+  private readonly api = inject(CustomersApi);
+  private readonly notify = inject(NotifyService);
+  private readonly ref = inject(MatDialogRef<PayOutDialog>);
+  private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
+  private readonly idempotencyKey = newUuid();
+
+  readonly busy = signal(false);
+  amount: number | null = null;
+  viaCard = false;
+  note = '';
+
+  get advance(): number {
+    return Math.max(0, -(this.customer.debtBalance ?? 0));
+  }
+
+  get asLoan(): number {
+    return Math.max(0, (this.amount ?? 0) - this.advance);
+  }
+
+  async save(message: string): Promise<void> {
+    if (!this.amount || this.amount <= 0) return;
+    this.busy.set(true);
+    try {
+      await lastValueFrom(
+        this.api.payOut({
+          customerId: this.customer.id,
+          branchId: null,
+          tenders: [{ method: this.viaCard ? 'Card' : 'Cash', currency: '', amount: this.amount }],
+          note: this.note.trim() || null,
           idempotencyKey: this.idempotencyKey,
         }),
       );

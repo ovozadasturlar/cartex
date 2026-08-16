@@ -32,11 +32,16 @@
           }
         </div>
       </div>
-      @if (canEdit || canDelete || canRepay) {
+      @if (canEdit || canDelete || canRepay || canPayOut) {
         <div class="actions">
           @if (canRepay) {
             <button matButton="filled" (click)="repay()">
               <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
+            </button>
+          }
+          @if (canPayOut) {
+            <button matButton="outlined" (click)="payOut()">
+              <mat-icon>output</mat-icon>{{ t('pay_out') }}
             </button>
           }
           @if (canEdit) {
