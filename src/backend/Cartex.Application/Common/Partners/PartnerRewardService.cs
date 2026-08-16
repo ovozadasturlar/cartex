@@ -50,8 +50,11 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
         CustomerPaymentDocument document,
         CancellationToken cancellationToken)
     {
+        // Kechirilgan qarz olingan pul emas: u yopilgan savdoni yopadi, lekin hamkorga
+        // mukofot faqat haqiqatan to'langan qismdan hisoblanadi.
         var paidBySale = document.Allocations
-            .Where(x => x.SaleId.HasValue && x.AmountBase > 0)
+            .Where(x => x.SaleId.HasValue && x.AmountBase > 0
+                        && x.Kind == CustomerPaymentAllocationKind.Payment)
             .GroupBy(x => x.SaleId!.Value)
             .ToDictionary(x => x.Key, x => x.Sum(row => row.AmountBase));
         if (paidBySale.Count == 0) return;

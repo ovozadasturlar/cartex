@@ -14,6 +14,8 @@ public class CustomerPaymentDocumentConfiguration : IEntityTypeConfiguration<Cus
         builder.Property(x => x.TotalBaseAmount).HasPrecision(18, 2);
         builder.Property(x => x.AllocatedBaseAmount).HasPrecision(18, 2);
         builder.Property(x => x.AdvanceBaseAmount).HasPrecision(18, 2);
+        builder.Property(x => x.WriteOffBaseAmount).HasPrecision(18, 2);
+        builder.Property(x => x.WriteOffReason).HasMaxLength(500);
         builder.Property(x => x.Note).HasMaxLength(1000);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(128);
         builder.HasIndex(x => x.DocumentNumber).IsUnique();
@@ -51,6 +53,7 @@ public class CustomerPaymentAllocationConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.Amount).HasPrecision(18, 4);
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.AmountBase).HasPrecision(18, 2);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(10);
         builder.HasOne(x => x.Document).WithMany(x => x.Allocations)
             .HasForeignKey(x => x.CustomerPaymentDocumentId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);

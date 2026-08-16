@@ -590,6 +590,7 @@
   "perm_customer_payments.view": "Мижоз тўлов ҳужжатларини кўриш",
   "perm_customer_payments.create": "Мижоздан тўлов ва аванс қабул қилиш",
   "perm_customer_payments.void": "Мижоз тўлов ҳужжатини бекор қилиш",
+  "perm_customer_payments.writeOffDebt": "Мижоз қарзини кечириш",
   "perm_returns.view": "Маҳсулот қайтариш ҳужжатларини кўриш",
   "perm_returns.create": "Маҳсулот қайтариш ҳужжати яратиш",
   "perm_returns.approve": "Маҳсулот қайтариш ҳужжатини тасдиқлаш",

@@ -588,6 +588,7 @@
   "perm_customer_payments.view": "Просмотр платежных документов клиентов",
   "perm_customer_payments.create": "Прием оплаты и аванса от клиента",
   "perm_customer_payments.void": "Аннулирование платежного документа клиента",
+  "perm_customer_payments.writeOffDebt": "Прощение долга клиента",
   "perm_returns.view": "Просмотр документов возврата товаров",
   "perm_returns.create": "Создание документа возврата товаров",
   "perm_returns.approve": "Подтверждение документа возврата товаров",

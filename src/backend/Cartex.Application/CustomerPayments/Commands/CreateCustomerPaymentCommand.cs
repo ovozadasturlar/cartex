@@ -15,7 +15,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Cartex.Application.CustomerPayments.Commands;
 
 public sealed record CustomerPaymentTenderInput(PaymentMethod Method, string Currency, decimal Amount);
-public sealed record CustomerPaymentAllocationInput(string Currency, decimal Amount, long? SaleId = null);
+public sealed record CustomerPaymentAllocationInput(string Currency, decimal Amount, long? SaleId = null,
+    CustomerPaymentAllocationKind Kind = CustomerPaymentAllocationKind.Payment);
 
 public sealed record CreateCustomerPaymentCommand(
     long CustomerId,
@@ -25,7 +26,9 @@ public sealed record CreateCustomerPaymentCommand(
     bool AutoAllocateDebt = true,
     DateOnly? BusinessDate = null,
     string? Note = null,
-    string? IdempotencyKey = null) : ICommand<CustomerPaymentCreatedDto>;
+    string? IdempotencyKey = null,
+    decimal WriteOffAmount = 0,
+    string? WriteOffReason = null) : ICommand<CustomerPaymentCreatedDto>;
 
 public sealed class CreateCustomerPaymentCommandHandler(
     IApplicationDbContext db,
@@ -42,6 +45,16 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (!currentUser.HasPermission(AppPermissions.CustomerPayments.Create)
             && !currentUser.HasPermission(AppPermissions.Customers.ReceivePayment))
             throw new ForbiddenException("Mijoz to'lovini qabul qilishga ruxsat yo'q.");
+
+        // Qobiliyat mijozdan oldin tekshiriladi: kechira olmaydigan foydalanuvchi mijoz
+        // haqida umuman so'roq ham qilmasin.
+        if (request.WriteOffAmount > 0)
+        {
+            if (!currentUser.HasPermission(AppPermissions.CustomerPayments.WriteOffDebt))
+                throw new ForbiddenException("Mijoz qarzini kechirishga ruxsat yo'q.");
+            if (string.IsNullOrWhiteSpace(request.WriteOffReason))
+                throw new BusinessRuleException("Kechirim sababi ko'rsatilishi shart.", "write_off_reason_required");
+        }
 
         var branchId = request.BranchId ?? currentUser.DefaultBranchId
             ?? throw new BusinessRuleException("Foydalanuvchi filiali aniqlanmadi.");
@@ -72,8 +85,11 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (normalizedTenders.Any(x => x.Method == PaymentMethod.Bonus))
             throw new BusinessRuleException("Bonus mijoz to'lovi sifatida qabul qilinmaydi.", "unsupported_payment_method");
 
+        // Baza valyuta doim kerak: sof kechirimda bironta tender ham bo'lmaydi, lekin
+        // taqsimot baribir kurs bo'yicha hisoblanadi.
         var distinctCodes = normalizedTenders.Select(x => x.Currency)
             .Concat(request.Allocations?.Select(x => NormalizeCurrency(x.Currency, baseCode)) ?? [])
+            .Append(baseCode)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var rates = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
@@ -92,7 +108,9 @@ public sealed class CreateCustomerPaymentCommandHandler(
             AmountBase = Math.Round(x.Amount * rates[x.Currency], 2)
         }).ToList();
         var totalBase = tenderRows.Sum(x => x.AmountBase);
-        if (totalBase <= 0)
+        // Naqdsiz kechirim ham to'liq hujjat: qarz yopiladi, lekin pul olinmaydi.
+        var writeOffBase = Math.Round(Math.Max(0, request.WriteOffAmount), 2);
+        if (totalBase <= 0 && writeOffBase <= 0)
             throw new BusinessRuleException("To'lov summasi 0 dan katta bo'lishi kerak.");
 
         var shiftId = await db.Shifts
@@ -104,6 +122,18 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (tenderRows.Any(x => x.Method == PaymentMethod.Cash) && shiftId is null && policy.ShiftPolicy != "Off"
             && !await db.Warehouses.AnyAsync(x => x.AssignedUserId == userId, cancellationToken))
             throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
+
+        if (writeOffBase > 0)
+        {
+            if (policy.MaxDebtWriteOffAmount > 0 && writeOffBase > policy.MaxDebtWriteOffAmount)
+                throw new BusinessRuleException(
+                    $"Kechirim {policy.MaxDebtWriteOffAmount:N0} dan osha olmaydi.", "write_off_limit_exceeded");
+            // Chegara bazasi — shu hujjat yopayotgan summa: to'langan + kechirilgan.
+            if (policy.MaxDebtWriteOffPercent > 0
+                && writeOffBase > (totalBase + writeOffBase) * policy.MaxDebtWriteOffPercent / 100)
+                throw new BusinessRuleException(
+                    $"Kechirim {policy.MaxDebtWriteOffPercent}% dan osha olmaydi.", "write_off_limit_exceeded");
+        }
 
         var debtRows = await db.Accounts
             .Where(x => x.CustomerId == request.CustomerId && x.Type == AccountType.Debt && x.Balance > 0)
@@ -127,9 +157,8 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (explicitlyAllocatedBase > totalBase)
             throw new BusinessRuleException("Qarzga taqsimlangan summa to'lovdan oshib ketdi.", "allocation_exceeds_payment");
 
-        if (request.AutoAllocateDebt)
+        if (request.AutoAllocateDebt || writeOffBase > 0)
         {
-            var remainingBase = totalBase - explicitlyAllocatedBase;
             var debtSales = await db.Sales
                 .Where(x => x.CustomerId == request.CustomerId && x.DebtAmount > x.RefundedDebt)
                 .OrderBy(x => x.DebtDueDate == null)
@@ -148,44 +177,58 @@ public sealed class CreateCustomerPaymentCommandHandler(
                     .Select(x => new { SaleId = x.Key, Amount = x.Sum(a => a.Amount) })
                     .ToDictionaryAsync(x => x.SaleId, x => x.Amount, cancellationToken);
 
+            // Kechirim birinchi bo'lib, eng eski muddatdagi qarzdan boshlab qo'llanadi —
+            // uning maqsadi aynan eng eskirgan qarzni yopish.
+            var unplacedWriteOff = await AllocateAsync(writeOffBase, CustomerPaymentAllocationKind.WriteOff);
+            if (unplacedWriteOff > 0)
+                throw new BusinessRuleException("Kechirim mijoz qarzidan oshib ketdi.", "write_off_exceeds_debt");
+
+            if (request.AutoAllocateDebt)
+                await AllocateAsync(totalBase - explicitlyAllocatedBase, CustomerPaymentAllocationKind.Payment);
+
             // Allocate to concrete invoices first so statements remain reconcilable.
             // Any opening/legacy balance which has no source invoice is handled below.
-            foreach (var sale in debtSales)
+            async Task<decimal> AllocateAsync(decimal budgetBase, CustomerPaymentAllocationKind kind)
             {
-                if (remainingBase <= 0) break;
-                var code = NormalizeCurrency(sale.DebtCurrency, baseCode);
-                var accountRemaining = remainingDebt.GetValueOrDefault(code);
-                if (accountRemaining <= 0) continue;
-                var rate = sale.DebtRate <= 0 ? await GetRateAsync(code) : sale.DebtRate;
-                var originalNative = Math.Round(
-                    Math.Max(0, sale.DebtAmount - sale.RefundedDebt) / rate, 4);
-                var currentExplicit = allocations
-                    .Where(x => x.SaleId == sale.Id && x.Currency == code)
-                    .Sum(x => x.Amount);
-                var saleRemaining = Math.Max(0,
-                    originalNative - priorBySale.GetValueOrDefault(sale.Id) - currentExplicit);
-                if (saleRemaining <= 0) continue;
+                foreach (var sale in debtSales)
+                {
+                    if (budgetBase <= 0) break;
+                    var code = NormalizeCurrency(sale.DebtCurrency, baseCode);
+                    var accountRemaining = remainingDebt.GetValueOrDefault(code);
+                    if (accountRemaining <= 0) continue;
+                    var rate = sale.DebtRate <= 0 ? await GetRateAsync(code) : sale.DebtRate;
+                    var originalNative = Math.Round(
+                        Math.Max(0, sale.DebtAmount - sale.RefundedDebt) / rate, 4);
+                    var currentExplicit = allocations
+                        .Where(x => x.SaleId == sale.Id && x.Currency == code)
+                        .Sum(x => x.Amount);
+                    var saleRemaining = Math.Max(0,
+                        originalNative - priorBySale.GetValueOrDefault(sale.Id) - currentExplicit);
+                    if (saleRemaining <= 0) continue;
 
-                var affordable = Math.Floor(remainingBase / rate * 10_000m) / 10_000m;
-                var amount = Math.Min(Math.Min(accountRemaining, saleRemaining), affordable);
-                var amountBase = Math.Round(amount * rate, 2);
-                if (amount <= 0 || amountBase <= 0) continue;
-                allocations.Add(new CustomerPaymentAllocationInput(code, amount, sale.Id));
-                remainingDebt[code] -= amount;
-                remainingBase -= amountBase;
-            }
+                    var affordable = Math.Floor(budgetBase / rate * 10_000m) / 10_000m;
+                    var amount = Math.Min(Math.Min(accountRemaining, saleRemaining), affordable);
+                    var amountBase = Math.Round(amount * rate, 2);
+                    if (amount <= 0 || amountBase <= 0) continue;
+                    allocations.Add(new CustomerPaymentAllocationInput(code, amount, sale.Id, kind));
+                    remainingDebt[code] -= amount;
+                    budgetBase -= amountBase;
+                }
 
-            foreach (var row in debtRows.Where(x => remainingDebt.GetValueOrDefault(x.Currency) > 0))
-            {
-                if (remainingBase <= 0) break;
-                var rate = await GetRateAsync(row.Currency);
-                var balance = remainingDebt[row.Currency];
-                var amount = Math.Min(balance, Math.Floor(remainingBase / rate * 10_000m) / 10_000m);
-                var amountBase = Math.Round(amount * rate, 2);
-                if (amount <= 0 || amountBase <= 0) continue;
-                allocations.Add(new CustomerPaymentAllocationInput(row.Currency, amount));
-                remainingDebt[row.Currency] -= amount;
-                remainingBase -= amountBase;
+                foreach (var row in debtRows.Where(x => remainingDebt.GetValueOrDefault(x.Currency) > 0))
+                {
+                    if (budgetBase <= 0) break;
+                    var rate = await GetRateAsync(row.Currency);
+                    var balance = remainingDebt[row.Currency];
+                    var amount = Math.Min(balance, Math.Floor(budgetBase / rate * 10_000m) / 10_000m);
+                    var amountBase = Math.Round(amount * rate, 2);
+                    if (amount <= 0 || amountBase <= 0) continue;
+                    allocations.Add(new CustomerPaymentAllocationInput(row.Currency, amount, null, kind));
+                    remainingDebt[row.Currency] -= amount;
+                    budgetBase -= amountBase;
+                }
+
+                return budgetBase;
             }
 
             async Task<decimal> GetRateAsync(string code)
@@ -223,6 +266,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
         }
 
         decimal allocatedBase = 0;
+        decimal writtenOffBase = 0;
         foreach (var allocation in allocations)
         {
             var rate = rates[allocation.Currency];
@@ -239,17 +283,25 @@ public sealed class CreateCustomerPaymentCommandHandler(
                 Currency = allocation.Currency,
                 Amount = allocation.Amount,
                 Rate = rate,
-                AmountBase = amountBase
+                AmountBase = amountBase,
+                Kind = allocation.Kind
             };
             document.Allocations.Add(row);
-            var transaction = ledger.Post(OperationType.DebtPay, allocation.Amount, debt, null, userId, shiftId, rate);
+            var operation = allocation.Kind == CustomerPaymentAllocationKind.WriteOff
+                ? OperationType.DebtWriteOff
+                : OperationType.DebtPay;
+            var transaction = ledger.Post(operation, allocation.Amount, debt, null, userId, shiftId, rate);
             transaction.CustomerPaymentDocument = document;
             transaction.SaleId = allocation.SaleId;
             transaction.Description = document.DocumentNumber;
-            allocatedBase += amountBase;
+            if (allocation.Kind == CustomerPaymentAllocationKind.WriteOff) writtenOffBase += amountBase;
+            else allocatedBase += amountBase;
         }
 
         document.AllocatedBaseAmount = allocatedBase;
+        document.WriteOffBaseAmount = writtenOffBase;
+        document.WriteOffReason = writtenOffBase > 0 ? NormalizeOptional(request.WriteOffReason) : null;
+        // Kechirim pul emas — ortiqcha avansga faqat haqiqatan olingan puldan hisoblanadi.
         document.AdvanceBaseAmount = Math.Max(0, totalBase - allocatedBase);
         if (document.AdvanceBaseAmount > 0)
         {
@@ -336,7 +388,11 @@ public sealed class CreateCustomerPaymentCommandValidator : AbstractValidator<Cr
     public CreateCustomerPaymentCommandValidator()
     {
         RuleFor(x => x.CustomerId).GreaterThan(0);
-        RuleFor(x => x.Tenders).NotEmpty().Must(x => x.Count <= 20);
+        // Sof kechirimda to'lov qatori bo'lmaydi (QARZ-16).
+        RuleFor(x => x.Tenders).Must((cmd, tenders) => tenders.Count > 0 || cmd.WriteOffAmount > 0)
+            .WithMessage("To'lov qatori yoki kechirim summasi bo'lishi kerak.");
+        RuleFor(x => x.Tenders).Must(x => x.Count <= 20);
+        RuleFor(x => x.WriteOffAmount).GreaterThanOrEqualTo(0);
         RuleForEach(x => x.Tenders).ChildRules(row =>
         {
             row.RuleFor(x => x.Amount).GreaterThan(0);

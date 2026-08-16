@@ -185,6 +185,7 @@ public static class AppPermissions
         public const string View = "customer_payments.view";
         public const string Create = "customer_payments.create";
         public const string Void = "customer_payments.void";
+        public const string WriteOffDebt = "customer_payments.writeOffDebt";
     }
 
     public static class Returns
@@ -416,6 +417,7 @@ public static class AppPermissions
             P(CustomerPayments.View, "View customer payment documents", true, Customers.View),
             P(CustomerPayments.Create, "Receive customer payments and advances", true, CustomerPayments.View, Customers.ReceivePayment, Rates.View),
             P(CustomerPayments.Void, "Void customer payment documents", true, CustomerPayments.View),
+            P(CustomerPayments.WriteOffDebt, "Forgive customer debt", true, CustomerPayments.Create),
             P(Returns.View, "View return documents", true, Sales.View),
             P(Returns.Create, "Create product return documents", true, Returns.View, Stocks.View),
             P(Returns.FreeLine, "Return products that are not part of a recorded sale", true, Returns.Create, Products.View),
@@ -512,7 +514,8 @@ public static class AppPermissions
             new PermissionBundleDefinition("accountant", "Hisobchi",
                 [Accounts.View, Transactions.View, Reports.View, Reports.Export,
                     Customers.ReceivePayment, Customers.Refund, CustomerPayments.View,
-                    CustomerPayments.Create, CustomerPayments.Void, Returns.View, Returns.Approve,
+                    CustomerPayments.Create, CustomerPayments.Void, CustomerPayments.WriteOffDebt,
+                    Returns.View, Returns.Approve,
                     Statements.View, Statements.Export,
                     Partners.View, PartnerRewards.View, PartnerRewards.Redeem,
                     Suppliers.Pay]),

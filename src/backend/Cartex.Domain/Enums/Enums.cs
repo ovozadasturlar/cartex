@@ -30,7 +30,14 @@ public enum OperationType
     SaleReturn,
     CashbackRecovery,
     PartnerRewardCash,
-    PartnerRewardBonus
+    PartnerRewardBonus,
+    DebtWriteOff
+}
+
+public enum CustomerPaymentAllocationKind
+{
+    Payment,
+    WriteOff
 }
 
 public enum PaymentMethod

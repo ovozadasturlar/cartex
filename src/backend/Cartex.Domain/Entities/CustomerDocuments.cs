@@ -16,6 +16,11 @@ public class CustomerPaymentDocument : AuditableEntity, IBranchScoped
     public decimal TotalBaseAmount { get; set; }
     public decimal AllocatedBaseAmount { get; set; }
     public decimal AdvanceBaseAmount { get; set; }
+
+    /// Debt forgiven with this document. It settles the customer's balance like a payment but
+    /// is no money received, so it is kept apart from the tendered total.
+    public decimal WriteOffBaseAmount { get; set; }
+    public string? WriteOffReason { get; set; }
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
 
@@ -45,6 +50,10 @@ public class CustomerPaymentAllocation : BaseEntity
     public decimal Amount { get; set; }
     public decimal Rate { get; set; } = 1m;
     public decimal AmountBase { get; set; }
+
+    /// Both kinds consume the sale's remaining debt, but only a payment is money received —
+    /// partner rewards and payment reporting must never count a forgiveness.
+    public CustomerPaymentAllocationKind Kind { get; set; } = CustomerPaymentAllocationKind.Payment;
 }
 
 public class CustomerRefundDocument : AuditableEntity, IBranchScoped

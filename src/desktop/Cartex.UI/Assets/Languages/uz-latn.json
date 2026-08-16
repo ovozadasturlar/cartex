@@ -590,6 +590,7 @@
   "perm_customer_payments.view": "Mijoz to'lov hujjatlarini ko'rish",
   "perm_customer_payments.create": "Mijozdan to'lov va avans qabul qilish",
   "perm_customer_payments.void": "Mijoz to'lov hujjatini bekor qilish",
+  "perm_customer_payments.writeOffDebt": "Mijoz qarzini kechirish",
   "perm_returns.view": "Mahsulot qaytarish hujjatlarini ko'rish",
   "perm_returns.create": "Mahsulot qaytarish hujjati yaratish",
   "perm_returns.approve": "Mahsulot qaytarish hujjatini tasdiqlash",

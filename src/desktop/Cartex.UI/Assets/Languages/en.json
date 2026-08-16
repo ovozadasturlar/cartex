@@ -586,6 +586,7 @@
   "perm_customer_payments.view": "View customer payment documents",
   "perm_customer_payments.create": "Receive payments and advances from customer",
   "perm_customer_payments.void": "Void customer payment document",
+  "perm_customer_payments.writeOffDebt": "Forgive customer debt",
   "perm_returns.view": "View goods return documents",
   "perm_returns.create": "Create goods return document",
   "perm_returns.approve": "Approve goods return document",
