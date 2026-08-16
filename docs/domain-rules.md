@@ -88,9 +88,18 @@ qanday qilingan" degan savolga javob bera olmaydi — bu ataylab shunday.
 |---|---|
 | `NARX-01` | Katalog narxi: avval shu omborga tegishli narx, bo'lmasa umumiy narx. Chet valyutada belgilangan bo'lsa, joriy kurs bo'yicha bazaga o'giriladi. |
 | `NARX-02` | Kiritilgan narx katalogdan **past** bo'lsa — farq × miqdor shu qatorning chegirmasi bo'ladi. Saqlanadigan `UnitPrice` **katalog narxi bo'lib qoladi**, shunda chekda "narxi shuncha edi, shuncha chegirma berildi" ko'rinadi. |
-| `NARX-03` | Kiritilgan narx katalogdan **yuqori** bo'lsa — savdo kiritilgan narxda o'tadi. Katalog narxi yangilanishi savdo siyosatiga bog'liq *(rejalashtirilgan: `UpdateCatalogPriceOnSale`, `MaxPriceIncreasePercent`)*. |
+| `NARX-03` | Kiritilgan narx katalogdan **yuqori** bo'lsa — savdo **har doim kiritilgan narxda o'tadi**. Katalog narxining yangilanishi esa alohida qaror: `NARX-06`, `NARX-07`. |
+| `NARX-06` | `UpdateCatalogPriceOnSale` (standart `true`) katalog narxi savdodan yangilanishini boshqaradi. `false` bo'lsa katalog **hech qachon** savdodan yangilanmaydi; savdo baribir kiritilgan narxda o'tadi. |
+| `NARX-07` | `MaxPriceIncreasePercent` — katalogni yangilash uchun ruxsat etilgan eng katta oshish. Kiritilgan narx katalogdan shu foizdan ko'proq oshsa, **katalog yangilanmaydi**, savdo esa kiritilgan narxda o'tadi va auditga "chegaradan oshgani uchun o'tkazib yuborildi" yoziladi. `0` — chegara yo'q (`SOZ-02`). Katalog yangilanmaganda auditga `salePriceUpSkipped` yoziladi (variant, ombor, kiritilgan narx). |
+| `NARX-08` | Mahsulotning avvalgi katalog narxi `0` bo'lsa, bu **oshirish emas, birinchi narx** — `MaxPriceIncreasePercent` unga qo'llanmaydi. Aks holda narxi belgilanmagan mahsulot abadiy `0` da qolardi. |
 | `NARX-04` | Narxni o'zgartirish `sales.priceOverride` ruxsatini talab qiladi. **Istisno:** navbatdagi savatga ruxsatli foydalanuvchi kiritib qo'ygan narx yakunlovchidan qayta ruxsat talab qilmaydi (oldindan ruxsat berilgan). Yakunlashda **yangi** yoki **o'zgartirilgan** narx esa talab qiladi. |
 | `NARX-05` | Narxi umuman belgilanmagan mahsulotni narx kiritmasdan sotib bo'lmaydi. |
+
+> **`NARX-07` mezoni.** Katalog narxi 100 000, `MaxPriceIncreasePercent = 10`.
+> Sotuvchi 105 000 kiritsa (5% oshish) — savdo 105 000 da o'tadi **va** katalog 105 000 bo'ladi.
+> Sotuvchi 130 000 kiritsa (30% oshish) — savdo baribir 130 000 da o'tadi, lekin katalog
+> **100 000 bo'lib qoladi**. Sabab: bitta xato terish butun katalogni buza olmasligi kerak,
+> lekin kassirni ham to'xtatib qo'ymaslik kerak — mijoz kassada turibdi.
 
 ---
 

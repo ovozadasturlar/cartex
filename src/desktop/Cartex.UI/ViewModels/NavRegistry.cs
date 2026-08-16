@@ -49,6 +49,7 @@ public static class NavRegistry
         new("catalog", "product_types", MaterialIconKind.TagOutline, typeof(ProductTypesViewModel), "product_types.view"),
         new("catalog", "manufacturers", MaterialIconKind.Factory, typeof(ManufacturersViewModel), "manufacturers.view"),
         new("organization", "business", MaterialIconKind.Domain, typeof(BusinessSettingsViewModel), "business.edit"),
+        new("organization", "sales_policy", MaterialIconKind.ScaleBalance, typeof(SalesPolicyViewModel), "settings.salesPolicy"),
         new("organization", "branch", MaterialIconKind.OfficeBuildingOutline, typeof(BranchesViewModel), "branches.view"),
         new("organization", "warehouse", MaterialIconKind.Warehouse, typeof(WarehousesViewModel), "warehouses.view"),
         new("organization", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view"),

@@ -607,6 +607,26 @@ public sealed class CreateSaleCommandHandler(
                 PurchasePrice = row.Batch.PurchasePrice
             });
 
+        // NARX-06/07: the sale is priced already; this only decides whether the catalogue follows.
+        // One mistyped price must not be able to rewrite the catalogue, but it must not stop the
+        // sale either — the customer is standing at the till.
+        var skippedIncreases = new List<CatalogPrice>();
+        if (!policy.UpdateCatalogPriceOnSale)
+        {
+            skippedIncreases.AddRange(priceIncreases.Values);
+            priceIncreases.Clear();
+        }
+        else if (policy.MaxPriceIncreasePercent > 0)
+            foreach (var increase in priceIncreases.Values.ToList())
+            {
+                // A product priced at zero is being given its first price, not raised (NARX-08).
+                var current = Math.Round(increase.Source.SellingPrice * increase.Rate, 2);
+                if (current <= 0 || (increase.Amount - current) / current * 100 <= policy.MaxPriceIncreasePercent)
+                    continue;
+                skippedIncreases.Add(increase);
+                priceIncreases.Remove(increase.Source);
+            }
+
         foreach (var increase in priceIncreases.Values)
             increase.Source.SellingPrice = Math.Round(increase.Amount / increase.Rate, 2);
 
@@ -633,6 +653,10 @@ public sealed class CreateSaleCommandHandler(
         if (priceIncreases.Count > 0)
             audit.Add("salePriceUp", "product_prices", null,
                 priceIncreases.Values.Select(x => new { x.Source.VariantId, x.Source.WarehouseId, SellingPrice = x.Amount }));
+
+        if (skippedIncreases.Count > 0)
+            audit.Add("salePriceUpSkipped", "product_prices", null,
+                skippedIncreases.Select(x => new { x.Source.VariantId, x.Source.WarehouseId, Entered = x.Amount }));
 
         await db.SaveChangesAsync(cancellationToken);
 

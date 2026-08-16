@@ -48,7 +48,7 @@ public interface ISettingsApi
     Task<SalesPolicyDto> GetSalesPolicyAsync();
 
     [Put("/api/settings/sales-policy")]
-    Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
+    Task UpdateSalesPolicyAsync([Body] SalesPolicyDto policy);
 
     [Get("/api/settings/login-methods")]
     Task<LoginMethodsSettingsDto> GetLoginMethodsAsync();

@@ -34,33 +34,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isMonochromeLogoCustom;
 
     public ObservableCollection<string> Currencies { get; } = new(CurrencyCatalog.All);
-    public ObservableCollection<string> ShiftPolicies { get; } = [];
-    private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
-    public ObservableCollection<string> CorrectionWindows { get; } = [];
-    private static readonly string[] CorrectionWindowCodes = ["Off", "Shift", "BusinessDay", "Days", "Always"];
-
-    [ObservableProperty] private int _shiftPolicyIndex = 1;
-    [ObservableProperty] private int _correctionWindowIndex = 1;
-    [ObservableProperty] private decimal _saleCorrectionDays = 1;
-
-    public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
-
-    partial void OnCorrectionWindowIndexChanged(int value) => OnPropertyChanged(nameof(ShowCorrectionDays));
-    [ObservableProperty] private decimal _maxDiscountPercent;
-    [ObservableProperty] private decimal _defaultMinStock;
-    [ObservableProperty] private decimal _staleRateDays = 3;
-    [ObservableProperty] private bool _allowDebtSales = true;
-    [ObservableProperty] private bool _allowCustomerCredit;
-    [ObservableProperty] private bool _requireDebtDueDate = true;
-    [ObservableProperty] private bool _requireSupplier;
-    [ObservableProperty] private bool _showOutOfStock;
-    [ObservableProperty] private bool _showUnlistedProducts;
-    [ObservableProperty] private bool _allowInsufficientStockSales;
-    [ObservableProperty] private bool _allowRetroactiveCashback;
     [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     [ObservableProperty] private bool _keyLoginEnabled = true;
-    private bool _policyLoaded;
     private bool _loginLoaded;
 
     private readonly ISettingsApi _settingsApi;
@@ -77,36 +53,10 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         _filePicker = filePicker;
         _toast = toast;
         _busy = busy;
-        // A ComboBox bound to an empty ItemsSource coerces SelectedIndex to -1 and writes it
-        // back, so the options must exist before the view binds — not once loading finishes.
-        FillOptions(ShiftPolicies, ShiftPolicyCodes, code => L[$"shift_policy_{code.ToLowerInvariant()}"]);
-        FillOptions(CorrectionWindows, CorrectionWindowCodes, code => L[$"correction_{code.ToLowerInvariant()}"]);
     }
 
     public async Task LoadAsync()
     {
-        try
-        {
-            var policy = await _settingsApi.GetSalesPolicyAsync();
-            _loadedShiftPolicy = policy.ShiftPolicy;
-            _loadedCorrectionWindow = policy.SaleCorrectionWindow;
-            ShiftPolicyIndex = Math.Max(0, Array.IndexOf(ShiftPolicyCodes, policy.ShiftPolicy));
-            CorrectionWindowIndex = Math.Max(0, Array.IndexOf(CorrectionWindowCodes, policy.SaleCorrectionWindow));
-            SaleCorrectionDays = policy.SaleCorrectionDays;
-            MaxDiscountPercent = policy.MaxDiscountPercent;
-            DefaultMinStock = policy.DefaultMinStock;
-            StaleRateDays = policy.StaleRateDays;
-            AllowDebtSales = policy.AllowDebtSales;
-            AllowCustomerCredit = policy.AllowCustomerCredit;
-            RequireDebtDueDate = policy.RequireDebtDueDate;
-            RequireSupplier = policy.RequireSupplier;
-            ShowOutOfStock = policy.ShowOutOfStock;
-            ShowUnlistedProducts = policy.ShowUnlistedProducts;
-            AllowInsufficientStockSales = policy.AllowInsufficientStockSales;
-            AllowRetroactiveCashback = policy.AllowRetroactiveCashback;
-            _policyLoaded = true;
-        }
-        catch { }
         if (CanManageSecurity)
         try
         {
@@ -147,12 +97,6 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
         }
         catch { return null; }
     }
-
-    private string _loadedShiftPolicy = "CashOnly";
-    private string _loadedCorrectionWindow = "Shift";
-
-    private static string CodeAt(string[] codes, int index, string fallback) =>
-        index >= 0 && index < codes.Length ? codes[index] : fallback;
 
     private static void FillOptions(ObservableCollection<string> target, string[] codes, Func<string, string> label)
     {
@@ -224,18 +168,11 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     string.IsNullOrWhiteSpace(Telegram) ? null : Telegram.Trim(),
                     string.IsNullOrWhiteSpace(Website) ? null : Website.Trim(),
                     MonochromeLogoImageKey));
-                if (_policyLoaded)
-                    await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
-                        CodeAt(ShiftPolicyCodes, ShiftPolicyIndex, _loadedShiftPolicy), MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
-                        AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier, ShowOutOfStock,
-                        ShowUnlistedProducts, AllowInsufficientStockSales, AllowRetroactiveCashback,
-                        CodeAt(CorrectionWindowCodes, CorrectionWindowIndex, _loadedCorrectionWindow),
-                        (int)Math.Clamp(SaleCorrectionDays, 1, 365)));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));
             }
-            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business, CacheKeys.SalesPolicy);
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

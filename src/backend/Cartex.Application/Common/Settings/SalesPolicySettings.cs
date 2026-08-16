@@ -26,4 +26,12 @@ public sealed class SalesPolicySettings
     public bool AllowRetroactiveCashback { get; set; }
     public string SaleCorrectionWindow { get; set; } = "Shift";
     public int SaleCorrectionDays { get; set; } = 1;
+
+    /// Savdoda katalogdan yuqori narx kiritilsa, katalog narxi yangilanadimi (NARX-06).
+    public bool UpdateCatalogPriceOnSale { get; set; } = true;
+
+    /// Katalogni yangilash uchun ruxsat etilgan eng katta oshish, foizda (NARX-07).
+    /// Oshirish chegaradan katta bo'lsa savdo baribir o'tadi, faqat katalog yangilanmaydi.
+    /// 0 — chegara yo'q.
+    public decimal MaxPriceIncreasePercent { get; set; }
 }

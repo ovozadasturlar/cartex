@@ -123,18 +123,20 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    // Readable by any signed-in user on purpose: every seller's till needs the discount ceiling
+    // and the debt rules to behave the same way the server will. Writing is the owner's call.
     [HttpGet("sales-policy")]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.SalesPolicyDto>> GetSalesPolicy()
+    public async Task<ActionResult<SalesPolicyDto>> GetSalesPolicy()
     {
         var result = await sender.Send(new GetSalesPolicyQuery());
         return Ok(result);
     }
 
     [HttpPut("sales-policy")]
-    [HasPermission(AppPermissions.Business.Edit)]
-    public async Task<IActionResult> UpdateSalesPolicy(UpdateSalesPolicyCommand command)
+    [HasPermission(AppPermissions.Settings.SalesPolicy)]
+    public async Task<IActionResult> UpdateSalesPolicy(SalesPolicyDto policy)
     {
-        await sender.Send(command);
+        await sender.Send(new UpdateSalesPolicyCommand(policy));
         return NoContent();
     }
 

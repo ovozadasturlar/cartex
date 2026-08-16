@@ -118,8 +118,31 @@ public record UpdateProformaSettingsRequest(
     bool ShowCustomer = true,
     bool ShowNote = true,
     bool ShowCartCode = true);
-public record SalesPolicyDto(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1, decimal MaxRoundingAmount = 0, decimal MaxDebtWriteOffAmount = 0, decimal MaxDebtWriteOffPercent = 0);
-public record UpdateSalesPolicyRequest(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1, decimal MaxRoundingAmount = 0, decimal MaxDebtWriteOffAmount = 0, decimal MaxDebtWriteOffPercent = 0);
+/// Savdo siyosati bitta hujjat: GET ham, PUT ham aynan shu shaklni ishlatadi. Ilgari bu ro'yxat
+/// to'rt joyda pozitsion record bo'lib takrorlangan edi — yangi maydon to'rtta imzoga bir xil
+/// tartibda qo'shilishi kerak edi, aks holda sozlama jimgina yo'qolardi.
+public sealed record SalesPolicyDto
+{
+    public string ShiftPolicy { get; init; } = "CashOnly";
+    public decimal MaxDiscountPercent { get; init; }
+    public decimal MaxRoundingAmount { get; init; }
+    public decimal MaxDebtWriteOffAmount { get; init; }
+    public decimal MaxDebtWriteOffPercent { get; init; }
+    public decimal DefaultMinStock { get; init; }
+    public int StaleRateDays { get; init; } = 3;
+    public bool AllowDebtSales { get; init; } = true;
+    public bool AllowCustomerCredit { get; init; }
+    public bool RequireDebtDueDate { get; init; } = true;
+    public bool RequireSupplier { get; init; }
+    public bool ShowOutOfStock { get; init; }
+    public bool ShowUnlistedProducts { get; init; } = true;
+    public bool AllowInsufficientStockSales { get; init; }
+    public bool AllowRetroactiveCashback { get; init; }
+    public string SaleCorrectionWindow { get; init; } = "Shift";
+    public int SaleCorrectionDays { get; init; } = 1;
+    public bool UpdateCatalogPriceOnSale { get; init; } = true;
+    public decimal MaxPriceIncreasePercent { get; init; }
+}
 
 
 public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
