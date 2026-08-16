@@ -702,6 +702,7 @@
   "perm_customer_payments.view": "Mijoz to'lov hujjatlarini ko'rish",
   "perm_customer_payments.void": "Mijoz to'lov hujjatini bekor qilish",
   "perm_customer_payments.writeOffDebt": "Mijoz qarzini kechirish",
+  "perm_customers.act": "Mijoz bo'yicha yig'ma dalolatnoma tuzish",
   "perm_customers.create": "Mijoz yaratish",
   "perm_customers.delete": "Mijozni o'chirish",
   "perm_customers.edit": "Mijozni tahrirlash",

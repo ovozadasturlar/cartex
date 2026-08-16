@@ -702,6 +702,7 @@
   "perm_customer_payments.view": "Просмотр платежных документов клиентов",
   "perm_customer_payments.void": "Аннулирование платежного документа клиента",
   "perm_customer_payments.writeOffDebt": "Прощение долга клиента",
+  "perm_customers.act": "Формирование сводного акта по клиенту",
   "perm_customers.create": "Создание клиентов",
   "perm_customers.delete": "Удаление клиентов",
   "perm_customers.edit": "Изменение клиентов",

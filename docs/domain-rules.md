@@ -343,6 +343,10 @@ ishlatilgani va qancha qarz qolgani** bitta qog'ozda ko'rinishi kerak.
 | `DAL-05` | To'liq qaytarilgan mahsulot "ishlatilgan" bo'limida umuman ko'rinmaydi. |
 | `DAL-06` | Summalar qatorning **sof qiymatidan** olinadi (chegirma hisobga olingan), shunda dalolatnoma qarz bilan mos tushadi. |
 | `DAL-07` | Dalolatnoma chop etiladi va fayl sifatida saqlanadi; qamragan davr ko'rsatiladi. |
+| `DAL-08` | "Qolgan qarz" — **tanlangan hujjatlar bo'yicha** qoldiq, mijozning umumiy balansi emas: `sof tovar − to'langan`. Ikkalasi teng bo'lishi shart emas, chunki mijozning tanlanmagan boshqa hujjatlari bo'lishi mumkin. Dalolatnomada bu ochiq yoziladi. |
+| `DAL-09` | "To'langan" — mijoz haqiqatan bergan pul: savdolarning o'z to'lovlari **va** tanlangan to'lov hujjatlari, minus qaytarib berilgan pul (chiqim hujjatlari va naqd qaytarilgan qaytarishlar). Qarzni kamaytirgan qaytarish pul emas — u tovar tomonida hisobga olinadi. |
+| `DAL-10` | Qaytarish faqat **tanlangan** hujjatlar ichida hisobga olinadi. Tanlanmagan qaytarish sof tovarni kamaytirmaydi — foydalanuvchi nimani tanlagan bo'lsa, dalolatnoma o'shani ko'rsatadi. |
+| `DAL-11` | Dalolatnoma `customers.act` ruxsatini va savdo siyosatidagi `AllowConsolidatedAct` kalitini talab qiladi (`SOZ-08`). |
 
 **Qabul mezoni — `DAL-02`**
 

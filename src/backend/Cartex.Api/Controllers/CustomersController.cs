@@ -123,6 +123,15 @@ public class CustomersController(ISender sender) : ControllerBase
         return Ok();
     }
 
+    // A read that takes a body: the selection can be dozens of ids, which do not belong in a URL.
+    [HttpPost("{id}/consolidated-act")]
+    [HasPermission(AppPermissions.Customers.Act)]
+    public async Task<ActionResult<ConsolidatedActDto>> ConsolidatedAct(long id, [FromBody] ConsolidatedActRequest request)
+    {
+        var result = await sender.Send(new GetConsolidatedActQuery(id, request.Documents));
+        return Ok(result);
+    }
+
     [HttpPost("{id}/bonus")]
     [HasPermission(AppPermissions.Loyalty.GrantBonus)]
     public async Task<IActionResult> GiveBonus(long id, [FromBody] GiveCustomerBonusRequest request)

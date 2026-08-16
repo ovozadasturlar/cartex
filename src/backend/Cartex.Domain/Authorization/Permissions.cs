@@ -178,6 +178,7 @@ public static class AppPermissions
         public const string ReceivePayment = "customers.receivePayment";
         public const string Refund = "customers.refund";
         public const string Loan = "customers.loan";
+        public const string Act = "customers.act";
         public const string Message = "customers.message";
     }
 
@@ -416,6 +417,7 @@ public static class AppPermissions
             P(Customers.ReceivePayment, "Receive customer debt payment", true, Customers.View, Rates.View),
             P(Customers.Refund, "Pay an approved customer refund", true, Customers.View, Rates.View),
             P(Customers.Loan, "Hand cash to a customer as a debt", false, Customers.Refund),
+            P(Customers.Act, "Generate a consolidated act for a customer", false, Customers.View, Sales.View),
             P(Customers.Message, "Send messages to customers", true, Customers.View),
             P(CustomerPayments.View, "View customer payment documents", true, Customers.View),
             P(CustomerPayments.Create, "Receive customer payments and advances", true, CustomerPayments.View, Customers.ReceivePayment, Rates.View),

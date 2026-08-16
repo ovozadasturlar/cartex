@@ -63,18 +63,30 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private bool _keepExcessAsCredit;
     [ObservableProperty] private bool _hasInvalidChange;
     [ObservableProperty] private string _excessText = "";
+    [ObservableProperty] private string _discountText = "";
+    [ObservableProperty] private string _roundingTargetText = "";
+    [ObservableProperty] private string _roundingText = "";
+    [ObservableProperty] private string _payableText = "";
+    [ObservableProperty] private bool _canDiscount;
+    [ObservableProperty] private bool _canRound;
 
     public bool IsSimplePayment => !IsMulticurrency;
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
     public bool CanAddPayment => Payments.Count < 20;
     public bool HasParticipants => Participants.Count > 0;
-    public bool CanStoreExcessAsCredit => HasCustomer && Paid > _totalAmount;
+    public bool CanStoreExcessAsCredit => HasCustomer && Paid > Payable;
+
+    /// What the customer actually hands over once the discount and the rounding are off.
+    public decimal Payable => Math.Max(0, _totalAmount - _discount - _rounding);
 
     private string _code = "";
     private CartDto? _serverCart;
     private decimal _totalAmount;
     private long? _customerId;
     private bool _initializingPayments;
+    private readonly SalesPolicyCache _policy;
+    private decimal _discount;
+    private decimal _rounding;
 
     public CheckoutViewModel(
         IOrderingApi orderingApi,
@@ -83,7 +95,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CartStore localCart,
         WarehouseContext warehouse,
         MobilePermissions permissions,
-        MobileOfflineService offline)
+        MobileOfflineService offline,
+        SalesPolicyCache policy)
     {
         _orderingApi = orderingApi;
         _businessApi = businessApi;
@@ -92,7 +105,10 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         _warehouse = warehouse;
         _permissions = permissions;
         _offline = offline;
+        _policy = policy;
         CanSelfSell = permissions.Has("sales.checkout");
+        CanDiscount = permissions.Has("sales.discount");
+        CanRound = CanDiscount && policy.Current.AllowRounding;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -126,6 +142,10 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             Recalc();
             return;
         }
+
+        // The rounding button only exists if the shop switched the capability on; offline the
+        // last known answer is used, which is why the policy is cached on the device.
+        CanRound = CanDiscount && (await _policy.RefreshAsync()).AllowRounding;
 
         var businessTask = _businessApi.GetAsync();
         var currenciesTask = _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
@@ -178,6 +198,25 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     }
 
     partial void OnCashTextChanged(string value) => Recalc();
+    partial void OnDiscountTextChanged(string value) => Recalc();
+
+    /// The cashier types what the customer will hand over; the shortfall becomes the rounding.
+    [RelayCommand]
+    private void ApplyRounding()
+    {
+        if (!CanRound) return;
+        var target = Parse(RoundingTargetText);
+        _rounding = target > 0 ? Math.Max(0, _totalAmount - _discount - target) : 0;
+        Recalc();
+    }
+
+    [RelayCommand]
+    private void ClearRounding()
+    {
+        _rounding = 0;
+        RoundingTargetText = "";
+        Recalc();
+    }
     partial void OnCardTextChanged(string value) => Recalc();
     partial void OnBonusTextChanged(string value) => Recalc();
     partial void OnIsMulticurrencyChanged(bool value) => OnPropertyChanged(nameof(IsSimplePayment));
@@ -192,7 +231,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             if (row is not null) ExactPayment(row);
             return;
         }
-        CashText = _totalAmount.ToString("0.##", CultureInfo.CurrentCulture);
+        CashText = Payable.ToString("0.##", CultureInfo.CurrentCulture);
     }
 
     [RelayCommand]
@@ -217,7 +256,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private void ExactPayment(CheckoutPaymentRow row)
     {
         var otherPaid = Payments.Where(x => !ReferenceEquals(x, row)).Sum(x => x.AmountBase);
-        var remainingBase = Math.Max(0, _totalAmount - otherPaid);
+        var remainingBase = Math.Max(0, Payable - otherPaid);
         var rate = row.EffectiveRate;
         if (rate <= 0)
         {
@@ -262,6 +301,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 Payments = BuildPaymentRequests(),
                 DebtCurrency = SelectedDebtCurrency?.Code,
                 CreditAmount = creditAmount,
+                DiscountAmount = _discount,
+                RoundingAmount = _rounding,
                 UseCustomerAdvance = UseCustomerAdvance
             };
 
@@ -284,7 +325,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     {
         if (IsBusy || !ValidatePayments()) return;
         var paid = Paid;
-        if (_totalAmount - paid > 0 && _customerId is null)
+        if (Payable - paid > 0 && _customerId is null)
         {
             await Shell.Current.CurrentPage.DisplayAlertAsync(
                 Loc.Instance["checkout"], Loc.Instance["err_debt_needs_customer"], Loc.Instance["ok"]);
@@ -311,6 +352,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 Payments = BuildPaymentRequests(),
                 DebtCurrency = SelectedDebtCurrency?.Code,
                 CreditAmount = creditAmount,
+                DiscountAmount = _discount,
+                RoundingAmount = _rounding,
                 UseCustomerAdvance = UseCustomerAdvance,
                 CustomerId = _customerId,
                 Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim()
@@ -385,6 +428,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             Payments = BuildPaymentRequests(),
             DebtCurrency = SelectedDebtCurrency?.Code,
             CreditAmount = creditAmount,
+            DiscountAmount = _discount,
+            RoundingAmount = _rounding,
             UseCustomerAdvance = UseCustomerAdvance
         });
         _localCart.MarkSubmitted(code);
@@ -584,18 +629,25 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         HasCustomer = _customerId is not null;
         HasNote = !string.IsNullOrEmpty(NoteText);
         TotalText = $"{_totalAmount:N0} {BaseCurrency}";
+
+        _discount = CanDiscount ? Math.Clamp(Parse(DiscountText), 0, _totalAmount) : 0;
+        _rounding = Math.Clamp(_rounding, 0, Math.Max(0, _totalAmount - _discount));
+        RoundingText = _rounding > 0 ? $"{_rounding:N0} {BaseCurrency}" : "";
+        var payable = Payable;
+        PayableText = $"{payable:N0} {BaseCurrency}";
+
         var paid = Paid;
         PaidText = $"{paid:N0} {BaseCurrency}";
-        var excess = Math.Max(0, paid - _totalAmount);
+        var excess = Math.Max(0, paid - payable);
         if ((!HasCustomer || excess <= 0) && KeepExcessAsCredit)
             KeepExcessAsCredit = false;
         var credit = KeepExcessAsCredit && HasCustomer ? excess : 0;
         ExcessText = excess > 0 ? $"{excess:N0} {BaseCurrency}" : "";
         var change = excess - credit;
         var aggregates = PaymentAggregates();
-        HasInvalidChange = change > 0 && aggregates.Card + aggregates.Bonus > _totalAmount + credit;
+        HasInvalidChange = change > 0 && aggregates.Card + aggregates.Bonus > payable + credit;
         ChangeText = change > 0 ? $"{change:N0} {BaseCurrency}" : "";
-        var debt = _totalAmount - paid;
+        var debt = payable - paid;
         DebtText = debt > 0 ? $"{debt:N0} {BaseCurrency}" : "";
         HasPaymentRateError = IsMulticurrency && Payments.Any(x => x.Amount > 0 && x.EffectiveRate <= 0);
         HasRateWarning = IsMulticurrency && Payments.Any(x => x.Amount > 0 && x.IsRateStale);
@@ -604,7 +656,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     }
 
     private decimal CreditAmount() => KeepExcessAsCredit && HasCustomer
-        ? Math.Max(0, Paid - _totalAmount)
+        ? Math.Max(0, Paid - Payable)
         : 0;
 
     private void NotifyPaymentState()

@@ -702,6 +702,7 @@
   "perm_customer_payments.view": "View customer payment documents",
   "perm_customer_payments.void": "Void customer payment document",
   "perm_customer_payments.writeOffDebt": "Forgive customer debt",
+  "perm_customers.act": "Generate a consolidated act for a customer",
   "perm_customers.create": "Create customers",
   "perm_customers.delete": "Delete customers",
   "perm_customers.edit": "Edit customers",

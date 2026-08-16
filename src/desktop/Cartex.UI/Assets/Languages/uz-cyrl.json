@@ -702,6 +702,7 @@
   "perm_customer_payments.view": "Мижоз тўлов ҳужжатларини кўриш",
   "perm_customer_payments.void": "Мижоз тўлов ҳужжатини бекор қилиш",
   "perm_customer_payments.writeOffDebt": "Мижоз қарзини кечириш",
+  "perm_customers.act": "Мижоз бўйича йиғма далолатнома тузиш",
   "perm_customers.create": "Create customers",
   "perm_customers.delete": "Delete customers",
   "perm_customers.edit": "Edit customers",
