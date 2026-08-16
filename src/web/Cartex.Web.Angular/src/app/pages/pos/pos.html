@@ -257,6 +257,13 @@
             </div>
           </div>
 
+          @if (hasAutoDiscount()) {
+            <div class="row">
+              <span>{{ t('loyalty_discount') }}</span>
+              <span class="cx-money auto-discount">-{{ autoDiscount() | cxMoney }}</span>
+            </div>
+          }
+
           <div class="sep"></div>
 
           <div class="row total-row">

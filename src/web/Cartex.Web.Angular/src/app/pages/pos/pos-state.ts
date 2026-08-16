@@ -71,3 +71,9 @@ export class PosCartState {
     this.resetPayments();
   }
 }
+
+// CHEG-10: mijoz kelishilgan summani beradi va yetmagan qismi chegirmaga aylanadi. Natija joriy
+// chegirmadan hisoblanmaydi, shuning uchun tugmani ikki marta bosish summani ikkilantirmaydi.
+export function shortfallDiscount(subTotal: number, autoDiscount: number, tendered: number): number {
+  return Math.max(0, subTotal - autoDiscount - tendered);
+}

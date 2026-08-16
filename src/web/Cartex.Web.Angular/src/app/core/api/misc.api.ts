@@ -242,6 +242,15 @@ export class LoyaltyApi {
   stats(fromDate: string, toDate: string): Observable<LoyaltyStats> {
     return this.http.get<LoyaltyStats>('/api/loyalty/stats', { params: { fromDate, toDate } });
   }
+
+  // The till has to show the same total the server will charge, so the automatic rules are
+  // previewed the way the desktop does it instead of appearing only on the receipt.
+  previewDiscount(
+    customerId: number | null,
+    items: { variantId: number; quantity: number; unitPrice: number }[],
+  ): Observable<{ total: number }> {
+    return this.http.post<{ total: number }>('/api/loyalty/discount-preview', { customerId, items });
+  }
 }
 
 @Injectable({ providedIn: 'root' })

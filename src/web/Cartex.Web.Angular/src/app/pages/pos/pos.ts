@@ -17,14 +17,14 @@ import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer } from '../../core/models';
 import { MoneyInputDirective } from '../../core/money-input.directive';
-import { CartListItem, OrderingApi } from '../../core/api/misc.api';
+import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
 import { NotifyService } from '../../core/notify.service';
 import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
-import { CartLine, PosCartState } from './pos-state';
+import { CartLine, PosCartState, shortfallDiscount } from './pos-state';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
@@ -59,6 +59,7 @@ export class Pos implements OnInit {
   private readonly transloco = inject(TranslocoService);
   readonly state = inject(PosCartState);
   private readonly orderingApi = inject(OrderingApi);
+  private readonly loyaltyApi = inject(LoyaltyApi);
   private readonly queueHub = inject(QueueHubService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
@@ -113,6 +114,7 @@ export class Pos implements OnInit {
   readonly policy = signal<SalesPolicy | null>(null);
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
   readonly bonusAuto = signal(false);
+  readonly autoDiscount = signal(0);
   readonly dueDateMissing = signal(false);
   private lastCustomerId: number | null | undefined;
 
@@ -124,12 +126,13 @@ export class Pos implements OnInit {
       : this.state.discountManual();
     return Math.min(sub, Math.max(0, raw));
   });
-  readonly total = computed(() => Math.max(0, this.subTotal() - this.discount()));
+  readonly total = computed(() => Math.max(0, this.subTotal() - this.discount() - this.autoDiscount()));
   readonly paid = computed(() => this.cash() + this.card() + this.bonus());
   readonly change = computed(() => Math.max(0, this.paid() - this.total()));
   readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
   // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
   readonly hasShortfall = computed(() => this.paid() > 0 && this.paid() < this.total());
+  readonly hasAutoDiscount = computed(() => this.autoDiscount() > 0);
   readonly overCreditLimit = computed(() => {
     const c = this.customer();
     return !!c && c.creditLimit > 0 && c.debtBalance + this.debt() > c.creditLimit;
@@ -180,6 +183,41 @@ export class Pos implements OnInit {
       const target = Math.min(c.cashbackBalance, Math.max(0, this.total() - this.cash() - this.card()));
       untracked(() => this.bonus.set(target));
     });
+    // The server applies the loyalty rules whether or not the till asked about them, so the
+    // basket is previewed here as well; without it the screen shows a total nobody will be charged.
+    effect(() => {
+      const lines = this.cart().map((l) => ({ variantId: l.variantId, quantity: l.qty, unitPrice: l.price }));
+      const customerId = this.customer()?.id ?? null;
+      untracked(() => this.schedulePreview(customerId, lines));
+    });
+  }
+
+  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+  private previewToken = 0;
+
+  private schedulePreview(
+    customerId: number | null,
+    items: { variantId: number; quantity: number; unitPrice: number }[],
+  ): void {
+    if (this.previewTimer) clearTimeout(this.previewTimer);
+    if (!items.length) {
+      this.autoDiscount.set(0);
+      return;
+    }
+    // A stale answer must never win: every request carries a token and only the newest one
+    // is allowed to write, because the calls complete out of order.
+    const token = ++this.previewToken;
+    this.previewTimer = setTimeout(() => {
+      lastValueFrom(this.loyaltyApi.previewDiscount(customerId, items))
+        .then((r) => {
+          if (token !== this.previewToken) return;
+          const sub = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+          this.autoDiscount.set(Math.max(0, Math.round((sub - r.total) * 100) / 100));
+        })
+        .catch(() => {
+          if (token === this.previewToken) this.autoDiscount.set(0);
+        });
+    }, 250);
   }
 
   async ngOnInit(): Promise<void> {
@@ -400,7 +438,7 @@ export class Pos implements OnInit {
   // shuning uchun ikkinchi bosish qiymatni ikkilantirmaydi.
   fillDiscountFromTender(): void {
     if (!this.hasShortfall()) return;
-    this.onDiscountAmount(this.subTotal() - this.paid());
+    this.onDiscountAmount(shortfallDiscount(this.subTotal(), this.autoDiscount(), this.paid()));
   }
 
   onDiscountAmount(v: number): void {
