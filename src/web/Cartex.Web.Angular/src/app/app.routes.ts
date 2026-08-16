@@ -153,6 +153,11 @@ export const routes: Routes = [
               import('./pages/manufacturers/manufacturers').then((m) => m.Manufacturers),
           },
           {
+            path: 'partners',
+            data: { permission: 'partners.view' },
+            loadComponent: () => import('./pages/partners/partners').then((m) => m.Partners),
+          },
+          {
             path: 'business',
             data: { permission: 'business.edit' },
             loadComponent: () =>

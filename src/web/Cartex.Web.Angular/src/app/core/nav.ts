@@ -43,6 +43,7 @@ export const NAV_SECTIONS: NavSection[] = [
         feature: 'ordering',
       },
       { labelKey: 'customers', icon: 'group', route: '/customers', permission: 'customers.view' },
+      { labelKey: 'partners', icon: 'handshake', route: '/settings/partners', permission: 'partners.view' },
     ],
   },
   {

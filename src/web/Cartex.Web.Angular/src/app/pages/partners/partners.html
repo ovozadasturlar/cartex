@@ -1,0 +1,132 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('partners')">
+    @if (canEdit) {
+      <button matButton="filled" (click)="startEdit(null, editTpl)">
+        <mat-icon>add</mat-icon>
+        {{ t('add') }}
+      </button>
+    }
+  </cx-page-header>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search">
+    <mat-label>{{ t('search') }}</mat-label>
+    <input matInput [(ngModel)]="search" (keyup.enter)="load()" />
+  </mat-form-field>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else {
+    <div class="split">
+      <div class="cx-card list">
+        @for (p of partners(); track p.id) {
+          <button class="row" type="button" [class.active]="selected()?.id === p.id" (click)="selected.set(p)">
+            <div class="who">
+              <span class="name">{{ p.fullName }}</span>
+              <span class="code">{{ p.partnerCode }}</span>
+            </div>
+            <div class="chips">
+              @for (s of p.specialties ?? []; track s.id) {
+                <span class="chip">{{ s.name }}</span>
+              }
+            </div>
+          </button>
+        } @empty {
+          <p class="hint">{{ t('no_items') }}</p>
+        }
+      </div>
+
+      @if (selected(); as p) {
+        <div class="cx-card detail">
+          <h2>{{ p.fullName }}</h2>
+          <p class="hint">{{ p.partnerCode }}</p>
+          <div class="stats">
+            <div>
+              <span class="hint">{{ t('earned') }}</span>
+              <strong>{{ p.earned | number: '1.0-0' }}</strong>
+            </div>
+            <div>
+              <span class="hint">{{ t('pending') }}</span>
+              <strong>{{ p.pending | number: '1.0-0' }}</strong>
+            </div>
+          </div>
+          <p class="hint">{{ t('consent') }}: {{ t('consent_' + p.publicConsent.toLowerCase()) }}</p>
+          <div class="actions">
+            @if (canEdit) {
+              <button matButton="outlined" (click)="startEdit(p, editTpl)">{{ t('edit') }}</button>
+            }
+            @if (canPublish) {
+              <button matButton="outlined" (click)="startPublicity(publicityTpl)">{{ t('public_page') }}</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <ng-template #editTpl let-ref="dialogRef">
+    <h2 mat-dialog-title>{{ t('partner') }}</h2>
+    <mat-dialog-content class="form">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('full_name') }}</mat-label>
+        <input matInput [(ngModel)]="form.fullName" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('phone') }}</mat-label>
+        <input matInput [(ngModel)]="form.phone" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('address') }}</mat-label>
+        <input matInput [(ngModel)]="form.address" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('note') }}</mat-label>
+        <input matInput [(ngModel)]="form.note" />
+      </mat-form-field>
+      <span class="hint">{{ t('specialties') }}</span>
+      <div class="chips">
+        @for (s of specialties(); track s.id) {
+          @if (s.isEnabled) {
+            <button type="button" class="chip pick" [class.on]="form.specialtyIds.includes(s.id)"
+                    (click)="toggleSpecialty(s.id)">{{ s.name }}</button>
+          }
+        }
+      </div>
+      <mat-slide-toggle [(ngModel)]="form.isEnabled">{{ t('active') }}</mat-slide-toggle>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+      <button matButton="filled" [disabled]="busy()" (click)="save(ref, t('success'))">{{ t('save') }}</button>
+    </mat-dialog-actions>
+  </ng-template>
+
+  <ng-template #publicityTpl let-ref="dialogRef">
+    <h2 mat-dialog-title>{{ t('public_page') }}</h2>
+    <mat-dialog-content class="form">
+      <p class="hint">{{ t('public_consent_hint') }}</p>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ t('consent') }}</mat-label>
+        <mat-select [(ngModel)]="publicity.consent" (ngModelChange)="onConsentChange()">
+          @for (c of consentStates; track c) {
+            <mat-option [value]="c">{{ t('consent_' + c.toLowerCase()) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (publicity.consent === 'Granted') {
+        <mat-slide-toggle [(ngModel)]="publicity.publicVisible">{{ t('show_on_public_page') }}</mat-slide-toggle>
+        <mat-slide-toggle [(ngModel)]="publicity.publicPhoneVisible">{{ t('show_phone_publicly') }}</mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('public_display_name') }}</mat-label>
+          <input matInput [(ngModel)]="publicity.publicDisplayName" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('public_about') }}</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="publicity.publicAbout"></textarea>
+        </mat-form-field>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+      <button matButton="filled" [disabled]="busy()" (click)="savePublicity(ref, t('success'))">{{ t('save') }}</button>
+    </mat-dialog-actions>
+  </ng-template>
+</ng-container>
