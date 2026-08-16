@@ -313,6 +313,8 @@ public sealed class CreateCustomerPaymentCommandHandler(
             transaction.Description = document.DocumentNumber;
         }
 
+        document.BalanceAfterBase = await CustomerBalance.NetAsync(db, currency, request.CustomerId, cancellationToken);
+
         db.CustomerPaymentDocuments.Add(document);
         await partnerRewards.AccruePaymentAsync(document, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);

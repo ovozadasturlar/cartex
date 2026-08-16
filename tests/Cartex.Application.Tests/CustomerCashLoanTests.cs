@@ -3,6 +3,7 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.CustomerPayments.Commands;
 using Cartex.Application.Customers.Commands;
+using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common.Exceptions;
@@ -37,12 +38,13 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
             (await db.Users.FirstAsync(x => x.Username == "admin")).Id);
     }
 
-    /// The till is floated well above every payout under test, so a payout can only be refused
-    /// by the rule being tested and never by an empty drawer.
+    /// The drawer is filled well above every payout under test, so a payout can only be refused
+    /// by the rule being tested and never by an empty till.
     private async Task AsAdminAsync(Setup s)
     {
         Fixture.CurrentUser.AsAdmin(s.Admin, s.Business, s.Branch);
-        await TestShift.OpenAsync(Fixture, TillFloat);
+        await TestShift.OpenAsync(Fixture);
+        await Send(x => x.Send(new AddCashMovementCommand(TillFloat, IsPayOut: false)));
     }
 
     private async Task SetPolicyAsync(bool allowCustomerLoans, decimal maxCustomerLoan = 0m)
@@ -182,13 +184,39 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
         // 500 000 - 200 000 = 300 000 qarz
         Assert.Equal(Loan, await DebtAsync(customerId));
 
+        // mijoz aynan qarzini to'laydi: 300 000
+        await PayInAsync(s, customerId, Loan);
+
+        // 300 000 - 300 000 = 0
+        Assert.Equal(0m, await DebtAsync(customerId));
+        // mijozning o'z 200 000 i chiqimda ishlatilgan - u ikkinchi marta qaytariladigan pul emas
+        Assert.Equal(0m, await AdvanceAsync(customerId));
+        // QARZ-10: 500 000 chiqdi, 300 000 qaytdi -> kassa 200 000 ga kamayadi, ya'ni
+        // mijozning o'ziniki bo'lgan 200 000 ga
+        Assert.Equal(tillBefore - Advance, await TillAsync(s.Branch));
+    }
+
+    [Fact]
+    public async Task QARZ_03_QARZ_08_Repayment_above_the_loan_becomes_a_new_advance()
+    {
+        var s = await SetupAsync();
+        await AsAdminAsync(s);
+        await SetPolicyAsync(allowCustomerLoans: true);
+
+        var customerId = await CreateCustomerAsync(Advance);
+        var tillBefore = await TillAsync(s.Branch);
+
+        await PayOutAsync(s, customerId, Payout);
+        // 500 000 - 200 000 = 300 000 qarz
+        Assert.Equal(Loan, await DebtAsync(customerId));
+
+        // 300 000 qarzga qarshi 500 000 to'laydi
         await PayInAsync(s, customerId, Payout);
 
         // to'lov avval qarzni yopadi: 300 000 - 300 000 = 0
         Assert.Equal(0m, await DebtAsync(customerId));
-        // qolgan 500 000 - 300 000 = 200 000 avansga tushmaydi, chunki avans allaqachon
-        // chiqimda sarflangan edi; qabul mezoni bo'yicha avans 200 000 emas, 0
-        Assert.Equal(0m, await AdvanceAsync(customerId));
+        // ortgan 500 000 - 300 000 = 200 000 yo'qolmaydi, yangi avans bo'lib yoziladi
+        Assert.Equal(Advance, await AdvanceAsync(customerId));
         // QARZ-10: 500 000 chiqdi, 500 000 qaytib kirdi -> kassa boshlang'ich holatida
         Assert.Equal(tillBefore, await TillAsync(s.Branch));
     }

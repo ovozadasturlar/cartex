@@ -21,6 +21,10 @@ public class CustomerPaymentDocument : AuditableEntity, IBranchScoped
     /// is no money received, so it is kept apart from the tendered total.
     public decimal WriteOffBaseAmount { get; set; }
     public string? WriteOffReason { get; set; }
+
+    /// See CustomerRefundDocument.BalanceAfterBase.
+    public decimal BalanceAfterBase { get; set; }
+
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }
 
@@ -72,6 +76,11 @@ public class CustomerRefundDocument : AuditableEntity, IBranchScoped
     /// back money it already held or lent it (QARZ-08), because only the second leaves a debt.
     public decimal AdvanceBaseAmount { get; set; }
     public decimal LoanBaseAmount { get; set; }
+
+    /// The customer's net position right after this document, in base currency: positive means
+    /// they owe, negative means the shop does. Snapshotted because a document must keep saying
+    /// what was true when it was issued, however long afterwards it is reprinted (HUJJ-03, HUJJ-05).
+    public decimal BalanceAfterBase { get; set; }
 
     public string? Note { get; set; }
     public string? IdempotencyKey { get; set; }

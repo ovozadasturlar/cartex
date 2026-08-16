@@ -10,7 +10,12 @@ public sealed record CreateCustomerRefundRequest(
     string? Note = null,
     string? IdempotencyKey = null);
 
-public sealed record CustomerRefundCreatedDto(long Id, string DocumentNumber, decimal TotalBaseAmount);
+public sealed record CustomerRefundCreatedDto(
+    long Id,
+    string DocumentNumber,
+    decimal TotalBaseAmount,
+    decimal AdvanceBaseAmount = 0,
+    decimal LoanBaseAmount = 0);
 
 public sealed record CustomerRefundTenderDto(
     string Method,
@@ -31,6 +36,8 @@ public sealed record CustomerRefundDocumentDto(
     DateTime CreatedAt,
     string Status,
     decimal TotalBaseAmount,
+    decimal AdvanceBaseAmount,
+    decimal LoanBaseAmount,
     string? Note,
     IReadOnlyList<CustomerRefundTenderDto> Tenders);
 

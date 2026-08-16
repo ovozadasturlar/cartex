@@ -252,7 +252,10 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 |---|---|
 | `QARZ-07` | Do'kon mijozga savdosiz pul chiqarishi mumkin. Chiqim avvalo mijozning **avansidan** (ya'ni o'zi ortiqcha to'lab qo'ygan pulidan) beriladi. |
 | `QARZ-08` | Avans yetmasa, qolgan qismi **qarz** bo'lib yoziladi — ya'ni do'kon mijozga qarz berdi. Bu `OperationType.CustomerLoan` bilan yoziladi — savdodan kelgan `DebtCharge` dan **ataylab ajratilgan**: tovar qarzi ortida marja turadi, naqd qarz esa sof tavakkalchilik, va hisobotda ular ajralib turishi shart. |
-| `QARZ-09` | Qarzga pul berish savdo siyosatida alohida yoqiladi (`AllowCustomerLoans`) va chegarasi bo'ladi (`MaxCustomerLoan`). Alohida ruxsat talab qiladi — savdodagi qarz bilan bir xil emas: bu yerda kassadan naqd chiqadi. |
+| `QARZ-09` | Qarzga pul berish savdo siyosatida alohida yoqiladi (`AllowCustomerLoans`, standart **o'chiq**) va `customers.loan` ruxsatini talab qiladi — `customers.refund` dan alohida, chunki bu yerda kassadan naqd chiqadi. |
+| `QARZ-17` | `MaxCustomerLoan` **qarz qismiga** qo'llanadi, umumiy chiqimga emas. Avansdan berilgan pul chegarani yemaydi: mijozning o'z puli qaytarilayotgani tavakkalchilik emas. `0` — chegara yo'q (`SOZ-02`). |
+| `QARZ-18` | Mijozning `CreditLimit` i naqd qarzga **majburlanadi**: qarzga berishdan keyingi umumiy qarz limitdan oshsa, rad etiladi. Ma'lum nomuvofiqlik: savdodagi qarz uchun bu limit hozir faqat klientda tekshiriladi (`SOZ-03` og'ishi). Naqd chiqim yangi eshik bo'lgani uchun u darhol serverda yopiladi. |
+| `QARZ-19` | Qarzga berilgan pul hujjatda alohida ko'rinadi: `AdvanceBaseAmount` + `LoanBaseAmount` = `TotalBaseAmount`, va bu klient DTO'siga ham chiqadi — mijoz qo'lidagi qog'ozda qaysi qismi qarz bo'lganini ko'rishi shart (`HUJJ-03`). |
 | `QARZ-10` | Har qanday pul chiqimi ochiq smenani talab qiladi va kassa qoldig'ini kamaytiradi. Smena yopilishida u ham hisobga olinadi. |
 | `QARZ-11` | Mijozning yakuniy holati bitta son bilan ifodalanadi: **qarzdor** (musbat qarz) yoki **haqdor** (musbat avans). Ikkalasi bir vaqtda musbat bo'lib turishi mumkin, chunki ular alohida valyutalarda bo'lishi mumkin — hisobotda har valyuta alohida ko'rsatiladi. |
 
@@ -261,8 +264,11 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 > **Berilgan:** mijozning avansi 200 000, qarzi 0.
 > **Qachonki:** unga 500 000 naqd berilsa,
 > **U holda:** avans 0 ga tushadi, qarz **300 000** bo'ladi, kassadan 500 000 chiqadi.
-> Keyin mijoz 500 000 to'lasa — qarz 0 ga qaytadi, avans 200 000 emas, **0** bo'ladi
-> (to'lov avval qarzni yopadi).
+> Mijozning o'z 200 000 i shu bilan **ishlatilgan** — u endi qaytarilishi kerak bo'lgan pul emas.
+> Keyin mijoz **300 000** to'lasa — qarz 0 ga qaytadi va avans ham **0** bo'lib qoladi.
+>
+> Agar u 300 000 o'rniga 500 000 to'lasa, ortgan 200 000 yo'qolmaydi — u **yangi avans** bo'lib
+> yoziladi. To'lov avval qarzni yopadi, ortgani avansga tushadi (`QARZ-03`).
 
 ---
 
