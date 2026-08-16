@@ -26,16 +26,27 @@ public sealed class PartnersController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Partners.Edit)]
     public async Task<ActionResult<long>> Create(CreatePartnerRequest request) =>
         Ok(await sender.Send(new CreatePartnerCommand(request.FullName, request.Phone, request.Email,
-            request.Address, request.CustomerId, request.Note)));
+            request.Address, request.CustomerId, request.Note, request.SpecialtyIds)));
 
     [HttpPut("{id:long}")]
     [HasPermission(AppPermissions.Partners.Edit)]
     public async Task<IActionResult> Update(long id, UpdatePartnerRequest request)
     {
         await sender.Send(new UpdatePartnerCommand(id, request.FullName, request.Phone,
-            request.Email, request.Address, request.IsEnabled, request.Note));
+            request.Email, request.Address, request.IsEnabled, request.Note, request.SpecialtyIds));
         return NoContent();
     }
+
+    [HttpGet("specialties")]
+    [HasPermission(AppPermissions.Partners.View)]
+    public async Task<ActionResult<IReadOnlyList<PartnerSpecialtyDto>>> GetSpecialties([FromQuery] bool includeDisabled = false) =>
+        Ok(await sender.Send(new GetPartnerSpecialtiesQuery(includeDisabled)));
+
+    [HttpPut("specialties")]
+    [HasPermission(AppPermissions.Partners.Edit)]
+    public async Task<ActionResult<long>> SaveSpecialty(SavePartnerSpecialtyRequest request) =>
+        Ok(await sender.Send(new SavePartnerSpecialtyCommand(
+            request.Id, request.Name, request.IsEnabled, request.SortOrder)));
 
     [HttpGet("{partnerId:long}/rewards")]
     [HasPermission(AppPermissions.PartnerRewards.View)]

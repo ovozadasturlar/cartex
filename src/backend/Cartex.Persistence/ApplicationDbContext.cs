@@ -94,6 +94,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
     public DbSet<Party> Parties => Set<Party>();
     public DbSet<PartnerProfile> PartnerProfiles => Set<PartnerProfile>();
+    public DbSet<PartnerSpecialty> PartnerSpecialties => Set<PartnerSpecialty>();
+    public DbSet<PartnerSpecialtyLink> PartnerSpecialtyLinks => Set<PartnerSpecialtyLink>();
     public DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions => Set<ParticipantRoleDefinition>();
     public DbSet<SaleParticipant> SaleParticipants => Set<SaleParticipant>();
     public DbSet<CartParticipant> CartParticipants => Set<CartParticipant>();

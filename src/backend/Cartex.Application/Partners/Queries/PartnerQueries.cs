@@ -62,7 +62,11 @@ public sealed class GetPartnersQueryHandler(
             db.PartnerRewardEntries.Where(e => e.PartnerProfileId == x.Id
                                                && e.State != PartnerRewardState.Redeemed)
                 .Sum(e => (decimal?)e.Amount) ?? 0,
-            x.Note), writer, cancellationToken);
+            x.Note,
+            x.Specialties.OrderBy(l => l.Specialty.SortOrder).ThenBy(l => l.Specialty.Name)
+                .Select(l => new PartnerSpecialtyDto(
+                    l.Specialty.Id, l.Specialty.Name, l.Specialty.IsEnabled, l.Specialty.SortOrder)).ToList()),
+            writer, cancellationToken);
     }
 }
 
@@ -190,5 +194,28 @@ public sealed class GetPartnerRewardEntriesQueryHandler(
                 x.PartnerRedemptionDocumentId,
                 x.PartnerProgram.Name,
                 x.DetailsJson), writer, cancellationToken);
+    }
+}
+
+public sealed record GetPartnerSpecialtiesQuery(bool IncludeDisabled = false)
+    : IRequest<IReadOnlyList<PartnerSpecialtyDto>>;
+
+public sealed class GetPartnerSpecialtiesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    : IRequestHandler<GetPartnerSpecialtiesQuery, IReadOnlyList<PartnerSpecialtyDto>>
+{
+    public async Task<IReadOnlyList<PartnerSpecialtyDto>> Handle(
+        GetPartnerSpecialtiesQuery request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.HasPermission(AppPermissions.Partners.View))
+            throw new ForbiddenException("Hamkorlarni ko'rishga ruxsat yo'q.");
+        var businessId = currentUser.BusinessId ?? throw new BusinessRuleException("Business not found.");
+
+        var query = db.PartnerSpecialties.AsNoTracking().Where(x => x.BusinessId == businessId);
+        if (!request.IncludeDisabled) query = query.Where(x => x.IsEnabled);
+
+        return await query
+            .OrderBy(x => x.SortOrder).ThenBy(x => x.Name)
+            .Select(x => new PartnerSpecialtyDto(x.Id, x.Name, x.IsEnabled, x.SortOrder))
+            .ToListAsync(cancellationToken);
     }
 }

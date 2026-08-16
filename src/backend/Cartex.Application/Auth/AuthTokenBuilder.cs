@@ -133,7 +133,8 @@ public sealed class AuthTokenBuilder(
 
         if (!roles.Any(r => r.AccessAll))
         {
-            var disabledCodes = await db.Features.Where(f => !f.IsEnabled).Select(f => f.Code).ToListAsync(cancellationToken);
+            var disabledCodes = await db.Features.Where(f => !f.IsEnabled || !f.OwnerEnabled)
+                .Select(f => f.Code).ToListAsync(cancellationToken);
             var permittedFeatures = await licenseService.GetTariffFeaturesAsync(cancellationToken);
             var blockedFeatures = FeatureCatalog.AllCodes.Where(c => !permittedFeatures.Contains(c)).Concat(disabledCodes);
             var blocked = FeatureCatalog.PermissionsFor(blockedFeatures);

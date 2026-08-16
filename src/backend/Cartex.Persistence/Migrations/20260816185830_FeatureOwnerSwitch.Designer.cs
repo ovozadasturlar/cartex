@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260816185830_FeatureOwnerSwitch")]
+    partial class FeatureOwnerSwitch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3641,92 +3644,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_partner_reward_rules_partner_program_id_scope_target_id");
 
                     b.ToTable("partner_reward_rules", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerSpecialty", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BusinessId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("business_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_enabled");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
-                        .HasColumnName("name");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_specialties");
-
-                    b.HasIndex("BusinessId", "Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_specialties_business_id_name");
-
-                    b.HasIndex("BusinessId", "IsEnabled", "SortOrder")
-                        .HasDatabaseName("ix_partner_specialties_business_id_is_enabled_sort_order");
-
-                    b.ToTable("partner_specialties", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerSpecialtyLink", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("PartnerProfileId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_profile_id");
-
-                    b.Property<long>("PartnerSpecialtyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("partner_specialty_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_partner_specialty_links");
-
-                    b.HasIndex("PartnerSpecialtyId")
-                        .HasDatabaseName("ix_partner_specialty_links_partner_specialty_id");
-
-                    b.HasIndex("PartnerProfileId", "PartnerSpecialtyId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_partner_specialty_links_partner_profile_id_partner_specialt");
-
-                    b.ToTable("partner_specialty_links", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>
@@ -7596,39 +7513,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Program");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerSpecialty", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Business", "Business")
-                        .WithMany()
-                        .HasForeignKey("BusinessId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_specialties_businesses_business_id");
-
-                    b.Navigation("Business");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerSpecialtyLink", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.PartnerProfile", "PartnerProfile")
-                        .WithMany("Specialties")
-                        .HasForeignKey("PartnerProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_specialty_links_partner_profiles_partner_profile_id");
-
-                    b.HasOne("Cartex.Domain.Entities.PartnerSpecialty", "Specialty")
-                        .WithMany("Partners")
-                        .HasForeignKey("PartnerSpecialtyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_partner_specialty_links_partner_specialties_partner_special");
-
-                    b.Navigation("PartnerProfile");
-
-                    b.Navigation("Specialty");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Business", "Business")
@@ -8505,11 +8389,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Events");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerProfile", b =>
-                {
-                    b.Navigation("Specialties");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.PartnerProgram", b =>
                 {
                     b.Navigation("Rules");
@@ -8520,11 +8399,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Entries");
 
                     b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.PartnerSpecialty", b =>
-                {
-                    b.Navigation("Partners");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Party", b =>

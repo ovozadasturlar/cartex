@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:f="using:Cartex.Shared.Models.Features"
+             xmlns:svc="using:Cartex.UI.Services"
+             x:Class="Cartex.UI.Views.ModulesView"
+             x:DataType="vm:ModulesViewModel">
+
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,14">
+            <TextBlock Text="{Binding L[modules]}" Classes="h2" />
+            <TextBlock Text="{Binding L[modules_hint]}" Foreground="{DynamicResource TextMuted}"
+                       FontSize="12" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="{Binding IsLoading}"
+                     IsVisible="{Binding IsLoading}" Height="3" Margin="0,0,0,8" />
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Modules}" MaxWidth="620" HorizontalAlignment="Left">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="f:OwnerModuleDto">
+                        <Border Background="{DynamicResource CardBg}" CornerRadius="10" Padding="14,12" Margin="0,0,0,8"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Code}" Foreground="{DynamicResource TextMuted}" FontSize="11" />
+                                    <TextBlock Text="{Binding [module_not_in_tariff], Source={x:Static svc:LocalizationManager.Instance}}"
+                                               Foreground="{DynamicResource TextMuted}" FontSize="11"
+                                               IsVisible="{Binding !Available}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding Available}"
+                                              Command="{Binding $parent[ItemsControl].((vm:ModulesViewModel)DataContext).ToggleCommand}"
+                                              CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

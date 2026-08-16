@@ -24,6 +24,12 @@ public interface IPartnersApi
         [Query] int page = 1,
         [Query] int pageSize = 50);
 
+    [Get("/api/partners/specialties")]
+    Task<List<PartnerSpecialtyDto>> GetSpecialtiesAsync([Query] bool includeDisabled = false);
+
+    [Put("/api/partners/specialties")]
+    Task<long> SaveSpecialtyAsync([Body] SavePartnerSpecialtyRequest request);
+
     [Get("/api/partners/roles")]
     Task<List<ParticipantRoleDto>> GetRolesAsync([Query] bool includeDisabled = false);
 

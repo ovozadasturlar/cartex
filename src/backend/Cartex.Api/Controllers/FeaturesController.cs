@@ -29,6 +29,21 @@ public class FeaturesController(ISender sender) : ControllerBase
         return Ok(enabled);
     }
 
+    // The owner's own view: only the modules a shop may switch, and only its own switch.
+    // The vendor screen above stays where it is, under the developer section.
+    [HttpGet("modules")]
+    [HasPermission(AppPermissions.Business.Edit)]
+    public async Task<ActionResult<IReadOnlyList<OwnerModuleDto>>> GetModules() =>
+        Ok(await sender.Send(new GetOwnerModulesQuery()));
+
+    [HttpPut("modules/{code}")]
+    [HasPermission(AppPermissions.Business.Edit)]
+    public async Task<IActionResult> SetModule(string code, [FromBody] SetFeatureRequest body)
+    {
+        await sender.Send(new SetOwnerModuleCommand(code, body.IsEnabled));
+        return NoContent();
+    }
+
     [HttpGet]
     [HasPermission(AppPermissions.Features.View)]
     public async Task<ActionResult<IReadOnlyList<FeatureDto>>> GetFeatures() =>

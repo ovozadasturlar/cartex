@@ -81,6 +81,8 @@ public interface IApplicationDbContext
     DbSet<InventoryMovement> InventoryMovements { get; }
     DbSet<Party> Parties { get; }
     DbSet<PartnerProfile> PartnerProfiles { get; }
+    DbSet<PartnerSpecialty> PartnerSpecialties { get; }
+    DbSet<PartnerSpecialtyLink> PartnerSpecialtyLinks { get; }
     DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions { get; }
     DbSet<SaleParticipant> SaleParticipants { get; }
     DbSet<CartParticipant> CartParticipants { get; }

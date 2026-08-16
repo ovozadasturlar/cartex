@@ -11,6 +11,12 @@ public interface IFeaturesApi
     [Put("/api/features/{code}")]
     Task SetAsync(string code, [Body] SetFeatureRequest request);
 
+    [Get("/api/features/modules")]
+    Task<List<OwnerModuleDto>> GetModulesAsync();
+
+    [Put("/api/features/modules/{code}")]
+    Task SetModuleAsync(string code, [Body] SetFeatureRequest request);
+
     [Get("/api/features/enabled")]
     Task<List<string>> GetEnabledAsync();
 }

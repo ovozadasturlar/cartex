@@ -18,7 +18,8 @@ public sealed record CreatePartnerCommand(
     string? Email = null,
     string? Address = null,
     long? CustomerId = null,
-    string? Note = null) : ICommand<long>;
+    string? Note = null,
+    List<long>? SpecialtyIds = null) : ICommand<long>;
 
 public sealed class CreatePartnerCommandHandler(
     IApplicationDbContext db,
@@ -74,6 +75,7 @@ public sealed class CreatePartnerCommandHandler(
             Note = NormalizeOptional(request.Note)
         };
         db.PartnerProfiles.Add(profile);
+        await PartnerSpecialtyLinks.ApplyAsync(db, profile, request.SpecialtyIds, businessId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome("partner.created", "partner_profiles", profile.Id, new
         {
@@ -110,7 +112,8 @@ public sealed record UpdatePartnerCommand(
     string? Email = null,
     string? Address = null,
     bool IsEnabled = true,
-    string? Note = null) : ICommand<Cartex.Application.Common.Messaging.Unit>;
+    string? Note = null,
+    List<long>? SpecialtyIds = null) : ICommand<Cartex.Application.Common.Messaging.Unit>;
 
 public sealed class UpdatePartnerCommandHandler(
     IApplicationDbContext db,
@@ -143,6 +146,7 @@ public sealed class UpdatePartnerCommandHandler(
             customer.Email = profile.Party.Email;
             customer.Address = profile.Party.Address;
         }
+        await PartnerSpecialtyLinks.ApplyAsync(db, profile, request.SpecialtyIds, profile.Party.BusinessId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome("partner.updated", "partner_profiles", profile.Id, new
         {

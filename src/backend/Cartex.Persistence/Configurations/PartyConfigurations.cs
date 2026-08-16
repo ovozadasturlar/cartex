@@ -36,6 +36,31 @@ public sealed class PartnerProfileConfiguration : IEntityTypeConfiguration<Partn
     }
 }
 
+public sealed class PartnerSpecialtyConfiguration : IEntityTypeConfiguration<PartnerSpecialty>
+{
+    public void Configure(EntityTypeBuilder<PartnerSpecialty> builder)
+    {
+        builder.ToTable("partner_specialties");
+        builder.Property(x => x.Name).HasMaxLength(60).IsRequired();
+        builder.HasIndex(x => new { x.BusinessId, x.Name }).IsUnique();
+        builder.HasIndex(x => new { x.BusinessId, x.IsEnabled, x.SortOrder });
+        builder.HasOne(x => x.Business).WithMany().HasForeignKey(x => x.BusinessId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class PartnerSpecialtyLinkConfiguration : IEntityTypeConfiguration<PartnerSpecialtyLink>
+{
+    public void Configure(EntityTypeBuilder<PartnerSpecialtyLink> builder)
+    {
+        builder.ToTable("partner_specialty_links");
+        builder.HasIndex(x => new { x.PartnerProfileId, x.PartnerSpecialtyId }).IsUnique();
+        builder.HasOne(x => x.PartnerProfile).WithMany(x => x.Specialties)
+            .HasForeignKey(x => x.PartnerProfileId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.Specialty).WithMany(x => x.Partners)
+            .HasForeignKey(x => x.PartnerSpecialtyId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class ParticipantRoleDefinitionConfiguration : IEntityTypeConfiguration<ParticipantRoleDefinition>
 {
     public void Configure(EntityTypeBuilder<ParticipantRoleDefinition> builder)

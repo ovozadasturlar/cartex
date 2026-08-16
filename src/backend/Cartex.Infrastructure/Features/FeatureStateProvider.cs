@@ -16,7 +16,7 @@ public sealed class FeatureStateProvider(IApplicationDbContext db, ILicenseServi
         var states = await cache.GetOrCreateAsync(CacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
-            return await db.Features.ToDictionaryAsync(f => f.Code, f => f.IsEnabled, cancellationToken);
+            return await db.Features.ToDictionaryAsync(f => f.Code, f => f.IsEnabled && f.OwnerEnabled, cancellationToken);
         });
 
         if (states is not null && states.TryGetValue(code, out var enabled) && !enabled)

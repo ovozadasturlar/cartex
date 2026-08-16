@@ -8,7 +8,8 @@ public sealed record CreatePartnerRequest(
     string? Email = null,
     string? Address = null,
     long? CustomerId = null,
-    string? Note = null);
+    string? Note = null,
+    List<long>? SpecialtyIds = null);
 
 public sealed record UpdatePartnerRequest(
     string FullName,
@@ -16,7 +17,12 @@ public sealed record UpdatePartnerRequest(
     string? Email = null,
     string? Address = null,
     bool IsEnabled = true,
-    string? Note = null);
+    string? Note = null,
+    List<long>? SpecialtyIds = null);
+
+public sealed record PartnerSpecialtyDto(long Id, string Name, bool IsEnabled, int SortOrder);
+
+public sealed record SavePartnerSpecialtyRequest(long? Id, string Name, bool IsEnabled = true, int SortOrder = 0);
 
 public sealed record PartnerDto(
     long Id,
@@ -33,7 +39,8 @@ public sealed record PartnerDto(
     decimal Pending,
     decimal Redeemed,
     decimal Score,
-    string? Note);
+    string? Note,
+    IReadOnlyList<PartnerSpecialtyDto>? Specialties = null);
 
 public sealed record SaveParticipantRoleRequest(
     long? Id,

@@ -101,6 +101,8 @@ public static class DependencyInjection
         services.AddTransient<PrintingViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
         services.AddTransient<SalesPolicyViewModel>();
+        services.AddTransient<ModulesViewModel>();
+        services.AddTransient<PartnersViewModel>();
         services.AddTransient<BarcodePrintViewModel>();
         services.AddTransient<HardwareKeysViewModel>();
         services.AddTransient<DevicesViewModel>();
