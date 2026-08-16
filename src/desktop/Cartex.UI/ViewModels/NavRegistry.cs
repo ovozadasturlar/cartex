@@ -23,7 +23,6 @@ public static class NavRegistry
         new("sales", "orders", MaterialIconKind.ClipboardTextClockOutline, typeof(OrdersViewModel), "sales.view", "ordering"),
         new("sales", "returns", MaterialIconKind.KeyboardReturn, typeof(ReturnsViewModel), "returns.view"),
         new("sales", "customers", MaterialIconKind.AccountGroup, typeof(CustomersViewModel), "customers.view"),
-        new("sales", "partners", MaterialIconKind.HandshakeOutline, typeof(PartnersViewModel), "partners.view", "partners"),
         new("inventory", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
         new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),
         new("inventory", "supplies", MaterialIconKind.TruckCheckOutline, typeof(SuppliesViewModel), "supplies.view"),

@@ -2,13 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-export interface PartnerSpecialty {
-  id: number;
-  name: string;
-  isEnabled: boolean;
-  sortOrder: number;
-}
-
 export interface Partner {
   id: number;
   partyId: number;
@@ -25,7 +18,6 @@ export interface Partner {
   redeemed: number;
   score: number;
   note: string | null;
-  specialties: PartnerSpecialty[] | null;
   publicConsent: string;
   publicVisible: boolean;
   publicPhoneVisible: boolean;
@@ -40,7 +32,16 @@ export interface SavePartner {
   address?: string | null;
   isEnabled?: boolean;
   note?: string | null;
-  specialtyIds?: number[];
+}
+
+export interface CustomerPartner {
+  partnerId: number;
+  isEnabled: boolean;
+  publicConsent: string;
+  publicVisible: boolean;
+  publicPhoneVisible: boolean;
+  publicDisplayName: string | null;
+  publicAbout: string | null;
 }
 
 export interface SetPartnerPublicity {
@@ -69,14 +70,12 @@ export class PartnersApi {
     return this.http.put<void>(`/api/partners/${id}`, body);
   }
 
-  specialties(includeDisabled = false): Observable<PartnerSpecialty[]> {
-    return this.http.get<PartnerSpecialty[]>('/api/partners/specialties', {
-      params: { includeDisabled },
-    });
+  forCustomer(customerId: number): Observable<CustomerPartner | null> {
+    return this.http.get<CustomerPartner | null>(`/api/partners/customers/${customerId}`);
   }
 
-  saveSpecialty(body: { id?: number | null; name: string; isEnabled?: boolean; sortOrder?: number }): Observable<number> {
-    return this.http.put<number>('/api/partners/specialties', body);
+  setForCustomer(customerId: number, isPartner: boolean): Observable<CustomerPartner | null> {
+    return this.http.put<CustomerPartner | null>(`/api/partners/customers/${customerId}`, { isPartner });
   }
 
   setPublicity(id: number, body: SetPartnerPublicity): Observable<void> {

@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
@@ -26,8 +26,6 @@ public sealed class PartnerProfile : AuditableEntity
     public DateOnly JoinedAt { get; set; }
     public string? Note { get; set; }
 
-    public ICollection<PartnerSpecialtyLink> Specialties { get; set; } = [];
-
     /// Consent is a fact about the person, kept apart from whether the shop is showing them right
     /// now: a shop may hide someone temporarily without revoking what they agreed to.
     public PublicConsentState PublicConsent { get; set; } = PublicConsentState.NotAsked;
@@ -41,28 +39,6 @@ public sealed class PartnerProfile : AuditableEntity
     public bool PublicPhoneVisible { get; set; }
     public string? PublicDisplayName { get; set; }
     public string? PublicAbout { get; set; }
-}
-
-/// What the partner does for a living — electrician, plumber. Deliberately not the same thing as
-/// the role they played in a sale (ParticipantRoleDefinition): an electrician can turn up as the
-/// "middleman" on a plumbing sale, and merging the two would break exactly there.
-public sealed class PartnerSpecialty : AuditableEntity
-{
-    public long BusinessId { get; set; }
-    public Business Business { get; set; } = null!;
-    public string Name { get; set; } = null!;
-    public bool IsEnabled { get; set; } = true;
-    public int SortOrder { get; set; }
-
-    public ICollection<PartnerSpecialtyLink> Partners { get; set; } = [];
-}
-
-public sealed class PartnerSpecialtyLink : BaseEntity
-{
-    public long PartnerProfileId { get; set; }
-    public PartnerProfile PartnerProfile { get; set; } = null!;
-    public long PartnerSpecialtyId { get; set; }
-    public PartnerSpecialty Specialty { get; set; } = null!;
 }
 
 public sealed class ParticipantRoleDefinition : AuditableEntity

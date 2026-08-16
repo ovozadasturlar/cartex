@@ -14,7 +14,6 @@ namespace Cartex.UiTests;
 public class ViewRenderTests
 {
     [AvaloniaTheory]
-    [InlineData(typeof(PartnersView))]
     [InlineData(typeof(ModulesView))]
     [InlineData(typeof(SalesPolicyView))]
     [InlineData(typeof(ConsolidatedActDialog))]

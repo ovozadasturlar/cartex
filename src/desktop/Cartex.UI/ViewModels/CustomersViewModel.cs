@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -6,6 +6,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Partners;
 using Cartex.Shared.Models.Sales;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -17,6 +18,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 {
     private readonly ICustomersApi _api;
     private readonly ISalesApi _salesApi;
+    private readonly IPartnersApi _partnersApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
@@ -54,6 +56,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editFullName = "";
     [ObservableProperty] private string _editLastName = "";
     [ObservableProperty] private string _editAddress = "";
+    [ObservableProperty] private string _editNote = "";
     [ObservableProperty] private string _editPhone = "";
     [ObservableProperty] private string _editEmail = "";
     [ObservableProperty] private string _editCardBarcode = "";
@@ -116,6 +119,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private void HandleEscape()
     {
+        if (IsPublicityOpen) { IsPublicityOpen = false; return; }
         if (IsRepayOpen) { IsRepayOpen = false; return; }
         if (IsMessageOpen) { IsMessageOpen = false; return; }
         if (IsEditOpen) { IsEditOpen = false; return; }
@@ -127,14 +131,119 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     {
         SelectedCustomer = customer;
         IsProfileOpen = true;
+        _ = LoadPartnerAsync(customer.Id);
     }
 
     [RelayCommand]
     private void CloseProfile()
     {
         IsProfileOpen = false;
+        IsPublicityOpen = false;
+        ShowPartner = false;
         SelectedCustomer = null;
     }
+
+    private CustomerPartnerDto? _partner;
+
+    [ObservableProperty] private bool _showPartner;
+    [ObservableProperty] private bool _isPartner;
+
+    public bool CanEditPartner => _auth.HasPermission("partners.edit");
+    public bool CanOpenPublicity => IsPartner && _auth.HasPermission("partners.publish");
+
+    partial void OnIsPartnerChanged(bool value) => OnPropertyChanged(nameof(CanOpenPublicity));
+
+    /// The partner module can be switched off or out of this user's reach; when its state cannot be
+    /// read there is nothing meaningful to offer, so the whole block stays hidden.
+    private async Task LoadPartnerAsync(long customerId)
+    {
+        ShowPartner = false;
+        _partner = null;
+        IsPartner = false;
+        if (!_auth.HasPermission("partners.view")) return;
+        try
+        {
+            _partner = await _partnersApi.GetForCustomerAsync(customerId);
+            IsPartner = _partner is { IsEnabled: true };
+            ShowPartner = true;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private async Task TogglePartnershipAsync()
+    {
+        if (!CanEditPartner || SelectedCustomer is not { } customer) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                _partner = await _partnersApi.SetForCustomerAsync(customer.Id,
+                    new SetCustomerPartnershipRequest(!IsPartner));
+            IsPartner = _partner is { IsEnabled: true };
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            OnPropertyChanged(nameof(IsPartner));
+        }
+    }
+
+    private static readonly string[] ConsentCodes = ["NotAsked", "Granted", "Declined", "Withdrawn"];
+    public ObservableCollection<string> ConsentOptions { get; } = [];
+
+    [ObservableProperty] private bool _isPublicityOpen;
+    [ObservableProperty] private int _consentIndex;
+    [ObservableProperty] private bool _publicVisible;
+    [ObservableProperty] private bool _publicPhoneVisible;
+    [ObservableProperty] private string _publicDisplayName = "";
+    [ObservableProperty] private string _publicAbout = "";
+
+    /// The visibility switches only mean anything once a yes is on file; the server refuses the
+    /// combination anyway, and hiding them here keeps the screen from suggesting otherwise.
+    public bool ConsentGranted => ConsentIndex == 1;
+
+    partial void OnConsentIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ConsentGranted));
+        if (value == 1) return;
+        PublicVisible = false;
+        PublicPhoneVisible = false;
+    }
+
+    [RelayCommand]
+    private void OpenPublicity()
+    {
+        if (!CanOpenPublicity || _partner is not { } partner) return;
+        ConsentIndex = Math.Max(0, Array.IndexOf(ConsentCodes, partner.PublicConsent));
+        PublicVisible = partner.PublicVisible;
+        PublicPhoneVisible = partner.PublicPhoneVisible;
+        PublicDisplayName = partner.PublicDisplayName ?? "";
+        PublicAbout = partner.PublicAbout ?? "";
+        IsPublicityOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelPublicity() => IsPublicityOpen = false;
+
+    [RelayCommand]
+    private async Task SavePublicityAsync()
+    {
+        if (!CanOpenPublicity || _partner is not { } partner || SelectedCustomer is not { } customer) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _partnersApi.SetPublicityAsync(partner.PartnerId, new SetPartnerPublicityRequest(
+                    ConsentCodes[Math.Clamp(ConsentIndex, 0, ConsentCodes.Length - 1)],
+                    PublicVisible, PublicPhoneVisible, Trim(PublicDisplayName), Trim(PublicAbout)));
+            IsPublicityOpen = false;
+            _toast.Success(L["success"]);
+            await LoadPartnerAsync(customer.Id);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private static string? Trim(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private decimal RateOf(string? code) => code is null || code == _baseCurrency ? 1m : _rates.GetValueOrDefault(code, 0m);
 
@@ -184,10 +293,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public string EditTitle => L[IsNew ? "customer_new" : "customer_edit"];
     partial void OnIsNewChanged(bool value) => OnPropertyChanged(nameof(EditTitle));
-    public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen;
+    public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen || IsPublicityOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsPublicityOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     public bool CanCreate => _auth.HasPermission("customers.create");
     public bool CanEdit => _auth.HasPermission("customers.edit");
     public bool CanMessage => _auth.HasPermission("customers.message");
@@ -219,8 +329,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     public CustomersViewModel(ICustomersApi api, ISalesApi salesApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, ReceiptDialogService receiptDialog,
         ICustomerPaymentsApi paymentsApi, IDialogService dialog, PrintDispatchService print,
-        ICustomerRefundsApi refundsApi)
+        ICustomerRefundsApi refundsApi, IPartnersApi partnersApi)
     {
+        _partnersApi = partnersApi;
         _refundsApi = refundsApi;
         _print = print;
         _receiptDialog = receiptDialog;
@@ -238,6 +349,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         _auth.LoggedOut += ResetState;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["date"], "CreatedAt")]);
+        foreach (var code in ConsentCodes) ConsentOptions.Add(L[$"consent_{code.ToLowerInvariant()}"]);
         LedgerPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadLedgerAsync(_ledgerCustomerId, NewLedgerToken()));
         SalesPaging.Attach(() => _ledgerCustomerId == 0 ? Task.CompletedTask : LoadSalesAsync(_ledgerCustomerId));
     }
@@ -306,7 +418,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         IsEditOpen = false;
         IsMessageOpen = false;
         IsRepayOpen = false;
+        IsPublicityOpen = false;
         IsProfileOpen = false;
+        ShowPartner = false;
         ProfileTab = "ledger";
         SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
@@ -317,6 +431,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         IsEditOpen = false;
         IsMessageOpen = false;
         IsRepayOpen = false;
+        IsPublicityOpen = false;
         IsProfileOpen = false;
     }
 
@@ -350,6 +465,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanViewSales));
         OnPropertyChanged(nameof(CanRepay));
         OnPropertyChanged(nameof(CanPayOut));
+        OnPropertyChanged(nameof(CanEditPartner));
+        OnPropertyChanged(nameof(CanOpenPublicity));
     }
 
     public async Task LoadAsync()
@@ -541,6 +658,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditFullName = "";
         EditLastName = "";
         EditAddress = "";
+        EditNote = "";
         EditPhone = "";
         EditEmail = "";
         EditCardBarcode = "";
@@ -567,6 +685,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditFullName = customer.FullName;
         EditLastName = customer.LastName ?? "";
         EditAddress = customer.Address ?? "";
+        EditNote = customer.Note ?? "";
         EditPhone = customer.Phone ?? "";
         EditEmail = customer.Email ?? "";
         EditCardBarcode = customer.CardBarcode ?? "";
@@ -593,6 +712,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         var card = string.IsNullOrWhiteSpace(EditCardBarcode) ? null : EditCardBarcode.Trim();
         var lastName = string.IsNullOrWhiteSpace(EditLastName) ? null : EditLastName.Trim();
         var address = string.IsNullOrWhiteSpace(EditAddress) ? null : EditAddress.Trim();
+        var note = string.IsNullOrWhiteSpace(EditNote) ? null : EditNote.Trim();
         try
         {
             long targetId;
@@ -602,11 +722,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
                 {
                     var opening = EditOpeningKindIndex == 1 ? -EditOpeningBalance : EditOpeningBalance;
                     targetId = await _api.CreateAsync(new CreateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut,
-                        opening, IsMulticurrency ? EditOpeningCurrency : null, EditLanguage));
+                        opening, IsMulticurrency ? EditOpeningCurrency : null, EditLanguage, Note: note));
                 }
                 else
                 {
-                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage));
+                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage, note));
                     targetId = _editId;
                 }
             }

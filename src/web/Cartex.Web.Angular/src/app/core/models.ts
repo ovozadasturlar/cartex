@@ -107,6 +107,7 @@ export interface Customer {
   creditLimit: number;
   hasTelegram: boolean;
   debtBalances: CurrencyAmount[];
+  note?: string | null;
 }
 
 export interface CustomerTotals {

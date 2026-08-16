@@ -14,6 +14,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CustomersApi, SalesApi } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
+import { CustomerPartner, PartnersApi } from '../../core/api/partners.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
@@ -31,12 +32,21 @@ const statusKeys: Record<string, string> = {
   PartialReturn: 'status_partial_return',
 };
 
+// "Granted" is the only state that lets anything be published; the server enforces the same.
+const consentOptions = [
+  { value: 'NotAsked', key: 'consent_notasked' },
+  { value: 'Granted', key: 'consent_granted' },
+  { value: 'Declined', key: 'consent_declined' },
+  { value: 'Withdrawn', key: 'consent_withdrawn' },
+];
+
 @Component({
   selector: 'app-customer-profile',
   imports: [
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    MatSlideToggleModule,
     MatTableModule,
     TranslocoModule,
     CxDatePipe,
@@ -51,6 +61,7 @@ const statusKeys: Record<string, string> = {
 export class CustomerProfile implements OnInit {
   private readonly api = inject(CustomersApi);
   private readonly salesApi = inject(SalesApi);
+  private readonly partnersApi = inject(PartnersApi);
   private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
@@ -64,6 +75,12 @@ export class CustomerProfile implements OnInit {
   readonly canRepay = this.auth.hasPermission('customers.receivePayment');
   readonly canPayOut = this.auth.hasPermission('customers.refund');
   readonly canViewSales = this.auth.hasPermission('sales.view');
+  readonly canEditPartner = this.auth.hasPermission('partners.edit');
+  readonly canPublishPartner = this.auth.hasPermission('partners.publish');
+  readonly showPartner = signal(false);
+  readonly isPartner = signal(false);
+  readonly partnerBusy = signal(false);
+  private partner: CustomerPartner | null = null;
   readonly loading = signal(true);
   readonly customer = signal<Customer | null>(null);
   readonly ledgerLoading = signal(true);
@@ -98,6 +115,7 @@ export class CustomerProfile implements OnInit {
   ngOnInit(): void {
     void this.load();
     void this.loadLedger();
+    void this.loadPartner();
   }
 
   back(): void {
@@ -183,6 +201,50 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
     } catch (e) {
       this.notify.error(e);
     }
+  }
+
+  // The partner module can be switched off or out of this user's reach; when its state cannot be
+  // read there is nothing meaningful to offer, so the whole block stays hidden.
+  private async loadPartner(): Promise<void> {
+    if (!this.auth.hasPermission('partners.view')) return;
+    try {
+      this.partner = await lastValueFrom(this.partnersApi.forCustomer(this.id));
+      this.isPartner.set(this.partner?.isEnabled ?? false);
+      this.showPartner.set(true);
+    } catch {
+      this.showPartner.set(false);
+    }
+  }
+
+  async togglePartnership(next: boolean, message: string): Promise<void> {
+    if (!this.canEditPartner) return;
+    this.isPartner.set(next);
+    this.partnerBusy.set(true);
+    try {
+      this.partner = await lastValueFrom(this.partnersApi.setForCustomer(this.id, next));
+      this.isPartner.set(this.partner?.isEnabled ?? false);
+      this.notify.success(message);
+    } catch (e) {
+      this.notify.error(e);
+      this.isPartner.set(!next);
+    } finally {
+      this.partnerBusy.set(false);
+    }
+  }
+
+  async publicity(): Promise<void> {
+    if (!this.canPublishPartner || !this.partner) return;
+    const saved: boolean | undefined = await lastValueFrom(
+      this.dialog
+        .open<PartnerPublicityDialog, CustomerPartner, boolean>(PartnerPublicityDialog, {
+          data: this.partner,
+          width: '460px',
+          maxWidth: '94vw',
+          autoFocus: false,
+        })
+        .afterClosed(),
+    );
+    if (saved) void this.loadPartner();
   }
 
   private async load(): Promise<void> {
@@ -280,6 +342,10 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
             <input matInput type="number" min="0" [(ngModel)]="creditLimit" />
           </mat-form-field>
         </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('description') }}</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="note"></textarea>
+        </mat-form-field>
       </div>
       <div mat-dialog-actions align="end">
         <button matButton mat-dialog-close>{{ t('cancel') }}</button>
@@ -306,6 +372,7 @@ export class CustomerEditDialog {
   cardBarcode = this.customer?.cardBarcode ?? '';
   discountPct = this.customer?.discountPct ?? 0;
   creditLimit = this.customer?.creditLimit ?? 0;
+  note = this.customer?.note ?? '';
 
   async save(message: string): Promise<void> {
     this.busy.set(true);
@@ -320,11 +387,93 @@ export class CustomerEditDialog {
           discountPct: this.discountPct || 0,
           creditLimit: this.creditLimit || 0,
           notificationsOptOut: this.customer?.notificationsOptOut ?? false,
+          note: this.note.trim() || null,
       };
       if (this.customer)
         await lastValueFrom(this.api.update(this.customer.id, { ...body, phone: body.phone ?? '' }));
       else
         await lastValueFrom(this.api.create({ ...body, openingBalance: 0 }));
+      this.notify.success(message);
+      this.ref.close(true);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+}
+
+@Component({
+  selector: 'app-partner-publicity-dialog',
+  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, TranslocoModule],
+  styleUrl: './customer-profile.scss',
+  template: `
+    <div class="edit-dlg" *transloco="let t">
+      <div class="head">
+        <h2>{{ t('public_page') }}</h2>
+      </div>
+      <div mat-dialog-content class="form">
+        <p class="hint">{{ t('public_consent_hint') }}</p>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+          <mat-label>{{ t('consent') }}</mat-label>
+          <mat-select [(ngModel)]="consent" (ngModelChange)="onConsentChange()">
+            @for (c of consentOptions; track c.value) {
+              <mat-option [value]="c.value">{{ t(c.key) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (consent === 'Granted') {
+          <mat-slide-toggle [(ngModel)]="publicVisible">{{ t('show_on_public_page') }}</mat-slide-toggle>
+          <mat-slide-toggle [(ngModel)]="publicPhoneVisible">{{ t('show_phone_publicly') }}</mat-slide-toggle>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+            <mat-label>{{ t('public_display_name') }}</mat-label>
+            <input matInput [(ngModel)]="publicDisplayName" maxlength="120" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+            <mat-label>{{ t('public_about') }}</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="publicAbout" maxlength="600"></textarea>
+          </mat-form-field>
+        }
+      </div>
+      <div mat-dialog-actions align="end">
+        <button matButton mat-dialog-close>{{ t('cancel') }}</button>
+        <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">{{ t('save') }}</button>
+      </div>
+    </div>
+  `,
+})
+export class PartnerPublicityDialog {
+  private readonly api = inject(PartnersApi);
+  private readonly notify = inject(NotifyService);
+  private readonly ref = inject(MatDialogRef<PartnerPublicityDialog>);
+  private readonly partner = inject<CustomerPartner>(MAT_DIALOG_DATA);
+
+  readonly busy = signal(false);
+  readonly consentOptions = consentOptions;
+  consent = this.partner.publicConsent || 'NotAsked';
+  publicVisible = this.partner.publicVisible;
+  publicPhoneVisible = this.partner.publicPhoneVisible;
+  publicDisplayName = this.partner.publicDisplayName ?? '';
+  publicAbout = this.partner.publicAbout ?? '';
+
+  onConsentChange(): void {
+    if (this.consent === 'Granted') return;
+    this.publicVisible = false;
+    this.publicPhoneVisible = false;
+  }
+
+  async save(message: string): Promise<void> {
+    this.busy.set(true);
+    try {
+      await lastValueFrom(
+        this.api.setPublicity(this.partner.partnerId, {
+          consent: this.consent,
+          publicVisible: this.publicVisible,
+          publicPhoneVisible: this.publicPhoneVisible,
+          publicDisplayName: this.publicDisplayName.trim() || null,
+          publicAbout: this.publicAbout.trim() || null,
+        }),
+      );
       this.notify.success(message);
       this.ref.close(true);
     } catch (e) {

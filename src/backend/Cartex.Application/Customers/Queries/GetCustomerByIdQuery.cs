@@ -1,4 +1,4 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
@@ -35,7 +35,8 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
                 c.TelegramChatId != null,
                 c.PreferredLanguage,
                 c.Accounts.Where(a => a.Type == AccountType.CustomerAdvance).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
-                    : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault()))))
+                    : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
+                c.Party.Note))
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

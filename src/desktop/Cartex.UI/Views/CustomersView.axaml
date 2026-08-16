@@ -266,6 +266,23 @@
                 </Border>
             </Grid>
 
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="18,14"
+                    Margin="0,0,0,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding ShowPartner}">
+                <Grid ColumnDefinitions="Auto,10,Auto,*,Auto">
+                    <mi:MaterialIcon Kind="HandshakeOutline" Width="18" Height="18" VerticalAlignment="Center"
+                                     Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="2" Text="{Binding L[partner]}" VerticalAlignment="Center"
+                               FontSize="13.5" FontWeight="SemiBold" />
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Button Classes="outline" Command="{Binding OpenPublicityCommand}"
+                                IsVisible="{Binding CanOpenPublicity}" Content="{Binding L[public_page]}" />
+                        <ToggleSwitch IsChecked="{Binding IsPartner, Mode=OneWay}" IsEnabled="{Binding CanEditPartner}"
+                                      Command="{Binding TogglePartnershipCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <Panel DockPanel.Dock="Top" Margin="0,0,0,10">
                 <TextBlock Text="{Binding L[recent_transactions]}" FontWeight="SemiBold" FontSize="15"
                            Foreground="{DynamicResource TextPrimary}" IsVisible="{Binding !CanViewSales}" />
@@ -462,6 +479,11 @@
                         <ComboBox ItemsSource="{Binding CustomerLanguages}" SelectedItem="{Binding EditLanguage}"
                                   MinWidth="160" MinHeight="36" HorizontalAlignment="Left" />
                     </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[description]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding EditNote}" AcceptsReturn="True" TextWrapping="Wrap"
+                                 MinHeight="70" MaxHeight="140" />
+                    </StackPanel>
                     <CheckBox IsChecked="{Binding EditNotificationsOptOut}" Content="{Binding L[notifications_opt_out]}" />
                     <StackPanel Spacing="5" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -489,6 +511,39 @@
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[message_text]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding MessageText}" MinHeight="90" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000" />
+                    </StackPanel>
+                </StackPanel>
+        </c:ModalCard>
+
+        <c:ModalCard IsOpen="{Binding IsPublicityOpen}" Title="{Binding L[public_page]}" CardWidth="520"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelPublicityCommand}" SaveCommand="{Binding SavePublicityCommand}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[public_consent_hint]}" Foreground="{DynamicResource TextMuted}"
+                               FontSize="11.5" TextWrapping="Wrap" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[consent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding ConsentOptions}" SelectedIndex="{Binding ConsentIndex}"
+                                  HorizontalAlignment="Stretch" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Spacing="14" IsVisible="{Binding ConsentGranted}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[show_on_public_page]}" VerticalAlignment="Center" FontSize="12.5" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PublicVisible}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[show_phone_publicly]}" VerticalAlignment="Center" FontSize="12.5" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PublicPhoneVisible}" />
+                        </Grid>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[public_display_name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding PublicDisplayName}" MinHeight="38" />
+                        </StackPanel>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[public_about]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding PublicAbout}" MinHeight="80" AcceptsReturn="True"
+                                     TextWrapping="Wrap" MaxLength="600" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
         </c:ModalCard>

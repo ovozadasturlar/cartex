@@ -1,4 +1,4 @@
-namespace Cartex.Shared.Models.Partners;
+﻿namespace Cartex.Shared.Models.Partners;
 
 public sealed record ParticipantSelectionRequest(long RoleDefinitionId, long PartyId);
 
@@ -8,8 +8,7 @@ public sealed record CreatePartnerRequest(
     string? Email = null,
     string? Address = null,
     long? CustomerId = null,
-    string? Note = null,
-    List<long>? SpecialtyIds = null);
+    string? Note = null);
 
 public sealed record UpdatePartnerRequest(
     string FullName,
@@ -17,10 +16,7 @@ public sealed record UpdatePartnerRequest(
     string? Email = null,
     string? Address = null,
     bool IsEnabled = true,
-    string? Note = null,
-    List<long>? SpecialtyIds = null);
-
-public sealed record PartnerSpecialtyDto(long Id, string Name, bool IsEnabled, int SortOrder);
+    string? Note = null);
 
 /// Consent state as recorded, not as displayed: "NotAsked", "Granted", "Declined", "Withdrawn".
 public sealed record SetPartnerPublicityRequest(
@@ -30,7 +26,18 @@ public sealed record SetPartnerPublicityRequest(
     string? PublicDisplayName = null,
     string? PublicAbout = null);
 
-public sealed record SavePartnerSpecialtyRequest(long? Id, string Name, bool IsEnabled = true, int SortOrder = 0);
+public sealed record SetCustomerPartnershipRequest(bool IsPartner);
+
+/// Partnership as the customer profile sees it: a flag on the person plus what they agreed to have
+/// published. The reward figures are deliberately absent — the score is an internal tool (HAMKOR-10).
+public sealed record CustomerPartnerDto(
+    long PartnerId,
+    bool IsEnabled,
+    string PublicConsent,
+    bool PublicVisible,
+    bool PublicPhoneVisible,
+    string? PublicDisplayName,
+    string? PublicAbout);
 
 public sealed record PartnerDto(
     long Id,
@@ -48,7 +55,6 @@ public sealed record PartnerDto(
     decimal Redeemed,
     decimal Score,
     string? Note,
-    IReadOnlyList<PartnerSpecialtyDto>? Specialties = null,
     string PublicConsent = "NotAsked",
     bool PublicVisible = false,
     bool PublicPhoneVisible = false,

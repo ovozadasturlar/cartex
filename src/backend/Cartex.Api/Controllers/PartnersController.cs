@@ -1,4 +1,4 @@
-using Cartex.Application.Partners.Commands;
+﻿using Cartex.Application.Partners.Commands;
 using Cartex.Application.Partners.Queries;
 using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Authorization;
@@ -26,16 +26,28 @@ public sealed class PartnersController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Partners.Edit)]
     public async Task<ActionResult<long>> Create(CreatePartnerRequest request) =>
         Ok(await sender.Send(new CreatePartnerCommand(request.FullName, request.Phone, request.Email,
-            request.Address, request.CustomerId, request.Note, request.SpecialtyIds)));
+            request.Address, request.CustomerId, request.Note)));
 
     [HttpPut("{id:long}")]
     [HasPermission(AppPermissions.Partners.Edit)]
     public async Task<IActionResult> Update(long id, UpdatePartnerRequest request)
     {
         await sender.Send(new UpdatePartnerCommand(id, request.FullName, request.Phone,
-            request.Email, request.Address, request.IsEnabled, request.Note, request.SpecialtyIds));
+            request.Email, request.Address, request.IsEnabled, request.Note));
         return NoContent();
     }
+
+    [HttpGet("customers/{customerId:long}")]
+    [HasPermission(AppPermissions.Partners.View)]
+    public async Task<ActionResult<CustomerPartnerDto?>> ForCustomer(long customerId) =>
+        Ok(await sender.Send(new GetCustomerPartnerQuery(customerId)));
+
+    [HttpPut("customers/{customerId:long}")]
+    [HasPermission(AppPermissions.Partners.Edit)]
+    public async Task<ActionResult<CustomerPartnerDto?>> SetForCustomer(
+        long customerId,
+        SetCustomerPartnershipRequest request) =>
+        Ok(await sender.Send(new SetCustomerPartnershipCommand(customerId, request.IsPartner)));
 
     [HttpPut("{id:long}/publicity")]
     [HasPermission(AppPermissions.Partners.Publish)]
@@ -47,17 +59,6 @@ public sealed class PartnersController(ISender sender) : ControllerBase
             request.PublicPhoneVisible, request.PublicDisplayName, request.PublicAbout));
         return NoContent();
     }
-
-    [HttpGet("specialties")]
-    [HasPermission(AppPermissions.Partners.View)]
-    public async Task<ActionResult<IReadOnlyList<PartnerSpecialtyDto>>> GetSpecialties([FromQuery] bool includeDisabled = false) =>
-        Ok(await sender.Send(new GetPartnerSpecialtiesQuery(includeDisabled)));
-
-    [HttpPut("specialties")]
-    [HasPermission(AppPermissions.Partners.Edit)]
-    public async Task<ActionResult<long>> SaveSpecialty(SavePartnerSpecialtyRequest request) =>
-        Ok(await sender.Send(new SavePartnerSpecialtyCommand(
-            request.Id, request.Name, request.IsEnabled, request.SortOrder)));
 
     [HttpGet("{partnerId:long}/rewards")]
     [HasPermission(AppPermissions.PartnerRewards.View)]

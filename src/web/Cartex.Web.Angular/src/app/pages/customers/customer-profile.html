@@ -64,6 +64,21 @@
       <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit | cxMoney" icon="credit_score" />
     </div>
 
+    @if (showPartner()) {
+      <div class="cx-card partner">
+        <mat-icon>handshake</mat-icon>
+        <span class="label">{{ t('partner') }}</span>
+        @if (isPartner() && canPublishPartner) {
+          <button matButton="outlined" (click)="publicity()">{{ t('public_page') }}</button>
+        }
+        <mat-slide-toggle
+          [checked]="isPartner()"
+          [disabled]="!canEditPartner || partnerBusy()"
+          (change)="togglePartnership($event.checked, t('success'))"
+        />
+      </div>
+    }
+
     @if (canViewSales) {
       <div class="cx-seg tabs">
         <button type="button" [class.active]="tab() === 'ledger'" (click)="setTab('ledger')">

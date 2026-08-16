@@ -1,4 +1,4 @@
-using Cartex.Application.Common;
+﻿using Cartex.Application.Common;
 using Cartex.Domain.Authorization;
 using FluentValidation;
 using Cartex.Persistence;
@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null) : ICommand<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
@@ -39,6 +39,9 @@ public sealed class CreateCustomerCommandHandler(
             Address = NormalizeOptional(request.Address)
         };
         if (party.Id == 0) db.Parties.Add(party);
+        // Izoh shaxsga tegishli (Party), mijoz yozuviga emas: bitta odam ham mijoz, ham hamkor
+        // bo'lishi mumkin va tavsif ikkalasida bir xil ko'rinishi kerak.
+        if (!string.IsNullOrWhiteSpace(request.Note)) party.Note = request.Note.Trim();
 
         var customer = new Customer
         {

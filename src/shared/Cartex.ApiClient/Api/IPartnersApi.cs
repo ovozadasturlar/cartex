@@ -1,4 +1,4 @@
-using Cartex.Shared.Models.Partners;
+﻿using Cartex.Shared.Models.Partners;
 using Refit;
 
 namespace Cartex.ApiClient.Api;
@@ -24,14 +24,15 @@ public interface IPartnersApi
         [Query] int page = 1,
         [Query] int pageSize = 50);
 
+    [Get("/api/partners/customers/{customerId}")]
+    Task<CustomerPartnerDto?> GetForCustomerAsync(long customerId);
+
+    [Put("/api/partners/customers/{customerId}")]
+    Task<CustomerPartnerDto?> SetForCustomerAsync(
+        long customerId, [Body] SetCustomerPartnershipRequest request);
+
     [Put("/api/partners/{id}/publicity")]
     Task SetPublicityAsync(long id, [Body] SetPartnerPublicityRequest request);
-
-    [Get("/api/partners/specialties")]
-    Task<List<PartnerSpecialtyDto>> GetSpecialtiesAsync([Query] bool includeDisabled = false);
-
-    [Put("/api/partners/specialties")]
-    Task<long> SaveSpecialtyAsync([Body] SavePartnerSpecialtyRequest request);
 
     [Get("/api/partners/roles")]
     Task<List<ParticipantRoleDto>> GetRolesAsync([Query] bool includeDisabled = false);

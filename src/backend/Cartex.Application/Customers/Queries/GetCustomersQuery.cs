@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
@@ -12,7 +12,7 @@ namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomersQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerDto>>;
 
-public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null, decimal CreditBalance = 0)
+public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null, decimal CreditBalance = 0, string? Note = null)
 {
     public IReadOnlyList<CurrencyAmountDto> DebtBalances { get; init; } = [];
     public IReadOnlyList<CurrencyAmountDto> CreditBalances { get; init; } = [];
@@ -51,7 +51,9 @@ public sealed class GetCustomersQueryHandler(
                         c.CreditLimit,
                         c.NotificationsOptOut,
                         c.TelegramChatId != null,
-                        c.PreferredLanguage),
+                        c.PreferredLanguage,
+                        0m,
+                        c.Party.Note),
                     Debts = db.Accounts
                         .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Debt && a.Balance != 0)
                         .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))

@@ -1,4 +1,4 @@
-using Cartex.Application.Common;
+﻿using Cartex.Application.Common;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using FluentValidation;
@@ -7,7 +7,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null) : ICommand<Unit>;
+public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<Unit>;
 
 public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCustomerCommand, Unit>
 {
@@ -33,6 +33,7 @@ public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurr
         party.Phone = customer.Phone;
         party.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         party.Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim();
+        party.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         if (request.PreferredLanguage is not null)
             customer.PreferredLanguage = request.PreferredLanguage;
         var assignedUserId = request.AssignedUserId ?? request.AgentId;
