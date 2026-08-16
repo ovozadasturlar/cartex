@@ -32,6 +32,7 @@
     <Project Path="tests/Cartex.ArchitectureTests/Cartex.ArchitectureTests.csproj" />
     <Project Path="tests/Cartex.Application.Tests/Cartex.Application.Tests.csproj" />
     <Project Path="tests/Cartex.UnitTests/Cartex.UnitTests.csproj" />
+    <Project Path="tests/Cartex.UiTests/Cartex.UiTests.csproj" />
     <Project Path="tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj" />
   </Folder>
 </Solution>

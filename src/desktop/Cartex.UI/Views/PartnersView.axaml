@@ -28,7 +28,7 @@
                 </Button>
             </Grid>
 
-            <TextBox DockPanel.Dock="Top" Text="{Binding SearchText}" Watermark="{Binding L[search]}"
+            <TextBox DockPanel.Dock="Top" Text="{Binding SearchText}" PlaceholderText="{Binding L[search]}"
                      MinHeight="38" Margin="0,0,0,12" />
 
             <c:Pager DockPanel.Dock="Bottom" State="{Binding Paging}" Margin="0,10,0,0" />
@@ -124,10 +124,10 @@
                   c:FormBehaviors.EscCancels="{Binding CloseEditCommand}">
             <StackPanel Margin="24" Spacing="10">
                 <TextBlock Text="{Binding L[partner]}" FontSize="18" FontWeight="Bold" />
-                <TextBox Text="{Binding EditName}" Watermark="{Binding L[full_name]}" MinHeight="38" />
-                <TextBox Text="{Binding EditPhone}" Watermark="{Binding L[phone]}" MinHeight="38" />
-                <TextBox Text="{Binding EditAddress}" Watermark="{Binding L[address]}" MinHeight="38" />
-                <TextBox Text="{Binding EditNote}" Watermark="{Binding L[note]}" MinHeight="38" />
+                <TextBox Text="{Binding EditName}" PlaceholderText="{Binding L[full_name]}" MinHeight="38" />
+                <TextBox Text="{Binding EditPhone}" PlaceholderText="{Binding L[phone]}" MinHeight="38" />
+                <TextBox Text="{Binding EditAddress}" PlaceholderText="{Binding L[address]}" MinHeight="38" />
+                <TextBox Text="{Binding EditNote}" PlaceholderText="{Binding L[note]}" MinHeight="38" />
                 <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsNew}">
                     <TextBlock Text="{Binding L[active]}" VerticalAlignment="Center" FontSize="12.5" />
                     <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditEnabled}" />
@@ -180,8 +180,8 @@
                         <TextBlock Text="{Binding L[show_phone_publicly]}" VerticalAlignment="Center" FontSize="12.5" />
                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding PublicPhoneVisible}" />
                     </Grid>
-                    <TextBox Text="{Binding PublicDisplayName}" Watermark="{Binding L[public_display_name]}" MinHeight="38" />
-                    <TextBox Text="{Binding PublicAbout}" Watermark="{Binding L[public_about]}"
+                    <TextBox Text="{Binding PublicDisplayName}" PlaceholderText="{Binding L[public_display_name]}" MinHeight="38" />
+                    <TextBox Text="{Binding PublicAbout}" PlaceholderText="{Binding L[public_about]}"
                              AcceptsReturn="True" MinHeight="70" TextWrapping="Wrap" />
                 </StackPanel>
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,6,0,0">
@@ -203,7 +203,7 @@
             <StackPanel Margin="24" Spacing="10">
                 <TextBlock Text="{Binding L[specialties]}" FontSize="18" FontWeight="Bold" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBox Text="{Binding SpecialtyName}" Watermark="{Binding L[name]}" MinHeight="38" />
+                    <TextBox Text="{Binding SpecialtyName}" PlaceholderText="{Binding L[name]}" MinHeight="38" />
                     <Button Grid.Column="1" Classes="brand" MinHeight="38" Padding="14,0"
                             Command="{Binding AddSpecialtyCommand}" Content="{Binding L[add]}" />
                 </Grid>

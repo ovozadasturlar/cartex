@@ -10,5 +10,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cartex.UnitTests/Cartex.UnitTests.csproj" />
+    <Project Path="tests/Cartex.UiTests/Cartex.UiTests.csproj" />
   </Folder>
 </Solution>

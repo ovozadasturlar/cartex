@@ -39,6 +39,11 @@ jobs:
       - name: API integration tests
         run: dotnet test tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj -c Release
 
+      # Screens are built and laid out headlessly so a binding that only breaks when the view is
+      # shown fails here, not in front of a cashier.
+      - name: Desktop UI render tests
+        run: dotnet test tests/Cartex.UiTests/Cartex.UiTests.csproj -c Release
+
   qodana:
     name: Qodana (${{ matrix.scope }})
     needs: build-and-test
