@@ -26,8 +26,8 @@ public sealed record UpdateCartCommand(
     decimal CreditAmount = 0,
     bool UseCustomerAdvance = true,
     int? ExpectedVersion = null,
-    decimal DiscountAmount = 0,
-    decimal RoundingAmount = 0) : ICommand<Unit>;
+    decimal? DiscountAmount = null,
+    decimal? RoundingAmount = null) : ICommand<Unit>;
 
 public sealed class UpdateCartCommandHandler(
     IApplicationDbContext db,
@@ -67,9 +67,14 @@ public sealed class UpdateCartCommandHandler(
             && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
+        // Berilmagan maydon saqlangan qiymatida qoladi: aks holda chegirmani qayta yubormagan
+        // klient uni jimgina nolga tushirib yuborardi (NAVBAT-01/02).
+        var discountAmount = request.DiscountAmount ?? cart.DiscountAmount;
+        var roundingAmount = request.RoundingAmount ?? cart.RoundingAmount;
+
         // Saqlangan qiymatni o'zgartirish ruxsat talab qiladi; tegilmagani esa yo'q.
-        if ((request.DiscountAmount != cart.DiscountAmount || request.RoundingAmount != cart.RoundingAmount)
-            && (request.DiscountAmount > 0 || request.RoundingAmount > 0)
+        if ((discountAmount != cart.DiscountAmount || roundingAmount != cart.RoundingAmount)
+            && (discountAmount > 0 || roundingAmount > 0)
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
@@ -100,8 +105,8 @@ public sealed class UpdateCartCommandHandler(
         cart.DebtDueDate = request.DebtDueDate;
         cart.CreditAmount = request.CreditAmount;
         cart.UseCustomerAdvance = request.UseCustomerAdvance;
-        cart.DiscountAmount = request.DiscountAmount;
-        cart.RoundingAmount = request.RoundingAmount;
+        cart.DiscountAmount = discountAmount;
+        cart.RoundingAmount = roundingAmount;
         cart.Items.Clear();
         foreach (var row in request.Items)
             cart.Items.Add(new CartItem

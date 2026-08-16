@@ -259,7 +259,37 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         Assert.Equal(Rounding, clone.Rounding);         // 1 550
     }
 
-    /// NAVBAT-01 through the edit path: the phone reopens a queued cart and saves it again.
+    /// NAVBAT-02 says an omitted field keeps its stored value. An edit that only changes the
+    /// items must therefore not silently wipe the discount the seller agreed with the customer.
+    [Fact]
+    public async Task NAVBAT_02_Editing_a_cart_without_resending_the_discount_keeps_it()
+    {
+        var s = await SetupAsync();
+        await SetPolicyAsync();
+        await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
+
+        var code = await QueueAsync(s, Manual, Rounding);
+
+        using (var scope = Fixture.CreateScope())
+        {
+            // Only the items are sent — no discount, no rounding.
+            await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartCommand(
+                code, null,
+                [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)]));
+        }
+
+        var edited = await CartAsync(code);
+        Assert.Equal(Manual, edited.Discount);
+        Assert.Equal(Rounding, edited.Rounding);
+
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, RoundedTotal, 0, 0));
+        var sale = await SaleAsync(s, saleId);
+
+        Assert.Equal(SaleDiscount, sale.Discount);
+        Assert.Equal(Rounding, sale.Rounding);
+        Assert.Equal(RoundedTotal, sale.Total);
+    }
+
     [Fact]
     public async Task NAVBAT_01_Editing_a_queued_cart_keeps_the_discount_through_checkout()
     {

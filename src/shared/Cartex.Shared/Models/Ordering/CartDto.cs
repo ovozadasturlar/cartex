@@ -78,8 +78,8 @@ public sealed record UpdateCartRequest(
     decimal CreditAmount = 0,
     bool UseCustomerAdvance = true,
     int? ExpectedVersion = null,
-    decimal DiscountAmount = 0,
-    decimal RoundingAmount = 0);
+    decimal? DiscountAmount = null,
+    decimal? RoundingAmount = null);
 
 public sealed record RequeueCartRequest(string? Note = null, string? IdempotencyKey = null);
 public sealed record RequeueCartResult(string AggregateCode, int Version);
