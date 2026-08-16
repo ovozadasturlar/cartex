@@ -245,6 +245,8 @@ export class LoyaltyApi {
 
   // The till has to show the same total the server will charge, so the automatic rules are
   // previewed the way the desktop does it instead of appearing only on the receipt.
+  // `total` is the discount the rules add up to, not the net basket — the name comes from the
+  // server contract and reading it as a net total silently turns a 0 into a 100% discount.
   previewDiscount(
     customerId: number | null,
     items: { variantId: number; quantity: number; unitPrice: number }[],

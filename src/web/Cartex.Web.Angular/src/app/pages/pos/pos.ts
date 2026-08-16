@@ -211,8 +211,7 @@ export class Pos implements OnInit {
       lastValueFrom(this.loyaltyApi.previewDiscount(customerId, items))
         .then((r) => {
           if (token !== this.previewToken) return;
-          const sub = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-          this.autoDiscount.set(Math.max(0, Math.round((sub - r.total) * 100) / 100));
+          this.autoDiscount.set(Math.max(0, r.total));
         })
         .catch(() => {
           if (token === this.previewToken) this.autoDiscount.set(0);
