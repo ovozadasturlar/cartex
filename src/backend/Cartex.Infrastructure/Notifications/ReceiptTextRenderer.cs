@@ -27,6 +27,8 @@ public static class ReceiptTextRenderer
         {
             sb.AppendLine(i.ProductName);
             sb.AppendLine($"  {i.Quantity:0.###} x {i.UnitPrice:N0} = {i.LineTotal:N0}");
+            if (i.DiscountAmount > 0)
+                sb.AppendLine($"  {T("discount")} −{i.DiscountAmount:N0} = {i.LineTotal - i.DiscountAmount:N0}");
         }
         sb.AppendLine("————————————");
         if (r.DiscountAmount > 0) sb.AppendLine($"{T("discount")}: {r.DiscountAmount:N0}");

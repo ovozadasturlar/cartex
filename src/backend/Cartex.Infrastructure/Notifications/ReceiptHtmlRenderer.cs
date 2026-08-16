@@ -79,7 +79,9 @@ public static class ReceiptHtmlRenderer
             sb.Append("<div class=\"item\"><div>");
             sb.Append($"<div class=\"iname\">{E(item.ProductName)}</div>");
             sb.Append($"<div class=\"iqty\">{item.Quantity:0.###} {E(item.UnitName)} × {item.UnitPrice:N0}</div>");
-            sb.Append($"</div><div class=\"isum\">{item.LineTotal:N0}</div></div>");
+            if (item.DiscountAmount > 0)
+                sb.Append($"<div class=\"iqty\">{T("discount")} −{item.DiscountAmount:N0}</div>");
+            sb.Append($"</div><div class=\"isum\">{item.LineTotal - item.DiscountAmount:N0}</div></div>");
         }
 
         sb.Append("<div class=\"totals\">");

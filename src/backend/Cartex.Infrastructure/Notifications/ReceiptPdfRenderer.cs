@@ -60,6 +60,12 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                             row.RelativeItem().Text($"{item.Quantity:0.###} {item.UnitName} x {item.UnitPrice:N0}");
                             row.ConstantItem(70).AlignRight().Text($"{item.LineTotal:N0}");
                         });
+                        if (item.DiscountAmount > 0)
+                            col.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text($"{T("discount")} −{item.DiscountAmount:N0}");
+                                row.ConstantItem(70).AlignRight().Text($"{item.LineTotal - item.DiscountAmount:N0}");
+                            });
                     }
 
                     col.Item().LineHorizontal(0.5f);
@@ -184,12 +190,14 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                 {
                     col.Item().Table(table =>
                     {
+                        var anyDiscount = receipt.Items.Any(x => x.DiscountAmount > 0);
                         table.ColumnsDefinition(columns =>
                         {
                             columns.ConstantColumn(a4 ? 28 : 22);
                             columns.RelativeColumn(5);
                             columns.RelativeColumn(2);
                             columns.RelativeColumn(2);
+                            if (anyDiscount) columns.RelativeColumn(2);
                             columns.RelativeColumn(2);
                         });
 
@@ -200,6 +208,7 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                             header.Cell().Element(Cell).Text(T("item")).SemiBold();
                             header.Cell().Element(Cell).AlignRight().Text(T("qty")).SemiBold();
                             header.Cell().Element(Cell).AlignRight().Text(T("price")).SemiBold();
+                            if (anyDiscount) header.Cell().Element(Cell).AlignRight().Text(T("discount")).SemiBold();
                             header.Cell().Element(Cell).AlignRight().Text(T("amount")).SemiBold();
                         });
 
@@ -212,7 +221,9 @@ public sealed class ReceiptPdfRenderer : IReceiptPdfRenderer
                             table.Cell().Element(Cell).Text(item.ProductName);
                             table.Cell().Element(Cell).AlignRight().Text($"{item.Quantity:0.###} {item.UnitName}");
                             table.Cell().Element(Cell).AlignRight().Text($"{item.UnitPrice:N0}");
-                            table.Cell().Element(Cell).AlignRight().Text($"{item.LineTotal:N0}").SemiBold();
+                            if (anyDiscount)
+                                table.Cell().Element(Cell).AlignRight().Text(item.DiscountAmount > 0 ? $"−{item.DiscountAmount:N0}" : "");
+                            table.Cell().Element(Cell).AlignRight().Text($"{item.LineTotal - item.DiscountAmount:N0}").SemiBold();
                         }
                     });
 

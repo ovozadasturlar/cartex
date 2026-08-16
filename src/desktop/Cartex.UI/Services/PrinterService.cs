@@ -635,6 +635,8 @@ public sealed class PrinterService : IPrinterService
         {
             sb.AppendLine(i.ProductName);
             sb.AppendLine(Row($"  {i.Quantity:0.###} x {i.UnitPrice:N0}", $"{i.LineTotal:N0}", w));
+            if (i.DiscountAmount > 0)
+                sb.AppendLine(Row($"  {T("discount")} −{i.DiscountAmount:N0}", $"{i.LineTotal - i.DiscountAmount:N0}", w));
         }
         sb.AppendLine(new string('-', w));
         if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));

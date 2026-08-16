@@ -1,6 +1,10 @@
 namespace Cartex.Shared.Models.Sales;
 
-public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal);
+public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal, decimal DiscountAmount = 0)
+{
+    public bool HasDiscount => DiscountAmount > 0;
+    public decimal NetTotal => LineTotal - DiscountAmount;
+}
 
 public record ReceiptPaymentDto(string Method, string Currency, decimal Amount, decimal Rate = 1m, decimal AmountBase = 0, bool IsForeign = false);
 
