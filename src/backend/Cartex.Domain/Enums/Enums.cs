@@ -241,3 +241,22 @@ public enum CartStatus
     CheckedOut,
     Cancelled
 }
+
+/// Whether a partner agreed to appear on the shop's public page. A single bool cannot tell
+/// "we never asked" from "they said no" from "they took it back", and publishing a real person's
+/// name is not a place to guess.
+public enum PublicConsentState
+{
+    NotAsked,
+    Granted,
+    Declined,
+    Withdrawn
+}
+
+/// Who put the consent on record. A shop employee ticking a box and the person themselves saying
+/// yes in their own app are not the same weight of evidence, and self-service is coming.
+public enum PublicConsentSource
+{
+    Staff,
+    SelfService
+}

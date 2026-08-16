@@ -27,6 +27,20 @@ public sealed class PartnerProfile : AuditableEntity
     public string? Note { get; set; }
 
     public ICollection<PartnerSpecialtyLink> Specialties { get; set; } = [];
+
+    /// Consent is a fact about the person, kept apart from whether the shop is showing them right
+    /// now: a shop may hide someone temporarily without revoking what they agreed to.
+    public PublicConsentState PublicConsent { get; set; } = PublicConsentState.NotAsked;
+    public DateTime? PublicConsentAt { get; set; }
+    public long? PublicConsentByUserId { get; set; }
+    public PublicConsentSource PublicConsentSource { get; set; } = PublicConsentSource.Staff;
+
+    /// Agreeing to be listed is not the same as agreeing to publish a phone number, so the two
+    /// are asked and stored separately.
+    public bool PublicVisible { get; set; }
+    public bool PublicPhoneVisible { get; set; }
+    public string? PublicDisplayName { get; set; }
+    public string? PublicAbout { get; set; }
 }
 
 /// What the partner does for a living — electrician, plumber. Deliberately not the same thing as

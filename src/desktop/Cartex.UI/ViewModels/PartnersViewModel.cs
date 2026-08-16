@@ -33,6 +33,7 @@ public partial class PartnersViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _auth = auth;
         Paging.Attach(LoadAsync);
+        foreach (var code in ConsentCodes) ConsentOptions.Add(L[$"consent_{code.ToLowerInvariant()}"]);
     }
 
     public ObservableCollection<PartnerDto> Partners { get; } = [];
@@ -56,6 +57,30 @@ public partial class PartnersViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private bool _isSpecialtyOpen;
     [ObservableProperty] private string _specialtyName = "";
+
+    [ObservableProperty] private bool _isPublicityOpen;
+    [ObservableProperty] private int _consentIndex;
+    [ObservableProperty] private bool _publicVisible;
+    [ObservableProperty] private bool _publicPhoneVisible;
+    [ObservableProperty] private string _publicDisplayName = "";
+    [ObservableProperty] private string _publicAbout = "";
+
+    private static readonly string[] ConsentCodes = ["NotAsked", "Granted", "Declined", "Withdrawn"];
+    public ObservableCollection<string> ConsentOptions { get; } = [];
+
+    /// The visibility switches only mean anything once a yes is on file; the server refuses the
+    /// combination anyway, and hiding them here keeps the screen from suggesting otherwise.
+    public bool ConsentGranted => ConsentIndex == 1;
+
+    partial void OnConsentIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ConsentGranted));
+        if (value == 1) return;
+        PublicVisible = false;
+        PublicPhoneVisible = false;
+    }
+
+    public bool CanPublish => _auth.HasPermission("partners.publish");
 
     public bool CanEdit => _auth.HasPermission("partners.edit");
     public bool HasSelection => SelectedPartner is not null;
@@ -159,6 +184,39 @@ public partial class PartnersViewModel : ViewModelBase, ILoadable
                         EditName.Trim(), Trim(EditPhone), null, Trim(EditAddress), EditEnabled, Trim(EditNote), picked));
             }
             IsEditOpen = false;
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void OpenPublicity()
+    {
+        if (!CanPublish || SelectedPartner is not { } partner) return;
+        ConsentIndex = Math.Max(0, Array.IndexOf(ConsentCodes, partner.PublicConsent));
+        PublicVisible = partner.PublicVisible;
+        PublicPhoneVisible = partner.PublicPhoneVisible;
+        PublicDisplayName = partner.PublicDisplayName ?? "";
+        PublicAbout = partner.PublicAbout ?? "";
+        IsPublicityOpen = true;
+    }
+
+    [RelayCommand]
+    private void ClosePublicity() => IsPublicityOpen = false;
+
+    [RelayCommand]
+    private async Task SavePublicityAsync()
+    {
+        if (!CanPublish || SelectedPartner is not { } partner) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _api.SetPublicityAsync(partner.Id, new SetPartnerPublicityRequest(
+                    ConsentCodes[Math.Clamp(ConsentIndex, 0, ConsentCodes.Length - 1)],
+                    PublicVisible, PublicPhoneVisible,
+                    Trim(PublicDisplayName), Trim(PublicAbout)));
+            IsPublicityOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();
         }

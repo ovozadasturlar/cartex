@@ -210,6 +210,7 @@ public static class AppPermissions
         public const string View = "partners.view";
         public const string Edit = "partners.edit";
         public const string ConfigureRoles = "partners.roles.configure";
+        public const string Publish = "partners.publish";
     }
 
     public static class PartnerRewards
@@ -433,6 +434,7 @@ public static class AppPermissions
             P(Partners.View, "View external business partners", true),
             P(Partners.Edit, "Create and edit external business partners", true, Partners.View),
             P(Partners.ConfigureRoles, "Configure participant roles and labels", false, Partners.View),
+            P(Partners.Publish, "Record consent and publish a partner on the public page", false, Partners.Edit),
             P(PartnerRewards.View, "View partner rewards and rankings", true, Partners.View),
             P(PartnerRewards.Configure, "Configure partner reward programs", false, PartnerRewards.View, Partners.ConfigureRoles),
             P(PartnerRewards.Redeem, "Redeem or pay partner rewards", true, PartnerRewards.View),

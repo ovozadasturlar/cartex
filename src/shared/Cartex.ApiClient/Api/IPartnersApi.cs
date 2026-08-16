@@ -24,6 +24,9 @@ public interface IPartnersApi
         [Query] int page = 1,
         [Query] int pageSize = 50);
 
+    [Put("/api/partners/{id}/publicity")]
+    Task SetPublicityAsync(long id, [Body] SetPartnerPublicityRequest request);
+
     [Get("/api/partners/specialties")]
     Task<List<PartnerSpecialtyDto>> GetSpecialtiesAsync([Query] bool includeDisabled = false);
 

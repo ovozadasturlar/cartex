@@ -29,6 +29,11 @@ public sealed class PartnerProfileConfiguration : IEntityTypeConfiguration<Partn
         builder.ToTable("partner_profiles");
         builder.Property(x => x.PartnerCode).HasMaxLength(40).IsRequired();
         builder.Property(x => x.Note).HasMaxLength(1000);
+        builder.Property(x => x.PublicConsent).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.PublicConsentSource).HasConversion<string>().HasMaxLength(15);
+        builder.Property(x => x.PublicDisplayName).HasMaxLength(120);
+        builder.Property(x => x.PublicAbout).HasMaxLength(600);
+        builder.HasIndex(x => x.PublicVisible);
         builder.HasIndex(x => x.PartyId).IsUnique();
         builder.HasIndex(x => x.PartnerCode).IsUnique();
         builder.HasOne(x => x.Party).WithOne(x => x.PartnerProfile)

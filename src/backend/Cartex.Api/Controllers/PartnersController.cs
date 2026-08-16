@@ -37,6 +37,17 @@ public sealed class PartnersController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id:long}/publicity")]
+    [HasPermission(AppPermissions.Partners.Publish)]
+    public async Task<IActionResult> SetPublicity(long id, SetPartnerPublicityRequest request)
+    {
+        if (!Enum.TryParse<Cartex.Domain.Enums.PublicConsentState>(request.Consent, true, out var consent))
+            return BadRequest();
+        await sender.Send(new SetPartnerPublicityCommand(id, consent, request.PublicVisible,
+            request.PublicPhoneVisible, request.PublicDisplayName, request.PublicAbout));
+        return NoContent();
+    }
+
     [HttpGet("specialties")]
     [HasPermission(AppPermissions.Partners.View)]
     public async Task<ActionResult<IReadOnlyList<PartnerSpecialtyDto>>> GetSpecialties([FromQuery] bool includeDisabled = false) =>

@@ -65,7 +65,12 @@ public sealed class GetPartnersQueryHandler(
             x.Note,
             x.Specialties.OrderBy(l => l.Specialty.SortOrder).ThenBy(l => l.Specialty.Name)
                 .Select(l => new PartnerSpecialtyDto(
-                    l.Specialty.Id, l.Specialty.Name, l.Specialty.IsEnabled, l.Specialty.SortOrder)).ToList()),
+                    l.Specialty.Id, l.Specialty.Name, l.Specialty.IsEnabled, l.Specialty.SortOrder)).ToList(),
+            x.PublicConsent.ToString(),
+            x.PublicVisible,
+            x.PublicPhoneVisible,
+            x.PublicDisplayName,
+            x.PublicAbout),
             writer, cancellationToken);
     }
 }

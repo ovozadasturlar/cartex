@@ -22,6 +22,14 @@ public sealed record UpdatePartnerRequest(
 
 public sealed record PartnerSpecialtyDto(long Id, string Name, bool IsEnabled, int SortOrder);
 
+/// Consent state as recorded, not as displayed: "NotAsked", "Granted", "Declined", "Withdrawn".
+public sealed record SetPartnerPublicityRequest(
+    string Consent,
+    bool PublicVisible = false,
+    bool PublicPhoneVisible = false,
+    string? PublicDisplayName = null,
+    string? PublicAbout = null);
+
 public sealed record SavePartnerSpecialtyRequest(long? Id, string Name, bool IsEnabled = true, int SortOrder = 0);
 
 public sealed record PartnerDto(
@@ -40,7 +48,12 @@ public sealed record PartnerDto(
     decimal Redeemed,
     decimal Score,
     string? Note,
-    IReadOnlyList<PartnerSpecialtyDto>? Specialties = null);
+    IReadOnlyList<PartnerSpecialtyDto>? Specialties = null,
+    string PublicConsent = "NotAsked",
+    bool PublicVisible = false,
+    bool PublicPhoneVisible = false,
+    string? PublicDisplayName = null,
+    string? PublicAbout = null);
 
 public sealed record SaveParticipantRoleRequest(
     long? Id,

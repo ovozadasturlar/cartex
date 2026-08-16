@@ -282,6 +282,14 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `HAMKOR-02` | Faqat **yoqilgan** hamkor profili mukofot oladi. |
 | `HAMKOR-03` | Savdo bekor qilinsa yoki qaytarilsa, mukofot proporsional qaytarib olinadi; ikki marta qaytarib olinmaydi. |
 | `HAMKOR-04` | Ishtirokchi rolining qoidalari (majburiymi, nechtagacha, xaridorning o'zi bo'la oladimi) serverda tekshiriladi — klient ularni chetlab o'ta olmaydi. |
+| `HAMKOR-05` | **Mutaxassislik** (elektrik, santexnik) — shaxsning kasbi, ixtiyoriy. U savdodagi **rol** (`ParticipantRoleDefinition`) bilan **birlashtirilmaydi**: elektrik santexnika savdosida "vositachi" bo'lib qatnashishi mumkin, birlashtirilsa aynan shu yerda buziladi. Do'kon bitta ham mutaxassislik yaratmasa, maydon umuman ko'rinmaydi. |
+| `HAMKOR-06` | Ommaga chiqarish **qayd etilgan rozilikni** talab qiladi. Rozilik holati — enum: `NotAsked`, `Granted`, `Declined`, `Withdrawn`. Oddiy `bool` yaramaydi, chunki u "so'ramadik", "rad etdi" va "qaytarib oldi" ni bir-biridan ajrata olmaydi — odamning ismini internetga chiqarayotganda bu farq muhim. |
+| `HAMKOR-07` | Rozilik bilan **ko'rinish alohida**: do'kon rozilikni bekor qilmasdan hamkorni vaqtincha ro'yxatdan olib qo'yishi mumkin. `Granted` bo'lmasa hech qanday ko'rinish kaliti yoqilmaydi — buni server rad etadi. |
+| `HAMKOR-08` | **Telefon alohida so'raladi**: ro'yxatga kirishga rozilik telefon raqamini e'lon qilishga rozilik emas. |
+| `HAMKOR-09` | Rozilikning **izi qoladi**: qachon va kim qayd etgani saqlanadi va auditga yoziladi. Ruxsat — `partners.publish`, oddiy tahrirlashdan alohida. |
+| `HAMKOR-12` | Rozilikning **manbasi** saqlanadi: uni do'kon xodimi qayd etganmi (`Staff`) yoki shaxsning o'zi bergami (`SelfService`). Kelajakda hamkor o'z ma'lumotini Telegram/web/mobil orqali boshqarganda rozilik birinchi qo'ldan bo'ladi — bu xodim qayd etganidan boshqa vaznga ega, shuning uchun ustun **hozir** qo'shiladi: keyin qo'shilsa, eski yozuvlar qaysi manbadan ekani noaniq bo'lib qolardi. |
+| `HAMKOR-10` | Ommaga **hech qachon chiqmaydi**: `Score`, **reyting va o'rin/daraja**, aylanma, mukofot summasi, xarid tarixi. Hamkor ommada faqat **mutaxassis sifatida** ko'rinadi, tartiblanmagan holda. Chiqadi: ism (yoki ko'rsatiladigan nom), mutaxassislik, qisqa tavsif va — alohida rozilik bilan — telefon. Reyting ichki vosita: u do'kon uchun, ommaga emas. |
+| `HAMKOR-11` | **Mijozlarni** ("top mijozlar") ommaga chiqarish alohida qaror: u bilvosita mijozning sarfini oshkor qiladi. Hamkor katalogi bilan bir xil mexanizmda hal qilinmaydi va reyting o'rni ko'rsatilmaydi. Hozircha qurilmagan. |
 
 ---
 
@@ -427,7 +435,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | **Hisobotlar** | ⬜ | `ReportsTests`, `SalesReportTests`, `ReportDayBucketingTests` |
 | Offline savdo va sinxronizatsiya | ⬜ test ham yo'q | — |
 | Prepack (qadoq) | ⬜ test ham yo'q | — |
-| Hamkor mutaxassisligi, ommaviy katalog | ⬜ hali qurilmagan | — |
+| Hamkor mutaxassisligi, ommaviy katalog | 🟡 model va UI bor, ommaviy sahifa (Mirror) qolgan | — |
 | Agent (mobil savdo) oqimi | ⬜ | — |
 
 ### To'ldirish tartibi
