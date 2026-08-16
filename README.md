@@ -28,6 +28,8 @@ Bir biznes, ko'p filial. O'zbekiston kichik va o'rta biznesi uchun.
 - [O'rnatish (mijozga)](docs/deployment.md)
 - [Xavfsizlik](docs/security.md)
 - [Ma'lum muammolar](docs/known-issues.md)
+- [Biznes mantiq talablari](docs/domain-rules.md) — mantiqning yagona haqiqat manbai
+- [Kod sifati standarti](docs/code-quality.md) — texnik talablar va suppression siyosati
 
 ## Litsenziya
 
@@ -36,6 +38,11 @@ Foydalanish faqat yozma shartnoma asosida. [LICENSE](LICENSE)
 
 ## Commit qoidalari
 
+Bu qoidalar **istisnosiz** amal qiladi — ish kim tomonidan yoki qanday vosita bilan
+bajarilganidan qat'i nazar.
+
 - Xabar bir qatorlik, ingliz tilida, sodda va aniq.
-- Hech qanday trailer yo'q (Co-Authored-By, Generated-with va h.k.).
-- Commitlar faqat `muqimjon` profili nomidan qilinadi.
+- **Hech qanday trailer yozilmaydi.** Jumladan `Co-Authored-By`, `Generated-with`,
+  `Claude-Session` va shunga o'xshash har qanday qator — hech qachon, hech qanday holatda.
+- Barcha commitlar **faqat `muqimjon` profili nomidan**. Boshqa muallif ko'rsatilmaydi.
+- Xuddi shu qoida PR tavsiflari, tag va relizlarga ham tegishli.
