@@ -210,6 +210,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paidCard;
     [ObservableProperty] private decimal _paidBonus;
     [ObservableProperty] private decimal _discountAmount;
+    [ObservableProperty] private decimal _roundingAmount;
+    [ObservableProperty] private decimal _roundingTarget;
     [ObservableProperty] private string _saleNote = "";
     [ObservableProperty] private decimal _discountPercent;
     [ObservableProperty] private bool _isPaymentPanelOpen;
@@ -344,7 +346,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
-    public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
+    public decimal PayableBeforeRounding => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
+    public decimal TotalAmount => Math.Max(0, PayableBeforeRounding - RoundingAmount);
     [ObservableProperty] private decimal _autoDiscountAmount;
     public bool HasAutoDiscount => AutoDiscountAmount > 0;
     public decimal TotalPaid => IsMulticurrency ? PaymentRows.Sum(r => r.AmountBase) : PaidCash + PaidCard + PaidBonus;
@@ -770,6 +773,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 }
             }
 
+            DiscountAmount = cart.DiscountAmount;
+            RoundingAmount = cart.RoundingAmount;
+            RoundingTarget = PayableBeforeRounding - cart.RoundingAmount;
+
             if (cart.CustomerId is { } customerId)
             {
                 try { SelectedCustomer = await _customersApi.GetByIdAsync(customerId); }
@@ -995,6 +1002,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _syncingDiscount = false;
         }
         OnPropertyChanged(nameof(SubTotal));
+        OnPropertyChanged(nameof(PayableBeforeRounding));
         OnPropertyChanged(nameof(TotalAmount));
         OnPropertyChanged(nameof(TotalPaid));
         OnPropertyChanged(nameof(ChangeAmount));
@@ -1107,6 +1115,31 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         DiscountAmount = SubTotal > 0 ? Math.Round(SubTotal * value / 100, 2) : 0;
         _syncingDiscount = false;
         NotifyTotals();
+    }
+
+    partial void OnRoundingAmountChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(HasRounding));
+        NotifyTotals();
+    }
+
+    public bool HasRounding => RoundingAmount > 0;
+    public bool CanRound => _auth.HasPermission("sales.discount");
+
+    /// The cashier types what the customer will actually hand over and the shortfall becomes a
+    /// discount, so the sale still adds up and tomorrow's refund comes off the right lines.
+    [RelayCommand]
+    private void ApplyRounding()
+    {
+        if (!CanRound) return;
+        RoundingAmount = Math.Max(0, PayableBeforeRounding - Math.Max(0, RoundingTarget));
+    }
+
+    [RelayCommand]
+    private void ClearRounding()
+    {
+        RoundingAmount = 0;
+        RoundingTarget = PayableBeforeRounding;
     }
     private CancellationTokenSource? _productSearchCts;
 
@@ -1675,7 +1708,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         SaleNote = "";
         DebtDueDate = null;
         DueDateMissing = false;
-        PaidCash = PaidCard = PaidBonus = DiscountAmount = 0;
+        PaidCash = PaidCard = PaidBonus = DiscountAmount = RoundingAmount = RoundingTarget = 0;
         _syncingDiscount = true;
         DiscountPercent = 0;
         _syncingDiscount = false;
@@ -2002,15 +2035,23 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                if (_activeCartCode is null)
+                var queueItems = CartItems
+                    .Select(item => new SubmitCartItemRequest(item.VariantId, item.Quantity, item.PriceOverride))
+                    .ToList();
+                var queueNote = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim();
+
+                // A cart resumed from the queue already exists, so the discount typed since has to
+                // be written back; submitting again would leave a second row for the same basket.
+                if (_activeCartCode is { } code)
+                    await _orderingApi.UpdateAsync(code, new UpdateCartRequest(
+                        SelectedCustomer?.Id, queueItems, queueNote,
+                        DiscountAmount: DiscountAmount, RoundingAmount: RoundingAmount));
+                else
                 {
                     _queueIdempotencyKey ??= Guid.NewGuid().ToString("N");
                     await _orderingApi.SubmitAsync(new SubmitCartRequest(
-                        warehouseId,
-                        SelectedCustomer?.Id,
-                        CartItems.Select(item => new SubmitCartItemRequest(item.VariantId, item.Quantity, item.PriceOverride)).ToList(),
-                        _queueIdempotencyKey,
-                        string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()));
+                        warehouseId, SelectedCustomer?.Id, queueItems, _queueIdempotencyKey, queueNote,
+                        DiscountAmount: DiscountAmount, RoundingAmount: RoundingAmount));
                 }
             }
 
@@ -2120,7 +2161,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                             CreditAmount,
                             CustomerId: SelectedCustomer?.Id,
                             DiscountAmount: DiscountAmount,
-                            Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()));
+                            Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
+                            RoundingAmount: RoundingAmount));
                 }
                 _activeCartCode = null;
                 var queuedCustomerId = SelectedCustomer?.Id;
@@ -2146,7 +2188,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
                     IdempotencyKey: _saleIdempotencyKey,
                     CreditAmount: CreditAmount,
-                    Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim());
+                    Note: string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
+                    RoundingAmount: RoundingAmount);
                 result = await _salesApi.CreateAsync(request);
             }
 
