@@ -1,12 +1,10 @@
-namespace Cartex.Application.Common.Settings;
+﻿namespace Cartex.Application.Common.Settings;
 
 public sealed class SalesPolicySettings
 {
     public string ShiftPolicy { get; set; } = "CashOnly";
     public decimal MaxDiscountPercent { get; set; }
 
-    /// Yaxlitlashda kechiriladigan eng katta summa. 0 — chegara yo'q (MaxDiscountPercent bilan bir xil shart).
-    public decimal MaxRoundingAmount { get; set; }
 
     /// Bir hujjatda kechirilishi mumkin bo'lgan eng katta qarz. 0 — chegara yo'q.
     public decimal MaxDebtWriteOffAmount { get; set; }
@@ -32,7 +30,6 @@ public sealed class SalesPolicySettings
 
     /// Ixtiyoriy imkoniyatlarning kalitlari (SOZ-08). Chegara maydoni o'chirish vositasi emas:
     /// unda 0 — "chegara yo'q" degani, shuning uchun har biriga alohida kalit kerak (SOZ-09).
-    public bool AllowRounding { get; set; } = true;
     public bool AllowDebtWriteOff { get; set; } = true;
     public bool PrintMoneyDocuments { get; set; } = true;
     public bool AllowConsolidatedAct { get; set; } = true;

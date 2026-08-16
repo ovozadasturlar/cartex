@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Cartex.Application.Common.Settings;
 using Cartex.Shared.Models.Settings;
 using Xunit;
@@ -26,7 +26,6 @@ public class SalesPolicyContractTests
         {
             ShiftPolicy = "AllSales",
             MaxDiscountPercent = 11,
-            MaxRoundingAmount = 12,
             MaxDebtWriteOffAmount = 13,
             MaxDebtWriteOffPercent = 14,
             DefaultMinStock = 15,

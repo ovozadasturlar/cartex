@@ -1,4 +1,4 @@
-using Cartex.Domain.Entities;
+﻿using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -35,7 +35,6 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.ToTable("sales");
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-        builder.Property(x => x.RoundingAmount).HasPrecision(18, 2);
         builder.Property(x => x.CashbackEarned).HasPrecision(18, 2);
         builder.Property(x => x.PaidCash).HasPrecision(18, 2);
         builder.Property(x => x.PaidCard).HasPrecision(18, 2);

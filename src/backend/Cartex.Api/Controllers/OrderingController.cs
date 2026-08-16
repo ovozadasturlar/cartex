@@ -1,4 +1,4 @@
-using Cartex.Application.Ordering.Commands;
+﻿using Cartex.Application.Ordering.Commands;
 using Cartex.Application.Ordering.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
@@ -73,8 +73,7 @@ public class OrderingController(ISender sender) : ControllerBase
             CreditAmount = request.CreditAmount,
             UseCustomerAdvance = request.UseCustomerAdvance,
             ExpectedVersion = request.ExpectedVersion,
-            DiscountAmount = request.DiscountAmount,
-            RoundingAmount = request.RoundingAmount
+            DiscountAmount = request.DiscountAmount
         });
         return NoContent();
     }
@@ -113,8 +112,7 @@ public class OrderingController(ISender sender) : ControllerBase
             UseCustomerAdvance = request.UseCustomerAdvance,
             CustomerId = request.CustomerId,
             DiscountAmount = request.DiscountAmount,
-            Note = request.Note,
-            RoundingAmount = request.RoundingAmount
+            Note = request.Note
         });
         return Ok(saleId);
     }

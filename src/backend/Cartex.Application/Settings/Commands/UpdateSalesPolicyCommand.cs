@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Cartex.Shared.Models.Settings;
@@ -27,7 +27,6 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
     {
         RuleFor(x => x.Policy.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
         RuleFor(x => x.Policy.MaxDiscountPercent).InclusiveBetween(0, 100);
-        RuleFor(x => x.Policy.MaxRoundingAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100);
         RuleFor(x => x.Policy.MaxPriceIncreasePercent).GreaterThanOrEqualTo(0);

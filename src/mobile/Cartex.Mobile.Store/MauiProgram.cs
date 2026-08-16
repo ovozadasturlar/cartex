@@ -1,4 +1,4 @@
-using BarcodeScanning;
+﻿using BarcodeScanning;
 using Cartex.ApiClient;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
@@ -53,7 +53,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<OrderingHubService>();
         builder.Services.AddSingleton<MobilePrintDispatcher>();
         builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
-        builder.Services.AddSingleton<SalesPolicyCache>();
         builder.Services.AddSingleton<MobileOfflineStore>();
         builder.Services.AddSingleton<MobileOfflineService>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();

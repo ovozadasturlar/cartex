@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -61,7 +61,6 @@ public sealed class RequeueCartCommandHandler(
             Note = string.IsNullOrWhiteSpace(request.Note) ? source.Note : request.Note.Trim(),
             Kind = source.Kind,
             DiscountAmount = source.DiscountAmount,
-            RoundingAmount = source.RoundingAmount,
             PaidCash = source.PaidCash,
             PaidCard = source.PaidCard,
             PaidBonus = source.PaidBonus,

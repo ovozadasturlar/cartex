@@ -1,4 +1,4 @@
-using Cartex.Shared.Models.Partners;
+﻿using Cartex.Shared.Models.Partners;
 
 namespace Cartex.Shared.Models.Sales;
 
@@ -24,5 +24,4 @@ public sealed record CreateSaleRequest(
     public bool UseCustomerAdvance { get; init; } = true;
     public List<ParticipantSelectionRequest>? Participants { get; init; }
     public string? Note { get; init; }
-    public decimal RoundingAmount { get; init; }
 }

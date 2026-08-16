@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -210,8 +210,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _paidCard;
     [ObservableProperty] private decimal _paidBonus;
     [ObservableProperty] private decimal _discountAmount;
-    [ObservableProperty] private decimal _roundingAmount;
-    [ObservableProperty] private decimal _roundingTarget;
     [ObservableProperty] private string _saleNote = "";
     [ObservableProperty] private decimal _discountPercent;
     [ObservableProperty] private bool _isPaymentPanelOpen;
@@ -346,8 +344,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     public decimal SubTotal => CartItems.Sum(i => i.LineTotal);
-    public decimal PayableBeforeRounding => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
-    public decimal TotalAmount => Math.Max(0, PayableBeforeRounding - RoundingAmount);
+    public decimal TotalAmount => Math.Max(0, SubTotal - DiscountAmount - AutoDiscountAmount);
     [ObservableProperty] private decimal _autoDiscountAmount;
     public bool HasAutoDiscount => AutoDiscountAmount > 0;
     public decimal TotalPaid => IsMulticurrency ? PaymentRows.Sum(r => r.AmountBase) : PaidCash + PaidCard + PaidBonus;
@@ -603,8 +600,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _allowDebtSales = policy.AllowDebtSales;
             _requireDebtDueDate = policy.RequireDebtDueDate;
             _supplierRequired = policy.RequireSupplier;
-            _roundingEnabled = policy.AllowRounding;
-            OnPropertyChanged(nameof(CanRound));
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
@@ -780,8 +775,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             }
 
             DiscountAmount = cart.DiscountAmount;
-            RoundingAmount = cart.RoundingAmount;
-            RoundingTarget = PayableBeforeRounding - cart.RoundingAmount;
 
             if (cart.CustomerId is { } customerId)
             {
@@ -1008,13 +1001,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _syncingDiscount = false;
         }
         OnPropertyChanged(nameof(SubTotal));
-        OnPropertyChanged(nameof(PayableBeforeRounding));
         OnPropertyChanged(nameof(TotalAmount));
         OnPropertyChanged(nameof(TotalPaid));
         OnPropertyChanged(nameof(ChangeAmount));
         OnPropertyChanged(nameof(DebtAmount));
         OnPropertyChanged(nameof(IsCartEmpty));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        OnPropertyChanged(nameof(HasShortfall));
         NotifyExcess();
         SchedulePreview();
     }
@@ -1078,6 +1071,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(ChangeAmount));
         OnPropertyChanged(nameof(DebtAmount));
         OnPropertyChanged(nameof(IsOverCreditLimit));
+        OnPropertyChanged(nameof(HasShortfall));
         NotifyExcess();
     }
 
@@ -1123,33 +1117,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         NotifyTotals();
     }
 
-    partial void OnRoundingAmountChanged(decimal value)
-    {
-        OnPropertyChanged(nameof(HasRounding));
-        NotifyTotals();
-    }
+    public bool CanDiscount => _auth.HasPermission("sales.discount");
 
-    public bool HasRounding => RoundingAmount > 0;
+    /// Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa ishlaydi.
+    public bool HasShortfall => TotalPaid > 0 && TotalPaid < TotalAmount;
 
-    /// Both halves matter: the shop has to have the capability switched on, and this user has to
-    /// be allowed to give money away. The server checks the same two things (SOZ-10).
-    public bool CanRound => _roundingEnabled && _auth.HasPermission("sales.discount");
-    private bool _roundingEnabled = true;
-
-    /// The cashier types what the customer will actually hand over and the shortfall becomes a
-    /// discount, so the sale still adds up and tomorrow's refund comes off the right lines.
+    /// Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
+    /// yetmagan qismni chegirmaga yozadi (CHEG-10). Natija joriy chegirmaga bog'liq emas,
+    /// shuning uchun ikkinchi bosish qiymatni ikkilantirmaydi.
     [RelayCommand]
-    private void ApplyRounding()
+    private void FillDiscountFromTender()
     {
-        if (!CanRound) return;
-        RoundingAmount = Math.Max(0, PayableBeforeRounding - Math.Max(0, RoundingTarget));
-    }
-
-    [RelayCommand]
-    private void ClearRounding()
-    {
-        RoundingAmount = 0;
-        RoundingTarget = PayableBeforeRounding;
+        if (!CanDiscount || !HasShortfall) return;
+        DiscountAmount = Math.Max(0, SubTotal - AutoDiscountAmount - TotalPaid);
     }
     private CancellationTokenSource? _productSearchCts;
 
@@ -1718,7 +1698,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         SaleNote = "";
         DebtDueDate = null;
         DueDateMissing = false;
-        PaidCash = PaidCard = PaidBonus = DiscountAmount = RoundingAmount = RoundingTarget = 0;
+        PaidCash = PaidCard = PaidBonus = DiscountAmount = 0;
         _syncingDiscount = true;
         DiscountPercent = 0;
         _syncingDiscount = false;
@@ -2056,8 +2036,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     await _orderingApi.UpdateAsync(code, new UpdateCartRequest(SelectedCustomer?.Id, queueItems)
                     {
                         Note = queueNote,
-                        DiscountAmount = DiscountAmount,
-                        RoundingAmount = RoundingAmount
+                        DiscountAmount = DiscountAmount
                     });
                 else
                 {
@@ -2066,8 +2045,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     {
                         IdempotencyKey = _queueIdempotencyKey,
                         Note = queueNote,
-                        DiscountAmount = DiscountAmount,
-                        RoundingAmount = RoundingAmount
+                        DiscountAmount = DiscountAmount
                     });
                 }
             }
@@ -2182,8 +2160,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                             CreditAmount = CreditAmount,
                             CustomerId = SelectedCustomer?.Id,
                             DiscountAmount = DiscountAmount,
-                            Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
-                            RoundingAmount = RoundingAmount
+                            Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()
                         });
                 }
                 _activeCartCode = null;
@@ -2212,8 +2189,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     DebtDueDate = DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate.Date) : null,
                     IdempotencyKey = _saleIdempotencyKey,
                     CreditAmount = CreditAmount,
-                    Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
-                    RoundingAmount = RoundingAmount
+                    Note = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim()
                 };
                 result = await _salesApi.CreateAsync(request);
             }

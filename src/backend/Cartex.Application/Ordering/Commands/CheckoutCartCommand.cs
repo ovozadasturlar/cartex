@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Sales.Commands;
 using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
@@ -23,7 +23,6 @@ public sealed record CheckoutCartCommand(string Code, decimal PaidCash, decimal 
     public long? CustomerId { get; init; }
     public decimal? DiscountAmount { get; init; }
     public string? Note { get; init; }
-    public decimal? RoundingAmount { get; init; }
 }
 
 public sealed class CheckoutCartCommandHandler(
@@ -103,9 +102,7 @@ public sealed class CheckoutCartCommandHandler(
                     new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
                 Note = request.Note ?? cart.Note,
                 PreauthorizedPrices = preauthorizedPrices.Count > 0 ? preauthorizedPrices : null,
-                RoundingAmount = request.RoundingAmount ?? cart.RoundingAmount,
-                PreauthorizedDiscountAmount = cart.DiscountAmount,
-                PreauthorizedRoundingAmount = cart.RoundingAmount
+                PreauthorizedDiscountAmount = cart.DiscountAmount
             }, cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;

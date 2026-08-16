@@ -1,4 +1,4 @@
-using Cartex.Shared.Models.Sales;
+﻿using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Shared.Models.Ordering;
 
@@ -18,5 +18,4 @@ public sealed record CheckoutCartRequest(decimal PaidCash, decimal PaidCard, dec
     public long? CustomerId { get; init; }
     public decimal? DiscountAmount { get; init; }
     public string? Note { get; init; }
-    public decimal? RoundingAmount { get; init; }
 }

@@ -1,4 +1,4 @@
-using Cartex.Domain.Entities;
+﻿using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -19,7 +19,6 @@ public class CartConfiguration : IEntityTypeConfiguration<Cart>
         builder.Property(x => x.Version).IsConcurrencyToken().HasDefaultValue(1);
         builder.Property(x => x.CancellationReason).HasMaxLength(500);
         builder.Property(x => x.DiscountAmount).HasPrecision(14, 2);
-        builder.Property(x => x.RoundingAmount).HasPrecision(14, 2);
         builder.Property(x => x.PaidCash).HasPrecision(14, 2);
         builder.Property(x => x.PaidCard).HasPrecision(14, 2);
         builder.Property(x => x.PaidBonus).HasPrecision(14, 2);

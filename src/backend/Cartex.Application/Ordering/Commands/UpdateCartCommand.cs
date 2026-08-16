@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Finance;
+﻿using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Measurement;
 using Cartex.Application.Common.Participants;
@@ -25,7 +25,6 @@ public sealed record UpdateCartCommand(string Code, long? CustomerId, List<Submi
     public bool UseCustomerAdvance { get; init; } = true;
     public int? ExpectedVersion { get; init; }
     public decimal? DiscountAmount { get; init; }
-    public decimal? RoundingAmount { get; init; }
 }
 
 public sealed class UpdateCartCommandHandler(
@@ -69,11 +68,10 @@ public sealed class UpdateCartCommandHandler(
         // Berilmagan maydon saqlangan qiymatida qoladi: aks holda chegirmani qayta yubormagan
         // klient uni jimgina nolga tushirib yuborardi (NAVBAT-01/02).
         var discountAmount = request.DiscountAmount ?? cart.DiscountAmount;
-        var roundingAmount = request.RoundingAmount ?? cart.RoundingAmount;
 
         // Saqlangan qiymatni o'zgartirish ruxsat talab qiladi; tegilmagani esa yo'q.
-        if ((discountAmount != cart.DiscountAmount || roundingAmount != cart.RoundingAmount)
-            && (discountAmount > 0 || roundingAmount > 0)
+        if (discountAmount != cart.DiscountAmount
+            && discountAmount > 0
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
@@ -105,7 +103,6 @@ public sealed class UpdateCartCommandHandler(
         cart.CreditAmount = request.CreditAmount;
         cart.UseCustomerAdvance = request.UseCustomerAdvance;
         cart.DiscountAmount = discountAmount;
-        cart.RoundingAmount = roundingAmount;
         cart.Items.Clear();
         foreach (var row in request.Items)
             cart.Items.Add(new CartItem
@@ -162,7 +159,6 @@ public sealed class UpdateCartCommandValidator : AbstractValidator<UpdateCartCom
         RuleFor(x => x.DebtCurrency).MaximumLength(3);
         RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.RoundingAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Payments).Must(x => x is null || x.Count <= 20);
         RuleForEach(x => x.Payments!).ChildRules(row =>
         {

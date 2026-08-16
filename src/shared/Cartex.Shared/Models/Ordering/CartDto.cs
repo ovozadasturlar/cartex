@@ -54,8 +54,7 @@ public record CartDto(
     string? CancellationReason = null,
     long? RequeuedFromCartId = null,
     List<string>? AllowedActions = null,
-    decimal DiscountAmount = 0,
-    decimal RoundingAmount = 0);
+    decimal DiscountAmount = 0);
 
 public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName,
     string WarehouseName, int ItemCount, DateTime CreatedAt, string? CreatedByName,
@@ -78,7 +77,6 @@ public sealed record UpdateCartRequest(long? CustomerId, List<SubmitCartItemRequ
     public bool UseCustomerAdvance { get; init; } = true;
     public int? ExpectedVersion { get; init; }
     public decimal? DiscountAmount { get; init; }
-    public decimal? RoundingAmount { get; init; }
 }
 
 public sealed record RequeueCartRequest(string? Note = null, string? IdempotencyKey = null);

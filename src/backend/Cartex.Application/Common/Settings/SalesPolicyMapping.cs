@@ -1,4 +1,4 @@
-using Cartex.Shared.Models.Settings;
+﻿using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Common.Settings;
 
@@ -11,7 +11,6 @@ public static class SalesPolicyMapping
     {
         ShiftPolicy = cfg.ShiftPolicy,
         MaxDiscountPercent = cfg.MaxDiscountPercent,
-        MaxRoundingAmount = cfg.MaxRoundingAmount,
         MaxDebtWriteOffAmount = cfg.MaxDebtWriteOffAmount,
         MaxDebtWriteOffPercent = cfg.MaxDebtWriteOffPercent,
         DefaultMinStock = cfg.DefaultMinStock,
@@ -26,7 +25,6 @@ public static class SalesPolicyMapping
         AllowRetroactiveCashback = cfg.AllowRetroactiveCashback,
         SaleCorrectionWindow = cfg.SaleCorrectionWindow,
         SaleCorrectionDays = cfg.SaleCorrectionDays,
-        AllowRounding = cfg.AllowRounding,
         AllowDebtWriteOff = cfg.AllowDebtWriteOff,
         PrintMoneyDocuments = cfg.PrintMoneyDocuments,
         AllowConsolidatedAct = cfg.AllowConsolidatedAct,
@@ -40,7 +38,6 @@ public static class SalesPolicyMapping
     {
         cfg.ShiftPolicy = dto.ShiftPolicy;
         cfg.MaxDiscountPercent = dto.MaxDiscountPercent;
-        cfg.MaxRoundingAmount = dto.MaxRoundingAmount;
         cfg.MaxDebtWriteOffAmount = dto.MaxDebtWriteOffAmount;
         cfg.MaxDebtWriteOffPercent = dto.MaxDebtWriteOffPercent;
         cfg.DefaultMinStock = dto.DefaultMinStock;
@@ -55,7 +52,6 @@ public static class SalesPolicyMapping
         cfg.AllowRetroactiveCashback = dto.AllowRetroactiveCashback;
         cfg.SaleCorrectionWindow = dto.SaleCorrectionWindow;
         cfg.SaleCorrectionDays = dto.SaleCorrectionDays;
-        cfg.AllowRounding = dto.AllowRounding;
         cfg.AllowDebtWriteOff = dto.AllowDebtWriteOff;
         cfg.PrintMoneyDocuments = dto.PrintMoneyDocuments;
         cfg.AllowConsolidatedAct = dto.AllowConsolidatedAct;

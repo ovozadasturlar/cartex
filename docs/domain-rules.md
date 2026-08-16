@@ -71,7 +71,7 @@ qanday qilingan" degan savolga javob bera olmaydi — bu ataylab shunday.
 
 ---
 
-## 1. Pul va yaxlitlash
+## 1. Pul va aniqlik
 
 | ID | Qoida |
 |---|---|
@@ -105,12 +105,12 @@ qanday qilingan" degan savolga javob bera olmaydi — bu ataylab shunday.
 
 ## 3. Chegirma
 
-Chegirmaning to'rt manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**,
-**qo'lda umumiy chegirma**, **yaxlitlash** *(rejalashtirilgan)*.
+Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**,
+**qo'lda umumiy chegirma**.
 
 | ID | Qoida |
 |---|---|
-| `CHEG-01` | To'rttala manba ham **yagona joyga** — savdo qatorining chegirmasiga tushadi. Sarlavhada alohida "taqsimlanmagan chegirma" tushunchasi yo'q. |
+| `CHEG-01` | Uchala manba ham **yagona joyga** — savdo qatorining chegirmasiga tushadi. Sarlavhada alohida "taqsimlanmagan chegirma" tushunchasi yo'q. |
 | `CHEG-02` | **Invariant:** qator chegirmalari yig'indisi savdo chegirmasiga **aniq** teng. |
 | `CHEG-03` | **Invariant:** qatorning sof qiymati (`miqdor × narx − chegirma`) hech qachon manfiy bo'lmaydi va chegirma qator qiymatidan oshmaydi. |
 | `CHEG-04` | Narx pasaytirish faqat **o'z qatoriga** tushadi, boshqa qatorlarga surtilmaydi. Qator bir necha partiyaga bo'linsa — miqdor bo'yicha. |
@@ -119,10 +119,10 @@ Chegirmaning to'rt manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida
 | `CHEG-07` | Komponent qatorlarga to'liq sig'masa, sig'magan qismi **sarlavhadan ham olib tashlanadi** — `CHEG-02` buzilmaydi. |
 | `CHEG-08` | `Jami = brutto − chegirma`. |
 | `CHEG-09` | Savdo siyosatidagi `MaxDiscountPercent` chegarasidan oshgan chegirma `sales.discountOverride` ruxsatini talab qiladi. **Ma'lum og'ish:** hozir bu qorovul avtomatik chegirma qo'shilishidan *oldin* ishlaydi, ya'ni loyalty qoidasi chegarani jimgina osha oladi. Qoida to'g'ri, kod hali unga mos emas — tuzatilishi kerak. |
-| `CHEG-10` | **Yaxlitlash** — mijoz yaxlit summa to'lamoqchi bo'lganda qolgan tiyinlarni kechirish. U chegirmaning bir turi: qatorlarga `CHEG-05` bilan bir xil (sof qiymat bo'yicha) taqsimlanadi va `Sale.DiscountAmount` ichiga kiradi. `CHEG-08` formulasi o'zgarmaydi. |
-| `CHEG-11` | Yaxlitlash summasi sarlavhada **alohida izoh ustunida** ham saqlanadi (`Sale.RoundingAmount`) — egasi "chegirmaning qanchasi yaxlitlashdan ketdi" ni alohida ko'rishi uchun. Bu ustun hisobga ta'sir qilmaydi, faqat hisobot uchun. |
-| `CHEG-12` | Yaxlitlash manfiy bo'lmaydi va to'lanadigan summadan oshmaydi. Savdo siyosatidagi `MaxRoundingAmount` dan oshsa — `sales.discountOverride` ruxsati talab qilinadi. |
-| `CHEG-13` | Qo'lda chegirma yoki yaxlitlash kiritish `sales.discount` ruxsatini talab qiladi. |
+| `CHEG-10` | **Yetmagan summa tugmasi** (kassa UI). Mijoz "shuncha beraman" deganda kassir o'sha summani to'lov maydoniga kiritadi; tugma bir bosilishida yetmagan qism **qo'lda chegirma maydoniga** yoziladi: `chegirma = brutto − avtomatik chegirma − kiritilgan to'lov`. Bu alohida tushuncha emas — natija oddiy qo'lda chegirma, shuning uchun `CHEG-01`…`CHEG-09` o'zgarishsiz qo'llanadi. |
+| `CHEG-11` | Tugma **idempotent**: qiymat joriy chegirmadan hisoblanmaydi, shuning uchun ikkinchi bosish summani ikkilantirmaydi. |
+| `CHEG-12` | Tugma **to'lov kiritilmagan bo'lsa ishlamaydi** (`to'lov = 0`) va to'lov to'lanadigan summadan kam bo'lgandagina faol bo'ladi. Sabab: bo'sh to'lov maydonida tasodifiy bosish butun savdoni 100% chegirmaga aylantirib yuborardi. |
+| `CHEG-13` | Qo'lda chegirma kiritish (tugma orqali ham) `sales.discount` ruxsatini talab qiladi. |
 
 ### Qabul mezonlari
 
@@ -161,16 +161,18 @@ Chegirmaning to'rt manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida
 > Ya'ni 10 000 ikkiga bo'linib 5 000/5 000 bo'lmaydi — chegirma tegishli bo'lmagan mahsulotni
 > arzonlashtirmaydi.
 
-**`CHEG-10` / `CHEG-11` — yaxlitlash**
+**`CHEG-10` / `CHEG-11` / `CHEG-12` — yetmagan summa tugmasi**
 
-> **Berilgan:** brutto 115 000 lik savat, unga 3% (3 450) chegirma berilgan — to'lanadigan summa 111 550.
-> **Qachonki:** mijoz 110 000 to'laydi deb kelishilsa (ya'ni 1 550 yaxlitlanadi),
+> **Berilgan:** brutto 12 000 lik savat, chegirma yo'q, avtomatik chegirma yo'q.
+> **Qachonki:** mijoz "10 000 beraman, 2 000 ni o'tkazib yuboring" desa — kassir naqd maydoniga
+> 10 000 yozadi va chegirma yonidagi tugmani bosadi,
 > **U holda:**
-> - `Sale.DiscountAmount` = 3 450 + 1 550 = **5 000**
-> - `Sale.RoundingAmount` = **1 550**
-> - `Jami` = **110 000**
-> - Qator chegirmalari yig'indisi = **5 000** (`CHEG-02` saqlanadi)
-> - 1 550 ham qatorlarga sof qiymat bo'yicha taqsimlanadi, ya'ni ertaga qaytarilganda o'sha qatordan chiqadi.
+> - `chegirma` = 12 000 − 0 − 10 000 = **2 000**
+> - `Jami` = **10 000**, qarz **0**
+> - Qator chegirmalari yig'indisi = **2 000** (`CHEG-02` saqlanadi), ya'ni ertaga bitta maxsulot
+>   qaytarilsa 2 000 o'z qatoridan chiqadi
+> - Tugma ikkinchi marta bosilsa chegirma **2 000 bo'lib qoladi** (`CHEG-11`)
+> - Naqd maydoni bo'sh bo'lsa tugma **ishlamaydi** (`CHEG-12`)
 
 **`CHEG-02` — aniq yig'ilish**
 
@@ -219,7 +221,7 @@ Chegirmaning to'rt manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida
 | `QARZ-05` | Kechirilgan qarzdan **hamkorga mukofot berilmaydi** — u olingan pul emas. Mukofot faqat haqiqatan to'langan qismdan hisoblanadi. |
 | `QARZ-06` | Kechirim alohida ruxsat talab qiladi va savdo siyosatidagi chegaraga bo'ysunadi (`MaxDebtWriteOffAmount`, `MaxDebtWriteOffPercent`). Sabab majburiy, auditga yoziladi, hisobotda alohida ko'rinadi. Chegarasiz kechirim — o'g'irlik kanali. |
 | `QARZ-14` | `MaxDebtWriteOffPercent` ning bazasi — **shu hujjat yopayotgan summa**, ya'ni to'langan + kechirilgan (baza valyutada). "Yopilayotgan qarzning ko'pi bilan N foizi kechirilishi mumkin" degani. Sof kechirimda baza kechirimning o'ziga teng, ya'ni u 100% bo'ladi. |
-| `QARZ-15` | Ikkala chegarada ham `0` — **chegara yo'q** degani (`MaxDiscountPercent` va `MaxRoundingAmount` bilan bir xil konvensiya, `SOZ-02`). Kechirimni cheklaydigan asosiy vosita — ruxsat; chegara qo'shimcha himoya. Egasiga real qiymat qo'yish tavsiya etiladi. |
+| `QARZ-15` | Ikkala chegarada ham `0` — **chegara yo'q** degani (`MaxDiscountPercent` bilan bir xil konvensiya, `SOZ-02`). Kechirimni cheklaydigan asosiy vosita — ruxsat; chegara qo'shimcha himoya. Egasiga real qiymat qo'yish tavsiya etiladi. |
 | `QARZ-16` | Kechirim naqdsiz ham bo'ladi: hujjatda bironta to'lov qatori bo'lmasa ham, kechirim summasi noldan katta bo'lsa hujjat qabul qilinadi. |
 | `QARZ-12` | Kechirim to'lov bilan bir hujjatda rasmiylashtiriladi va savdolarga xuddi to'lov kabi taqsimlanadi — shunda savdo haqiqatan yopiladi. Kechirim **avval**, eng eski muddatdagi qarzdan boshlab qo'llanadi. |
 | `QARZ-13` | To'lov hujjati bekor qilinsa, kechirim ham qaytariladi: qarz o'zining oldingi holatiga tiklanadi. |
@@ -282,7 +284,8 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `HAMKOR-02` | Faqat **yoqilgan** hamkor profili mukofot oladi. |
 | `HAMKOR-03` | Savdo bekor qilinsa yoki qaytarilsa, mukofot proporsional qaytarib olinadi; ikki marta qaytarib olinmaydi. |
 | `HAMKOR-04` | Ishtirokchi rolining qoidalari (majburiymi, nechtagacha, xaridorning o'zi bo'la oladimi) serverda tekshiriladi — klient ularni chetlab o'ta olmaydi. |
-| `HAMKOR-05` | **Mutaxassislik** (elektrik, santexnik) — shaxsning kasbi, ixtiyoriy. U savdodagi **rol** (`ParticipantRoleDefinition`) bilan **birlashtirilmaydi**: elektrik santexnika savdosida "vositachi" bo'lib qatnashishi mumkin, birlashtirilsa aynan shu yerda buziladi. Do'kon bitta ham mutaxassislik yaratmasa, maydon umuman ko'rinmaydi. |
+| `HAMKOR-13` | **Hamkor — alohida ro'yxat emas, mijozning belgisi.** Do'konga ish olib keladigan usta ham mijoz: u mijozlar ro'yxatida turadi va uning profilida ikki narsa boshqariladi — hamkorlik **yoqilgan/o'chirilgan** va **ommaviy ko'rinish roziligi**. Alohida "hamkorlar" bo'limi yo'q: bir odam ikki joyda yuritilmaydi. Hamkorlikni yoqish shaxsning `PartnerProfile` ini yaratadi (bo'lmasa), o'chirish esa uni **o'chirmaydi** — faqat `IsEnabled` ni `false` qiladi, shunda mukofot tarixi va qayd etilgan rozilik joyida qoladi. Yoqib-o'chirish `partners.edit`, rozilikni qayd etish `partners.publish` ruxsatini talab qiladi; ruxsati yo'q foydalanuvchiga tegishli boshqaruv ko'rinmaydi. O'chirilgan hamkor ommaga chiqmaydi: ommaviy so'rov `IsEnabled`, `PublicConsent = Granted` va `PublicVisible` — uchalasini ham talab qiladi. |
+| `HAMKOR-05` | **Mutaxassislik** (elektrik, santexnik) — shaxsning kasbi, ixtiyoriy. U savdodagi **rol** (`ParticipantRoleDefinition`) bilan **birlashtirilmaydi**: elektrik santexnika savdosida "vositachi" bo'lib qatnashishi mumkin, birlashtirilsa aynan shu yerda buziladi. Katalog va biriktirish serverda bor, lekin **hozircha ekranda boshqarilmaydi**: mutaxassislik katalogi qayerda tahrirlanishi (Sozlamalar → ma'lumotnomalar yonida yoki umuman kerak emasligi) egasining qaroriga qoldirilgan. |
 | `HAMKOR-06` | Ommaga chiqarish **qayd etilgan rozilikni** talab qiladi. Rozilik holati — enum: `NotAsked`, `Granted`, `Declined`, `Withdrawn`. Oddiy `bool` yaramaydi, chunki u "so'ramadik", "rad etdi" va "qaytarib oldi" ni bir-biridan ajrata olmaydi — odamning ismini internetga chiqarayotganda bu farq muhim. |
 | `HAMKOR-07` | Rozilik bilan **ko'rinish alohida**: do'kon rozilikni bekor qilmasdan hamkorni vaqtincha ro'yxatdan olib qo'yishi mumkin. `Granted` bo'lmasa hech qanday ko'rinish kaliti yoqilmaydi — buni server rad etadi. |
 | `HAMKOR-08` | **Telefon alohida so'raladi**: ro'yxatga kirishga rozilik telefon raqamini e'lon qilishga rozilik emas. |
@@ -297,19 +300,19 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 
 | ID | Qoida |
 |---|---|
-| `NAVBAT-01` | **Sotuvchi kiritgan hech narsa navbatda yo'qolmaydi:** mahsulotlar, miqdorlar, o'zgartirilgan narxlar, **chegirma**, **yaxlitlash**, mijoz, izoh, to'lov qatorlari, ishtirokchilar, qarz valyutasi va muddati, kredit/avans sozlamalari. |
-| `NAVBAT-05` | Navbatdagi savatga ruxsatli sotuvchi kiritgan **chegirma va yaxlitlash** yakunlovchidan qayta ruxsat talab qilmaydi — narx o'zgartirish (`NARX-04`) bilan bir xil mantiq. Yakunlovchi ularni **o'zgartirsa**, o'zgartirilgan qiymat uchun ruxsat talab qilinadi. |
+| `NAVBAT-01` | **Sotuvchi kiritgan hech narsa navbatda yo'qolmaydi:** mahsulotlar, miqdorlar, o'zgartirilgan narxlar, **chegirma**, mijoz, izoh, to'lov qatorlari, ishtirokchilar, qarz valyutasi va muddati, kredit/avans sozlamalari. |
+| `NAVBAT-05` | Navbatdagi savatga ruxsatli sotuvchi kiritgan **chegirma** yakunlovchidan qayta ruxsat talab qilmaydi — narx o'zgartirish (`NARX-04`) bilan bir xil mantiq. Yakunlovchi uni **o'zgartirsa**, o'zgartirilgan qiymat uchun ruxsat talab qilinadi. |
 | `NAVBAT-02` | Yakunlashda har maydon uchun "so'rovda bo'lsa — so'rovdan, bo'lmasa — savatdan" qoidasi amal qiladi. Maydon uchun bu qoida yozilmasa — u jimgina yo'qoladi; shuning uchun yangi maydon qo'shilganda **navbat orqali o'tish testi majburiy**. |
 | `NAVBAT-03` | Savatni qayta navbatga qo'yish (requeue) barcha maydonlarni ko'chiradi. |
 | `NAVBAT-04` | Savat yakunlangach yopiladi; bekor qilingan savat navbatda ko'rinmaydi. Bo'sh "arvoh" savat qolmaydi. |
 
 **Qabul mezoni — `NAVBAT-01` / `NAVBAT-05`**
 
-> **Berilgan:** sotuvchi telefonda 115 000 lik savat yig'di, 3 450 chegirma va 1 550 yaxlitlash
-> kiritdi va navbatga yubordi.
+> **Berilgan:** sotuvchi telefonda 115 000 lik savat yig'di, 5 000 chegirma kiritdi va
+> navbatga yubordi.
 > **Qachonki:** kassir savatni navbatdan olib, hech narsa o'zgartirmasdan yakunlasa,
-> **U holda:** savdoda chegirma **5 000**, yaxlitlash **1 550**, jami **110 000** bo'ladi —
-> ya'ni kiritilgan qiymatlar aynan saqlanadi.
+> **U holda:** savdoda chegirma **5 000**, jami **110 000** bo'ladi —
+> ya'ni kiritilgan qiymat aynan saqlanadi.
 > Kassirda `sales.discount` ruxsati bo'lmasa ham shunday bo'ladi: chegirmani u kiritmagan.
 
 ---
@@ -390,9 +393,9 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 
 **Ma'lum og'ishlar (tuzatilishi kerak):**
 - `RequireDebtDueDate` faqat klientda tekshiriladi, serverda emas → `SOZ-03` buzilgan.
-- `MaxRoundingAmount` va `MaxDiscountPercent` da `0` = "chegara yo'q". Bu izchil, lekin standart
-  holatda ruxsati bor kassir istalgancha yaxlitlab tashlashi mumkin degani → egasiga real
-  qiymat qo'yish tavsiya etiladi (`SOZ-02` bajarilgan, lekin xavf ochiq).
+- `MaxDiscountPercent` da `0` = "chegara yo'q". Bu izchil, lekin standart holatda ruxsati bor
+  kassir istalgancha chegirma bera oladi degani → egasiga real qiymat qo'yish tavsiya etiladi
+  (`SOZ-02` bajarilgan, lekin xavf ochiq).
 
 ## 12. Qamrov holati
 
@@ -408,7 +411,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 
 | Soha | Holat | Hozir himoyalayotgan testlar |
 |---|---|---|
-| Pul, aniqlik, yaxlitlash | ✅ | `MoneyAllocatorTests`, `MulticurrencyTests` |
+| Pul, aniqlik, yaxlitlash (arifmetik) | ✅ | `MoneyAllocatorTests`, `MulticurrencyTests` |
 | Narx aniqlash va o'zgartirish | ✅ | `CreateSaleTests`, `CartPriceOverrideTests` |
 | Chegirma va taqsimot | ✅ | `SaleDiscountAllocationTests`, `ScopedAutoDiscountTests` |
 | Qaytarish | ✅ | `ReturnSaleTests`, `ReturnWaterfallTests`, `MultiSaleReturnTests`, `CustomerDocumentTests` |

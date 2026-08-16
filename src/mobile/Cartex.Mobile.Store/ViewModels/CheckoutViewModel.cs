@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using Cartex.ApiClient.Api;
@@ -64,11 +64,11 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private bool _hasInvalidChange;
     [ObservableProperty] private string _excessText = "";
     [ObservableProperty] private string _discountText = "";
-    [ObservableProperty] private string _roundingTargetText = "";
-    [ObservableProperty] private string _roundingText = "";
     [ObservableProperty] private string _payableText = "";
     [ObservableProperty] private bool _canDiscount;
-    [ObservableProperty] private bool _canRound;
+
+    /// Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
+    [ObservableProperty] private bool _hasShortfall;
 
     public bool IsSimplePayment => !IsMulticurrency;
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
@@ -76,17 +76,15 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     public bool HasParticipants => Participants.Count > 0;
     public bool CanStoreExcessAsCredit => HasCustomer && Paid > Payable;
 
-    /// What the customer actually hands over once the discount and the rounding are off.
-    public decimal Payable => Math.Max(0, _totalAmount - _discount - _rounding);
+    /// What the customer actually hands over once the discount is off.
+    public decimal Payable => Math.Max(0, _totalAmount - _discount);
 
     private string _code = "";
     private CartDto? _serverCart;
     private decimal _totalAmount;
     private long? _customerId;
     private bool _initializingPayments;
-    private readonly SalesPolicyCache _policy;
     private decimal _discount;
-    private decimal _rounding;
 
     public CheckoutViewModel(
         IOrderingApi orderingApi,
@@ -95,8 +93,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CartStore localCart,
         WarehouseContext warehouse,
         MobilePermissions permissions,
-        MobileOfflineService offline,
-        SalesPolicyCache policy)
+        MobileOfflineService offline)
     {
         _orderingApi = orderingApi;
         _businessApi = businessApi;
@@ -105,10 +102,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         _warehouse = warehouse;
         _permissions = permissions;
         _offline = offline;
-        _policy = policy;
         CanSelfSell = permissions.Has("sales.checkout");
         CanDiscount = permissions.Has("sales.discount");
-        CanRound = CanDiscount && policy.Current.AllowRounding;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -142,10 +137,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             Recalc();
             return;
         }
-
-        // The rounding button only exists if the shop switched the capability on; offline the
-        // last known answer is used, which is why the policy is cached on the device.
-        CanRound = CanDiscount && (await _policy.RefreshAsync()).AllowRounding;
 
         var businessTask = _businessApi.GetAsync();
         var currenciesTask = _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
@@ -200,22 +191,13 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     partial void OnCashTextChanged(string value) => Recalc();
     partial void OnDiscountTextChanged(string value) => Recalc();
 
-    /// The cashier types what the customer will hand over; the shortfall becomes the rounding.
+    /// Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
+    /// yetmagan qismni chegirma maydoniga yozadi (CHEG-10).
     [RelayCommand]
-    private void ApplyRounding()
+    private void FillDiscountFromTender()
     {
-        if (!CanRound) return;
-        var target = Parse(RoundingTargetText);
-        _rounding = target > 0 ? Math.Max(0, _totalAmount - _discount - target) : 0;
-        Recalc();
-    }
-
-    [RelayCommand]
-    private void ClearRounding()
-    {
-        _rounding = 0;
-        RoundingTargetText = "";
-        Recalc();
+        if (!CanDiscount || !HasShortfall) return;
+        DiscountText = (_totalAmount - Paid).ToString("0.##", CultureInfo.InvariantCulture);
     }
     partial void OnCardTextChanged(string value) => Recalc();
     partial void OnBonusTextChanged(string value) => Recalc();
@@ -302,7 +284,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 DebtCurrency = SelectedDebtCurrency?.Code,
                 CreditAmount = creditAmount,
                 DiscountAmount = _discount,
-                RoundingAmount = _rounding,
                 UseCustomerAdvance = UseCustomerAdvance
             };
 
@@ -353,7 +334,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
                 DebtCurrency = SelectedDebtCurrency?.Code,
                 CreditAmount = creditAmount,
                 DiscountAmount = _discount,
-                RoundingAmount = _rounding,
                 UseCustomerAdvance = UseCustomerAdvance,
                 CustomerId = _customerId,
                 Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim()
@@ -429,7 +409,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             DebtCurrency = SelectedDebtCurrency?.Code,
             CreditAmount = creditAmount,
             DiscountAmount = _discount,
-            RoundingAmount = _rounding,
             UseCustomerAdvance = UseCustomerAdvance
         });
         _localCart.MarkSubmitted(code);
@@ -631,13 +610,12 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         TotalText = $"{_totalAmount:N0} {BaseCurrency}";
 
         _discount = CanDiscount ? Math.Clamp(Parse(DiscountText), 0, _totalAmount) : 0;
-        _rounding = Math.Clamp(_rounding, 0, Math.Max(0, _totalAmount - _discount));
-        RoundingText = _rounding > 0 ? $"{_rounding:N0} {BaseCurrency}" : "";
         var payable = Payable;
         PayableText = $"{payable:N0} {BaseCurrency}";
 
         var paid = Paid;
         PaidText = $"{paid:N0} {BaseCurrency}";
+        HasShortfall = paid > 0 && paid < payable;
         var excess = Math.Max(0, paid - payable);
         if ((!HasCustomer || excess <= 0) && KeepExcessAsCredit)
             KeepExcessAsCredit = false;

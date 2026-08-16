@@ -30,7 +30,6 @@ export class PosCartState {
   readonly discountPercent = signal(0);
   readonly discountManual = signal(0);
   readonly discountByPercent = signal(true);
-  readonly rounding = signal(0);
   readonly note = signal('');
   readonly dueDate = signal('');
   readonly held = signal<HeldSale[]>(JSON.parse(localStorage.getItem('cartex.heldSales') ?? '[]'));
@@ -62,7 +61,6 @@ export class PosCartState {
     this.discountPercent.set(0);
     this.discountManual.set(0);
     this.discountByPercent.set(true);
-    this.rounding.set(0);
     this.note.set('');
     this.dueDate.set('');
   }

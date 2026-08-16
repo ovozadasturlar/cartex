@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Cartex.Application.Common.Participants;
 using Cartex.Application.CustomerPayments.Commands;
 using Cartex.Application.Sales.Commands;
@@ -230,8 +230,7 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             UseCustomerAdvance = dto.UseCustomerAdvance,
             Participants = participants,
             FromOfflineSync = true,
-            OfflineActorUserId = actorUserId,
-            RoundingAmount = dto.RoundingAmount
+            OfflineActorUserId = actorUserId
         }, cancellationToken);
         return (result.SaleId, result.ReceiptToken);
     }

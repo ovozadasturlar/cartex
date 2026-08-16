@@ -556,7 +556,7 @@
   .suffix { margin-left: 4px; font-size: 12px; color: var(--cx-text-3); }
 }
 
-.round-apply {
+.fill-shortfall {
   width: 34px;
   height: 34px;
   border: 1px solid var(--cx-border);
@@ -566,16 +566,8 @@
   font-size: 16px;
   cursor: pointer;
 
-  &:hover { background: var(--cx-hover); }
-}
-
-.round-clear {
-  margin-left: 6px;
-  border: none;
-  background: none;
-  color: var(--cx-text-3);
-  cursor: pointer;
-  font-size: 12px;
+  &:hover:not(:disabled) { background: var(--cx-hover); }
+  &:disabled { opacity: .4; cursor: default; }
 }
 
 .note-row {

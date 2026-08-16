@@ -72,7 +72,6 @@ export interface ReceiptSettings {
 export interface SalesPolicy {
   shiftPolicy: string;
   maxDiscountPercent: number;
-  maxRoundingAmount: number;
   maxDebtWriteOffAmount: number;
   maxDebtWriteOffPercent: number;
   defaultMinStock: number;
@@ -87,7 +86,6 @@ export interface SalesPolicy {
   allowRetroactiveCashback: boolean;
   saleCorrectionWindow: string;
   saleCorrectionDays: number;
-  allowRounding: boolean;
   allowDebtWriteOff: boolean;
   printMoneyDocuments: boolean;
   allowConsolidatedAct: boolean;

@@ -70,31 +70,15 @@
                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding CanDiscount}">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding CanDiscount}">
                             <Label Text="{svc:T discount}" FontSize="14" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
                             <Border Grid.Column="1" Style="{StaticResource InputWrap}" WidthRequest="140">
                                 <Entry Text="{Binding DiscountText}" Keyboard="Numeric" HorizontalTextAlignment="End"
                                        Placeholder="0" />
                             </Border>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding CanRound}">
-                            <Label Text="{svc:T rounding_target}" FontSize="14" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                            <Border Grid.Column="1" Style="{StaticResource InputWrap}" WidthRequest="140">
-                                <Entry Text="{Binding RoundingTargetText}" Keyboard="Numeric" HorizontalTextAlignment="End"
-                                       Placeholder="0" />
-                            </Border>
-                            <Button Grid.Column="2" Text="&#8776;" Command="{Binding ApplyRoundingCommand}"
-                                    WidthRequest="44" HeightRequest="44" Padding="0" FontSize="18" />
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8"
-                              IsVisible="{Binding RoundingText, Converter={StaticResource NotEmpty}}">
-                            <Label Text="{svc:T rounding}" FontSize="14" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding RoundingText}" FontSize="14" FontAttributes="Bold"
-                                   VerticalOptions="Center" />
-                            <Button Grid.Column="2" Text="&#10005;" Command="{Binding ClearRoundingCommand}"
-                                    WidthRequest="44" HeightRequest="44" Padding="0" FontSize="14" />
+                            <Button Grid.Column="2" Text="=" Command="{Binding FillDiscountFromTenderCommand}"
+                                    IsEnabled="{Binding HasShortfall}" WidthRequest="44" HeightRequest="44"
+                                    Padding="0" FontSize="18" />
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">

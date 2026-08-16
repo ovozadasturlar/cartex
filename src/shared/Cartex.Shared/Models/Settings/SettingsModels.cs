@@ -1,4 +1,4 @@
-namespace Cartex.Shared.Models.Settings;
+﻿namespace Cartex.Shared.Models.Settings;
 
 public record TelegramSettingsDto(bool Enabled, string? ChatId, bool HasBotToken, int BotTokenLength);
 public record EmailSettingsDto(bool Enabled, string? Host, int Port, bool UseSsl, string? Username, string? FromAddress, string? FromName, bool HasPassword);
@@ -125,7 +125,6 @@ public sealed record SalesPolicyDto
 {
     public string ShiftPolicy { get; init; } = "CashOnly";
     public decimal MaxDiscountPercent { get; init; }
-    public decimal MaxRoundingAmount { get; init; }
     public decimal MaxDebtWriteOffAmount { get; init; }
     public decimal MaxDebtWriteOffPercent { get; init; }
     public decimal DefaultMinStock { get; init; }
@@ -140,7 +139,6 @@ public sealed record SalesPolicyDto
     public bool AllowRetroactiveCashback { get; init; }
     public string SaleCorrectionWindow { get; init; } = "Shift";
     public int SaleCorrectionDays { get; init; } = 1;
-    public bool AllowRounding { get; init; } = true;
     public bool AllowDebtWriteOff { get; init; } = true;
     public bool PrintMoneyDocuments { get; init; } = true;
     public bool AllowConsolidatedAct { get; init; } = true;

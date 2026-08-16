@@ -47,7 +47,6 @@ export class SalesPolicySettings implements OnInit {
   model: SalesPolicy = {
     shiftPolicy: 'CashOnly',
     maxDiscountPercent: 0,
-    maxRoundingAmount: 0,
     maxDebtWriteOffAmount: 0,
     maxDebtWriteOffPercent: 0,
     defaultMinStock: 0,
@@ -62,7 +61,6 @@ export class SalesPolicySettings implements OnInit {
     allowRetroactiveCashback: false,
     saleCorrectionWindow: 'Shift',
     saleCorrectionDays: 1,
-    allowRounding: true,
     allowDebtWriteOff: true,
     printMoneyDocuments: true,
     allowConsolidatedAct: true,

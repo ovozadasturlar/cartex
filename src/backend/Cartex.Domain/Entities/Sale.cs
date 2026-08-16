@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
@@ -21,7 +21,6 @@ public class Sale : SoftDeleteEntity, IBranchScoped
 
     /// How much of <see cref="DiscountAmount"/> came from rounding the payable down.
     /// Reporting only: the total is already net of it.
-    public decimal RoundingAmount { get; set; }
     public decimal PaidCash { get; set; }
     public decimal PaidCard { get; set; }
     public decimal PaidBonus { get; set; }

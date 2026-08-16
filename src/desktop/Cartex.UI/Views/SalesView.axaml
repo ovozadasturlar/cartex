@@ -567,24 +567,10 @@
                                 </NumericUpDown.InnerRightContent>
                             </NumericUpDown>
                             <Button Grid.Column="3" Classes="icon" Margin="6,0,0,0" MinHeight="34"
-                                    IsVisible="{Binding CanRound}" ToolTip.Tip="{Binding L[rounding]}">
-                                <TextBlock Text="≈" FontSize="16" />
-                                <Button.Flyout>
-                                    <Flyout Placement="Top">
-                                        <StackPanel Spacing="8" Width="230">
-                                            <TextBlock Text="{Binding L[rounding_target]}" Classes="caption" />
-                                            <NumericUpDown Value="{Binding RoundingTarget, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
-                                                           Minimum="0" FormatString="N0" ShowButtonSpinner="False" MinHeight="34">
-                                                <NumericUpDown.InnerRightContent>
-                                                    <TextBlock Text="{Binding L[currency_sum]}" VerticalAlignment="Center" Margin="0,0,8,0"
-                                                               Foreground="{DynamicResource TextMuted}" />
-                                                </NumericUpDown.InnerRightContent>
-                                            </NumericUpDown>
-                                            <Button Content="{Binding L[rounding_apply]}" Classes="brand" HorizontalAlignment="Stretch"
-                                                    Command="{Binding ApplyRoundingCommand}" />
-                                        </StackPanel>
-                                    </Flyout>
-                                </Button.Flyout>
+                                    IsVisible="{Binding CanDiscount}" IsEnabled="{Binding HasShortfall}"
+                                    Command="{Binding FillDiscountFromTenderCommand}"
+                                    ToolTip.Tip="{Binding L[discount_fill_shortfall]}">
+                                <mi:MaterialIcon Kind="Calculator" Width="18" Height="18" />
                             </Button>
                         </Grid>
 
@@ -593,16 +579,6 @@
                                        VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
                                        Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto,Auto" IsVisible="{Binding HasRounding}">
-                            <TextBlock Text="{Binding L[rounding]}" Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding RoundingAmount, StringFormat='{}-{0:N0}'}"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
-                            <Button Grid.Column="2" Classes="icon" Margin="6,0,0,0" Content="✕"
-                                    Command="{Binding ClearRoundingCommand}" />
                         </Grid>
 
                         <Separator Background="{DynamicResource BorderBrush}" Height="1" />

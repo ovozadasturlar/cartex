@@ -82,13 +82,11 @@ public sealed record CreateSaleCommand(
     public bool UseCustomerAdvance { get; init; } = true;
     public List<ParticipantInput>? Participants { get; init; }
     public string? Note { get; init; }
-    public decimal RoundingAmount { get; init; }
 
     [JsonIgnore] public bool FromOfflineSync { get; init; }
     [JsonIgnore] public long? OfflineActorUserId { get; init; }
     [JsonIgnore] public IReadOnlyDictionary<long, decimal>? PreauthorizedPrices { get; init; }
     [JsonIgnore] public decimal? PreauthorizedDiscountAmount { get; init; }
-    [JsonIgnore] public decimal? PreauthorizedRoundingAmount { get; init; }
 }
 
 public sealed class CreateSaleCommandHandler(
@@ -291,9 +289,8 @@ public sealed class CreateSaleCommandHandler(
         // Navbatdagi savatga ruxsatli sotuvchi kiritgan chegirma yakunlovchidan qayta ruxsat
         // talab qilmaydi — narx o'zgartirish bilan bir xil mantiq. Faqat o'zgartirilgani tekshiriladi.
         var preauthorizedDiscount = request.PreauthorizedDiscountAmount ?? 0m;
-        var preauthorizedRounding = request.PreauthorizedRoundingAmount ?? 0m;
-        if ((request.DiscountAmount != preauthorizedDiscount || request.RoundingAmount != preauthorizedRounding)
-            && (request.DiscountAmount > 0 || request.RoundingAmount > 0)
+        if (request.DiscountAmount != preauthorizedDiscount
+            && request.DiscountAmount > 0
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
@@ -379,24 +376,6 @@ public sealed class CreateSaleCommandHandler(
                     budget -= placed;
                 }
             }
-        }
-
-        // Yaxlitlash — chegirmaning bir turi: u ham qatorlarga tushadi, shuning uchun ertaga
-        // qaytarilganda o'z qatoridan chiqadi. Sarlavhada esa alohida izoh sifatida saqlanadi.
-        var roundingAmount = 0m;
-        if (request.RoundingAmount > 0)
-        {
-            if (!policy.AllowRounding)
-                throw new BusinessRuleException("Yaxlitlash o'chirilgan.", "rounding_disabled");
-            if (policy.MaxRoundingAmount > 0 && request.RoundingAmount > policy.MaxRoundingAmount
-                && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
-                throw new ForbiddenException($"Yaxlitlash {policy.MaxRoundingAmount:N0} dan osha olmaydi.");
-
-            if (request.RoundingAmount > grossAmount - discountAmount)
-                throw new BusinessRuleException("Yaxlitlash to'lanadigan summadan oshib ketdi.", "rounding_exceeds_payable");
-
-            roundingAmount = request.RoundingAmount - Place(request.RoundingAmount, saleRows, r => r.NetBase);
-            discountAmount += roundingAmount;
         }
 
         var totalAmount = grossAmount - discountAmount;
@@ -564,7 +543,6 @@ public sealed class CreateSaleCommandHandler(
             CustomerId = request.CustomerId,
             TotalAmount = totalAmount,
             DiscountAmount = discountAmount,
-            RoundingAmount = roundingAmount,
             PaidCash = paidCash - changeAmount,
             PaidCard = paidCard,
             PaidBonus = paidBonus,
@@ -812,6 +790,5 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.RoundingAmount).GreaterThanOrEqualTo(0);
     }
 }

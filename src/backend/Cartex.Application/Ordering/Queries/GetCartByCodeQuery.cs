@@ -109,6 +109,6 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
                 : null,
             cart.ClaimedByUserId, cart.ClaimedByUser?.FullName, cart.ClaimedAt, cart.SaleId,
             cart.CancelledAt, cart.CancellationReason, cart.RequeuedFromCartId, actions,
-            cart.DiscountAmount, cart.RoundingAmount);
+            cart.DiscountAmount);
     }
 }

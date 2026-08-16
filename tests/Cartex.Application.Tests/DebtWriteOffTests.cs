@@ -31,7 +31,7 @@ public class DebtWriteOffTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     private sealed record Setup(long Branch, long Warehouse, long Business, long Admin, long BigVariant, long SmallVariant);
 
     private sealed record SaleSnapshot(
-        decimal Total, decimal Discount, decimal Rounding, decimal Debt, decimal Cashback, SaleStatus Status);
+        decimal Total, decimal Discount, decimal Debt, decimal Cashback, SaleStatus Status);
 
     /// Two stocked variants repriced to 1 000 000 and 400 000 in the base currency, so every
     /// number in the assertions comes straight from the acceptance criterion.
@@ -154,7 +154,7 @@ public class DebtWriteOffTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return await db.Sales.Where(x => x.Id == saleId)
             .Select(x => new SaleSnapshot(
-                x.TotalAmount, x.DiscountAmount, x.RoundingAmount, x.DebtAmount, x.CashbackEarned, x.Status))
+                x.TotalAmount, x.DiscountAmount, x.DebtAmount, x.CashbackEarned, x.Status))
             .SingleAsync();
     }
 

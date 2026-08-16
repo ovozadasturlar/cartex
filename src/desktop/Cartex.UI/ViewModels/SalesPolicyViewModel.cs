@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
@@ -36,7 +36,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _correctionWindowIndex = 1;
     [ObservableProperty] private decimal _saleCorrectionDays = 1;
     [ObservableProperty] private decimal _maxDiscountPercent;
-    [ObservableProperty] private decimal _maxRoundingAmount;
     [ObservableProperty] private decimal _maxDebtWriteOffAmount;
     [ObservableProperty] private decimal _maxDebtWriteOffPercent;
     [ObservableProperty] private decimal _maxPriceIncreasePercent;
@@ -51,7 +50,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowInsufficientStockSales;
     [ObservableProperty] private bool _allowRetroactiveCashback;
     [ObservableProperty] private bool _updateCatalogPriceOnSale = true;
-    [ObservableProperty] private bool _allowRounding = true;
     [ObservableProperty] private bool _allowDebtWriteOff = true;
     [ObservableProperty] private bool _printMoneyDocuments = true;
     [ObservableProperty] private bool _allowConsolidatedAct = true;
@@ -76,7 +74,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             CorrectionWindowIndex = Math.Max(0, Array.IndexOf(CorrectionWindowCodes, _loaded.SaleCorrectionWindow));
             SaleCorrectionDays = _loaded.SaleCorrectionDays;
             MaxDiscountPercent = _loaded.MaxDiscountPercent;
-            MaxRoundingAmount = _loaded.MaxRoundingAmount;
             MaxDebtWriteOffAmount = _loaded.MaxDebtWriteOffAmount;
             MaxDebtWriteOffPercent = _loaded.MaxDebtWriteOffPercent;
             MaxPriceIncreasePercent = _loaded.MaxPriceIncreasePercent;
@@ -91,7 +88,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowInsufficientStockSales = _loaded.AllowInsufficientStockSales;
             AllowRetroactiveCashback = _loaded.AllowRetroactiveCashback;
             UpdateCatalogPriceOnSale = _loaded.UpdateCatalogPriceOnSale;
-            AllowRounding = _loaded.AllowRounding;
             AllowDebtWriteOff = _loaded.AllowDebtWriteOff;
             PrintMoneyDocuments = _loaded.PrintMoneyDocuments;
             AllowConsolidatedAct = _loaded.AllowConsolidatedAct;
@@ -115,7 +111,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 SaleCorrectionWindow = CodeAt(CorrectionWindowCodes, CorrectionWindowIndex, _loaded.SaleCorrectionWindow),
                 SaleCorrectionDays = (int)Math.Clamp(SaleCorrectionDays, 1, 365),
                 MaxDiscountPercent = MaxDiscountPercent,
-                MaxRoundingAmount = MaxRoundingAmount,
                 MaxDebtWriteOffAmount = MaxDebtWriteOffAmount,
                 MaxDebtWriteOffPercent = MaxDebtWriteOffPercent,
                 MaxPriceIncreasePercent = MaxPriceIncreasePercent,
@@ -130,7 +125,6 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 AllowInsufficientStockSales = AllowInsufficientStockSales,
                 AllowRetroactiveCashback = AllowRetroactiveCashback,
                 UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale,
-                AllowRounding = AllowRounding,
                 AllowDebtWriteOff = AllowDebtWriteOff,
                 PrintMoneyDocuments = PrintMoneyDocuments,
                 AllowConsolidatedAct = AllowConsolidatedAct,

@@ -44,10 +44,6 @@
                     <StackPanel Spacing="12">
                         <TextBlock Text="{Binding L[optional_capabilities]}" Classes="section" />
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{Binding L[allow_rounding]}" Classes="field" VerticalAlignment="Center" />
-                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowRounding}" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[allow_debt_write_off]}" Classes="field" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtWriteOff}" />
                         </Grid>
@@ -73,16 +69,11 @@
                                                Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="5">
-                                <TextBlock Text="{Binding L[max_rounding_amount]}" Classes="field" />
-                                <NumericUpDown Value="{Binding MaxRoundingAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
-                                               Minimum="0" Increment="1000" FormatString="N0" />
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Spacing="5">
                                 <TextBlock Text="{Binding L[max_write_off_amount]}" Classes="field" />
                                 <NumericUpDown Value="{Binding MaxDebtWriteOffAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                                Minimum="0" Increment="1000" FormatString="N0" />
                             </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="5">
+                            <StackPanel Grid.Row="2" Spacing="5">
                                 <TextBlock Text="{Binding L[max_write_off_percent]}" Classes="field" />
                                 <NumericUpDown Value="{Binding MaxDebtWriteOffPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
                                                Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />

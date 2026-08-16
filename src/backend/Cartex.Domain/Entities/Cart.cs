@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
@@ -35,7 +35,6 @@ public class Cart : SoftDeleteEntity, IBranchScoped
     /// Entered by whoever filled the cart. Carried into the sale untouched, so a discount
     /// agreed with the customer on the shop floor is not lost at the till.
     public decimal DiscountAmount { get; set; }
-    public decimal RoundingAmount { get; set; }
 
     public decimal PaidCash { get; set; }
     public decimal PaidCard { get; set; }

@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -30,7 +30,6 @@ public sealed record SubmitCartCommand(long WarehouseId, long? CustomerId, List<
     public decimal CreditAmount { get; init; }
     public bool UseCustomerAdvance { get; init; } = true;
     public decimal DiscountAmount { get; init; }
-    public decimal RoundingAmount { get; init; }
 }
 
 public sealed class SubmitCartCommandHandler(
@@ -69,7 +68,7 @@ public sealed class SubmitCartCommandHandler(
         // Ruxsat kiritilayotgan joyda tekshiriladi: yakunlashda savatdagi chegirma allaqachon
         // ruxsat berilgan deb qabul qilinadi, shuning uchun bu yerda o'tkazib yuborilsa
         // ruxsatsiz sotuvchi chegirmani kassir orqali o'tkazib yuborishi mumkin bo'lardi.
-        if ((request.DiscountAmount > 0 || request.RoundingAmount > 0)
+        if (request.DiscountAmount > 0
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
@@ -105,7 +104,6 @@ public sealed class SubmitCartCommandHandler(
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             Kind = request.Kind ?? await ResolveKindAsync(cancellationToken),
             DiscountAmount = request.DiscountAmount,
-            RoundingAmount = request.RoundingAmount,
             PaidCash = request.PaidCash,
             PaidCard = request.PaidCard,
             PaidBonus = request.PaidBonus,
@@ -190,7 +188,6 @@ public sealed class SubmitCartCommandValidator : AbstractValidator<SubmitCartCom
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.RoundingAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DebtCurrency).MaximumLength(3);
         RuleFor(x => x.Payments).Must(x => x is null || x.Count <= 20);
         RuleForEach(x => x.Payments!).ChildRules(row =>

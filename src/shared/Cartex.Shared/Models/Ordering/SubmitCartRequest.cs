@@ -1,4 +1,4 @@
-using Cartex.Shared.Models.Partners;
+﻿using Cartex.Shared.Models.Partners;
 using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Shared.Models.Ordering;
@@ -20,5 +20,4 @@ public sealed record SubmitCartRequest(long WarehouseId, long? CustomerId, List<
     public decimal CreditAmount { get; init; }
     public bool UseCustomerAdvance { get; init; } = true;
     public decimal DiscountAmount { get; init; }
-    public decimal RoundingAmount { get; init; }
 }

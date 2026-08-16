@@ -106,15 +106,12 @@ export class Pos implements OnInit {
   readonly card = this.state.card;
   readonly bonus = this.state.bonus;
   readonly discountPercent = this.state.discountPercent;
-  readonly rounding = this.state.rounding;
   readonly note = this.state.note;
-  readonly roundingTarget = signal(0);
   readonly dueDate = this.state.dueDate;
   readonly paying = signal(false);
   readonly minDueDate = isoDay(new Date());
   readonly policy = signal<SalesPolicy | null>(null);
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
-  readonly canRound = computed(() => this.policy()?.allowRounding !== false);
   readonly bonusAuto = signal(false);
   readonly dueDateMissing = signal(false);
   private lastCustomerId: number | null | undefined;
@@ -127,11 +124,12 @@ export class Pos implements OnInit {
       : this.state.discountManual();
     return Math.min(sub, Math.max(0, raw));
   });
-  readonly payableBeforeRounding = computed(() => Math.max(0, this.subTotal() - this.discount()));
-  readonly total = computed(() => Math.max(0, this.payableBeforeRounding() - this.rounding()));
+  readonly total = computed(() => Math.max(0, this.subTotal() - this.discount()));
   readonly paid = computed(() => this.cash() + this.card() + this.bonus());
   readonly change = computed(() => Math.max(0, this.paid() - this.total()));
   readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
+  // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
+  readonly hasShortfall = computed(() => this.paid() > 0 && this.paid() < this.total());
   readonly overCreditLimit = computed(() => {
     const c = this.customer();
     return !!c && c.creditLimit > 0 && c.debtBalance + this.debt() > c.creditLimit;
@@ -371,6 +369,9 @@ export class Pos implements OnInit {
 
   remove(line: CartLine): void {
     this.cart.update((c) => c.filter((l) => l !== line));
+    // An empty cart holding a tender and a note is not a state a till may sit in:
+    // the next customer would start with the previous one's money on screen.
+    if (!this.cart().length) this.state.resetPayments();
   }
 
   clearCart(): void {
@@ -394,14 +395,12 @@ export class Pos implements OnInit {
     this.state.discountByPercent.set(true);
   }
 
-  // The cashier types what the customer will actually hand over; the shortfall becomes a
-  // rounding discount so the sale still adds up and a refund comes off the right lines.
-  applyRounding(target: number): void {
-    this.state.rounding.set(Math.max(0, this.payableBeforeRounding() - Math.max(0, target)));
-  }
-
-  clearRounding(): void {
-    this.state.rounding.set(0);
+  // Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
+  // yetmagan qismni chegirma maydoniga yozadi (CHEG-10). Joriy chegirmaga bog'liq emas,
+  // shuning uchun ikkinchi bosish qiymatni ikkilantirmaydi.
+  fillDiscountFromTender(): void {
+    if (!this.hasShortfall()) return;
+    this.onDiscountAmount(this.subTotal() - this.paid());
   }
 
   onDiscountAmount(v: number): void {
@@ -493,7 +492,6 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
               unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
             })),
             discountAmount: this.discount(),
-            roundingAmount: this.rounding(),
             note: this.note().trim() || null,
             debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
           },
@@ -518,7 +516,6 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
         })),
         discountAmount: this.discount(),
-        roundingAmount: this.rounding(),
         note: this.note().trim() || null,
         debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
         idempotencyKey: newUuid(),
@@ -560,7 +557,6 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           idempotencyKey: newUuid(),
           note: this.note().trim() || null,
           discountAmount: this.discount(),
-          roundingAmount: this.rounding(),
         }));
       }
       this.activeQueueCode = null;

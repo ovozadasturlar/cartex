@@ -10,9 +10,6 @@
 
     <div class="cx-card section">
       <h2>{{ t('optional_capabilities') }}</h2>
-      <mat-slide-toggle [(ngModel)]="model.allowRounding" [disabled]="!canManage">
-        {{ t('allow_rounding') }}
-      </mat-slide-toggle>
       <mat-slide-toggle [(ngModel)]="model.allowDebtWriteOff" [disabled]="!canManage">
         {{ t('allow_debt_write_off') }}
       </mat-slide-toggle>
@@ -31,10 +28,6 @@
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('max_discount') }}</mat-label>
           <input matInput type="number" min="0" max="100" [(ngModel)]="model.maxDiscountPercent" [disabled]="!canManage" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('max_rounding_amount') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="model.maxRoundingAmount" [disabled]="!canManage" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('max_write_off_amount') }}</mat-label>

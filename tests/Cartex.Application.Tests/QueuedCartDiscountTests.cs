@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Ordering.Commands;
@@ -20,10 +20,8 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
     private const decimal PriceA = 100_000m;
     private const decimal PriceB = 15_000m;
     private const decimal Gross = PriceA + PriceB;              // 115 000
-    private const decimal Manual = 3_450m;                      // 115 000 x 3%
-    private const decimal Rounding = 1_550m;                    // 111 550 -> 110 000
-    private const decimal SaleDiscount = Manual + Rounding;     // CHEG-10: the rounding joins the discount = 5 000
-    private const decimal RoundedTotal = Gross - SaleDiscount;  // CHEG-08: 115 000 - 5 000 = 110 000
+    private const decimal Manual = 5_000m;                      // sotuvchi kelishgan chegirma
+    private const decimal Payable = Gross - Manual;             // CHEG-08: 115 000 - 5 000 = 110 000
 
     // CHEG-05: the 5 000 spreads over the net line values 100 000 : 15 000, not equally.
     // A: 5 000 x 100/115 = 4 347.826... -> 4 347.83
@@ -33,7 +31,7 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
     private sealed record Setup(long Branch, long Warehouse, long Business, long Admin, long VariantA, long VariantB);
 
-    private sealed record SaleFacts(decimal Discount, decimal Rounding, decimal Total, decimal LineSum, decimal LineA, decimal LineB);
+    private sealed record SaleFacts(decimal Discount, decimal Total, decimal LineSum, decimal LineA, decimal LineB);
 
     /// Two priced variants that both have stock, normalised to the base currency at 100 000 and 15 000
     /// so the allocation maths in the assertions is exact.
@@ -71,8 +69,7 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
     {
         using var scope = Fixture.CreateScope();
         var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
-        await settings.SetAsync(SettingKeys.SalesPolicy,
-            new SalesPolicySettings { MaxDiscountPercent = 100, MaxRoundingAmount = 100_000m });
+        await settings.SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings { MaxDiscountPercent = 100 });
     }
 
     private async Task StartAsync(Setup s, params string[] permissions)
@@ -84,18 +81,17 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
             Fixture.CurrentUser.Granted.Add(permission);
     }
 
-    private static SubmitCartCommand Submit(Setup s, decimal discount, decimal rounding) =>
+    private static SubmitCartCommand Submit(Setup s, decimal discount) =>
         new(s.Warehouse, null,
             [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
         {
-            DiscountAmount = discount,
-            RoundingAmount = rounding
+            DiscountAmount = discount
         };
 
-    private async Task<string> QueueAsync(Setup s, decimal discount, decimal rounding)
+    private async Task<string> QueueAsync(Setup s, decimal discount)
     {
         using var scope = Fixture.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<ISender>().Send(Submit(s, discount, rounding));
+        return await scope.ServiceProvider.GetRequiredService<ISender>().Send(Submit(s, discount));
     }
 
     private async Task<long> CheckoutAsync(CheckoutCartCommand command)
@@ -110,12 +106,12 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartStatusCommand(code, status, reason));
     }
 
-    private async Task<(decimal Discount, decimal Rounding)> CartAsync(string code)
+    private async Task<decimal> CartDiscountAsync(string code)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var cart = await db.Carts.AsNoTracking().SingleAsync(x => x.AggregateCode == code);
-        return (cart.DiscountAmount, cart.RoundingAmount);
+        return cart.DiscountAmount;
     }
 
     private async Task<SaleFacts> SaleAsync(Setup s, long saleId)
@@ -125,36 +121,32 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         var sale = await db.Sales.Include(x => x.Items).SingleAsync(x => x.Id == saleId);
         return new SaleFacts(
             sale.DiscountAmount,
-            sale.RoundingAmount,
             sale.TotalAmount,
             sale.Items.Sum(i => i.DiscountAmount),
             sale.Items.Where(i => i.VariantId == s.VariantA).Sum(i => i.DiscountAmount),
             sale.Items.Where(i => i.VariantId == s.VariantB).Sum(i => i.DiscountAmount));
     }
 
-    /// NAVBAT-01 worked criterion: the seller queues 3 450 off plus 1 550 rounded away on a 115 000 basket,
-    /// the cashier changes nothing, and the sale must read 5 000 / 1 550 / 110 000.
+    /// NAVBAT-01 worked criterion: the seller queues 5 000 off a 115 000 basket, the cashier
+    /// changes nothing, and the sale must read 5 000 / 110 000.
     [Fact]
-    public async Task NAVBAT_01_Queued_discount_and_rounding_reach_the_sale_untouched()
+    public async Task NAVBAT_01_Queued_discount_reaches_the_sale_untouched()
     {
         var s = await SetupAsync();
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
-        // First the queue itself must hold the values, otherwise the loss happened before checkout.
-        var cart = await CartAsync(code);
-        Assert.Equal(Manual, cart.Discount);            // 3 450
-        Assert.Equal(Rounding, cart.Rounding);          // 1 550
+        // First the queue itself must hold the value, otherwise the loss happened before checkout.
+        Assert.Equal(Manual, await CartDiscountAsync(code));
 
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, RoundedTotal, 0, 0));
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, Payable, 0, 0));
         var sale = await SaleAsync(s, saleId);
 
-        Assert.Equal(SaleDiscount, sale.Discount);      // 3 450 + 1 550 = 5 000
-        Assert.Equal(Rounding, sale.Rounding);          // 1 550 reported on its own (CHEG-11)
-        Assert.Equal(RoundedTotal, sale.Total);         // 115 000 - 5 000 = 110 000
-        Assert.Equal(SaleDiscount, sale.LineSum);       // CHEG-02: the lines add up to the header exactly
+        Assert.Equal(Manual, sale.Discount);            // 5 000
+        Assert.Equal(Payable, sale.Total);              // 115 000 - 5 000 = 110 000
+        Assert.Equal(Manual, sale.LineSum);             // CHEG-02: the lines add up to the header exactly
         Assert.Equal(LineDiscountA, sale.LineA);        // 5 000 x 100/115 = 4 347.83
         Assert.Equal(LineDiscountB, sale.LineB);        // 5 000 x  15/115 =   652.17
     }
@@ -168,17 +160,16 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
         Fixture.CurrentUser.Granted.Remove(AppPermissions.Sales.Discount);
 
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, RoundedTotal, 0, 0));
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, Payable, 0, 0));
         var sale = await SaleAsync(s, saleId);
 
-        Assert.Equal(SaleDiscount, sale.Discount);      // 5 000
-        Assert.Equal(Rounding, sale.Rounding);          // 1 550
-        Assert.Equal(RoundedTotal, sale.Total);         // 110 000
-        Assert.Equal(SaleDiscount, sale.LineSum);
+        Assert.Equal(Manual, sale.Discount);            // 5 000
+        Assert.Equal(Payable, sale.Total);              // 110 000
+        Assert.Equal(Manual, sale.LineSum);
     }
 
     /// NAVBAT-05, second sentence: a value the cashier changes is a value the cashier is entering.
@@ -189,72 +180,50 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
         Fixture.CurrentUser.Granted.Remove(AppPermissions.Sales.Discount);
 
-        // 10 000 is not the queued 3 450. The payment matches what the sale would come to
-        // (115 000 - (10 000 + 1 550) = 103 450), so only the missing permission can refuse it.
+        // 10 000 is not the queued 5 000. The payment matches what the sale would come to
+        // (115 000 - 10 000 = 105 000), so only the missing permission can refuse it.
         await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CheckoutAsync(new CheckoutCartCommand(code, 103_450m, 0, 0)
+            CheckoutAsync(new CheckoutCartCommand(code, 105_000m, 0, 0)
             {
                 DiscountAmount = 10_000m
             }));
     }
 
-    /// NAVBAT-05: the rounding is guarded exactly like the discount it belongs to.
+    /// NAVBAT-02: "request if given, cart otherwise".
     [Fact]
-    public async Task NAVBAT_05_Changing_the_queued_rounding_at_checkout_requires_the_permission()
+    public async Task NAVBAT_02_Request_discount_wins_over_the_queued_one()
     {
         var s = await SetupAsync();
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
-        Fixture.CurrentUser.Granted.Remove(AppPermissions.Sales.Discount);
-
-        // 3 000 is not the queued 1 550; 115 000 - (3 450 + 3 000) = 108 550.
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            CheckoutAsync(new CheckoutCartCommand(code, 108_550m, 0, 0)
-            {
-                RoundingAmount = 3_000m
-            }));
-    }
-
-    /// NAVBAT-02: "request if given, cart otherwise" — per field, in the same call.
-    [Fact]
-    public async Task NAVBAT_02_Request_discount_wins_while_the_cart_rounding_still_rides_along()
-    {
-        var s = await SetupAsync();
-        await SetPolicyAsync();
-        await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
-
-        var code = await QueueAsync(s, Manual, Rounding);
-
-        // The cashier has the permission and raises the discount to 6 000; he says nothing about the
-        // rounding, so the queued 1 550 stays. 6 000 + 1 550 = 7 550 -> 115 000 - 7 550 = 107 450.
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, 107_450m, 0, 0)
+        // The cashier has the permission and raises the discount to 6 000 -> 115 000 - 6 000 = 109 000.
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, 109_000m, 0, 0)
         {
             DiscountAmount = 6_000m
         });
         var sale = await SaleAsync(s, saleId);
 
-        Assert.Equal(7_550m, sale.Discount);
-        Assert.Equal(Rounding, sale.Rounding);          // 1 550 came from the cart, not from the request
-        Assert.Equal(107_450m, sale.Total);
-        Assert.Equal(7_550m, sale.LineSum);             // CHEG-02
+        Assert.Equal(6_000m, sale.Discount);
+        Assert.Equal(109_000m, sale.Total);
+        Assert.Equal(6_000m, sale.LineSum);             // CHEG-02
     }
 
-    /// NAVBAT-03 (with NAVBAT-01): requeue copies every field, discount and rounding among them.
+    /// NAVBAT-03 (with NAVBAT-01): requeue copies every field, the discount among them.
     [Fact]
-    public async Task NAVBAT_03_Requeued_cart_keeps_the_discount_and_the_rounding()
+    public async Task NAVBAT_03_Requeued_cart_keeps_the_discount()
     {
         var s = await SetupAsync();
         await SetPolicyAsync();
         Fixture.CurrentUser.AsAdmin(s.Admin, s.Business, s.Branch);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
         await StatusAsync(code, CartStatus.Confirmed);
         await StatusAsync(code, CartStatus.Cancelled, "Mijoz kutib turdi");
@@ -266,9 +235,7 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
             requeued = (await sender.Send(new RequeueCartCommand(code, "Qayta navbatga"))).AggregateCode;
         }
 
-        var clone = await CartAsync(requeued);
-        Assert.Equal(Manual, clone.Discount);           // 3 450
-        Assert.Equal(Rounding, clone.Rounding);         // 1 550
+        Assert.Equal(Manual, await CartDiscountAsync(requeued));   // 5 000
     }
 
     /// NAVBAT-02 says an omitted field keeps its stored value. An edit that only changes the
@@ -280,26 +247,23 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
         using (var scope = Fixture.CreateScope())
         {
-            // Only the items are sent — no discount, no rounding.
+            // Only the items are sent — no discount.
             await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartCommand(
                 code, null,
                 [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)]));
         }
 
-        var edited = await CartAsync(code);
-        Assert.Equal(Manual, edited.Discount);
-        Assert.Equal(Rounding, edited.Rounding);
+        Assert.Equal(Manual, await CartDiscountAsync(code));
 
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, RoundedTotal, 0, 0));
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, Payable, 0, 0));
         var sale = await SaleAsync(s, saleId);
 
-        Assert.Equal(SaleDiscount, sale.Discount);
-        Assert.Equal(Rounding, sale.Rounding);
-        Assert.Equal(RoundedTotal, sale.Total);
+        Assert.Equal(Manual, sale.Discount);
+        Assert.Equal(Payable, sale.Total);
     }
 
     [Fact]
@@ -309,28 +273,24 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout, AppPermissions.Sales.Discount);
 
-        var code = await QueueAsync(s, Manual, Rounding);
+        var code = await QueueAsync(s, Manual);
 
         using (var scope = Fixture.CreateScope())
         {
             await scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCartCommand(code, null, [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
             {
-                DiscountAmount = Manual,
-                RoundingAmount = Rounding
+                DiscountAmount = Manual
             });
         }
 
-        var edited = await CartAsync(code);
-        Assert.Equal(Manual, edited.Discount);
-        Assert.Equal(Rounding, edited.Rounding);
+        Assert.Equal(Manual, await CartDiscountAsync(code));
 
-        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, RoundedTotal, 0, 0));
+        var saleId = await CheckoutAsync(new CheckoutCartCommand(code, Payable, 0, 0));
         var sale = await SaleAsync(s, saleId);
 
-        Assert.Equal(SaleDiscount, sale.Discount);      // 5 000
-        Assert.Equal(Rounding, sale.Rounding);          // 1 550
-        Assert.Equal(RoundedTotal, sale.Total);         // 110 000
-        Assert.Equal(SaleDiscount, sale.LineSum);
+        Assert.Equal(Manual, sale.Discount);            // 5 000
+        Assert.Equal(Payable, sale.Total);              // 110 000
+        Assert.Equal(Manual, sale.LineSum);
     }
 
     /// NAVBAT-01 from the other side: a cart nobody discounted must not pick one up on the way through.
@@ -341,13 +301,12 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create, AppPermissions.Sales.Checkout);
 
-        var code = await QueueAsync(s, 0m, 0m);
+        var code = await QueueAsync(s, 0m);
 
         var saleId = await CheckoutAsync(new CheckoutCartCommand(code, Gross, 0, 0));
         var sale = await SaleAsync(s, saleId);
 
         Assert.Equal(0m, sale.Discount);
-        Assert.Equal(0m, sale.Rounding);
         Assert.Equal(Gross, sale.Total);                // 115 000, nothing taken off
         Assert.Equal(0m, sale.LineSum);
     }
@@ -362,7 +321,7 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
 
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(Submit(s, Manual, Rounding)));
+        await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(Submit(s, Manual)));
     }
 
     /// CHEG-13 on the edit path: the guard has to sit on every door into the queue, not only the first one.
@@ -373,14 +332,13 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
         await SetPolicyAsync();
         await StartAsync(s, AppPermissions.Sales.Create);
 
-        var code = await QueueAsync(s, 0m, 0m);
+        var code = await QueueAsync(s, 0m);
 
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<ForbiddenException>(() => sender.Send(new UpdateCartCommand(code, null, [new SubmitCartItemDto(s.VariantA, 1), new SubmitCartItemDto(s.VariantB, 1)])
         {
-            DiscountAmount = Manual,
-            RoundingAmount = Rounding
+            DiscountAmount = Manual
         }));
     }
 }

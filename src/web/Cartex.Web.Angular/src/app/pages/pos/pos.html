@@ -252,32 +252,10 @@
                 <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="discount()" (ngModelChange)="onDiscountAmount($event)" />
                 <span class="suffix">{{ t('currency_sum') }}</span>
               </div>
+              <button class="fill-shortfall" type="button" (click)="fillDiscountFromTender()"
+                      [disabled]="!hasShortfall()" [matTooltip]="t('discount_fill_shortfall')">=</button>
             </div>
           </div>
-
-          <div class="discount-row" [hidden]="!canRound()">
-            <span>{{ t('rounding') }}</span>
-            <div class="dinputs round">
-              <div class="dinput">
-                <input type="text" inputmode="numeric" cxMoneyInput
-                       [ngModel]="roundingTarget()" (ngModelChange)="roundingTarget.set($event)"
-                       [placeholder]="t('rounding_target')" />
-                <span class="suffix">{{ t('currency_sum') }}</span>
-              </div>
-              <button class="round-apply" type="button" (click)="applyRounding(roundingTarget())"
-                      [matTooltip]="t('rounding')">&#8776;</button>
-            </div>
-          </div>
-
-          @if (rounding() > 0) {
-            <div class="row">
-              <span>{{ t('rounding') }}</span>
-              <span class="cx-money">
-                -{{ rounding() | cxMoney }}
-                <button class="round-clear" type="button" (click)="clearRounding()">&#10005;</button>
-              </span>
-            </div>
-          }
 
           <div class="sep"></div>
 
