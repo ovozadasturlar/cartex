@@ -32,6 +32,9 @@ public interface ICustomersApi
     [Post("/api/customers/{id}/repay-debt")]
     Task RepayDebtAsync(long id, [Body] RepayDebtRequest request);
 
+    [Post("/api/customers/{id}/consolidated-act")]
+    Task<ConsolidatedActDto> GetConsolidatedActAsync(long id, [Body] ConsolidatedActRequest request);
+
     [Post("/api/customers/{id}/bonus")]
     Task GiveCustomerBonusAsync(long id, [Body] GiveCustomerBonusRequest request);
 

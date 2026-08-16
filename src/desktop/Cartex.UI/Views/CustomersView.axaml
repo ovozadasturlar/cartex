@@ -283,6 +283,15 @@
                         <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextSecondary}" FontSize="12" />
                         <DatePicker SelectedDate="{Binding StatementTo, Mode=TwoWay}" MinWidth="140" MinHeight="34" />
+                        <Button Classes="outline" MinHeight="34" Padding="12,0"
+                                Command="{Binding OpenConsolidatedActCommand}"
+                                IsVisible="{Binding CanBuildAct}"
+                                ToolTip.Tip="{Binding L[consolidated_act_hint]}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <mi:MaterialIcon Kind="FileDocumentMultipleOutline" Width="15" Height="15" />
+                                <TextBlock Text="{Binding L[consolidated_act]}" FontSize="12.5" />
+                            </StackPanel>
+                        </Button>
                         <c:ExportButton Command="{Binding ExportStatementCommand}" Text="{Binding L[export]}"
                                         IsVisible="{Binding CanExportStatement}" />
                     </StackPanel>

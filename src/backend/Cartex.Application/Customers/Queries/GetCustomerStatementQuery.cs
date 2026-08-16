@@ -242,10 +242,10 @@ public sealed class GetCustomerStatementQueryHandler(
             x => x.BranchId, x => x.CreatedAt, request);
         var saleRows = await sales.Select(x => new
         {
-            x.Id, x.CreatedAt, x.ReceiptToken, x.TotalAmount, x.DebtCurrency
+            x.Id, x.CreatedAt, x.ReceiptToken, x.DocumentNumber, x.TotalAmount, x.DebtCurrency
         }).ToListAsync(cancellationToken);
         raw.AddRange(saleRows.Where(x => !knownSales.Contains(x.Id)).Select(x => new RawStatementEntry(
-            x.CreatedAt, "Sale", x.Id, $"SALE-{x.Id}", $"Savdo: {x.TotalAmount:N2}",
+            x.CreatedAt, "Sale", x.Id, x.DocumentNumber, $"Savdo: {x.TotalAmount:N2}",
             0, x.DebtCurrency, x.Id, x.Id)));
 
         var knownReturns = raw.Where(x => x.Type == "CustomerReturn" && x.DocumentId.HasValue)

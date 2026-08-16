@@ -248,6 +248,20 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
             entry.Debit, entry.Credit, entry.RunningBalance, entry.Currency, entry.SaleId,
             entry.Type == "CustomerPayment" ? entry.DocumentId : null);
 
+    public bool CanBuildAct => _auth.HasPermission("customers.act");
+
+    /// The act is picked from the statement the user is already looking at, so there is no second
+    /// place where "which documents does this customer have" has to be answered.
+    [RelayCommand]
+    private async Task OpenConsolidatedActAsync()
+    {
+        if (!CanBuildAct || Statement is not { } statement) return;
+        var vm = new ConsolidatedActViewModel(_api, _toast, _busy, ServiceLocator.Resolve<IPrinterService>(),
+            _businessApi, statement.CustomerId, statement.CustomerName, statement.Timeline);
+        await _dialog.ShowAsync<Views.ConsolidatedActDialog, ConsolidatedActViewModel, object?>(vm);
+    }
+
+
     private async Task ShowTransactionAsync(
         DateTime occurredAt, string operation, string? documentNumber,
         decimal debit, decimal credit, decimal balance, string? currency,

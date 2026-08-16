@@ -407,7 +407,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | Qarz va to'lov | ✅ | `DebtFlowTests`, `CustomerCreditTests`, `VoidCustomerPaymentTests`, `DebtWriteOffTests` |
 | **Mijozga qarzga pul berish** | ✅ | `CustomerCashLoanTests` |
 | **Hujjatlar** | ✅ | `CustomerDocumentTests` |
-| **Yig'ma dalolatnoma** | ✅ hisob tayyor, chop etish qoldi | `ConsolidatedActTests` |
+| **Yig'ma dalolatnoma** | ✅ | `ConsolidatedActTests` |
 | **Sozlamalar** | 🟡 ikkita ma'lum og'ish bor | — |
 | Cashback va hamkor mukofoti | 🟡 test juda kam (2 ta) | `PartnerRewardTests` |
 | Navbat (savat) | 🟡 egalik/claim qoidalari yo'q | `CartKindTests`, `CartLifecycleOwnershipTests`, `OrderingCheckoutDraftTests` |
