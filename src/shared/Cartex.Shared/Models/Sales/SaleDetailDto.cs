@@ -13,6 +13,8 @@ public sealed record SaleDetailItemDto(
     string PriceCurrency,
     decimal PriceRate,
     decimal LineTotal,
+    decimal DiscountAmount,
+    decimal NetTotal,
     decimal CashbackEarned,
     decimal ReturnedCashback,
     bool AllowsFractional = false);

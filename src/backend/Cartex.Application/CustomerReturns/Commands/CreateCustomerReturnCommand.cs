@@ -121,11 +121,13 @@ public sealed class CreateCustomerReturnCommandHandler(
         await quantityPolicy.ValidateAsync(
             request.Lines.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
 
-        var discountRates = sales.Values.ToDictionary(x => x.Id, x =>
-        {
-            var gross = saleItems.Where(item => item.SaleId == x.Id).Sum(item => item.Quantity * item.UnitPrice);
-            return gross > 0 ? x.DiscountAmount / gross : 0;
-        });
+        // The discount already sits on the line, so a refund is simply the part of that line's net
+        // this return consumes. Taking the difference keeps repeated partial returns adding up
+        // to the net exactly, with no cent stranded on the last one.
+        static decimal NetConsumed(SaleItem item, decimal quantity) =>
+            item.Quantity <= 0
+                ? 0
+                : Math.Round((item.Quantity * item.UnitPrice - item.DiscountAmount) * quantity / item.Quantity, 2);
 
         var resolved = new List<ResolvedReturnLine>(request.Lines.Count);
         foreach (var input in request.Lines)
@@ -133,9 +135,8 @@ public sealed class CreateCustomerReturnCommandHandler(
             if (input.SaleItemId is { } saleItemId)
             {
                 var item = itemById[saleItemId];
-                var discountRate = discountRates[item.SaleId];
                 resolved.Add(new ResolvedReturnLine(input, item, item.UnitPrice,
-                    Math.Round(input.Quantity * item.UnitPrice * (1 - discountRate), 2)));
+                    NetConsumed(item, item.ReturnedQuantity + input.Quantity) - NetConsumed(item, item.ReturnedQuantity)));
             }
             else
             {
@@ -148,8 +149,9 @@ public sealed class CreateCustomerReturnCommandHandler(
 
         var grossAmount = resolved.Sum(x => x.Input.Quantity * x.UnitPrice);
         var refundAmount = resolved.Sum(x => x.LineAmount);
-        if (refundAmount <= 0)
-            throw new BusinessRuleException("Qaytaruv qiymati noldan katta bo'lishi kerak.", "return_value_empty");
+        // A fully discounted line refunds nothing, but the goods still have to come back.
+        if (refundAmount < 0)
+            throw new BusinessRuleException("Qaytaruv qiymati manfiy bo'lishi mumkin emas.", "return_value_negative");
 
         var businessDate = request.BusinessDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var document = new CustomerReturnDocument

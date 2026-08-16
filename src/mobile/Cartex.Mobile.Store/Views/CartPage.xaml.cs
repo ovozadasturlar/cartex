@@ -101,6 +101,17 @@ public partial class CartPage : ContentPage
         _vm.SetQuantityFromTextCommand.Execute(null);
     }
 
+    private void OnPriceEntryCompleted(object? sender, EventArgs e)
+    {
+        _vm.SetPriceFromTextCommand.Execute(null);
+        KeyboardDismissal.Hide();
+    }
+
+    private void OnPriceEntryUnfocused(object? sender, FocusEventArgs e)
+    {
+        _vm.SetPriceFromTextCommand.Execute(null);
+    }
+
     private void OnOutsideTapped(object? sender, TappedEventArgs e) => CloseOpenSwipe();
 
     private void OnCartScrolled(object? sender, ItemsViewScrolledEventArgs e) => CloseOpenSwipe();

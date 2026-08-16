@@ -7,6 +7,7 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Events;
+using Cartex.Domain.Pricing;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Measurement;
@@ -43,6 +44,23 @@ file sealed record ResolvedSaleLine(
     decimal Rate,
     decimal PriceDiscount);
 
+/// One stock batch taken for one requested line. Discounts are allocated onto these rows,
+/// so the sale total and the stored lines are derived from the very same numbers.
+file sealed class SaleRow(int lineIndex, Stock batch, decimal quantity, ResolvedSaleLine line)
+{
+    public int LineIndex { get; } = lineIndex;
+    public Stock Batch { get; } = batch;
+    public decimal Quantity { get; } = quantity;
+    public ResolvedSaleLine Line { get; } = line;
+    public decimal Extended { get; } = Math.Round(quantity * line.UnitPrice, 2);
+    public decimal Discount { get; set; }
+
+    /// What the row is actually worth once its own price cut is off. Order-level discounts are
+    /// shared out by this, not by the catalog amount: a percent quoted on the payable has to
+    /// come off each line in proportion to what the customer is really paying for it.
+    public decimal NetBase { get; set; }
+}
+
 internal sealed record AdvanceUse(Account Account, decimal Amount, decimal Rate, decimal AmountBase);
 
 public record CreateSaleCommand(
@@ -64,7 +82,9 @@ public record CreateSaleCommand(
     List<ParticipantInput>? Participants = null,
     string? Note = null,
     [property: JsonIgnore] bool FromOfflineSync = false,
-    [property: JsonIgnore] long? OfflineActorUserId = null) : ICommand<CreateSaleResult>;
+    [property: JsonIgnore] long? OfflineActorUserId = null,
+    [property: JsonIgnore] IReadOnlyDictionary<long, decimal>? PreauthorizedPrices = null,
+    decimal RoundingAmount = 0) : ICommand<CreateSaleResult>;
 
 public sealed class CreateSaleCommandHandler(
     IApplicationDbContext db,
@@ -255,23 +275,91 @@ public sealed class CreateSaleCommandHandler(
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
-        if (priceOverrides.Count > 0
+        // Navbatdagi savatga ruxsatli foydalanuvchi kiritib qo'ygan narx yakunlovchidan
+        // qayta ruxsat talab qilmaydi; faqat yangi/o'zgartirilgan narx tekshiriladi.
+        if (priceOverrides.Any(o => request.PreauthorizedPrices is null
+                || !request.PreauthorizedPrices.TryGetValue(o.VariantId, out var preauthorized)
+                || preauthorized != o.EnteredPrice)
             && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
-        var grossAmount = resolvedItems.Sum(x => x.Quantity * x.UnitPrice);
-        var priceDiscountAmount = resolvedItems.Sum(x => x.PriceDiscount);
+        if ((request.DiscountAmount > 0 || request.RoundingAmount > 0)
+            && !currentUser.HasPermission(AppPermissions.Sales.Discount))
+            throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
+
+        // Stock is allocated before the totals so the sale adds up from the very rows it will
+        // store: a line split across batches rounds once per row, not once per line.
+        await stockAllocator.PreloadAsync(request.WarehouseId,
+            resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
+
+        var saleRows = new List<SaleRow>();
+        for (var index = 0; index < resolvedItems.Count; index++)
+        {
+            var line = resolvedItems[index];
+            var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId,
+                line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
+            foreach (var allocation in allocations)
+            {
+                saleRows.Add(new SaleRow(index, allocation.Batch, allocation.Quantity, line));
+                allocation.Batch.Quantity -= allocation.Quantity;
+            }
+        }
+
+        // Each component is capped by what its rows have left, so no line can go below zero;
+        // anything that will not fit is dropped from the header too, keeping the two in step.
+        decimal Place(decimal amount, IReadOnlyList<SaleRow> targets, Func<SaleRow, decimal> weight)
+        {
+            if (amount <= 0 || targets.Count == 0) return amount;
+            var placement = MoneyAllocator.Distribute(amount,
+                [.. targets.Select(weight)],
+                [.. targets.Select(r => r.Extended - r.Discount)]);
+            for (var i = 0; i < targets.Count; i++) targets[i].Discount += placement.Placed[i];
+            return placement.Residual;
+        }
+
+        var grossAmount = saleRows.Sum(r => r.Extended);
+
+        var priceDiscountAmount = 0m;
+        for (var index = 0; index < resolvedItems.Count; index++)
+        {
+            var cut = Math.Round(resolvedItems[index].PriceDiscount, 2);
+            if (cut <= 0) continue;
+            var targets = saleRows.Where(r => r.LineIndex == index).ToList();
+            priceDiscountAmount += cut - Place(cut, targets, r => r.Quantity);
+        }
+
+        foreach (var row in saleRows) row.NetBase = row.Extended - row.Discount;
+
         var discountAmount = Math.Clamp(request.DiscountAmount + priceDiscountAmount, 0, grossAmount);
         if (policy.MaxDiscountPercent > 0 && discountAmount > grossAmount * policy.MaxDiscountPercent / 100
             && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
             throw new BusinessRuleException($"Chegirma {policy.MaxDiscountPercent}% dan osha olmaydi.");
+
+        discountAmount -= Place(discountAmount - priceDiscountAmount, saleRows, r => r.NetBase);
 
         if (request.ApplyAutoDiscount)
         {
             var autoApplied = await discountCalculator.CalculateAsync(request.CustomerId,
                 resolvedItems.Select(x => new DiscountCalcLine(x.Item.VariantId, x.Quantity * (x.Item.UnitPrice ?? x.UnitPrice))).ToList(),
                 cancellationToken);
-            discountAmount = Math.Clamp(discountAmount + autoApplied.Sum(a => a.Amount), 0, grossAmount);
+            var auto = Math.Clamp(autoApplied.Sum(a => a.Amount), 0, grossAmount - discountAmount);
+            discountAmount += auto - Place(auto, saleRows, r => r.NetBase);
+        }
+
+        // Yaxlitlash — chegirmaning bir turi: u ham qatorlarga tushadi, shuning uchun ertaga
+        // qaytarilganda o'z qatoridan chiqadi. Sarlavhada esa alohida izoh sifatida saqlanadi.
+        var roundingAmount = 0m;
+        if (request.RoundingAmount > 0)
+        {
+            if (policy.MaxRoundingAmount > 0 && request.RoundingAmount > policy.MaxRoundingAmount
+                && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
+                throw new ForbiddenException($"Yaxlitlash {policy.MaxRoundingAmount:N0} dan osha olmaydi.");
+
+            if (request.RoundingAmount > grossAmount - discountAmount)
+                throw new BusinessRuleException("Yaxlitlash to'lanadigan summadan oshib ketdi.", "rounding_exceeds_payable");
+
+            roundingAmount = request.RoundingAmount - Place(request.RoundingAmount, saleRows, r => r.NetBase);
+            discountAmount += roundingAmount;
         }
 
         var totalAmount = grossAmount - discountAmount;
@@ -439,6 +527,7 @@ public sealed class CreateSaleCommandHandler(
             CustomerId = request.CustomerId,
             TotalAmount = totalAmount,
             DiscountAmount = discountAmount,
+            RoundingAmount = roundingAmount,
             PaidCash = paidCash - changeAmount,
             PaidCard = paidCard,
             PaidBonus = paidBonus,
@@ -469,32 +558,19 @@ public sealed class CreateSaleCommandHandler(
                     : ParticipantAttributionSource.Direct
             });
 
-        var cashbackFactor = grossAmount > 0 ? totalAmount / grossAmount : 1m;
-        await stockAllocator.PreloadAsync(request.WarehouseId,
-            resolvedItems.Select(x => x.Item.VariantId), cancellationToken);
-
-        foreach (var line in resolvedItems)
-        {
-
-            var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId, line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
-
-            foreach (var allocation in allocations)
+        foreach (var row in saleRows)
+            sale.Items.Add(new SaleItem
             {
-                sale.Items.Add(new SaleItem
-                {
-                    VariantId = line.Item.VariantId,
-                    StockId = allocation.Batch.Id,
-                    Stock = allocation.Batch,
-                    Quantity = allocation.Quantity,
-                    UnitPrice = line.UnitPrice,
-                    PriceCurrency = line.Currency,
-                    PriceRate = line.Rate,
-                    PurchasePrice = allocation.Batch.PurchasePrice
-                });
-
-                allocation.Batch.Quantity -= allocation.Quantity;
-            }
-        }
+                VariantId = row.Line.Item.VariantId,
+                StockId = row.Batch.Id,
+                Stock = row.Batch,
+                Quantity = row.Quantity,
+                UnitPrice = row.Line.UnitPrice,
+                DiscountAmount = row.Discount,
+                PriceCurrency = row.Line.Currency,
+                PriceRate = row.Line.Rate,
+                PurchasePrice = row.Batch.PurchasePrice
+            });
 
         foreach (var increase in priceIncreases.Values)
             increase.Source.SellingPrice = Math.Round(increase.Amount / increase.Rate, 2);
@@ -503,7 +579,7 @@ public sealed class CreateSaleCommandHandler(
         db.Sales.Add(sale);
 
         await PostLedgerAsync(sale, warehouse.BranchId, debtAmount, advanceUses,
-            variantProduct, cashbackFactor, userId, shiftId, cancellationToken);
+            variantProduct, userId, shiftId, cancellationToken);
         await partnerRewards.AccrueSaleAsync(sale, cancellationToken);
 
         sale.RaiseDomainEvent(new SaleCompletedEvent(sale.ReceiptToken, sale.CustomerId, sale.TotalAmount));
@@ -560,7 +636,6 @@ public sealed class CreateSaleCommandHandler(
         decimal debtAmount,
         IReadOnlyCollection<AdvanceUse> advanceUses,
         IReadOnlyDictionary<long, long> variantProduct,
-        decimal cashbackFactor,
         long userId,
         long? shiftId,
         CancellationToken cancellationToken)
@@ -638,7 +713,7 @@ public sealed class CreateSaleCommandHandler(
         var saleItems = sale.Items.ToList();
         var cashback = await cashbackCalculator.CalculateBreakdownAsync(branchId,
             saleItems.Select(x => new CashbackLine(
-                variantProduct[x.VariantId], x.Quantity, x.UnitPrice * x.Quantity * cashbackFactor)).ToList(),
+                variantProduct[x.VariantId], x.Quantity, x.Quantity * x.UnitPrice - x.DiscountAmount)).ToList(),
             cancellationToken);
         if (cashback.Total > 0)
         {
@@ -673,5 +748,7 @@ public sealed class CreateSaleCommandValidator : AbstractValidator<CreateSaleCom
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CreditAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.RoundingAmount).GreaterThanOrEqualTo(0);
     }
 }

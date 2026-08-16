@@ -70,7 +70,12 @@ public sealed class RequeueCartCommandHandler(
             RequeuedFromCartId = source.Id
         };
         foreach (var row in source.Items)
-            cart.Items.Add(new CartItem { VariantId = row.VariantId, Quantity = row.Quantity });
+            cart.Items.Add(new CartItem
+            {
+                VariantId = row.VariantId,
+                Quantity = row.Quantity,
+                UnitPriceOverride = row.UnitPriceOverride
+            });
         foreach (var row in source.Participants)
             cart.Participants.Add(new CartParticipant
             {

@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260815141536_CartItemPriceOverride")]
+    partial class CartItemPriceOverride
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5152,8 +5155,7 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("branch_id");
 
                     b.Property<decimal>("CashbackEarned")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
+                        .HasColumnType("numeric")
                         .HasColumnName("cashback_earned");
 
                     b.Property<decimal>("ChangeAmount")
@@ -5203,8 +5205,7 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnName("deleted_at");
 
                     b.Property<decimal>("DiscountAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
+                        .HasColumnType("numeric")
                         .HasColumnName("discount_amount");
 
                     b.Property<string>("IdempotencyKey")
@@ -5267,6 +5268,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("refunded_cash");
 
+                    b.Property<decimal>("RefundedCashback")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("refunded_cashback");
+
                     b.Property<decimal>("RefundedDebt")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -5276,11 +5282,6 @@ namespace Cartex.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("return_no_charge_amount");
-
-                    b.Property<decimal>("RoundingAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("rounding_amount");
 
                     b.Property<long?>("ShiftId")
                         .HasColumnType("bigint")
@@ -5365,11 +5366,6 @@ namespace Cartex.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("cashback_earned");
-
-                    b.Property<decimal>("DiscountAmount")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("discount_amount");
 
                     b.Property<string>("PriceCurrency")
                         .IsRequired()

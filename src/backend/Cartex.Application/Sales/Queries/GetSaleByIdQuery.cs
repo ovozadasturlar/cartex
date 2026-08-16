@@ -61,6 +61,8 @@ public sealed class GetSaleByIdQueryHandler(
                 i.PriceCurrency,
                 i.PriceRate,
                 i.Quantity * i.UnitPrice,
+                i.DiscountAmount,
+                i.Quantity * i.UnitPrice - i.DiscountAmount,
                 i.CashbackEarned,
                 i.ReturnedCashback,
                 i.Variant.Product.FractionalOverride ?? i.Variant.Product.Unit.AllowFractional)).ToList(),

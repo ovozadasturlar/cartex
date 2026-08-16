@@ -352,6 +352,7 @@
   "edit_product": "Маҳсулотни таҳрирлаш",
   "name": "Номи",
   "price": "Нарх",
+  "original_price_fmt": "Асл нархи: {0}",
   "code": "Артикул",
   "category": "Категория",
   "take_photo": "Расм олиш",

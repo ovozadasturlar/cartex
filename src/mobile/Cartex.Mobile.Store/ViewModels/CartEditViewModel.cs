@@ -165,7 +165,7 @@ public partial class CartEditViewModel(
         {
             await orderingApi.UpdateAsync(_code, new UpdateCartRequest(
                 _customerId,
-                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity)).ToList(),
+                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride)).ToList(),
                 string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),
                 _cart.Participants?.Select(x => new ParticipantSelectionRequest(x.RoleDefinitionId, x.PartyId)).ToList(),
                 _cart.Payments?.Select(x => new SalePaymentRequest(x.Method, x.Currency, x.Amount)).ToList(),
@@ -206,7 +206,8 @@ public partial class CartEditViewModel(
             foreach (var item in cart.Items)
             {
                 Lines.Add(new CartEditLine(item.VariantId, item.ProductName, item.UnitName,
-                    item.Quantity, item.UnitPrice, item.AllowsFractional, item.ImageKey));
+                    item.Quantity, item.UnitPrice, item.AllowsFractional, item.ImageKey,
+                    item.OriginalUnitPrice));
             }
             Recalculate();
             IsLoaded = true;
@@ -334,6 +335,8 @@ public sealed partial class CartEditLine : ObservableObject
     public string ProductName { get; }
     public string UnitName { get; }
     public decimal UnitPrice { get; }
+    public decimal OriginalUnitPrice { get; }
+    public decimal? PriceOverride => UnitPrice != OriginalUnitPrice ? UnitPrice : null;
     public bool AllowsFractional { get; }
     public string? ImageKey { get; }
     public decimal LineTotal => UnitPrice * Quantity;
@@ -342,12 +345,13 @@ public sealed partial class CartEditLine : ObservableObject
     [ObservableProperty] private string _quantityText;
 
     public CartEditLine(long variantId, string productName, string unitName, decimal quantity,
-        decimal unitPrice, bool allowsFractional, string? imageKey)
+        decimal unitPrice, bool allowsFractional, string? imageKey, decimal? originalUnitPrice = null)
     {
         VariantId = variantId;
         ProductName = productName;
         UnitName = unitName;
         UnitPrice = unitPrice;
+        OriginalUnitPrice = originalUnitPrice ?? unitPrice;
         AllowsFractional = allowsFractional;
         ImageKey = imageKey;
         _quantity = quantity;

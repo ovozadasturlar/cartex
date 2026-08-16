@@ -50,7 +50,7 @@ public class OrderingController(ISender sender) : ControllerBase
     public async Task<IActionResult> UpdateItems(string code, UpdateCartItemsRequest request)
     {
         await sender.Send(new UpdateCartItemsCommand(code,
-            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity)).ToList(),
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
             request.ExpectedVersion));
         return NoContent();
     }
@@ -62,7 +62,7 @@ public class OrderingController(ISender sender) : ControllerBase
         await sender.Send(new UpdateCartCommand(
             code,
             request.CustomerId,
-            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity)).ToList(),
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
             request.Note,
             request.Participants?.Select(x => new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
             request.Payments?.Select(x => new SalePaymentDto(

@@ -52,13 +52,28 @@ public sealed class UpdateCartItemsCommandHandler(
         if (request.Items.Select(x => x.VariantId).Distinct().Count() != request.Items.Count)
             throw new BusinessRuleException("Bir mahsulot varianti savatda takrorlanmasligi kerak.", "duplicate_cart_item");
 
+        // Savatda avvaldan (ruxsatli foydalanuvchi tomonidan) saqlangan override'ni har kim
+        // qaytarib yuborishi mumkin; yangi yoki o'zgartirilgan narx esa o'z ruxsatini talab qiladi.
+        var storedOverrides = cart.Items
+            .Where(i => i.UnitPriceOverride != null)
+            .ToDictionary(i => i.VariantId, i => i.UnitPriceOverride!.Value);
+        if (request.Items.Any(i => i.UnitPrice is not null
+                && (!storedOverrides.TryGetValue(i.VariantId, out var stored) || stored != i.UnitPrice))
+            && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
+
         await quantityPolicy.ValidateAsync(
             request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
 
         cart.Items.Clear();
         foreach (var item in request.Items)
         {
-            cart.Items.Add(new CartItem { VariantId = item.VariantId, Quantity = item.Quantity });
+            cart.Items.Add(new CartItem
+            {
+                VariantId = item.VariantId,
+                Quantity = item.Quantity,
+                UnitPriceOverride = item.UnitPrice
+            });
         }
         cart.Version++;
 

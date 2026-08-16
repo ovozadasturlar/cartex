@@ -57,6 +57,14 @@ public sealed class UpdateCartCommandHandler(
             && !await db.Customers.AnyAsync(x => x.Id == customerId, cancellationToken))
             throw new NotFoundException("Customer not found.", "customer_not_found");
 
+        var storedOverrides = cart.Items
+            .Where(i => i.UnitPriceOverride != null)
+            .ToDictionary(i => i.VariantId, i => i.UnitPriceOverride!.Value);
+        if (request.Items.Any(i => i.UnitPrice is not null
+                && (!storedOverrides.TryGetValue(i.VariantId, out var stored) || stored != i.UnitPrice))
+            && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
+
         await quantityPolicy.ValidateAsync(request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
         var participants = await participantService.ResolveAsync(
             request.Participants, ParticipantContext.Cart, request.CustomerId, cancellationToken);
@@ -86,7 +94,12 @@ public sealed class UpdateCartCommandHandler(
         cart.UseCustomerAdvance = request.UseCustomerAdvance;
         cart.Items.Clear();
         foreach (var row in request.Items)
-            cart.Items.Add(new CartItem { VariantId = row.VariantId, Quantity = row.Quantity });
+            cart.Items.Add(new CartItem
+            {
+                VariantId = row.VariantId,
+                Quantity = row.Quantity,
+                UnitPriceOverride = row.UnitPrice
+            });
         cart.Participants.Clear();
         foreach (var row in participants)
             cart.Participants.Add(new CartParticipant

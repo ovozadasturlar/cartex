@@ -76,7 +76,10 @@ public sealed class CheckoutCartCommandHandler(
             cart.CustomerId = request.CustomerId ?? cart.CustomerId;
             var saleItems = request.Items is { Count: > 0 }
                 ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)).ToList()
-                : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity)).ToList();
+                : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPriceOverride)).ToList();
+            var preauthorizedPrices = cart.Items
+                .Where(i => i.UnitPriceOverride != null)
+                .ToDictionary(i => i.VariantId, i => i.UnitPriceOverride!.Value);
             var payments = request.Payments is { Count: > 0 }
                 ? request.Payments
                 : cart.Payments.Select(x => new SalePaymentDto(x.Method, x.Currency, x.Amount)).ToList();
@@ -98,14 +101,15 @@ public sealed class CheckoutCartCommandHandler(
                 UseCustomerAdvance: request.UseCustomerAdvance ?? cart.UseCustomerAdvance,
                 Participants: cart.Participants.Select(x =>
                     new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
-                Note: request.Note ?? cart.Note), cancellationToken);
+                Note: request.Note ?? cart.Note,
+                PreauthorizedPrices: preauthorizedPrices.Count > 0 ? preauthorizedPrices : null), cancellationToken);
 
             cart.Status = CartStatus.CheckedOut;
             cart.SaleId = result.SaleId;
             cart.Version++;
             await db.SaveChangesAsync(cancellationToken);
 
-            return (result.SaleId, CartId: cart.Id, BranchId: cart.BranchId, CartKind: cart.Kind.ToString());
+            return (result.SaleId, CartId: cart.Id, cart.BranchId, CartKind: cart.Kind.ToString());
         }, cancellationToken);
 
         if (completed.CartId is not null)

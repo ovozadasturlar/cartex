@@ -47,9 +47,25 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private CartLine? _selectedProduct;
     [ObservableProperty] private string _selectedProductImage = "";
     [ObservableProperty] private string _selectedQuantityText = "";
+    [ObservableProperty] private string _selectedPriceText = "";
+    [ObservableProperty] private bool _canOverridePrice;
+    [ObservableProperty] private string _selectedOriginalPriceText = "";
+    [ObservableProperty] private bool _hasPriceOverride;
 
-    partial void OnSelectedProductChanged(CartLine? value) =>
+    partial void OnSelectedProductChanged(CartLine? value)
+    {
         SelectedQuantityText = value?.Quantity.ToString("0.###") ?? "0";
+        SelectedPriceText = value?.UnitPrice.ToString("0.##") ?? "0";
+        RefreshPriceState();
+    }
+
+    private void RefreshPriceState()
+    {
+        HasPriceOverride = SelectedProduct?.PriceOverride is not null;
+        SelectedOriginalPriceText = SelectedProduct is { } line
+            ? string.Format(Loc.Instance["original_price_fmt"], $"{line.OriginalPrice:N0}")
+            : "";
+    }
 
     private CancellationTokenSource? _searchCts;
     private CancellationTokenSource? _partnerSearchCts;
@@ -74,6 +90,7 @@ public partial class CartViewModel : ObservableObject
         _permissions = permissions;
         _images = images;
         _offline = offline;
+        CanOverridePrice = permissions.Has("sales.priceOverride");
     }
 
     public async Task AppearAsync()
@@ -395,6 +412,27 @@ public partial class CartViewModel : ObservableObject
                 _ => "quantity_invalid"
             }]);
         }
+    }
+
+    [RelayCommand]
+    private void SetPriceFromText()
+    {
+        if (SelectedProduct is null || !CanOverridePrice) return;
+        if (decimal.TryParse(
+                SelectedPriceText.Trim().Replace(',', '.'),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var price)
+            && price >= 0
+            && _cart.SetPrice(SelectedProduct.VariantId, price))
+        {
+            SelectedPriceText = price.ToString("0.##");
+        }
+        else
+        {
+            SelectedPriceText = SelectedProduct.UnitPrice.ToString("0.##");
+        }
+        RefreshPriceState();
     }
 
     [RelayCommand]

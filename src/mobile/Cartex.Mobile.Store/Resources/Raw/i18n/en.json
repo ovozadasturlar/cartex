@@ -352,6 +352,7 @@
   "edit_product": "Edit product",
   "name": "Name",
   "price": "Price",
+  "original_price_fmt": "Regular price: {0}",
   "code": "Article",
   "category": "Category",
   "take_photo": "Take photo",

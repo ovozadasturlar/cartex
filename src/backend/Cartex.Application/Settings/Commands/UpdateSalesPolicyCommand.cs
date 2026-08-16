@@ -5,7 +5,7 @@ using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1) : ICommand<Unit>;
+public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false, bool ShowOutOfStock = false, bool ShowUnlistedProducts = true, bool AllowInsufficientStockSales = false, bool AllowRetroactiveCashback = false, string SaleCorrectionWindow = "Shift", int SaleCorrectionDays = 1, decimal MaxRoundingAmount = 0) : ICommand<Unit>;
 
 public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateSalesPolicyCommand, Unit>
@@ -15,6 +15,7 @@ public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, I
         var cfg = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
         cfg.ShiftPolicy = request.ShiftPolicy;
         cfg.MaxDiscountPercent = request.MaxDiscountPercent;
+        cfg.MaxRoundingAmount = request.MaxRoundingAmount;
         cfg.DefaultMinStock = request.DefaultMinStock;
         cfg.StaleRateDays = request.StaleRateDays;
         cfg.AllowDebtSales = request.AllowDebtSales;
@@ -39,6 +40,7 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
     {
         RuleFor(x => x.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
         RuleFor(x => x.MaxDiscountPercent).InclusiveBetween(0, 100);
+        RuleFor(x => x.MaxRoundingAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DefaultMinStock).GreaterThanOrEqualTo(0);
         RuleFor(x => x.StaleRateDays).InclusiveBetween(1, 30);
     }

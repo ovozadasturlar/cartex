@@ -371,7 +371,18 @@
                                               RepeatCommand="{Binding IncrementSelectedCommand}" />
                     </Grid>
 
-                    <Button Text="O'chirish" FontFamily="MDI" Style="{StaticResource BtnOutline}" 
+                    <VerticalStackLayout Spacing="4" IsVisible="{Binding CanOverridePrice}">
+                        <Label Text="{svc:T price}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding SelectedPriceText}" Keyboard="Numeric"
+                                   Completed="OnPriceEntryCompleted"
+                                   Unfocused="OnPriceEntryUnfocused" />
+                        </Border>
+                        <Label Text="{Binding SelectedOriginalPriceText}" Style="{StaticResource MutedLabel}"
+                               FontSize="12" IsVisible="{Binding HasPriceOverride}" />
+                    </VerticalStackLayout>
+
+                    <Button Text="O'chirish" FontFamily="MDI" Style="{StaticResource BtnOutline}"
                             TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                             BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
                             Command="{Binding RemoveSelectedCommand}" />

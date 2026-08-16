@@ -11,7 +11,8 @@ public record CartItemDto(
     decimal LineTotal,
     string UnitName = "",
     bool AllowsFractional = false,
-    string? ImageKey = null);
+    string? ImageKey = null,
+    decimal? OriginalUnitPrice = null);
 
 public sealed record CartParticipantDto(
     long RoleDefinitionId,

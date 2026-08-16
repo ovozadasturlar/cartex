@@ -352,6 +352,7 @@
   "edit_product": "Mahsulotni tahrirlash",
   "name": "Nomi",
   "price": "Narx",
+  "original_price_fmt": "Asl narxi: {0}",
   "code": "Artikul",
   "category": "Kategoriya",
   "take_photo": "Rasm olish",

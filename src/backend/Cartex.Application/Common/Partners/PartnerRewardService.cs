@@ -129,8 +129,6 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
         foreach (var source in sources)
         {
             var sale = source.Sale;
-            var gross = sale.Items.Sum(x => x.Quantity * x.UnitPrice);
-            var netFactor = gross <= 0 ? 1m : sale.TotalAmount / gross;
             foreach (var participant in sale.Participants)
             {
                 if (!partners.TryGetValue(participant.PartyId, out var partner)) continue;
@@ -142,7 +140,7 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
                         ? source.PaymentFactor
                         : 1m;
                     if (eventFactor <= 0) continue;
-                    var drafts = BuildDrafts(sale, partner, program, products, netFactor, eventFactor);
+                    var drafts = BuildDrafts(sale, partner, program, products, eventFactor);
                     if (drafts.Count == 0) continue;
 
                     if (program.CapPerSale is { } cap)
@@ -297,7 +295,6 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
         PartnerProfile partner,
         PartnerProgram program,
         IReadOnlyDictionary<long, RewardProduct> products,
-        decimal netFactor,
         decimal eventFactor)
     {
         var eligible = new List<(SaleItem Item, decimal Financial, decimal Value)>();
@@ -307,7 +304,8 @@ public sealed class PartnerRewardService(IApplicationDbContext db) : IPartnerRew
             if (activeQuantity <= 0 || !products.TryGetValue(item.VariantId, out var product)) continue;
             var rule = ResolveRule(program, product.ProductId, product.CategoryId);
             if (rule?.IsExcluded == true) continue;
-            var netRevenue = Math.Round(activeQuantity * item.UnitPrice * netFactor, 2);
+            var lineNet = item.Quantity * item.UnitPrice - item.DiscountAmount;
+            var netRevenue = Math.Round(lineNet * activeQuantity / item.Quantity, 2);
             var financial = program.Basis == PartnerRewardBasis.NetMargin
                 ? Math.Max(0, netRevenue - activeQuantity * item.PurchasePrice)
                 : netRevenue;

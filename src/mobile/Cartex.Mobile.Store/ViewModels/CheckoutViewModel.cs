@@ -254,7 +254,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             var request = new SubmitCartRequest(
                 _warehouse.WarehouseId!.Value,
                 _customerId,
-                _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
+                _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList(),
                 _localCart.EnsureSubmissionIdempotencyKey(),
                 string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
                 PaidCash: aggregates.Cash,
@@ -383,7 +383,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         var code = await _orderingApi.SubmitAsync(new SubmitCartRequest(
             _warehouse.WarehouseId!.Value,
             _customerId,
-            _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity)).ToList(),
+            _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList(),
             _localCart.EnsureSubmissionIdempotencyKey(),
             string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
             PaidCash: aggregates.Cash,

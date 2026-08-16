@@ -11,4 +11,5 @@ public class CartItem : BaseEntity
     public ProductVariant Variant { get; set; } = null!;
 
     public decimal Quantity { get; set; }
+    public decimal? UnitPriceOverride { get; set; }
 }

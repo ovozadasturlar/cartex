@@ -34,6 +34,9 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
     {
         builder.ToTable("sales");
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
+        builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+        builder.Property(x => x.RoundingAmount).HasPrecision(18, 2);
+        builder.Property(x => x.CashbackEarned).HasPrecision(18, 2);
         builder.Property(x => x.PaidCash).HasPrecision(18, 2);
         builder.Property(x => x.PaidCard).HasPrecision(18, 2);
         builder.Property(x => x.PaidBonus).HasPrecision(18, 2);
@@ -49,7 +52,6 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.RefundedDebt).HasPrecision(18, 2);
         builder.Property(x => x.RefundedAdvance).HasPrecision(18, 2);
         builder.Property(x => x.ReturnNoChargeAmount).HasPrecision(18, 2);
-        builder.Property(x => x.RefundedCashback).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.ReceiptToken).IsUnique();
@@ -86,6 +88,7 @@ public class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.ToTable("sale_items");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.UnitPrice).HasPrecision(14, 2);
+        builder.Property(x => x.DiscountAmount).HasPrecision(14, 2);
         builder.Property(x => x.PriceCurrency).HasMaxLength(3);
         builder.Property(x => x.PriceRate).HasPrecision(18, 6);
         builder.Property(x => x.PurchasePrice).HasPrecision(14, 2);

@@ -10,14 +10,21 @@ public sealed partial class CartLine : ObservableObject
     public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
     public string UnitName { get; set; } = "";
-    public decimal UnitPrice { get; set; }
+    public decimal OriginalPrice { get; set; }
+    [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private bool _isSwiped;
     public bool AllowsFractional { get; set; }
     public decimal LineTotal => UnitPrice * Quantity;
+    public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
     public string? ImageKey { get; set; }
 
     partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+    partial void OnUnitPriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(PriceOverride));
+    }
 }
 
 public sealed class CartStore
@@ -52,6 +59,7 @@ public sealed class CartStore
                 VariantId = l.VariantId,
                 ProductName = l.ProductName,
                 UnitName = l.UnitName,
+                OriginalPrice = l.OriginalPrice > 0 ? l.OriginalPrice : l.UnitPrice,
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
                 AllowsFractional = l.AllowsFractional,
@@ -82,6 +90,7 @@ public sealed class CartStore
                 VariantId = product.VariantId,
                 ProductName = product.ProductName,
                 UnitName = product.UnitName,
+                OriginalPrice = product.SellingPrice,
                 UnitPrice = product.SellingPrice,
                 Quantity = quantity,
                 AllowsFractional = product.AllowsFractional,
@@ -98,6 +107,16 @@ public sealed class CartStore
         if (line is null || !QuantityInput.IsValid(quantity, line.AllowsFractional))
             return false;
         line.Quantity = quantity;
+        Save(debouncePersistence: true);
+        return true;
+    }
+
+    public bool SetPrice(long variantId, decimal price)
+    {
+        var line = Lines.FirstOrDefault(l => l.VariantId == variantId);
+        if (line is null || price < 0)
+            return false;
+        line.UnitPrice = price;
         Save(debouncePersistence: true);
         return true;
     }
@@ -227,7 +246,7 @@ public sealed class CartStore
         pending?.Dispose();
         var draft = new Draft(
             Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey,
-                l.AllowsFractional)).ToList(),
+                l.AllowsFractional, l.OriginalPrice)).ToList(),
             CustomerId, CustomerName, Note, SubmittedCartCode, SubmissionIdempotencyKey, CheckoutIdempotencyKey,
             Participants.ToList());
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
@@ -263,7 +282,8 @@ public sealed class CartStore
         decimal UnitPrice,
         decimal Quantity,
         string? ImageKey,
-        bool AllowsFractional = false);
+        bool AllowsFractional = false,
+        decimal OriginalPrice = 0);
     private sealed record Draft(
         List<DraftLine> Lines,
         long? CustomerId,

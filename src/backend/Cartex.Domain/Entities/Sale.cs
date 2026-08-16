@@ -18,6 +18,10 @@ public class Sale : SoftDeleteEntity, IBranchScoped
 
     public decimal TotalAmount { get; set; }
     public decimal DiscountAmount { get; set; }
+
+    /// How much of <see cref="DiscountAmount"/> came from rounding the payable down.
+    /// Reporting only: the total is already net of it.
+    public decimal RoundingAmount { get; set; }
     public decimal PaidCash { get; set; }
     public decimal PaidCard { get; set; }
     public decimal PaidBonus { get; set; }
@@ -35,7 +39,6 @@ public class Sale : SoftDeleteEntity, IBranchScoped
     public decimal RefundedDebt { get; set; }
     public decimal RefundedAdvance { get; set; }
     public decimal ReturnNoChargeAmount { get; set; }
-    public decimal RefundedCashback { get; set; }
     public SaleStatus Status { get; set; } = SaleStatus.Completed;
     public long? ShiftId { get; set; }
     public Shift? Shift { get; set; }

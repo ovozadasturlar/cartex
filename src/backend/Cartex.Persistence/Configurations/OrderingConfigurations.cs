@@ -76,6 +76,7 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
     {
         builder.ToTable("cart_items");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
+        builder.Property(x => x.UnitPriceOverride).HasPrecision(18, 4);
 
         builder.HasOne(x => x.Cart)
             .WithMany(c => c.Items)

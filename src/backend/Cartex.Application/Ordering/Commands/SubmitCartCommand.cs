@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
@@ -12,7 +13,7 @@ using Cartex.Application.Sales.Commands;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public record SubmitCartItemDto(long VariantId, decimal Quantity);
+public record SubmitCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null);
 
 public record SubmitCartCommand(
     long WarehouseId,
@@ -60,6 +61,10 @@ public sealed class SubmitCartCommandHandler(
             !await db.Customers.AnyAsync(c => c.Id == customerId, cancellationToken))
             throw new NotFoundException("Customer not found.", "customer_not_found");
 
+        if (request.Items.Any(x => x.UnitPrice is not null)
+            && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
+
         await quantityPolicy.ValidateAsync(
             request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
         var resolvedParticipants = await participantService.ResolveAsync(
@@ -101,7 +106,12 @@ public sealed class SubmitCartCommandHandler(
         };
 
         foreach (var item in request.Items)
-            cart.Items.Add(new CartItem { VariantId = item.VariantId, Quantity = item.Quantity });
+            cart.Items.Add(new CartItem
+            {
+                VariantId = item.VariantId,
+                Quantity = item.Quantity,
+                UnitPriceOverride = item.UnitPrice
+            });
         foreach (var participant in resolvedParticipants)
             cart.Participants.Add(new CartParticipant
             {
@@ -164,6 +174,7 @@ public sealed class SubmitCartCommandValidator : AbstractValidator<SubmitCartCom
         RuleFor(x => x.Items).Must(x => x.Select(i => i.VariantId).Distinct().Count() == x.Count)
             .WithMessage("Bir mahsulot varianti savatda takrorlanmasligi kerak.");
         RuleForEach(x => x.Items).Must(i => i.Quantity > 0).WithMessage("Miqdor 0 dan katta bo'lishi kerak.");
+        RuleForEach(x => x.Items).Must(i => i.UnitPrice is null or >= 0).WithMessage("Narx manfiy bo'lishi mumkin emas.");
         RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PaidBonus).GreaterThanOrEqualTo(0);
