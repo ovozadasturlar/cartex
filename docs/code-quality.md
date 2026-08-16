@@ -198,12 +198,21 @@ Web hech qachon tahlil qilinmagan edi. Birinchi skan **110 ta muammo, 47 ta fayl
 Ikki toifaga bo'linadi:
 
 - **Tozalik:** ishlatilmagan importlar va lokal o'zgaruvchilar (`KS-23`).
-- **Haqiqiy nuqson:** `Missing await for an async function call` va `Promise returned from
-  load is ignored` — bir necha ekranda (`suppliers.ts`, `supplies.ts`, `orders.ts`). Yuklash
-  xatosi hech qayerda ko'rinmaydi, ekranda eski ma'lumot qolaveradi. Bu `KS-14` bo'lib
-  muhrlandi.
+- **Async:** `Missing await` va `Promise returned from load is ignored` — `suppliers.ts`,
+  `supplies.ts`, `orders.ts` da.
 
-Ular alohida ish sifatida tozalanadi — bu yerda ochiq qarz sifatida qayd etiladi.
+> **Tekshirilgan baho.** Dastlab bu "yuklash xatosi ko'rinmay qoladi" degan jiddiy nuqson deb
+> baholangan edi. Kod o'qib chiqilgach ma'lum bo'ldiki, **bu noto'g'ri**: har bir `load()` /
+> `loadTotals()` o'z ichida `try/catch` bilan o'ralgan va xatoni `notify.error(e)` orqali
+> foydalanuvchiga ko'rsatadi. Ya'ni e'tiborsiz qoldirilgan `Promise` hech qachon rad etilmaydi
+> va hech narsa yutilmaydi.
+>
+> Qolgan haqiqiy kamchilik kichikroq: chaqiruvchi metod yangilanish tugashini kutmaydi, ya'ni
+> `async` metod o'zi va'da qilgan ishdan oldin tugaydi. `async` metodlarda `await` qo'yiladi,
+> sinxron joylarda esa `void` bilan e'tiborsizlik **ataylab** ekani bildiriladi.
+
+`KS-14` qoida sifatida kuchda qoladi, lekin bu toifa **past ustuvorlikdagi tozalash** — qarz
+sifatida qayd etiladi, shoshilinch emas.
 
 ## 7. Hozirgi qarz
 
