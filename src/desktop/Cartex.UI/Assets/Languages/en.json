@@ -1303,6 +1303,8 @@
   "status_voided": "Voided",
   "preview": "Preview",
   "preview_print": "Print preview",
+  "print_and_queue": "Print receipt and send to queue",
+  "payment_details": "Payment details",
   "preview_not_receipt": "PREVIEW — NOT A RECEIPT",
   "print_section_cart": "Pre-check",
   "cart_print_hint": "How the basket item list prints before the sale is completed. This is not a payment document.",

@@ -1304,6 +1304,8 @@
   "status_voided": "Bekor qilingan",
   "preview": "Oldindan ko'rish",
   "preview_print": "Oldindan chop etish",
+  "print_and_queue": "Chek chiqarish va navbatga yuborish",
+  "payment_details": "To'lov ma'lumotlari",
   "preview_not_receipt": "OLDINDAN KO'RISH — CHEK EMAS",
   "print_section_cart": "Oldindan chek",
   "cart_print_hint": "Savatdagi mahsulotlar ro'yxatini savdo yakunlanmasdan oldin chop etish ko'rinishi. Bu chek to'lov hujjati emas.",

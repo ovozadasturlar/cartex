@@ -408,7 +408,7 @@
                 Classes.blurred="{Binding IsModalOpen}">
             <DockPanel Margin="16">
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
                     <TextBlock Text="{Binding L[cart]}" Classes="h2" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding ToggleQueuePanelCommand}" ToolTip.Tip="{Binding L[queue]}"
@@ -436,11 +436,28 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="4" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
-                            Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[preview_print]}"
+                            ToolTip.Tip="{Binding L[note]}">
+                        <Panel>
+                            <mi:MaterialIcon Kind="InformationOutline" Width="18" Height="18" />
+                            <Border Background="{DynamicResource BrandPrimaryBrush}" CornerRadius="5" Width="10" Height="10"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-5,-7,0" IsVisible="{Binding HasSaleNote}" />
+                        </Panel>
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <TextBox Width="280" MinHeight="88" AcceptsReturn="True" TextWrapping="Wrap"
+                                         c:FormBehaviors.SelectAllOnFocus="False"
+                                         Text="{Binding SaleNote, Mode=TwoWay}"
+                                         PlaceholderText="{Binding L[note]}" />
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Grid.Column="5" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[print_and_queue]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="PrinterOutline" Width="18" Height="18" />
                     </Button>
-                    <Button Grid.Column="5" Classes="paybtn" Padding="8,6"
+                    <Button Grid.Column="6" Classes="paybtn" Padding="8,6"
                             Command="{Binding ClearCartCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"
@@ -501,9 +518,6 @@
                         </Grid>
                     </Panel>
                 </Border>
-
-                <TextBox DockPanel.Dock="Top" Margin="0,8,0,0" MinHeight="34" FontSize="12.5"
-                         Text="{Binding SaleNote, Mode=TwoWay}" PlaceholderText="{Binding L[note]}" />
 
                 <Border DockPanel.Dock="Bottom" Margin="0,12,0,0">
                     <StackPanel Spacing="10">
@@ -723,7 +737,7 @@
                         <Grid ColumnDefinitions="Auto,8,Auto,8,*">
                             <Button Grid.Column="0" Background="Transparent" BorderThickness="0" MinHeight="50" Padding="14,0"
                                     HorizontalContentAlignment="Center" Command="{Binding TogglePaymentPanelCommand}"
-                                    ToolTip.Tip="To'lov ma'lumotlari">
+                                    ToolTip.Tip="{Binding L[payment_details]}">
                                 <Panel>
                                     <mi:MaterialIcon Kind="ChevronDown" Width="22" Height="22" IsVisible="{Binding IsPaymentPanelOpen}" />
                                     <mi:MaterialIcon Kind="ChevronUp" Width="22" Height="22" IsVisible="{Binding !IsPaymentPanelOpen}" />
@@ -1064,13 +1078,24 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
-                            <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="14">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding L[items]}" FontWeight="SemiBold" FontSize="12.5"
-                                               Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Text="{Binding SelectedQueueRow.Subtitle}" FontSize="12"
-                                               Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" />
-                                </StackPanel>
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="4" ClipToBounds="True">
+                                <ScrollViewer>
+                                    <ItemsControl ItemsSource="{Binding SelectedQueueItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="10,7">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding ProductName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}"
+                                                                   Text="{Binding Quantity, StringFormat='{}{0:0.###} x'}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                               Text="{Binding LineTotal, StringFormat='{}{0:N0}'}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
                             </Border>
                         </DockPanel>
 
