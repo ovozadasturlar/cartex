@@ -324,6 +324,10 @@ public sealed class CreateSaleCommandHandler(
             return placement.Residual;
         }
 
+        var rowsByLine = Enumerable.Range(0, resolvedItems.Count)
+            .Select(index => saleRows.Where(r => r.LineIndex == index).ToList())
+            .ToList();
+
         var grossAmount = saleRows.Sum(r => r.Extended);
 
         var priceDiscountAmount = 0m;
@@ -331,8 +335,7 @@ public sealed class CreateSaleCommandHandler(
         {
             var cut = Math.Round(resolvedItems[index].PriceDiscount, 2);
             if (cut <= 0) continue;
-            var targets = saleRows.Where(r => r.LineIndex == index).ToList();
-            priceDiscountAmount += cut - Place(cut, targets, r => r.Quantity);
+            priceDiscountAmount += cut - Place(cut, rowsByLine[index], r => r.Quantity);
         }
 
         foreach (var row in saleRows) row.NetBase = row.Extended - row.Discount;
@@ -349,8 +352,30 @@ public sealed class CreateSaleCommandHandler(
             var autoApplied = await discountCalculator.CalculateAsync(request.CustomerId,
                 resolvedItems.Select(x => new DiscountCalcLine(x.Item.VariantId, x.Quantity * (x.Item.UnitPrice ?? x.UnitPrice))).ToList(),
                 cancellationToken);
-            var auto = Math.Clamp(autoApplied.Sum(a => a.Amount), 0, grossAmount - discountAmount);
-            discountAmount += auto - Place(auto, saleRows, r => r.NetBase);
+
+            // A rule keeps to the lines it matched. Spreading it over the whole basket would make
+            // the products it never touched look discounted, and tomorrow they would be refunded short.
+            var budget = grossAmount - discountAmount;
+            foreach (var application in autoApplied)
+            {
+                if (application.LineAmounts is not { } shares)
+                {
+                    var flat = Math.Clamp(application.Amount, 0, budget);
+                    var spread = flat - Place(flat, saleRows, r => r.NetBase);
+                    discountAmount += spread;
+                    budget -= spread;
+                    continue;
+                }
+
+                for (var index = 0; index < shares.Count && budget > 0; index++)
+                {
+                    var share = Math.Min(shares[index], budget);
+                    if (share <= 0) continue;
+                    var placed = share - Place(share, rowsByLine[index], r => r.NetBase);
+                    discountAmount += placed;
+                    budget -= placed;
+                }
+            }
         }
 
         // Yaxlitlash — chegirmaning bir turi: u ham qatorlarga tushadi, shuning uchun ertaga

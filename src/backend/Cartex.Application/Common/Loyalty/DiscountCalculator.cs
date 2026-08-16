@@ -42,15 +42,34 @@ public sealed class DiscountCalculator(IApplicationDbContext db, IFeatureStatePr
             .Select(v => new { v.Id, v.ProductId, v.Product.CategoryId, v.Product.ManufacturerId })
             .ToDictionaryAsync(v => v.Id, cancellationToken);
 
-        var discountLines = lines
-            .Where(l => products.ContainsKey(l.VariantId))
-            .Select(l =>
+        // A variant the catalogue no longer knows drops out here, which shifts every later index.
+        // The caller allocates by position, so the engine's per-line split is mapped back onto the
+        // lines it was handed rather than onto whatever survived the filter.
+        var sourceIndexes = new List<int>(lines.Count);
+        var discountLines = new List<DiscountLine>(lines.Count);
+        var index = 0;
+        foreach (var line in lines)
+        {
+            if (products.TryGetValue(line.VariantId, out var p))
             {
-                var p = products[l.VariantId];
-                return new DiscountLine(p.ProductId, p.CategoryId, p.ManufacturerId, l.LineTotal);
-            })
-            .ToList();
+                sourceIndexes.Add(index);
+                discountLines.Add(new DiscountLine(p.ProductId, p.CategoryId, p.ManufacturerId, line.LineTotal));
+            }
+            index++;
+        }
 
-        return DiscountEngine.Compute(rules, customerPct, mode, customerId, DateOnly.FromDateTime(DateTime.Now), discountLines);
+        var applied = DiscountEngine.Compute(rules, customerPct, mode, customerId, DateOnly.FromDateTime(DateTime.Now), discountLines);
+        if (discountLines.Count == lines.Count) return applied;
+
+        return applied
+            .Select(a => a.LineAmounts is { } shares ? a with { LineAmounts = Expand(shares, sourceIndexes, lines.Count) } : a)
+            .ToList();
+    }
+
+    private static decimal[] Expand(IReadOnlyList<decimal> shares, List<int> sourceIndexes, int count)
+    {
+        var expanded = new decimal[count];
+        for (var i = 0; i < shares.Count; i++) expanded[sourceIndexes[i]] = shares[i];
+        return expanded;
     }
 }

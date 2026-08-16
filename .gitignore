@@ -424,3 +424,6 @@ FodyWeavers.xsd
 
 # Installer build outputs
 deploy/installer/output/
+
+# Repograph tool cache
+.repograph/

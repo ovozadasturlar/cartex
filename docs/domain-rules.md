@@ -138,6 +138,20 @@ Chegirmaning to'rt manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida
 > **U holda:** birinchi qator eng ko'pi bilan yana 10 000 oladi (jami 100 000), qolgan 100 000 ikkinchi qatorga tushadi.
 > Ikkala qatorning sofi 0, jami 0, va `CHEG-02` saqlanadi.
 
+**`CHEG-06` — avtomatik chegirma faqat o'z qatoriga**
+
+> **Berilgan:** ikkita mahsulot, ikkalasi ham 100 000. Loyalty qoidasi **faqat birinchi
+> mahsulotga** 10% chegirma beradi.
+> **Qachonki:** ikkalasi bir savdoda sotilsa,
+> **U holda:**
+> - savdo chegirmasi **10 000**;
+> - **hammasi birinchi qatorga** tushadi: 1-qator chegirmasi 10 000, 2-qator chegirmasi **0**;
+> - sof qiymatlar: 90 000 va 100 000;
+> - ertaga **ikkinchi** mahsulot qaytarilsa, **to'liq 100 000** qaytariladi.
+>
+> Ya'ni 10 000 ikkiga bo'linib 5 000/5 000 bo'lmaydi — chegirma tegishli bo'lmagan mahsulotni
+> arzonlashtirmaydi.
+
 **`CHEG-10` / `CHEG-11` — yaxlitlash**
 
 > **Berilgan:** brutto 115 000 lik savat, unga 3% (3 450) chegirma berilgan — to'lanadigan summa 111 550.
