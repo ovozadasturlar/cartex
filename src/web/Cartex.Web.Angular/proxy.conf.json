@@ -1,5 +1,6 @@
 {
   "/api": { "target": "http://localhost:5015", "secure": false },
+  "/hubs": { "target": "http://localhost:5015", "secure": false, "ws": true },
   "/r/": { "target": "http://localhost:5015", "secure": false },
   "/health": { "target": "http://localhost:5015", "secure": false }
 }
