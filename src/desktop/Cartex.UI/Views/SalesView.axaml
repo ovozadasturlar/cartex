@@ -570,7 +570,7 @@
                                     IsVisible="{Binding CanDiscount}" IsEnabled="{Binding HasShortfall}"
                                     Command="{Binding FillDiscountFromTenderCommand}"
                                     ToolTip.Tip="{Binding L[discount_fill_shortfall]}">
-                                <mi:MaterialIcon Kind="Calculator" Width="18" Height="18" />
+                                <TextBlock Text="=" FontSize="16" FontWeight="SemiBold" />
                             </Button>
                         </Grid>
 
