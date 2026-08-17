@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Auth;
 
@@ -31,23 +30,12 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         var cached = _claims;
         if (cached is not null && cached.Token == token) return cached;
 
-        try
-        {
-            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-            cached = new TokenClaims(token, ClaimId(jwt, "userId"), ClaimId(jwt, "defaultBranchId"), jwt.ValidTo);
-        }
-        catch
-        {
-            cached = new TokenClaims(token, null, null, DateTime.MinValue);
-        }
+        var jwt = JwtClaims.Parse(token);
+        cached = jwt is null
+            ? new TokenClaims(token, null, null, DateTime.MinValue)
+            : new TokenClaims(token, jwt.Number("userId"), jwt.Number("defaultBranchId"), jwt.ValidTo);
         _claims = cached;
         return cached;
-    }
-
-    private static long? ClaimId(JwtSecurityToken jwt, string type)
-    {
-        var value = jwt.Claims.FirstOrDefault(c => c.Type == type)?.Value;
-        return long.TryParse(value, out var id) ? id : null;
     }
 
     public async Task LoginAsync(string username, string password)
@@ -69,32 +57,14 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     public event Action? SessionInvalidated;
 
-    public async Task ValidateSessionAsync()
-    {
-        var refresh = session.RefreshToken;
-        if (string.IsNullOrEmpty(refresh)) return;
-        await _refreshLock.WaitAsync();
-        try
-        {
-            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
-            await session.SaveAsync(response.Token, response.RefreshToken);
-        }
-        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
-        {
-            session.Clear();
-            SessionInvalidated?.Invoke();
-        }
-        catch
-        {
-        }
-        finally
-        {
-            _refreshLock.Release();
-        }
-    }
+    /// Refresh tokeni har yangilashda aylanadi, shuning uchun tekshirish ham aynan shu qulf
+    /// ostidagi yo'ldan o'tadi: eskirgan token bilan ikkinchi urinish 401 qaytarib
+    /// foydalanuvchini bekordan-bekorga tizimdan chiqarib yuborardi.
+    public Task ValidateSessionAsync() => EnsureFreshTokenAsync(CancellationToken.None);
 
     public async Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken)
     {
+        await session.LoadAsync();
         var token = session.AccessToken;
         if (token is null) return null;
         if (!IsExpiringSoon(token)) return token;

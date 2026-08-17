@@ -1,3 +1,4 @@
+using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Views;
 using Cartex.Mobile.Store.Services;
 
@@ -24,6 +25,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("devices", typeof(DevicesPage));
         Routing.RegisterRoute("pin", typeof(PinPage));
         Routing.RegisterRoute("security", typeof(SecurityPage));
+        if (SessionStore.HasSession) CurrentItem = MainTab;
     }
 
     protected override void OnNavigating(ShellNavigatingEventArgs args)

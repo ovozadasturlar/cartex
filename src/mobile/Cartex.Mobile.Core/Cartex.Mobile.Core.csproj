@@ -8,11 +8,11 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
 		<PackageReference Include="Xamarin.AndroidX.Biometric" Version="1.1.0.33" />
 		<!-- Keep AndroidX KTX bindings aligned with .NET MAUI's current AndroidX set. -->
 		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.13.0.1" />

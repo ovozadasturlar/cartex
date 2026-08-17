@@ -9,7 +9,7 @@
 
     <ShellContent Route="login" ContentTemplate="{DataTemplate views:LoginPage}" Shell.NavBarIsVisible="False" />
 
-    <TabBar Route="main" Shell.TabBarIsVisible="False">
+    <TabBar x:Name="MainTab" Route="main" Shell.TabBarIsVisible="False">
         <ShellContent Route="home" Title="{svc:T tab_home}" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
         <ShellContent Route="trade" Title="{svc:T tab_trade}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:TradePage}" />
         <ShellContent Route="scan" Title="{svc:T scan}" Icon="tab_scan.png" ContentTemplate="{DataTemplate views:ScanPage}" />

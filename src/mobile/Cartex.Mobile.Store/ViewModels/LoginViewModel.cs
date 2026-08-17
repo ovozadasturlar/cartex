@@ -17,7 +17,6 @@ public partial class LoginViewModel(
     [ObservableProperty] private string _password = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isServerVisible;
-    [ObservableProperty] private bool _isChecking = true;
     [ObservableProperty] private bool _hidePassword = true;
     [ObservableProperty] private string _eyeGlyph = "\U000F0208";
     [ObservableProperty] private string _languageShort = "";
@@ -59,25 +58,8 @@ public partial class LoginViewModel(
         OnPropertyChanged(nameof(ServerText));
     }
 
-    public async Task InitializeAsync()
-    {
+    public void Initialize() =>
         LanguageShort = LangShorts[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
-        var restored = false;
-        try
-        {
-            restored = await auth.TryRestoreAsync();
-        }
-        finally
-        {
-            if (!restored) IsChecking = false;
-        }
-        if (!restored) return;
-        _ = offline.StartAsync();
-        await Shell.Current.GoToAsync("//home", false);
-        _ = auth.ValidateSessionAsync();
-        if (AppLock.PinEnabled)
-            await Shell.Current.GoToAsync("pin", false);
-    }
 
     private static async Task OfferPinSetupAsync()
     {

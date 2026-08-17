@@ -32,6 +32,7 @@ public static class MauiProgram
 #endif
 
         var session = new SessionStore();
+        _ = session.LoadAsync();
         builder.Services.AddSingleton(session);
         builder.Services.AddApiClients(
             () => session.ServerUrl,
@@ -57,6 +58,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MobileOfflineStore>();
         builder.Services.AddSingleton<MobileOfflineService>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
+        builder.Services.AddSingleton<StartupService>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<PinViewModel>();
@@ -106,8 +108,19 @@ public static class MauiProgram
 
         var app = builder.Build();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
+        Warm(app.Services);
         return app;
     }
+
+    /// Birinchi ekran shu servislarni so'raganda ular saqlangan JSON'ni ochadi. UI thread'da
+    /// bu ~200 ms turib qolish, shuning uchun fonda oldindan tayyorlanadi.
+    private static void Warm(IServiceProvider services) => _ = Task.Run(() =>
+    {
+        services.GetRequiredService<CartStore>();
+        services.GetRequiredService<SupplyCartStore>();
+        services.GetRequiredService<SalesPolicyCache>();
+        services.GetRequiredService<WarehouseContext>();
+    });
 
     private static T Resolve<T>() where T : notnull =>
         IPlatformApplication.Current!.Services.GetRequiredService<T>();

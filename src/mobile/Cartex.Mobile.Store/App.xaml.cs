@@ -13,9 +13,16 @@ public partial class App : Application
 
 	private DateTime? _sleptAt;
 
+	protected override void OnStart()
+	{
+		base.OnStart();
+		_ = IPlatformApplication.Current!.Services.GetRequiredService<Services.StartupService>().RunAsync();
+	}
+
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		var window = new Window(new AppShell());
+		var shell = new AppShell();
+		var window = new Window(shell);
 		var services = IPlatformApplication.Current!.Services;
 		services.GetRequiredService<MobileAuthService>().SessionInvalidated += OnSessionInvalidated;
 		window.Deactivated += (_, _) => _sleptAt = DateTime.UtcNow;

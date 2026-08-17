@@ -12,9 +12,9 @@ public partial class LoginPage : ContentPage
         BindingContext = _vm = vm;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _vm.InitializeAsync();
+        _vm.Initialize();
     }
 }

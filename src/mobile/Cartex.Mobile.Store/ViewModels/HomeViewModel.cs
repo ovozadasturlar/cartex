@@ -14,7 +14,8 @@ public partial class HomeViewModel(
     SupplyCartStore supplyCart,
     IOrderingApi ordering,
     ISalesApi sales,
-    SalesPolicyCache policy) : ObservableObject
+    SalesPolicyCache policy,
+    SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
@@ -42,11 +43,12 @@ public partial class HomeViewModel(
 
     public async Task AppearAsync()
     {
+        await session.LoadAsync();
         HasAccess = perms.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         if (!HasAccess) return;
         // NAVBAT-06: navbat do'kon siyosati bilan o'chirilgan bo'lsa, ilovada u haqda
         // hech narsa ko'rinmasligi kerak.
-        _ = policy.RefreshAsync();
+        _ = Task.Run(policy.RefreshAsync);
         ShowQueue = perms.HasAny("sales.pick", "sales.create", "sales.view") && policy.Current.AllowSaleQueue;
         ShowStats = perms.HasAny("sales.view", "sales.viewAll");
         var name = auth.FullName;
@@ -71,12 +73,12 @@ public partial class HomeViewModel(
         try
         {
             var queueTask = ShowQueue
-                ? ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue")
+                ? Task.Run(() => ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue"))
                 : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
             var totalsTask = ShowStats
-                ? sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1))
+                ? Task.Run(() => sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1)))
                 : Task.FromResult(new Cartex.Shared.Models.Sales.SalesTotalsDto(0, 0, 0, 0));
-            var dailyTask = LoadDailySafeAsync();
+            var dailyTask = Task.Run(LoadDailySafeAsync);
             await Task.WhenAll(queueTask, totalsTask, dailyTask);
             if (ShowQueue) OpenCarts = queueTask.Result.Count;
             if (ShowStats)
