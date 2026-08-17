@@ -193,6 +193,7 @@ Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**
 | `QAYT-05` | Qaytarish cashback va hamkor mukofotini **proporsional** qaytarib oladi. Qator to'liq yopilsa, qoldiq to'liq olinadi. |
 | `QAYT-06` | Qaytariladigan miqdor qolgan miqdordan oshmaydi. |
 | `QAYT-07` | Hisob-kitob sharshara bo'yicha: har savdo uchun qarz → bonus → karta → naqd, har biri o'sha savdoning sig'imi bilan cheklangan; qolgani mijoz qarzini kamaytiradi, ortgani avansga tushadi. |
+| `QAYT-08` | Qaytarish faqat **`Completed`** yoki **`PartialReturn`** holatidagi savdoga bog'lanadi. Bekor qilingan (`Voided`) savdo allaqachon ortga qaytarilgan — tovari omborga qaytgan, puli hisobdan yechilgan; unga yana qaytarish rasmiylashtirilsa tovar ikki marta kirim bo'lib, pul ikki marta chiqadi. Server rad etadi, klient esa bunday savdoda qaytarish va tuzatish tugmalarini umuman ko'rsatmaydi. |
 
 ### Qabul mezonlari
 

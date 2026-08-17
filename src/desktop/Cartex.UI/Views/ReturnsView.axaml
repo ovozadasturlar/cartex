@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
@@ -248,8 +248,12 @@
                 <TextBlock Grid.Column="2" Text="{Binding L[ret_settlement_hint]}" VerticalAlignment="Center"
                            Margin="8,0,0,0" Foreground="{DynamicResource TextMuted}" FontSize="12"
                            IsVisible="{Binding !NeedsManualSettlement}" TextWrapping="Wrap" />
-                <Button Grid.Column="3" Classes="brand" MinWidth="140" Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding HasLines}" Content="{Binding L[save]}" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10">
+                    <Button Classes="outline" MinWidth="120" Command="{Binding ClearEditorCommand}"
+                            IsEnabled="{Binding CanClearEditor}" Content="{Binding L[clear]}" />
+                    <Button Classes="brand" MinWidth="140" Command="{Binding SaveCommand}"
+                            IsEnabled="{Binding HasLines}" Content="{Binding L[save]}" />
+                </StackPanel>
             </Grid>
 
             <!-- Lines -->
@@ -261,13 +265,18 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Width="*" IsReadOnly="True" Binding="{Binding ProductName}"
                                                 Header="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="Auto" IsReadOnly="True" Binding="{Binding SaleLabel}"
-                                                Header="{Binding [sale], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <!-- Savdo raqami emas: qabul qiluvchiga mijoz shu mahsulotdan jami
+                                 nechta olib ketgani kerak, u shu raqamga qarab miqdor kiritadi. -->
+                            <DataGridTextColumn Width="Auto" IsReadOnly="True" Binding="{Binding TakenLabel}"
+                                                Header="{Binding [ret_taken], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="160"
                                                     Header="{Binding [return_qty], Source={x:Static svc:LocalizationManager.Instance}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <NumericUpDown Minimum="0" Maximum="{Binding MaxQuantity}" Increment="1"
+                                        <!-- Yuqori chegara qo'yilmaydi: chegaradan oshgan qiymat jimgina
+                                             0 ga qaytib, kassirni sababsiz qoldirardi. Ortiqchasi erkin
+                                             qator bo'lib ketadi. -->
+                                        <NumericUpDown Minimum="0" Increment="1"
                                                        FormatString="0.###" ShowButtonSpinner="False" MinHeight="30"
                                                        Value="{Binding Quantity, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" />
                                     </DataTemplate>
@@ -277,14 +286,12 @@
                                                     Header="{Binding [price], Source={x:Static svc:LocalizationManager.Instance}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Panel>
-                                            <TextBlock Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}"
-                                                       VerticalAlignment="Center" IsVisible="{Binding IsFromSale}" />
-                                            <NumericUpDown Minimum="0" Increment="1000" FormatString="#,##0.##"
-                                                           ShowButtonSpinner="False" MinHeight="30"
-                                                           IsVisible="{Binding IsFreeLine}"
-                                                           Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" />
-                                        </Panel>
+                                        <!-- Ro'yxatda shu mahsulot sotilgan narxlar turadi, birinchisi oxirgi
+                                             savdoniki. Boshqa narx yozilsa qator savdodan uziladi (Savdo ustuni "—"). -->
+                                        <ComboBox IsEditable="True" MinHeight="30" HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding PriceOptions}"
+                                                  SelectedItem="{Binding UnitPrice, Mode=TwoWay}"
+                                                  Text="{Binding UnitPrice, Mode=TwoWay}" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

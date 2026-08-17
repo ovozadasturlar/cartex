@@ -48,7 +48,8 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.PaidAdvance,
                 business.MonochromeLogoImageKey,
                 sale.CustomerId,
-                sale.Note))
+                sale.Note,
+                sale.Status.ToString()))
             .FirstOrDefaultAsync(cancellationToken);
 
         // A line can be filled from several stock batches, but the customer should still see

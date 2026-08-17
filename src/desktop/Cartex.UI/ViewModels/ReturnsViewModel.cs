@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -88,7 +88,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
     public bool HasCustomer => SelectedCustomer is not null;
     public bool HasLines => Lines.Count > 0;
     public decimal TotalAmount => Lines.Sum(x => x.LineTotal);
-    public bool NeedsManualSettlement => SelectedCustomer is null && Lines.Any(x => x.SaleItemId is null);
+    public bool NeedsManualSettlement => SelectedCustomer is null && Lines.Any(x => x.NeedsFreeLine);
 
     private void ResetState()
     {
@@ -291,13 +291,26 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         foreach (var item in detail.Items)
         {
             var remaining = item.ReturnableQuantity > 0 ? item.ReturnableQuantity : item.Quantity - item.ReturnedQuantity;
-            if (remaining <= 0 || Lines.Any(x => x.SaleItemId == item.SaleItemId)) continue;
-            Lines.Add(new ReturnEditorLine(
-                item.VariantId, item.ProductName, item.UnitName, remaining, item.UnitPrice,
-                item.SaleItemId, detail.Id, quantity: 0m, NotifyEditor));
+            if (remaining <= 0) continue;
+
+            var source = new ReturnSource(
+                item.SaleItemId, detail.Id, NetUnitPrice(item), item.Quantity, remaining, detail.SaleDate);
+            var existing = Lines.FirstOrDefault(x => x.VariantId == item.VariantId && x.IsFromSale);
+            if (existing is not null)
+            {
+                existing.AddSource(source);
+                continue;
+            }
+            Lines.Add(new ReturnEditorLine(item.VariantId, item.ProductName, item.UnitName, source, NotifyEditor));
         }
         NotifyEditor();
     }
+
+    /// Qaytariladigan pul savdodagi chegirmadan keyingi qiymatdan hisoblanadi, katalog narxidan
+    /// emas. Shuning uchun ekranda ham aynan o'sha narx ko'rsatiladi — aks holda kassir
+    /// ko'rgan summa server qaytaradigan summadan farq qilardi.
+    private static decimal NetUnitPrice(SaleDetailItemDto item) =>
+        item.Quantity > 0 ? Math.Round(item.NetTotal / item.Quantity, 2) : item.UnitPrice;
 
     [RelayCommand]
     private void RemoveLine(ReturnEditorLine line)
@@ -352,12 +365,31 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        Lines.Add(new ReturnEditorLine(
-            product.DefaultVariantId, product.Name, product.UnitName, LineQuantity, LinePrice,
-            null, null, LineQuantity, NotifyEditor));
+        Lines.Add(ReturnEditorLine.Free(
+            product.DefaultVariantId, product.Name, product.UnitName, LineQuantity, LinePrice, NotifyEditor));
         ClearLineDraft();
         NotifyEditor();
     }
+
+    /// Sahifadagi hamma narsani tozalaydi — kassir yarim to'ldirilgan qaytarishdan
+    /// voz kechganda qolgan qatorlar keyingisiga qo'shilib ketmasligi uchun.
+    [RelayCommand]
+    private async Task ClearEditorAsync()
+    {
+        if (Lines.Count > 0 && !await _dialog.ConfirmAsync(L["clear_confirm"], L["clear"])) return;
+        Lines.Clear();
+        CustomerSales.Clear();
+        IsSalesPanelOpen = false;
+        SelectedCustomer = null;
+        Note = "";
+        RefundInCash = false;
+        BusinessDate = DateTime.Today;
+        _idempotencyKey = null;
+        ClearLineDraft();
+        NotifyEditor();
+    }
+
+    public bool CanClearEditor => Lines.Count > 0 || SelectedCustomer is not null || !string.IsNullOrWhiteSpace(Note);
 
     private void ClearLineDraft()
     {
@@ -372,6 +404,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
     {
         OnPropertyChanged(nameof(HasCustomer));
         OnPropertyChanged(nameof(HasLines));
+        OnPropertyChanged(nameof(CanClearEditor));
         OnPropertyChanged(nameof(TotalAmount));
         OnPropertyChanged(nameof(NeedsManualSettlement));
     }
@@ -382,6 +415,21 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         if (!CanCreate || SelectedWarehouse is null) { _toast.Error(L["select_warehouse"]); return; }
         var rows = Lines.Where(x => x.Quantity > 0).ToList();
         if (rows.Count == 0) { _toast.Error(L["ret_select_qty"]); return; }
+
+        // Savdodagidan ortiq miqdor yoki boshqa narx erkin qator bo'lib ketadi — serverda
+        // qaytariladigan pulni faqat erkin qatorda kassir belgilay oladi (QAYT-04).
+        if (rows.Any(x => x.NeedsFreeLine) && !CanAddFreeLine)
+        {
+            _toast.Error(L["ret_free_line_required"]);
+            return;
+        }
+
+        var requestLines = rows
+            .SelectMany(row => row.Allocate().Select(part => new CustomerReturnLineRequest(
+                row.VariantId, part.Quantity, part.SaleItemId,
+                part.SaleItemId is null ? row.UnitPrice : null,
+                row.Reason, row.Condition, row.Disposition)))
+            .ToList();
 
         var settlements = NeedsManualSettlement
             ? new List<CustomerReturnSettlementRequest>
@@ -397,9 +445,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
                 created = await _api.CreateAsync(new CreateCustomerReturnRequest(
                     SelectedWarehouse.Id,
-                    [.. rows.Select(x => new CustomerReturnLineRequest(
-                        x.VariantId, x.Quantity, x.SaleItemId, x.SaleItemId is null ? x.UnitPrice : null,
-                        x.Reason, x.Condition, x.Disposition))],
+                    [.. requestLines],
                     SelectedCustomer?.Id,
                     settlements,
                     AutoSettle: settlements is null,
@@ -422,48 +468,109 @@ public partial class SelectableSaleRow(SaleDto sale) : ObservableObject
     [ObservableProperty] private bool _isSelected;
 }
 
+/// Bitta savdo qatori: qaysi savdodan, qanday narxda va nechtasi qaytarilishi mumkin.
+public sealed record ReturnSource(
+    long SaleItemId, long SaleId, decimal NetUnitPrice, decimal SoldQuantity, decimal Returnable, DateTime SoldAt);
+
+/// Bir mahsulot bir necha savdoda sotilgan bo'lishi mumkin. Kassir uchun bu bitta qator —
+/// "shu mahsulotdan 3 dona qaytdi" — qaysi savdoning qatoridan olinishini dastur hisoblaydi.
 public partial class ReturnEditorLine : ObservableObject
 {
     private readonly Action _onChanged;
+    private readonly List<ReturnSource> _sources = [];
 
-    public ReturnEditorLine(
-        long variantId,
-        string productName,
-        string unitName,
-        decimal maxQuantity,
-        decimal unitPrice,
-        long? saleItemId,
-        long? saleId,
-        decimal quantity,
-        Action onChanged)
+    private ReturnEditorLine(long variantId, string productName, string unitName, Action onChanged)
     {
         VariantId = variantId;
         ProductName = productName;
         UnitName = unitName;
-        MaxQuantity = maxQuantity;
-        _quantity = quantity;
-        _unitPrice = unitPrice;
-        SaleItemId = saleItemId;
-        SaleId = saleId;
         _onChanged = onChanged;
+    }
+
+    public ReturnEditorLine(long variantId, string productName, string unitName, ReturnSource source, Action onChanged)
+        : this(variantId, productName, unitName, onChanged)
+    {
+        AddSource(source);
+        _quantity = 0m;
+    }
+
+    public static ReturnEditorLine Free(
+        long variantId, string productName, string unitName, decimal quantity, decimal unitPrice, Action onChanged) =>
+        new(variantId, productName, unitName, onChanged) { Quantity = quantity, UnitPrice = unitPrice };
+
+    public ObservableCollection<decimal> PriceOptions { get; } = [];
+
+    public void AddSource(ReturnSource source)
+    {
+        _sources.Add(source);
+        _sources.Sort((a, b) => b.SoldAt.CompareTo(a.SoldAt));
+
+        PriceOptions.Clear();
+        foreach (var price in _sources.Select(x => x.NetUnitPrice).Distinct())
+            PriceOptions.Add(price);
+
+        // Standart holatda oxirgi savdodagi narx turadi.
+        UnitPrice = _sources[0].NetUnitPrice;
+        OnPropertyChanged(nameof(TotalTaken));
+        OnPropertyChanged(nameof(TakenLabel));
+        OnPropertyChanged(nameof(Returnable));
+        OnPropertyChanged(nameof(IsFromSale));
     }
 
     public long VariantId { get; }
     public string ProductName { get; }
     public string UnitName { get; }
-    public decimal MaxQuantity { get; }
-    public long? SaleItemId { get; }
-    public long? SaleId { get; }
-    public bool IsFromSale => SaleItemId is not null;
-    public bool IsFreeLine => SaleItemId is null;
-    public string SaleLabel => SaleId is { } id ? $"#{id}" : "";
+    public bool IsFromSale => _sources.Count > 0;
+    public bool IsFreeLine => _sources.Count == 0;
+
+    /// Mijoz shu mahsulotdan jami nechta olib ketgani. Qabul qilayotgan odam aynan shu
+    /// raqamga qarab miqdor kiritadi — savdo raqami unga kerak emas.
+    public decimal TotalTaken => _sources.Sum(x => x.SoldQuantity);
+    public string TakenLabel => IsFreeLine ? "—" : $"{TotalTaken:0.###}";
+
+    /// Savdo qatorlaridan qaytarish mumkin bo'lgan qism. Undan ortig'i ham qabul qilinadi —
+    /// ortiqchasi erkin qator bo'lib ketadi, ya'ni kassir 0 ga tushib qolgan maydonga emas,
+    /// o'zi yozgan raqamga qaraydi.
+    public decimal Returnable => _sources.Sum(x => x.Returnable);
+
+    /// Savdodagi narxdan boshqasi yozilsa, server o'sha narxni faqat erkin qatorda hisobga
+    /// oladi — shuning uchun bunday qator savdodan uzilib yuboriladi.
+    public bool HasCustomPrice => IsFromSale && !_sources.Exists(x => x.NetUnitPrice == UnitPrice);
+
+    /// Ortiqcha miqdor yoki boshqa narx — ikkalasi ham erkin qator sifatida ketadi.
+    public bool NeedsFreeLine => IsFreeLine || HasCustomPrice || Quantity > Returnable;
+
+    /// Kiritilgan miqdorni savdo qatorlariga bo'ladi: avval tanlangan narxdagilar, keyin
+    /// eng yangisidan boshlab qolganlari. Sig'magani erkin qator bo'lib qo'shiladi.
+    public IEnumerable<(long? SaleItemId, decimal Quantity)> Allocate()
+    {
+        if (IsFreeLine || HasCustomPrice)
+        {
+            yield return (null, Quantity);
+            yield break;
+        }
+
+        var left = Quantity;
+        foreach (var source in _sources.OrderBy(x => x.NetUnitPrice == UnitPrice ? 0 : 1).ThenByDescending(x => x.SoldAt))
+        {
+            if (left <= 0) yield break;
+            var take = Math.Min(left, source.Returnable);
+            if (take <= 0) continue;
+            left -= take;
+            yield return (source.SaleItemId, take);
+        }
+        if (left > 0) yield return (null, left);
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LineTotal))]
+    [NotifyPropertyChangedFor(nameof(NeedsFreeLine))]
     private decimal _quantity;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LineTotal))]
+    [NotifyPropertyChangedFor(nameof(HasCustomPrice))]
+    [NotifyPropertyChangedFor(nameof(NeedsFreeLine))]
     private decimal _unitPrice;
 
     [ObservableProperty] private string _condition = "Sellable";

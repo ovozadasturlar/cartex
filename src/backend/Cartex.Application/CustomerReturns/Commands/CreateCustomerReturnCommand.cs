@@ -110,6 +110,11 @@ public sealed class CreateCustomerReturnCommandHandler(
             var sale = sales[item.SaleId];
             if (!currentUser.CanAccessAllBranches && !currentUser.BranchIds.Contains(sale.BranchId))
                 throw new NotFoundException("Sale not found.", "sale_not_found");
+            // QAYT-08: bekor qilingan savdo allaqachon ortga qaytarilgan — tovari omborga
+            // kirgan, puli hisobdan yechilgan. Unga yana qaytarish yozilsa ikkalasi takrorlanadi.
+            if (sale.Status is not (SaleStatus.Completed or SaleStatus.PartialReturn))
+                throw new BusinessRuleException(
+                    "Bu savdoga qaytarish rasmiylashtirib bo'lmaydi.", "sale_not_returnable");
             if (request.CustomerId is { } customerId && sale.CustomerId != customerId)
                 throw new BusinessRuleException("Tanlangan savdo boshqa mijozga tegishli.", "sale_customer_mismatch");
             if (line.Quantity > item.Quantity - item.ReturnedQuantity)

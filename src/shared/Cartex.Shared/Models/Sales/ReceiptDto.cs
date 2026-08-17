@@ -42,7 +42,9 @@ public record ReceiptDto(
     decimal PaidAdvance = 0,
     string? MonochromeLogoImageKey = null,
     long? CustomerId = null,
-    string? Note = null)
+    string? Note = null,
+    /// Savdo holati: bekor qilingan savdoni qayta tuzatib ham, qaytarib ham bo'lmaydi (QAYT-08).
+    string Status = "Completed")
 {
     public bool HasPayments => Payments.Count > 0;
     public bool HasNote => !string.IsNullOrWhiteSpace(Note);

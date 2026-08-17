@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -43,6 +43,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isSuppliesLoading;
     [ObservableProperty] private bool _isSuppliesTab;
 
+    /// Mijozlar sahifasidagi kabi: birinchi ekran ro'yxat, tanlangach o'sha yetkazib
+    /// beruvchining profili to'liq sahifa bo'lib ochiladi.
+    [ObservableProperty] private bool _isProfileOpen;
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
     [ObservableProperty] private string _editName = "";
@@ -64,6 +67,22 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsEmpty => Suppliers.Count == 0;
+
+    [RelayCommand]
+    private void OpenProfile(SupplierDto supplier)
+    {
+        if (supplier is null) return;
+        SelectedSupplier = supplier;
+        IsProfileOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseProfile()
+    {
+        IsProfileOpen = false;
+        SelectedSupplier = null;
+    }
+
     public bool HasSelection => SelectedSupplier is not null;
     private static readonly SupplierDto EmptySupplier = new(0, "", null, 0);
     public SupplierDto SelectedSupplierDisplay => SelectedSupplier ?? EmptySupplier;

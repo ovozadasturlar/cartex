@@ -1,4 +1,4 @@
-using Material.Icons;
+﻿using Material.Icons;
 
 namespace Cartex.UI.ViewModels;
 
@@ -26,6 +26,7 @@ public static class NavRegistry
         new("inventory", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
         new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),
         new("inventory", "supplies", MaterialIconKind.TruckCheckOutline, typeof(SuppliesViewModel), "supplies.view"),
+        new("inventory", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view"),
         new("inventory", "barcode_print", MaterialIconKind.BarcodeScan, typeof(BarcodePrintViewModel), "products.printBarcode"),
         new("inventory", "transfers", MaterialIconKind.SwapHorizontal, typeof(TransfersViewModel), "stock_transfers.view"),
         new("finance", "accounts", MaterialIconKind.WalletOutline, typeof(AccountsViewModel), "accounts.view"),
@@ -53,7 +54,6 @@ public static class NavRegistry
         new("organization", "modules", MaterialIconKind.ToggleSwitchOutline, typeof(ModulesViewModel), "business.edit"),
         new("organization", "branch", MaterialIconKind.OfficeBuildingOutline, typeof(BranchesViewModel), "branches.view"),
         new("organization", "warehouse", MaterialIconKind.Warehouse, typeof(WarehousesViewModel), "warehouses.view"),
-        new("organization", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view"),
         new("access", "users", MaterialIconKind.AccountCog, typeof(UsersViewModel), "users.view"),
         new("access", "roles", MaterialIconKind.ShieldAccount, typeof(RolesViewModel), "roles.view"),
         new("access", "permissions_matrix", MaterialIconKind.ShieldKeyOutline, typeof(PermissionsMatrixViewModel), "roles.assignPermissions"),

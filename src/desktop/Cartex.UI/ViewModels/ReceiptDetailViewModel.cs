@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -88,9 +88,12 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     public bool HasReceipt => Receipt is not null;
     public bool HasLoadError => !string.IsNullOrWhiteSpace(LoadError);
     public bool CanAttachCustomer => (_auth.HasPermission("sales.assignCustomer") || _auth.HasPermission("sales.create") || _auth.HasPermission("customers.create") || _auth.HasPermission("customers.edit")) && Receipt is not null && string.IsNullOrEmpty(Receipt.CustomerName);
-    public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null;
+    /// Bekor qilingan savdo allaqachon ortga qaytarilgan: uni na qaytarish, na qayta tuzatish
+    /// mumkin (QAYT-08). Server ham rad etadi, tugma esa umuman ko'rinmasligi kerak.
+    public bool IsSaleOpen => Receipt is null || Receipt.Status is "Completed" or "PartialReturn";
+    public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null && IsSaleOpen;
     public bool CanPrint => (_auth.HasPermission("printing.receipts.print") || _auth.HasPermission("printing.receipts.reprint")) && Receipt is not null;
-    public bool CanCorrect => _auth.HasPermission("sales.void") && _saleId is > 0 && Receipt is not null;
+    public bool CanCorrect => _auth.HasPermission("sales.void") && _saleId is > 0 && Receipt is not null && IsSaleOpen;
     public bool IsAnySubPanelOpen => IsCustomerPickerOpen;
 
     partial void OnIsCustomerPickerOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
@@ -145,6 +148,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         ReceiptQrCode = QrService.Generate($"{baseUrl}/r/{r.ReceiptToken}");
         OnPropertyChanged(nameof(HasReceipt));
         OnPropertyChanged(nameof(CanAttachCustomer));
+        OnPropertyChanged(nameof(IsSaleOpen));
         OnPropertyChanged(nameof(CanReturnSale));
         OnPropertyChanged(nameof(CanPrint));
         OnPropertyChanged(nameof(CanCorrect));

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
@@ -48,7 +48,7 @@
     </UserControl.Styles>
 
     <Panel>
-        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}" IsVisible="{Binding !IsProfileOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[suppliers]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
@@ -61,8 +61,7 @@
                 </StackPanel>
             </c:PageHeader>
 
-            <Grid ColumnDefinitions="380,16,*">
-                <DockPanel Grid.Column="0">
+            <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,12" ColumnDefinitions="*,Auto,Auto">
                         <TextBox Classes="search" PlaceholderText="{Binding L[search]}" Text="{Binding SearchText, Mode=TwoWay}" />
                         <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="130" VerticalAlignment="Stretch"
@@ -95,7 +94,7 @@
                             <DataGrid ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier, Mode=TwoWay}"
                                       AutoGenerateColumns="False" IsReadOnly="True"
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                                      c:GridDoubleClick.Command="{Binding OpenEditCommand}">
+                                      c:GridDoubleClick.Command="{Binding OpenProfileCommand}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Width="*" Binding="{Binding Name}"
                                                         Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -132,9 +131,16 @@
                         </Border>
                         <c:EmptyState Icon="TruckOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
                     </Panel>
-                </DockPanel>
+            </DockPanel>
+        </DockPanel>
 
-                <Panel Grid.Column="2">
+        <!-- Profil sahifasi: ro'yxatdan yetkazib beruvchi tanlangach ochiladi. -->
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}" IsVisible="{Binding IsProfileOpen}">
+            <Button DockPanel.Dock="Top" Classes="icon" HorizontalAlignment="Left" Margin="0,0,0,12"
+                    Command="{Binding CloseProfileCommand}" ToolTip.Tip="{Binding L[back]}">
+                <mi:MaterialIcon Kind="ArrowLeft" Width="20" Height="20" />
+            </Button>
+            <Panel>
                     <Grid IsVisible="{Binding HasSelection}" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                                     Margin="0,0,0,16"
@@ -259,9 +265,7 @@
                             <c:Pager Grid.Row="5" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding !IsSuppliesTab}" />
                             <c:Pager Grid.Row="5" State="{Binding SuppliesPaging}" Margin="0,10,0,0" IsVisible="{Binding IsSuppliesTab}" />
                     </Grid>
-                    <c:EmptyState Icon="TruckOutline" Title="{Binding L[select_supplier]}" IsVisible="{Binding !HasSelection}" />
-                </Panel>
-            </Grid>
+            </Panel>
         </DockPanel>
 
         <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />

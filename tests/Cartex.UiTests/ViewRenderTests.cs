@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -23,6 +23,7 @@ public class ViewRenderTests
     [InlineData(typeof(ReturnsView))]
     [InlineData(typeof(SalesView))]
     [InlineData(typeof(ConfirmDialog))]
+    [InlineData(typeof(SuppliersView))]
     public void Every_screen_loads_without_a_binding_error(Type viewType)
     {
         using var listener = new BindingErrorListener();
