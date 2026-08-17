@@ -512,6 +512,13 @@ public sealed class CreatePrintJobCommandHandler(
             && !(await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
                  ?? new SalesPolicySettings()).PrintMoneyDocuments)
             throw new BusinessRuleException("To'lov hujjatini chop etish o'chirilgan.", "money_document_print_disabled");
+
+        // SOZ-14: proforma do'kon ishida bor-yo'qligi — eganing qarori, shuning uchun
+        // yo'naltirish sozlamasi emas, savdo siyosati to'sadi.
+        if ((DomainJobKind)request.Kind == DomainJobKind.CartProforma
+            && !(await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
+                 ?? new SalesPolicySettings()).PrintCartProforma)
+            throw new BusinessRuleException("Oldindan chop etish o'chirilgan.", "proforma_print_disabled");
         if (request.IsReprint && string.IsNullOrWhiteSpace(request.Reason))
             throw new BusinessRuleException("A reprint reason is required.");
         if (!string.IsNullOrWhiteSpace(request.DeviceId))

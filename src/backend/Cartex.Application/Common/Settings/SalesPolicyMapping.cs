@@ -27,6 +27,7 @@ public static class SalesPolicyMapping
         SaleCorrectionDays = cfg.SaleCorrectionDays,
         AllowDebtWriteOff = cfg.AllowDebtWriteOff,
         PrintMoneyDocuments = cfg.PrintMoneyDocuments,
+        PrintCartProforma = cfg.PrintCartProforma,
         AllowConsolidatedAct = cfg.AllowConsolidatedAct,
         AllowCustomerLoans = cfg.AllowCustomerLoans,
         MaxCustomerLoan = cfg.MaxCustomerLoan,
@@ -59,6 +60,7 @@ public static class SalesPolicyMapping
         cfg.SaleCorrectionDays = dto.SaleCorrectionDays;
         cfg.AllowDebtWriteOff = dto.AllowDebtWriteOff;
         cfg.PrintMoneyDocuments = dto.PrintMoneyDocuments;
+        cfg.PrintCartProforma = dto.PrintCartProforma;
         cfg.AllowConsolidatedAct = dto.AllowConsolidatedAct;
         cfg.AllowCustomerLoans = dto.AllowCustomerLoans;
         cfg.MaxCustomerLoan = dto.MaxCustomerLoan;

@@ -458,8 +458,8 @@
                         <mi:MaterialIcon Kind="TrayArrowUp" Width="18" Height="18" />
                     </Button>
                     <Button Grid.Column="6" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
-                            Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[print_and_queue]}"
-                            IsEnabled="{Binding !IsCartEmpty}">
+                            Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[print_kind_preview]}"
+                            IsVisible="{Binding CanPrintProforma}" IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="PrinterOutline" Width="18" Height="18" />
                     </Button>
                     <Button Grid.Column="7" Classes="paybtn" Padding="8,6"

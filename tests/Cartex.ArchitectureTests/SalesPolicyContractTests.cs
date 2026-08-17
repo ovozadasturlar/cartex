@@ -46,7 +46,8 @@ public class SalesPolicyContractTests
             AllowReturnOnVoidedSale = true,
             AllowFreeReturnLines = false,
             RequireReturnReason = true,
-            AllowSaleQueue = false
+            AllowSaleQueue = false,
+            PrintCartProforma = false
         };
 
         SalesPolicyMapping.Apply(cfg, changed);

@@ -203,7 +203,7 @@
               <mat-icon>outbox</mat-icon>
             </button>
           }
-          @if (canCreateCart) {
+          @if (canCreateCart && proformaAllowed()) {
             <button class="queue-btn" [matTooltip]="t('print_kind_preview')" [disabled]="!cart().length || paying()"
                     (click)="printPreview()">
               <mat-icon>print</mat-icon>

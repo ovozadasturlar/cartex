@@ -1440,5 +1440,6 @@
   "channel_sms": "SMS",
   "channel_email": "Email",
   "excess_toggle_hint": "Bosilsa ortiqcha pul naqd qaytim va mijoz hisobi orasida almashadi",
-  "allow_sale_queue": "Savatni navbatga qo'yish"
+  "allow_sale_queue": "Savatni navbatga qo'yish",
+  "print_cart_proforma": "Savat proformasini chop etish"
 }

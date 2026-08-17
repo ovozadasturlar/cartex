@@ -359,6 +359,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public bool CanCreateProduct => _auth.HasPermission("products.create");
     public bool CanManageProducts => _auth.HasPermission("products.edit");
     [ObservableProperty] private bool _canPrepack;
+    [ObservableProperty] private bool _canPrintProforma = true;
 
     public decimal CustomerDebt => SelectedCustomer?.DebtBalance ?? 0;
     public bool HasCreditLimit => (SelectedCustomer?.CreditLimit ?? 0) > 0;
@@ -605,6 +606,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _supplierRequired = policy.RequireSupplier;
             _customerAlwaysRequired = policy.CustomerRequirement == "Always";
             _queueAllowed = policy.AllowSaleQueue;
+            CanPrintProforma = policy.PrintCartProforma;
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;

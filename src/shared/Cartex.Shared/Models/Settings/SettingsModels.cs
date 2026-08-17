@@ -141,6 +141,7 @@ public sealed record SalesPolicyDto
     public int SaleCorrectionDays { get; init; } = 1;
     public bool AllowDebtWriteOff { get; init; } = true;
     public bool PrintMoneyDocuments { get; init; } = true;
+    public bool PrintCartProforma { get; init; } = true;
     public bool AllowConsolidatedAct { get; init; } = true;
     public bool AllowCustomerLoans { get; init; }
     public decimal MaxCustomerLoan { get; init; }

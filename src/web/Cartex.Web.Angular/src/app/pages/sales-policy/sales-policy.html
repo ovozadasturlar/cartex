@@ -16,6 +16,9 @@
       <mat-slide-toggle [(ngModel)]="model.printMoneyDocuments" [disabled]="!canManage">
         {{ t('print_money_documents') }}
       </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.printCartProforma" [disabled]="!canManage">
+        {{ t('print_cart_proforma') }}
+      </mat-slide-toggle>
       <mat-slide-toggle [(ngModel)]="model.allowConsolidatedAct" [disabled]="!canManage">
         {{ t('allow_consolidated_act') }}
       </mat-slide-toggle>

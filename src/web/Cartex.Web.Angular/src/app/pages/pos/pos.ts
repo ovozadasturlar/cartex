@@ -131,6 +131,7 @@ export class Pos implements OnInit {
 
   /// NAVBAT-06: navbat o'chirilgan bo'lsa uning ikonalari umuman chizilmaydi.
   readonly queueAllowed = computed(() => this.policy()?.allowSaleQueue ?? true);
+  readonly proformaAllowed = computed(() => this.policy()?.printCartProforma ?? true);
   readonly canManageRates = this.auth.hasPermission('rates.edit');
 
   /// Desktopdagi kabi to'lov bloki yig'iladi — kichik ekranda savat qatorlariga joy qoladi.

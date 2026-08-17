@@ -32,6 +32,10 @@ public sealed class SalesPolicySettings
     /// unda 0 — "chegara yo'q" degani, shuning uchun har biriga alohida kalit kerak (SOZ-09).
     public bool AllowDebtWriteOff { get; set; } = true;
     public bool PrintMoneyDocuments { get; set; } = true;
+
+    /// Savat proformasini ("oldindan chop etish") mijozga berish do'kon ishida bormi
+    /// (SOZ-14). Qaysi printer chiqarishi — bu emas, chop etish bo'limining ishi.
+    public bool PrintCartProforma { get; set; } = true;
     public bool AllowConsolidatedAct { get; set; } = true;
 
     /// Do'kon mijozga savdosiz naqd qarz bera oladimi (QARZ-09). Standart: yo'q —

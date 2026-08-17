@@ -398,6 +398,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-11` | **Savdoda mijoz talabi** — `CustomerRequirement`: `Optional` (mijoz ixtiyoriy), `OnDebt` (qarz yoki bonus bo'lsa majburiy — standart), `Always` (har savdoda majburiy). Bonus bilan to'lashda mijoz siyosatdan qat'i nazar majburiy: bonus mijozning hisobidan yechiladi. |
 | `SOZ-12` | Yuqoridagi uchala qaytarish kaliti (`AllowReturnOnVoidedSale`, `AllowFreeReturnLines`, `RequireReturnReason`) ham **serverda** tekshiriladi. Klientda tugmani yashirish yetarli emas: siyosat qoidani ifodalaydi, tugma esa faqat qulaylik. |
 | `SOZ-13` | `AllowSaleQueue` (standart: yoqiq) navbat ish uslubini boshqaradi (`NAVBAT-06`). Bu tarif feature'i emas — do'kon uni pul to'lamasdan yoqib-o'chiradi. Server tekshiruvi majburiy: klientda ikonani yashirish qoida emas. |
+| `SOZ-14` | **Chop etish ikki joydan boshqariladi va ular turli savolga javob beradi.** Savdo siyosati — "do'kon shu qog'ozni beradimi" (eganing qarori, tugma ko'rinishini belgilaydi): `PrintMoneyDocuments`, `PrintCartProforma`. Chop etish bo'limi — "qaysi printer, qanday qog'oz, nechta nusxa" (texnik yo'naltirish). Ish jarayoni qarori chop etish bo'limiga, printer sozlamasi savdo siyosatiga qo'yilmaydi. |
 
 **Ma'lum og'ishlar (tuzatilishi kerak):**
 - `RequireDebtDueDate` faqat klientda tekshiriladi, serverda emas → `SOZ-03` buzilgan.

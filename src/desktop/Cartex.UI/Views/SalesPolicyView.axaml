@@ -55,6 +55,10 @@
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding PrintMoneyDocuments}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[print_cart_proforma]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PrintCartProforma}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[allow_consolidated_act]}" Classes="field" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowConsolidatedAct}" />
                         </Grid>

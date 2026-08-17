@@ -55,6 +55,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _updateCatalogPriceOnSale = true;
     [ObservableProperty] private bool _allowDebtWriteOff = true;
     [ObservableProperty] private bool _printMoneyDocuments = true;
+    [ObservableProperty] private bool _printCartProforma = true;
     [ObservableProperty] private bool _allowConsolidatedAct = true;
     [ObservableProperty] private bool _allowCustomerLoans;
     [ObservableProperty] private decimal _maxCustomerLoan;
@@ -98,6 +99,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             UpdateCatalogPriceOnSale = _loaded.UpdateCatalogPriceOnSale;
             AllowDebtWriteOff = _loaded.AllowDebtWriteOff;
             PrintMoneyDocuments = _loaded.PrintMoneyDocuments;
+            PrintCartProforma = _loaded.PrintCartProforma;
             AllowConsolidatedAct = _loaded.AllowConsolidatedAct;
             AllowCustomerLoans = _loaded.AllowCustomerLoans;
             MaxCustomerLoan = _loaded.MaxCustomerLoan;
@@ -140,6 +142,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale,
                 AllowDebtWriteOff = AllowDebtWriteOff,
                 PrintMoneyDocuments = PrintMoneyDocuments,
+                PrintCartProforma = PrintCartProforma,
                 AllowConsolidatedAct = AllowConsolidatedAct,
                 AllowCustomerLoans = AllowCustomerLoans,
                 MaxCustomerLoan = MaxCustomerLoan,

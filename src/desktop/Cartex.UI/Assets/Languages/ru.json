@@ -1440,5 +1440,6 @@
   "channel_sms": "СМС",
   "channel_email": "Email",
   "excess_toggle_hint": "Нажмите, чтобы переключить сдачу между наличными и счётом клиента",
-  "allow_sale_queue": "Очередь корзин"
+  "allow_sale_queue": "Очередь корзин",
+  "print_cart_proforma": "Печать проформы корзины"
 }

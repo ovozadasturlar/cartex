@@ -64,6 +64,7 @@ export class SalesPolicySettings implements OnInit {
     saleCorrectionDays: 1,
     allowDebtWriteOff: true,
     printMoneyDocuments: true,
+    printCartProforma: true,
     allowConsolidatedAct: true,
     allowCustomerLoans: false,
     maxCustomerLoan: 0,

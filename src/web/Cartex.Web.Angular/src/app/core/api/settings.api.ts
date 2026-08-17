@@ -88,6 +88,7 @@ export interface SalesPolicy {
   saleCorrectionDays: number;
   allowDebtWriteOff: boolean;
   printMoneyDocuments: boolean;
+  printCartProforma: boolean;
   allowConsolidatedAct: boolean;
   allowCustomerLoans: boolean;
   maxCustomerLoan: number;
