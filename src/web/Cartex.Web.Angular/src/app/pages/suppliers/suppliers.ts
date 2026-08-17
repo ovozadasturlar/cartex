@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { InventoryApi, Supplier, SupplierTotals } from '../../core/api/inventory.api';
@@ -41,6 +42,13 @@ import { StatCard } from '../../shared/stat-card';
   styleUrl: './suppliers.scss',
 })
 export class Suppliers implements OnInit {
+  private readonly router = inject(Router);
+
+  /// Ro'yxatdagi qator bosilganda o'sha yetkazib beruvchining profili ochiladi.
+  open(supplier: Supplier): void {
+    void this.router.navigate(['/suppliers', supplier.id]);
+  }
+
   private readonly api = inject(InventoryApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);

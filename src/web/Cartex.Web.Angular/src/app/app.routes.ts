@@ -55,6 +55,19 @@ export const routes: Routes = [
           import('./pages/customers/customer-profile').then((m) => m.CustomerProfile),
       },
       {
+        path: 'suppliers',
+        canActivate: [permissionGuard],
+        data: { permission: 'suppliers.view' },
+        loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers),
+      },
+      {
+        path: 'suppliers/:id',
+        canActivate: [permissionGuard],
+        data: { permission: 'suppliers.view' },
+        loadComponent: () =>
+          import('./pages/suppliers/supplier-profile').then((m) => m.SupplierProfile),
+      },
+      {
         path: 'products',
         canActivate: [permissionGuard],
         data: { permission: 'products.view' },
@@ -173,11 +186,6 @@ export const routes: Routes = [
             path: 'warehouses',
             data: { permission: 'warehouses.view' },
             loadComponent: () => import('./pages/warehouses/warehouses').then((m) => m.Warehouses),
-          },
-          {
-            path: 'suppliers',
-            data: { permission: 'suppliers.view' },
-            loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers),
           },
           {
             path: 'users',

@@ -56,21 +56,21 @@
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let s" class="num actions">
                   @if (s.payable > 0) {
-                    <button matButton (click)="openPayDebt(s)">
+                    <button matButton (click)="openPayDebt(s); $event.stopPropagation()">
                       <mat-icon>payments</mat-icon>
                       {{ t('repay_debt') }}
                     </button>
                   }
-                  <button matIconButton [title]="t('supplier_ledger')" (click)="openLedger(s)">
+                  <button matIconButton [title]="t('supplier_ledger')" (click)="openLedger(s); $event.stopPropagation()">
                     <mat-icon>receipt_long</mat-icon>
                   </button>
                   @if (canEdit) {
-                    <button matIconButton (click)="openEdit(s)"><mat-icon>edit</mat-icon></button>
+                    <button matIconButton (click)="openEdit(s); $event.stopPropagation()"><mat-icon>edit</mat-icon></button>
                   }
                 </td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr mat-row *matRowDef="let s; columns: cols"></tr>
+              <tr mat-row *matRowDef="let s; columns: cols" class="clickable" (click)="open(s)"></tr>
             </table>
           </div>
           <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />

@@ -1,4 +1,5 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 
 const money = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
 
@@ -76,4 +77,18 @@ export function newUuid(): string {
   b[8] = (b[8] & 0x3f) | 0x80;
   const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/// Serverdan kelgan enum nomlarini ("DebtPay", "Debt") til fayllaridagi `op_*` / `acct_*`
+/// kalitlariga o'giradi. Kalit topilmasa xom nom qoladi — desktopdagi bilan bir xil xulq.
+@Pipe({ name: 'cxEnum', pure: false })
+export class CxEnumPipe implements PipeTransform {
+  private readonly transloco = inject(TranslocoService);
+
+  transform(value: string | null | undefined, prefix: string): string {
+    if (!value) return '—';
+    const key = `${prefix}_${value.toLowerCase()}`;
+    const translated = this.transloco.translate(key);
+    return translated === key ? value : translated;
+  }
 }

@@ -37,3 +37,6 @@ table {
 .actions {
   white-space: nowrap;
 }
+
+.clickable { cursor: pointer; }
+.clickable:hover { background: var(--cx-hover); }

@@ -62,6 +62,12 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: 'supplies.view',
       },
       {
+        labelKey: 'suppliers',
+        icon: 'contact_phone',
+        route: '/suppliers',
+        permission: 'suppliers.view',
+      },
+      {
         labelKey: 'barcode_print',
         icon: 'barcode_reader',
         route: '/barcode-print',
@@ -147,12 +153,6 @@ export const SETTINGS_SECTIONS: NavSection[] = [
         icon: 'home_storage',
         route: '/settings/warehouses',
         permission: 'warehouses.view',
-      },
-      {
-        labelKey: 'suppliers',
-        icon: 'contact_phone',
-        route: '/settings/suppliers',
-        permission: 'suppliers.view',
       },
     ],
   },

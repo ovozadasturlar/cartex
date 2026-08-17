@@ -16,7 +16,7 @@ import { CustomersApi, SalesApi } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
 import { CustomerPartner, PartnersApi } from '../../core/api/partners.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
+import { CxDatePipe, CxEnumPipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
@@ -50,6 +50,7 @@ const consentOptions = [
     MatTableModule,
     TranslocoModule,
     CxDatePipe,
+    CxEnumPipe,
     CxMoneyPipe,
     StatCard,
     EmptyState,
