@@ -238,6 +238,7 @@ export interface Warehouse {
 
 export interface Receipt {
   receiptToken: string;
+  status: string;
   businessName: string;
   branchName: string;
   saleDate: string;
@@ -253,12 +254,16 @@ export interface Receipt {
   baseCurrency: string;
   userName: string;
   customerName: string | null;
+  note: string | null;
   items: {
     productName: string;
     quantity: number;
     unitName: string;
     unitPrice: number;
     lineTotal: number;
+    discountAmount: number;
+    netTotal: number;
+    hasDiscount: boolean;
   }[];
   payments: {
     method: string;

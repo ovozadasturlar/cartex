@@ -1,5 +1,4 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,7 +14,6 @@ import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { Customer, Receipt } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
-import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-customer-picker-dialog',
@@ -246,146 +244,5 @@ export class CustomerPickerDialog implements OnInit {
     } finally {
       this.loading.set(false);
     }
-  }
-}
-
-@Component({
-  selector: 'app-pos-receipt-dialog',
-  imports: [MatButtonModule, MatDialogModule, MatIconModule, TranslocoModule, CxDatePipe, CxMoneyPipe],
-  template: `
-    <ng-container *transloco="let t">
-      <div class="head">
-        <div>
-          <h2>{{ receipt.businessName }}</h2>
-          <p>{{ receipt.branchName }} · {{ receipt.saleDate | cxDate }}</p>
-        </div>
-        <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
-      </div>
-      <mat-dialog-content>
-        <div class="items">
-          @for (item of receipt.items; track $index) {
-            <div class="item">
-              <div class="info">
-                <span class="name">{{ item.productName }}</span>
-                <span class="qty">{{ item.quantity }} {{ item.unitName }} × {{ item.unitPrice | cxMoney }}</span>
-              </div>
-              <span class="cx-money">{{ item.lineTotal | cxMoney }}</span>
-            </div>
-          }
-        </div>
-        @if (receipt.discountAmount > 0) {
-          <div class="row">
-            <span>{{ t('discount') }}</span>
-            <span class="cx-money">−{{ receipt.discountAmount | cxMoney }}</span>
-          </div>
-        }
-        <div class="row total">
-          <span>{{ t('total') }}</span>
-          <span class="cx-money">{{ receipt.totalAmount | cxMoney }}</span>
-        </div>
-        @for (p of receipt.payments; track $index) {
-          <div class="row">
-            <span>{{ t(p.method.toLowerCase()) }}</span>
-            @if (p.isForeign) {
-              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }} ≈ {{ p.amountBase | cxMoney }}</span>
-            } @else {
-              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
-            }
-          </div>
-        }
-        @if (receipt.debtAmount > 0) {
-          <div class="row debt">
-            <span>{{ t('debt') }}</span>
-            <span class="cx-money">{{ receipt.debtAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.creditAmount > 0) {
-          <div class="row">
-            <span>{{ t('advance') }}</span>
-            <span class="cx-money">{{ receipt.creditAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.changeAmount > 0) {
-          <div class="row">
-            <span>{{ t('change') }}</span>
-            <span class="cx-money">{{ receipt.changeAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.cashbackEarned > 0) {
-          <div class="row">
-            <span>{{ t('cashback_earned') }}</span>
-            <span class="cx-money">{{ receipt.cashbackEarned | cxMoney }}</span>
-          </div>
-        }
-        <p class="footer">
-          {{ t('cashier') }}: {{ receipt.userName }}
-          @if (receipt.customerName) {
-            · {{ receipt.customerName }}
-          }
-        </p>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button matButton (click)="print()">
-          <mat-icon>print</mat-icon>
-          {{ t('print') }}
-        </button>
-        <button matButton="filled" mat-dialog-close>{{ t('close') }}</button>
-      </mat-dialog-actions>
-    </ng-container>
-  `,
-  styles: `
-    .head {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
-      padding: 20px 16px 4px 24px;
-      h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
-      p { margin: 4px 0 0; color: var(--cx-text-2); font-size: 13px; }
-    }
-    .item {
-      display: flex; justify-content: space-between; align-items: center; gap: 12px;
-      padding: 9px 0; border-bottom: 1px dashed var(--cx-border);
-      .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-      .name { font-size: 13.5px; font-weight: 500; }
-      .qty { font-size: 12px; color: var(--cx-text-3); }
-    }
-    .row {
-      display: flex; justify-content: space-between; gap: 12px; padding: 6px 0;
-      font-size: 13.5px; color: var(--cx-text-2);
-      &.total {
-        margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--cx-border);
-        font-size: 15px; font-weight: 700; color: var(--cx-text-1);
-      }
-      &.debt .cx-money { color: var(--cx-danger); }
-    }
-    .footer { margin: 10px 0 0; font-size: 12px; color: var(--cx-text-3); }
-  `,
-})
-export class PosReceiptDialog {
-  readonly receipt = inject<Receipt>(MAT_DIALOG_DATA);
-  private readonly http = inject(HttpClient);
-  private readonly auth = inject(AuthService);
-  private readonly notify = inject(NotifyService);
-
-  async print(): Promise<void> {
-    if (this.auth.hasPermission('printing.remote.use') && this.auth.hasPermission('printing.receipts.print')) {
-      try {
-        const context = await lastValueFrom(this.http.get<{ defaultBranchId: number; branches: { id: number }[] }>('/api/auth/context'));
-        const branchId = context.defaultBranchId || context.branches[0]?.id;
-        if (branchId) {
-          await lastValueFrom(this.http.post('/api/printing/jobs', {
-            branchId,
-            kind: 'Receipt',
-            sourceType: 'receipt_token',
-            sourceId: this.receipt.receiptToken,
-            payload: { receiptToken: this.receipt.receiptToken },
-            copies: 1,
-            idempotencyKey: `receipt:${this.receipt.receiptToken}:web`,
-          }));
-          return;
-        }
-      } catch (error) {
-        this.notify.error(error);
-      }
-    }
-    window.open('/r/' + this.receipt.receiptToken, '_blank');
   }
 }

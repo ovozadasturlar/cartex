@@ -1,0 +1,169 @@
+<ng-container *transloco="let t">
+  <div class="sheet">
+    <div class="body">
+      <!-- CHAP: tashkilot, yakunlar, QR — desktopdagi tartibning aynan o'zi -->
+      <div class="left">
+        <div class="badge">
+          <span class="biz">{{ receipt.businessName }}</span>
+          @if (receipt.branchName) {
+            <span class="branch">{{ receipt.branchName }}</span>
+          }
+          <span class="token">{{ receipt.receiptToken }}</span>
+        </div>
+
+        <div class="meta">
+          <div class="mrow">
+            <span class="k">{{ t('sale_date') }}</span>
+            <span class="v">{{ receipt.saleDate | cxDate }}</span>
+          </div>
+          <div class="mrow">
+            <span class="k">{{ t('cashier') }}</span>
+            <span class="v">{{ receipt.userName }}</span>
+          </div>
+          @if (receipt.customerName) {
+            <div class="mrow">
+              <span class="k">{{ t('customer') }}</span>
+              <span class="v">{{ receipt.customerName }}</span>
+            </div>
+          }
+          @if (receipt.note) {
+            <div class="mrow">
+              <span class="k">{{ t('note') }}</span>
+              <span class="v wrap">{{ receipt.note }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="sums">
+          <div class="srow big">
+            <span class="k">{{ t('total') }}</span>
+            <span class="v cx-money">{{ receipt.totalAmount | cxMoney }}</span>
+          </div>
+          @if (receipt.discountAmount) {
+            <div class="srow">
+              <span class="k">{{ t('discount') }}</span>
+              <span class="v danger cx-money">{{ receipt.discountAmount | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.paidCash) {
+            <div class="srow">
+              <span class="k">{{ t('cash') }}</span>
+              <span class="v cx-money">{{ receipt.paidCash | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.paidCard) {
+            <div class="srow">
+              <span class="k">{{ t('card') }}</span>
+              <span class="v cx-money">{{ receipt.paidCard | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.paidBonus) {
+            <div class="srow">
+              <span class="k">{{ t('bonus') }}</span>
+              <span class="v cx-money">{{ receipt.paidBonus | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.debtAmount) {
+            <div class="srow">
+              <span class="k">{{ t('debt') }}</span>
+              <span class="v danger cx-money">{{ receipt.debtAmount | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.creditAmount) {
+            <div class="srow">
+              <span class="k">{{ t('credit') }}</span>
+              <span class="v danger cx-money">{{ receipt.creditAmount | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.changeAmount) {
+            <div class="srow">
+              <span class="k">{{ t('change') }}</span>
+              <span class="v success cx-money">{{ receipt.changeAmount | cxMoney }}</span>
+            </div>
+          }
+          @if (receipt.cashbackEarned) {
+            <div class="srow">
+              <span class="k">{{ t('cashback') }}</span>
+              <span class="v success cx-money">+{{ receipt.cashbackEarned | cxMoney }}</span>
+            </div>
+          }
+        </div>
+
+        @if (qr()) {
+          <div class="qr">
+            <p>{{ t('scan_to_view_online') }}</p>
+            <div class="frame"><img [src]="qr()" [alt]="t('scan_to_view_online')" /></div>
+          </div>
+        }
+      </div>
+
+      <div class="vsep"></div>
+
+      <!-- O'NG: mahsulotlar jadvali -->
+      <div class="right">
+        <div class="thead">
+          <span class="c-name">{{ t('product') }}</span>
+          <span class="c-num">{{ t('price') }}</span>
+          <span class="c-num">{{ t('qty') }}</span>
+          <span class="c-num">{{ t('discount') }}</span>
+          <span class="c-num">{{ t('sum') }}</span>
+        </div>
+        <div class="tbody">
+          @for (item of receipt.items; track $index) {
+            <div class="trow">
+              <span class="c-name">{{ item.productName }}</span>
+              <span class="c-num muted cx-money">{{ item.unitPrice | cxMoney }}</span>
+              <span class="c-num muted">{{ item.quantity }}</span>
+              <span class="c-num success cx-money">
+                @if (item.hasDiscount) {
+                  −{{ item.discountAmount | cxMoney }}
+                }
+              </span>
+              <span class="c-num net cx-money">{{ item.netTotal | cxMoney }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="hsep"></div>
+
+    <div class="actions">
+      <div class="left-actions">
+        @if (isPosCheckout) {
+          <button matButton="filled" mat-dialog-close>
+            <mat-icon>add</mat-icon>{{ t('new_sale') }}
+          </button>
+        } @else {
+          <button matButton="outlined" mat-dialog-close>{{ t('close') }}</button>
+        }
+      </div>
+
+      <div class="mid-actions">
+        @if (canAttachCustomer) {
+          <button matButton="outlined" (click)="attachCustomer()">
+            <mat-icon>person_add</mat-icon>{{ t('customer') }}
+          </button>
+        }
+        @if (canCorrect) {
+          <button matButton="outlined" (click)="correct()">
+            <mat-icon>edit</mat-icon>{{ t('correct_sale') }}
+          </button>
+        }
+        @if (canReturn) {
+          <button matButton="outlined" class="danger" (click)="returnSale()">
+            <mat-icon>undo</mat-icon>{{ t('return') }}
+          </button>
+        }
+      </div>
+
+      @if (canPrint) {
+        <button matButton="filled" (click)="print()">
+          <mat-icon>print</mat-icon>{{ t('print') }}
+        </button>
+      }
+    </div>
+  </div>
+</ng-container>

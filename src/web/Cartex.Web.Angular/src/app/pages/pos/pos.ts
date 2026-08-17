@@ -26,7 +26,8 @@ import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
-import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
+import { CustomerPickerDialog } from './pos-dialogs';
+import { PosReceiptDialog } from './receipt-dialog';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
 import { LongPressDirective } from '../../core/long-press.directive';
 import { RemotePrintService } from '../../core/remote-print.service';
@@ -727,7 +728,11 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           const receipt = await lastValueFrom(this.api.receipt(detail.receiptToken));
           await lastValueFrom(
             this.dialog
-              .open(PosReceiptDialog, { data: receipt, width: '420px', maxWidth: '94vw', autoFocus: false })
+              .open(PosReceiptDialog, {
+                data: { receipt, saleId, posCheckout: true },
+                maxWidth: '94vw',
+                autoFocus: false,
+              })
               .afterClosed(),
           );
         } catch {
@@ -767,7 +772,13 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       try {
         const receipt = await lastValueFrom(this.api.receipt(result.receiptToken));
         await lastValueFrom(
-          this.dialog.open(PosReceiptDialog, { data: receipt, width: '420px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+          this.dialog
+            .open(PosReceiptDialog, {
+              data: { receipt, saleId: result.saleId, posCheckout: true },
+              maxWidth: '94vw',
+              autoFocus: false,
+            })
+            .afterClosed(),
         );
       } catch (e) {
         this.notify.error(e);

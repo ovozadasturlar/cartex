@@ -55,6 +55,14 @@ export class SalesApi {
   createReturn(request: CreateCustomerReturn): Observable<CustomerReturnCreated> {
     return this.http.post<CustomerReturnCreated>('/api/customer-returns', request);
   }
+
+  voidSale(id: number, reason: string): Observable<void> {
+    return this.http.post<void>(`/api/sales/${id}/void`, { reason });
+  }
+
+  assignCustomer(id: number, customerId: number): Observable<void> {
+    return this.http.post<void>(`/api/sales/${id}/customer/${customerId}`, {});
+  }
 }
 
 @Injectable({ providedIn: 'root' })
