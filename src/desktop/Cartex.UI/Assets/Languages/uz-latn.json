@@ -1477,5 +1477,7 @@
   "show_unlisted_products_off": "Narxsiz mahsulotlar kassada ko'rinmaydi.",
   "allow_insufficient_stock_sales_on": "Qoldiqdan ortiq sotish mumkin — qoldiq manfiyga tushadi.",
   "allow_insufficient_stock_sales_off": "Qoldiqdan ortiq sotish rad etiladi.",
-  "customer_req_onbonus": "Qarz va bonusda"
+  "customer_req_onbonus": "Qarz va bonusda",
+  "op_customerloan": "Qarzga berildi",
+  "op_debtwriteoff": "Qarz kechirildi"
 }

@@ -25,6 +25,7 @@ export interface SaleDetail {
   customerId: number | null;
   status: string;
   saleDate: string;
+  receiptToken: string;
   items: SaleDetailLine[];
 }
 

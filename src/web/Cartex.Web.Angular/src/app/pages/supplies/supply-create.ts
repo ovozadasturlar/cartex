@@ -245,7 +245,20 @@ export class SupplyCreate implements OnInit {
   async save(): Promise<void> {
     const supplierId = this.supplierId();
     const warehouseId = this.warehouseId();
-    if ((this.requireSupplier() && supplierId === null) || !warehouseId || !this.items().length) return;
+
+    // Jimgina qaytib ketmaydi: tugma bosilgan, demak nima yetishmayotgani aytilishi kerak.
+    if (this.requireSupplier() && supplierId === null) {
+      this.notify.error(new Error(this.transloco.translate('err_select_supplier')));
+      return;
+    }
+    if (!warehouseId) {
+      this.notify.error(new Error(this.transloco.translate('select_warehouse')));
+      return;
+    }
+    if (!this.items().length) {
+      this.notify.error(new Error(this.transloco.translate('no_items')));
+      return;
+    }
     this.saving.set(true);
     try {
       const items: CreateSupplyItem[] = this.items().map((i) => ({

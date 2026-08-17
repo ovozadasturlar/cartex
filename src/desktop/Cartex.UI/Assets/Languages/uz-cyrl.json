@@ -1477,5 +1477,7 @@
   "show_unlisted_products_off": "Нархсиз маҳсулотлар кассада кўринмайди.",
   "allow_insufficient_stock_sales_on": "Қолдиқдан ортиқ сотиш мумкин — қолдиқ манфийга тушади.",
   "allow_insufficient_stock_sales_off": "Қолдиқдан ортиқ сотиш рад этилади.",
-  "customer_req_onbonus": "Қарз ва бонусда"
+  "customer_req_onbonus": "Қарз ва бонусда",
+  "op_customerloan": "Қарзга берилди",
+  "op_debtwriteoff": "Қарз кечирилди"
 }

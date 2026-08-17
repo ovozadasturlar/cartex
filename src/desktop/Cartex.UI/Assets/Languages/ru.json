@@ -1477,5 +1477,7 @@
   "show_unlisted_products_off": "Товары без цены на кассе не показываются.",
   "allow_insufficient_stock_sales_on": "Можно продать больше, чем есть — остаток уйдёт в минус.",
   "allow_insufficient_stock_sales_off": "Продажа сверх остатка отклоняется.",
-  "customer_req_onbonus": "При долге и бонусе"
+  "customer_req_onbonus": "При долге и бонусе",
+  "op_customerloan": "Выдано в долг",
+  "op_debtwriteoff": "Долг списан"
 }

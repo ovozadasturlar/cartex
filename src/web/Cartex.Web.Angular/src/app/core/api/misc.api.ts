@@ -168,7 +168,10 @@ export class OrderingApi {
     discountAmount?: number;
     kind?: string;
   }): Observable<string> {
-    return this.http.post<string>('/api/ordering/carts', body);
+    // Server savat kodini `text/plain` bilan qaytaradi (ASP.NET `Ok(string)` shunday
+    // ishlaydi), shuning uchun javob JSON deb o'qilmaydi: aks holda savat serverda
+    // yaratilib bo'lgach klient "xatolik" deb ko'rsatadi va navbatda arvoh savat qoladi.
+    return this.http.post('/api/ordering/carts', body, { responseType: 'text' });
   }
 
   checkout(

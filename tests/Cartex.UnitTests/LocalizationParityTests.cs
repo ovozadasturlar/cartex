@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Enums;
 using Xunit;
 
 namespace Cartex.UnitTests;
@@ -36,6 +37,21 @@ public class LocalizationParityTests
             var keys = Load(file);
             var missing = AppPermissions.Catalog.Keys.Where(code => !keys.ContainsKey($"perm_{code}")).ToList();
             Assert.True(missing.Count == 0, $"{file}: perm_ keys missing for [{string.Join(", ", missing.Take(5))}]");
+        }
+    }
+
+    /// Hisob tarixi operatsiya turini `op_<tur>` kaliti bilan chiqaradi; kalit bo'lmasa
+    /// mijozga xom enum nomi ko'rinadi ("CustomerLoan"). Bu allaqachon bir marta yuz bergan.
+    [Fact]
+    public void Every_ledger_operation_has_a_localized_name()
+    {
+        foreach (var file in Files)
+        {
+            var keys = Load(file);
+            var missing = Enum.GetNames<OperationType>()
+                .Where(name => !keys.ContainsKey($"op_{name.ToLowerInvariant()}"))
+                .ToList();
+            Assert.True(missing.Count == 0, $"{file}: op_ keys missing for [{string.Join(", ", missing)}]");
         }
     }
 }

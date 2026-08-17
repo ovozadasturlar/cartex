@@ -21,6 +21,7 @@ import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
 import { BusinessApi } from '../../core/api/misc.api';
 import { Currency, RatesApi } from '../../core/api/finance.api';
 import { NotifyService } from '../../core/notify.service';
+import { SalesApi } from '../../core/api.service';
 import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
@@ -60,6 +61,7 @@ const PAGE_SIZE = 40;
 })
 export class Pos implements OnInit {
   private readonly api = inject(PosApi);
+  private readonly salesApi = inject(SalesApi);
   private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
@@ -697,7 +699,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
     this.paying.set(true);
     try {
       if (this.activeQueueCode) {
-        await lastValueFrom(this.orderingApi.checkout(
+        const saleId = await lastValueFrom(this.orderingApi.checkout(
           this.activeQueueCode,
           this.isMulticurrency() ? 0 : this.cash(),
           this.isMulticurrency() ? 0 : this.card(),
@@ -717,9 +719,23 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           },
         ));
         this.activeQueueCode = null;
+
+        // Navbatdan yakunlangan savdo ham chekini ko'rsatadi: kassir uchun bu oddiy
+        // savdodan farq qilmaydi, chek esa faqat shu yerda chiqariladi.
+        try {
+          const detail = await lastValueFrom(this.salesApi.detail(saleId));
+          const receipt = await lastValueFrom(this.api.receipt(detail.receiptToken));
+          await lastValueFrom(
+            this.dialog
+              .open(PosReceiptDialog, { data: receipt, width: '420px', maxWidth: '94vw', autoFocus: false })
+              .afterClosed(),
+          );
+        } catch {
+          this.notify.success(t('sale_completed'));
+        }
+
         this.state.clearAll();
         this.reset();
-        this.notify.success(t('sale_completed'));
         this.focusScan();
         return;
       }

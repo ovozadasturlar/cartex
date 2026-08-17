@@ -1477,5 +1477,7 @@
   "show_unlisted_products_off": "Products with no price are hidden at the till.",
   "allow_insufficient_stock_sales_on": "Selling more than is in stock is allowed — the balance goes negative.",
   "allow_insufficient_stock_sales_off": "A sale beyond the stock on hand is refused.",
-  "customer_req_onbonus": "For debt and bonus"
+  "customer_req_onbonus": "For debt and bonus",
+  "op_customerloan": "Lent out",
+  "op_debtwriteoff": "Debt written off"
 }
