@@ -383,15 +383,31 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ReceiveStock()
+    private async Task ReceiveStockAsync()
     {
         if (BlockOnlineMutationWhileOffline()) return;
         if (_product is null) return;
-        var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == _product.VariantId)?.Quantity ?? 0;
-        _supplyCart.Add(_product);
-        _supplyCart.SetQuantity(_product.VariantId, existing + Quantity);
+        var product = _product;
+        var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == product.VariantId);
+        var quantity = (existing?.Quantity ?? 0) + Quantity;
+        _supplyCart.Add(product, existing?.PurchasePrice ?? 0);
+        _supplyCart.SetQuantity(product.VariantId, quantity);
         Ui.Toast($"{Loc.Instance["receive_stock"]} ✓");
         CloseOverlay();
+
+        // Tannarx qo'lda kiritiladi, lekin oxirgi xarid narxi bilan oldindan to'ldiriladi —
+        // aks holda kassir har safar noldan yozadi va nol qolib ketish xavfi tug'iladi.
+        if (existing is not null || _warehouse.WarehouseId is not { } warehouseId) return;
+        try
+        {
+            var info = await Task.Run(() => _productsApi.GetVariantPriceInfoAsync(product.VariantId, warehouseId));
+            if (info.LastPurchasePrice is > 0 and { } last)
+                _supplyCart.SetPurchasePrice(product.VariantId, last);
+        }
+        catch
+        {
+            // Narx qo'lda kiritilaveradi; oldindan to'ldirish qulaylik, shart emas.
+        }
     }
 
     [RelayCommand]

@@ -32,17 +32,35 @@ public partial class ReceiveCartViewModel : ObservableObject
         Refresh();
     }
 
-    public void Disappear() => _cart.Changed -= Refresh;
+    public void Disappear()
+    {
+        _cart.Changed -= Refresh;
+        foreach (var line in Lines)
+            line.PropertyChanged -= OnLineChanged;
+    }
+
+    private void OnLineChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(SupplyCartLine.PurchasePrice) or nameof(SupplyCartLine.Quantity))) return;
+        OnPropertyChanged(nameof(TotalText));
+        _cart.PersistSoon();
+    }
 
     private void Refresh()
     {
         if (!Lines.SequenceEqual(_cart.Lines))
         {
+            foreach (var line in Lines)
+                line.PropertyChanged -= OnLineChanged;
             Lines.Clear();
             foreach (var line in _cart.Lines)
+            {
+                line.PropertyChanged += OnLineChanged;
                 Lines.Add(line);
+            }
         }
         IsEmpty = Lines.Count == 0;
+        OnPropertyChanged(nameof(TotalText));
     }
 
     [RelayCommand]
@@ -57,6 +75,8 @@ public partial class ReceiveCartViewModel : ObservableObject
     [RelayCommand]
     private void Remove(SupplyCartLine line) => _cart.Remove(line.VariantId);
 
+    public string TotalText => Money.Text(Lines.Sum(l => l.LineTotal));
+
     [RelayCommand]
     private async Task SubmitAsync()
     {
@@ -64,6 +84,13 @@ public partial class ReceiveCartViewModel : ObservableObject
         if (_cart.Lines.Count == 0)
         {
             Ui.Toast(Loc.Instance["err_no_items"]);
+            return;
+        }
+        // Tannarxsiz kirim foyda hisobotini va hamkor mukofotini jimgina buzadi, shuning
+        // uchun narx majburiy: 0 qiymat ham ataylab kiritilgan bo'lishi kerak.
+        if (_cart.Lines.FirstOrDefault(l => l.PurchasePrice <= 0) is { } priceless)
+        {
+            Ui.Toast(string.Format(Loc.Instance["err_purchase_price_required"], priceless.ProductName));
             return;
         }
         if (!await _warehouse.EnsureSelectedAsync())
@@ -78,7 +105,7 @@ public partial class ReceiveCartViewModel : ObservableObject
                 null,
                 _warehouse.WarehouseId!.Value,
                 DateOnly.FromDateTime(DateTime.Today),
-                _cart.Lines.Select(l => new CreateSupplyItemRequest(l.VariantId, l.Quantity, 0, null)).ToList()
+                _cart.Lines.Select(l => new CreateSupplyItemRequest(l.VariantId, l.Quantity, l.PurchasePrice, null)).ToList()
             );
             await _suppliesApi.CreateAsync(request);
             _cart.Clear();
