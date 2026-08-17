@@ -193,7 +193,9 @@ Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**
 | `QAYT-05` | Qaytarish cashback va hamkor mukofotini **proporsional** qaytarib oladi. Qator to'liq yopilsa, qoldiq to'liq olinadi. |
 | `QAYT-06` | Qaytariladigan miqdor qolgan miqdordan oshmaydi. |
 | `QAYT-07` | Hisob-kitob sharshara bo'yicha: har savdo uchun qarz → bonus → karta → naqd, har biri o'sha savdoning sig'imi bilan cheklangan; qolgani mijoz qarzini kamaytiradi, ortgani avansga tushadi. |
-| `QAYT-08` | Qaytarish faqat **`Completed`** yoki **`PartialReturn`** holatidagi savdoga bog'lanadi. Bekor qilingan (`Voided`) savdo allaqachon ortga qaytarilgan — tovari omborga qaytgan, puli hisobdan yechilgan; unga yana qaytarish rasmiylashtirilsa tovar ikki marta kirim bo'lib, pul ikki marta chiqadi. Server rad etadi, klient esa bunday savdoda qaytarish va tuzatish tugmalarini umuman ko'rsatmaydi. |
+| `QAYT-08` | Bekor qilingan (`Voided`) savdo allaqachon ortga qaytarilgan — tovari omborga qaytgan, puli hisobdan yechilgan; unga yana qaytarish rasmiylashtirilsa tovar ikki marta kirim bo'lib, pul ikki marta chiqadi. Shuning uchun **standart holatda** qaytarish faqat `Completed` yoki `PartialReturn` savdoga bog'lanadi. Do'kon o'z siyosati bilan buni ocha oladi: `AllowReturnOnVoidedSale` yoqilsa server bunday qaytarishni qabul qiladi (`SOZ-12`). |
+| `QAYT-09` | Savdoga bog'lanmagan **erkin qator** — sotilganidan ortiq miqdor ham shu yo'l bilan ketadi — `returns.freeLine` ruxsati bilan birga `AllowFreeReturnLines` siyosatini talab qiladi. Ruxsat kimga, siyosat esa do'konga tegishli: biri xodimni, ikkinchisi do'kon qoidasini boshqaradi. |
+| `QAYT-10` | `RequireReturnReason` yoqilgan bo'lsa, har bir qaytarish qatorida sabab yozilishi shart. Sababsiz qaytarish keyin tekshirib bo'lmaydigan yozuv qoldiradi. |
 
 ### Qabul mezonlari
 
@@ -391,6 +393,8 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-09` | Chegara maydoni (`Max...`) o'chirish vositasi **emas**: unda `0` — "chegara yo'q" degani (`SOZ-02`). Imkoniyatni yopish uchun alohida `Allow.../Print...` kaliti bo'lishi shart. |
 | `SOZ-10` | Kalit o'chirilganda: server operatsiyani **rad etadi** (`SOZ-03`) va klient tegishli tugma/maydonni **ko'rsatmaydi**. Faqat klientda yashirish yetarli emas. |
 | `SOZ-07` | Sozlama keshi chegaralangan muddatga ega; o'zgarish ilovani qayta ishga tushirmasdan kuchga kiradi. |
+| `SOZ-11` | **Savdoda mijoz talabi** — `CustomerRequirement`: `Optional` (mijoz ixtiyoriy), `OnDebt` (qarz yoki bonus bo'lsa majburiy — standart), `Always` (har savdoda majburiy). Bonus bilan to'lashda mijoz siyosatdan qat'i nazar majburiy: bonus mijozning hisobidan yechiladi. |
+| `SOZ-12` | Yuqoridagi uchala qaytarish kaliti (`AllowReturnOnVoidedSale`, `AllowFreeReturnLines`, `RequireReturnReason`) ham **serverda** tekshiriladi. Klientda tugmani yashirish yetarli emas: siyosat qoidani ifodalaydi, tugma esa faqat qulaylik. |
 
 **Ma'lum og'ishlar (tuzatilishi kerak):**
 - `RequireDebtDueDate` faqat klientda tekshiriladi, serverda emas → `SOZ-03` buzilgan.

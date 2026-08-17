@@ -73,6 +73,19 @@ public sealed class CreateCustomerReturnCommandHandler(
         if (request.Lines.Any(x => x.SaleItemId is null) && !currentUser.HasPermission(AppPermissions.Returns.FreeLine))
             throw new ForbiddenException("Savdoga bog'lanmagan mahsulotni qaytarishga ruxsat yo'q.");
 
+        var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
+            ?? new SalesPolicySettings();
+
+        // QAYT-09/QAYT-10/SOZ-12: ruxsat xodimni, siyosat do'konni boshqaradi — ikkalasi ham
+        // shu yerda tekshiriladi, chunki klientda tugmani yashirish qoida emas.
+        if (!policy.AllowFreeReturnLines && request.Lines.Any(x => x.SaleItemId is null))
+            throw new BusinessRuleException(
+                "Savdoga bog'lanmagan qaytarish do'kon siyosatida yopilgan.", "free_return_lines_disabled");
+
+        if (policy.RequireReturnReason && request.Lines.Any(x => string.IsNullOrWhiteSpace(x.Reason)))
+            throw new BusinessRuleException(
+                "Har bir qaytarish qatorida sabab ko'rsatilishi shart.", "return_reason_required");
+
         var warehouse = await db.Warehouses.AsNoTracking()
             .Where(x => x.Id == request.WarehouseId)
             .Select(x => new { x.Id, x.BranchId })
@@ -112,7 +125,9 @@ public sealed class CreateCustomerReturnCommandHandler(
                 throw new NotFoundException("Sale not found.", "sale_not_found");
             // QAYT-08: bekor qilingan savdo allaqachon ortga qaytarilgan — tovari omborga
             // kirgan, puli hisobdan yechilgan. Unga yana qaytarish yozilsa ikkalasi takrorlanadi.
-            if (sale.Status is not (SaleStatus.Completed or SaleStatus.PartialReturn))
+            // Shuning uchun standart holatda yopiq; do'kon o'z siyosati bilan ocha oladi.
+            if (sale.Status is not (SaleStatus.Completed or SaleStatus.PartialReturn)
+                && !(sale.Status == SaleStatus.Voided && policy.AllowReturnOnVoidedSale))
                 throw new BusinessRuleException(
                     "Bu savdoga qaytarish rasmiylashtirib bo'lmaydi.", "sale_not_returnable");
             if (request.CustomerId is { } customerId && sale.CustomerId != customerId)

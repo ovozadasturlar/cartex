@@ -1,0 +1,210 @@
+<ng-container *transloco="let t">
+  <cx-page-header [title]="t('returns')">
+    @if (canCreate && !editorOpen()) {
+      <button matButton="filled" (click)="openEditor()">
+        <mat-icon>add</mat-icon>{{ t('ret_new') }}
+      </button>
+    }
+    @if (editorOpen()) {
+      <button matButton (click)="closeEditor()">
+        <mat-icon>arrow_back</mat-icon>{{ t('back') }}
+      </button>
+    }
+  </cx-page-header>
+
+  @if (loading() || saving()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (!editorOpen()) {
+    <div class="cx-table-card">
+      @if (documents().length) {
+        <table mat-table [dataSource]="documents()">
+          <ng-container matColumnDef="number">
+            <th mat-header-cell *matHeaderCellDef>{{ t('ret_document') }}</th>
+            <td mat-cell *matCellDef="let r">{{ r.documentNumber }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>{{ t('date') }}</th>
+            <td mat-cell *matCellDef="let r">{{ r.createdAt | cxDate }}</td>
+          </ng-container>
+          <ng-container matColumnDef="customer">
+            <th mat-header-cell *matHeaderCellDef>{{ t('customer') }}</th>
+            <td mat-cell *matCellDef="let r">{{ r.customerName || t('walk_in') }}</td>
+          </ng-container>
+          <ng-container matColumnDef="lines">
+            <th mat-header-cell *matHeaderCellDef>{{ t('items') }}</th>
+            <td mat-cell *matCellDef="let r">{{ r.lineCount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="refund">
+            <th mat-header-cell *matHeaderCellDef>{{ t('total') }}</th>
+            <td mat-cell *matCellDef="let r" class="cx-money">{{ r.refundAmount | cxMoney }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="docCols"></tr>
+          <tr mat-row *matRowDef="let row; columns: docCols" class="clickable" (click)="openDetail(row)"></tr>
+        </table>
+        <cx-paging-bar [meta]="meta()" (changed)="onPage($event)" />
+      } @else if (!loading()) {
+        <cx-empty-state icon="keyboard_return" [message]="t('no_data')" />
+      }
+    </div>
+  } @else {
+    <section class="cx-card picker">
+      <div class="row">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('warehouse') }}</mat-label>
+          <mat-select [(ngModel)]="warehouseId">
+            @for (w of warehouses(); track w.id) {
+              <mat-option [value]="w.id">{{ w.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('customer') }}</mat-label>
+          <input
+            matInput
+            [ngModel]="customerText"
+            (ngModelChange)="searchCustomers($event)"
+            [matAutocomplete]="customerAuto"
+          />
+          <mat-autocomplete
+            #customerAuto="matAutocomplete"
+            [displayWith]="displayCustomer"
+            (optionSelected)="pickCustomer($event.option.value)"
+          >
+            @for (c of customerResults(); track c.id) {
+              <mat-option [value]="c">{{ c.fullName }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('date') }}</mat-label>
+          <input matInput type="date" [(ngModel)]="businessDate" />
+        </mat-form-field>
+      </div>
+
+      @if (customerSales().length) {
+        <div class="sales">
+          @for (sale of customerSales(); track sale.id) {
+            <label class="sale" [class.on]="sale.picked">
+              <mat-checkbox [checked]="sale.picked" (change)="togglePick(sale)" />
+              <span class="no">#{{ sale.id }}</span>
+              <span class="when">{{ sale.saleDate | cxDate }}</span>
+              <span class="amount cx-money">{{ sale.totalAmount | cxMoney }}</span>
+            </label>
+          }
+        </div>
+        <button matButton="filled" (click)="loadPickedSales()">
+          <mat-icon>download</mat-icon>{{ t('ret_load_sales') }}
+        </button>
+      }
+    </section>
+
+    <div class="cx-table-card">
+      @if (lines().length) {
+        <table mat-table [dataSource]="lines()">
+          <ng-container matColumnDef="product">
+            <th mat-header-cell *matHeaderCellDef>{{ t('product') }}</th>
+            <td mat-cell *matCellDef="let r">
+              {{ r.productName }}
+              @if (needsFreeLine(r)) {
+                <mat-icon class="warn" [title]="t('ret_free_line')">link_off</mat-icon>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="taken">
+            <th mat-header-cell *matHeaderCellDef>{{ t('ret_taken') }}</th>
+            <td mat-cell *matCellDef="let r">{{ isFreeLine(r) ? '—' : totalTaken(r) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="quantity">
+            <th mat-header-cell *matHeaderCellDef>{{ t('qty') }}</th>
+            <td mat-cell *matCellDef="let r">
+              <input
+                class="cell"
+                type="number"
+                min="0"
+                step="0.001"
+                [ngModel]="r.quantity"
+                (ngModelChange)="updateLine(r, { quantity: +$event || 0 })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef>{{ t('price') }}</th>
+            <td mat-cell *matCellDef="let r">
+              <input
+                class="cell"
+                type="number"
+                min="0"
+                [ngModel]="r.unitPrice"
+                (ngModelChange)="updateLine(r, { unitPrice: +$event || 0 })"
+                [attr.list]="'prices-' + r.variantId"
+              />
+              <datalist [id]="'prices-' + r.variantId">
+                @for (p of priceOptions(r); track p) {
+                  <option [value]="p"></option>
+                }
+              </datalist>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>{{ t('total') }}</th>
+            <td mat-cell *matCellDef="let r" class="cx-money">{{ lineTotal(r) | cxMoney }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="reason">
+            <th mat-header-cell *matHeaderCellDef>{{ t('reason') }}</th>
+            <td mat-cell *matCellDef="let r">
+              <input
+                class="cell wide"
+                [ngModel]="r.reason"
+                (ngModelChange)="updateLine(r, { reason: $event })"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="remove">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let r">
+              <button matIconButton (click)="removeLine(r)" [attr.aria-label]="t('delete')">
+                <mat-icon>close</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="editorCols"></tr>
+          <tr mat-row *matRowDef="let row; columns: editorCols"></tr>
+        </table>
+      } @else {
+        <cx-empty-state icon="keyboard_return" [message]="t('ret_pick_customer')" />
+      }
+    </div>
+
+    <section class="cx-card footer">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note">
+        <mat-label>{{ t('note') }}</mat-label>
+        <input matInput [(ngModel)]="note" />
+      </mat-form-field>
+
+      @if (needsManualSettlement()) {
+        <mat-checkbox [(ngModel)]="refundInCash">{{ t('ret_refund_cash') }}</mat-checkbox>
+      }
+
+      <span class="spacer"></span>
+      <span class="sum">
+        {{ t('total') }}
+        <strong class="cx-money">{{ refundTotal() | cxMoney }}</strong>
+      </span>
+      <button matButton (click)="clearEditor()"><mat-icon>backspace</mat-icon>{{ t('clear') }}</button>
+      <button matButton="filled" [disabled]="saving()" (click)="save()">
+        <mat-icon>save</mat-icon>{{ t('save') }}
+      </button>
+    </section>
+  }
+</ng-container>

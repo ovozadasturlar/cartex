@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildReceiptSettingsRequest } from './receipt-settings';
+import { buildReceiptSettingsRequest } from './receipt-settings-state';
 
 describe('buildReceiptSettingsRequest', () => {
   it('trims optional text and keeps the selected paper configuration', () => {

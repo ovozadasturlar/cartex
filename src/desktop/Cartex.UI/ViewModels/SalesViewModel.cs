@@ -588,6 +588,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private ReferenceCache _cache = null!;
     private int _staleRateDays = 3;
     private bool _supplierRequired;
+    private bool _customerAlwaysRequired;
 
     private async Task LoadClientPolicyAsync()
     {
@@ -600,6 +601,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _allowDebtSales = policy.AllowDebtSales;
             _requireDebtDueDate = policy.RequireDebtDueDate;
             _supplierRequired = policy.RequireSupplier;
+            _customerAlwaysRequired = policy.CustomerRequirement == "Always";
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
@@ -2090,7 +2092,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (PaidBonusBase > 0 && SelectedCustomer is null) { _toast.Warning(L["bonus_customer_required"]); return; }
 
         if (DebtAmount > 0 && SelectedCustomer is null && !DebtCoveredByCredit) { _toast.Warning(L["debt_customer_required"]); return; }
-        
+
+        if (_customerAlwaysRequired && SelectedCustomer is null) { _toast.Warning(L["sale_customer_required"]); return; }
+
         if (DebtAmount > 0 && !DebtCoveredByCredit && !_allowDebtSales) { _toast.Warning(L["debt_sales_disabled"]); return; }
         if (DebtAmount > 0 && !DebtCoveredByCredit && _requireDebtDueDate && DebtDueDate is null)
         {

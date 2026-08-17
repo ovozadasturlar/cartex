@@ -30,6 +30,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     private readonly IDialogService _dialog;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private bool _allowReturnOnVoidedSale;
 
     private readonly string? _receiptToken;
     private long? _saleId;
@@ -91,7 +92,12 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     /// Bekor qilingan savdo allaqachon ortga qaytarilgan: uni na qaytarish, na qayta tuzatish
     /// mumkin (QAYT-08). Server ham rad etadi, tugma esa umuman ko'rinmasligi kerak.
     public bool IsSaleOpen => Receipt is null || Receipt.Status is "Completed" or "PartialReturn";
-    public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null && IsSaleOpen;
+
+    /// Bekor qilinganini qayta bekor qilishning ma'nosi yo'q, shuning uchun tuzatish siyosatdan
+    /// qat'i nazar yopiq. Qaytarishni esa do'kon o'z siyosati bilan ocha oladi.
+    private bool IsReturnable => IsSaleOpen || (Receipt?.Status == "Voided" && _allowReturnOnVoidedSale);
+
+    public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null && IsReturnable;
     public bool CanPrint => (_auth.HasPermission("printing.receipts.print") || _auth.HasPermission("printing.receipts.reprint")) && Receipt is not null;
     public bool CanCorrect => _auth.HasPermission("sales.void") && _saleId is > 0 && Receipt is not null && IsSaleOpen;
     public bool IsAnySubPanelOpen => IsCustomerPickerOpen;
@@ -144,6 +150,8 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         if ((_customerId is null or 0) && r.CustomerId is { } cid && cid > 0)
             _customerId = cid;
 
+        if (r.Status == "Voided") _ = LoadReturnPolicyAsync();
+
         var baseUrl = SettingsService.Instance.ApiBaseUrl?.TrimEnd('/');
         ReceiptQrCode = QrService.Generate($"{baseUrl}/r/{r.ReceiptToken}");
         OnPropertyChanged(nameof(HasReceipt));
@@ -152,6 +160,19 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         OnPropertyChanged(nameof(CanReturnSale));
         OnPropertyChanged(nameof(CanPrint));
         OnPropertyChanged(nameof(CanCorrect));
+    }
+
+    /// Faqat bekor qilingan chek ochilganda so'raladi — oddiy chekda bu savolning ma'nosi yo'q.
+    private async Task LoadReturnPolicyAsync()
+    {
+        try
+        {
+            _allowReturnOnVoidedSale = (await ServiceLocator.Resolve<ReferenceCache>()
+                .GetAsync(CacheKeys.SalesPolicy, ServiceLocator.Resolve<ISettingsApi>().GetSalesPolicyAsync))
+                .AllowReturnOnVoidedSale;
+            OnPropertyChanged(nameof(CanReturnSale));
+        }
+        catch { }
     }
 
     [RelayCommand]

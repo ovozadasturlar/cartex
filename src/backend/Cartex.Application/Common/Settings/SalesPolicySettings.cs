@@ -45,4 +45,19 @@ public sealed class SalesPolicySettings
     /// Oshirish chegaradan katta bo'lsa savdo baribir o'tadi, faqat katalog yangilanmaydi.
     /// 0 — chegara yo'q.
     public decimal MaxPriceIncreasePercent { get; set; }
+
+    /// Savdoda mijoz qachon majburiy (SOZ-11): "Optional", "OnDebt" (standart), "Always".
+    public string CustomerRequirement { get; set; } = "OnDebt";
+
+    /// Bekor qilingan savdoga qaytarish rasmiylashtirsa bo'ladimi (QAYT-08). Standart: yo'q —
+    /// bunday savdo allaqachon ortga qaytarilgan, ustiga qaytarish tovarni ikki marta kirim
+    /// qilib pulni ikki marta chiqaradi. Do'kon o'z siyosati bilan ocha oladi.
+    public bool AllowReturnOnVoidedSale { get; set; }
+
+    /// Savdoga bog'lanmagan erkin qator — sotilganidan ortiq miqdor ham shu yo'l bilan
+    /// ketadi — qabul qilinadimi (QAYT-09). Ruxsat xodimni, bu kalit do'konni boshqaradi.
+    public bool AllowFreeReturnLines { get; set; } = true;
+
+    /// Har qaytarish qatorida sabab majburiymi (QAYT-10).
+    public bool RequireReturnReason { get; set; }
 }

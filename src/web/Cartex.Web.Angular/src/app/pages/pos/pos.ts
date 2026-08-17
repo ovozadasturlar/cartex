@@ -587,6 +587,10 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       return;
     }
     const policy = this.policy();
+    if (policy?.customerRequirement === 'Always' && !this.customer()) {
+      this.notify.error(t('sale_customer_required'));
+      return;
+    }
     if (this.debt() > 0 && policy && !policy.allowDebtSales) {
       this.notify.error(t('debt_sales_disabled'));
       return;

@@ -35,6 +35,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { labelKey: 'shift', icon: 'schedule', route: '/shift', permission: 'shifts.view' },
       { labelKey: 'sale_history', icon: 'receipt_long', route: '/sales', permission: 'sales.view' },
+      { labelKey: 'returns', icon: 'keyboard_return', route: '/returns', permission: 'returns.view' },
       {
         labelKey: 'orders',
         icon: 'shopping_basket',

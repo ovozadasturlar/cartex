@@ -41,7 +41,11 @@ public class SalesPolicyContractTests
             SaleCorrectionWindow = "Days",
             SaleCorrectionDays = 17,
             UpdateCatalogPriceOnSale = false,
-            MaxPriceIncreasePercent = 18
+            MaxPriceIncreasePercent = 18,
+            CustomerRequirement = "Always",
+            AllowReturnOnVoidedSale = true,
+            AllowFreeReturnLines = false,
+            RequireReturnReason = true
         };
 
         SalesPolicyMapping.Apply(cfg, changed);

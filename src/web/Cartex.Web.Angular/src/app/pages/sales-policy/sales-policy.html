@@ -98,6 +98,33 @@
     </div>
 
     <div class="cx-card section">
+      <h2>{{ t('sale_requirements') }}</h2>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+        <mat-label>{{ t('customer_requirement') }}</mat-label>
+        <mat-select [(ngModel)]="model.customerRequirement" [disabled]="!canManage">
+          @for (code of customerRequirements; track code) {
+            <mat-option [value]="code">{{ t('customer_req_' + code.toLowerCase()) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <p class="hint">{{ t('customer_requirement_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('returns_policy') }}</h2>
+      <mat-slide-toggle [(ngModel)]="model.allowReturnOnVoidedSale" [disabled]="!canManage">
+        {{ t('allow_return_on_voided_sale') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowFreeReturnLines" [disabled]="!canManage">
+        {{ t('allow_free_return_lines') }}
+      </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.requireReturnReason" [disabled]="!canManage">
+        {{ t('require_return_reason') }}
+      </mat-slide-toggle>
+      <p class="hint">{{ t('returns_policy_hint') }}</p>
+    </div>
+
+    <div class="cx-card section">
       <h2>{{ t('sale_correction') }}</h2>
       <div class="grid">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">

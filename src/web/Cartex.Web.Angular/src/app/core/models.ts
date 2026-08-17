@@ -10,14 +10,21 @@ export interface SaleDetailLine {
   saleItemId: number;
   variantId: number;
   productName: string;
+  unitName: string;
+  quantity: number;
+  returnedQuantity: number;
   returnableQuantity: number;
   unitPrice: number;
+  discountAmount: number;
+  netTotal: number;
 }
 
 export interface SaleDetail {
   id: number;
   warehouseId: number;
   customerId: number | null;
+  status: string;
+  saleDate: string;
   items: SaleDetailLine[];
 }
 

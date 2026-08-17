@@ -93,6 +93,10 @@ export interface SalesPolicy {
   maxCustomerLoan: number;
   updateCatalogPriceOnSale: boolean;
   maxPriceIncreasePercent: number;
+  customerRequirement: string;
+  allowReturnOnVoidedSale: boolean;
+  allowFreeReturnLines: boolean;
+  requireReturnReason: boolean;
 }
 
 export interface LoginMethods {

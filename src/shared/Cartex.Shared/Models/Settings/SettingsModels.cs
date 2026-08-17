@@ -146,6 +146,10 @@ public sealed record SalesPolicyDto
     public decimal MaxCustomerLoan { get; init; }
     public bool UpdateCatalogPriceOnSale { get; init; } = true;
     public decimal MaxPriceIncreasePercent { get; init; }
+    public string CustomerRequirement { get; init; } = "OnDebt";
+    public bool AllowReturnOnVoidedSale { get; init; }
+    public bool AllowFreeReturnLines { get; init; } = true;
+    public bool RequireReturnReason { get; init; }
 }
 
 

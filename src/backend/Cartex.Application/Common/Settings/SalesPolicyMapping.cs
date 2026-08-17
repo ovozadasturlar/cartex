@@ -31,7 +31,11 @@ public static class SalesPolicyMapping
         AllowCustomerLoans = cfg.AllowCustomerLoans,
         MaxCustomerLoan = cfg.MaxCustomerLoan,
         UpdateCatalogPriceOnSale = cfg.UpdateCatalogPriceOnSale,
-        MaxPriceIncreasePercent = cfg.MaxPriceIncreasePercent
+        MaxPriceIncreasePercent = cfg.MaxPriceIncreasePercent,
+        CustomerRequirement = cfg.CustomerRequirement,
+        AllowReturnOnVoidedSale = cfg.AllowReturnOnVoidedSale,
+        AllowFreeReturnLines = cfg.AllowFreeReturnLines,
+        RequireReturnReason = cfg.RequireReturnReason
     };
 
     public static void Apply(SalesPolicySettings cfg, SalesPolicyDto dto)
@@ -59,5 +63,9 @@ public static class SalesPolicyMapping
         cfg.MaxCustomerLoan = dto.MaxCustomerLoan;
         cfg.UpdateCatalogPriceOnSale = dto.UpdateCatalogPriceOnSale;
         cfg.MaxPriceIncreasePercent = dto.MaxPriceIncreasePercent;
+        cfg.CustomerRequirement = dto.CustomerRequirement;
+        cfg.AllowReturnOnVoidedSale = dto.AllowReturnOnVoidedSale;
+        cfg.AllowFreeReturnLines = dto.AllowFreeReturnLines;
+        cfg.RequireReturnReason = dto.RequireReturnReason;
     }
 }

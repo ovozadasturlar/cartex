@@ -12,20 +12,7 @@ import { SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
-
-export function buildReceiptSettingsRequest(settings: {
-  headerText: string;
-  footerText: string;
-  paperWidth: number;
-  paperFormat: string;
-}) {
-  return {
-    headerText: settings.headerText.trim() || null,
-    footerText: settings.footerText.trim() || null,
-    paperWidth: settings.paperWidth,
-    paperFormat: settings.paperFormat,
-  };
-}
+import { buildReceiptSettingsRequest } from './receipt-settings-state';
 
 @Component({
   selector: 'app-receipt-settings',

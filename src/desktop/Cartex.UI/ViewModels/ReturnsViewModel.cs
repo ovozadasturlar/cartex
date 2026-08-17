@@ -26,6 +26,11 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
     private readonly PrintDispatchService _print;
+    private readonly ISettingsApi _settingsApi;
+    private readonly ReferenceCache _cache;
+    private bool _allowReturnOnVoidedSale;
+    private bool _allowFreeReturnLines = true;
+    private bool _requireReturnReason;
 
     private long? _pendingSaleId;
     private string? _idempotencyKey;
@@ -41,7 +46,9 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         IToastService toast,
         IBusyService busy,
         AuthService auth,
-        PrintDispatchService print)
+        PrintDispatchService print,
+        ISettingsApi settingsApi,
+        ReferenceCache cache)
     {
         _api = api;
         _salesApi = salesApi;
@@ -53,6 +60,8 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _auth = auth;
         _print = print;
+        _settingsApi = settingsApi;
+        _cache = cache;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["total"], "RefundAmount")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
@@ -84,7 +93,10 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
     public bool IsEmpty => Documents.Count == 0;
     public bool CanView => _auth.HasPermission("returns.view");
     public bool CanCreate => _auth.HasPermission("returns.create");
-    public bool CanAddFreeLine => _auth.HasPermission("returns.freeLine");
+
+    // QAYT-09: the permission says which staff may do it, the policy says whether the shop
+    // does it at all. Both have to agree, and the server checks the same pair.
+    public bool CanAddFreeLine => _auth.HasPermission("returns.freeLine") && _allowFreeReturnLines;
     public bool HasCustomer => SelectedCustomer is not null;
     public bool HasLines => Lines.Count > 0;
     public decimal TotalAmount => Lines.Sum(x => x.LineTotal);
@@ -103,6 +115,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
     {
         OnPropertyChanged(nameof(CanCreate));
         if (!CanView) return;
+        await LoadPolicyAsync();
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -122,6 +135,19 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task LoadPolicyAsync()
+    {
+        try
+        {
+            var policy = await _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync);
+            _allowReturnOnVoidedSale = policy.AllowReturnOnVoidedSale;
+            _allowFreeReturnLines = policy.AllowFreeReturnLines;
+            _requireReturnReason = policy.RequireReturnReason;
+            OnPropertyChanged(nameof(CanAddFreeLine));
+        }
+        catch { }
     }
 
     partial void OnSearchTextChanged(string value)
@@ -252,7 +278,10 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
                     .With("customerId", SelectedCustomer.Id)
                     .Build();
                 var paged = (await _salesApi.QueryAsync(query)).ToPaged();
-                foreach (var sale in paged.Items.Where(x => x.Status != "Returned"))
+                // QAYT-08: a voided sale is only offered when the shop opened that door, so the
+                // clerk never picks a sale that the save will then reject.
+                foreach (var sale in paged.Items.Where(x => x.Status != "Returned"
+                             && (x.Status != "Voided" || _allowReturnOnVoidedSale)))
                     CustomerSales.Add(new SelectableSaleRow(sale));
             }
             IsSalesPanelOpen = CustomerSales.Count > 0;
@@ -421,6 +450,12 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         if (rows.Any(x => x.NeedsFreeLine) && !CanAddFreeLine)
         {
             _toast.Error(L["ret_free_line_required"]);
+            return;
+        }
+
+        if (_requireReturnReason && rows.Any(x => string.IsNullOrWhiteSpace(x.Reason)))
+        {
+            _toast.Error(L["ret_reason_required"]);
             return;
         }
 

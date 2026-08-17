@@ -24,13 +24,16 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
         // back, so the options must exist before the view binds — not once loading finishes.
         FillOptions(ShiftPolicies, ShiftPolicyCodes, code => L[$"shift_policy_{code.ToLowerInvariant()}"]);
         FillOptions(CorrectionWindows, CorrectionWindowCodes, code => L[$"correction_{code.ToLowerInvariant()}"]);
+        FillOptions(CustomerRequirements, CustomerRequirementCodes, code => L[$"customer_req_{code.ToLowerInvariant()}"]);
     }
 
     private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
     private static readonly string[] CorrectionWindowCodes = ["Off", "Shift", "BusinessDay", "Days", "Always"];
+    private static readonly string[] CustomerRequirementCodes = ["Optional", "OnDebt", "Always"];
 
     public ObservableCollection<string> ShiftPolicies { get; } = [];
     public ObservableCollection<string> CorrectionWindows { get; } = [];
+    public ObservableCollection<string> CustomerRequirements { get; } = [];
 
     [ObservableProperty] private int _shiftPolicyIndex = 1;
     [ObservableProperty] private int _correctionWindowIndex = 1;
@@ -55,6 +58,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowConsolidatedAct = true;
     [ObservableProperty] private bool _allowCustomerLoans;
     [ObservableProperty] private decimal _maxCustomerLoan;
+    [ObservableProperty] private int _customerRequirementIndex = 1;
+    [ObservableProperty] private bool _allowReturnOnVoidedSale;
+    [ObservableProperty] private bool _allowFreeReturnLines = true;
+    [ObservableProperty] private bool _requireReturnReason;
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
@@ -93,6 +100,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowConsolidatedAct = _loaded.AllowConsolidatedAct;
             AllowCustomerLoans = _loaded.AllowCustomerLoans;
             MaxCustomerLoan = _loaded.MaxCustomerLoan;
+            CustomerRequirementIndex = Math.Max(0, Array.IndexOf(CustomerRequirementCodes, _loaded.CustomerRequirement));
+            AllowReturnOnVoidedSale = _loaded.AllowReturnOnVoidedSale;
+            AllowFreeReturnLines = _loaded.AllowFreeReturnLines;
+            RequireReturnReason = _loaded.RequireReturnReason;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -129,7 +140,11 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 PrintMoneyDocuments = PrintMoneyDocuments,
                 AllowConsolidatedAct = AllowConsolidatedAct,
                 AllowCustomerLoans = AllowCustomerLoans,
-                MaxCustomerLoan = MaxCustomerLoan
+                MaxCustomerLoan = MaxCustomerLoan,
+                CustomerRequirement = CodeAt(CustomerRequirementCodes, CustomerRequirementIndex, _loaded.CustomerRequirement),
+                AllowReturnOnVoidedSale = AllowReturnOnVoidedSale,
+                AllowFreeReturnLines = AllowFreeReturnLines,
+                RequireReturnReason = RequireReturnReason
             };
 
             using (_busy.Begin(L["loading"]))

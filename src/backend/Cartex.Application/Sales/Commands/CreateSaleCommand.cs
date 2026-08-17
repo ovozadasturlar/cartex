@@ -502,6 +502,11 @@ public sealed class CreateSaleCommandHandler(
         if (debtAmount > 0 && request.CustomerId is null)
             throw new BusinessRuleException("Qarzga sotish uchun mijoz tanlanishi shart.");
 
+        // SOZ-11: qarz va bonus mijozsiz baribir mumkin emas — ular mijoz hisobiga yoziladi.
+        // Siyosat esa to'liq to'langan savdoda ham mijozni talab qila oladi.
+        if (policy.CustomerRequirement == "Always" && request.CustomerId is null)
+            throw new BusinessRuleException("Savdo uchun mijoz tanlanishi shart.", "customer_required");
+
         if (request.CustomerId is not null && paidBonus > 0)
         {
             var bonusAccount = await ledger.FindCustomerAccountAsync(request.CustomerId.Value, AccountType.Bonus, cancellationToken);

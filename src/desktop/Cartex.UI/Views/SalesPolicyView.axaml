@@ -148,6 +148,37 @@
 
                 <Border Classes="card">
                     <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[sale_requirements]}" Classes="section" />
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[customer_requirement]}" Classes="field" />
+                            <ComboBox ItemsSource="{Binding CustomerRequirements}" SelectedIndex="{Binding CustomerRequirementIndex}"
+                                      HorizontalAlignment="Stretch" MinHeight="38" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding L[customer_requirement_hint]}" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[returns_policy]}" Classes="section" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_return_on_voided_sale]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowReturnOnVoidedSale}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_free_return_lines]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowFreeReturnLines}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[require_return_reason]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireReturnReason}" />
+                        </Grid>
+                        <TextBlock Text="{Binding L[returns_policy_hint]}" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
                         <TextBlock Text="{Binding L[sale_correction]}" Classes="section" />
                         <Grid ColumnDefinitions="*,12,*">
                             <StackPanel Spacing="5">

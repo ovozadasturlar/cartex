@@ -39,6 +39,7 @@ export class SalesPolicySettings implements OnInit {
 
   readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
   readonly correctionWindows = ['Off', 'Shift', 'BusinessDay', 'Days', 'Always'];
+  readonly customerRequirements = ['Optional', 'OnDebt', 'Always'];
 
   // The loaded document is kept whole. Saving spreads over it, so a field this screen does not
   // render keeps its stored value instead of going back to the type default.
@@ -68,6 +69,10 @@ export class SalesPolicySettings implements OnInit {
     maxCustomerLoan: 0,
     updateCatalogPriceOnSale: true,
     maxPriceIncreasePercent: 0,
+    customerRequirement: 'OnDebt',
+    allowReturnOnVoidedSale: false,
+    allowFreeReturnLines: true,
+    requireReturnReason: false,
   };
 
   async ngOnInit(): Promise<void> {

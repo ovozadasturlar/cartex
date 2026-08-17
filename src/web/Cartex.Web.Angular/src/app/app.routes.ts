@@ -61,6 +61,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers),
       },
       {
+        path: 'returns',
+        canActivate: [permissionGuard],
+        data: { permission: 'returns.view' },
+        loadComponent: () => import('./pages/returns/returns').then((m) => m.Returns),
+      },
+      {
         path: 'suppliers/:id',
         canActivate: [permissionGuard],
         data: { permission: 'suppliers.view' },
