@@ -418,3 +418,45 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
     align-items: flex-start !important;
   }
 }
+
+
+/// Brauzerning standart scrollbari qalin va o'zining trek foni bilan keladi; desktop
+/// ilovada esa u shunchaki yupqa dumaloq chiziq. Ikkalasi bir xil ko'rinishi uchun
+/// veb tomon shu ko'rinishga keltiriladi.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cx-scrollbar) transparent;
+}
+
+body {
+  --cx-scrollbar: #cbd5e1;
+}
+
+body.dark {
+  --cx-scrollbar: #3a4049;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cx-scrollbar);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cx-text-3);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

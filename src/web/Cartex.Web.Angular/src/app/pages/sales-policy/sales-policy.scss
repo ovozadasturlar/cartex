@@ -1,5 +1,17 @@
+/// Sarlavha skroll maydonining ichida emas, ustida turadi — shunda scrollbar ham
+/// desktopdagi kabi sarlavhadan pastdan boshlanadi, uning yonidan o'tmaydi.
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .section {
@@ -99,12 +111,9 @@
 /// Skroll konteynerining o'z ustki bo'shligi bor, shuning uchun sarlavha shu bo'shliq
 /// qadar yuqoriga tortiladi — aks holda uning tepasidan kontent ko'rinib o'tardi.
 .sticky-head {
-  position: sticky;
-  top: -24px;
-  z-index: 5;
-  margin: -24px 0 14px;
-  padding: 24px 0 10px;
-  background: var(--cx-app-bg);
+  flex: none;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--cx-border);
 
   cx-page-header {
