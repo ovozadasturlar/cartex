@@ -97,7 +97,7 @@ public partial class LoginViewModel(
             await auth.LoginAsync(Username.Trim(), Password);
             await offline.StartAsync();
             Password = "";
-            await Shell.Current.GoToAsync("//home");
+            await Shell.Current.GoToAsync("//main");
             _ = OfferPinSetupAsync();
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)

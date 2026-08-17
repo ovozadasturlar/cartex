@@ -142,25 +142,25 @@ public partial class HomeViewModel(
     }
 
     [RelayCommand]
-    private Task NewCartAsync() => Shell.Current.GoToAsync("//main/scan");
+    private void NewCart() => Views.MainPage.Current?.Show(2);
 
     [RelayCommand]
     private Task OpenCartAsync() => Shell.Current.GoToAsync("cart");
 
     [RelayCommand]
-    private Task OpenQueueAsync() => Shell.Current.GoToAsync("//main/trade");
+    private void OpenQueue() => Views.MainPage.Current?.Show(1);
 
     [RelayCommand]
-    private Task OpenSalesAsync() => Shell.Current.GoToAsync("//main/trade?section=sales");
+    private void OpenSales() => Views.MainPage.Current?.Show(1, "sales");
 
     [RelayCommand]
     private Task OpenSupplyCartAsync() => Shell.Current.GoToAsync("receive_cart");
 
     [RelayCommand]
-    private Task OpenCustomersAsync() => Shell.Current.GoToAsync("//main/customers");
+    private void OpenCustomers() => Views.MainPage.Current?.Show(3);
 
     [RelayCommand]
-    private Task OpenProfileAsync() => Shell.Current.GoToAsync("//main/profile");
+    private void OpenProfile() => Views.MainPage.Current?.Show(4);
 
     [RelayCommand]
     private async Task LogoutAsync()

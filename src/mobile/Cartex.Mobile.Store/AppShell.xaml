@@ -9,12 +9,6 @@
 
     <ShellContent Route="login" ContentTemplate="{DataTemplate views:LoginPage}" Shell.NavBarIsVisible="False" />
 
-    <TabBar x:Name="MainTab" Route="main" Shell.TabBarIsVisible="False">
-        <ShellContent Route="home" Title="{svc:T tab_home}" Icon="tab_home.png" ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Route="trade" Title="{svc:T tab_trade}" Icon="tab_order.png" ContentTemplate="{DataTemplate views:TradePage}" />
-        <ShellContent Route="scan" Title="{svc:T scan}" Icon="tab_scan.png" ContentTemplate="{DataTemplate views:ScanPage}" />
-        <ShellContent Route="customers" Title="{svc:T tab_customer}" Icon="tab_customers.svg" ContentTemplate="{DataTemplate views:CustomersPage}" />
-        <ShellContent Route="profile" Title="{svc:T settings}" Icon="tab_settings.svg" ContentTemplate="{DataTemplate views:ProfilePage}" />
-    </TabBar>
+    <ShellContent x:Name="MainTab" Route="main" ContentTemplate="{DataTemplate views:MainPage}" Shell.NavBarIsVisible="False" />
 
 </Shell>

@@ -68,6 +68,9 @@ Har qoidaning ID'si bor. Suppression yozilsa, sababda shu ID ko'rsatiladi.
 | `KS-31` | Yangi view `x:CompileBindings="False"` bilan yozilmaydi. |
 | `KS-32` | POS ekranida yangi fokus oladigan element qo'shilsa, shtrixkod skaneri fokusi buzilmasligi tekshiriladi (`ScanFocus`). Popup/Flyout xavfsiz, inline element — yo'q. |
 | `KS-33` | Foydalanuvchiga ko'rinadigan matn qattiq yozilmaydi — barcha 4 ta til fayliga kalit qo'shiladi (parity testi tekshiradi). |
+| `KS-34` | **Doimiy chrome sahifa ichida takrorlanmaydi.** Har ekranda turadigan element (pastki panel, doimiy header) bitta nusxada, almashadigan kontentdan **tashqarida** yashaydi. Har sahifaga nusxa qo'yilsa, platforma sahifani almashtirganda uni ham qayta yaratadi va ekran bir-ikki kadr yo'qoladi. Buni yamoq bilan (yashirish, fade, inset kompensatsiyasi) yopib bo'lmaydi — faqat tuzilma bilan: **bitta xost sahifa + almashadigan bo'lim ko'rinishlari**. Bu sanoat standarti: Android `BottomNavigationView` + fragment konteyner, iOS `UITabBarController`, Flutter `IndexedStack`, React Navigation bottom tabs — hammasi chrome'ni bir marta yaratadi. |
+| `KS-35` | **Ko'rinadigan UI nuqsoni taxmin bilan tuzatilmaydi — o'lchanadi.** Tartib: `adb shell screenrecord` → `ffmpeg` bilan kadrlarga ajratish → kerakli elementning har kadrdagi o'rnini hisoblash. Tuzatishdan keyin **xuddi shu o'lchov** takrorlanadi va raqam bilan solishtiriladi. "Endi yaxshi ko'rinyapti" — dalil emas; shu qoida bo'lmagani uchun bitta panel muammosi bir necha kunga cho'zilgan. |
+| `KS-36` | **Animatsiya davomida har kadrdagi ish cheklanadi.** Soya (blur), gradient va ko'rinish xossalariga yozish qimmat: tinch holatda sifat, harakat davomida tezlik. Kadr tashlanishi `KS-35` dagi o'lchov bilan tekshiriladi (harakat kadrlari uzluksiz ketma-ketlik bo'lishi kerak). |
 
 ### Ma'lumot va xavfsizlik
 

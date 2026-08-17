@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
-    x:Class="Cartex.Mobile.Store.Views.HomePage"
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.HomeView"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
-    x:DataType="vm:HomeViewModel"
-    Shell.NavBarIsVisible="False"
-    Shell.TabBarIsVisible="False">
+    x:DataType="vm:HomeViewModel">
 
-    <ContentPage.Resources>
+    <ContentView.Resources>
         <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#2F7A4C" Offset="0" />
             <GradientStop Color="#1B4C2F" Offset="1" />
@@ -42,7 +40,7 @@
             <Setter Property="LineBreakMode" Value="TailTruncation" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkSoft}, Dark={StaticResource InkSoftDark}}" />
         </Style>
-    </ContentPage.Resources>
+    </ContentView.Resources>
 
     <Grid>
         <VerticalStackLayout IsVisible="{Binding HasAccess, Converter={StaticResource Invert}}"
@@ -235,7 +233,5 @@
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>
-
-        <ctl:LiquidTabBar Index="0" />
     </Grid>
-</ContentPage>
+</ContentView>

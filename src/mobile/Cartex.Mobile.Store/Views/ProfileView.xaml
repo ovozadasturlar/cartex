@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
-    x:Class="Cartex.Mobile.Store.Views.ProfilePage"
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.ProfileView"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
-    x:DataType="vm:ProfileViewModel"
-    Shell.NavBarIsVisible="False"
-    Shell.TabBarIsVisible="False">
+    x:DataType="vm:ProfileViewModel">
     <Grid>
     <ScrollView>
         <VerticalStackLayout Padding="20,18,20,116" Spacing="14">
@@ -159,6 +157,5 @@
                     TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
         </VerticalStackLayout>
     </ScrollView>
-    <ctl:LiquidTabBar Index="4" />
     </Grid>
-</ContentPage>
+</ContentView>

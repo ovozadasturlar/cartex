@@ -5,27 +5,26 @@ using Cartex.Mobile.Store.ViewModels;
 
 namespace Cartex.Mobile.Store.Views;
 
-public partial class ScanPage : ContentPage
+public partial class ScanView : ContentView, ISectionView
 {
     private static bool _cameraPermissionGranted;
 
     private readonly ScanViewModel _vm;
 
-    public ScanPage(ScanViewModel vm)
+    public ScanView(ScanViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
     }
 
-    protected override async void OnAppearing()
+    public async void Appear()
     {
-        base.OnAppearing();
-
         if (!_cameraPermissionGranted && !(_cameraPermissionGranted = await Methods.AskForRequiredPermissionAsync()))
         {
-            await DisplayAlertAsync(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
-            await Shell.Current.GoToAsync("//home");
+            if (Shell.Current?.CurrentPage is { } page)
+                await page.DisplayAlertAsync(Loc.Instance["camera_title"], Loc.Instance["camera_permission"], Loc.Instance["ok"]);
+            MainPage.Current?.Show(0);
             return;
         }
 
@@ -34,15 +33,14 @@ public partial class ScanPage : ContentPage
         _ = _vm.RefreshVisibleProductAsync();
     }
 
-    protected override void OnDisappearing()
+    public void Disappear()
     {
         Reader.CameraEnabled = false;
         _vm.Disappear();
         HideProductActionsImmediately();
-        base.OnDisappearing();
     }
 
-    protected override bool OnBackButtonPressed()
+    public bool HandleBack()
     {
         if (_vm.OverlayVisible)
         {
@@ -64,9 +62,10 @@ public partial class ScanPage : ContentPage
         if (_vm.SearchVisible)
         {
             _vm.ToggleSearchCommand.Execute(null);
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     private void OnDetectionFinished(object? sender, OnDetectionFinishedEventArg e)
@@ -104,6 +103,8 @@ public partial class ScanPage : ContentPage
     {
         if (e.PropertyName == nameof(ScanViewModel.ProductActionsExpanded) && !_vm.ProductActionsExpanded)
             MainThread.BeginInvokeOnMainThread(async () => await CollapseProductActionsAsync());
+        if (e.PropertyName == nameof(ScanViewModel.OverlayVisible) && MainPage.Current is { } page)
+            page.BarVisible = !_vm.OverlayVisible;
     }
 
     private async Task CollapseProductActionsAsync()

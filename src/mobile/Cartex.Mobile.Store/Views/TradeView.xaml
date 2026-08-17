@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
-    x:Class="Cartex.Mobile.Store.Views.TradePage"
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.TradeView"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
-    x:DataType="vm:TradeViewModel"
-    Title="{svc:T sales}"
-    Shell.TabBarIsVisible="False">
-    <ContentPage.Resources>
+    x:DataType="vm:TradeViewModel">
+    <ContentView.Resources>
         <Style x:Key="Section" TargetType="Button">
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
@@ -33,7 +31,7 @@
             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         </Style>
-    </ContentPage.Resources>
+    </ContentView.Resources>
 
     <Grid>
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Padding="16,12,16,0">
@@ -307,6 +305,5 @@
             </Grid>
         </RefreshView>
     </Grid>
-    <ctl:LiquidTabBar Index="1" />
     </Grid>
-</ContentPage>
+</ContentView>

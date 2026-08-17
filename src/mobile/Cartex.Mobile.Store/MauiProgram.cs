@@ -88,9 +88,12 @@ public static class MauiProgram
         builder.Services.AddTransient<SecurityPage>();
         builder.Services.AddTransient<ChangePasswordPage>();
         builder.Services.AddTransient<DevicesPage>();
-        builder.Services.AddTransient<ProfilePage>();
-        builder.Services.AddTransient<HomePage>();
-        builder.Services.AddTransient<ScanPage>();
+        builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddSingleton<HomeView>();
+        builder.Services.AddSingleton<TradeView>();
+        builder.Services.AddSingleton<ScanView>();
+        builder.Services.AddSingleton<CustomersView>();
+        builder.Services.AddSingleton<ProfileView>();
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<HandoffPage>();
         builder.Services.AddTransient<SaleDetailPage>();
@@ -100,8 +103,6 @@ public static class MauiProgram
         builder.Services.AddTransient<CustomerRefundPage>();
         builder.Services.AddTransient<SaleReturnPage>();
         builder.Services.AddTransient<CheckoutPage>();
-        builder.Services.AddTransient<TradePage>();
-        builder.Services.AddTransient<CustomersPage>();
         builder.Services.AddTransient<ReceiveCartPage>();
         builder.Services.AddTransient<ProductEditPage>();
         builder.Services.AddTransient<BarcodeAttachPage>();

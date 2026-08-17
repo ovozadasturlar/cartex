@@ -2,19 +2,19 @@ using Cartex.Mobile.Store.ViewModels;
 
 namespace Cartex.Mobile.Store.Views;
 
-public partial class ProfilePage : ContentPage
+public partial class ProfileView : ContentView, ISectionView
 {
     private readonly ProfileViewModel _vm;
 
-    public ProfilePage(ProfileViewModel vm)
+    public ProfileView(ProfileViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
     }
 
-    protected override async void OnAppearing()
+    public void Appear() => _ = _vm.AppearAsync();
+
+    public void Disappear()
     {
-        base.OnAppearing();
-        await _vm.AppearAsync();
     }
 }

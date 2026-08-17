@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
-    x:Class="Cartex.Mobile.Store.Views.ScanPage"
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.ScanView"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:scanner="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
@@ -8,9 +8,7 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     xmlns:local="clr-namespace:Cartex.Mobile.Store.Controls"
-    x:DataType="vm:ScanViewModel"
-    Title="{svc:T scan_title}"
-    Shell.TabBarIsVisible="False">
+    x:DataType="vm:ScanViewModel">
     <Grid>
         <scanner:CameraView
             x:Name="Reader"
@@ -266,8 +264,6 @@
             </Grid>
         </Border>
 
-        <local:LiquidTabBar Index="2" IsVisible="{Binding OverlayVisible, Converter={StaticResource Invert}}" />
-
         <Grid BackgroundColor="#CC000000" IsVisible="{Binding UnknownBarcodeVisible}">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseUnknownBarcodeCommand}" />
@@ -290,4 +286,4 @@
             </Border>
         </Grid>
     </Grid>
-</ContentPage>
+</ContentView>

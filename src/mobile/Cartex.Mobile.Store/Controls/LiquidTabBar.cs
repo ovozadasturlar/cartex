@@ -15,13 +15,18 @@ public class LiquidTabBar : Grid
     private const float LipRun = 8f;
     private const int TabCount = 5;
     private const float DropletCenterY = RaisedTop + DropletSize / 2;
+    // Barcha ikonkalar bir xil qutida turadi, shuning uchun quyidagi qiymatlar hammasiga
+    // barobar ta'sir qiladi: alohida ikonkaga alohida son berilmaydi.
+    private const double IconSize = 24;        // glif o'lchami
+    private const double IconBox = 34;         // qat'iy quti balandligi
+    private const double IconTop = 6;          // panel ichida yuqoridan chekinish
+    private const double SelectedLift = 10.25; // tanlangani aylana markaziga chiqishi
+    private const double SelectedScale = 0.16; // tanlangani qanchaga kattalashishi
 
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
 
     private static readonly string[] Keys = ["tab_home", "tab_trade", "scan", "tab_customer", "tab_profile"];
-
-    private static int _travelFrom = -1;
 
     private readonly BarDrawable _drawable = new();
     private readonly GraphicsView _canvas;
@@ -31,31 +36,12 @@ public class LiquidTabBar : Grid
     private readonly float[] _tints = new float[TabCount];
     private bool _animating;
 
-    /// Ikonka o'lchami birinchi chizishda hali ma'lum emas, shuning uchun zaxira qiymat
-    /// geometriyadan olinadi: `_zones` BarTop dan boshlanadi, ikonkaning yuqori chekkasi
-    /// 8, balandligi ~28 — markazi BarTop + 22 da bo'ladi.
-    private const double FallbackIconCenter = BarTop + 22;
-
-    private double IconLift
-    {
-        get
-        {
-            var icon = _icons[0];
-            var center = icon.Height > 0 ? BarTop + icon.Y + icon.Height / 2 : FallbackIconCenter;
-            return center - DropletCenterY;
-        }
-    }
-
-    public int Index { get; set; } = -1;
+    public int Index { get; set; }
 
     public LiquidTabBar()
     {
         HeightRequest = BarTop + BarHeight;
         VerticalOptions = LayoutOptions.End;
-        // Yangi sahifaning birinchi kadri tizim panellari inseti qo'llanishidan oldin
-        // chiziladi va panel bir-ikki kadr pastga tushib ketadi. Shu kadrlarda panel
-        // ko'rinmaydi, o'lcham joyiga tushgach yumshoq paydo bo'ladi.
-        Opacity = 0;
 
         _canvas = new GraphicsView { Drawable = _drawable, InputTransparent = true };
         Children.Add(_canvas);
@@ -72,11 +58,16 @@ public class LiquidTabBar : Grid
             var icon = new Label
             {
                 FontFamily = "MDI",
-                FontSize = 23,
+                FontSize = IconSize,
                 Text = Glyphs[i],
+                // Qat'iy quti va markazlangan matn: aks holda har glif o'z siyohiga qarab
+                // boshqa balandlikda turadi va tanlangani aylananing markaziga tushmaydi.
+                HeightRequest = IconBox,
+                VerticalTextAlignment = TextAlignment.Center,
+                HorizontalTextAlignment = TextAlignment.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Start,
-                Margin = new Thickness(0, 8, 0, 0),
+                Margin = new Thickness(0, IconTop, 0, 0),
                 InputTransparent = true,
             };
             icon.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#6B7280"), Color.FromArgb("#9CA3AF"));
@@ -94,7 +85,6 @@ public class LiquidTabBar : Grid
             };
             text.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#6B7280"), Color.FromArgb("#9CA3AF"));
             _labels[i] = text;
-            icon.SizeChanged += OnIconSizeChanged;
             var zone = new Grid { BackgroundColor = Colors.Transparent, Children = { icon, text } };
             var tap = new TapGestureRecognizer();
             var captured = i;
@@ -105,17 +95,21 @@ public class LiquidTabBar : Grid
         Children.Add(_zones);
 
         ApplyTheme();
+        Apply(0, 1f);
 
         Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    /// Ikonka o'lchami ma'lum bo'lgach ko'tarilish balandligi aniqlashadi va tanlangan
-    /// ikonka tomchining markaziga qayta o'rnashadi.
-    private void OnIconSizeChanged(object? sender, EventArgs e)
+    /// Panel bitta va u `MainPage` da yashaydi; bosilgan tab shu orqali xabar qilinadi.
+    public Action<int>? Selected { get; set; }
+
+    public void Select(int index, int animateFrom)
     {
-        if (_animating || _icons[0].Height <= 0) return;
-        Apply(_drawable.Position, _drawable.Presence);
+        Index = index;
+        if (animateFrom >= 0 && animateFrom != index)
+            _ = AnimateAsync(animateFrom, index);
+        else
+            Apply(index, 1f);
     }
 
     private void OnThemeChanged(object? sender, AppThemeChangedEventArgs e) => ApplyTheme();
@@ -137,52 +131,8 @@ public class LiquidTabBar : Grid
         Loc.Instance.PropertyChanged += OnLanguageChanged;
         ApplyTheme();
         OnLanguageChanged(null, new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
-
-        var index = ResolvedIndex;
-        var from = _travelFrom;
-        var travelling = from >= 0 && from != index
-            && Interlocked.CompareExchange(ref _travelFrom, -1, from) == from;
-        SetSelected(travelling ? from : index, 1f);
-
-        // Sahifa birinchi marta yaratilganda uning birinchi kadri tizim paneli insetisiz
-        // chiziladi va panel pastga tushib ketadi. Faqat o'sha bir marta kutiladi;
-        // keyingi o'tishlarda panel darhol ko'rinadi, aks holda har safar o'chib-yonadi.
-        if (Settled.Contains(index))
-        {
-            Opacity = 1;
-            if (travelling) _ = AnimateAsync(from, index);
-            return;
-        }
-
-        Dispatcher.Dispatch(() => Dispatcher.Dispatch(() =>
-        {
-            Settled.Add(index);
-            Opacity = 1;
-            if (travelling) _ = AnimateAsync(from, index);
-        }));
+        Apply(Index, 1f);
     }
-
-    private static readonly HashSet<int> Settled = [];
-
-    private void OnUnloaded(object? sender, EventArgs e)
-    {
-        if (Application.Current is { } app)
-            app.RequestedThemeChanged -= OnThemeChanged;
-        Loc.Instance.PropertyChanged -= OnLanguageChanged;
-        this.AbortAnimation("liquid");
-        this.CancelAnimations();
-        _animating = false;
-    }
-
-
-    private static int CurrentSection()
-    {
-        var item = Shell.Current?.CurrentItem;
-        if (item is null || item.Items.Count == 0) return 0;
-        return Math.Max(0, item.Items.IndexOf(item.CurrentItem));
-    }
-
-    private int ResolvedIndex => Index >= 0 ? Index : CurrentSection();
 
     private static readonly Color MutedLight = Color.FromArgb("#6B7280");
     private static readonly Color MutedDark = Color.FromArgb("#9CA3AF");
@@ -202,15 +152,14 @@ public class LiquidTabBar : Grid
         var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
         var muted = dark ? MutedDark : MutedLight;
         var onDroplet = dark ? OnDropletDark : Colors.White;
-        var lift = IconLift;
         var raised = Math.Clamp(presence, 0f, 1f);
         for (var i = 0; i < TabCount; i++)
         {
             var weight = Math.Max(0f, 1f - Math.Abs(i - position));
             var strength = weight * raised;
             var opacity = 1 - strength;
-            var translation = -lift * strength;
-            var scale = 1 + 0.16 * strength;
+            var translation = -SelectedLift * strength;
+            var scale = 1 + SelectedScale * strength;
             // Har kadrda 10 ta ko'rinishga yozish qimmat — sezilmaydigan farqlar o'tkazib yuboriladi.
             if (Math.Abs(_labels[i].Opacity - opacity) > 0.01) _labels[i].Opacity = opacity;
             if (Math.Abs(_icons[i].TranslationY - translation) > 0.25) _icons[i].TranslationY = translation;
@@ -224,8 +173,6 @@ public class LiquidTabBar : Grid
         }
         _canvas.Invalidate();
     }
-
-    private void SetSelected(int index, float presence) => Apply(index, presence);
 
     private const uint TravelMs = 460;
     private const float DipDepth = 0.94f;
@@ -272,29 +219,19 @@ public class LiquidTabBar : Grid
         _zones.Padding = new Thickness(pad, 0);
         _drawable.EdgePad = (float)pad;
         if (!_animating)
-            SetSelected(ResolvedIndex, 1f);
+            Apply(Index, 1f);
     }
 
-    private async void OnTap(int index)
+    private void OnTap(int index)
     {
-        if (index == ResolvedIndex)
+        if (index == Index)
         {
             if (Shell.Current?.Navigation.NavigationStack.Count > 1)
-                await Shell.Current.Navigation.PopToRootAsync();
+                _ = Shell.Current.Navigation.PopToRootAsync();
             return;
         }
-        _travelFrom = ResolvedIndex;
-        try
-        {
-            await Shell.Current.GoToAsync($"//main/{Routes[index]}", animate: false);
-        }
-        catch
-        {
-            _travelFrom = -1;
-        }
+        Selected?.Invoke(index);
     }
-
-    private static readonly string[] Routes = ["home", "trade", "scan", "customers", "profile"];
 
     private static readonly string[] Glyphs =
         ["\U000F02DC", "\U000F02DA", "\U000F0433", "\U000F0849", "\U000F0004"];
@@ -359,6 +296,8 @@ public class LiquidTabBar : Grid
             var still = o > 0.995f;
 
             canvas.SaveState();
+            // Soya blur talab qiladi va harakat paytida kadr tashlatadi; gradient esa
+            // qoladi — aks holda panel rangi bosilganda sezilarli o'zgarib ketadi.
             if (still)
                 canvas.SetShadow(new SizeF(0, -4), 16, Color.FromRgba(0, 0, 0, Dark ? 0.5f : 0.16f));
             canvas.SetFillPaint(Dark ? BarDark : BarLight, new RectF(0, top, w, bottom - top));
@@ -378,10 +317,11 @@ public class LiquidTabBar : Grid
             canvas.FillEllipse(cx - rx, dropletCy - ry, rx * 2, ry * 2);
             canvas.RestoreState();
 
+            if (!still) return;
             canvas.StrokeSize = 1f;
-            canvas.StrokeColor = Color.FromRgba(1f, 1f, 1f, 0.4f * o);
+            canvas.StrokeColor = Color.FromRgba(1f, 1f, 1f, 0.4f);
             canvas.DrawEllipse(cx - rx, dropletCy - ry, rx * 2, ry * 2);
-            canvas.FillColor = Color.FromRgba(1f, 1f, 1f, 0.3f * o * o);
+            canvas.FillColor = Color.FromRgba(1f, 1f, 1f, 0.3f);
             canvas.FillRoundedRectangle(cx - rx + 10, dropletCy - ry + 6, 15, 8, 4);
         }
 

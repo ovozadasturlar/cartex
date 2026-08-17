@@ -2,19 +2,19 @@ using Cartex.Mobile.Store.ViewModels;
 
 namespace Cartex.Mobile.Store.Views;
 
-public partial class HomePage : ContentPage
+public partial class HomeView : ContentView, ISectionView
 {
     private readonly HomeViewModel _vm;
 
-    public HomePage(HomeViewModel vm)
+    public HomeView(HomeViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
     }
 
-    protected override async void OnAppearing()
+    public void Appear() => _ = _vm.AppearAsync();
+
+    public void Disappear()
     {
-        base.OnAppearing();
-        await _vm.AppearAsync();
     }
 }
