@@ -18,6 +18,8 @@ import { CxDatePipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer } from '../../core/models';
 import { MoneyInputDirective } from '../../core/money-input.directive';
 import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
+import { BusinessApi } from '../../core/api/misc.api';
+import { Currency, RatesApi } from '../../core/api/finance.api';
 import { NotifyService } from '../../core/notify.service';
 import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
@@ -25,7 +27,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
-import { CartLine, PosCartState, shortfallDiscount } from './pos-state';
+import { CartLine, PaymentRow, PosCartState, shortfallDiscount } from './pos-state';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
@@ -61,6 +63,8 @@ export class Pos implements OnInit {
   readonly state = inject(PosCartState);
   private readonly orderingApi = inject(OrderingApi);
   private readonly loyaltyApi = inject(LoyaltyApi);
+  private readonly businessApi = inject(BusinessApi);
+  private readonly ratesApi = inject(RatesApi);
   private readonly queueHub = inject(QueueHubService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
@@ -116,6 +120,11 @@ export class Pos implements OnInit {
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
   readonly bonusAuto = signal(false);
   readonly autoDiscount = signal(0);
+  readonly isMulticurrency = signal(false);
+  readonly baseCurrency = signal('UZS');
+  readonly currencies = signal<Currency[]>([]);
+  readonly paymentRows = this.state.payments;
+  readonly payMethods = ['cash', 'card', 'transfer', 'bank', 'bonus'];
   readonly dueDateMissing = signal(false);
   private lastCustomerId: number | null | undefined;
 
@@ -128,7 +137,13 @@ export class Pos implements OnInit {
     return Math.min(sub, Math.max(0, raw));
   });
   readonly total = computed(() => Math.max(0, this.subTotal() - this.discount() - this.autoDiscount()));
-  readonly paid = computed(() => this.cash() + this.card() + this.bonus());
+  // Har qator o'z valyutasining kursi bilan asosiy valyutaga o'giriladi; kursi yo'q valyuta
+  // 0 beradi va pastdagi ogohlantirish chiqadi, jimgina noto'g'ri jami emas.
+  readonly paid = computed(() => this.isMulticurrency()
+    ? this.paymentRows().reduce((sum, r) => sum + this.toBase(r.amount, r.currency), 0)
+    : this.cash() + this.card() + this.bonus());
+  readonly hasRateGap = computed(() => this.isMulticurrency()
+    && this.paymentRows().some((r) => r.amount > 0 && this.rateOf(r.currency) <= 0));
   readonly change = computed(() => Math.max(0, this.paid() - this.total()));
   readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
   // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
@@ -222,14 +237,25 @@ export class Pos implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [categories, shift, policy] = await Promise.all([
+      const [categories, shift, policy, business] = await Promise.all([
         lastValueFrom(this.api.categories()),
         lastValueFrom(this.api.currentShift()),
         lastValueFrom(this.settingsApi.salesPolicy()).catch(() => null),
+        lastValueFrom(this.businessApi.get()).catch(() => null),
       ]);
       this.categories.set(categories);
       this.shift.set(shift);
       this.policy.set(policy);
+      if (business) {
+        this.baseCurrency.set(business.currency);
+        this.isMulticurrency.set(business.salesMulticurrency);
+      }
+      if (this.isMulticurrency()) {
+        const list = await lastValueFrom(this.ratesApi.currencies(true)).catch(() => []);
+        // Kursi yo'q valyutada to'lovni qabul qilib bo'lmaydi, shuning uchun u ro'yxatga ham tushmaydi.
+        this.currencies.set(list.filter((c) => c.isBase || (c.rate ?? 0) > 0));
+        if (!this.paymentRows().length) this.addPayment();
+      }
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -472,9 +498,58 @@ export class Pos implements OnInit {
   }
 
   payExact(): void {
+    if (this.isMulticurrency()) {
+      // Qolgan summa asosiy valyutadagi naqd qatoriga qo'yiladi. Chet valyutaga bo'lish
+      // tiyin yaxlitlanib ketishi va "aniq to'lash" dan keyin ham qarz qolishiga olib keladi.
+      const remaining = this.total() - this.paid();
+      if (remaining <= 0) return;
+      const rows = this.paymentRows();
+      let index = rows.findIndex((r) => r.currency === this.baseCurrency() && r.method === 'cash');
+      if (index < 0) index = rows.findIndex((r) => r.amount === 0);
+      if (index < 0) {
+        this.addPayment();
+        index = this.paymentRows().length - 1;
+      }
+      const current = this.paymentRows()[index];
+      this.updatePayment(index, {
+        method: 'cash',
+        currency: this.baseCurrency(),
+        amount: (current.currency === this.baseCurrency() ? current.amount : 0) + remaining,
+      });
+      return;
+    }
     this.cash.set(this.total());
     this.card.set(0);
     this.bonus.set(0);
+  }
+
+  rateOf(code: string): number {
+    if (code === this.baseCurrency()) return 1;
+    return this.currencies().find((c) => c.code === code)?.rate ?? 0;
+  }
+
+  toBase(amount: number, code: string): number {
+    return Math.round(amount * this.rateOf(code) * 100) / 100;
+  }
+
+  addPayment(): void {
+    if (this.paymentRows().length >= 20) return;
+    this.paymentRows.update((list) => [...list, { method: 'cash', currency: this.baseCurrency(), amount: 0 }]);
+  }
+
+  removePayment(index: number): void {
+    this.paymentRows.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  updatePayment(index: number, patch: Partial<PaymentRow>): void {
+    this.paymentRows.update((list) => list.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  /// Bo'sh qatorlar yuborilmaydi; bitta valyutali savdoda umuman yuborilmaydi.
+  private wirePayments(): { method: string; currency: string; amount: number }[] | null {
+    if (!this.isMulticurrency()) return null;
+    const rows = this.paymentRows().filter((r) => r.amount > 0);
+    return rows.length ? rows.map((r) => ({ method: r.method, currency: r.currency, amount: r.amount })) : null;
   }
 
   async attachCustomer(): Promise<void> {
@@ -526,10 +601,11 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       if (this.activeQueueCode) {
         await lastValueFrom(this.orderingApi.checkout(
           this.activeQueueCode,
-          this.cash(),
-          this.card(),
-          this.bonus(),
+          this.isMulticurrency() ? 0 : this.cash(),
+          this.isMulticurrency() ? 0 : this.card(),
+          this.isMulticurrency() ? 0 : this.bonus(),
           {
+            payments: this.wirePayments(),
             customerId: this.customer()?.id ?? null,
             items: this.cart().map((l) => ({
               variantId: l.variantId,
@@ -552,9 +628,10 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       const payload = {
         warehouseId,
         customerId: this.customer()?.id ?? null,
-        paidCash: this.cash(),
-        paidCard: this.card(),
-        paidBonus: this.bonus(),
+        paidCash: this.isMulticurrency() ? 0 : this.cash(),
+        paidCard: this.isMulticurrency() ? 0 : this.card(),
+        paidBonus: this.isMulticurrency() ? 0 : this.bonus(),
+        payments: this.wirePayments(),
         items: this.cart().map((l) => ({
           variantId: l.variantId,
           quantity: l.qty,

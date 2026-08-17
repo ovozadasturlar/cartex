@@ -30,6 +30,7 @@ export class PosCartState {
   readonly discountPercent = signal(0);
   readonly discountManual = signal(0);
   readonly discountByPercent = signal(true);
+  readonly payments = signal<PaymentRow[]>([]);
   readonly note = signal('');
   readonly dueDate = signal('');
   readonly held = signal<HeldSale[]>(JSON.parse(localStorage.getItem('cartex.heldSales') ?? '[]'));
@@ -61,6 +62,7 @@ export class PosCartState {
     this.discountPercent.set(0);
     this.discountManual.set(0);
     this.discountByPercent.set(true);
+    this.payments.set([]);
     this.note.set('');
     this.dueDate.set('');
   }
@@ -74,6 +76,14 @@ export class PosCartState {
 
 // CHEG-10: mijoz kelishilgan summani beradi va yetmagan qismi chegirmaga aylanadi. Natija joriy
 // chegirmadan hisoblanmaydi, shuning uchun tugmani ikki marta bosish summani ikkilantirmaydi.
+// Ko'p valyutali savdoda bitta "naqd" maydoni yetmaydi: mijoz bir qismini dollarda, bir qismini
+// so'mda berishi mumkin va har qatorning o'z kursi bor.
+export interface PaymentRow {
+  method: string;
+  currency: string;
+  amount: number;
+}
+
 export function shortfallDiscount(subTotal: number, autoDiscount: number, tendered: number): number {
   return Math.max(0, subTotal - autoDiscount - tendered);
 }

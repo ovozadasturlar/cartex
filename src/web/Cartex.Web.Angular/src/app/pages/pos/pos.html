@@ -276,23 +276,63 @@
                    [placeholder]="t('note')" />
           </div>
 
-          <div class="pay-grid" [hidden]="!canCheckout">
-            <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
-              <mat-icon>functions</mat-icon>
-            </button>
-            <label>
-              <span>{{ t('cash') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="cash" />
-            </label>
-            <label>
-              <span>{{ t('card') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="card" />
-            </label>
-            <label>
-              <span>{{ t('bonus') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="bonus()" (ngModelChange)="onBonusManual($event)" />
-            </label>
-          </div>
+          @if (canCheckout && !isMulticurrency()) {
+            <div class="pay-grid">
+              <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
+                <mat-icon>functions</mat-icon>
+              </button>
+              <label>
+                <span>{{ t('cash') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="cash" />
+              </label>
+              <label>
+                <span>{{ t('card') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="card" />
+              </label>
+              <label>
+                <span>{{ t('bonus') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="bonus()" (ngModelChange)="onBonusManual($event)" />
+              </label>
+            </div>
+          }
+
+          @if (canCheckout && isMulticurrency()) {
+            <div class="pay-rows">
+              @for (row of paymentRows(); track $index) {
+                <div class="pay-row">
+                  <select [ngModel]="row.method" (ngModelChange)="updatePayment($index, { method: $event })">
+                    @for (m of payMethods; track m) {
+                      <option [value]="m">{{ t(m === 'transfer' ? 'pay_transfer' : m === 'bank' ? 'pay_bank' : m) }}</option>
+                    }
+                  </select>
+                  <select [ngModel]="row.currency" (ngModelChange)="updatePayment($index, { currency: $event })">
+                    @for (c of currencies(); track c.code) {
+                      <option [value]="c.code">{{ c.code }}</option>
+                    }
+                  </select>
+                  <div class="amt">
+                    <input type="text" inputmode="numeric" cxMoneyInput
+                           [ngModel]="row.amount" (ngModelChange)="updatePayment($index, { amount: $event })" />
+                    @if (row.currency !== baseCurrency()) {
+                      <span class="base cx-money">≈ {{ toBase(row.amount, row.currency) | cxMoney }}</span>
+                    }
+                  </div>
+                  <button class="rm" type="button" (click)="removePayment($index)"><mat-icon>close</mat-icon></button>
+                </div>
+              }
+              <div class="pay-actions">
+                <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
+                  <mat-icon>functions</mat-icon>
+                </button>
+                <button class="add" type="button" (click)="addPayment()">
+                  <mat-icon>add</mat-icon><span>{{ t('add_payment') }}</span>
+                </button>
+              </div>
+              @if (hasRateGap()) {
+                <div class="rate-warn">{{ t('stale_rate_warning') }}</div>
+              }
+            </div>
+          }
 
           @if (canCheckout && (change() > 0 || debt() > 0)) {
             <div class="due">

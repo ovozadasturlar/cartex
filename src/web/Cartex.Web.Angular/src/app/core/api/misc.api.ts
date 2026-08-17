@@ -176,6 +176,7 @@ export class OrderingApi {
     paidCard: number,
     paidBonus: number,
     extra?: {
+      payments?: { method: string; currency: string; amount: number }[] | null;
       customerId: number | null;
       items: { variantId: number; quantity: number; unitPrice: number | null }[];
       discountAmount: number;
