@@ -34,19 +34,14 @@
               }
             }
           }
-          @if (canPrepack()) {
-            <button class="view-toggle" (click)="openPrepack()" [matTooltip]="t('prepack_title')">
-              <mat-icon>scale</mat-icon>
-            </button>
-          }
-          @if (canCreateProduct) {
-            <button class="view-toggle" (click)="newProduct()" [matTooltip]="t('add_product')">
-              <mat-icon>add_box</mat-icon>
-            </button>
-          }
           @if (isMulticurrency() && canManageRates) {
             <button class="view-toggle" (click)="openQuickRates()" [matTooltip]="t('rates')">
               <mat-icon>currency_exchange</mat-icon>
+            </button>
+          }
+          @if (canCreateProduct) {
+            <button matButton="outlined" class="add-product-btn" (click)="newProduct()">
+              <mat-icon>add</mat-icon>{{ t('add_product') }}
             </button>
           }
           <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
@@ -143,10 +138,12 @@
         </div>
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
-          @if (queue().length) {
+          @if (canCreateCart) {
             <button class="queue-btn" [matTooltip]="t('queue')" [matMenuTriggerFor]="queueMenu">
               <mat-icon>menu</mat-icon>
-              <span class="badge">{{ queue().length }}</span>
+              @if (queue().length) {
+                <span class="badge">{{ queue().length }}</span>
+              }
             </button>
             <mat-menu #queueMenu="matMenu" class="queue-menu">
               @for (q of queue(); track q.aggregateCode) {
@@ -168,19 +165,47 @@
               }
             </mat-menu>
           }
-          @if (state.held().length) {
-            <button class="held-btn" [matTooltip]="t('held_sales')" [matMenuTriggerFor]="heldMenu">
-              <mat-icon>pause_circle</mat-icon>
-              {{ state.held().length }}
+          @if (canPrepack()) {
+            <button class="queue-btn" [matTooltip]="t('prepack_title')" (click)="openPrepack()">
+              <mat-icon>balance</mat-icon>
             </button>
-            <mat-menu #heldMenu="matMenu">
-              @for (h of state.held(); track h.heldAt; let i = $index) {
-                <button mat-menu-item (click)="resumeHeld(i)">
-                  <mat-icon>play_arrow</mat-icon>
-                  <span>{{ h.customer?.fullName || t('cash_customer') }} · {{ h.total | cxMoney }}</span>
-                </button>
-              }
-            </mat-menu>
+          }
+          <button class="held-btn" [matTooltip]="t('held_sales')" [matMenuTriggerFor]="heldMenu"
+                  [disabled]="!state.held().length">
+            <mat-icon>pause_circle</mat-icon>
+            {{ state.held().length }}
+          </button>
+          <mat-menu #heldMenu="matMenu">
+            @for (h of state.held(); track h.heldAt; let i = $index) {
+              <button mat-menu-item (click)="resumeHeld(i)">
+                <mat-icon>play_arrow</mat-icon>
+                <span>{{ h.customer?.fullName || t('cash_customer') }} · {{ h.total | cxMoney }}</span>
+              </button>
+            }
+          </mat-menu>
+
+          <button class="queue-btn note-btn" [matTooltip]="t('note')" [matMenuTriggerFor]="noteMenu">
+            <mat-icon>info_outline</mat-icon>
+            @if (note().trim()) {
+              <span class="dot"></span>
+            }
+          </button>
+          <mat-menu #noteMenu="matMenu" class="note-menu">
+            <div class="note-pad" (click)="$event.stopPropagation()">
+              <textarea rows="4" [ngModel]="note()" (ngModelChange)="note.set($event)"
+                        [placeholder]="t('note')"></textarea>
+            </div>
+          </mat-menu>
+
+          @if (canCreateCart) {
+            <button class="queue-btn" [matTooltip]="t('send_to_queue')" [disabled]="!cart().length || paying()"
+                    (click)="sendToQueue()">
+              <mat-icon>outbox</mat-icon>
+            </button>
+            <button class="queue-btn" [matTooltip]="t('print_and_queue')" [disabled]="!cart().length || paying()"
+                    (click)="printPreview()">
+              <mat-icon>print</mat-icon>
+            </button>
           }
           <button class="clear-btn" [disabled]="!cart().length" (click)="clearCart()">
             <mat-icon>delete_outline</mat-icon>
@@ -258,6 +283,7 @@
             <span class="cx-money">{{ subTotal() | cxMoney }}</span>
           </div>
 
+          @if (paymentPanelOpen()) {
           <div class="discount-row">
             <span>{{ t('discount') }}</span>
             <div class="dinputs">
@@ -286,11 +312,6 @@
           <div class="row total-row">
             <span>{{ t('pos_payable') }}</span>
             <span class="cx-money">{{ total() | cxMoney }}</span>
-          </div>
-
-          <div class="note-row">
-            <input type="text" [ngModel]="note()" (ngModelChange)="note.set($event)"
-                   [placeholder]="t('note')" />
           </div>
 
           @if (canCheckout && !isMulticurrency()) {
@@ -386,20 +407,17 @@
               <span>{{ t('credit_limit_exceeded') }}</span>
             </div>
           }
+          }
 
           <div class="pay-row">
+          <button matButton="outlined" class="hold-btn" [matTooltip]="t('payment_details')"
+                  (click)="paymentPanelOpen.set(!paymentPanelOpen())">
+            <mat-icon>{{ paymentPanelOpen() ? 'expand_more' : 'expand_less' }}</mat-icon>
+          </button>
           <button matButton="outlined" class="hold-btn" [disabled]="!cart().length || paying()"
                   [matTooltip]="t('hold_sale')" (click)="holdSale()">
             <mat-icon>pause</mat-icon>
           </button>
-          @if (canCreateCart) {
-            <button matButton="outlined" class="pay-btn send-queue" [disabled]="!cart().length || paying()" (click)="sendToQueue()">
-              {{ t('send_to_queue') }}
-            </button>
-            <button matButton="outlined" class="pay-btn send-queue" [disabled]="!cart().length || paying()" (click)="printPreview()">
-              <mat-icon>print</mat-icon>{{ t('print_and_queue') }}
-            </button>
-          }
           @if (canCheckout) {
             <button matButton="filled" class="pay-btn" [disabled]="!cart().length || paying()" (click)="pay()">
               {{ t('complete_sale') }}

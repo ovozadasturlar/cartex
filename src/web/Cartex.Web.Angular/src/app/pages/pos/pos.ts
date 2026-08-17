@@ -129,6 +129,9 @@ export class Pos implements OnInit {
   /// Modul o'chirilgan bo'lsa tugma umuman chizilmaydi — keraksiz tugma kassirni chalg'itadi.
   readonly canPrepack = signal(false);
   readonly canManageRates = this.auth.hasPermission('rates.edit');
+
+  /// Desktopdagi kabi to'lov bloki yig'iladi — kichik ekranda savat qatorlariga joy qoladi.
+  readonly paymentPanelOpen = signal(true);
   readonly canCreateProduct = this.auth.hasPermission('products.create');
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
   readonly bonusAuto = signal(false);

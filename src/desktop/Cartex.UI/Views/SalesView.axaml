@@ -408,7 +408,7 @@
                 Classes.blurred="{Binding IsModalOpen}">
             <DockPanel Margin="16">
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
                     <TextBlock Text="{Binding L[cart]}" Classes="h2" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding ToggleQueuePanelCommand}" ToolTip.Tip="{Binding L[queue]}"
@@ -453,11 +453,16 @@
                         </Button.Flyout>
                     </Button>
                     <Button Grid.Column="5" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding SendToQueueCommand}" ToolTip.Tip="{Binding L[send_to_queue]}"
+                            IsVisible="{Binding CanSeeQueue}" IsEnabled="{Binding !IsCartEmpty}">
+                        <mi:MaterialIcon Kind="TrayArrowUp" Width="18" Height="18" />
+                    </Button>
+                    <Button Grid.Column="6" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[print_and_queue]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="PrinterOutline" Width="18" Height="18" />
                     </Button>
-                    <Button Grid.Column="6" Classes="paybtn" Padding="8,6"
+                    <Button Grid.Column="7" Classes="paybtn" Padding="8,6"
                             Command="{Binding ClearCartConfirmedCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"

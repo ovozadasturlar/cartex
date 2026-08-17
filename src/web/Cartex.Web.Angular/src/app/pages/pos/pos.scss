@@ -296,9 +296,12 @@
 .cart-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   margin-bottom: 10px;
+
+  h2 {
+    margin-right: auto;
+  }
 }
 
 .clear-btn {
@@ -526,7 +529,7 @@
 
 .dinputs {
   display: grid;
-  grid-template-columns: 96px 136px;
+  grid-template-columns: 96px 136px auto;
   gap: 6px;
   align-items: center;
 
@@ -641,60 +644,7 @@
   &:disabled { opacity: .4; cursor: default; }
 }
 
-.note-row {
-  margin-top: 8px;
 
-  input {
-    width: 100%;
-    height: 34px;
-    padding: 0 10px;
-    border: 1px solid var(--cx-border);
-    border-radius: 8px;
-    background: var(--cx-card);
-    font-size: 13px;
-    color: var(--cx-text-1);
-
-    &:focus { outline: none; border-color: var(--cx-primary); }
-  }
-}
-
-.pay-grid {
-  display: grid;
-  grid-template-columns: auto repeat(3, minmax(0, 1fr));
-  gap: 8px;
-
-  .exact {
-    display: grid;
-    place-items: center;
-    align-self: end;
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    color: var(--cx-text-1);
-
-    mat-icon { font-size: 20px; width: 20px; height: 20px; }
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-
-    span { font-size: 11px; color: var(--cx-text-3); }
-
-    input {
-      height: 38px;
-      padding: 0 8px;
-      border: 1px solid var(--cx-border);
-      border-radius: 8px;
-      background: var(--cx-card);
-      font-size: 13.5px;
-
-      &:focus { outline: none; border-color: var(--cx-brand); }
-    }
-  }
-}
 
 .due {
   display: flex;
@@ -775,7 +725,6 @@
   position: relative;
   display: grid;
   place-items: center;
-  margin-left: auto;
   width: 34px;
   height: 30px;
   border: 1px solid var(--cx-border);
@@ -827,7 +776,6 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-left: auto;
   padding: 5px 10px;
   border: 1px solid var(--cx-warning);
   border-radius: 8px;
@@ -839,4 +787,101 @@
   cursor: pointer;
 
   mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.queue-btn:disabled,
+.held-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/// Izohda matn bo'lsa ikonaning ustida kichik nuqta chiqadi — desktopdagi kabi,
+/// oyna ochmasdan izoh borligi ko'rinib turadi.
+.note-btn .dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cx-brand);
+}
+
+.note-menu .note-pad {
+  padding: 10px;
+
+  textarea {
+    width: 280px;
+    padding: 8px 10px;
+    border: 1px solid var(--cx-border);
+    border-radius: 8px;
+    background: var(--cx-surface-2);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--cx-brand);
+    }
+  }
+}
+
+.add-product-btn {
+  white-space: nowrap;
+}
+
+.pay-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  gap: 8px;
+
+  .exact {
+    display: grid;
+    place-items: center;
+    align-self: end;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    color: var(--cx-text-1);
+
+    mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+
+    span { font-size: 11px; color: var(--cx-text-3); }
+
+    input {
+      height: 38px;
+      padding: 0 8px;
+      border: 1px solid var(--cx-border);
+      border-radius: 8px;
+      background: var(--cx-card);
+      font-size: 13.5px;
+
+      &:focus { outline: none; border-color: var(--cx-brand); }
+    }
+  }
+}
+
+/// Savat sarlavhasidagi oltita tugma bir xil ko'rinishda bo'lishi kerak — desktopda ham
+/// shunday; kutish tugmasi alohida rangda ajralib turmaydi.
+.held-btn {
+  width: auto;
+  padding: 0 8px;
+  height: 30px;
+  border: 1px solid var(--cx-border);
+  border-radius: 8px;
+  background: var(--cx-card);
+  color: var(--cx-text-2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
