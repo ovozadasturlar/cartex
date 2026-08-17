@@ -502,10 +502,20 @@ public sealed class CreateSaleCommandHandler(
         if (debtAmount > 0 && request.CustomerId is null)
             throw new BusinessRuleException("Qarzga sotish uchun mijoz tanlanishi shart.");
 
-        // SOZ-11: qarz va bonus mijozsiz baribir mumkin emas — ular mijoz hisobiga yoziladi.
-        // Siyosat esa to'liq to'langan savdoda ham mijozni talab qila oladi.
-        if (policy.CustomerRequirement == "Always" && request.CustomerId is null)
-            throw new BusinessRuleException("Savdo uchun mijoz tanlanishi shart.", "customer_required");
+        // SOZ-11: qarz, bonus sarflash va haqdorlik mijozsiz baribir mumkin emas — pul uning
+        // hisobiga yoziladi. Siyosat esa to'liq to'langan savdoda nima bo'lishini hal qiladi:
+        //   OnDebt  — hech narsa so'ralmaydi;
+        //   OnBonus — do'kon cashback bersa mijoz so'raladi, aks holda bonus yo'qoladi;
+        //   Always  — har savdoda so'raladi.
+        if (request.CustomerId is null && policy.CustomerRequirement is "Always" or "OnBonus")
+        {
+            var required = policy.CustomerRequirement == "Always"
+                || await db.LoyaltyPrograms.AnyAsync(
+                    p => p.IsEnabled && (p.BranchId == warehouse.BranchId || p.BranchId == null),
+                    cancellationToken);
+            if (required)
+                throw new BusinessRuleException("Savdo uchun mijoz tanlanishi shart.", "customer_required");
+        }
 
         if (request.CustomerId is not null && paidBonus > 0)
         {

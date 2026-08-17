@@ -39,13 +39,48 @@ export class SalesPolicySettings implements OnInit {
 
   readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
   readonly correctionWindows = ['Off', 'Shift', 'BusinessDay', 'Days', 'Always'];
-  readonly customerRequirements = ['Optional', 'OnDebt', 'Always'];
+  // "Optional" olib tashlandi: qarz mijozsiz baribir mumkin emas, shuning uchun u "OnDebt"
+  // bilan bir xil ishlardi. "OnBonus" esa haqiqiy uchinchi holat.
+  readonly customerRequirements = ['OnDebt', 'OnBonus', 'Always'];
+
+  /// Har qatorning tarjima kaliti va model maydoni. Izoh matni shu kalitdan `_on` / `_off`
+  /// qo'shimchasi bilan olinadi, shunda kalitning hozirgi holati nimani anglatishi ko'rinadi.
+  readonly capabilityRows = [
+    { key: 'allow_debt_write_off', field: 'allowDebtWriteOff' },
+    { key: 'print_money_documents', field: 'printMoneyDocuments' },
+    { key: 'print_cart_proforma', field: 'printCartProforma' },
+    { key: 'allow_consolidated_act', field: 'allowConsolidatedAct' },
+    { key: 'allow_sale_queue', field: 'allowSaleQueue' },
+  ] as const;
+
+  readonly returnRows = [
+    { key: 'allow_return_on_voided_sale', field: 'allowReturnOnVoidedSale' },
+    { key: 'allow_free_return_lines', field: 'allowFreeReturnLines' },
+    { key: 'require_return_reason', field: 'requireReturnReason' },
+  ] as const;
+
+  readonly debtRows = [
+    { key: 'allow_debt_sales', field: 'allowDebtSales' },
+    { key: 'require_debt_due_date', field: 'requireDebtDueDate' },
+    { key: 'allow_customer_credit', field: 'allowCustomerCredit' },
+    { key: 'allow_retroactive_cashback', field: 'allowRetroactiveCashback' },
+    { key: 'allow_customer_loans', field: 'allowCustomerLoans' },
+  ] as const;
+
+  readonly stockRows = [
+    { key: 'require_supplier', field: 'requireSupplier' },
+    { key: 'show_out_of_stock', field: 'showOutOfStock' },
+    { key: 'show_unlisted_products', field: 'showUnlistedProducts' },
+    { key: 'allow_insufficient_stock_sales', field: 'allowInsufficientStockSales' },
+  ] as const;
 
   // The loaded document is kept whole. Saving spreads over it, so a field this screen does not
   // render keeps its stored value instead of going back to the type default.
   private loaded: SalesPolicy | null = null;
 
-  model: SalesPolicy = {
+  model!: SalesPolicy & Record<string, boolean | number | string>;
+
+  private readonly defaults: SalesPolicy = {
     shiftPolicy: 'CashOnly',
     maxDiscountPercent: 0,
     maxDebtWriteOffAmount: 0,
@@ -78,9 +113,10 @@ export class SalesPolicySettings implements OnInit {
   };
 
   async ngOnInit(): Promise<void> {
+    this.model = { ...this.defaults } as typeof this.model;
     try {
       this.loaded = await lastValueFrom(this.api.salesPolicy());
-      this.model = { ...this.model, ...this.loaded };
+      this.model = { ...this.defaults, ...this.loaded } as typeof this.model;
     } catch (e) {
       this.notify.error(e);
     } finally {

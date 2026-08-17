@@ -1,5 +1,15 @@
 <ng-container *transloco="let t">
-  <cx-page-header [title]="t('sales_policy')" [subtitle]="t('sales_policy_hint')" />
+  <!-- Sarlavha va «Saqlash» skroll paytida joyida qoladi — desktopdagi kabi, tugmani
+       qidirib pastga tushish kerak emas. -->
+  <div class="sticky-head">
+    <cx-page-header [title]="t('sales_policy')" [subtitle]="t('sales_policy_hint')">
+      @if (canManage && !loading()) {
+        <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
+          {{ t('save') }}
+        </button>
+      }
+    </cx-page-header>
+  </div>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
@@ -8,29 +18,27 @@
       <mat-progress-bar mode="indeterminate" />
     }
 
+    <!-- Har kalit bitta qator: chapda nom va hozirgi holat nimani anglatishi, o'ngda
+         qat'iy joydagi kalit. Kalit yonida "Yoqilgan/O'chiq" yozuvi yo'q — so'zlar
+         uzunligi turlicha bo'lgani uchun kalit holatga qarab sakrardi. -->
     <div class="cx-card section">
       <h2>{{ t('optional_capabilities') }}</h2>
-      <mat-slide-toggle [(ngModel)]="model.allowDebtWriteOff" [disabled]="!canManage">
-        {{ t('allow_debt_write_off') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.printMoneyDocuments" [disabled]="!canManage">
-        {{ t('print_money_documents') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.printCartProforma" [disabled]="!canManage">
-        {{ t('print_cart_proforma') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowConsolidatedAct" [disabled]="!canManage">
-        {{ t('allow_consolidated_act') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowSaleQueue" [disabled]="!canManage">
-        {{ t('allow_sale_queue') }}
-      </mat-slide-toggle>
-      <p class="hint">{{ t('optional_capabilities_hint') }}</p>
+      <div class="rows">
+        @for (row of capabilityRows; track row.key) {
+          <label class="row">
+            <span class="what">
+              <span class="name">{{ t(row.key) }}</span>
+              <span class="hint">{{ t(row.key + (model[row.field] ? '_on' : '_off')) }}</span>
+            </span>
+            <mat-slide-toggle [(ngModel)]="model[row.field]" [disabled]="!canManage" />
+          </label>
+        }
+      </div>
     </div>
 
     <div class="cx-card section">
       <h2>{{ t('sales_policy_limits') }}</h2>
-      <div class="grid">
+      <div class="triple">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('max_discount') }}</mat-label>
           <input matInput type="number" min="0" max="100" [(ngModel)]="model.maxDiscountPercent" [disabled]="!canManage" />
@@ -48,62 +56,6 @@
     </div>
 
     <div class="cx-card section">
-      <h2>{{ t('catalog_price_section') }}</h2>
-      <mat-slide-toggle [(ngModel)]="model.updateCatalogPriceOnSale" [disabled]="!canManage">
-        {{ t('update_catalog_price_on_sale') }}
-      </mat-slide-toggle>
-      @if (model.updateCatalogPriceOnSale) {
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
-          <mat-label>{{ t('max_price_increase_percent') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="model.maxPriceIncreasePercent" [disabled]="!canManage" />
-        </mat-form-field>
-      }
-      <p class="hint">{{ t('catalog_price_hint') }}</p>
-    </div>
-
-    <div class="cx-card section">
-      <h2>{{ t('debt_and_shift') }}</h2>
-      <div class="grid">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('shift_policy') }}</mat-label>
-          <mat-select [(ngModel)]="model.shiftPolicy" [disabled]="!canManage">
-            @for (p of shiftPolicies; track p) {
-              <mat-option [value]="p">{{ t('shift_policy_' + p.toLowerCase()) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ t('stale_rate_days') }}</mat-label>
-          <input matInput type="number" min="1" max="30" [(ngModel)]="model.staleRateDays" [disabled]="!canManage" />
-        </mat-form-field>
-      </div>
-      <mat-slide-toggle [(ngModel)]="model.allowDebtSales" [disabled]="!canManage">
-        {{ t('allow_debt_sales') }}
-      </mat-slide-toggle>
-      @if (model.allowDebtSales) {
-        <mat-slide-toggle [(ngModel)]="model.requireDebtDueDate" [disabled]="!canManage">
-          {{ t('require_debt_due_date') }}
-        </mat-slide-toggle>
-      }
-      <mat-slide-toggle [(ngModel)]="model.allowCustomerCredit" [disabled]="!canManage">
-        {{ t('allow_customer_credit') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowRetroactiveCashback" [disabled]="!canManage">
-        {{ t('allow_retroactive_cashback') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowCustomerLoans" [disabled]="!canManage">
-        {{ t('allow_customer_loans') }}
-      </mat-slide-toggle>
-      @if (model.allowCustomerLoans) {
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
-          <mat-label>{{ t('max_customer_loan') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="model.maxCustomerLoan" [disabled]="!canManage" />
-        </mat-form-field>
-      }
-      <p class="hint">{{ t('customer_loan_hint') }}</p>
-    </div>
-
-    <div class="cx-card section">
       <h2>{{ t('sale_requirements') }}</h2>
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
         <mat-label>{{ t('customer_requirement') }}</mat-label>
@@ -118,26 +70,86 @@
 
     <div class="cx-card section">
       <h2>{{ t('returns_policy') }}</h2>
-      <mat-slide-toggle [(ngModel)]="model.allowReturnOnVoidedSale" [disabled]="!canManage">
-        {{ t('allow_return_on_voided_sale') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowFreeReturnLines" [disabled]="!canManage">
-        {{ t('allow_free_return_lines') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.requireReturnReason" [disabled]="!canManage">
-        {{ t('require_return_reason') }}
-      </mat-slide-toggle>
-      <p class="hint">{{ t('returns_policy_hint') }}</p>
+      <div class="rows">
+        @for (row of returnRows; track row.key) {
+          <label class="row">
+            <span class="what">
+              <span class="name">{{ t(row.key) }}</span>
+              <span class="hint">{{ t(row.key + (model[row.field] ? '_on' : '_off')) }}</span>
+            </span>
+            <mat-slide-toggle [(ngModel)]="model[row.field]" [disabled]="!canManage" />
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('catalog_price_section') }}</h2>
+      <div class="rows">
+        <label class="row">
+          <span class="what">
+            <span class="name">{{ t('update_catalog_price_on_sale') }}</span>
+            <span class="hint">
+              {{ t('update_catalog_price_on_sale' + (model.updateCatalogPriceOnSale ? '_on' : '_off')) }}
+            </span>
+          </span>
+          <mat-slide-toggle [(ngModel)]="model.updateCatalogPriceOnSale" [disabled]="!canManage" />
+        </label>
+      </div>
+      @if (model.updateCatalogPriceOnSale) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+          <mat-label>{{ t('max_price_increase_percent') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.maxPriceIncreasePercent" [disabled]="!canManage" />
+        </mat-form-field>
+        <p class="hint">{{ t('catalog_price_hint') }}</p>
+      }
+    </div>
+
+    <div class="cx-card section">
+      <h2>{{ t('debt_and_shift') }}</h2>
+      <div class="pair">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('shift_policy') }}</mat-label>
+          <mat-select [(ngModel)]="model.shiftPolicy" [disabled]="!canManage">
+            @for (code of shiftPolicies; track code) {
+              <mat-option [value]="code">{{ t('shift_policy_' + code.toLowerCase()) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('stale_rate_days') }}</mat-label>
+          <input matInput type="number" min="1" max="30" [(ngModel)]="model.staleRateDays" [disabled]="!canManage" />
+        </mat-form-field>
+      </div>
+      <div class="rows">
+        @for (row of debtRows; track row.key) {
+          @if (row.field !== 'requireDebtDueDate' || model.allowDebtSales) {
+            <label class="row">
+              <span class="what">
+                <span class="name">{{ t(row.key) }}</span>
+                <span class="hint">{{ t(row.key + (model[row.field] ? '_on' : '_off')) }}</span>
+              </span>
+              <mat-slide-toggle [(ngModel)]="model[row.field]" [disabled]="!canManage" />
+            </label>
+          }
+        }
+      </div>
+      @if (model.allowCustomerLoans) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+          <mat-label>{{ t('max_customer_loan') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.maxCustomerLoan" [disabled]="!canManage" />
+        </mat-form-field>
+      }
     </div>
 
     <div class="cx-card section">
       <h2>{{ t('sale_correction') }}</h2>
-      <div class="grid">
+      <div class="pair">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('sale_correction_window') }}</mat-label>
           <mat-select [(ngModel)]="model.saleCorrectionWindow" [disabled]="!canManage">
-            @for (w of correctionWindows; track w) {
-              <mat-option [value]="w">{{ t('correction_' + w.toLowerCase()) }}</mat-option>
+            @for (code of correctionWindows; track code) {
+              <mat-option [value]="code">{{ t('correction_' + code.toLowerCase()) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -157,26 +169,18 @@
         <mat-label>{{ t('default_min_stock') }}</mat-label>
         <input matInput type="number" min="0" [(ngModel)]="model.defaultMinStock" [disabled]="!canManage" />
       </mat-form-field>
-      <mat-slide-toggle [(ngModel)]="model.requireSupplier" [disabled]="!canManage">
-        {{ t('require_supplier') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.showOutOfStock" [disabled]="!canManage">
-        {{ t('show_out_of_stock') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.showUnlistedProducts" [disabled]="!canManage">
-        {{ t('show_unlisted_products') }}
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="model.allowInsufficientStockSales" [disabled]="!canManage">
-        {{ t('allow_insufficient_stock_sales') }}
-      </mat-slide-toggle>
+      <div class="rows">
+        @for (row of stockRows; track row.key) {
+          <label class="row">
+            <span class="what">
+              <span class="name">{{ t(row.key) }}</span>
+              <span class="hint">{{ t(row.key + (model[row.field] ? '_on' : '_off')) }}</span>
+            </span>
+            <mat-slide-toggle [(ngModel)]="model[row.field]" [disabled]="!canManage" />
+          </label>
+        }
+      </div>
     </div>
 
-    @if (canManage) {
-      <div class="actions">
-        <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
-          {{ t('save') }}
-        </button>
-      </div>
-    }
   }
 </ng-container>

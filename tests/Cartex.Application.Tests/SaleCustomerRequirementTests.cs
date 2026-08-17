@@ -11,14 +11,15 @@ using Xunit;
 
 namespace Cartex.Application.Tests;
 
-/// Written from docs/domain-rules.md SOZ-11. Who must be named on a sale is the shop's policy:
-/// a walk-in till wants nobody, a wholesale counter wants everybody on file.
+/// Written from docs/domain-rules.md SOZ-11. Debt, bonus spending and credit are impossible
+/// without a customer whatever the setting says — the money lands on that customer's account.
+/// What the setting decides is the fully paid sale.
 [Collection("database")]
 public class SaleCustomerRequirementTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
     private sealed record Setup(long Warehouse, long VariantId, long CustomerId);
 
-    private async Task<Setup> SetupAsync(string requirement)
+    private async Task<Setup> SetupAsync(string requirement, bool loyaltyEnabled = true)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -32,6 +33,10 @@ public class SaleCustomerRequirementTests(DatabaseFixture fixture) : DatabaseTes
 
         await scope.ServiceProvider.GetRequiredService<ISettingsService>()
             .SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings { CustomerRequirement = requirement });
+
+        foreach (var program in await db.LoyaltyPrograms.ToListAsync())
+            program.IsEnabled = loyaltyEnabled;
+        await db.SaveChangesAsync();
 
         var stocked = db.Stocks.Where(s => s.WarehouseId == warehouse && s.Quantity >= 3).Select(s => s.VariantId);
         var variantId = await db.ProductPrices
@@ -50,9 +55,9 @@ public class SaleCustomerRequirementTests(DatabaseFixture fixture) : DatabaseTes
         };
 
     [Fact]
-    public async Task SOZ_11_Always_refuses_a_sale_with_nobody_on_it()
+    public async Task SOZ_11_Always_refuses_a_paid_sale_with_nobody_on_it()
     {
-        var s = await SetupAsync("Always");
+        var s = await SetupAsync("Always", loyaltyEnabled: false);
 
         using var scope = Fixture.CreateScope();
         var error = await Assert.ThrowsAnyAsync<Exception>(
@@ -73,12 +78,10 @@ public class SaleCustomerRequirementTests(DatabaseFixture fixture) : DatabaseTes
         Assert.True(result.SaleId > 0);
     }
 
-    [Theory]
-    [InlineData("OnDebt")]
-    [InlineData("Optional")]
-    public async Task SOZ_11_A_fully_paid_sale_needs_nobody_under_the_looser_settings(string requirement)
+    [Fact]
+    public async Task SOZ_11_OnDebt_lets_a_paid_walk_in_through_even_with_loyalty_running()
     {
-        var s = await SetupAsync(requirement);
+        var s = await SetupAsync("OnDebt");
 
         using var scope = Fixture.CreateScope();
         var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(Sale(s, null));
@@ -87,9 +90,33 @@ public class SaleCustomerRequirementTests(DatabaseFixture fixture) : DatabaseTes
     }
 
     [Fact]
-    public async Task SOZ_11_Optional_still_refuses_a_debt_sale_with_nobody_to_owe_it()
+    public async Task SOZ_11_OnBonus_demands_a_customer_while_the_shop_gives_cashback()
     {
-        var s = await SetupAsync("Optional");
+        var s = await SetupAsync("OnBonus", loyaltyEnabled: true);
+
+        using var scope = Fixture.CreateScope();
+        var error = await Assert.ThrowsAnyAsync<Exception>(
+            () => scope.ServiceProvider.GetRequiredService<ISender>().Send(Sale(s, null)));
+
+        Assert.True(error is BusinessRuleException { Code: "customer_required" },
+            $"expected customer_required, got {error.GetType().Name}: {error.Message}");
+    }
+
+    [Fact]
+    public async Task SOZ_11_OnBonus_lets_a_walk_in_through_when_no_cashback_is_on_offer()
+    {
+        var s = await SetupAsync("OnBonus", loyaltyEnabled: false);
+
+        using var scope = Fixture.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(Sale(s, null));
+
+        Assert.True(result.SaleId > 0);
+    }
+
+    [Fact]
+    public async Task SOZ_11_A_debt_sale_needs_a_customer_under_every_setting()
+    {
+        var s = await SetupAsync("OnDebt", loyaltyEnabled: false);
 
         using var scope = Fixture.CreateScope();
         var error = await Assert.ThrowsAnyAsync<Exception>(

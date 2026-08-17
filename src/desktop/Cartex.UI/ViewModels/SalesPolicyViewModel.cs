@@ -29,7 +29,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 
     private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
     private static readonly string[] CorrectionWindowCodes = ["Off", "Shift", "BusinessDay", "Days", "Always"];
-    private static readonly string[] CustomerRequirementCodes = ["Optional", "OnDebt", "Always"];
+    // "Optional" olib tashlandi: u "OnDebt" bilan bir xil ishlardi. "OnBonus" esa haqiqiy
+    // uchinchi holat — do'kon cashback bersa, mijozsiz savdo bonusni yo'qotadi.
+    private static readonly string[] CustomerRequirementCodes = ["OnDebt", "OnBonus", "Always"];
 
     public ObservableCollection<string> ShiftPolicies { get; } = [];
     public ObservableCollection<string> CorrectionWindows { get; } = [];
@@ -44,26 +46,85 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _maxPriceIncreasePercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
-    [ObservableProperty] private bool _allowDebtSales = true;
-    [ObservableProperty] private bool _allowCustomerCredit;
-    [ObservableProperty] private bool _requireDebtDueDate = true;
-    [ObservableProperty] private bool _requireSupplier;
-    [ObservableProperty] private bool _showOutOfStock;
-    [ObservableProperty] private bool _showUnlistedProducts = true;
-    [ObservableProperty] private bool _allowInsufficientStockSales;
-    [ObservableProperty] private bool _allowRetroactiveCashback;
-    [ObservableProperty] private bool _updateCatalogPriceOnSale = true;
-    [ObservableProperty] private bool _allowDebtWriteOff = true;
-    [ObservableProperty] private bool _printMoneyDocuments = true;
-    [ObservableProperty] private bool _printCartProforma = true;
-    [ObservableProperty] private bool _allowConsolidatedAct = true;
-    [ObservableProperty] private bool _allowCustomerLoans;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowDebtSalesHint))]
+    private bool _allowDebtSales = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowCustomerCreditHint))]
+    private bool _allowCustomerCredit;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RequireDebtDueDateHint))]
+    private bool _requireDebtDueDate = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RequireSupplierHint))]
+    private bool _requireSupplier;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowOutOfStockHint))]
+    private bool _showOutOfStock;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUnlistedProductsHint))]
+    private bool _showUnlistedProducts = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowInsufficientStockSalesHint))]
+    private bool _allowInsufficientStockSales;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowRetroactiveCashbackHint))]
+    private bool _allowRetroactiveCashback;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateCatalogPriceOnSaleHint))]
+    private bool _updateCatalogPriceOnSale = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowDebtWriteOffHint))]
+    private bool _allowDebtWriteOff = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PrintMoneyDocumentsHint))]
+    private bool _printMoneyDocuments = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PrintCartProformaHint))]
+    private bool _printCartProforma = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowConsolidatedActHint))]
+    private bool _allowConsolidatedAct = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowCustomerLoansHint))]
+    private bool _allowCustomerLoans;
     [ObservableProperty] private decimal _maxCustomerLoan;
     [ObservableProperty] private int _customerRequirementIndex = 1;
-    [ObservableProperty] private bool _allowReturnOnVoidedSale;
-    [ObservableProperty] private bool _allowFreeReturnLines = true;
-    [ObservableProperty] private bool _requireReturnReason;
-    [ObservableProperty] private bool _allowSaleQueue = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowReturnOnVoidedSaleHint))]
+    private bool _allowReturnOnVoidedSale;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowFreeReturnLinesHint))]
+    private bool _allowFreeReturnLines = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RequireReturnReasonHint))]
+    private bool _requireReturnReason;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowSaleQueueHint))]
+    private bool _allowSaleQueue = true;
+
+    /// Har kalitning ostida uning hozirgi holati nimani anglatishi yozilib turadi — egasi
+    /// tugmani bosmasdan oldin oqibatini o'qiy oladi.
+    private string Hint(bool on, string key) => L[$"{key}_{(on ? "on" : "off")}"];
+
+    public string AllowDebtWriteOffHint => Hint(AllowDebtWriteOff, "allow_debt_write_off");
+    public string PrintMoneyDocumentsHint => Hint(PrintMoneyDocuments, "print_money_documents");
+    public string PrintCartProformaHint => Hint(PrintCartProforma, "print_cart_proforma");
+    public string AllowConsolidatedActHint => Hint(AllowConsolidatedAct, "allow_consolidated_act");
+    public string AllowSaleQueueHint => Hint(AllowSaleQueue, "allow_sale_queue");
+    public string UpdateCatalogPriceOnSaleHint => Hint(UpdateCatalogPriceOnSale, "update_catalog_price_on_sale");
+    public string AllowDebtSalesHint => Hint(AllowDebtSales, "allow_debt_sales");
+    public string RequireDebtDueDateHint => Hint(RequireDebtDueDate, "require_debt_due_date");
+    public string AllowCustomerCreditHint => Hint(AllowCustomerCredit, "allow_customer_credit");
+    public string AllowRetroactiveCashbackHint => Hint(AllowRetroactiveCashback, "allow_retroactive_cashback");
+    public string AllowCustomerLoansHint => Hint(AllowCustomerLoans, "allow_customer_loans");
+    public string AllowReturnOnVoidedSaleHint => Hint(AllowReturnOnVoidedSale, "allow_return_on_voided_sale");
+    public string AllowFreeReturnLinesHint => Hint(AllowFreeReturnLines, "allow_free_return_lines");
+    public string RequireReturnReasonHint => Hint(RequireReturnReason, "require_return_reason");
+    public string RequireSupplierHint => Hint(RequireSupplier, "require_supplier");
+    public string ShowOutOfStockHint => Hint(ShowOutOfStock, "show_out_of_stock");
+    public string ShowUnlistedProductsHint => Hint(ShowUnlistedProducts, "show_unlisted_products");
+    public string AllowInsufficientStockSalesHint => Hint(AllowInsufficientStockSales, "allow_insufficient_stock_sales");
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
