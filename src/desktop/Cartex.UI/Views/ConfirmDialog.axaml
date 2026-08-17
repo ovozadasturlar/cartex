@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.ConfirmDialog"
+             x:DataType="vm:ConfirmViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            BoxShadow="0 18 50 0 #33000000"
+            c:FormBehaviors.AutoFocus="True"
+            c:FormBehaviors.EnterSubmits="{Binding AcceptCommand}">
+        <StackPanel Margin="22" Spacing="14">
+            <TextBlock Text="{Binding Title}" Classes="h2" IsVisible="{Binding HasTitle}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondary}" FontSize="13" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Classes="outline" Command="{Binding CancelCommand}"
+                        IsVisible="{Binding ShowCancel}" Content="{Binding L[cancel]}" />
+                <Button Classes="brand" Classes.danger="{Binding IsDanger}"
+                        Command="{Binding AcceptCommand}" Content="{Binding L[confirm]}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

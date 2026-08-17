@@ -22,6 +22,7 @@ public class ViewRenderTests
     [InlineData(typeof(TransactionDetailDialog))]
     [InlineData(typeof(ReturnsView))]
     [InlineData(typeof(SalesView))]
+    [InlineData(typeof(ConfirmDialog))]
     public void Every_screen_loads_without_a_binding_error(Type viewType)
     {
         using var listener = new BindingErrorListener();

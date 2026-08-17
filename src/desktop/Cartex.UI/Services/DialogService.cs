@@ -34,14 +34,18 @@ public sealed class DialogService : IDialogService
         finally { if (Interlocked.Decrement(ref _openCount) == 0) OpenChanged?.Invoke(false); }
     }
 
-    public async Task<bool> ConfirmAsync(string message, string? title = null) =>
-        await TrackAsync(MessageBox.ShowAsync(message, title, MessageBoxIcon.Question, MessageBoxButton.YesNo)) == MessageBoxResult.Yes;
+    public Task<bool> ConfirmAsync(string message, string? title = null) =>
+        AskAsync(message, title, danger: false, alertOnly: false);
 
-    public async Task<bool> ConfirmDangerAsync(string message, string? title = null) =>
-        await TrackAsync(MessageBox.ShowAsync(message, title, MessageBoxIcon.Warning, MessageBoxButton.YesNo)) == MessageBoxResult.Yes;
+    public Task<bool> ConfirmDangerAsync(string message, string? title = null) =>
+        AskAsync(message, title, danger: true, alertOnly: false);
 
-    public async Task AlertAsync(string message, string? title = null) =>
-        await TrackAsync(MessageBox.ShowAsync(message, title, MessageBoxIcon.Information, MessageBoxButton.OK));
+    public Task AlertAsync(string message, string? title = null) =>
+        AskAsync(message, title, danger: false, alertOnly: true);
+
+    private async Task<bool> AskAsync(string message, string? title, bool danger, bool alertOnly) =>
+        await ShowAsync<Views.ConfirmDialog, ViewModels.ConfirmViewModel, bool>(
+            new ViewModels.ConfirmViewModel(message, title, danger, alertOnly));
 
     public async Task<TResult?> ShowAsync<TView, TViewModel, TResult>(TViewModel vm) where TView : Control, new()
     {
