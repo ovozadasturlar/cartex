@@ -124,7 +124,7 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
         IsBusy = true;
         try
         {
-            decimal.TryParse(CreditLimit.Replace(" ", ""), out var limit);
+            decimal? limit = decimal.TryParse(CreditLimit.Replace(" ", ""), out var parsed) ? parsed : null;
             await customersApi.CreateAsync(new CreateCustomerRequest(
                 Name.Trim(), Phone.Trim(), null, 0,
                 Address: string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),

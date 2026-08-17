@@ -50,7 +50,7 @@ public sealed record OfflineCustomerDto(
     string? CardBarcode,
     decimal DiscountPct,
     decimal DebtBalance,
-    decimal CreditLimit);
+    decimal? CreditLimit);
 
 public sealed record OfflineParticipantRoleDto(
     long Id,

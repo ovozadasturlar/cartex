@@ -159,7 +159,7 @@ export class PosApi {
     address: string | null;
     cardBarcode: string | null;
     discountPct: number;
-    creditLimit: number;
+    creditLimit: number | null;
   }): Observable<number> {
     return this.http.post<number>('/api/customers', body);
   }

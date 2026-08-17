@@ -190,7 +190,7 @@ export class Pos implements OnInit {
   readonly hasAutoDiscount = computed(() => this.autoDiscount() > 0);
   readonly overCreditLimit = computed(() => {
     const c = this.customer();
-    return !!c && c.creditLimit > 0 && c.debtBalance + this.debt() > c.creditLimit;
+    return !!c && c.creditLimit !== null && c.debtBalance + this.debt() > c.creditLimit;
   });
 
   private search = '';

@@ -31,7 +31,7 @@ public class OfflineCustomer
     [Indexed] public string? CardBarcode { get; set; }
     public decimal DiscountPct { get; set; }
     public decimal DebtBalance { get; set; }
-    public decimal CreditLimit { get; set; }
+    public decimal? CreditLimit { get; set; }
 }
 
 public class OfflineOutboxItem

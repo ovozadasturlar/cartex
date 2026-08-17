@@ -13,7 +13,7 @@ public class ProductStateTests(CartexApiFactory factory)
     private sealed record StockPage(List<StockRow> Items, int TotalCount);
     private sealed record SalesPolicyRow(
         string ShiftPolicy,
-        decimal MaxDiscountPercent,
+        decimal? MaxDiscountPercent,
         decimal DefaultMinStock,
         int StaleRateDays,
         bool AllowDebtSales,

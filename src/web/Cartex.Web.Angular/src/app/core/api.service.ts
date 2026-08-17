@@ -121,7 +121,7 @@ export class CustomersApi {
     address: string | null;
     cardBarcode: string | null;
     discountPct: number;
-    creditLimit: number;
+    creditLimit: number | null;
     notificationsOptOut: boolean;
     openingBalance: number;
   }): Observable<number> {
@@ -138,7 +138,7 @@ export class CustomersApi {
       address: string | null;
       cardBarcode: string | null;
       discountPct: number;
-      creditLimit: number;
+      creditLimit: number | null;
       notificationsOptOut: boolean;
     },
   ): Observable<void> {

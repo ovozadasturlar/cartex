@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal CreditLimit = 0, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal? CreditLimit = null, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
@@ -105,6 +105,6 @@ public sealed class CreateCustomerCommandValidator : AbstractValidator<CreateCus
     {
         RuleFor(x => x.FullName).NotEmpty();
         RuleFor(x => x.Phone).NotEmpty().Must(p => Phones.IsValid(Phones.Normalize(p))).WithMessage("Telefon raqami noto'g'ri.");
-        RuleFor(x => x.CreditLimit).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CreditLimit).GreaterThanOrEqualTo(0).When(x => x.CreditLimit is not null);
     }
 }

@@ -3,15 +3,17 @@
 public sealed class SalesPolicySettings
 {
     public string ShiftPolicy { get; set; } = "CashOnly";
-    public decimal MaxDiscountPercent { get; set; }
+    /// Bo'sh — chegara yo'q, 0 — chegirma umuman berilmaydi (SOZ-02).
+    public decimal? MaxDiscountPercent { get; set; }
 
 
-    /// Bir hujjatda kechirilishi mumkin bo'lgan eng katta qarz. 0 — chegara yo'q.
-    public decimal MaxDebtWriteOffAmount { get; set; }
+    /// Bir hujjatda kechirilishi mumkin bo'lgan eng katta qarz. Bo'sh — chegara yo'q,
+    /// 0 — kechirim yopiq (SOZ-02).
+    public decimal? MaxDebtWriteOffAmount { get; set; }
 
     /// Kechirim shu hujjat yopayotgan summaning (to'langan + kechirilgan) necha foizidan
-    /// oshmasligi kerak. 0 — chegara yo'q.
-    public decimal MaxDebtWriteOffPercent { get; set; }
+    /// oshmasligi kerak. Bo'sh — chegara yo'q, 0 — kechirim yopiq (SOZ-02).
+    public decimal? MaxDebtWriteOffPercent { get; set; }
     public decimal DefaultMinStock { get; set; }
     public int StaleRateDays { get; set; } = 3;
     public bool AllowDebtSales { get; set; } = true;
@@ -28,8 +30,8 @@ public sealed class SalesPolicySettings
     /// Savdoda katalogdan yuqori narx kiritilsa, katalog narxi yangilanadimi (NARX-06).
     public bool UpdateCatalogPriceOnSale { get; set; } = true;
 
-    /// Ixtiyoriy imkoniyatlarning kalitlari (SOZ-08). Chegara maydoni o'chirish vositasi emas:
-    /// unda 0 — "chegara yo'q" degani, shuning uchun har biriga alohida kalit kerak (SOZ-09).
+    /// Ixtiyoriy imkoniyatlarning kalitlari (SOZ-08). Chegara maydoni imkoniyatni butunlay
+    /// yopish uchun ishlatilmaydi — buning uchun alohida kalit bor (SOZ-09).
     public bool AllowDebtWriteOff { get; set; } = true;
     public bool PrintMoneyDocuments { get; set; } = true;
 
@@ -42,13 +44,14 @@ public sealed class SalesPolicySettings
     /// bu kassadan pul chiqaradigan alohida imkoniyat, ataylab yopiq turadi.
     public bool AllowCustomerLoans { get; set; }
 
-    /// Bitta chiqimda qarzga berilishi mumkin bo'lgan eng katta summa. 0 — chegara yo'q.
-    public decimal MaxCustomerLoan { get; set; }
+    /// Bitta chiqimda qarzga berilishi mumkin bo'lgan eng katta summa. Bo'sh — chegara yo'q,
+    /// 0 — qarzga berish yopiq (SOZ-02).
+    public decimal? MaxCustomerLoan { get; set; }
 
     /// Katalogni yangilash uchun ruxsat etilgan eng katta oshish, foizda (NARX-07).
     /// Oshirish chegaradan katta bo'lsa savdo baribir o'tadi, faqat katalog yangilanmaydi.
-    /// 0 — chegara yo'q.
-    public decimal MaxPriceIncreasePercent { get; set; }
+    /// Bo'sh — chegara yo'q, 0 — katalog savdodan yangilanmaydi (SOZ-02).
+    public decimal? MaxPriceIncreasePercent { get; set; }
 
     /// Savdoda mijoz qachon majburiy (SOZ-11): "Optional", "OnDebt" (standart), "Always".
     public string CustomerRequirement { get; set; } = "OnDebt";

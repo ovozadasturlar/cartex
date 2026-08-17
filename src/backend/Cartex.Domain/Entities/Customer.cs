@@ -20,7 +20,8 @@ public class Customer : SoftDeleteEntity
     public long? AssignedUserId { get; set; }
     public User? AssignedUser { get; set; }
     public decimal DiscountPct { get; set; }
-    public decimal CreditLimit { get; set; }
+    /// Bo'sh — qarz chegarasi yo'q, 0 — bu mijozga qarzga sotilmaydi (SOZ-02a).
+    public decimal? CreditLimit { get; set; }
     public bool NotificationsOptOut { get; set; }
 
     public ICollection<Account> Accounts { get; set; } = [];

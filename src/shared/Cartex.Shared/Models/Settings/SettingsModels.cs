@@ -124,9 +124,9 @@ public record UpdateProformaSettingsRequest(
 public sealed record SalesPolicyDto
 {
     public string ShiftPolicy { get; init; } = "CashOnly";
-    public decimal MaxDiscountPercent { get; init; }
-    public decimal MaxDebtWriteOffAmount { get; init; }
-    public decimal MaxDebtWriteOffPercent { get; init; }
+    public decimal? MaxDiscountPercent { get; init; }
+    public decimal? MaxDebtWriteOffAmount { get; init; }
+    public decimal? MaxDebtWriteOffPercent { get; init; }
     public decimal DefaultMinStock { get; init; }
     public int StaleRateDays { get; init; } = 3;
     public bool AllowDebtSales { get; init; } = true;
@@ -144,9 +144,9 @@ public sealed record SalesPolicyDto
     public bool PrintCartProforma { get; init; } = true;
     public bool AllowConsolidatedAct { get; init; } = true;
     public bool AllowCustomerLoans { get; init; }
-    public decimal MaxCustomerLoan { get; init; }
+    public decimal? MaxCustomerLoan { get; init; }
     public bool UpdateCatalogPriceOnSale { get; init; } = true;
-    public decimal MaxPriceIncreasePercent { get; init; }
+    public decimal? MaxPriceIncreasePercent { get; init; }
     public string CustomerRequirement { get; init; } = "OnDebt";
     public bool AllowReturnOnVoidedSale { get; init; }
     public bool AllowFreeReturnLines { get; init; } = true;

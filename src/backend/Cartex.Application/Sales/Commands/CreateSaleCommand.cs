@@ -340,7 +340,7 @@ public sealed class CreateSaleCommandHandler(
         foreach (var row in saleRows) row.NetBase = row.Extended - row.Discount;
 
         var discountAmount = Math.Clamp(request.DiscountAmount + priceDiscountAmount, 0, grossAmount);
-        if (policy.MaxDiscountPercent > 0 && discountAmount > grossAmount * policy.MaxDiscountPercent / 100
+        if (policy.MaxDiscountPercent is { } maxDiscount && discountAmount > grossAmount * maxDiscount / 100
             && !currentUser.HasPermission(AppPermissions.Sales.DiscountOverride))
             throw new BusinessRuleException($"Chegirma {policy.MaxDiscountPercent}% dan osha olmaydi.");
 
@@ -534,7 +534,7 @@ public sealed class CreateSaleCommandHandler(
         {
             var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId.Value, cancellationToken)
                 ?? throw new NotFoundException("Customer not found.");
-            if (!policy.AllowDebtSales || customer.CreditLimit > 0)
+            if (!policy.AllowDebtSales || customer.CreditLimit is not null)
             {
                 var debtAccounts = await db.Accounts
                     .Where(a => a.CustomerId == request.CustomerId.Value && a.Type == AccountType.Debt)
@@ -544,7 +544,7 @@ public sealed class CreateSaleCommandHandler(
                     currentDebt += account.Balance * (account.Currency == baseCode ? 1m : await currency.RateAsync(account.Currency, cancellationToken));
                 if (!policy.AllowDebtSales && currentDebt + debtAmount > 0)
                     throw new BusinessRuleException("Nasiya savdo o'chirilgan.");
-                if (customer.CreditLimit > 0 && currentDebt + debtAmount > customer.CreditLimit)
+                if (customer.CreditLimit is { } creditLimit && currentDebt + debtAmount > creditLimit)
                     throw new BusinessRuleException("Qarz limiti oshib ketdi.");
             }
         }
@@ -612,12 +612,12 @@ public sealed class CreateSaleCommandHandler(
             skippedIncreases.AddRange(priceIncreases.Values);
             priceIncreases.Clear();
         }
-        else if (policy.MaxPriceIncreasePercent > 0)
+        else if (policy.MaxPriceIncreasePercent is { } maxIncrease)
             foreach (var increase in priceIncreases.Values.ToList())
             {
                 // A product priced at zero is being given its first price, not raised (NARX-08).
                 var current = Math.Round(increase.Source.SellingPrice * increase.Rate, 2);
-                if (current <= 0 || (increase.Amount - current) / current * 100 <= policy.MaxPriceIncreasePercent)
+                if (current <= 0 || (increase.Amount - current) / current * 100 <= maxIncrease)
                     continue;
                 skippedIncreases.Add(increase);
                 priceIncreases.Remove(increase.Source);

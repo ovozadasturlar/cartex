@@ -71,9 +71,9 @@ export interface ReceiptSettings {
 
 export interface SalesPolicy {
   shiftPolicy: string;
-  maxDiscountPercent: number;
-  maxDebtWriteOffAmount: number;
-  maxDebtWriteOffPercent: number;
+  maxDiscountPercent: number | null;
+  maxDebtWriteOffAmount: number | null;
+  maxDebtWriteOffPercent: number | null;
   defaultMinStock: number;
   staleRateDays: number;
   allowDebtSales: boolean;
@@ -91,9 +91,9 @@ export interface SalesPolicy {
   printCartProforma: boolean;
   allowConsolidatedAct: boolean;
   allowCustomerLoans: boolean;
-  maxCustomerLoan: number;
+  maxCustomerLoan: number | null;
   updateCatalogPriceOnSale: boolean;
-  maxPriceIncreasePercent: number;
+  maxPriceIncreasePercent: number | null;
   customerRequirement: string;
   allowReturnOnVoidedSale: boolean;
   allowFreeReturnLines: boolean;

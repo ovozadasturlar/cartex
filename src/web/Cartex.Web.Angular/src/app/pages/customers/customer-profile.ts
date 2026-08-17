@@ -455,7 +455,7 @@ export class CustomerEditDialog {
   address = this.customer?.address ?? '';
   cardBarcode = this.customer?.cardBarcode ?? '';
   discountPct = this.customer?.discountPct ?? 0;
-  creditLimit = this.customer?.creditLimit ?? 0;
+  creditLimit: number | null = this.customer?.creditLimit ?? null;
   note = this.customer?.note ?? '';
 
   async save(message: string): Promise<void> {
@@ -469,7 +469,7 @@ export class CustomerEditDialog {
           address: this.address.trim() || null,
           cardBarcode: this.cardBarcode.trim() || null,
           discountPct: this.discountPct || 0,
-          creditLimit: this.creditLimit || 0,
+          creditLimit: this.creditLimit ?? null,
           notificationsOptOut: this.customer?.notificationsOptOut ?? false,
           note: this.note.trim() || null,
       };

@@ -471,7 +471,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding EditCreditLimit, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="100000" FormatString="N0" />
+                            <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="N0" Watermark="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Spacing="5">

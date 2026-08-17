@@ -31,7 +31,7 @@ public partial class CartViewModel(AgentDb db, SyncService sync, CartService car
     public string DebtText => Money.Text(Debt, cart.Currency);
     public bool HasDebt => Debt > 0;
     public bool CreditExceeded =>
-        HasDebt && _customer is { CreditLimit: > 0 } c && c.DebtBalance + Debt > c.CreditLimit;
+        HasDebt && _customer?.CreditLimit is { } limit && _customer.DebtBalance + Debt > limit;
 
     public async Task AppearAsync()
     {

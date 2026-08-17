@@ -40,10 +40,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _shiftPolicyIndex = 1;
     [ObservableProperty] private int _correctionWindowIndex = 1;
     [ObservableProperty] private decimal _saleCorrectionDays = 1;
-    [ObservableProperty] private decimal _maxDiscountPercent;
-    [ObservableProperty] private decimal _maxDebtWriteOffAmount;
-    [ObservableProperty] private decimal _maxDebtWriteOffPercent;
-    [ObservableProperty] private decimal _maxPriceIncreasePercent;
+    [ObservableProperty] private decimal? _maxDiscountPercent;
+    [ObservableProperty] private decimal? _maxDebtWriteOffAmount;
+    [ObservableProperty] private decimal? _maxDebtWriteOffPercent;
+    [ObservableProperty] private decimal? _maxPriceIncreasePercent;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
     [ObservableProperty]
@@ -88,7 +88,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AllowCustomerLoansHint))]
     private bool _allowCustomerLoans;
-    [ObservableProperty] private decimal _maxCustomerLoan;
+    [ObservableProperty] private decimal? _maxCustomerLoan;
     [ObservableProperty] private int _customerRequirementIndex = 1;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AllowReturnOnVoidedSaleHint))]

@@ -9,7 +9,7 @@ public class LocalCustomer
     public string? Phone { get; set; }
     public string? Address { get; set; }
     public decimal DebtBalance { get; set; }
-    public decimal CreditLimit { get; set; }
+    public decimal? CreditLimit { get; set; }
     public string DebtBalancesJson { get; set; } = "[]";
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }

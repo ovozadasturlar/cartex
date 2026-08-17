@@ -112,7 +112,7 @@ export interface Customer {
   notificationsOptOut: boolean;
   cashbackBalance: number;
   debtBalance: number;
-  creditLimit: number;
+  creditLimit: number | null;
   hasTelegram: boolean;
   debtBalances: CurrencyAmount[];
   note?: string | null;

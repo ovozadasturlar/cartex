@@ -108,12 +108,12 @@ public sealed class CreateCustomerRefundCommandHandler(
             foreach (var loan in loans) loanBase += Math.Round(loan.Value * rates[loan.Key], 2);
 
             // QARZ-17: the ceiling measures the lending, not the customer's own money coming back.
-            if (policy.MaxCustomerLoan > 0 && loanBase > policy.MaxCustomerLoan)
+            if (policy.MaxCustomerLoan is { } maxLoan && loanBase > maxLoan)
                 throw new BusinessRuleException(
                     $"Qarzga berish {policy.MaxCustomerLoan:N0} dan osha olmaydi.", "customer_loan_limit");
 
             // QARZ-18: unlike goods debt, this one is checked on the server — cash is leaving the till.
-            if (customer.CreditLimit > 0)
+            if (customer.CreditLimit is { } creditLimit)
             {
                 var debts = await db.Accounts
                     .Where(x => x.CustomerId == request.CustomerId && x.Type == AccountType.Debt && x.Balance > 0)
@@ -122,9 +122,9 @@ public sealed class CreateCustomerRefundCommandHandler(
                 var debtBase = 0m;
                 foreach (var debt in debts)
                     debtBase += Math.Round(debt.Balance * await currency.RateAsync(debt.Currency, cancellationToken), 2);
-                if (debtBase + loanBase > customer.CreditLimit)
+                if (debtBase + loanBase > creditLimit)
                     throw new BusinessRuleException(
-                        $"Mijozning qarz chegarasi {customer.CreditLimit:N0} dan oshib ketadi.", "credit_limit_exceeded");
+                        $"Mijozning qarz chegarasi {creditLimit:N0} dan oshib ketadi.", "credit_limit_exceeded");
             }
         }
 

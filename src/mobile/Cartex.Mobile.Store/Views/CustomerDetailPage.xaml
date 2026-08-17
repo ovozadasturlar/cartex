@@ -189,7 +189,7 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{svc:T credit_limit}" Style="{StaticResource MutedLabel}" />
-                                    <Label Grid.Column="1" Text="{Binding Customer.CreditLimit, StringFormat='{0:N0}'}" FontSize="13.5" FontAttributes="Bold"
+                                    <Label Grid.Column="1" Text="{Binding CreditLimitText}" FontSize="13.5" FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                 </Grid>
                             </VerticalStackLayout>

@@ -125,17 +125,17 @@
                         <Grid ColumnDefinitions="*,12,*,12,*">
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[max_discount]}" Classes="hint" />
-                                <NumericUpDown Value="{Binding MaxDiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                <NumericUpDown Value="{Binding MaxDiscountPercent}"
                                                Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="5">
                                 <TextBlock Text="{Binding L[max_write_off_amount]}" Classes="hint" />
-                                <NumericUpDown Value="{Binding MaxDebtWriteOffAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                <NumericUpDown Value="{Binding MaxDebtWriteOffAmount}"
                                                Minimum="0" Increment="1000" FormatString="N0" />
                             </StackPanel>
                             <StackPanel Grid.Column="4" Spacing="5">
                                 <TextBlock Text="{Binding L[max_write_off_percent]}" Classes="hint" />
-                                <NumericUpDown Value="{Binding MaxDebtWriteOffPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                <NumericUpDown Value="{Binding MaxDebtWriteOffPercent}"
                                                Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
                             </StackPanel>
                         </Grid>
@@ -207,7 +207,7 @@
 
                         <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding UpdateCatalogPriceOnSale}">
                             <TextBlock Text="{Binding L[max_price_increase_percent]}" Classes="hint" />
-                            <NumericUpDown Value="{Binding MaxPriceIncreasePercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                            <NumericUpDown Value="{Binding MaxPriceIncreasePercent}"
                                            Minimum="0" Increment="1" FormatString="0.##" HorizontalAlignment="Left" Width="220" />
                             <TextBlock Text="{Binding L[catalog_price_hint]}" Classes="hint" />
                         </StackPanel>
@@ -282,7 +282,7 @@
 
                         <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding AllowCustomerLoans}">
                             <TextBlock Text="{Binding L[max_customer_loan]}" Classes="hint" />
-                            <NumericUpDown Value="{Binding MaxCustomerLoan, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                            <NumericUpDown Value="{Binding MaxCustomerLoan}"
                                            Minimum="0" Increment="1000" FormatString="N0" HorizontalAlignment="Left" Width="220" />
                         </StackPanel>
                     </StackPanel>

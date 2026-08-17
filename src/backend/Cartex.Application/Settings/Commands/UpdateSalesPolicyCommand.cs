@@ -26,11 +26,11 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
     public UpdateSalesPolicyCommandValidator()
     {
         RuleFor(x => x.Policy.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
-        RuleFor(x => x.Policy.MaxDiscountPercent).InclusiveBetween(0, 100);
-        RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100);
-        RuleFor(x => x.Policy.MaxPriceIncreasePercent).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.Policy.MaxCustomerLoan).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Policy.MaxDiscountPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDiscountPercent is not null);
+        RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxDebtWriteOffAmount is not null);
+        RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDebtWriteOffPercent is not null);
+        RuleFor(x => x.Policy.MaxPriceIncreasePercent).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxPriceIncreasePercent is not null);
+        RuleFor(x => x.Policy.MaxCustomerLoan).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxCustomerLoan is not null);
         RuleFor(x => x.Policy.DefaultMinStock).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Policy.StaleRateDays).InclusiveBetween(1, 30);
     }

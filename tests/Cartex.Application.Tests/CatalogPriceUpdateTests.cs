@@ -44,7 +44,7 @@ public sealed class CatalogPriceUpdateTests(DatabaseFixture fixture) : DatabaseT
         return new Setup(branch, warehouse, business.Id, admin, variant);
     }
 
-    private async Task SellingAsAdminAsync(Setup s, bool updateCatalog, decimal maxIncreasePercent)
+    private async Task SellingAsAdminAsync(Setup s, bool updateCatalog, decimal? maxIncreasePercent)
     {
         using (var scope = Fixture.CreateScope())
         {
@@ -139,17 +139,30 @@ public sealed class CatalogPriceUpdateTests(DatabaseFixture fixture) : DatabaseT
     }
 
     [Fact]
-    public async Task NARX_07_Zero_percent_means_no_limit_so_a_large_increase_still_updates()
+    public async Task NARX_07_An_empty_ceiling_lets_a_large_increase_reach_the_catalogue()
     {
         var s = await SetupAsync();
-        await SellingAsAdminAsync(s, updateCatalog: true, maxIncreasePercent: 0m);
+        await SellingAsAdminAsync(s, updateCatalog: true, maxIncreasePercent: null);
 
-        // SOZ-02: 0 is "no limit", not "no increase allowed". 100 000 -> 130 000 (+30%) must reach
-        // the catalogue. Sale: 2 x 130 000 = 260 000.
+        // SOZ-02: an empty ceiling is "no limit". 100 000 -> 130 000 (+30%) must reach the
+        // catalogue. Sale: 2 x 130 000 = 260 000.
         var saleId = await SellAsync(s, 130_000m, 260_000m);
 
         await AssertSaleAsync(saleId, unitPrice: 130_000m, discount: 0m, total: 260_000m);
         Assert.Equal(130_000m, await CatalogPriceAsync(s));
+    }
+
+    /// SOZ-02: a zero ceiling now means the catalogue is never raised from a sale.
+    [Fact]
+    public async Task NARX_07_A_zero_ceiling_keeps_the_catalogue_untouched()
+    {
+        var s = await SetupAsync();
+        await SellingAsAdminAsync(s, updateCatalog: true, maxIncreasePercent: 0m);
+
+        var saleId = await SellAsync(s, 130_000m, 260_000m);
+
+        await AssertSaleAsync(saleId, unitPrice: 130_000m, discount: 0m, total: 260_000m);
+        Assert.Equal(Catalog, await CatalogPriceAsync(s));
     }
 
     [Fact]

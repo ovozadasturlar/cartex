@@ -47,7 +47,7 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
         await Send(x => x.Send(new AddCashMovementCommand(TillFloat, IsPayOut: false)));
     }
 
-    private async Task SetPolicyAsync(bool allowCustomerLoans, decimal maxCustomerLoan = 0m)
+    private async Task SetPolicyAsync(bool allowCustomerLoans, decimal? maxCustomerLoan = null)
     {
         using var scope = Fixture.CreateScope();
         await scope.ServiceProvider.GetRequiredService<ISettingsService>()
@@ -305,21 +305,34 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
     }
 
     [Fact]
-    public async Task SOZ_02_MaxCustomerLoan_zero_means_no_ceiling()
+    public async Task SOZ_02_An_empty_MaxCustomerLoan_means_no_ceiling()
+    {
+        var s = await SetupAsync();
+        await AsAdminAsync(s);
+        await SetPolicyAsync(allowCustomerLoans: true, maxCustomerLoan: null);
+
+        var customerId = await CreateCustomerAsync(advance: 0m);
+        var tillBefore = await TillAsync(s.Branch);
+
+        // bo'sh chegara - "chegara yo'q": avanssiz 10 000 000 ham o'tadi
+        await PayOutAsync(s, customerId, 10_000_000m);
+
+        Assert.Equal(10_000_000m, await DebtAsync(customerId));
+        Assert.Equal(0m, await AdvanceAsync(customerId));
+        Assert.Equal(tillBefore - 10_000_000m, await TillAsync(s.Branch));
+    }
+
+    /// SOZ-02: nol chegara endi "qarzga berish yopiq" degani.
+    [Fact]
+    public async Task SOZ_02_A_zero_MaxCustomerLoan_closes_lending()
     {
         var s = await SetupAsync();
         await AsAdminAsync(s);
         await SetPolicyAsync(allowCustomerLoans: true, maxCustomerLoan: 0m);
 
         var customerId = await CreateCustomerAsync(advance: 0m);
-        var tillBefore = await TillAsync(s.Branch);
 
-        // 0 - "chegara yo'q", "qarz berilmaydi" emas: avanssiz 10 000 000 ham o'tadi
-        await PayOutAsync(s, customerId, 10_000_000m);
-
-        Assert.Equal(10_000_000m, await DebtAsync(customerId));
-        Assert.Equal(0m, await AdvanceAsync(customerId));
-        Assert.Equal(tillBefore - 10_000_000m, await TillAsync(s.Branch));
+        await Assert.ThrowsAnyAsync<Exception>(() => PayOutAsync(s, customerId, 100_000m));
     }
 
     [Fact]

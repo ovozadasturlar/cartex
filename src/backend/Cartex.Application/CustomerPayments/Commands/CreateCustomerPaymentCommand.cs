@@ -127,12 +127,12 @@ public sealed class CreateCustomerPaymentCommandHandler(
         {
             if (!policy.AllowDebtWriteOff)
                 throw new BusinessRuleException("Qarz kechirimi o'chirilgan.", "write_off_disabled");
-            if (policy.MaxDebtWriteOffAmount > 0 && writeOffBase > policy.MaxDebtWriteOffAmount)
+            if (policy.MaxDebtWriteOffAmount is { } maxWriteOff && writeOffBase > maxWriteOff)
                 throw new BusinessRuleException(
                     $"Kechirim {policy.MaxDebtWriteOffAmount:N0} dan osha olmaydi.", "write_off_limit_exceeded");
             // Chegara bazasi — shu hujjat yopayotgan summa: to'langan + kechirilgan.
-            if (policy.MaxDebtWriteOffPercent > 0
-                && writeOffBase > (totalBase + writeOffBase) * policy.MaxDebtWriteOffPercent / 100)
+            if (policy.MaxDebtWriteOffPercent is { } maxWriteOffPercent
+                && writeOffBase > (totalBase + writeOffBase) * maxWriteOffPercent / 100)
                 throw new BusinessRuleException(
                     $"Kechirim {policy.MaxDebtWriteOffPercent}% dan osha olmaydi.", "write_off_limit_exceeded");
         }

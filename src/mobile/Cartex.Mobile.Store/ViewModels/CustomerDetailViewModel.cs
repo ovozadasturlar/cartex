@@ -70,14 +70,15 @@ public partial class CustomerDetailViewModel(
     public int SalesCount => Sales.Count;
     public string TotalSpentText => Money.Compact(Sales.Sum(x => x.Sale.TotalAmount));
     public string LastPurchaseText => Sales.Count > 0 ? Sales[0].ShortDate : "—";
-    public bool HasCreditLimit => Customer is { CreditLimit: > 0 };
-    public double CreditUsedRatio => Customer is { CreditLimit: > 0 } limited
-        ? (double)Math.Clamp(limited.DebtBalance / limited.CreditLimit, 0m, 1m)
-        : 0;
-    public string CreditUsedText => Customer is { CreditLimit: > 0 } limited
-        ? $"{limited.DebtBalance:N0} / {limited.CreditLimit:N0}"
+    public bool HasCreditLimit => Customer?.CreditLimit is not null;
+    public double CreditUsedRatio => Customer?.CreditLimit is { } limit && limit > 0
+        ? (double)Math.Clamp(Customer.DebtBalance / limit, 0m, 1m)
+        : Customer?.DebtBalance > 0 ? 1 : 0;
+    public string CreditUsedText => Customer?.CreditLimit is { } limit
+        ? $"{Customer.DebtBalance:N0} / {limit:N0}"
         : "";
-    public bool IsOverLimit => Customer is { CreditLimit: > 0 } limited && limited.DebtBalance > limited.CreditLimit;
+    public bool IsOverLimit => Customer?.CreditLimit is { } limit && Customer.DebtBalance > limit;
+    public string CreditLimitText => Customer?.CreditLimit is { } limit ? limit.ToString("N0") : Loc.Instance["unlimited"];
 
     public bool HasNoLedger => _timelineLoaded && Ledger.Count == 0;
     public bool HasNoSales => IsLoaded && Sales.Count == 0;

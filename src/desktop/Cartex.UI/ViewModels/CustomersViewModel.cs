@@ -63,7 +63,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editEmail = "";
     [ObservableProperty] private string _editCardBarcode = "";
     [ObservableProperty] private decimal _editDiscountPct;
-    [ObservableProperty] private decimal _editCreditLimit;
+    [ObservableProperty] private decimal? _editCreditLimit;
     [ObservableProperty] private bool _editNotificationsOptOut;
     [ObservableProperty] private decimal _editOpeningBalance;
     [ObservableProperty] private int _editOpeningKindIndex;
@@ -665,7 +665,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditEmail = "";
         EditCardBarcode = "";
         EditDiscountPct = 0;
-        EditCreditLimit = 0;
+        EditCreditLimit = null;
         EditNotificationsOptOut = false;
         EditLanguage = "uz-latn";
         await EnsureCurrenciesAsync();
