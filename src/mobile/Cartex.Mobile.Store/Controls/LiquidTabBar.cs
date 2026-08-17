@@ -31,13 +31,18 @@ public class LiquidTabBar : Grid
     private readonly float[] _tints = new float[TabCount];
     private bool _animating;
 
+    /// Ikonka o'lchami birinchi chizishda hali ma'lum emas, shuning uchun zaxira qiymat
+    /// geometriyadan olinadi: `_zones` BarTop dan boshlanadi, ikonkaning yuqori chekkasi
+    /// 8, balandligi ~28 — markazi BarTop + 22 da bo'ladi.
+    private const double FallbackIconCenter = BarTop + 22;
+
     private double IconLift
     {
         get
         {
             var icon = _icons[0];
-            if (icon.Height <= 0) return 13;
-            return BarTop + icon.Y + icon.Height / 2 - DropletCenterY;
+            var center = icon.Height > 0 ? BarTop + icon.Y + icon.Height / 2 : FallbackIconCenter;
+            return center - DropletCenterY;
         }
     }
 
@@ -89,6 +94,7 @@ public class LiquidTabBar : Grid
             };
             text.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#6B7280"), Color.FromArgb("#9CA3AF"));
             _labels[i] = text;
+            icon.SizeChanged += OnIconSizeChanged;
             var zone = new Grid { BackgroundColor = Colors.Transparent, Children = { icon, text } };
             var tap = new TapGestureRecognizer();
             var captured = i;
@@ -102,6 +108,14 @@ public class LiquidTabBar : Grid
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+    }
+
+    /// Ikonka o'lchami ma'lum bo'lgach ko'tarilish balandligi aniqlashadi va tanlangan
+    /// ikonka tomchining markaziga qayta o'rnashadi.
+    private void OnIconSizeChanged(object? sender, EventArgs e)
+    {
+        if (_animating || _icons[0].Height <= 0) return;
+        Apply(_drawable.Position, _drawable.Presence);
     }
 
     private void OnThemeChanged(object? sender, AppThemeChangedEventArgs e) => ApplyTheme();
@@ -130,12 +144,25 @@ public class LiquidTabBar : Grid
             && Interlocked.CompareExchange(ref _travelFrom, -1, from) == from;
         SetSelected(travelling ? from : index, 1f);
 
-        Dispatcher.Dispatch(() =>
+        // Sahifa birinchi marta yaratilganda uning birinchi kadri tizim paneli insetisiz
+        // chiziladi va panel pastga tushib ketadi. Faqat o'sha bir marta kutiladi;
+        // keyingi o'tishlarda panel darhol ko'rinadi, aks holda har safar o'chib-yonadi.
+        if (Settled.Contains(index))
         {
-            _ = this.FadeTo(1, 120, Easing.CubicOut);
+            Opacity = 1;
             if (travelling) _ = AnimateAsync(from, index);
-        });
+            return;
+        }
+
+        Dispatcher.Dispatch(() => Dispatcher.Dispatch(() =>
+        {
+            Settled.Add(index);
+            Opacity = 1;
+            if (travelling) _ = AnimateAsync(from, index);
+        }));
     }
+
+    private static readonly HashSet<int> Settled = [];
 
     private void OnUnloaded(object? sender, EventArgs e)
     {
@@ -145,7 +172,6 @@ public class LiquidTabBar : Grid
         this.AbortAnimation("liquid");
         this.CancelAnimations();
         _animating = false;
-        Opacity = 0;
     }
 
 
