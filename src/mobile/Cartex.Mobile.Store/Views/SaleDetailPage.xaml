@@ -142,7 +142,9 @@
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
                 IsVisible="{Binding IsLoaded}">
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+            <!-- Ustunlar `Auto`: yashirilgan tugma joy egallamaydi, aks holda ko'rinib
+                 turgan tugmalar siqilib matni kesiladi ("Mahsulot qaytarish" → "Mahsulot"). -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="8" HorizontalOptions="Center">
                 <Button Text="{svc:T print}" Style="{StaticResource BtnOutline}"
                         IsVisible="{Binding CanPrint}" Command="{Binding PrintCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />

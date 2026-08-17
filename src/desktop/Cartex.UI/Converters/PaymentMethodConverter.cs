@@ -14,6 +14,8 @@ public sealed class PaymentMethodConverter : IValueConverter
             "cash" => LocalizationManager.Instance["cash"],
             "card" => LocalizationManager.Instance["card"],
             "bonus" => LocalizationManager.Instance["bonus"],
+            "transfer" => LocalizationManager.Instance["pay_transfer"],
+            "bank" => LocalizationManager.Instance["pay_bank"],
             _ => value
         };
 

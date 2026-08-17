@@ -197,14 +197,7 @@ public sealed record SaleDetailItemRow(SaleDetailItemDto Item)
 
 public sealed record SaleDetailPaymentRow(SaleDetailPaymentDto Payment)
 {
-    public string Method => Loc.Instance[Payment.Method.ToLowerInvariant() switch
-    {
-        "cash" => "cash",
-        "card" => "card",
-        "bonus" => "bonus",
-        "advance" => "advance",
-        _ => "payment"
-    }];
+    public string Method => Loc.Instance[$"pay_{Payment.Method.ToLowerInvariant()}"];
     public string Amount => $"{Payment.Amount:N2} {Payment.Currency}";
     public string BaseAmount => Payment.Rate == 1 ? "" : $"≈ {Payment.AmountBase:N0} UZS";
     public bool HasBaseAmount => Payment.Rate != 1;

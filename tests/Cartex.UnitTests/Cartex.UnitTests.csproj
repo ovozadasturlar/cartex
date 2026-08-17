@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <Content Include="..\..\src\desktop\Cartex.UI\Assets\Languages\*.json" LinkBase="Languages" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\mobile\Cartex.Mobile.Store\Resources\Raw\i18n\*.json" LinkBase="StoreLanguages" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\mobile\Cartex.Mobile.Agent\Resources\Raw\i18n\*.json" LinkBase="AgentLanguages" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
