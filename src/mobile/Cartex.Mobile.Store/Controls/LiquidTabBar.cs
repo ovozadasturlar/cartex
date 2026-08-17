@@ -8,7 +8,7 @@ public class LiquidTabBar : Grid
     private const float BarHeight = 62f;
     private const float CornerRadius = 18f;
     private const float DropletSize = 50f;
-    private const float RaisedTop = 13f;
+    private const float RaisedTop = 19f;
     private const float SunkenTop = BarTop + 8f;
     private const float Gap = 9f;
     private const float CradleRadius = DropletSize / 2 + Gap;
@@ -46,6 +46,10 @@ public class LiquidTabBar : Grid
     {
         HeightRequest = BarTop + BarHeight;
         VerticalOptions = LayoutOptions.End;
+        // Yangi sahifaning birinchi kadri tizim panellari inseti qo'llanishidan oldin
+        // chiziladi va panel bir-ikki kadr pastga tushib ketadi. Shu kadrlarda panel
+        // ko'rinmaydi, o'lcham joyiga tushgach yumshoq paydo bo'ladi.
+        Opacity = 0;
 
         _canvas = new GraphicsView { Drawable = _drawable, InputTransparent = true };
         Children.Add(_canvas);
@@ -121,15 +125,15 @@ public class LiquidTabBar : Grid
 
         var index = ResolvedIndex;
         var from = _travelFrom;
-        if (from >= 0 && from != index && Interlocked.CompareExchange(ref _travelFrom, -1, from) == from)
+        var travelling = from >= 0 && from != index
+            && Interlocked.CompareExchange(ref _travelFrom, -1, from) == from;
+        SetSelected(travelling ? from : index, 1f);
+
+        Dispatcher.Dispatch(() =>
         {
-            SetSelected(from, 1f);
-            _ = AnimateAsync(from, index);
-        }
-        else
-        {
-            SetSelected(index, 1f);
-        }
+            _ = this.FadeTo(1, 120, Easing.CubicOut);
+            if (travelling) _ = AnimateAsync(from, index);
+        });
     }
 
     private void OnUnloaded(object? sender, EventArgs e)
@@ -138,7 +142,9 @@ public class LiquidTabBar : Grid
             app.RequestedThemeChanged -= OnThemeChanged;
         Loc.Instance.PropertyChanged -= OnLanguageChanged;
         this.AbortAnimation("liquid");
+        this.CancelAnimations();
         _animating = false;
+        Opacity = 0;
     }
 
 
@@ -155,21 +161,30 @@ public class LiquidTabBar : Grid
     private static readonly Color MutedDark = Color.FromArgb("#9CA3AF");
     private static readonly Color OnDropletDark = Color.FromArgb("#052E16");
 
-    private void SetSelected(int index, float presence)
+    private static Color Blend(Color from, Color to, float t) => new(
+        from.Red + (to.Red - from.Red) * t,
+        from.Green + (to.Green - from.Green) * t,
+        from.Blue + (to.Blue - from.Blue) * t);
+
+    /// `position` — tomchining ustunlar bo'yicha kasrli o'rni, shuning uchun u ikki tab
+    /// orasida ham tura oladi va bir butun harakat sifatida suriladi.
+    private void Apply(float position, float presence)
     {
-        _drawable.SelectedIndex = index;
+        _drawable.Position = position;
         _drawable.Presence = presence;
         var dark = Application.Current?.RequestedTheme == AppTheme.Dark;
         var muted = dark ? MutedDark : MutedLight;
         var onDroplet = dark ? OnDropletDark : Colors.White;
         var lift = IconLift;
+        var raised = Math.Clamp(presence, 0f, 1f);
         for (var i = 0; i < TabCount; i++)
         {
-            var selected = i == index;
-            var opacity = selected ? 1 - presence : 1;
-            var translation = selected ? -lift * presence : 0;
-            var scale = selected ? 1 + 0.18 * presence : 1;
-            var color = selected && presence > 0.5f ? onDroplet : muted;
+            var weight = Math.Max(0f, 1f - Math.Abs(i - position));
+            var strength = weight * raised;
+            var opacity = 1 - strength;
+            var translation = -lift * strength;
+            var scale = 1 + 0.16 * strength;
+            var color = Blend(muted, onDroplet, Math.Clamp((strength - 0.35f) / 0.35f, 0f, 1f));
             if (_labels[i].Opacity != opacity) _labels[i].Opacity = opacity;
             if (_icons[i].TranslationY != translation) _icons[i].TranslationY = translation;
             if (_icons[i].Scale != scale) _icons[i].Scale = scale;
@@ -178,21 +193,30 @@ public class LiquidTabBar : Grid
         _canvas.Invalidate();
     }
 
+    private void SetSelected(int index, float presence) => Apply(index, presence);
+
+    private const uint TravelMs = 460;
+    private const float DipDepth = 0.94f;
+
     private async Task AnimateAsync(int from, int to)
     {
         _animating = true;
         try
         {
-            var sink = new TaskCompletionSource();
-            new Animation(v => SetSelected(from, 1 - (float)v), 0, 1)
-                .Commit(this, "liquid", 16, 170, Easing.CubicIn, (_, _) => sink.TrySetResult());
-            await sink.Task;
-
-            var rise = new TaskCompletionSource();
-            new Animation(v => SetSelected(to, (float)v), 0, 1)
-                .Commit(this, "liquid", 16, 380, Easing.SpringOut, (_, _) => rise.TrySetResult());
-            await rise.Task;
-            SetSelected(to, 1f);
+            var done = new TaskCompletionSource();
+            new Animation(v =>
+                {
+                    var t = (float)v;
+                    var slide = (float)Easing.CubicInOut.Ease(t);
+                    // Botish tez, sirpanish davomida past, chiqish esa yengil sakrash bilan —
+                    // shunda tomchi ikki alohida harakat emas, bitta oqim bo'lib ko'rinadi.
+                    var sink = (float)Easing.CubicOut.Ease(Math.Clamp(t / 0.26, 0, 1));
+                    var rise = (float)Easing.SpringOut.Ease(Math.Clamp((t - 0.54) / 0.46, 0, 1));
+                    Apply(from + (to - from) * slide, 1f - DipDepth * (sink - rise));
+                }, 0, 1)
+                .Commit(this, "liquid", 16, TravelMs, Easing.Linear, (_, _) => done.TrySetResult());
+            await done.Task;
+            Apply(to, 1f);
         }
         finally
         {
@@ -276,7 +300,7 @@ public class LiquidTabBar : Grid
             EndPoint = new Point(0, 1),
         };
 
-        public int SelectedIndex;
+        public float Position;
         public float Presence = 1f;
         public float EdgePad;
         public bool Dark;
@@ -288,10 +312,12 @@ public class LiquidTabBar : Grid
 
             var o = Math.Clamp(Presence, 0f, 1f);
             var colW = (w - 2 * EdgePad) / TabCount;
-            var cx = EdgePad + colW * (SelectedIndex + 0.5f);
+            var cx = EdgePad + colW * (Position + 0.5f);
             var top = BarTop;
             var bottom = rect.Height;
-            var dropletCy = RaisedTop + DropletSize / 2 + (SunkenTop - RaisedTop) * (1 - o);
+            // Chiqishdagi sakrash uchun xom qiymat ishlatiladi: `o` faqat shakl va shaffoflikni
+            // boshqaradi, tomchi esa o'z joyidan bir oz yuqoriga chiqib qaytishi mumkin.
+            var dropletCy = RaisedTop + DropletSize / 2 + (SunkenTop - RaisedTop) * (1 - Presence);
 
             var path = BuildPath(w, top, bottom, cx, dropletCy, o);
 
@@ -303,17 +329,21 @@ public class LiquidTabBar : Grid
 
             if (o <= 0.02f) return;
             var r = DropletSize / 2f;
+            // Botayotganda tomchi bir oz yassilanadi — suyuqlikning cho'zilishi shu bilan seziladi.
+            var squash = 1f + 0.18f * (1f - o);
+            var rx = r * squash;
+            var ry = r / squash;
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, 4), 10, Color.FromRgba(0, 0, 0, 0.35f * o));
-            canvas.SetFillPaint(Dark ? DropletDark : DropletLight, new RectF(cx - r, dropletCy - r, DropletSize, DropletSize));
-            canvas.FillCircle(cx, dropletCy, r);
+            canvas.SetFillPaint(Dark ? DropletDark : DropletLight, new RectF(cx - rx, dropletCy - ry, rx * 2, ry * 2));
+            canvas.FillEllipse(cx - rx, dropletCy - ry, rx * 2, ry * 2);
             canvas.RestoreState();
 
             canvas.StrokeSize = 1f;
             canvas.StrokeColor = Color.FromRgba(1f, 1f, 1f, 0.4f * o);
-            canvas.DrawCircle(cx, dropletCy, r);
-            canvas.FillColor = Color.FromRgba(1f, 1f, 1f, 0.3f * o);
-            canvas.FillRoundedRectangle(cx - r + 10, dropletCy - r + 6, 15, 8, 4);
+            canvas.DrawEllipse(cx - rx, dropletCy - ry, rx * 2, ry * 2);
+            canvas.FillColor = Color.FromRgba(1f, 1f, 1f, 0.3f * o * o);
+            canvas.FillRoundedRectangle(cx - rx + 10, dropletCy - ry + 6, 15, 8, 4);
         }
 
         private static PathF BuildPath(float w, float top, float bottom, float cx, float dropletCy, float o)

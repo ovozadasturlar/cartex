@@ -1,4 +1,4 @@
-﻿using Android.App;
+using Android.App;
 using Android.Content.PM;
 
 [assembly: UsesPermission(Android.Manifest.Permission.Camera)]
