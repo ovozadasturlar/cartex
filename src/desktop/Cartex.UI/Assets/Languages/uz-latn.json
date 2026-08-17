@@ -1425,5 +1425,15 @@
   "settle_card": "Karta",
   "settle_bonus": "Bonus",
   "settle_customeradvance": "Avansga",
-  "settle_nocharge": "Pulsiz"
+  "settle_nocharge": "Pulsiz",
+  "act_step_pick": "1-QADAM",
+  "act_step_result": "2-QADAM",
+  "act_selected_suffix": "ta tanlandi",
+  "act_result_hint": "Hujjatlarni belgilang va «Tuzish» ni bosing — mijozda qolgan tovarlar shu yerda chiqadi.",
+  "select_all": "Hammasini belgilash",
+  "act_kind_sale": "Savdo",
+  "act_kind_return": "Qaytarish",
+  "act_kind_payment": "To'lov",
+  "act_kind_refund": "Qaytarim",
+  "act_selected_effect": "Tanlanganlarning qarzga ta'siri"
 }

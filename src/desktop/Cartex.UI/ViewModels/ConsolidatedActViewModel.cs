@@ -10,7 +10,8 @@ namespace Cartex.UI.ViewModels;
 
 /// One row the user can tick. The statement already knows every document a customer has, so the
 /// act is picked from there rather than from four separate lists.
-public partial class ActDocumentRow(string kind, long id, string number, DateTime occurredAt, string summary)
+public partial class ActDocumentRow(
+    string kind, long id, string number, DateTime occurredAt, string summary, decimal amount)
     : ObservableObject
 {
     [ObservableProperty] private bool _isSelected;
@@ -20,7 +21,16 @@ public partial class ActDocumentRow(string kind, long id, string number, DateTim
     public string Number { get; } = number;
     public DateTime OccurredAt { get; } = occurredAt;
     public string Summary { get; } = summary;
+
+    /// Hujjatning mijoz balansiga ta'siri: qarz qo'shsa musbat, yopsa manfiy. To'liq
+    /// to'langan savdo balansga tegmaydi — shuning uchun nol chiziqcha bo'lib ko'rsatiladi,
+    /// hujjatning o'z summasi esa izohda turadi.
+    public decimal Amount { get; } = amount;
+
+    public string AmountText => Amount == 0 ? "—" : $"{Amount:+#,##0;-#,##0}";
+
     public string DateText => OccurredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    public string KindLabel => LocalizationManager.Instance[$"act_kind_{Kind}"];
 }
 
 public partial class ConsolidatedActViewModel : ViewModelBase, IDialogContext
@@ -48,8 +58,9 @@ public partial class ConsolidatedActViewModel : ViewModelBase, IDialogContext
         foreach (var entry in timeline)
         {
             if (Map(entry.Type) is not { } kind || entry.DocumentId is not { } id) continue;
-            var row = new ActDocumentRow(kind, id, entry.DocumentNumber, entry.OccurredAt, entry.Summary);
-            row.PropertyChanged += (_, _) => OnPropertyChanged(nameof(HasSelection));
+            var row = new ActDocumentRow(kind, id, entry.DocumentNumber, entry.OccurredAt, entry.Summary,
+                entry.Debit - entry.Credit);
+            row.PropertyChanged += (_, _) => NotifySelection();
             Documents.Add(row);
         }
     }
@@ -63,6 +74,28 @@ public partial class ConsolidatedActViewModel : ViewModelBase, IDialogContext
     public bool HasSelection => Documents.Any(x => x.IsSelected);
     public bool HasAct => Act is not null;
     public bool HasDocuments => Documents.Count > 0;
+    public int SelectedCount => Documents.Count(x => x.IsSelected);
+    public bool AllSelected => HasDocuments && Documents.All(x => x.IsSelected);
+
+    /// Tanlanganlarning balansga sof ta'siri — "Tuzish" bosilmasdan oldin ham ko'rinadi,
+    /// shunda nima tuzilayotgani oldindan ma'lum bo'ladi.
+    public decimal SelectedAmount => Documents.Where(x => x.IsSelected).Sum(x => x.Amount);
+
+    private void NotifySelection()
+    {
+        OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(SelectedAmount));
+        OnPropertyChanged(nameof(AllSelected));
+    }
+
+    [RelayCommand]
+    private void ToggleAll()
+    {
+        var select = !AllSelected;
+        foreach (var row in Documents) row.IsSelected = select;
+        NotifySelection();
+    }
 
     partial void OnActChanged(ConsolidatedActDto? value)
     {

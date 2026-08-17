@@ -171,6 +171,92 @@ export class CustomersApi {
       loanBaseAmount: number;
     }>('/api/customer-refunds', body);
   }
+
+  /// Hisob varaqasi: mijozning butun tarixi bitta hujjatda. Dalolatnoma ham shu vaqt
+  /// chizig'idan tanlanadi — to'rtta alohida ro'yxatdan emas.
+  statement(id: number, from: string, to: string): Observable<CustomerStatement> {
+    return this.http.get<CustomerStatement>(`/api/customers/${id}/statement`, {
+      params: { from, to },
+    });
+  }
+
+  exportStatement(id: number, format: string, from: string, to: string): Observable<Blob> {
+    return this.http.get(`/api/customers/${id}/statement/export`, {
+      params: { format, mode: 'both', from, to },
+      responseType: 'blob',
+    });
+  }
+
+  consolidatedAct(id: number, documents: { kind: string; id: number }[]): Observable<ConsolidatedAct> {
+    return this.http.post<ConsolidatedAct>(`/api/customers/${id}/consolidated-act`, {
+      customerId: id,
+      documents,
+    });
+  }
+}
+
+export interface StatementEntry {
+  occurredAt: string;
+  type: string;
+  documentId: number | null;
+  documentNumber: string;
+  summary: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  currency: string;
+  saleId: number | null;
+}
+
+export interface CustomerStatement {
+  customerId: number;
+  customerName: string;
+  customerPhone: string | null;
+  baseCurrency: string;
+  summary: {
+    saleCount: number;
+    saleAmount: number;
+    paymentCount: number;
+    paymentAmount: number;
+    returnCount: number;
+    returnAmount: number;
+    refundCount: number;
+    refundAmount: number;
+  };
+  balances: { currency: string; openingBalance: number; closingBalance: number }[];
+  timeline: StatementEntry[];
+  products: {
+    variantId: number;
+    productName: string;
+    unitName: string;
+    sold: number;
+    returned: number;
+    netSold: number;
+    chargedBaseAmount: number;
+  }[];
+  generatedAt: string;
+}
+
+export interface ConsolidatedActLine {
+  variantId: number;
+  productName: string;
+  unitName: string;
+  soldQuantity: number;
+  returnedQuantity: number;
+  netQuantity: number;
+  netAmount: number;
+}
+
+export interface ConsolidatedAct {
+  customerId: number;
+  customerName: string;
+  fromDate: string;
+  toDate: string;
+  documents: { kind: string; id: number; documentNumber: string; businessDate: string; amount: number }[];
+  lines: ConsolidatedActLine[];
+  consumedAmount: number;
+  paidAmount: number;
+  remainingDebt: number;
 }
 
 @Injectable({ providedIn: 'root' })

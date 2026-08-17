@@ -1425,5 +1425,15 @@
   "settle_card": "Карта",
   "settle_bonus": "Бонус",
   "settle_customeradvance": "В аванс",
-  "settle_nocharge": "Без оплаты"
+  "settle_nocharge": "Без оплаты",
+  "act_step_pick": "ШАГ 1",
+  "act_step_result": "ШАГ 2",
+  "act_selected_suffix": "выбрано",
+  "act_result_hint": "Отметьте документы и нажмите «Составить» — здесь появится товар, оставшийся у клиента.",
+  "select_all": "Выбрать все",
+  "act_kind_sale": "Продажа",
+  "act_kind_return": "Возврат",
+  "act_kind_payment": "Оплата",
+  "act_kind_refund": "Возмещение",
+  "act_selected_effect": "Влияние выбранных на долг"
 }

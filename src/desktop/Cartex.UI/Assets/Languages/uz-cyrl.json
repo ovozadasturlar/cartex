@@ -1425,5 +1425,15 @@
   "settle_card": "Карта",
   "settle_bonus": "Бонус",
   "settle_customeradvance": "Авансга",
-  "settle_nocharge": "Пулсиз"
+  "settle_nocharge": "Пулсиз",
+  "act_step_pick": "1-ҚАДАМ",
+  "act_step_result": "2-ҚАДАМ",
+  "act_selected_suffix": "та танланди",
+  "act_result_hint": "Ҳужжатларни белгиланг ва «Тузиш» ни босинг — мижозда қолган товарлар шу ерда чиқади.",
+  "select_all": "Ҳаммасини белгилаш",
+  "act_kind_sale": "Савдо",
+  "act_kind_return": "Қайтариш",
+  "act_kind_payment": "Тўлов",
+  "act_kind_refund": "Қайтарим",
+  "act_selected_effect": "Танланганларнинг қарзга таъсири"
 }

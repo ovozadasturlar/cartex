@@ -1425,5 +1425,15 @@
   "settle_card": "Card",
   "settle_bonus": "Bonus",
   "settle_customeradvance": "To advance",
-  "settle_nocharge": "No charge"
+  "settle_nocharge": "No charge",
+  "act_step_pick": "STEP 1",
+  "act_step_result": "STEP 2",
+  "act_selected_suffix": "selected",
+  "act_result_hint": "Tick the documents and press Generate — what the customer kept shows up here.",
+  "select_all": "Select all",
+  "act_kind_sale": "Sale",
+  "act_kind_return": "Return",
+  "act_kind_payment": "Payment",
+  "act_kind_refund": "Refund",
+  "act_selected_effect": "Effect of the selection on the debt"
 }

@@ -13,10 +13,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { CustomersApi, SalesApi } from '../../core/api.service';
+import type { CustomerStatement } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
 import { CustomerPartner, PartnersApi } from '../../core/api/partners.api';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxEnumPipe, CxMoneyPipe, newUuid } from '../../core/format';
+import { CxDatePipe, CxEnumPipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
@@ -25,6 +26,7 @@ import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
 import { ReceiptDialog } from '../sales/sales';
+import { ConsolidatedActDialog } from './consolidated-act.dialog';
 
 const statusKeys: Record<string, string> = {
   Completed: 'status_completed',
@@ -43,8 +45,11 @@ const consentOptions = [
 @Component({
   selector: 'app-customer-profile',
   imports: [
+    FormsModule,
     MatButtonModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
     MatProgressBarModule,
     MatSlideToggleModule,
     MatTableModule,
@@ -77,6 +82,9 @@ export class CustomerProfile implements OnInit {
   readonly canPayOut = this.auth.hasPermission('customers.refund');
   readonly canViewSales = this.auth.hasPermission('sales.view');
   readonly canEditPartner = this.auth.hasPermission('partners.edit');
+  readonly canViewStatement = this.auth.hasPermission('statements.view');
+  readonly canExportStatement = this.auth.hasPermission('statements.export');
+  readonly canBuildAct = this.auth.hasPermission('customers.act');
   readonly canPublishPartner = this.auth.hasPermission('partners.publish');
   readonly showPartner = signal(false);
   readonly isPartner = signal(false);
@@ -87,7 +95,12 @@ export class CustomerProfile implements OnInit {
   readonly ledgerLoading = signal(true);
   readonly ledger = signal<Paged<LedgerEntry> | null>(null);
   readonly cols = ['date', 'op', 'account', 'change', 'after'];
-  readonly tab = signal<'ledger' | 'sales'>('ledger');
+  readonly tab = signal<'ledger' | 'sales' | 'statement'>('ledger');
+  readonly statementLoading = signal(false);
+  readonly statement = signal<CustomerStatement | null>(null);
+  readonly statementCols = ['date', 'doc', 'summary', 'debit', 'credit', 'balance'];
+  statementFrom = isoDay(new Date(Date.now() - 30 * 86_400_000));
+  statementTo = isoDay(new Date());
   readonly salesLoading = signal(false);
   readonly sales = signal<Paged<Sale> | null>(null);
   readonly saleCols = ['date', 'user', 'total', 'debt', 'status'];
@@ -135,9 +148,65 @@ export class CustomerProfile implements OnInit {
     void this.loadSales();
   }
 
-  setTab(tab: 'ledger' | 'sales'): void {
+  setTab(tab: 'ledger' | 'sales' | 'statement'): void {
     this.tab.set(tab);
     if (tab === 'sales' && !this.sales()) void this.loadSales();
+    if (tab === 'statement' && !this.statement()) void this.loadStatement();
+  }
+
+  /// `to` serverda yarim tun sifatida o'qiladi, shuning uchun oxirgi kunning o'zi ham
+  /// kirishi uchun bir kun qo'shiladi — aks holda bugungi hujjatlar tushib qoladi.
+  private get rangeEnd(): string {
+    return isoDay(new Date(new Date(this.statementTo).getTime() + 86_400_000));
+  }
+
+  async loadStatement(): Promise<void> {
+    if (!this.canViewStatement) return;
+    this.statementLoading.set(true);
+    try {
+      this.statement.set(
+        await lastValueFrom(this.api.statement(this.id, this.statementFrom, this.rangeEnd)),
+      );
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.statementLoading.set(false);
+    }
+  }
+
+  /// Chegara: hisob varaqasi endpointi faqat pdf va xlsx biladi.
+  async exportStatement(format: 'pdf' | 'xlsx'): Promise<void> {
+    if (!this.canExportStatement) return;
+    try {
+      const blob = await lastValueFrom(
+        this.api.exportStatement(this.id, format, this.statementFrom, this.rangeEnd),
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${this.title()}-${this.statementFrom}-${this.statementTo}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  /// Dalolatnoma hujjatlari aynan shu vaqt chizig'idan tanlanadi, shuning uchun avval
+  /// varaqa yuklanadi.
+  async openAct(): Promise<void> {
+    if (!this.canBuildAct) return;
+    if (!this.statement()) await this.loadStatement();
+    const statement = this.statement();
+    if (!statement) return;
+    this.dialog.open(ConsolidatedActDialog, {
+      data: {
+        customerId: this.id,
+        customerName: statement.customerName,
+        timeline: statement.timeline,
+      },
+      width: '900px',
+    });
   }
 
   statusKey(status: string): string {

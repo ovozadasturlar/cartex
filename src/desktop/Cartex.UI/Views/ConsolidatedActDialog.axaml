@@ -3,13 +3,44 @@
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:cust="using:Cartex.Shared.Models.Customers"
+             xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.ConsolidatedActDialog"
              x:DataType="vm:ConsolidatedActViewModel"
-             Width="820">
+             Width="880">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.step">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        </Style>
+        <Style Selector="TextBlock.total-label">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        </Style>
+        <Style Selector="TextBlock.total-value">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="Border.pane">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.total">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Styles>
 
     <Border Background="{DynamicResource CardBg}" CornerRadius="14" Padding="22">
         <DockPanel>
-            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
                 <StackPanel Spacing="2">
                     <TextBlock Text="{Binding L[consolidated_act]}" Classes="h2" />
                     <TextBlock Text="{Binding CustomerName}" Foreground="{DynamicResource TextSecondary}" FontSize="13" />
@@ -19,25 +50,13 @@
                 </Button>
             </Grid>
 
-            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="0,14,0,0">
-                <StackPanel Spacing="2" IsVisible="{Binding HasAct}">
-                    <TextBlock FontSize="12.5" Foreground="{DynamicResource TextSecondary}">
-                        <Run Text="{Binding L[consumed_goods]}" /><Run Text=": " />
-                        <Run Text="{Binding Act.ConsumedAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
-                        <Run Text="    " />
-                        <Run Text="{Binding L[settled]}" /><Run Text=": " />
-                        <Run Text="{Binding Act.PaidAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
-                    </TextBlock>
-                    <TextBlock FontSize="15" FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}">
-                        <Run Text="{Binding L[remaining_debt]}" /><Run Text=": " />
-                        <Run Text="{Binding Act.RemainingDebt, StringFormat='{}{0:N0}'}" />
-                    </TextBlock>
-                </StackPanel>
-                <Button Grid.Column="1" Classes="outline" MinHeight="40" Padding="16,0"
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto" ColumnSpacing="10"
+                  HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Classes="outline" MinHeight="40" Padding="18,0"
                         Command="{Binding GenerateCommand}" IsEnabled="{Binding HasSelection}"
                         Content="{Binding L[generate]}" />
-                <Button Grid.Column="2" Classes="brand" MinHeight="40" Padding="16,0"
-                        Command="{Binding PrintCommand}" IsVisible="{Binding HasAct}">
+                <Button Grid.Column="1" Classes="brand" MinHeight="40" Padding="18,0"
+                        Command="{Binding PrintCommand}" IsEnabled="{Binding HasAct}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="Printer" Width="16" Height="16" />
                         <TextBlock Text="{Binding L[print]}" />
@@ -45,25 +64,80 @@
                 </Button>
             </Grid>
 
-            <Grid ColumnDefinitions="*,14,*" MaxHeight="420">
+            <!-- Uchta yakun har doim ko'rinadi: tuzilmagunicha nol turadi, tuzilgach to'ladi.
+                 Shunda oyna "yarim bo'sh" holatda ochilmaydi. -->
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,10,*,10,*" Margin="0,14,0,0">
+                <Border Classes="total">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding L[consumed_goods]}" Classes="total-label" />
+                        <TextBlock Text="{Binding Act.ConsumedAmount, StringFormat='{}{0:N0}', FallbackValue='0'}"
+                                   Classes="total-value" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="total">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding L[settled]}" Classes="total-label" />
+                        <TextBlock Text="{Binding Act.PaidAmount, StringFormat='{}{0:N0}', FallbackValue='0'}"
+                                   Classes="total-value" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Classes="total" BorderBrush="{DynamicResource BrandPrimaryBrush}">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding L[remaining_debt]}" Classes="total-label" />
+                        <TextBlock Text="{Binding Act.RemainingDebt, StringFormat='{}{0:N0}', FallbackValue='0'}"
+                                   Classes="total-value" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,14,*" Height="400">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[documents]}" FontWeight="SemiBold"
-                               FontSize="13" Margin="0,0,0,8" />
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="{Binding L[act_step_pick]}" Classes="step" />
+                            <TextBlock FontWeight="SemiBold" FontSize="13">
+                                <Run Text="{Binding L[documents]}" />
+                                <Run Text="·" Foreground="{DynamicResource TextMuted}" />
+                                <Run Text="{Binding SelectedCount}" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                <Run Text="{Binding L[act_selected_suffix]}" Foreground="{DynamicResource TextMuted}" />
+                            </TextBlock>
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="outline" Padding="10,0" MinHeight="28" FontSize="11.5"
+                                Command="{Binding ToggleAllCommand}"
+                                IsVisible="{Binding HasDocuments}" VerticalAlignment="Center"
+                                Content="{Binding L[select_all]}" />
+                    </Grid>
+
+                    <Border DockPanel.Dock="Bottom" Classes="pane" Margin="0,8,0,0" IsVisible="{Binding HasSelection}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[act_selected_effect]}" Classes="total-label" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedAmount, StringFormat='{}{0:N0}'}"
+                                       FontWeight="SemiBold" FontSize="13" />
+                        </Grid>
+                    </Border>
+
                     <TextBlock DockPanel.Dock="Top" Text="{Binding L[no_items]}" IsVisible="{Binding !HasDocuments}"
                                Foreground="{DynamicResource TextMuted}" FontSize="12.5" />
+
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Documents}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ActDocumentRow">
-                                    <Border Background="{DynamicResource AppBg}" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
-                                        <Grid ColumnDefinitions="Auto,*">
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                             <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" />
                                             <StackPanel Grid.Column="1" Spacing="1">
-                                                <TextBlock Text="{Binding Number}" FontWeight="SemiBold" FontSize="12.5" />
+                                                <TextBlock FontSize="12.5">
+                                                    <Run Text="{Binding KindLabel}" Foreground="{DynamicResource TextMuted}" />
+                                                    <Run Text="{Binding Number}" FontWeight="SemiBold" />
+                                                </TextBlock>
                                                 <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextSecondary}"
                                                            FontSize="11.5" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding DateText}" Foreground="{DynamicResource TextMuted}" FontSize="11" />
                                             </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding AmountText}"
+                                                       FontWeight="SemiBold" FontSize="12.5" VerticalAlignment="Center" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -72,19 +146,34 @@
                     </ScrollViewer>
                 </DockPanel>
 
-                <DockPanel Grid.Column="2" IsVisible="{Binding HasAct}">
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding L[consumed_goods]}" FontWeight="SemiBold"
-                               FontSize="13" Margin="0,0,0,8" />
-                    <ScrollViewer>
+                <DockPanel Grid.Column="2">
+                    <StackPanel DockPanel.Dock="Top" Spacing="1" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding L[act_step_result]}" Classes="step" />
+                        <TextBlock Text="{Binding L[consumed_goods]}" FontWeight="SemiBold" FontSize="13" />
+                    </StackPanel>
+
+                    <!-- Tuzilmagunicha bu yerda bo'shliq emas, tushuntirish turadi. -->
+                    <Border Classes="pane" IsVisible="{Binding !HasAct}">
+                        <StackPanel Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="240">
+                            <mi:MaterialIcon Kind="FileDocumentOutline" Width="30" Height="30"
+                                             Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding L[act_result_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       FontSize="12" TextWrapping="Wrap" TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer IsVisible="{Binding HasAct}">
                         <ItemsControl ItemsSource="{Binding Lines}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="cust:ConsolidatedActLineDto">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                         <StackPanel Spacing="1">
                                             <TextBlock Text="{Binding ProductName}" FontSize="12.5" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Foreground="{DynamicResource TextMuted}" FontSize="11">
                                                 <Run Text="{Binding NetQuantity, StringFormat='{}{0:0.###}'}" />
                                                 <Run Text="{Binding UnitName}" />
+                                                <Run Text="{Binding ReturnedQuantity, StringFormat='(−{0:0.###})'}"
+                                                     Foreground="{DynamicResource DangerBrush}" />
                                             </TextBlock>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" Text="{Binding NetAmount, StringFormat='{}{0:N0}'}"

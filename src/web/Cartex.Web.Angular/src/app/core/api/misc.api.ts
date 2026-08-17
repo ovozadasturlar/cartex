@@ -289,6 +289,22 @@ export class FeaturesApi {
   set(code: string, isEnabled: boolean): Observable<void> {
     return this.http.put<void>(`/api/features/${code}`, { isEnabled });
   }
+
+  /// Egaga tegishli kalit: faqat do'kon o'zgartira oladigan modullar va faqat o'z kaliti.
+  modules(): Observable<OwnerModule[]> {
+    return this.http.get<OwnerModule[]>('/api/features/modules');
+  }
+
+  setModule(code: string, isEnabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/features/modules/${code}`, { isEnabled });
+  }
+}
+
+export interface OwnerModule {
+  code: string;
+  name: string;
+  available: boolean;
+  isEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

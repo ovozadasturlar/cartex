@@ -87,9 +87,90 @@
         <button type="button" [class.active]="tab() === 'sales'" (click)="setTab('sales')">
           {{ t('sales') }}
         </button>
+        @if (canViewStatement) {
+          <button type="button" [class.active]="tab() === 'statement'" (click)="setTab('statement')">
+            {{ t('statement') }}
+          </button>
+        }
       </div>
     } @else {
       <h3>{{ t('ledger_history') }}</h3>
+    }
+
+    @if (tab() === 'statement') {
+      <section class="cx-card statement-bar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('date_from') }}</mat-label>
+          <input matInput type="date" [(ngModel)]="statementFrom" (change)="loadStatement()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('date_to') }}</mat-label>
+          <input matInput type="date" [(ngModel)]="statementTo" (change)="loadStatement()" />
+        </mat-form-field>
+        <span class="spacer"></span>
+        @if (canBuildAct) {
+          <button matButton (click)="openAct()">
+            <mat-icon>fact_check</mat-icon>{{ t('consolidated_act') }}
+          </button>
+        }
+        @if (canExportStatement) {
+          <button matButton (click)="exportStatement('pdf')">
+            <mat-icon>picture_as_pdf</mat-icon>PDF
+          </button>
+          <button matButton (click)="exportStatement('xlsx')">
+            <mat-icon>table_view</mat-icon>Excel
+          </button>
+        }
+      </section>
+
+      <div class="cx-table-card">
+        @if (statementLoading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (statement(); as st) {
+          <div class="statement-summary">
+            <span>{{ t('sales') }}: <strong>{{ st.summary.saleAmount | cxMoney }}</strong></span>
+            <span>{{ t('payment') }}: <strong>{{ st.summary.paymentAmount | cxMoney }}</strong></span>
+            <span>{{ t('returns') }}: <strong>{{ st.summary.returnAmount | cxMoney }}</strong></span>
+          </div>
+          @if (st.timeline.length) {
+            <table mat-table [dataSource]="st.timeline">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('time') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.occurredAt | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="doc">
+                <th mat-header-cell *matHeaderCellDef>{{ t('ret_document') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.documentNumber }}</td>
+              </ng-container>
+              <ng-container matColumnDef="summary">
+                <th mat-header-cell *matHeaderCellDef>{{ t('operation_type') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.summary }}</td>
+              </ng-container>
+              <ng-container matColumnDef="debit">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('debit') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">
+                  {{ e.debit ? (e.debit | cxMoney) : '—' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="credit">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('credit') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">
+                  {{ e.credit ? (e.credit | cxMoney) : '—' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="balance">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('balance') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">{{ e.runningBalance | cxMoney }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="statementCols"></tr>
+              <tr mat-row *matRowDef="let e; columns: statementCols"></tr>
+            </table>
+          } @else if (!statementLoading()) {
+            <cx-empty-state icon="receipt_long" [message]="t('no_ledger')" />
+          }
+        }
+      </div>
     }
 
     @if (tab() === 'sales') {
