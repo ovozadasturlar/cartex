@@ -39,7 +39,8 @@
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Padding="16,12,16,0">
         <!-- Section Selector -->
         <Grid ColumnDefinitions="*,*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-            <Button Text="{svc:T queue}" Style="{StaticResource Section}" Command="{Binding ShowQueueCommand}">
+            <Button Text="{svc:T queue}" Style="{StaticResource Section}" Command="{Binding ShowQueueCommand}"
+                    IsVisible="{Binding HasQueueAccess}">
                 <Button.Triggers>
                     <DataTrigger TargetType="Button" Binding="{Binding IsQueue}" Value="True">
                         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />

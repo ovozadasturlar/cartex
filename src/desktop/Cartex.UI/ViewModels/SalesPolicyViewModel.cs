@@ -62,6 +62,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _allowReturnOnVoidedSale;
     [ObservableProperty] private bool _allowFreeReturnLines = true;
     [ObservableProperty] private bool _requireReturnReason;
+    [ObservableProperty] private bool _allowSaleQueue = true;
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
@@ -104,6 +105,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowReturnOnVoidedSale = _loaded.AllowReturnOnVoidedSale;
             AllowFreeReturnLines = _loaded.AllowFreeReturnLines;
             RequireReturnReason = _loaded.RequireReturnReason;
+            AllowSaleQueue = _loaded.AllowSaleQueue;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -144,7 +146,8 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 CustomerRequirement = CodeAt(CustomerRequirementCodes, CustomerRequirementIndex, _loaded.CustomerRequirement),
                 AllowReturnOnVoidedSale = AllowReturnOnVoidedSale,
                 AllowFreeReturnLines = AllowFreeReturnLines,
-                RequireReturnReason = RequireReturnReason
+                RequireReturnReason = RequireReturnReason,
+                AllowSaleQueue = AllowSaleQueue
             };
 
             using (_busy.Begin(L["loading"]))

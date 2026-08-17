@@ -1439,5 +1439,6 @@
   "channel_telegram": "Телеграм",
   "channel_sms": "СМС",
   "channel_email": "Email",
-  "excess_toggle_hint": "Нажмите, чтобы переключить сдачу между наличными и счётом клиента"
+  "excess_toggle_hint": "Нажмите, чтобы переключить сдачу между наличными и счётом клиента",
+  "allow_sale_queue": "Очередь корзин"
 }

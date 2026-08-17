@@ -308,6 +308,8 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `NAVBAT-02` | Yakunlashda har maydon uchun "so'rovda bo'lsa — so'rovdan, bo'lmasa — savatdan" qoidasi amal qiladi. Maydon uchun bu qoida yozilmasa — u jimgina yo'qoladi; shuning uchun yangi maydon qo'shilganda **navbat orqali o'tish testi majburiy**. |
 | `NAVBAT-03` | Savatni qayta navbatga qo'yish (requeue) barcha maydonlarni ko'chiradi. |
 | `NAVBAT-04` | Savat yakunlangach yopiladi; bekor qilingan savat navbatda ko'rinmaydi. Bo'sh "arvoh" savat qolmaydi. |
+| `NAVBAT-06` | Navbat — do'konning **ish uslubi**, sotiladigan modul emas: bir do'kon hamma narsani bitta kassada uradi, boshqasida yig'uvchi tayyorlab, kassir pul oladi. Shuning uchun u `AllowSaleQueue` savdo siyosati kaliti bilan boshqariladi (`SOZ-13`), tarif feature'i bilan emas. O'chirilgan bo'lsa server `Queue` turidagi savat yaratishni rad etadi va **hamma klient** navbat tushunchasini yashiradi: kassadagi navbat va navbatga yuborish ikonalari, mobil ilovadagi navbat plitkasi va ro'yxati. |
+| `NAVBAT-07` | **Proforma navbat emas.** Oldindan chop etish qog'oz chiqarish uchun savatni serverda saqlaydi (server nima chop etilishini o'zi nazorat qiladi), lekin bu savat `Proforma` turida bo'ladi: navbatda ko'rinmaydi va **kassani tozalamaydi** — kassir qog'ozni berib, o'sha savat bilan ishlashda davom etadi. Savatni navbatga qo'yish alohida amal. |
 
 **Qabul mezoni — `NAVBAT-01` / `NAVBAT-05`**
 
@@ -395,6 +397,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-07` | Sozlama keshi chegaralangan muddatga ega; o'zgarish ilovani qayta ishga tushirmasdan kuchga kiradi. |
 | `SOZ-11` | **Savdoda mijoz talabi** — `CustomerRequirement`: `Optional` (mijoz ixtiyoriy), `OnDebt` (qarz yoki bonus bo'lsa majburiy — standart), `Always` (har savdoda majburiy). Bonus bilan to'lashda mijoz siyosatdan qat'i nazar majburiy: bonus mijozning hisobidan yechiladi. |
 | `SOZ-12` | Yuqoridagi uchala qaytarish kaliti (`AllowReturnOnVoidedSale`, `AllowFreeReturnLines`, `RequireReturnReason`) ham **serverda** tekshiriladi. Klientda tugmani yashirish yetarli emas: siyosat qoidani ifodalaydi, tugma esa faqat qulaylik. |
+| `SOZ-13` | `AllowSaleQueue` (standart: yoqiq) navbat ish uslubini boshqaradi (`NAVBAT-06`). Bu tarif feature'i emas — do'kon uni pul to'lamasdan yoqib-o'chiradi. Server tekshiruvi majburiy: klientda ikonani yashirish qoida emas. |
 
 **Ma'lum og'ishlar (tuzatilishi kerak):**
 - `RequireDebtDueDate` faqat klientda tekshiriladi, serverda emas → `SOZ-03` buzilgan.

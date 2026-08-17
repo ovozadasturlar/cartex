@@ -166,6 +166,7 @@ export class OrderingApi {
     idempotencyKey: string;
     note: string | null;
     discountAmount?: number;
+    kind?: string;
   }): Observable<string> {
     return this.http.post<string>('/api/ordering/carts', body);
   }

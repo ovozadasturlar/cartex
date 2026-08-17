@@ -23,6 +23,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
     private readonly MobileOfflineService _offline;
+    private readonly SalesPolicyCache _policy;
 
     public ObservableCollection<CheckoutLine> Items { get; } = [];
     public ObservableCollection<CheckoutParticipantLine> Participants { get; } = [];
@@ -52,6 +53,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _changeText = "";
     [ObservableProperty] private string _debtText = "";
     [ObservableProperty] private bool _canSelfSell;
+    /// Navbat siyosati o'chirilgan bo'lsa bu tugma umuman chizilmaydi (NAVBAT-06).
     [ObservableProperty] private bool _canQueue = true;
     [ObservableProperty] private bool _canEditNote = true;
     [ObservableProperty] private bool _isMulticurrency;
@@ -93,8 +95,10 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CartStore localCart,
         WarehouseContext warehouse,
         MobilePermissions permissions,
-        MobileOfflineService offline)
+        MobileOfflineService offline,
+        SalesPolicyCache policy)
     {
+        _policy = policy;
         _orderingApi = orderingApi;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
@@ -461,7 +465,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CustomerName = _localCart.CustomerName ?? "";
         NoteText = _localCart.Note;
         _totalAmount = _localCart.Total;
-        CanQueue = true;
+        CanQueue = _policy.Current.AllowSaleQueue;
         CanEditNote = true;
         OnPropertyChanged(nameof(HasParticipants));
     }

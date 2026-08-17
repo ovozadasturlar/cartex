@@ -1439,5 +1439,6 @@
   "channel_telegram": "Telegram",
   "channel_sms": "SMS",
   "channel_email": "Email",
-  "excess_toggle_hint": "Tap to switch the excess between cash change and the customer's account"
+  "excess_toggle_hint": "Tap to switch the excess between cash change and the customer's account",
+  "allow_sale_queue": "Cart queue"
 }

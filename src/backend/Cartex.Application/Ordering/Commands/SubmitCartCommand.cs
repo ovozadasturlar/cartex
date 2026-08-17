@@ -1,4 +1,5 @@
 ﻿using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -39,6 +40,7 @@ public sealed class SubmitCartCommandHandler(
     IQuantityPolicyService quantityPolicy,
     IParticipantService participantService,
     ICurrencyService currency,
+    ISettingsService settings,
     IAuditService audit) : IRequestHandler<SubmitCartCommand, string>
 {
     public async Task<string> Handle(SubmitCartCommand request, CancellationToken cancellationToken)
@@ -56,6 +58,19 @@ public sealed class SubmitCartCommandHandler(
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.", "warehouse_not_found");
+
+        // NAVBAT-06: navbat do'konning ish uslubi. O'chirilgan bo'lsa server savatni navbatga
+        // qo'ymaydi — klientda ikonani yashirish qoida emas. Proforma bundan tashqarida:
+        // u qog'oz chiqarish uchun saqlanadi, navbatga tushmaydi (NAVBAT-07).
+        var kind = request.Kind ?? await ResolveKindAsync(cancellationToken);
+        if (kind == CartKind.Queue)
+        {
+            var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
+                ?? new SalesPolicySettings();
+            if (!policy.AllowSaleQueue)
+                throw new BusinessRuleException(
+                    "Savatni navbatga qo'yish do'kon siyosatida yopilgan.", "sale_queue_disabled");
+        }
 
         if (request.CustomerId is { } customerId &&
             !await db.Customers.AnyAsync(c => c.Id == customerId, cancellationToken))
@@ -102,7 +117,7 @@ public sealed class SubmitCartCommandHandler(
             AggregateCode = Guid.NewGuid().ToString("N"),
             IdempotencyKey = idempotencyKey,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            Kind = request.Kind ?? await ResolveKindAsync(cancellationToken),
+            Kind = kind,
             DiscountAmount = request.DiscountAmount,
             PaidCash = request.PaidCash,
             PaidCard = request.PaidCard,

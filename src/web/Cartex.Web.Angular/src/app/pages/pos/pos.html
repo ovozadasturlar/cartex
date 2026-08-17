@@ -138,7 +138,7 @@
         </div>
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
-          @if (canCreateCart) {
+          @if (canCreateCart && queueAllowed()) {
             <button class="queue-btn" [matTooltip]="t('queue')" [matMenuTriggerFor]="queueMenu">
               <mat-icon>menu</mat-icon>
               @if (queue().length) {
@@ -197,12 +197,14 @@
             </div>
           </mat-menu>
 
-          @if (canCreateCart) {
+          @if (canCreateCart && queueAllowed()) {
             <button class="queue-btn" [matTooltip]="t('send_to_queue')" [disabled]="!cart().length || paying()"
                     (click)="sendToQueue()">
               <mat-icon>outbox</mat-icon>
             </button>
-            <button class="queue-btn" [matTooltip]="t('print_and_queue')" [disabled]="!cart().length || paying()"
+          }
+          @if (canCreateCart) {
+            <button class="queue-btn" [matTooltip]="t('print_kind_preview')" [disabled]="!cart().length || paying()"
                     (click)="printPreview()">
               <mat-icon>print</mat-icon>
             </button>

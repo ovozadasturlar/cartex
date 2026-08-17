@@ -19,7 +19,8 @@ public partial class TradeViewModel(
     MobilePermissions permissions,
     WarehouseContext warehouse,
     OrderingHubService orderingHub,
-    MobilePrintDispatcher printDispatcher) : ObservableObject, IQueryAttributable
+    MobilePrintDispatcher printDispatcher,
+    SalesPolicyCache policy) : ObservableObject, IQueryAttributable
 {
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -77,11 +78,14 @@ public partial class TradeViewModel(
         orderingHub.Resynced -= OnHubResynced;
         orderingHub.Resynced += OnHubResynced;
         _ = orderingHub.EnsureStartedAsync();
-        HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
+        HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll")
+            && policy.Current.AllowSaleQueue;
         HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
         HasZReportAccess = permissions.HasAny("shifts.view", "shifts.viewAll") && printDispatcher.CanPrintZReport;
         if (!HasQueueAccess && HasSalesAccess)
             Section = "sales";
+        else if (!HasQueueAccess && HasZReportAccess)
+            Section = "zreports";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
         if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(45)) return;
         await LoadAsync();

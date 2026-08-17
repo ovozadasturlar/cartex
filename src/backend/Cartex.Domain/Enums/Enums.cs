@@ -230,7 +230,11 @@ public enum PrepackStatus
 public enum CartKind
 {
     Queue,
-    Order
+    Order,
+
+    /// Oldindan chop etish uchun saqlangan savat: server proformani shundan chiqaradi,
+    /// lekin u navbatda ko'rinmaydi va kassani tozalamaydi (NAVBAT-07).
+    Proforma
 }
 
 public enum CartStatus

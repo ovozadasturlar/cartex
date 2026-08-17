@@ -35,7 +35,8 @@ public static class SalesPolicyMapping
         CustomerRequirement = cfg.CustomerRequirement,
         AllowReturnOnVoidedSale = cfg.AllowReturnOnVoidedSale,
         AllowFreeReturnLines = cfg.AllowFreeReturnLines,
-        RequireReturnReason = cfg.RequireReturnReason
+        RequireReturnReason = cfg.RequireReturnReason,
+        AllowSaleQueue = cfg.AllowSaleQueue
     };
 
     public static void Apply(SalesPolicySettings cfg, SalesPolicyDto dto)
@@ -67,5 +68,6 @@ public static class SalesPolicyMapping
         cfg.AllowReturnOnVoidedSale = dto.AllowReturnOnVoidedSale;
         cfg.AllowFreeReturnLines = dto.AllowFreeReturnLines;
         cfg.RequireReturnReason = dto.RequireReturnReason;
+        cfg.AllowSaleQueue = dto.AllowSaleQueue;
     }
 }

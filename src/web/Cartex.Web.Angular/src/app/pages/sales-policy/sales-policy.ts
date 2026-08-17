@@ -73,6 +73,7 @@ export class SalesPolicySettings implements OnInit {
     allowReturnOnVoidedSale: false,
     allowFreeReturnLines: true,
     requireReturnReason: false,
+    allowSaleQueue: true,
   };
 
   async ngOnInit(): Promise<void> {

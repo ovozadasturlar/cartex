@@ -542,7 +542,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         return code;
     }
 
-    private async Task<string?> SubmitCartAsync(List<SubmitCartItemRequest> items, long? customerId, string? note)
+    private async Task<string?> SubmitCartAsync(
+        List<SubmitCartItemRequest> items, long? customerId, string? note, string kind = "Queue")
     {
         if (items.Count == 0 || Branch.CurrentWarehouseId is not { } warehouseId) return null;
         try
@@ -551,7 +552,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             {
                 IdempotencyKey = Guid.NewGuid().ToString("N"),
                 Note = note,
-                Kind = "Queue"
+                Kind = kind
             });
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return null; }
@@ -589,6 +590,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private int _staleRateDays = 3;
     private bool _supplierRequired;
     private bool _customerAlwaysRequired;
+    private bool _queueAllowed = true;
 
     private async Task LoadClientPolicyAsync()
     {
@@ -602,6 +604,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _requireDebtDueDate = policy.RequireDebtDueDate;
             _supplierRequired = policy.RequireSupplier;
             _customerAlwaysRequired = policy.CustomerRequirement == "Always";
+            _queueAllowed = policy.AllowSaleQueue;
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
             var receipt = await receiptTask;
@@ -637,7 +640,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             LoadProductsAsync(),
             LoadPrepackAccessAsync(),
             LoadReceiveAccessAsync(),
-            LoadQueueAccessAsync(),
+            LoadQueueAccessAsync(policyTask),
             LoadShiftAsync());
 
         if (_handoff.PendingCartCode is { } pending)
@@ -690,17 +693,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         var document = BuildProformaDocument();
         try
         {
-            var code = await EnsureCartCodeAsync();
+            // NAVBAT-07: proforma qog'oz, navbat emas. Serverda saqlanadi, chunki nima chop
+            // etilishini server o'zi nazorat qiladi; lekin `Proforma` turi navbatda
+            // ko'rinmaydi va kassa tozalanmaydi — kassir shu savat bilan davom etadi.
+            var code = _activeCartCode ?? await SubmitCartAsync(
+                [.. CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride))],
+                SelectedCustomer?.Id,
+                string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
+                kind: "Proforma");
             if (code is null) { _toast.Error(L["error"]); return; }
+            if (_activeCartCode is { Length: > 0 }) await SyncActiveCartAsync();
             await _printDispatch.PrintCartProformaAsync(code, document);
-
-            // The cart now belongs to the queue, so the till is released for the next
-            // customer instead of keeping a copy that could be rung up a second time.
-            _activeCartCode = null;
-            _queueIdempotencyKey = null;
-            ClearCart();
-            _toast.Success(L["send_to_queue"]);
-            await LoadQueueAsync();
+            _toast.Success(L["print_kind_preview"]);
         }
         catch (Exception ex) when (PrintDispatchService.IsServerUnavailable(ex))
         {
@@ -1998,9 +2002,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         catch { _toast.Warning(L["error"]); }
     }
 
-    private async Task LoadQueueAccessAsync()
+    private async Task LoadQueueAccessAsync(Task policyTask)
     {
-        if (!_auth.HasPermission("sales.view")) return;
+        // Siyosat bilan bir vaqtda yuklanadi, shuning uchun kalitni o'qishdan oldin kutiladi —
+        // aks holda birinchi ochilishda navbat o'chirilgan bo'lsa ham ko'rinib ketardi.
+        try { await policyTask; } catch { }
+        if (!_auth.HasPermission("sales.view") || !_queueAllowed)
+        {
+            CanSeeQueue = false;
+            IsQueuePanelOpen = false;
+            QueueCarts.Clear();
+            return;
+        }
         CanSeeQueue = true;
         
         await LoadQueueAsync();

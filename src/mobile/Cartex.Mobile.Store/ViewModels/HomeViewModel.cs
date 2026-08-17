@@ -13,7 +13,8 @@ public partial class HomeViewModel(
     CartStore cart,
     SupplyCartStore supplyCart,
     IOrderingApi ordering,
-    ISalesApi sales) : ObservableObject
+    ISalesApi sales,
+    SalesPolicyCache policy) : ObservableObject
 {
     [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
@@ -43,7 +44,10 @@ public partial class HomeViewModel(
     {
         HasAccess = perms.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         if (!HasAccess) return;
-        ShowQueue = perms.HasAny("sales.pick", "sales.create", "sales.view");
+        // NAVBAT-06: navbat do'kon siyosati bilan o'chirilgan bo'lsa, ilovada u haqda
+        // hech narsa ko'rinmasligi kerak.
+        _ = policy.RefreshAsync();
+        ShowQueue = perms.HasAny("sales.pick", "sales.create", "sales.view") && policy.Current.AllowSaleQueue;
         ShowStats = perms.HasAny("sales.view", "sales.viewAll");
         var name = auth.FullName;
         Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);

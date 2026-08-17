@@ -19,6 +19,9 @@
       <mat-slide-toggle [(ngModel)]="model.allowConsolidatedAct" [disabled]="!canManage">
         {{ t('allow_consolidated_act') }}
       </mat-slide-toggle>
+      <mat-slide-toggle [(ngModel)]="model.allowSaleQueue" [disabled]="!canManage">
+        {{ t('allow_sale_queue') }}
+      </mat-slide-toggle>
       <p class="hint">{{ t('optional_capabilities_hint') }}</p>
     </div>
 

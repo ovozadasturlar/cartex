@@ -60,4 +60,8 @@ public sealed class SalesPolicySettings
 
     /// Har qaytarish qatorida sabab majburiymi (QAYT-10).
     public bool RequireReturnReason { get; set; }
+
+    /// Navbat ish uslubi yoqilganmi (NAVBAT-06). Bu tarif moduli emas — bir do'kon hamma
+    /// narsani bitta kassada uradi, boshqasida yig'uvchi tayyorlab kassir pul oladi.
+    public bool AllowSaleQueue { get; set; } = true;
 }

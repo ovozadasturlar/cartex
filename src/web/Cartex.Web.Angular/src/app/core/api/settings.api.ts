@@ -97,6 +97,7 @@ export interface SalesPolicy {
   allowReturnOnVoidedSale: boolean;
   allowFreeReturnLines: boolean;
   requireReturnReason: boolean;
+  allowSaleQueue: boolean;
 }
 
 export interface LoginMethods {

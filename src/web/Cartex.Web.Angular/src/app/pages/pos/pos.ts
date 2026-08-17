@@ -128,6 +128,9 @@ export class Pos implements OnInit {
 
   /// Modul o'chirilgan bo'lsa tugma umuman chizilmaydi — keraksiz tugma kassirni chalg'itadi.
   readonly canPrepack = signal(false);
+
+  /// NAVBAT-06: navbat o'chirilgan bo'lsa uning ikonalari umuman chizilmaydi.
+  readonly queueAllowed = computed(() => this.policy()?.allowSaleQueue ?? true);
   readonly canManageRates = this.auth.hasPermission('rates.edit');
 
   /// Desktopdagi kabi to'lov bloki yig'iladi — kichik ekranda savat qatorlariga joy qoladi.
@@ -768,16 +771,40 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
 
   /// Chek chiqarish va navbatga yuborish: savat navbatga tushadi, proforma serverdagi
   /// navbatdagi savatga havola qilib chop etiladi, kassa esa keyingi mijozga bo'shaydi.
+  /// NAVBAT-07: proforma qog'oz, navbat emas. Server nima chop etilishini o'zi nazorat
+  /// qilgani uchun savat saqlanadi, lekin `Proforma` turida — navbatda ko'rinmaydi va
+  /// kassa tozalanmaydi.
   async printPreview(): Promise<void> {
-    const code = await this.queueCart('print_and_queue');
-    if (!code) return;
-    await this.remotePrint.send({
-      kind: 'CartProforma',
-      permission: 'printing.receipts.print',
-      sourceType: 'cart',
-      sourceId: code,
-      payload: { cartCode: code },
-    });
+    const warehouseId = this.warehouseId();
+    if (!warehouseId || !this.cart().length || this.paying()) return;
+    this.paying.set(true);
+    try {
+      const code =
+        this.activeQueueCode ??
+        (await lastValueFrom(
+          this.orderingApi.submit({
+            warehouseId,
+            customerId: this.customer()?.id ?? null,
+            items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
+            idempotencyKey: newUuid(),
+            note: this.note().trim() || null,
+            discountAmount: this.discount(),
+            kind: 'Proforma',
+          }),
+        ));
+      await this.remotePrint.send({
+        kind: 'CartProforma',
+        permission: 'printing.receipts.print',
+        sourceType: 'cart',
+        sourceId: code,
+        payload: { cartCode: code },
+      });
+      this.notify.success(this.transloco.translate('print_kind_preview'));
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.paying.set(false);
+    }
   }
 
   private async queueCart(successKey: string): Promise<string | null> {

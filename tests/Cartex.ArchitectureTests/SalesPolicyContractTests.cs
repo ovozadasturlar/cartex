@@ -45,7 +45,8 @@ public class SalesPolicyContractTests
             CustomerRequirement = "Always",
             AllowReturnOnVoidedSale = true,
             AllowFreeReturnLines = false,
-            RequireReturnReason = true
+            RequireReturnReason = true,
+            AllowSaleQueue = false
         };
 
         SalesPolicyMapping.Apply(cfg, changed);

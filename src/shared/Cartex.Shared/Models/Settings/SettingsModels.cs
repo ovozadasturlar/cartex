@@ -150,6 +150,7 @@ public sealed record SalesPolicyDto
     public bool AllowReturnOnVoidedSale { get; init; }
     public bool AllowFreeReturnLines { get; init; } = true;
     public bool RequireReturnReason { get; init; }
+    public bool AllowSaleQueue { get; init; } = true;
 }
 
 

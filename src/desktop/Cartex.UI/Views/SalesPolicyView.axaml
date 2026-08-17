@@ -58,6 +58,10 @@
                             <TextBlock Text="{Binding L[allow_consolidated_act]}" Classes="field" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowConsolidatedAct}" />
                         </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[allow_sale_queue]}" Classes="field" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowSaleQueue}" />
+                        </Grid>
                         <TextBlock Text="{Binding L[optional_capabilities_hint]}" Classes="hint" />
                     </StackPanel>
                 </Border>
