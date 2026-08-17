@@ -17,11 +17,39 @@ public class LiquidTabBar : Grid
     private const float DropletCenterY = RaisedTop + DropletSize / 2;
     // Barcha ikonkalar bir xil qutida turadi, shuning uchun quyidagi qiymatlar hammasiga
     // barobar ta'sir qiladi: alohida ikonkaga alohida son berilmaydi.
-    private const double IconSize = 24;        // glif o'lchami
     private const double IconBox = 34;         // qat'iy quti balandligi
     private const double IconTop = 6;          // panel ichida yuqoridan chekinish
-    private const double SelectedLift = 10.25; // tanlangani aylana markaziga chiqishi
+    private const double IconInk = 17.5;       // glif siyoh balandligi (dp) — yagona sozlanadigan o'lcham
     private const double SelectedScale = 0.16; // tanlangani qanchaga kattalashishi
+    private const double SelectedLift = BarTop + IconTop + IconBox / 2.0 - DropletCenterY;
+
+    private readonly record struct GlyphFit(double FontSize, double Dx, double Dy);
+    private static GlyphFit[]? _fits;
+
+    /// MDI gliflarining siyohi em qutida turlicha o'lcham va joyda turadi, shuning uchun
+    /// bir xil FontSize hamda oddiy markazlash ularni notekis ko'rsatadi. Har glif shriftning
+    /// o'zidan o'lchanadi: balandligi IconInk ga, siyoh markazi quti markaziga keltiriladi —
+    /// glif almashsa hech narsa qo'lda sozlanmaydi.
+    private static GlyphFit[] MeasureGlyphs()
+    {
+        var fits = new GlyphFit[TabCount];
+        using var paint = new Android.Graphics.Paint();
+        if (IPlatformApplication.Current?.Services.GetService<IFontManager>() is { } fonts)
+            paint.SetTypeface(fonts.GetTypeface(Microsoft.Maui.Font.OfSize("MDI", 100)));
+        paint.TextSize = 100;
+        var line = paint.GetFontMetrics()!;
+        var bounds = new Android.Graphics.Rect();
+        for (var i = 0; i < TabCount; i++)
+        {
+            paint.GetTextBounds(Glyphs[i], 0, Glyphs[i].Length, bounds);
+            var size = IconInk * 100 / Math.Max(bounds.Height(), 1);
+            fits[i] = new(
+                size,
+                (paint.MeasureText(Glyphs[i]) - bounds.Left - bounds.Right) / 2 * size / 100,
+                (line.Ascent + line.Descent - bounds.Top - bounds.Bottom) / 2 * size / 100);
+        }
+        return fits;
+    }
 
     private static readonly float HalfWFull =
         (float)Math.Sqrt(CradleRadius * CradleRadius - (BarTop - (RaisedTop + DropletSize / 2)) * (BarTop - (RaisedTop + DropletSize / 2)));
@@ -35,11 +63,13 @@ public class LiquidTabBar : Grid
     private readonly Label[] _icons = new Label[TabCount];
     private readonly float[] _tints = new float[TabCount];
     private bool _animating;
+    private bool _live;
 
     public int Index { get; set; }
 
     public LiquidTabBar()
     {
+        _fits ??= MeasureGlyphs();
         HeightRequest = BarTop + BarHeight;
         VerticalOptions = LayoutOptions.End;
 
@@ -58,10 +88,9 @@ public class LiquidTabBar : Grid
             var icon = new Label
             {
                 FontFamily = "MDI",
-                FontSize = IconSize,
+                FontSize = _fits[i].FontSize,
+                FontAutoScalingEnabled = false,
                 Text = Glyphs[i],
-                // Qat'iy quti va markazlangan matn: aks holda har glif o'z siyohiga qarab
-                // boshqa balandlikda turadi va tanlangani aylananing markaziga tushmaydi.
                 HeightRequest = IconBox,
                 VerticalTextAlignment = TextAlignment.Center,
                 HorizontalTextAlignment = TextAlignment.Center,
@@ -129,6 +158,12 @@ public class LiquidTabBar : Grid
         }
         Loc.Instance.PropertyChanged -= OnLanguageChanged;
         Loc.Instance.PropertyChanged += OnLanguageChanged;
+        if (!_live)
+        {
+            _live = true;
+            for (var i = 0; i < TabCount; i++)
+                _icons[i].TranslationX = _fits![i].Dx;
+        }
         ApplyTheme();
         OnLanguageChanged(null, new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
         Apply(Index, 1f);
@@ -158,12 +193,18 @@ public class LiquidTabBar : Grid
             var weight = Math.Max(0f, 1f - Math.Abs(i - position));
             var strength = weight * raised;
             var opacity = 1 - strength;
-            var translation = -SelectedLift * strength;
+            var translation = _fits![i].Dy - SelectedLift * strength;
             var scale = 1 + SelectedScale * strength;
             // Har kadrda 10 ta ko'rinishga yozish qimmat — sezilmaydigan farqlar o'tkazib yuboriladi.
             if (Math.Abs(_labels[i].Opacity - opacity) > 0.01) _labels[i].Opacity = opacity;
-            if (Math.Abs(_icons[i].TranslationY - translation) > 0.25) _icons[i].TranslationY = translation;
-            if (Math.Abs(_icons[i].Scale - scale) > 0.01) _icons[i].Scale = scale;
+            // Platform view yaralmasidan oldin qo'yilgan transform bu qurilmalarda TextView'da
+            // muzlab qoladi (keyingi yangilanishlar wrapper'ga tushadi) — shuning uchun
+            // transformlar faqat Loaded'dan keyin yoziladi.
+            if (_live)
+            {
+                if (Math.Abs(_icons[i].TranslationY - translation) > 0.25) _icons[i].TranslationY = translation;
+                if (Math.Abs(_icons[i].Scale - scale) > 0.01) _icons[i].Scale = scale;
+            }
             var tint = MathF.Round(Math.Clamp((strength - 0.35f) / 0.35f, 0f, 1f) * 8f) / 8f;
             if (_tints[i] != tint)
             {
