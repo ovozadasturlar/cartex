@@ -110,11 +110,11 @@
 
 /// Skroll konteynerining o'z ustki bo'shligi bor, shuning uchun sarlavha shu bo'shliq
 /// qadar yuqoriga tortiladi — aks holda uning tepasidan kontent ko'rinib o'tardi.
+/// Sarlavha o'z matnida tugaydi: ostida ajratuvchi chiziq ham, ortiqcha bo'shliq ham yo'q —
+/// desktopdagi kabi zich. Skroll maydoni to'g'ridan-to'g'ri shundan keyin boshlanadi.
 .sticky-head {
   flex: none;
-  padding-bottom: 10px;
   margin-bottom: 14px;
-  border-bottom: 1px solid var(--cx-border);
 
   cx-page-header {
     display: block;
