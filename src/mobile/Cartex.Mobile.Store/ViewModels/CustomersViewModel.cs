@@ -151,8 +151,8 @@ public partial class CustomersViewModel(
                 rows = nextPage == 1 ? await offline.SearchCustomersAsync(Search, 200) : [];
             else
             {
-                var response = await customersApi.QueryAsync(
-                    QueryRequest.Create().Page(nextPage, PageSize).Search(Search).Build());
+                var query = QueryRequest.Create().Page(nextPage, PageSize).Search(Search).Build();
+                var response = await Task.Run(() => customersApi.QueryAsync(query));
                 rows = response.Content ?? [];
             }
             if (cancellationToken.IsCancellationRequested) return;

@@ -307,7 +307,8 @@ public partial class TradeViewModel(
             return;
         }
 
-        var items = await orderingApi.GetAllAsync(SelectedStatus, warehouse.WarehouseId, "Queue");
+        var status = SelectedStatus;
+        var items = await Task.Run(() => orderingApi.GetAllAsync(status, warehouse.WarehouseId, "Queue"));
         Carts.ReplaceAll(items.Select(cart => new TradeQueueRow(cart)));
         OnPropertyChanged(nameof(IsQueueEmpty));
     }
@@ -351,12 +352,14 @@ public partial class TradeViewModel(
         if (warehouse.WarehouseId is { } salesWarehouseId)
             queryBuilder = queryBuilder.Filter("WarehouseId", salesWarehouseId.ToString());
 
-        var listTask = salesApi.QueryListAsync(queryBuilder.Build());
-        var totalsTask = salesApi.GetTotalsAsync(
+        var query = queryBuilder.Build();
+        var search = string.IsNullOrWhiteSpace(SalesSearch) ? null : SalesSearch.Trim();
+        var listTask = Task.Run(() => salesApi.QueryListAsync(query));
+        var totalsTask = Task.Run(() => salesApi.GetTotalsAsync(
             warehouseId: warehouse.WarehouseId,
             fromDate: fromDate,
             toDate: toDate,
-            search: string.IsNullOrWhiteSpace(SalesSearch) ? null : SalesSearch.Trim());
+            search: search));
 
         var listResponse = await listTask;
         var totals = await totalsTask;
@@ -377,7 +380,7 @@ public partial class TradeViewModel(
 
     private async Task LoadZReportsCoreAsync()
     {
-        var response = await shiftsApi.GetHistoryAsync(1, 30);
+        var response = await Task.Run(() => shiftsApi.GetHistoryAsync(1, 30));
         Shifts.ReplaceAll((response.Content?.Where(x => !x.IsOpen) ?? []).Select(shift => new TradeShiftRow(shift)));
         OnPropertyChanged(nameof(IsZReportsEmpty));
     }

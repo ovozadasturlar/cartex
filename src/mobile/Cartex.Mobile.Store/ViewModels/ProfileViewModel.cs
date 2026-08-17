@@ -140,7 +140,7 @@ public partial class ProfileViewModel(
             }
             else
             {
-                _offlineState = await offlineApi.GetStateAsync();
+                _offlineState = await Task.Run(offlineApi.GetStateAsync);
                 if (_offlineState.DeviceId is not null && !_offlineState.IsCurrentDevice)
                 {
                     var message = string.Format(Loc.Instance["offline_other_device_fmt"],
@@ -176,7 +176,7 @@ public partial class ProfileViewModel(
     {
         try
         {
-            _offlineState = await offlineApi.GetStateAsync();
+            _offlineState = await Task.Run(offlineApi.GetStateAsync);
             if (_offlineState.DeviceId is null)
             {
                 OfflineTitle = Loc.Instance["offline_sales"];

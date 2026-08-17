@@ -28,6 +28,7 @@ public class LiquidTabBar : Grid
     private readonly Grid _zones;
     private readonly Label[] _labels = new Label[TabCount];
     private readonly Label[] _icons = new Label[TabCount];
+    private readonly float[] _tints = new float[TabCount];
     private bool _animating;
 
     private double IconLift
@@ -184,11 +185,16 @@ public class LiquidTabBar : Grid
             var opacity = 1 - strength;
             var translation = -lift * strength;
             var scale = 1 + 0.16 * strength;
-            var color = Blend(muted, onDroplet, Math.Clamp((strength - 0.35f) / 0.35f, 0f, 1f));
-            if (_labels[i].Opacity != opacity) _labels[i].Opacity = opacity;
-            if (_icons[i].TranslationY != translation) _icons[i].TranslationY = translation;
-            if (_icons[i].Scale != scale) _icons[i].Scale = scale;
-            if (!Equals(_icons[i].TextColor, color)) _icons[i].TextColor = color;
+            // Har kadrda 10 ta ko'rinishga yozish qimmat — sezilmaydigan farqlar o'tkazib yuboriladi.
+            if (Math.Abs(_labels[i].Opacity - opacity) > 0.01) _labels[i].Opacity = opacity;
+            if (Math.Abs(_icons[i].TranslationY - translation) > 0.25) _icons[i].TranslationY = translation;
+            if (Math.Abs(_icons[i].Scale - scale) > 0.01) _icons[i].Scale = scale;
+            var tint = MathF.Round(Math.Clamp((strength - 0.35f) / 0.35f, 0f, 1f) * 8f) / 8f;
+            if (_tints[i] != tint)
+            {
+                _tints[i] = tint;
+                _icons[i].TextColor = Blend(muted, onDroplet, tint);
+            }
         }
         _canvas.Invalidate();
     }
@@ -227,6 +233,7 @@ public class LiquidTabBar : Grid
     private void ApplyTheme()
     {
         _drawable.Dark = Application.Current?.RequestedTheme == AppTheme.Dark;
+        Array.Fill(_tints, -1f);
         _canvas.Invalidate();
     }
 
@@ -321,8 +328,13 @@ public class LiquidTabBar : Grid
 
             var path = BuildPath(w, top, bottom, cx, dropletCy, o);
 
+            // Soya blur talab qiladi va Android'da eng qimmat amal. Harakat paytida u
+            // chizilmaydi — aks holda animatsiya kadr tashlaydi.
+            var still = o > 0.995f;
+
             canvas.SaveState();
-            canvas.SetShadow(new SizeF(0, -4), 16, Color.FromRgba(0, 0, 0, Dark ? 0.5f : 0.16f));
+            if (still)
+                canvas.SetShadow(new SizeF(0, -4), 16, Color.FromRgba(0, 0, 0, Dark ? 0.5f : 0.16f));
             canvas.SetFillPaint(Dark ? BarDark : BarLight, new RectF(0, top, w, bottom - top));
             canvas.FillPath(path);
             canvas.RestoreState();
@@ -334,7 +346,8 @@ public class LiquidTabBar : Grid
             var rx = r * squash;
             var ry = r / squash;
             canvas.SaveState();
-            canvas.SetShadow(new SizeF(0, 4), 10, Color.FromRgba(0, 0, 0, 0.35f * o));
+            if (still)
+                canvas.SetShadow(new SizeF(0, 4), 10, Color.FromRgba(0, 0, 0, 0.35f));
             canvas.SetFillPaint(Dark ? DropletDark : DropletLight, new RectF(cx - rx, dropletCy - ry, rx * 2, ry * 2));
             canvas.FillEllipse(cx - rx, dropletCy - ry, rx * 2, ry * 2);
             canvas.RestoreState();
@@ -362,7 +375,7 @@ public class LiquidTabBar : Grid
                 p.CurveTo(ncx - halfW - LipRun * 0.35f, top, ncx - halfW - 1.5f, top - lip, ncx - halfW, top);
                 var a0 = Math.Atan2(dy, -halfW);
                 var a1 = Math.Atan2(dy, halfW) - 2 * Math.PI;
-                const int steps = 26;
+                const int steps = 14;
                 for (var i = 1; i <= steps; i++)
                 {
                     var a = a0 + (a1 - a0) * i / steps;
