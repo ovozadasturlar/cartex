@@ -1,8 +1,9 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Commands;
 

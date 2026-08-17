@@ -1,11 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
 public record GetLowStockQuery(long WarehouseId) : IRequest<IReadOnlyCollection<LowStockDto>>;
-
-public record LowStockDto(long VariantId, string ProductName, string UnitName, string WarehouseName, decimal OnHand, decimal MinStock);
 
 public sealed class GetLowStockQueryHandler(IApplicationDbContext db) : IRequestHandler<GetLowStockQuery, IReadOnlyCollection<LowStockDto>>
 {

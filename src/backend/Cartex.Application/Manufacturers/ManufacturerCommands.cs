@@ -1,13 +1,12 @@
-using Cartex.Domain.Entities;
+﻿using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Manufacturers;
-
-public record ManufacturerDto(long Id, string Name);
 
 public record GetManufacturersQuery : IRequest<IReadOnlyCollection<ManufacturerDto>>;
 

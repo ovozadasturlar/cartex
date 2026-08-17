@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
@@ -7,28 +7,9 @@ using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Notifications;
 
 namespace Cartex.Application.Notifications.Queries;
-
-public record NotificationDeliveryDto(
-    long Id,
-    long? CustomerId,
-    string? CustomerName,
-    string Channel,
-    string Purpose,
-    string Recipient,
-    string? Subject,
-    string? Content,
-    string Status,
-    string Provider,
-    string? ProviderMessageId,
-    int AttemptCount,
-    int Units,
-    string? Error,
-    DateTime CreatedAt,
-    DateTime? AcceptedAt,
-    DateTime? DeliveredAt,
-    DateTime? CompletedAt);
 
 public record GetNotificationJournalQuery : FilteringRequest, IRequest<IReadOnlyCollection<NotificationDeliveryDto>>
 {

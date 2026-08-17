@@ -1,4 +1,4 @@
-using Cartex.Application.Notifications;
+﻿using Cartex.Application.Notifications;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Sales.Queries;
 using Cartex.Auth.Authorization;
@@ -7,10 +7,6 @@ using Cartex.Shared.Models.Sales;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CreateSaleResult = Cartex.Application.Sales.Commands.CreateSaleResult;
-using SaleDto = Cartex.Application.Sales.Queries.SaleDto;
-using SalesTotalsDto = Cartex.Application.Sales.Queries.SalesTotalsDto;
-using DailySalesPointDto = Cartex.Application.Sales.Queries.DailySalesPointDto;
 
 namespace Cartex.Api.Controllers;
 

@@ -1,13 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
 public record GetProductVariantsQuery(long ProductId) : IRequest<IReadOnlyCollection<VariantDto>>;
-
-public record VariantBarcodeDto(string Code, decimal PackQty);
-
-public record VariantDto(long Id, long ProductId, string? Name, string? Code, string? Attributes, string? ImageKey, bool IsDefault, List<VariantBarcodeDto> Barcodes);
 
 public sealed class GetProductVariantsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetProductVariantsQuery, IReadOnlyCollection<VariantDto>>
 {

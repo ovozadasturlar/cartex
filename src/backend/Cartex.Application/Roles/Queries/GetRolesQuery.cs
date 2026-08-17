@@ -1,19 +1,15 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Common.Security;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Domain.Authorization;
+using Cartex.Shared.Models.Roles;
 
 namespace Cartex.Application.Roles.Queries;
 
 public record GetRolesQuery : FilteringRequest, IRequest<IReadOnlyCollection<RoleDto>>;
-
-public record RoleDto(long Id, string Name, string? Description, string? StartPage, int Priority, bool IsSystem, bool IsActive, bool AccessAll, List<string> Permissions, List<string> GrantablePermissions, List<string> AssignableRoles, string? CartDestination)
-{
-    public bool RequiresBranch { get; init; }
-}
 
 public sealed class GetRolesQueryHandler(
     IApplicationDbContext db,
@@ -45,16 +41,18 @@ public sealed class GetRolesQueryHandler(
                     r.Description,
                     r.StartPage,
                     r.Priority,
-                    r.IsSystem,
-                    r.IsActive,
                     r.AccessAll,
                     r.RolePermissions
                         .Where(rp => rp.Permission.IsEnabled)
                         .Select(rp => rp.Permission.Name)
                         .ToList(),
                     r.GrantablePermissions,
-                    r.AssignableRoles,
-                    r.CartDestination),
+                    r.CartDestination)
+                {
+                    IsSystem = r.IsSystem,
+                    IsActive = r.IsActive,
+                    AssignableRoles = r.AssignableRoles
+                },
                 writer, cancellationToken);
 
         return roles.Select(role => role with

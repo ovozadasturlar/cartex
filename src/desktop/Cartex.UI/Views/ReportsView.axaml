@@ -249,7 +249,9 @@
             <TabItem Header="{Binding L[sales_breakdown]}">
                 <ScrollViewer>
                     <StackPanel Spacing="16">
-                        <Grid ColumnDefinitions="*,*,*,*">
+                        <!-- HIS-03: pulning har bir kelish yo'li ko'rsatiladi, aks holda
+                             ustunlar yig'indisi daromadga yetmaydi va sababi ko'rinmaydi. -->
+                        <Grid ColumnDefinitions="*,*,*,*,*,*">
                             <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
                                 <StackPanel Spacing="8" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding L[cash]}" Classes="muted" HorizontalAlignment="Center" />
@@ -271,10 +273,24 @@
                                                HorizontalAlignment="Center" Foreground="{DynamicResource WarningBrush}" />
                                 </StackPanel>
                             </Border>
-                            <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                            <Border Classes="card" Grid.Column="3" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[advance]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayAdvance, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="4" Margin="8,0,8,0">
                                 <StackPanel Spacing="8" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding L[debt]}" Classes="muted" HorizontalAlignment="Center" />
                                     <TextBlock Text="{Binding PayDebt, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="5" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[returned]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayReturned, StringFormat={}-{0:N0}}" FontSize="22" FontWeight="Bold"
                                                HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
                                 </StackPanel>
                             </Border>

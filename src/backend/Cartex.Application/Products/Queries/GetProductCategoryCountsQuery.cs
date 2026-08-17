@@ -1,11 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
 public record GetProductCategoryCountsQuery : IRequest<IReadOnlyCollection<CategoryCountDto>>;
-
-public record CategoryCountDto(string? Name, int Count);
 
 public sealed class GetProductCategoryCountsQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetProductCategoryCountsQuery, IReadOnlyCollection<CategoryCountDto>>

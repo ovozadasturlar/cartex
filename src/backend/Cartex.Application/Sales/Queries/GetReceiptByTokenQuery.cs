@@ -1,54 +1,11 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Queries;
 
 public record GetReceiptByTokenQuery(string Token) : IRequest<ReceiptDto?>;
-
-public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal, decimal DiscountAmount = 0);
-
-public record ReceiptPaymentDto(string Method, string Currency, decimal Amount, decimal Rate = 1m, decimal AmountBase = 0, bool IsForeign = false);
-
-public record ReceiptDto(
-    string ReceiptToken,
-    string BusinessName,
-    string BranchName,
-    string? BranchAddress,
-    string? BranchPhone,
-    DateTime SaleDate,
-    decimal TotalAmount,
-    decimal DiscountAmount,
-    decimal PaidCash,
-    decimal PaidCard,
-    decimal PaidBonus,
-    decimal DebtAmount,
-    decimal ChangeAmount,
-    decimal CashbackEarned,
-    string UserName,
-    List<ReceiptItemDto> Items,
-    List<ReceiptPaymentDto> Payments,
-    long SaleId = 0,
-    string? CustomerName = null,
-    string? CustomerPhone = null,
-    string? CustomerEmail = null,
-    string? Language = null,
-    string? BusinessPhone = null,
-    string? BusinessTelegram = null,
-    string? BusinessWebsite = null,
-    string? LogoImageKey = null,
-    decimal CreditAmount = 0,
-    string? BaseCurrency = null,
-    decimal PaidAdvance = 0,
-    string? MonochromeLogoImageKey = null,
-    long? CustomerId = null,
-    string? Note = null)
-{
-    // Rendering-only data. It is populated only for PDF/image generation so the
-    // normal receipt API remains lightweight and never serializes a base64 logo.
-    [JsonIgnore]
-    public byte[]? LogoBytes { get; init; }
-}
 
 public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {

@@ -1,10 +1,11 @@
-using Cartex.Application.ExpenseCategories.Commands;
+﻿using Cartex.Application.ExpenseCategories.Commands;
 using Cartex.Application.ExpenseCategories.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.ExpenseCategories;
 
 namespace Cartex.Api.Controllers;
 

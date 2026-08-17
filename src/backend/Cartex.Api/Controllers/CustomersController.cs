@@ -1,12 +1,10 @@
-using Cartex.Application.Customers.Commands;
+﻿using Cartex.Application.Customers.Commands;
 using Cartex.Application.Customers.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Customers;
 using Cartex.Application.Common.Messaging;
-using CustomerDto = Cartex.Application.Customers.Queries.CustomerDto;
-using CustomerLedgerEntryDto = Cartex.Application.Customers.Queries.CustomerLedgerEntryDto;
-using CustomerTotalsDto = Cartex.Application.Customers.Queries.CustomerTotalsDto;
+using Cartex.Shared.Models.Customers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

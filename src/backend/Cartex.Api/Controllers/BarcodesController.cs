@@ -1,10 +1,11 @@
-using Cartex.Application.Barcodes.Commands;
+﻿using Cartex.Application.Barcodes.Commands;
 using Cartex.Application.Barcodes.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Barcodes;
 
 namespace Cartex.Api.Controllers;
 

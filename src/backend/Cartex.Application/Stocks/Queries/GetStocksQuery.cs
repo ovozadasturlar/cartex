@@ -1,13 +1,12 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
 public record GetStocksQuery : FilteringRequest, IRequest<IReadOnlyCollection<StockDto>>;
-
-public record StockDto(long Id, long VariantId, string ProductName, string? CategoryName, string UnitName, decimal Quantity, decimal PurchasePrice, decimal SellingPrice, DateOnly? ExpiredAt);
 
 public sealed class GetStocksQueryHandler(
     IApplicationDbContext db,

@@ -1,9 +1,8 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record StorageSettingsDto(bool Enabled, string Provider, string? Endpoint, string? AccessKey, string? Bucket, bool UseSsl, bool HasSecretKey, int SecretKeyLength = 0);
 
 public record GetStorageSettingsQuery : IRequest<StorageSettingsDto>;
 

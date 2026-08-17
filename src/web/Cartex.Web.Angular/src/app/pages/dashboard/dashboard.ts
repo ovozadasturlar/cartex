@@ -76,11 +76,15 @@ export class Dashboard implements OnInit {
     const b = this.breakdown();
     if (!b) return [];
     return [
+      // HIS-03: pulning har bir kelish yo'li ko'rsatiladi. Avans tushib qolsa, mijoz avansidan
+      // yopilgan savdo daromadda bor, taqsimotda yo'q bo'lib qoladi.
       { label: t('cash'), value: b.cash, display: this.money(b.cash) },
       { label: t('card'), value: b.card, display: this.money(b.card) },
       { label: t('bonus'), value: b.bonus, display: this.money(b.bonus) },
+      { label: t('advance'), value: b.advance, display: this.money(b.advance) },
       { label: t('debt'), value: b.debt, display: this.money(b.debt) },
-    ];
+      { label: t('returned'), value: b.returned, display: '-' + this.money(b.returned) },
+    ].filter((r) => r.value !== 0);
   }
 
   private async loadPeriod(): Promise<void> {

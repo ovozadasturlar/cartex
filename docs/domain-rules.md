@@ -397,7 +397,32 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
   kassir istalgancha chegirma bera oladi degani → egasiga real qiymat qo'yish tavsiya etiladi
   (`SOZ-02` bajarilgan, lekin xavf ochiq).
 
-## 12. Qamrov holati
+## 12. Hisobotlar
+
+Boshqaruv panelida ikkita karta yonma-yon turadi: **Daromad** va **To'lov taqsimoti**. Ular bir xil
+savdolarni tasvirlaydi, shuning uchun ular bir-biriga to'g'ri kelishi **shart**. Kelmasa, egasi
+ikkalasiga ham ishonmay qo'yadi — va qaysi biri to'g'ri ekanini bilishning iloji bo'lmaydi.
+
+| ID | Qoida |
+|---|---|
+| `HIS-01` | **Daromad** — savdo qiymati, qaytarilgan qism chiqarib tashlangan holda. Qamrovga `Completed` va `PartialReturn` holatidagi savdolar kiradi. |
+| `HIS-02` | To'lov taqsimoti **aynan o'sha savdolar** ustida hisoblanadi: bir xil status filtri, bir xil vaqt oralig'i, bir xil ombor filtri. Qisman qaytarilgan savdoni taqsimotdan chiqarib tashlash pulni hisobotdan yo'q qiladi. |
+| `HIS-03` | Taqsimotda pulning **barcha kelish yo'llari** ko'rsatiladi: naqd, karta, bonus, **avans**, qarz. Bittasi tushib qolsa, ustunlar yig'indisi daromadga yetmaydi va farqning sababi ko'rinmaydi. |
+| `HIS-04` | **Invariant:** `naqd + karta + bonus + avans + qarz − kredit − qaytarilgan = daromad`. Bu yerda *kredit* — mijoz ortiqcha bergan va avansiga yozilgan pul (savdo qiymatiga kirmaydi), *qaytarilgan* — qaytarilgan tovarning chegirmadan keyingi qiymati. |
+| `HIS-05` | Vaqt mintaqasi faqat **kunlarga ajratish** uchun ishlatiladi (`tzOffsetMinutes`), oraliq chegarasi uchun emas. Ikkala so'rov ham bir xil UTC oralig'ini oladi, aks holda bir xil savdo bittasiga tushib, ikkinchisiga tushmay qolardi. |
+
+### Qabul mezoni — `HIS-04`
+
+> **Berilgan:** 200 000 lik savdo to'liq naqd to'langan; 100 000 lik ikkinchi savdo mijoz
+> avansidan yopilgan; birinchi savdodan 50 000 lik tovar qaytarilgan (savdo `PartialReturn`).
+> **U holda:**
+> - naqd = **200 000**, avans = **100 000**, qaytarilgan = **50 000**
+> - daromad = 200 000 + 100 000 − 50 000 = **250 000**
+> - ikkala savdo ham taqsimotda ishtirok etadi (`HIS-02`) — `PartialReturn` chiqarib tashlanmaydi
+
+---
+
+## 13. Qamrov holati
 
 > **Halol baho:** bu hujjat hozircha savdo/narx/qaytarish o'zagini qamraydi — bu mavjud
 > `Cartex.Application.Tests` dagi ~217 testning **taxminan choragi**. Qolgani kodda ishlaydi va
@@ -435,7 +460,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | **Mahsulot importi** | ⬜ | `ProductImportTests` |
 | **Qarz eslatmasi, bildirishnomalar** | ⬜ | `DebtReminderTests`, `NotificationJournalTests` |
 | **Chop etish qurilmasi ishonchi** | ⬜ | `PrintDeviceTrustTests`, `PrintingPolicyTests` |
-| **Hisobotlar** | ⬜ | `ReportsTests`, `SalesReportTests`, `ReportDayBucketingTests` |
+| **Hisobotlar** | ✅ | `ReportsTests`, `SalesReportTests`, `ReportDayBucketingTests`, `ReportReconciliationTests` |
 | Offline savdo va sinxronizatsiya | ⬜ test ham yo'q | — |
 | Prepack (qadoq) | ⬜ test ham yo'q | — |
 | Hamkor mutaxassisligi, ommaviy katalog | 🟡 model va UI bor, ommaviy sahifa (Mirror) qolgan | — |
@@ -458,7 +483,7 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 
 ---
 
-## 13. Test yozuvchi uchun eslatma
+## 14. Test yozuvchi uchun eslatma
 
 - Testlar `tests/Cartex.Application.Tests` da, haqiqiy Postgres (Testcontainers) ustida.
 - Har test **bitta qoidani** tekshiradi va nomida ID'ni ko'rsatadi, masalan:

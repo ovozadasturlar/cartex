@@ -1,9 +1,10 @@
-namespace Cartex.Application.Common.Extensions;
+﻿namespace Cartex.Application.Common.Extensions;
 
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using Cartex.Shared.Models.Common;
 
 public static class PagingExtensions
 {

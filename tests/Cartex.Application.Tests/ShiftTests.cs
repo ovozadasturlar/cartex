@@ -1,4 +1,4 @@
-using Cartex.Application.Sales.Commands;
+﻿using Cartex.Application.Sales.Commands;
 using Cartex.Application.Shifts;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Shifts.Queries;
@@ -9,6 +9,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Tests;
 

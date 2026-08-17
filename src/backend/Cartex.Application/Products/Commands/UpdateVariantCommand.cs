@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Cartex.Persistence;
@@ -7,6 +7,7 @@ using Cartex.Application.Common.Catalog;
 using Cartex.Application.Common.Measurement;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Commands;
 

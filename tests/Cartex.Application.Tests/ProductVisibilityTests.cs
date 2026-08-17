@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Products.Commands;
@@ -12,6 +12,7 @@ using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Tests;
 

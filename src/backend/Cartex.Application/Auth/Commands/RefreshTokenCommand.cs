@@ -1,4 +1,5 @@
-using FluentValidation;
+﻿using FluentValidation;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 

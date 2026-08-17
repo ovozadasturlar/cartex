@@ -1,11 +1,10 @@
-using Cartex.Domain.Authorization;
+﻿using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Queries;
-
-public record DeviceSessionDto(long Id, string? DeviceName, DateTime CreatedAt, DateTime LastUsedAt, DateTime ExpiresAt, string? Username = null, string? Client = null, bool IsOfflineHolder = false);
 
 public record GetSessionsQuery(bool All = false) : IRequest<IReadOnlyList<DeviceSessionDto>>;
 

@@ -1,4 +1,4 @@
-using Cartex.Application.Shifts;
+﻿using Cartex.Application.Shifts;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Shifts.Queries;
 using Cartex.Auth.Authorization;
@@ -6,6 +6,7 @@ using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Api.Controllers;
 

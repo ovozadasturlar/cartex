@@ -1,16 +1,15 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerTotalsQuery : FilteringRequest, IRequest<CustomerTotalsDto>;
-
-public record CustomerTotalsDto(int Count, decimal TotalDebt, decimal TotalBonus, decimal TotalCredit = 0);
 
 public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCustomerTotalsQuery, CustomerTotalsDto>
 {

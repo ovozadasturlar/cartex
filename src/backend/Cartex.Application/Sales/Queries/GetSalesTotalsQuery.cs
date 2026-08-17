@@ -1,9 +1,10 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -14,8 +15,6 @@ public record GetSalesTotalsQuery : FilteringRequest, IRequest<SalesTotalsDto>
     public long? WarehouseId { get; set; }
     public long? CustomerId { get; set; }
 }
-
-public record SalesTotalsDto(int Count, decimal TotalAmount, decimal TotalDiscount, decimal TotalDebt);
 
 public sealed class GetSalesTotalsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetSalesTotalsQuery, SalesTotalsDto>
 {

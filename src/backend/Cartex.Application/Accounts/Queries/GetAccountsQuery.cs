@@ -1,14 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Accounts;
 
 namespace Cartex.Application.Accounts.Queries;
 
 public record GetAccountsQuery : FilteringRequest, IRequest<IReadOnlyCollection<AccountDto>>;
-
-public record AccountDto(long Id, string Name, string Type, string Currency, decimal Balance, string? OwnerName);
 
 public sealed class GetAccountsQueryHandler(
     IApplicationDbContext db,

@@ -1,11 +1,10 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Cartex.Auth.Services;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 
 public record LoginCommand(string Username, string Password, string? DeviceName = null, string? DeviceId = null) : IRequest<LoginResponse>;
-
-public record LoginResponse(string Token, string RefreshToken, string FullName, string Role);
 
 public sealed class LoginCommandHandler(
     AuthTokenBuilder tokenBuilder,

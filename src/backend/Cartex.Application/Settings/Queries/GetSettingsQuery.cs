@@ -1,15 +1,9 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Microsoft.Extensions.Logging;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record TelegramSettingsDto(bool Enabled, string? ChatId, bool HasBotToken, int BotTokenLength);
-public record EmailSettingsDto(bool Enabled, string? Host, int Port, bool UseSsl, string? Username, string? FromAddress, string? FromName, bool HasPassword);
-public record SmsSettingsDto(bool Enabled, string Provider, string? Login, string? Sender, string? BaseUrl, bool HasPassword);
-public record NotificationSettingsDto(List<string> Channels, bool CopyToAdmin, string? PublicBaseUrl, string TelegramFormat, string EmailFormat);
-
-public record SettingsDto(TelegramSettingsDto Telegram, EmailSettingsDto Email, SmsSettingsDto Sms, NotificationSettingsDto Notification);
 
 public record GetSettingsQuery : IRequest<SettingsDto>;
 

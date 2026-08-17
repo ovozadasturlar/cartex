@@ -1,5 +1,6 @@
-using Cartex.Application.Common.Settings;
+﻿using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Common.Interfaces;
 

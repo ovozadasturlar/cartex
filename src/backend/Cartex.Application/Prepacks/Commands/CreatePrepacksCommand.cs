@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using Cartex.Application.Common.Finance;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
@@ -6,10 +6,9 @@ using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Application.Common.Measurement;
+using Cartex.Shared.Models.Prepacks;
 
 namespace Cartex.Application.Prepacks.Commands;
-
-public record PrepackLabelDto(long Id, string LabelCode, string ProductName, string UnitName, decimal Quantity, decimal Price);
 
 public record CreatePrepacksCommand(long WarehouseId, long VariantId, decimal Quantity, int Count = 1, int? ExpiresHours = null) : ICommand<List<PrepackLabelDto>>;
 

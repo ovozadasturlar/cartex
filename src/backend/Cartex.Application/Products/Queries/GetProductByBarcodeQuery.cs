@@ -1,27 +1,12 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Cartex.Application.Common.Finance;
 using Cartex.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
 public record GetProductByBarcodeQuery(string Code, long WarehouseId, bool ForSale = false) : IRequest<ProductLookupDto?>;
-
-public record ProductLookupDto(
-    long VariantId,
-    string ProductName,
-    string UnitName,
-    decimal PackQty,
-    decimal SellingPrice,
-    decimal OnHand,
-    string Dimension,
-    string? ImageKey = null,
-    bool AllowsAmountEntry = false,
-    decimal? OriginalSellingPrice = null,
-    string? PriceCurrency = null,
-    string? BaseCurrency = null,
-    decimal ConversionRate = 1,
-    bool AllowsFractional = false);
 
 public sealed class GetProductByBarcodeQueryHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<GetProductByBarcodeQuery, ProductLookupDto?>
 {

@@ -196,6 +196,7 @@ export interface SalesBreakdown {
   debt: number;
   credit: number;
   advance: number;
+  returned: number;
   byCashier: CashierSales[];
   byCategory: CategorySales[];
 }

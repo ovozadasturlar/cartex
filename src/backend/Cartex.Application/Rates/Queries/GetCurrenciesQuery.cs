@@ -1,9 +1,8 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Rates;
 
 namespace Cartex.Application.Rates.Queries;
-
-public record CurrencyDto(string Code, string Name, bool IsSystem, bool IsEnabled, bool IsDefault, bool IsBase, decimal? Rate, DateTime? RateAt, string Symbol, string SymbolPosition, int DecimalDigits);
 
 public record GetCurrenciesQuery(bool OnlyEnabled = false) : IRequest<IReadOnlyCollection<CurrencyDto>>;
 

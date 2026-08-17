@@ -1,14 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Categories;
 
 namespace Cartex.Application.Categories.Queries;
 
 public record GetCategoriesQuery : FilteringRequest, IRequest<IReadOnlyCollection<CategoryDto>>;
-
-public record CategoryDto(long Id, string Name, string? Description, long? ParentId, string? ParentName);
 
 public sealed class GetCategoriesQueryHandler(
     IApplicationDbContext db,

@@ -1,22 +1,10 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Products.Import;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Application.Supplies.Import;
-
-public record SupplyImportRowDto(
-    int Row,
-    long? VariantId,
-    string? Name,
-    string? Barcode,
-    decimal Quantity,
-    decimal? PurchasePrice,
-    decimal? SellingPrice,
-    DateOnly? ExpiredAt,
-    string? Message);
-
-public record SupplyImportPreviewDto(List<SupplyImportRowDto> Rows, int MatchedCount, int UnmatchedCount);
 
 public record PreviewSupplyImportQuery(Stream Content) : IRequest<SupplyImportPreviewDto>;
 

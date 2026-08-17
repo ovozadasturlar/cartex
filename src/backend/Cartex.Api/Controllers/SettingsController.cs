@@ -1,4 +1,4 @@
-using Cartex.Application.Settings.Commands;
+﻿using Cartex.Application.Settings.Commands;
 using Cartex.Application.Settings.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
@@ -16,7 +16,7 @@ public class SettingsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.SettingsDto>> Get() =>
+    public async Task<ActionResult<SettingsDto>> Get() =>
         Ok(await sender.Send(new GetSettingsQuery()));
 
     [HttpPut("telegram")]
@@ -68,7 +68,7 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("receipt")]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReceiptSettingsDto>> GetReceipt()
+    public async Task<ActionResult<ReceiptSettingsDto>> GetReceipt()
     {
         var result = await sender.Send(new GetReceiptSettingsQuery());
         return Ok(result);
@@ -109,7 +109,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpGet("login-methods")]
     [HasPermission(AppPermissions.Settings.Security)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.LoginMethodsSettingsDto>> GetLoginMethods()
+    public async Task<ActionResult<LoginMethodsSettingsDto>> GetLoginMethods()
     {
         var result = await sender.Send(new GetLoginMethodsSettingsQuery());
         return Ok(result);
@@ -142,7 +142,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpGet("storage")]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.StorageSettingsDto>> GetStorage()
+    public async Task<ActionResult<StorageSettingsDto>> GetStorage()
     {
         var result = await sender.Send(new GetStorageSettingsQuery());
         return Ok(result);
@@ -174,7 +174,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpGet("cloud-bridge")]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.CloudBridgeSettingsDto>> GetCloudBridge()
+    public async Task<ActionResult<CloudBridgeSettingsDto>> GetCloudBridge()
     {
         var result = await sender.Send(new GetCloudBridgeSettingsQuery());
         return Ok(result);
@@ -190,7 +190,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpGet("reminder")]
     [HasPermission(AppPermissions.Notifications.View)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReminderSettingsDto>> GetReminder()
+    public async Task<ActionResult<ReminderSettingsDto>> GetReminder()
     {
         var result = await sender.Send(new GetReminderSettingsQuery());
         return Ok(result);

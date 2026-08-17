@@ -1,10 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
-
-public record DailyCashFlowDto(DateTime Date, decimal Income, decimal Expense, decimal Sales);
 
 public record GetCashFlowQuery(DateTime From, DateTime To, int? TzOffsetMinutes = null) : IRequest<IReadOnlyCollection<DailyCashFlowDto>>;
 

@@ -1,11 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.AuditLogs;
 
 namespace Cartex.Application.AuditLogs.Queries;
 
 public record GetAuditFilterOptionsQuery : IRequest<AuditFilterOptionsDto>;
-
-public record AuditFilterOptionsDto(IReadOnlyList<string> Tables, IReadOnlyList<string> Actions, IReadOnlyList<string> Users);
 
 public sealed class GetAuditFilterOptionsQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetAuditFilterOptionsQuery, AuditFilterOptionsDto>

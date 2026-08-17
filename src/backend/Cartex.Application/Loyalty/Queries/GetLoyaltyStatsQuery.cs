@@ -1,10 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Loyalty.Queries;
-
-public record LoyaltyStatsDto(int SalesCount, int DiscountedSales, decimal DiscountTotal, decimal GrossTotal, decimal BonusOutstanding);
 
 public record GetLoyaltyStatsQuery(DateTime FromDate, DateTime ToDate) : IRequest<LoyaltyStatsDto>;
 

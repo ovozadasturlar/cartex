@@ -1,11 +1,7 @@
-using Cartex.Domain.Authorization;
+﻿using Cartex.Domain.Authorization;
+using Cartex.Shared.Models.Permissions;
 
 namespace Cartex.Application.Permissions.Queries;
-
-public record PermissionBundleDto(
-    string Key,
-    string Description,
-    IReadOnlyList<string> Permissions);
 
 public record GetPermissionBundlesQuery : IRequest<IReadOnlyList<PermissionBundleDto>>;
 

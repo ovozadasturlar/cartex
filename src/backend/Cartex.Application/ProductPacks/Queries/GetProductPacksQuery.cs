@@ -1,9 +1,8 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.ProductPacks.Queries;
-
-public record ProductPackDto(long Id, long ProductId, string Name, decimal Size, string Kind, bool IsDefault);
 
 public record GetProductPacksQuery(long ProductId) : IRequest<IReadOnlyCollection<ProductPackDto>>;
 

@@ -1,23 +1,12 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Units;
 
 namespace Cartex.Application.Units.Queries;
 
 public record GetUnitsQuery : FilteringRequest, IRequest<IReadOnlyCollection<UnitDto>>;
-
-public record UnitDto(
-    long Id,
-    string Name,
-    string ShortName,
-    string Dimension,
-    decimal Factor,
-    bool IsSystem,
-    bool IsEnabled = true,
-    bool IsDefault = false,
-    bool AllowFractional = true,
-    bool DefaultAllowAmountEntry = false);
 
 public sealed class GetUnitsQueryHandler(
     IApplicationDbContext db,

@@ -3,6 +3,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
 

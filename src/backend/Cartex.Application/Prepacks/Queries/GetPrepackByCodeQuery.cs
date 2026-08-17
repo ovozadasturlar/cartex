@@ -1,10 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Prepacks;
 
 namespace Cartex.Application.Prepacks.Queries;
-
-public record PrepackLookupDto(long PrepackId, long VariantId, string ProductName, string UnitName, string Dimension, decimal Quantity, decimal UnitPrice, decimal Price);
 
 public record GetPrepackByCodeQuery(string Code, long WarehouseId) : IRequest<PrepackLookupDto?>;
 

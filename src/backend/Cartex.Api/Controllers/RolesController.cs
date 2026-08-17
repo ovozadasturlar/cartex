@@ -1,4 +1,4 @@
-using Cartex.Application.Roles.Commands;
+﻿using Cartex.Application.Roles.Commands;
 using Cartex.Application.Roles.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
@@ -6,6 +6,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SetRoleActiveRequest = Cartex.Shared.Models.Roles.SetRoleActiveRequest;
+using Cartex.Shared.Models.Roles;
 
 namespace Cartex.Api.Controllers;
 

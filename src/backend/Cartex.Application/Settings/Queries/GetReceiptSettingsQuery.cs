@@ -1,27 +1,8 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record ReceiptSettingsDto(
-    string? HeaderText,
-    string? FooterText,
-    int PaperWidth,
-    string PaperFormat = "Thermal",
-    bool ShowBusinessName = true,
-    bool ShowBranchName = true,
-    bool ShowAddress = true,
-    bool ShowPhone = true,
-    bool ShowCashier = true,
-    bool ShowCustomer = true,
-    bool ShowReceiptNumber = true,
-    bool ShowPaymentDetails = true,
-    bool ShowQrCode = true,
-    bool ShowElectronicLink = true,
-    string? PublicReceiptBaseUrl = null,
-    bool ShowLogo = true,
-    bool ShowCustomerPhone = true,
-    bool ShowCustomerEmail = false);
 
 public record GetReceiptSettingsQuery : IRequest<ReceiptSettingsDto>;
 

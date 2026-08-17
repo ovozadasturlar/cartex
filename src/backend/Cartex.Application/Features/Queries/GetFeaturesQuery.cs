@@ -1,9 +1,8 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Features;
 
 namespace Cartex.Application.Features.Queries;
-
-public record FeatureDto(string Code, string Name, bool IsEnabled);
 
 public record GetFeaturesQuery : IRequest<IReadOnlyList<FeatureDto>>;
 

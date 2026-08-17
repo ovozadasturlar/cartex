@@ -1,17 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Permissions;
 
 namespace Cartex.Application.Permissions.Queries;
 
 public record GetPermissionsQuery : FilteringRequest, IRequest<IReadOnlyCollection<PermissionDto>>;
-
-public record PermissionDto(long Id, string Name, string? Description, bool IsEnabled)
-{
-    public IReadOnlyList<string> DependsOn { get; init; } = [];
-}
 
 public sealed class GetPermissionsQueryHandler(
     IApplicationDbContext db,

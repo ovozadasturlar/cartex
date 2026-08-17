@@ -1,10 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Suppliers.Queries;
-
-public record SupplierPaymentDto(long TransactionId, DateTime CreatedAt, decimal Amount, string Currency, string Method, string? UserName);
 
 public record GetSupplierPaymentsQuery(long SupplierId, DateOnly Date) : IRequest<IReadOnlyCollection<SupplierPaymentDto>>;
 

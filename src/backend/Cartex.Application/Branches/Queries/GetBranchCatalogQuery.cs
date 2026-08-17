@@ -1,16 +1,13 @@
-using Cartex.Application.Common.Search;
+﻿using Cartex.Application.Common.Search;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Branches;
 
 namespace Cartex.Application.Branches.Queries;
 
 public record GetBranchCatalogQuery(long BranchId, string? Search = null, int Page = 1, int PageSize = 80) : IRequest<BranchCatalogPageDto>;
-
-public record BranchCatalogItemDto(long VariantId, string ProductName, string? Code, string? Barcode, bool IsActive, string VisibilityOverride);
-
-public record BranchCatalogPageDto(IReadOnlyCollection<BranchCatalogItemDto> Items, int TotalCount);
 
 public sealed class GetBranchCatalogQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetBranchCatalogQuery, BranchCatalogPageDto>
 {

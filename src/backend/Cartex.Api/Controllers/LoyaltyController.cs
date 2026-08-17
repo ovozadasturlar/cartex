@@ -1,13 +1,10 @@
-using Cartex.Application.Loyalty.Commands;
+﻿using Cartex.Application.Loyalty.Commands;
 using Cartex.Application.Loyalty.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Enums;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Application.Common.Messaging;
-using LoyaltyProgramDto = Cartex.Application.Loyalty.Queries.LoyaltyProgramDto;
-using DiscountRuleDto = Cartex.Application.Loyalty.Queries.DiscountRuleDto;
-using LoyaltyStatsDto = Cartex.Application.Loyalty.Queries.LoyaltyStatsDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

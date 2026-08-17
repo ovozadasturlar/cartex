@@ -1,4 +1,4 @@
-using Cartex.Application.Suppliers.Commands;
+﻿using Cartex.Application.Suppliers.Commands;
 using Cartex.Application.Suppliers.Queries;
 using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Supplies.Queries;
@@ -10,6 +10,8 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Supplies;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Tests;
 

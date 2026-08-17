@@ -1,10 +1,11 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Messaging;
 using Cartex.Application.Notifications.Commands;
 using Cartex.Application.Notifications.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Notifications;
 
 namespace Cartex.Api.Controllers;
 

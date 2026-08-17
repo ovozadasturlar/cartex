@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -612,9 +613,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     partial void OnSelectedLabelPresetChanged(string? value)
     {
         if (value is null || value == "custom") return;
+        // Preset o'lchamlari kodda yozilgan qiymatlar, foydalanuvchi kiritgan matn emas —
+        // shuning uchun til o'zgarganda ham bir xil o'qilishi kerak.
         var parts = value.Split('×');
-        LabelWidthMm = decimal.Parse(parts[0]);
-        LabelHeightMm = decimal.Parse(parts[1]);
+        LabelWidthMm = decimal.Parse(parts[0], CultureInfo.InvariantCulture);
+        LabelHeightMm = decimal.Parse(parts[1], CultureInfo.InvariantCulture);
     }
 
     partial void OnLabelWidthMmChanged(decimal value)

@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Infrastructure.Notifications;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.IO.Compression;
+using Cartex.Shared.Models.Settings;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Api.Controllers;
 
@@ -89,7 +91,7 @@ public class ReceiptController(ISender sender, IObjectStorage storage) : Control
         return File(output.ToArray(), "application/zip");
     }
 
-    private static ReceiptSettings ToRenderSettings(Cartex.Application.Settings.Queries.ReceiptSettingsDto settings) =>
+    private static ReceiptSettings ToRenderSettings(ReceiptSettingsDto settings) =>
         new()
         {
             HeaderText = settings.HeaderText,

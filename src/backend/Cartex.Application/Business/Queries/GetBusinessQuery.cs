@@ -1,28 +1,14 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
+using Cartex.Shared.Models.Business;
 
 namespace Cartex.Application.Business.Queries;
 
 public record GetBusinessQuery : IRequest<BusinessDto>;
-
-public record BusinessDto(
-    string Name,
-    string? LegalName,
-    string Currency,
-    bool IsOnboarded,
-    string? Phone,
-    string? Address,
-    string? LogoImageKey,
-    bool Multicurrency,
-    string? Telegram = null,
-    string? Website = null,
-    bool PricingMulticurrency = false,
-    bool SalesMulticurrency = false,
-    string? MonochromeLogoImageKey = null);
 
 public sealed class GetBusinessQueryHandler(IApplicationDbContext db, ISettingsService settings, IFeatureStateProvider features)
     : IRequestHandler<GetBusinessQuery, BusinessDto>

@@ -1,8 +1,9 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
 using Cartex.Shared.Localization;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Infrastructure.Notifications;
 

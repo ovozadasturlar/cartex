@@ -1,9 +1,10 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Shifts.Queries;
 
@@ -11,8 +12,6 @@ public record GetShiftsQuery : FilteringRequest, IRequest<IReadOnlyCollection<Sh
 {
     public long? UserId { get; set; }
 }
-
-public record ShiftHistoryDto(long Id, long UserId, string UserName, DateTime OpenedAt, DateTime? ClosedAt, decimal OpeningFloat, decimal? CountedCash, string Status);
 
 public sealed class GetShiftsQueryHandler(
     IApplicationDbContext db,

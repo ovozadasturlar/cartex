@@ -1,14 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Loyalty.Queries;
-
-public record DiscountExceptionDto(string Scope, long TargetId, string TargetName);
-
-public record DiscountRuleDto(long Id, string Name, bool IsEnabled, string Scope, long? TargetId, string? TargetName,
-    long? CustomerId, string? CustomerName, decimal MinAmount, string Method, decimal Value, int Priority,
-    DateOnly? StartsOn, DateOnly? EndsOn, List<DiscountExceptionDto> Exceptions);
 
 public record GetDiscountRulesQuery : IRequest<IReadOnlyCollection<DiscountRuleDto>>;
 

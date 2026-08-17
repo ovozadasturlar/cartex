@@ -458,7 +458,7 @@
                         <mi:MaterialIcon Kind="PrinterOutline" Width="18" Height="18" />
                     </Button>
                     <Button Grid.Column="6" Classes="paybtn" Padding="8,6"
-                            Command="{Binding ClearCartCommand}" ToolTip.Tip="{Binding L[cancel]}"
+                            Command="{Binding ClearCartConfirmedCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"
                                          Foreground="{DynamicResource DangerBrush}" />

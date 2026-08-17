@@ -1,14 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Notifications;
 
 namespace Cartex.Application.Notifications.Queries;
-
-public record NotificationJournalOptionsDto(
-    List<string> Channels,
-    List<string> Providers,
-    List<string> Statuses,
-    List<string> Purposes);
 
 public record GetNotificationJournalOptionsQuery : IRequest<NotificationJournalOptionsDto>;
 

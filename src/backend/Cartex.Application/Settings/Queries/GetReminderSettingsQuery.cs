@@ -1,21 +1,8 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record ReminderSettingsDto(
-    bool Enabled,
-    int MinDaysOverdue,
-    int RepeatEveryDays,
-    decimal MinBalance,
-    int SendHourLocal,
-    bool NotifyBeforeDue,
-    int DaysBeforeDue,
-    bool NotifyOnDueDate,
-    List<string> Channels,
-    string? OverdueTemplate = null,
-    string? DueSoonTemplate = null,
-    string? DueTodayTemplate = null);
 
 public record GetReminderSettingsQuery : IRequest<ReminderSettingsDto>;
 

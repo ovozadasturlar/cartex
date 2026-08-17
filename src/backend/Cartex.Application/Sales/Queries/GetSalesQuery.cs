@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Common.Settings;
@@ -7,6 +7,7 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -17,30 +18,6 @@ public record GetSalesQuery : FilteringRequest, IRequest<IReadOnlyCollection<Sal
     public long? WarehouseId { get; set; }
     public long? CustomerId { get; set; }
 }
-
-public record SaleLineDto(
-    long SaleItemId,
-    string ProductName,
-    decimal Quantity,
-    decimal ReturnedQuantity,
-    decimal UnitPrice);
-
-public record SaleDto(
-    long Id,
-    DateTime SaleDate,
-    decimal TotalAmount,
-    decimal PaidCash,
-    decimal PaidCard,
-    decimal PaidBonus,
-    decimal DebtAmount,
-    decimal CreditAmount,
-    string Status,
-    string ReceiptToken,
-    string? CustomerName,
-    string UserName,
-    List<SaleLineDto> Items,
-    bool CanResendReceipt,
-    decimal PaidAdvance = 0);
 
 public sealed class GetSalesQueryHandler(
     IApplicationDbContext db,

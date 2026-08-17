@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Auth.Services;
@@ -6,6 +6,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Entities;
 using Cartex.Application.Auth.Commands;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth;
 

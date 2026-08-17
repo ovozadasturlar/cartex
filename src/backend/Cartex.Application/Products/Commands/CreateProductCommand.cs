@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Finance;
+﻿using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using FluentValidation;
@@ -9,6 +9,7 @@ using Cartex.Application.Common.Catalog;
 using Cartex.Application.Barcodes.Commands;
 using Microsoft.Extensions.Configuration;
 using Cartex.Application.Common.Measurement;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Commands;
 

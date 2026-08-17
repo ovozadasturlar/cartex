@@ -32,7 +32,10 @@
 
     <DockPanel Margin="20">
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
-            <TextBlock Text="{Binding L[sales_policy]}" Classes="h2" VerticalAlignment="Center" />
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding L[sales_policy]}" Classes="h2" />
+                <TextBlock Text="{Binding L[sales_policy_hint]}" Classes="hint" />
+            </StackPanel>
             <Button Grid.Column="1" Classes="brand" Content="{Binding L[save]}"
                     Command="{Binding SaveCommand}" IsVisible="{Binding CanEdit}" />
         </Grid>
@@ -186,7 +189,6 @@
                             <TextBlock Text="{Binding L[allow_insufficient_stock_sales]}" Classes="field" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowInsufficientStockSales}" />
                         </Grid>
-                        <TextBlock Text="{Binding L[sales_policy_hint]}" Classes="hint" />
                     </StackPanel>
                 </Border>
 

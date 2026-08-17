@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Finance;
+﻿using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Customers.Commands;
 using Cartex.Application.Stocks.Queries;
@@ -12,6 +12,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Tests;
 

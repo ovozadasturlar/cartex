@@ -1,4 +1,4 @@
-using Cartex.Application.Customers.Commands;
+﻿using Cartex.Application.Customers.Commands;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Rates.Commands;
 using Cartex.Application.Sales.Commands;
@@ -13,6 +13,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Tests;
 
@@ -251,7 +252,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             shiftId = await sender.Send(new Cartex.Application.Shifts.Commands.OpenShiftCommand(0,
-                [new Cartex.Application.Common.Models.CurrencyAmountDto("USD", 5m)]));
+                [new CurrencyAmountDto("USD", 5m)]));
 
             var total = price * 2;
             var usdAmount = 1m;
@@ -269,7 +270,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
         var report = await sender2.Send(new Cartex.Application.Shifts.Commands.CloseShiftCommand(shiftId,
             price * 2 - 12600m,
-            [new Cartex.Application.Common.Models.CurrencyAmountDto("USD", 6m)]));
+            [new CurrencyAmountDto("USD", 6m)]));
 
         var usd = report.Currencies.Single(c => c.Currency == "USD");
         Assert.Equal(5m, usd.OpeningFloat);

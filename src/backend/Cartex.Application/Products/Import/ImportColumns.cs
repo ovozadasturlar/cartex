@@ -1,4 +1,5 @@
-using System.Globalization;
+﻿using System.Globalization;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 

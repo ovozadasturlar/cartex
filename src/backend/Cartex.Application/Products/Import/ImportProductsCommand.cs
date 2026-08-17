@@ -1,4 +1,4 @@
-using Cartex.Application.Barcodes.Commands;
+﻿using Cartex.Application.Barcodes.Commands;
 using Cartex.Application.Common.Images;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Products.Commands;
@@ -8,6 +8,7 @@ using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 

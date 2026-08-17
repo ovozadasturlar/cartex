@@ -1,12 +1,11 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
 
 public record GetTopCustomersReportQuery(DateTime From, DateTime To, long? WarehouseId) : IRequest<List<CustomerSalesDto>>;
-
-public record CustomerSalesDto(long CustomerId, string CustomerName, decimal Revenue, decimal Profit, int SalesCount, DateTime LastPurchase);
 
 public sealed class GetTopCustomersReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetTopCustomersReportQuery, List<CustomerSalesDto>>
 {

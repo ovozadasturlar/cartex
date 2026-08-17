@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Settings;
@@ -9,15 +9,12 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
 public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
     : IRequest<StockOnHandPageDto>;
-
-public record StockOnHandDto(long VariantId, string ProductName, long? CategoryId, string? CategoryName, string UnitName, string Dimension, decimal Quantity, decimal SellingPrice, DateOnly? NearestExpiry, string? ImageUrl = null, decimal? DiscountPct = null, string? Code = null, List<string>? Barcodes = null, bool AllowsAmountEntry = false, bool AllowsFractional = false);
-
-public record StockOnHandPageDto(IReadOnlyCollection<StockOnHandDto> Items, int TotalCount, decimal TotalQuantity, decimal TotalValue);
 
 public sealed class GetStockOnHandQueryHandler(
     IApplicationDbContext db,

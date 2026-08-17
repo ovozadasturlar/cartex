@@ -1,13 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
 
 public record GetInventoryValuationReportQuery(long? WarehouseId) : IRequest<InventoryValuationReportDto>;
-
-public record InventoryValuationGroupDto(string? Name, decimal Quantity, decimal Cost, decimal Retail);
-
-public record InventoryValuationReportDto(decimal TotalCost, decimal TotalRetail, List<InventoryValuationGroupDto> ByWarehouse, List<InventoryValuationGroupDto> ByCategory);
 
 public sealed class GetInventoryValuationReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetInventoryValuationReportQuery, InventoryValuationReportDto>
 {

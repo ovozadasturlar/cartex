@@ -1,14 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Accounts;
 
 namespace Cartex.Application.Accounts.Queries;
 
 public record GetAccountsTotalsQuery : FilteringRequest, IRequest<AccountsTotalsDto>;
-
-public record AccountsTotalsDto(int Count, decimal TotalBalance);
 
 public sealed class GetAccountsTotalsQueryHandler(
     IApplicationDbContext db,

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mi="using:Material.Icons.Avalonia"
         xmlns:c="using:Cartex.UI.Controls"
+        xmlns:svc="using:Cartex.UI.Services"
         xmlns:u="https://irihi.tech/ursa">
 
     <Styles.Resources>
@@ -195,6 +196,12 @@
     </Style>
     <Style Selector=":is(Control).form :is(CalendarDatePicker)">
         <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
+    </Style>
+
+    <!-- Avalonia kalitga "On"/"Off" ni o'zi yozadi; ular til fayllaridan o'tmaydi. -->
+    <Style Selector="ToggleSwitch">
+        <Setter Property="OnContent" Value="{Binding [toggle_on], Source={x:Static svc:LocalizationManager.Instance}}" />
+        <Setter Property="OffContent" Value="{Binding [toggle_off], Source={x:Static svc:LocalizationManager.Instance}}" />
     </Style>
 
     <Style Selector="NumericUpDown">

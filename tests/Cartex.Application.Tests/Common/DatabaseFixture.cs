@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +9,7 @@ using Respawn;
 using Respawn.Graph;
 using Testcontainers.PostgreSql;
 using Xunit;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Tests.Common;
 
@@ -81,7 +82,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     private sealed class NoopPagingWriter : Cartex.Application.Common.Interfaces.IPagingMetadataWriter
     {
-        public void Write(Cartex.Application.Common.Models.PagedListMetadata metadata) { }
+        public void Write(PagedListMetadata metadata) { }
     }
 
     private sealed class NullCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier

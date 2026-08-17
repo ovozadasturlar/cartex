@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Messaging;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Products.Import;
 using Cartex.Application.Supplies.Import;
@@ -9,6 +9,7 @@ using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Tests;
 

@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +18,7 @@ using Cartex.Application.Common.Partners;
 using System.Text.Json.Serialization;
 using Cartex.Application.Printing;
 using Cartex.Application.OfflineCache;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Commands;
 
@@ -31,8 +32,6 @@ public record CreateSaleItemDto(
     [property: JsonIgnore] decimal? SourceRate = null);
 
 public record SalePaymentDto(PaymentMethod Method, string Currency, decimal Amount);
-
-public record CreateSaleResult(long SaleId, string ReceiptToken);
 
 file sealed record CatalogPrice(ProductPrice Source, decimal Amount, string Currency, decimal Rate);
 

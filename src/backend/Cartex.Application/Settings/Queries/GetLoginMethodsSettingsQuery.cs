@@ -1,9 +1,8 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record LoginMethodsSettingsDto(bool QrEnabled, int QrRefreshSeconds, bool KeyEnabled);
 
 public record GetLoginMethodsSettingsQuery : IRequest<LoginMethodsSettingsDto>;
 

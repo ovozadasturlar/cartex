@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.ProductPacks.Commands;
 using Cartex.Application.ProductPacks.Queries;
 using Cartex.Application.Products.Commands;
@@ -10,6 +10,7 @@ using Cartex.Domain.Common.Exceptions;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Api.Controllers;
 

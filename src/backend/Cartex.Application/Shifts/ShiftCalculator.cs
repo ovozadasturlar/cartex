@@ -1,21 +1,10 @@
-using Cartex.Domain.Entities;
+﻿using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Shifts;
-
-public record ZReportCurrencyDto(string Currency, decimal OpeningFloat, decimal CashSales, decimal CashReturns, decimal DebtPayIn, decimal SupplyPayOut, decimal ExpectedCash, decimal CountedCash, decimal Difference);
-
-public record ZReportDto(long ShiftId, decimal OpeningFloat, decimal CashSales, decimal CashReturns, decimal PayIn, decimal PayOut, decimal DebtPayIn, decimal SupplyPayOut, decimal ExpectedCash, decimal CountedCash, decimal Difference)
-{
-    public decimal CardSales { get; init; }
-    public decimal CardReturns { get; init; }
-    public decimal BonusUsed { get; init; }
-    public decimal NewDebtIssued { get; init; }
-    public int SalesCount { get; init; }
-    public List<ZReportCurrencyDto> Currencies { get; init; } = [];
-}
 
 public static class ShiftCalculator
 {

@@ -1,4 +1,4 @@
-using Cartex.Application.Products.Commands;
+﻿using Cartex.Application.Products.Commands;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Suppliers.Commands;
 using Cartex.Application.Supplies.Commands;
@@ -11,6 +11,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Application.Tests;
 

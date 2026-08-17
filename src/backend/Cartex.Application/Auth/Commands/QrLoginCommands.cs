@@ -1,16 +1,13 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using FluentValidation;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 
 public record StartQrLoginCommand : IRequest<QrLoginStartResponse>;
-
-public record QrLoginStartResponse(string Code, int ExpiresInSeconds);
-
-public record LoginMethodsDto(bool QrEnabled, bool KeyEnabled);
 
 public record GetLoginMethodsQuery : IRequest<LoginMethodsDto>;
 

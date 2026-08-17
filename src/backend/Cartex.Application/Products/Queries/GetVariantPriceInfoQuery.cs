@@ -1,15 +1,8 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
-
-public record VariantPriceInfoDto(
-    decimal? LastPurchasePrice,
-    decimal? SellingPrice,
-    long? LastUnitId = null,
-    decimal? LastPackSize = null,
-    long? LastPackId = null,
-    string? LastPriceBasis = null);
 
 public record GetVariantPriceInfoQuery(long VariantId, long WarehouseId) : IRequest<VariantPriceInfoDto>;
 

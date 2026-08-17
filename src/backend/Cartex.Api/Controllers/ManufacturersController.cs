@@ -1,9 +1,10 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Messaging;
 using Cartex.Application.Manufacturers;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Api.Controllers;
 

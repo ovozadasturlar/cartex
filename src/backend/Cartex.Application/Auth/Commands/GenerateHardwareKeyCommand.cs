@@ -1,14 +1,13 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Security;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 
 public record GenerateHardwareKeyCommand(long UserId, string Serial) : ICommand<HardwareKeyResult>;
-
-public record HardwareKeyResult(string FileName, string Content);
 
 public sealed class GenerateHardwareKeyCommandHandler(
     IApplicationDbContext db,

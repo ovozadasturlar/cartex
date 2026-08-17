@@ -1,26 +1,16 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerLedgerQuery(long CustomerId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
-
-public record CustomerLedgerEntryDto(
-    DateTime Date,
-    string OperationType,
-    string AccountType,
-    decimal Change,
-    decimal BalanceAfter,
-    string? Currency = null,
-    long TransactionId = 0,
-    long? PaymentDocumentId = null,
-    string? PaymentNumber = null,
-    long? SaleId = null);
 
 public sealed class GetCustomerLedgerQueryHandler(
     IApplicationDbContext db,

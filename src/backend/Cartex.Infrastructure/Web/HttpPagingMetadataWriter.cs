@@ -1,9 +1,10 @@
-namespace Cartex.Infrastructure.Web;
+﻿namespace Cartex.Infrastructure.Web;
 
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using Cartex.Shared.Models.Common;
 
 public class HttpPagingMetadataWriter(IHttpContextAccessor accessor) : IPagingMetadataWriter
 {

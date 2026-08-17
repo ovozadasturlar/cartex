@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -45,6 +45,8 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _payCard;
     [ObservableProperty] private decimal _payBonus;
     [ObservableProperty] private decimal _payDebt;
+    [ObservableProperty] private decimal _payAdvance;
+    [ObservableProperty] private decimal _payReturned;
 
     public ObservableCollection<TopProductReportDto> TopProducts { get; } = [];
     public ObservableCollection<DebtAgingRowDto> DebtRows { get; } = [];
@@ -230,6 +232,8 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
             PayCard = report.Card;
             PayBonus = report.Bonus;
             PayDebt = report.Debt;
+            PayAdvance = report.Advance;
+            PayReturned = report.Returned;
             SalesByCashier.Clear();
             foreach (var c in report.ByCashier) SalesByCashier.Add(c);
             SalesByCategory.Clear();

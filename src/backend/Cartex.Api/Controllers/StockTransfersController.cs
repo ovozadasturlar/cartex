@@ -1,10 +1,11 @@
-using Cartex.Application.StockTransfers.Commands;
+﻿using Cartex.Application.StockTransfers.Commands;
 using Cartex.Application.StockTransfers.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.StockTransfers;
 
 namespace Cartex.Api.Controllers;
 

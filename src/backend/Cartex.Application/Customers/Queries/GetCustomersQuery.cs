@@ -7,16 +7,12 @@ using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomersQuery : FilteringRequest, IRequest<IReadOnlyCollection<CustomerDto>>;
-
-public record CustomerDto(long Id, string FullName, string? LastName, string? Address, string? Phone, string? Email, string? CardBarcode, decimal DiscountPct, decimal CashbackBalance, decimal DebtBalance, decimal CreditLimit, bool NotificationsOptOut = false, bool HasTelegram = false, string? PreferredLanguage = null, decimal CreditBalance = 0, string? Note = null)
-{
-    public IReadOnlyList<CurrencyAmountDto> DebtBalances { get; init; } = [];
-    public IReadOnlyList<CurrencyAmountDto> CreditBalances { get; init; } = [];
-}
 
 public sealed class GetCustomersQueryHandler(
     IApplicationDbContext db,

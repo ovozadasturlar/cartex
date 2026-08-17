@@ -1,10 +1,11 @@
-using Cartex.Application.Rates.Commands;
+﻿using Cartex.Application.Rates.Commands;
 using Cartex.Application.Rates.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Rates;
 
 namespace Cartex.Api.Controllers;
 

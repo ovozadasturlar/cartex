@@ -1,15 +1,13 @@
-using Cartex.Application.Common.Models;
+﻿using Cartex.Application.Common.Models;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Agents;
 
 namespace Cartex.Application.Agents.Queries;
-
-public record AgentCustomerDto(long Id, string FullName, string? Phone, string? Address, decimal DebtBalance, decimal CreditLimit, List<CurrencyAmountDto> DebtBalances, double? Latitude, double? Longitude);
-
-public record AgentBootstrapDto(long? WarehouseId, string? WarehouseName, string BaseCurrency, DateTime ServerTime, List<AgentCustomerDto> Customers, IReadOnlyCollection<StockOnHandDto> VanStock);
 
 public record GetAgentBootstrapQuery : IRequest<AgentBootstrapDto>;
 

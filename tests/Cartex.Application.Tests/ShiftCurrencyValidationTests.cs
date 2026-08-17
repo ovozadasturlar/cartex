@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Tests.Common;
@@ -8,6 +8,7 @@ using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Tests;
 

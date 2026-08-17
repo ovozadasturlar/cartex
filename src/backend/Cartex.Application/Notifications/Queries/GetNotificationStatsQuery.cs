@@ -1,18 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Notifications;
 
 namespace Cartex.Application.Notifications.Queries;
-
-public record NotificationStatsDto(
-    int Deliveries,
-    int Attempts,
-    int Accepted,
-    int Delivered,
-    int Undelivered,
-    int Failed,
-    int Skipped,
-    int BillableUnits);
 
 public record GetNotificationStatsQuery(
     DateTime? From = null,

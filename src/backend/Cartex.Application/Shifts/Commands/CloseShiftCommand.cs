@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Finance;
+﻿using Cartex.Application.Common.Finance;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Application.Common.Models;
@@ -7,6 +7,8 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using Cartex.Domain.Enums;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Shifts.Commands;
 

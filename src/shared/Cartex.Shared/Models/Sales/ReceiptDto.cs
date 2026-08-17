@@ -1,3 +1,5 @@
+﻿using System.Text.Json.Serialization;
+
 namespace Cartex.Shared.Models.Sales;
 
 public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal, decimal DiscountAmount = 0)
@@ -44,4 +46,8 @@ public record ReceiptDto(
 {
     public bool HasPayments => Payments.Count > 0;
     public bool HasNote => !string.IsNullOrWhiteSpace(Note);
+
+    /// Chek chizilishidan oldin server logotipni saqlashdan yuklab shu yerga qo'yadi.
+    /// Simdan hech qachon o'tmaydi — klientlar rasmni `LogoImageKey` orqali oladi.
+    [JsonIgnore] public byte[]? LogoBytes { get; init; }
 }

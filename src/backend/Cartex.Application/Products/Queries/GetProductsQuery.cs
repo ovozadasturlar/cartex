@@ -1,7 +1,8 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
@@ -12,39 +13,6 @@ public record GetProductsQuery : FilteringRequest, IRequest<IReadOnlyCollection<
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
 }
-
-public record ProductDto(
-    long Id,
-    long DefaultVariantId,
-    string Name,
-    string? CategoryName,
-    string UnitName,
-    decimal MinStock,
-    List<string> Barcodes,
-    long? ProductTypeId,
-    string? ProductTypeName,
-    bool TracksExpiry,
-    string? Attributes,
-    string? ImageKey,
-    string? Code,
-    string? IkpuCode,
-    decimal? VatRate,
-    decimal? SellingPrice,
-    decimal OnHand,
-    string? ImageUrl = null,
-    string? PriceCurrency = null,
-    string? Dimension = null,
-    long? ManufacturerId = null,
-    bool IsEnabled = true,
-    long? CategoryId = null,
-    long UnitId = 0,
-    bool AllowsAmountEntry = false,
-    string? PriceSymbol = null,
-    string? PriceSymbolPosition = null,
-    int? PriceDecimalDigits = null,
-    bool AllowsFractional = false,
-    bool? FractionalOverride = null,
-    bool? AmountEntryEnabled = null);
 
 public sealed class GetProductsQueryHandler(
     IApplicationDbContext db,

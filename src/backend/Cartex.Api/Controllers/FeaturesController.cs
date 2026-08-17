@@ -1,4 +1,4 @@
-using Cartex.Application.Features.Commands;
+﻿using Cartex.Application.Features.Commands;
 using Cartex.Application.Features.Queries;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
@@ -7,7 +7,6 @@ using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Features;
 using Cartex.Application.Common.Messaging;
-using FeatureDto = Cartex.Application.Features.Queries.FeatureDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

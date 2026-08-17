@@ -1,8 +1,9 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.AuditLogs;
 
 namespace Cartex.Application.AuditLogs.Queries;
 
@@ -14,27 +15,6 @@ public record GetAuditLogsQuery : FilteringRequest, IRequest<IReadOnlyCollection
     public string? UserName { get; set; }
     public string? Action { get; set; }
 }
-
-public record AuditLogDto(
-    long Id,
-    string? UserName,
-    string Action,
-    string TableName,
-    long? RecordId,
-    string? OldData,
-    string? NewData,
-    DateTime CreatedAt,
-    string? Client,
-    Guid EventId,
-    string? Summary,
-    string? CommandName,
-    string? Details,
-    int EntityCount,
-    long? BranchId,
-    string? DeviceId,
-    string? DeviceName,
-    string? IpAddress,
-    string? CorrelationId);
 
 public sealed class GetAuditLogsQueryHandler(
     IApplicationDbContext db,

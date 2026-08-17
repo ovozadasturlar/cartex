@@ -1,9 +1,8 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Application.Settings.Queries;
-
-public record CloudBridgeSettingsDto(bool Enabled, string? GatewayUrl, bool HasLicenseKey);
 
 public record GetCloudBridgeSettingsQuery : IRequest<CloudBridgeSettingsDto>;
 

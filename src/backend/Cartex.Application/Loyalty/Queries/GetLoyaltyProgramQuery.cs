@@ -1,14 +1,11 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Loyalty.Queries;
 
 public record GetLoyaltyProgramQuery : IRequest<LoyaltyProgramDto>;
-
-public record CashbackRuleDto(long Id, string Scope, long TargetId, string TargetName, string Method, decimal Value, int Priority, bool ExcludeFromTotalPercent);
-
-public record LoyaltyProgramDto(bool IsEnabled, decimal TotalPercent, decimal CashbackRounding, List<CashbackRuleDto> Rules, string DiscountCombineMode = "Priority");
 
 public sealed class GetLoyaltyProgramQueryHandler(IApplicationDbContext db) : IRequestHandler<GetLoyaltyProgramQuery, LoyaltyProgramDto>
 {

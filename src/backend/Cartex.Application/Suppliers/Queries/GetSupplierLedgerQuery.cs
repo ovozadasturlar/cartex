@@ -1,14 +1,14 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Suppliers;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Suppliers.Queries;
 
 public record GetSupplierLedgerQuery(long SupplierId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<SupplierLedgerEntryDto>>;
-
-public record SupplierLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter, string? Currency = null);
 
 public sealed class GetSupplierLedgerQueryHandler(
     IApplicationDbContext db,

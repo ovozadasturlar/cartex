@@ -1,6 +1,7 @@
-using Cartex.Application.Common.Models;
+﻿using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
@@ -10,8 +11,6 @@ public record GetProductsTotalsQuery : FilteringRequest, IRequest<ProductsTotals
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
 }
-
-public record ProductsTotalsDto(int Count, decimal TotalOnHand);
 
 public sealed class GetProductsTotalsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetProductsTotalsQuery, ProductsTotalsDto>
 {

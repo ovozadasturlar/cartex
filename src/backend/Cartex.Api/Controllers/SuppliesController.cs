@@ -1,4 +1,4 @@
-using Cartex.Application.Supplies.Commands;
+﻿using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Supplies.Import;
 using Cartex.Application.Supplies.Queries;
 using Cartex.Application.Suppliers.Commands;
@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using AttachSupplierPaymentsRequest = Cartex.Shared.Models.Supplies.AttachSupplierPaymentsRequest;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Api.Controllers;
 

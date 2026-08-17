@@ -1,11 +1,10 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.ProductTypes.Queries;
 
 public record GetProductTypesQuery : IRequest<IReadOnlyCollection<ProductTypeDto>>;
-
-public record ProductTypeDto(long Id, string Name, bool TracksExpiry, string? AttributeSchema);
 
 public sealed class GetProductTypesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetProductTypesQuery, IReadOnlyCollection<ProductTypeDto>>
 {

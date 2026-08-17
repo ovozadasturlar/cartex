@@ -1,5 +1,6 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 

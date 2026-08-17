@@ -1,19 +1,14 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Common.Security;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Users;
 
 namespace Cartex.Application.Users.Queries;
 
 public record GetUsersQuery : FilteringRequest, IRequest<IReadOnlyCollection<UserDto>>;
-
-public record UserDto(
-    long Id, string FullName, string Username,
-    List<long> RoleIds, List<string> RoleNames,
-    long? DefaultBranchId, string? DefaultBranchName,
-    List<long> BranchIds, string? StartPage, string? CartDestination, bool IsActive);
 
 public sealed class GetUsersQueryHandler(
     IApplicationDbContext db,

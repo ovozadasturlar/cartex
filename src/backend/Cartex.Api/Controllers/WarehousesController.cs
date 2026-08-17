@@ -1,10 +1,11 @@
-using Cartex.Application.Warehouses.Commands;
+﻿using Cartex.Application.Warehouses.Commands;
 using Cartex.Application.Warehouses.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Warehouses;
 
 namespace Cartex.Api.Controllers;
 

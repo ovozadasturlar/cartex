@@ -1,9 +1,10 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Transactions;
 
 namespace Cartex.Application.Transactions.Queries;
 
@@ -13,16 +14,6 @@ public record GetTransactionsQuery : FilteringRequest, IRequest<IReadOnlyCollect
     public DateTime? ToDate { get; set; }
     public string? OperationType { get; set; }
 }
-
-public record TransactionDto(
-    long Id,
-    decimal Amount,
-    string Currency,
-    string OperationType,
-    string? FromAccountName,
-    string? ToAccountName,
-    DateTime CreatedAt,
-    string UserName);
 
 public sealed class GetTransactionsQueryHandler(
     IApplicationDbContext db,

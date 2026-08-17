@@ -501,7 +501,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (IsCustomerPanelOpen) { IsCustomerPanelOpen = false; return; }
         if (IsHeldPanelOpen) { IsHeldPanelOpen = false; return; }
         if (IsQueuePanelOpen) { IsQueuePanelOpen = false; return; }
-        ClearCart();
+        ClearCartConfirmedCommand.Execute(null);
     }
 
     public override void OnNavigatedFrom()
@@ -1688,7 +1688,16 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         PaidCash = Math.Max(0, TotalAmount - PaidCard - PaidBonus);
     }
 
+    /// Savatni tozalash — sotuvni yo'qotadi va orqaga qaytarib bo'lmaydi, shuning uchun
+    /// foydalanuvchi qo'li bilan tozalayotganda so'raladi. Savdo yakunlangandan keyingi
+    /// avtomatik tozalash bu yerdan o'tmaydi.
     [RelayCommand]
+    private async Task ClearCartConfirmedAsync()
+    {
+        if (CartItems.Count > 0 && !await _dialog.ConfirmAsync(L["clear_confirm"], L["clear"])) return;
+        ClearCart();
+    }
+
     private void ClearCart()
     {
         if (_activeCartCode is { } activeCode)

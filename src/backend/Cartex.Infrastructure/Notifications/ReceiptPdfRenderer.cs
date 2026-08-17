@@ -1,10 +1,11 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
 using Cartex.Shared.Localization;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Infrastructure.Notifications;
 

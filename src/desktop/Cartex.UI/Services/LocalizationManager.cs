@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using Cartex.UI.Models;
@@ -92,8 +93,28 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         _ => "en"
     };
 
+    /// Sana tanlagichdagi oy nomlari va hafta kunlari matn fayldan emas, .NET madaniyatidan
+    /// keladi. Madaniyat til bilan birga o'zgarmasa, o'zbekcha ekranda "July" chiqib qoladi.
+    private static CultureInfo GetCulture(AppLanguage lang) => CultureInfo.GetCultureInfo(lang switch
+    {
+        AppLanguage.Ru => "ru-RU",
+        AppLanguage.UzLatn => "uz-Latn-UZ",
+        AppLanguage.UzCyrl => "uz-Cyrl-UZ",
+        _ => "en-US"
+    });
+
+    private static void ApplyCulture(AppLanguage lang)
+    {
+        var culture = GetCulture(lang);
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+    }
+
     public void LoadLanguage(AppLanguage lang)
     {
+        ApplyCulture(lang);
         if (_cache.TryGetValue(lang, out var cached))
         {
             _strings = cached;

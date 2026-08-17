@@ -1,15 +1,9 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Queries;
-
-public record UserContextBranchDto(long Id, string Name, bool IsActive);
-public record UserContextWarehouseDto(long Id, string Name, long BranchId, string BranchName);
-public record UserContextDto(
-    long? DefaultBranchId,
-    IReadOnlyList<UserContextBranchDto> Branches,
-    IReadOnlyList<UserContextWarehouseDto> Warehouses);
 
 public record GetUserContextQuery : IRequest<UserContextDto>;
 

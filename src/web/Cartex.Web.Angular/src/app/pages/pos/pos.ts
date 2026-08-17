@@ -24,6 +24,7 @@ import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
+import { ConfirmDialog } from '../loyalty/confirm-dialog';
 import { CartLine, PosCartState, shortfallDiscount } from './pos-state';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
@@ -411,7 +412,14 @@ export class Pos implements OnInit {
     if (!this.cart().length) this.state.resetPayments();
   }
 
-  clearCart(): void {
+  // Savatni tozalash sotuvni yo'qotadi va orqaga qaytarib bo'lmaydi, shuning uchun so'raladi.
+  async clearCart(): Promise<void> {
+    if (this.cart().length) {
+      const ok: boolean | undefined = await lastValueFrom(
+        this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'clear_confirm', width: '380px' }).afterClosed(),
+      );
+      if (!ok) return;
+    }
     this.state.clearAll();
     this.activeQueueCode = null;
   }

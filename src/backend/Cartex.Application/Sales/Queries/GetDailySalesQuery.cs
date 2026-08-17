@@ -1,7 +1,8 @@
-using Cartex.Application.Common.Models;
+﻿using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Queries;
 
@@ -11,8 +12,6 @@ public record GetDailySalesQuery : FilteringRequest, IRequest<List<DailySalesPoi
     public DateTime? ToDate { get; set; }
     public long? WarehouseId { get; set; }
 }
-
-public record DailySalesPointDto(DateTime Date, int Count, decimal TotalAmount);
 
 public sealed class GetDailySalesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetDailySalesQuery, List<DailySalesPointDto>>
 {

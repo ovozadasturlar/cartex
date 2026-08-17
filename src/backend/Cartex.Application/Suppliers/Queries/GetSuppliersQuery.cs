@@ -1,18 +1,15 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Suppliers.Queries;
 
 public record GetSuppliersQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplierDto>>;
-
-public record SupplierDto(long Id, string Name, string? Phone, decimal Payable)
-{
-    public IReadOnlyList<CurrencyAmountDto> PayableBalances { get; init; } = [];
-}
 
 public sealed class GetSuppliersQueryHandler(
     IApplicationDbContext db,

@@ -1,7 +1,8 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Application.Supplies.Queries;
 
@@ -11,8 +12,6 @@ public record GetSuppliesTotalsQuery : FilteringRequest, IRequest<SuppliesTotals
     public DateTime? ToDate { get; set; }
     public long? SupplierId { get; set; }
 }
-
-public record SuppliesTotalsDto(int Count, decimal TotalAmount);
 
 public sealed class GetSuppliesTotalsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSuppliesTotalsQuery, SuppliesTotalsDto>
 {

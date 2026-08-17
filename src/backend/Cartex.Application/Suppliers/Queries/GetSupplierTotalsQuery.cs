@@ -1,14 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Suppliers.Queries;
 
 public record GetSupplierTotalsQuery : FilteringRequest, IRequest<SupplierTotalsDto>;
-
-public record SupplierTotalsDto(int Count, decimal TotalPayable, decimal TotalAdvance);
 
 public sealed class GetSupplierTotalsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetSupplierTotalsQuery, SupplierTotalsDto>
 {
