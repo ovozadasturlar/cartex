@@ -27,6 +27,11 @@ import { EmptyState } from '../../shared/empty-state';
 import { OpenShiftDialog } from '../shift/shift';
 import { CustomerPickerDialog, PosReceiptDialog } from './pos-dialogs';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
+import { LongPressDirective } from '../../core/long-press.directive';
+import { RemotePrintService } from '../../core/remote-print.service';
+import { FeaturesApi } from '../../core/api/misc.api';
+import { PosProductDialog, PrepackDialog, QuickRatesDialog } from './pos-tools';
+import { ProductDialog } from '../products/product-dialog';
 import { CartLine, PaymentRow, PosCartState, shortfallDiscount } from './pos-state';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
@@ -44,6 +49,7 @@ const PAGE_SIZE = 40;
     MatProgressBarModule,
     MatTooltipModule,
     TranslocoModule,
+    LongPressDirective,
     CxDatePipe,
     CxMoneyPipe,
     EmptyState,
@@ -58,6 +64,8 @@ export class Pos implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly features = inject(FeaturesApi);
+  private readonly remotePrint = inject(RemotePrintService);
   private readonly wh = inject(WarehouseContextService);
   private readonly transloco = inject(TranslocoService);
   readonly state = inject(PosCartState);
@@ -117,6 +125,11 @@ export class Pos implements OnInit {
   readonly paying = signal(false);
   readonly minDueDate = isoDay(new Date());
   readonly policy = signal<SalesPolicy | null>(null);
+
+  /// Modul o'chirilgan bo'lsa tugma umuman chizilmaydi — keraksiz tugma kassirni chalg'itadi.
+  readonly canPrepack = signal(false);
+  readonly canManageRates = this.auth.hasPermission('rates.edit');
+  readonly canCreateProduct = this.auth.hasPermission('products.create');
   readonly shiftRequired = computed(() => (this.policy()?.shiftPolicy ?? 'On') !== 'Off');
   readonly bonusAuto = signal(false);
   readonly autoDiscount = signal(0);
@@ -145,6 +158,22 @@ export class Pos implements OnInit {
   readonly hasRateGap = computed(() => this.isMulticurrency()
     && this.paymentRows().some((r) => r.amount > 0 && this.rateOf(r.currency) <= 0));
   readonly change = computed(() => Math.max(0, this.paid() - this.total()));
+
+  /// Ortiqcha pul: mijoz biriktirilgan va do'kon avansga ruxsat bergan bo'lsa, standart
+  /// holatda uning hisobiga yoziladi; kassir bitta bosish bilan naqd qaytimga o'tkazadi.
+  private readonly excessOverride = signal<boolean | null>(null);
+  readonly canCreditExcess = computed(
+    () => (this.policy()?.allowCustomerCredit ?? false) && this.customer() !== null,
+  );
+  readonly excessToCredit = computed(
+    () => this.change() > 0 && this.canCreditExcess() && (this.excessOverride() ?? true),
+  );
+  readonly creditAmount = computed(() => (this.excessToCredit() ? this.change() : 0));
+
+  toggleExcessTarget(): void {
+    if (!this.canCreditExcess()) return;
+    this.excessOverride.set(!this.excessToCredit());
+  }
   readonly debt = computed(() => Math.max(0, this.total() - this.paid()));
   // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
   readonly hasShortfall = computed(() => this.paid() > 0 && this.paid() < this.total());
@@ -246,6 +275,7 @@ export class Pos implements OnInit {
       this.categories.set(categories);
       this.shift.set(shift);
       this.policy.set(policy);
+      void this.loadPrepackAccess();
       if (business) {
         this.baseCurrency.set(business.currency);
         this.isMulticurrency.set(business.salesMulticurrency);
@@ -552,6 +582,63 @@ export class Pos implements OnInit {
     return rows.length ? rows.map((r) => ({ method: r.method, currency: r.currency, amount: r.amount })) : null;
   }
 
+  /// Ruxsat ham, modul ham bo'lishi shart: biri xodimni, ikkinchisi do'konni boshqaradi.
+  private async loadPrepackAccess(): Promise<void> {
+    if (!this.auth.hasPermission('sales.prepack')) return;
+    try {
+      const enabled = await lastValueFrom(this.features.enabled());
+      this.canPrepack.set(enabled.includes('prepack'));
+    } catch {
+      this.canPrepack.set(false);
+    }
+  }
+
+  async openPrepack(): Promise<void> {
+    const warehouseId = this.warehouseId();
+    if (!warehouseId) return;
+    await lastValueFrom(
+      this.dialog.open(PrepackDialog, { data: warehouseId, maxWidth: '94vw' }).afterClosed(),
+    );
+  }
+
+  async openQuickRates(): Promise<void> {
+    const saved = await lastValueFrom(
+      this.dialog.open(QuickRatesDialog, { width: '460px' }).afterClosed(),
+    );
+    if (saved) await this.refreshTiles();
+  }
+
+  async newProduct(): Promise<void> {
+    const created = await lastValueFrom(
+      this.dialog.open(ProductDialog, { data: null, width: '640px' }).afterClosed(),
+    );
+    if (created) await this.refreshTiles();
+  }
+
+  /// Savatdagi qatordan ham xuddi shu kartochka ochiladi — kassir mahsulotni savatga
+  /// qo'shgandan keyin ham qoldig'ini ko'ra olishi kerak.
+  async showCartDetail(line: { variantId: number }): Promise<void> {
+    const tile = this.tiles().find((t) => t.variantId === line.variantId);
+    if (tile) await this.showDetail(tile);
+  }
+
+  /// Kartochka: qoldiq, narx va shu yerdan tahrirlash yoki kirim qilish.
+  async showDetail(tile: StockOnHand): Promise<void> {
+    const warehouseId = this.warehouseId();
+    if (!warehouseId) return;
+    const result = await lastValueFrom(
+      this.dialog
+        .open(PosProductDialog, { data: { stock: tile, warehouseId }, width: '520px' })
+        .afterClosed(),
+    );
+    if (result === 'add') this.addTile(tile);
+    if (result === 'reload') await this.refreshTiles();
+  }
+
+  private async refreshTiles(): Promise<void> {
+    await this.loadTiles();
+  }
+
   async attachCustomer(): Promise<void> {
     const picked: Customer | undefined = await lastValueFrom(
 this.dialog.open<CustomerPickerDialog, unknown, Customer>(CustomerPickerDialog, { autoFocus: 'input' }).afterClosed(),
@@ -619,6 +706,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
             discountAmount: this.discount(),
             note: this.note().trim() || null,
             debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
+            creditAmount: this.creditAmount(),
           },
         ));
         this.activeQueueCode = null;
@@ -632,6 +720,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       const payload = {
         warehouseId,
         customerId: this.customer()?.id ?? null,
+        creditAmount: this.creditAmount(),
         paidCash: this.isMulticurrency() ? 0 : this.cash(),
         paidCard: this.isMulticurrency() ? 0 : this.card(),
         paidBonus: this.isMulticurrency() ? 0 : this.bonus(),
@@ -671,12 +760,31 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
   }
 
   async sendToQueue(): Promise<void> {
+    await this.queueCart('send_to_queue');
+  }
+
+  /// Chek chiqarish va navbatga yuborish: savat navbatga tushadi, proforma serverdagi
+  /// navbatdagi savatga havola qilib chop etiladi, kassa esa keyingi mijozga bo'shaydi.
+  async printPreview(): Promise<void> {
+    const code = await this.queueCart('print_and_queue');
+    if (!code) return;
+    await this.remotePrint.send({
+      kind: 'CartProforma',
+      permission: 'printing.receipts.print',
+      sourceType: 'cart',
+      sourceId: code,
+      payload: { cartCode: code },
+    });
+  }
+
+  private async queueCart(successKey: string): Promise<string | null> {
     const warehouseId = this.warehouseId();
-    if (!this.canCreateCart || !warehouseId || !this.cart().length || this.paying()) return;
+    if (!this.canCreateCart || !warehouseId || !this.cart().length || this.paying()) return null;
     this.paying.set(true);
     try {
-      if (!this.activeQueueCode) {
-        await lastValueFrom(this.orderingApi.submit({
+      let code = this.activeQueueCode;
+      if (!code) {
+        code = await lastValueFrom(this.orderingApi.submit({
           warehouseId,
           customerId: this.customer()?.id ?? null,
           items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
@@ -687,10 +795,12 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       }
       this.activeQueueCode = null;
       this.state.clearAll();
-      this.notify.success(this.transloco.translate('send_to_queue'));
+      this.notify.success(this.transloco.translate(successKey));
       this.focusScan();
+      return code;
     } catch (e) {
       this.notify.error(e);
+      return null;
     } finally {
       this.paying.set(false);
     }

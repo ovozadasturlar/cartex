@@ -182,6 +182,7 @@ export class OrderingApi {
       discountAmount: number;
       note: string | null;
       debtDueDate: string | null;
+      creditAmount?: number;
     },
   ): Observable<number> {
     return this.http.post<number>(`/api/ordering/carts/${code}/checkout`, {

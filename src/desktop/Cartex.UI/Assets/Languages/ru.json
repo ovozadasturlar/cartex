@@ -1438,5 +1438,6 @@
   "act_selected_effect": "Влияние выбранных на долг",
   "channel_telegram": "Телеграм",
   "channel_sms": "СМС",
-  "channel_email": "Email"
+  "channel_email": "Email",
+  "excess_toggle_hint": "Нажмите, чтобы переключить сдачу между наличными и счётом клиента"
 }

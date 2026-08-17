@@ -34,6 +34,21 @@
               }
             }
           }
+          @if (canPrepack()) {
+            <button class="view-toggle" (click)="openPrepack()" [matTooltip]="t('prepack_title')">
+              <mat-icon>scale</mat-icon>
+            </button>
+          }
+          @if (canCreateProduct) {
+            <button class="view-toggle" (click)="newProduct()" [matTooltip]="t('add_product')">
+              <mat-icon>add_box</mat-icon>
+            </button>
+          }
+          @if (isMulticurrency() && canManageRates) {
+            <button class="view-toggle" (click)="openQuickRates()" [matTooltip]="t('rates')">
+              <mat-icon>currency_exchange</mat-icon>
+            </button>
+          }
           <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
             <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
           </button>
@@ -62,7 +77,8 @@
           @if (viewMode() === 'grid') {
             <div class="tiles">
               @for (p of tiles(); track p.variantId) {
-                <button class="tile" [disabled]="!canCreateCart" (click)="addTile(p)">
+                <button class="tile" [disabled]="!canCreateCart" (click)="addTile(p)"
+                        (cxLongPress)="showDetail(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
                       <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
@@ -89,7 +105,8 @@
           } @else {
             <div class="rows">
               @for (p of tiles(); track p.variantId) {
-                <button class="prow" [disabled]="!canCreateCart" (click)="addTile(p)">
+                <button class="prow" [disabled]="!canCreateCart" (click)="addTile(p)"
+                        (cxLongPress)="showDetail(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
                       <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
@@ -203,7 +220,7 @@
 
         <div class="lines">
           @for (line of cart(); track line.variantId) {
-            <div class="line" [class.over]="isOver(line)">
+            <div class="line" [class.over]="isOver(line)" (cxLongPress)="showCartDetail(line)">
               <div class="info">
                 <span class="name">{{ line.name }}</span>
                 @if (canOverridePrice) {
@@ -337,7 +354,19 @@
           @if (canCheckout && (change() > 0 || debt() > 0)) {
             <div class="due">
               @if (change() > 0) {
-                <span class="chg cx-money">{{ change() | cxMoney }}</span>
+                <button
+                  type="button"
+                  class="chg cx-money"
+                  [class.credit]="excessToCredit()"
+                  [disabled]="!canCreditExcess()"
+                  [matTooltip]="canCreditExcess() ? t('excess_toggle_hint') : ''"
+                  (click)="toggleExcessTarget()">
+                  @if (canCreditExcess()) {
+                    <mat-icon>swap_vert</mat-icon>
+                  }
+                  <span class="what">{{ excessToCredit() ? t('pos_to_account') : t('change') }}</span>
+                  {{ change() | cxMoney }}
+                </button>
               }
               @if (debt() > 0) {
                 <span class="dbt cx-money">{{ debt() | cxMoney }}</span>
@@ -366,6 +395,9 @@
           @if (canCreateCart) {
             <button matButton="outlined" class="pay-btn send-queue" [disabled]="!cart().length || paying()" (click)="sendToQueue()">
               {{ t('send_to_queue') }}
+            </button>
+            <button matButton="outlined" class="pay-btn send-queue" [disabled]="!cart().length || paying()" (click)="printPreview()">
+              <mat-icon>print</mat-icon>{{ t('print_and_queue') }}
             </button>
           }
           @if (canCheckout) {

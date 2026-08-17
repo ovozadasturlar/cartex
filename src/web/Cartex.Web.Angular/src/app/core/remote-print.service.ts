@@ -4,7 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { webDeviceId, webDeviceName } from './device-identity';
 
-export type RemotePrintKind = 'Receipt' | 'BarcodeLabel' | 'ZReport';
+export type RemotePrintKind = 'Receipt' | 'BarcodeLabel' | 'ZReport' | 'CartProforma';
 
 export interface RemotePrintRequest {
   kind: RemotePrintKind;

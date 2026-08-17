@@ -1438,5 +1438,6 @@
   "act_selected_effect": "Танланганларнинг қарзга таъсири",
   "channel_telegram": "Телеграм",
   "channel_sms": "СМС",
-  "channel_email": "Емайл"
+  "channel_email": "Емайл",
+  "excess_toggle_hint": "Босилса ортиқча пул нақд қайтим ва мижоз ҳисоби орасида алмашади"
 }

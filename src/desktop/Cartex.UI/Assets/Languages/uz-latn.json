@@ -1438,5 +1438,6 @@
   "act_selected_effect": "Tanlanganlarning qarzga ta'siri",
   "channel_telegram": "Telegram",
   "channel_sms": "SMS",
-  "channel_email": "Email"
+  "channel_email": "Email",
+  "excess_toggle_hint": "Bosilsa ortiqcha pul naqd qaytim va mijoz hisobi orasida almashadi"
 }

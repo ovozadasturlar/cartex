@@ -39,6 +39,10 @@ public partial class ModulesViewModel(IFeaturesApi api, IToastService toast, IBu
         {
             using (busy.Begin(L["loading"]))
                 await api.SetModuleAsync(module.Code, new SetFeatureRequest(!module.IsEnabled));
+
+            // Kassa yoqilgan modullar ro'yxatini keshdan o'qiydi. Keshni bo'shatmasak,
+            // o'chirilgan modulning tugmasi yana 10 daqiqa ko'rinib turadi.
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features);
             await LoadAsync();
             toast.Success(L["success"]);
         }

@@ -201,14 +201,16 @@ export class InventoryApi {
     pageSize: number;
     search?: string;
     categoryId?: number;
+    forSale?: boolean;
   }): Observable<StockOnHandPage> {
-    const params: Record<string, string | number> = {
+    const params: Record<string, string | number | boolean> = {
       warehouseId: q.warehouseId,
       page: q.page,
       pageSize: q.pageSize,
     };
     if (q.search) params['search'] = q.search;
     if (q.categoryId) params['categoryId'] = q.categoryId;
+    if (q.forSale) params['forSale'] = true;
     return this.http.get<StockOnHandPage>('/api/stocks/on-hand', { params });
   }
 
