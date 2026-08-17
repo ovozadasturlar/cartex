@@ -172,6 +172,10 @@ export class CustomersApi {
     }>('/api/customer-refunds', body);
   }
 
+  sendMessage(id: number, channel: string, text: string): Observable<void> {
+    return this.http.post<void>(`/api/customers/${id}/message`, { channel, text });
+  }
+
   /// Hisob varaqasi: mijozning butun tarixi bitta hujjatda. Dalolatnoma ham shu vaqt
   /// chizig'idan tanlanadi — to'rtta alohida ro'yxatdan emas.
   statement(id: number, from: string, to: string): Observable<CustomerStatement> {

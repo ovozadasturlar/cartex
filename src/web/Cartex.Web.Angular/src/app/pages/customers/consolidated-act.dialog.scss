@@ -11,10 +11,10 @@ h2 .who {
 
 .panes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
 
-  @media (max-width: 780px) {
+  @media (max-width: 900px) {
     grid-template-columns: 1fr;
   }
 }
@@ -22,7 +22,7 @@ h2 .who {
 .pane {
   display: flex;
   flex-direction: column;
-  min-height: 340px;
+  min-height: 300px;
 
   header {
     display: flex;
@@ -53,7 +53,7 @@ h2 .who {
   .rows {
     flex: 1;
     overflow-y: auto;
-    max-height: 320px;
+    max-height: 300px;
     display: flex;
     flex-direction: column;
     gap: 6px;

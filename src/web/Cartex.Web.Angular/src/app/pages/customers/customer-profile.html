@@ -44,7 +44,12 @@
               <mat-icon>output</mat-icon>{{ t('pay_out') }}
             </button>
           }
-          @if (canEdit) {
+          @if (canMessage) {
+          <button matButton (click)="message()">
+            <mat-icon>send</mat-icon>{{ t('customer_message') }}
+          </button>
+        }
+        @if (canEdit) {
             <button matButton="outlined" (click)="edit()">
               <mat-icon>edit</mat-icon>{{ t('edit') }}
             </button>

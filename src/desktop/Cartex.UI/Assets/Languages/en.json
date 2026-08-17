@@ -1435,5 +1435,8 @@
   "act_kind_return": "Return",
   "act_kind_payment": "Payment",
   "act_kind_refund": "Refund",
-  "act_selected_effect": "Effect of the selection on the debt"
+  "act_selected_effect": "Effect of the selection on the debt",
+  "channel_telegram": "Telegram",
+  "channel_sms": "SMS",
+  "channel_email": "Email"
 }

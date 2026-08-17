@@ -1435,5 +1435,8 @@
   "act_kind_return": "Возврат",
   "act_kind_payment": "Оплата",
   "act_kind_refund": "Возмещение",
-  "act_selected_effect": "Влияние выбранных на долг"
+  "act_selected_effect": "Влияние выбранных на долг",
+  "channel_telegram": "Телеграм",
+  "channel_sms": "СМС",
+  "channel_email": "Email"
 }

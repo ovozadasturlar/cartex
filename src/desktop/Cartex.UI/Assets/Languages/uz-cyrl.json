@@ -1435,5 +1435,8 @@
   "act_kind_return": "Қайтариш",
   "act_kind_payment": "Тўлов",
   "act_kind_refund": "Қайтарим",
-  "act_selected_effect": "Танланганларнинг қарзга таъсири"
+  "act_selected_effect": "Танланганларнинг қарзга таъсири",
+  "channel_telegram": "Телеграм",
+  "channel_sms": "СМС",
+  "channel_email": "Емайл"
 }

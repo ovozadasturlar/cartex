@@ -1435,5 +1435,8 @@
   "act_kind_return": "Qaytarish",
   "act_kind_payment": "To'lov",
   "act_kind_refund": "Qaytarim",
-  "act_selected_effect": "Tanlanganlarning qarzga ta'siri"
+  "act_selected_effect": "Tanlanganlarning qarzga ta'siri",
+  "channel_telegram": "Telegram",
+  "channel_sms": "SMS",
+  "channel_email": "Email"
 }

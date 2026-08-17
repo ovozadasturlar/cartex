@@ -27,6 +27,7 @@ import { StatCard } from '../../shared/stat-card';
 import { ConfirmDialog } from '../loyalty/confirm-dialog';
 import { ReceiptDialog } from '../sales/sales';
 import { ConsolidatedActDialog } from './consolidated-act.dialog';
+import { SendMessageDialog } from './send-message.dialog';
 
 const statusKeys: Record<string, string> = {
   Completed: 'status_completed',
@@ -85,6 +86,7 @@ export class CustomerProfile implements OnInit {
   readonly canViewStatement = this.auth.hasPermission('statements.view');
   readonly canExportStatement = this.auth.hasPermission('statements.export');
   readonly canBuildAct = this.auth.hasPermission('customers.act');
+  readonly canMessage = this.auth.hasPermission('customers.message');
   readonly canPublishPartner = this.auth.hasPermission('partners.publish');
   readonly showPartner = signal(false);
   readonly isPartner = signal(false);
@@ -194,6 +196,17 @@ export class CustomerProfile implements OnInit {
 
   /// Dalolatnoma hujjatlari aynan shu vaqt chizig'idan tanlanadi, shuning uchun avval
   /// varaqa yuklanadi.
+  /// Yuboradigan yo'l bo'lmasa oyna ochilmaydi — bo'sh ro'yxatli dialog foydasiz.
+  message(): void {
+    const customer = this.customer();
+    if (!this.canMessage || !customer) return;
+    if (!customer.hasTelegram && !customer.phone && !customer.email) {
+      this.notify.error(this.transloco.translate('message_no_channel'));
+      return;
+    }
+    this.dialog.open(SendMessageDialog, { data: customer, width: '420px' });
+  }
+
   async openAct(): Promise<void> {
     if (!this.canBuildAct) return;
     if (!this.statement()) await this.loadStatement();
@@ -205,7 +218,8 @@ export class CustomerProfile implements OnInit {
         customerName: statement.customerName,
         timeline: statement.timeline,
       },
-      width: '900px',
+      width: '1180px',
+      maxWidth: '95vw',
     });
   }
 

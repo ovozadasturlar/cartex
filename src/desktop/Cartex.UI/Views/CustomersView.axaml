@@ -505,7 +505,8 @@
                 <StackPanel Spacing="14">
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[channel]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <ComboBox ItemsSource="{Binding MessageChannels}" SelectedItem="{Binding MessageChannel}"
+                        <ComboBox ItemsSource="{Binding MessageChannels}" SelectedValue="{Binding MessageChannel}"
+                                  SelectedValueBinding="{Binding Code}" DisplayMemberBinding="{Binding Label}"
                                   HorizontalAlignment="Stretch" MinHeight="38" />
                     </StackPanel>
                     <StackPanel Spacing="5">

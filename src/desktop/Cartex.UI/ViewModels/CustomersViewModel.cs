@@ -14,6 +14,8 @@ using Cartex.UI.ViewModels.Common;
 
 namespace Cartex.UI.ViewModels;
 
+public sealed record MessageChannelOption(string Code, string Label);
+
 public partial class CustomersViewModel : ViewModelBase, ILoadable
 {
     private readonly ICustomersApi _api;
@@ -738,7 +740,8 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    public ObservableCollection<string> MessageChannels { get; } = [];
+    /// Ro'yxatda kod emas, nom ko'rinadi; serverga esa baribir kod ketadi.
+    public ObservableCollection<MessageChannelOption> MessageChannels { get; } = [];
     [ObservableProperty] private bool _isMessageOpen;
     [ObservableProperty] private string? _messageChannel;
     [ObservableProperty] private string _messageText = "";
@@ -748,11 +751,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     {
         if (SelectedCustomer is null) return;
         MessageChannels.Clear();
-        if (SelectedCustomer.HasTelegram) MessageChannels.Add("telegram");
-        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Phone)) MessageChannels.Add("sms");
-        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Email)) MessageChannels.Add("email");
+        if (SelectedCustomer.HasTelegram) MessageChannels.Add(new("telegram", L["channel_telegram"]));
+        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Phone)) MessageChannels.Add(new("sms", L["channel_sms"]));
+        if (!string.IsNullOrWhiteSpace(SelectedCustomer.Email)) MessageChannels.Add(new("email", L["channel_email"]));
         if (MessageChannels.Count == 0) { _toast.Warning(L["message_no_channel"]); return; }
-        MessageChannel = MessageChannels[0];
+        MessageChannel = MessageChannels[0].Code;
         MessageText = "";
         IsMessageOpen = true;
     }
