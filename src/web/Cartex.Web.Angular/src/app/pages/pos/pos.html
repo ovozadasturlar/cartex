@@ -228,9 +228,9 @@
                   } @else {
                     <span class="cbonus cx-money">{{ c.cashbackBalance | cxMoney }} 🎁</span>
                   }
-                  @if (c.creditLimit > 0) {
+                  @if ((c.creditLimit ?? 0) > 0) {
                     <span class="cdebt cx-money">{{ c.debtBalance | cxMoney }}</span>
-                    <span class="climit cx-money">{{ t('credit_remaining') }} {{ c.creditLimit - c.debtBalance | cxMoney }}</span>
+                    <span class="climit cx-money">{{ t('credit_remaining') }} {{ (c.creditLimit ?? 0) - c.debtBalance | cxMoney }}</span>
                   }
                 </span>
               </div>
