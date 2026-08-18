@@ -69,7 +69,7 @@
 
         <Border Style="{StaticResource Card}" Margin="12,8,12,8"
                 IsVisible="{Binding SearchVisible}">
-            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <Border Style="{StaticResource InputWrap}">
                         <Grid ColumnDefinitions="*,36">
@@ -89,7 +89,28 @@
                             Command="{Binding CreateProductFromSearchCommand}"
                             IsVisible="{Binding CanEditProduct}" />
                 </Grid>
-                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}" MaximumHeightRequest="420"
+                <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never"
+                            IsVisible="{Binding SearchCategories.Count, Converter={StaticResource Positive}}">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SearchCategories}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SearchCategory">
+                                <Button Text="{Binding Name}" Style="{StaticResource BtnOutline}"
+                                        Padding="14,6" HeightRequest="36" MinimumHeightRequest="36" FontSize="13"
+                                        Command="{Binding SelectSearchCategoryCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
+                                        CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BackgroundColor"
+                                                    Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            <Setter Property="TextColor" Value="White" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </ScrollView>
+                <CollectionView Grid.Row="2" ItemsSource="{Binding SearchResults}"
                                 RemainingItemsThreshold="5"
                                 RemainingItemsThresholdReachedCommand="{Binding LoadMoreResultsCommand}"
                                 IsVisible="{Binding IsSearching, Converter={StaticResource Invert}}">
@@ -119,7 +140,7 @@
                                            HorizontalOptions="Center" />
                     </CollectionView.Footer>
                 </CollectionView>
-                <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
+                <ActivityIndicator Grid.Row="2" Margin="0,24" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
                                    VerticalOptions="Center" HorizontalOptions="Center" />
             </Grid>
         </Border>

@@ -23,6 +23,7 @@ public partial class ScanViewModel : ObservableObject
     private readonly IProductsApi _productsApi;
     private readonly IRatesApi _ratesApi;
     private readonly IBarcodesApi _barcodesApi;
+    private readonly ICategoriesApi _categoriesApi;
     private readonly WarehouseContext _warehouse;
     private readonly MobilePermissions _permissions;
     private readonly CartStore _cart;
@@ -61,6 +62,7 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _canOverridePrintPrice = true;
 
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
+    public ObservableCollection<SearchCategory> SearchCategories { get; } = [];
     public ObservableCollection<BarcodeChoice> BarcodeChoices { get; } = [];
     public bool CanPrintBarcode => _printDispatcher.CanPrintBarcode;
     public bool HasProductActions => CanEditProduct || CanPrintBarcode;
@@ -78,18 +80,21 @@ public partial class ScanViewModel : ObservableObject
     private DateTime _lastAt = DateTime.MinValue;
     private CancellationTokenSource? _searchCts;
     private string? _activeSearch;
+    private long? _searchCategoryId;
+    private bool _searchCategoriesLoaded;
     private int _loadedSearchPage;
     private bool _hasMoreSearchResults;
     private IReadOnlyList<CurrencyDto>? _currencies;
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
         _ratesApi = ratesApi;
         _barcodesApi = barcodesApi;
+        _categoriesApi = categoriesApi;
         _warehouse = warehouse;
         _permissions = permissions;
         _cart = cart;
@@ -444,6 +449,9 @@ public partial class ScanViewModel : ObservableObject
             Debounce.Cancel(ref _searchCts);
             IsSearching = false;
             SearchText = "";
+            _searchCategoryId = null;
+            foreach (var category in SearchCategories)
+                category.IsSelected = category.Id == 0;
             SearchResults.Clear();
             if (!OverlayVisible)
                 IsDetecting = true;
@@ -451,7 +459,32 @@ public partial class ScanViewModel : ObservableObject
         else
         {
             IsDetecting = false;
+            _ = EnsureSearchCategoriesAsync();
         }
+    }
+
+    private async Task EnsureSearchCategoriesAsync()
+    {
+        if (_searchCategoriesLoaded) return;
+        try
+        {
+            var categories = await _categoriesApi.GetAllAsync();
+            SearchCategories.Add(new SearchCategory(0, Loc.Instance["filter_all"]) { IsSelected = true });
+            foreach (var category in categories)
+                SearchCategories.Add(new SearchCategory(category.Id, category.Name));
+            _searchCategoriesLoaded = true;
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void SelectSearchCategory(SearchCategory category)
+    {
+        if (category.IsSelected) return;
+        foreach (var item in SearchCategories)
+            item.IsSelected = item.Id == category.Id;
+        _searchCategoryId = category.Id == 0 ? null : category.Id;
+        RestartSearch();
     }
 
     [RelayCommand]
@@ -474,7 +507,9 @@ public partial class ScanViewModel : ObservableObject
         Resume();
     }
 
-    partial void OnSearchTextChanged(string value)
+    partial void OnSearchTextChanged(string value) => RestartSearch();
+
+    private void RestartSearch()
     {
         Debounce.Cancel(ref _searchCts);
         SearchResults.Clear();
@@ -483,26 +518,27 @@ public partial class ScanViewModel : ObservableObject
         _hasMoreSearchResults = false;
         IsLoadingMoreResults = false;
 
-        var text = value.Trim();
-        if (text.Length < 2)
+        var text = SearchText.Trim();
+        if (text.Length < 2 && _searchCategoryId is null)
         {
             IsSearching = false;
             return;
         }
 
         var cts = _searchCts = new CancellationTokenSource();
-        _activeSearch = text;
+        _activeSearch = text.Length < 2 ? null : text;
         IsSearching = true;
-        _ = SearchAsync(text, cts, 1);
+        _ = SearchAsync(_activeSearch, cts, 1);
     }
 
-    private async Task SearchAsync(string text, CancellationTokenSource cts, int page)
+    private async Task SearchAsync(string? text, CancellationTokenSource cts, int page)
     {
         try
         {
             await Task.Delay(200, cts.Token);
             if (_offline.ShouldUseOffline)
             {
+                if (text is null) return;
                 var cached = page == 1
                     ? await _offline.SearchProductsAsync(text, SearchPageSize)
                     : [];
@@ -513,7 +549,8 @@ public partial class ScanViewModel : ObservableObject
                     SearchResults.Add(new SearchRow(product, _images));
                 return;
             }
-            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(page, SearchPageSize).Search(text).Build());
+            var response = await _productsApi.QueryAsync(QueryRequest.Create()
+                .Page(page, SearchPageSize).Search(text).With("categoryId", _searchCategoryId).Build());
             if (cts.IsCancellationRequested) return;
 
             var products = (response.Content ?? []).ToList();
@@ -526,7 +563,7 @@ public partial class ScanViewModel : ObservableObject
         catch
         {
             _offline.MarkServerUnavailable();
-            if (page == 1 && _offline.IsEnabled && !cts.IsCancellationRequested)
+            if (text is not null && page == 1 && _offline.IsEnabled && !cts.IsCancellationRequested)
             {
                 foreach (var product in await _offline.SearchProductsAsync(text, SearchPageSize))
                     SearchResults.Add(new SearchRow(product, _images));
@@ -543,7 +580,8 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadMoreResultsAsync()
     {
-        if (IsSearching || IsLoadingMoreResults || !_hasMoreSearchResults || string.IsNullOrWhiteSpace(_activeSearch) || _searchCts is null)
+        if (IsSearching || IsLoadingMoreResults || !_hasMoreSearchResults || _searchCts is null
+            || (_activeSearch is null && _searchCategoryId is null))
             return;
 
         var cts = _searchCts;
@@ -551,8 +589,9 @@ public partial class ScanViewModel : ObservableObject
         IsLoadingMoreResults = true;
         try
         {
-            var response = await _productsApi.QueryAsync(QueryRequest.Create().Page(page, SearchPageSize).Search(_activeSearch).Build());
-            if (cts.IsCancellationRequested || _searchCts != cts || _activeSearch is null)
+            var response = await _productsApi.QueryAsync(QueryRequest.Create()
+                .Page(page, SearchPageSize).Search(_activeSearch).With("categoryId", _searchCategoryId).Build());
+            if (cts.IsCancellationRequested || _searchCts != cts)
                 return;
 
             var products = (response.Content ?? []).ToList();
@@ -586,6 +625,11 @@ public partial class ScanViewModel : ObservableObject
         catch (InvalidOperationException ex)
         {
             Ui.Toast(ex.Message);
+            return;
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex is Refit.ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
             return;
         }
         ConfigureQuantity(_product, 1);
@@ -785,6 +829,13 @@ public partial class ScanViewModel : ObservableObject
         Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
         return true;
     }
+}
+
+public sealed partial class SearchCategory(long id, string name) : ObservableObject
+{
+    public long Id { get; } = id;
+    public string Name { get; } = name;
+    [ObservableProperty] private bool _isSelected;
 }
 
 public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)

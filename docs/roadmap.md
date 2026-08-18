@@ -1,7 +1,7 @@
 # Cartex — Professional Takomillashtirish Dasturi (Roadmap)
 
 > Holat belgilari: `[ ]` kutilmoqda · `[~]` jarayonda · `[x]` tayyor
-> Oxirgi yangilanish: 2026-08-13 (Loyiha/TradeCase olib tashlandi · Qaytarish alohida hujjatga aylandi)
+> Oxirgi yangilanish: 2026-08-18 (Web dialog parity vazifasi qo'shildi)
 
 ## Dizayn qarorlari (qulflangan)
 
@@ -65,6 +65,7 @@
 - [ ] Mobile mijoz profili redesign (spec yuqorida)
 - [ ] Mobile tugmalar: kichikroq, zamonaviy (Mobile.Core design tokens)
 - [ ] Desktop kassa plitalari elastikligi; rollar ustuni diagnostika
+- [ ] **Web dialog parity — desktop etalon.** Webdagi navbat hozir savat panelidagi ikonka ostidan chiqadigan mini-dropdown (qatorda faqat ism/meta + inline ▶/✖). Desktop dizayniga keltirilsin: qoraytirilgan backdrop ustida markaziy modal; sarlavha qatori (ikonka + "Navbat" + son chip + X); ikki panel — chapda savatlar ro'yxati (avatar, ism accent rangda, "vaqt · dona · summa" meta, mijoz nomi), o'ngda tanlangan savat tafsiloti (mahsulot qatorlari: nom, soni, qator summasi) va pastda chapda qizil "Bekor qilish", o'ngda yashil "▶ Davom ettirish". Chek (receipt) dialogi va qolgan barcha web modallariga ham xuddi shu dizayn tili qo'llansin — uch klientda dialoglar bir xil ko'rinsin.
 
 ### F8 — Yakun
 - [ ] POS summa-kiritish (AmountEntry) UI mobile/desktop
