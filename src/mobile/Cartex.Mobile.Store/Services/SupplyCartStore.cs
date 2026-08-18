@@ -26,7 +26,9 @@ public sealed partial class SupplyCartLine : ObservableObject
         set
         {
             _priceText = value;
+            _editingText = true;
             PurchasePrice = Parse(value);
+            _editingText = false;
         }
     }
 
@@ -36,12 +38,26 @@ public sealed partial class SupplyCartLine : ObservableObject
         set
         {
             _salePriceText = value;
+            _editingText = true;
             SellingPrice = Parse(value);
+            _editingText = false;
         }
+    }
+
+    /// Bitta narx ikki joyda tahrirlanadi (qator ostidagi maydon va modal). Matn
+    /// yozilayotgan maydonni qayta formatlab terishni buzmaslik uchun jonli bildirish
+    /// yo'q — mirror ko'ringan payti shu bilan yangilanadi.
+    public void RefreshPriceTexts()
+    {
+        _priceText = null;
+        _salePriceText = null;
+        OnPropertyChanged(nameof(PriceText));
+        OnPropertyChanged(nameof(SalePriceText));
     }
 
     private string? _priceText;
     private string? _salePriceText;
+    private bool _editingText;
 
     private static decimal Parse(string? value) =>
         decimal.TryParse(value?.Replace(" ", "").Replace(',', '.'),
@@ -51,7 +67,21 @@ public sealed partial class SupplyCartLine : ObservableObject
             : 0;
 
     partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
-    partial void OnPurchasePriceChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
+
+    partial void OnPurchasePriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        if (_editingText) return;
+        _priceText = null;
+        OnPropertyChanged(nameof(PriceText));
+    }
+
+    partial void OnSellingPriceChanged(decimal value)
+    {
+        if (_editingText) return;
+        _salePriceText = null;
+        OnPropertyChanged(nameof(SalePriceText));
+    }
 }
 
 public sealed class SupplyCartStore
@@ -139,14 +169,14 @@ public sealed class SupplyCartStore
     public void SetPurchasePrice(long variantId, decimal price)
     {
         if (Lines.FirstOrDefault(l => l.VariantId == variantId) is not { } line) return;
-        line.PriceText = price > 0 ? price.ToString("0.##") : "";
+        line.PurchasePrice = Math.Max(0, price);
         Save(debouncePersistence: true);
     }
 
     public void SetSellingPrice(long variantId, decimal price)
     {
         if (Lines.FirstOrDefault(l => l.VariantId == variantId) is not { } line) return;
-        line.SalePriceText = price > 0 ? price.ToString("0.##") : "";
+        line.SellingPrice = Math.Max(0, price);
         Save(debouncePersistence: true);
     }
 

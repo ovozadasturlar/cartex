@@ -12,6 +12,7 @@ public partial class ReceiveCartPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _vm = vm;
+        _vm.RowInteracted = CloseOpenSwipe;
     }
 
     protected override void OnAppearing()
@@ -23,9 +24,32 @@ public partial class ReceiveCartPage : ContentPage
     protected override void OnDisappearing()
     {
         KeyboardDismissal.Hide();
+        CloseOpenSwipe();
         base.OnDisappearing();
         _vm.Disappear();
     }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_vm.IsLineModalOpen)
+        {
+            _vm.CloseLineModalCommand.Execute(null);
+            return true;
+        }
+
+        if (_vm.IsSupplierModalOpen)
+        {
+            _vm.CloseSupplierModalCommand.Execute(null);
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
+    }
+
+    /// The totals hide behind the stepper as the row opens, so they follow the real drag
+    /// distance. SwipeEnded reports the row as open even after a swipe back, which used to
+    /// leave the totals hidden until the row was touched again.
+    private const double RevealedOffset = 4;
 
     private void OnSwipeStarted(object? sender, SwipeStartedEventArgs e)
     {
@@ -33,19 +57,47 @@ public partial class ReceiveCartPage : ContentPage
         if (_openSwipeView is not null && _openSwipeView != swipeView)
         {
             _openSwipeView.Close();
-            if (_openSwipeView.BindingContext is Services.SupplyCartLine previous)
+            if (_openSwipeView.BindingContext is SupplyCartLine previous)
                 previous.IsSwiped = false;
         }
         _openSwipeView = swipeView;
-        if (swipeView.BindingContext is Services.SupplyCartLine line)
-            line.IsSwiped = true;
+    }
+
+    private void OnSwipeChanging(object? sender, SwipeChangingEventArgs e)
+    {
+        if (sender is SwipeView { BindingContext: SupplyCartLine line })
+            line.IsSwiped = Math.Abs(e.Offset) > RevealedOffset;
     }
 
     private void OnSwipeEnded(object? sender, SwipeEndedEventArgs e)
     {
-        if (sender is not SwipeView swipeView || swipeView.BindingContext is not Services.SupplyCartLine line) return;
-        line.IsSwiped = e.IsOpen;
-        if (!e.IsOpen && _openSwipeView == swipeView)
+        if (sender is not SwipeView swipeView) return;
+        if (swipeView.BindingContext is SupplyCartLine { IsSwiped: false } && _openSwipeView == swipeView)
             _openSwipeView = null;
+    }
+
+    private void OnOutsideTapped(object? sender, TappedEventArgs e) => CloseOpenSwipe();
+
+    private void OnListScrolled(object? sender, ItemsViewScrolledEventArgs e) => CloseOpenSwipe();
+
+    private bool CloseOpenSwipe()
+    {
+        if (_openSwipeView is null) return false;
+        _openSwipeView.Close();
+        if (_openSwipeView.BindingContext is SupplyCartLine line)
+            line.IsSwiped = false;
+        _openSwipeView = null;
+        return true;
+    }
+
+    private void OnQtyEntryCompleted(object? sender, EventArgs e)
+    {
+        _vm.SetSelectedQuantityFromTextCommand.Execute(null);
+        KeyboardDismissal.Hide();
+    }
+
+    private void OnQtyEntryUnfocused(object? sender, FocusEventArgs e)
+    {
+        _vm.SetSelectedQuantityFromTextCommand.Execute(null);
     }
 }

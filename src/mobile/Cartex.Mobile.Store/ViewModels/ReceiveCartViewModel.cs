@@ -29,6 +29,13 @@ public partial class ReceiveCartViewModel : ObservableObject
     [ObservableProperty] private bool _isSupplierModalOpen;
     [ObservableProperty] private string _newSupplierName = "";
     [ObservableProperty] private string _newSupplierPhone = "";
+    [ObservableProperty] private bool _isLineModalOpen;
+    [ObservableProperty] private SupplyCartLine? _selectedLine;
+    [ObservableProperty] private string _selectedQtyText = "";
+
+    /// Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
+    /// yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
+    public Func<bool>? RowInteracted { get; set; }
 
     public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi)
     {
@@ -160,10 +167,78 @@ public partial class ReceiveCartViewModel : ObservableObject
     [RelayCommand]
     private void ToggleExpand(SupplyCartLine line)
     {
+        if (RowInteracted?.Invoke() == true) return;
         foreach (var other in Lines)
             if (!ReferenceEquals(other, line))
                 other.IsExpanded = false;
+        if (!line.IsExpanded)
+            line.RefreshPriceTexts();
         line.IsExpanded = !line.IsExpanded;
+    }
+
+    [RelayCommand]
+    private void OpenLineModal(SupplyCartLine line)
+    {
+        if (RowInteracted?.Invoke() == true) return;
+        foreach (var other in Lines)
+            other.IsExpanded = false;
+        SelectedLine = line;
+        SelectedQtyText = QuantityInput.Format(line.Quantity);
+        line.RefreshPriceTexts();
+        IsLineModalOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseLineModal() => IsLineModalOpen = false;
+
+    [RelayCommand]
+    private void IncrementSelected()
+    {
+        if (SelectedLine is not { } line) return;
+        _cart.SetQuantity(line.VariantId, line.Quantity + 1m);
+        SelectedQtyText = QuantityInput.Format(line.Quantity);
+    }
+
+    [RelayCommand]
+    private void DecrementSelected()
+    {
+        if (SelectedLine is not { } line) return;
+        var next = Math.Max(1m, line.Quantity - 1m);
+        if (next < line.Quantity)
+            _cart.SetQuantity(line.VariantId, next);
+        SelectedQtyText = QuantityInput.Format(line.Quantity);
+    }
+
+    [RelayCommand]
+    private void SetSelectedQuantityFromText()
+    {
+        if (SelectedLine is not { } line) return;
+        if (QuantityInput.TryParse(SelectedQtyText, allowsFractional: true, out var quantity, out var error))
+        {
+            _cart.SetQuantity(line.VariantId, quantity);
+            SelectedQtyText = QuantityInput.Format(quantity);
+        }
+        else
+        {
+            SelectedQtyText = QuantityInput.Format(line.Quantity);
+            Ui.Toast(Loc.Instance[error switch
+            {
+                QuantityInputError.MustBePositive => "quantity_positive_required",
+                QuantityInputError.FractionNotAllowed => "quantity_integer_required",
+                _ => "quantity_invalid"
+            }]);
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveSelected()
+    {
+        if (SelectedLine is not { } line) return;
+        // Avval tanlov bo'shatiladi: modal yopilishida fokusdan chiqqan miqdor maydoni
+        // o'chirilayotgan qatorga qarshi validatsiya toast'ini otmasin.
+        SelectedLine = null;
+        IsLineModalOpen = false;
+        _cart.Remove(line.VariantId);
     }
 
     [RelayCommand]
@@ -172,7 +247,9 @@ public partial class ReceiveCartViewModel : ObservableObject
     [RelayCommand]
     private void Decrement(SupplyCartLine line)
     {
-        _cart.SetQuantity(line.VariantId, Math.Max(1m, line.Quantity - 1m));
+        var next = Math.Max(1m, line.Quantity - 1m);
+        if (next < line.Quantity)
+            _cart.SetQuantity(line.VariantId, next);
     }
 
     [RelayCommand]

@@ -12,6 +12,9 @@
     Title="{svc:T receive_stock}">
     <Grid RowDefinitions="Auto,*,Auto">
         <VerticalStackLayout Margin="16,10,16,0" Spacing="8">
+            <VerticalStackLayout.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnOutsideTapped" />
+            </VerticalStackLayout.GestureRecognizers>
             <Border Style="{StaticResource Card}" Padding="14,6" IsVisible="{Binding HasSupplier}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                     <Label Text="{StaticResource IcTruck}" Style="{StaticResource Icon}" />
@@ -55,14 +58,16 @@
                 </Border>
             </VerticalStackLayout>
         </VerticalStackLayout>
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Lines}" Margin="16,10" ItemsLayout="VerticalList" SelectionMode="None">
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Lines}" Margin="16,10" ItemsLayout="VerticalList" SelectionMode="None"
+                        Scrolled="OnListScrolled">
             <CollectionView.EmptyView>
                 <Label Text="{svc:T cart_empty}" Style="{StaticResource MutedLabel}" FontSize="15"
                        HorizontalOptions="Center" Margin="0,40" />
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="services:SupplyCartLine">
-                    <SwipeView Margin="0,0,0,8" SwipeStarted="OnSwipeStarted" SwipeEnded="OnSwipeEnded">
+                    <SwipeView Margin="0,0,0,8" SwipeStarted="OnSwipeStarted"
+                               SwipeChanging="OnSwipeChanging" SwipeEnded="OnSwipeEnded">
                         <SwipeView.LeftItems>
                             <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
                                 <SwipeItemView Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
@@ -75,36 +80,37 @@
                             </SwipeItems>
                         </SwipeView.LeftItems>
                         <SwipeView.RightItems>
-                            <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="Close">
-                                <SwipeItemView Command="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
-                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBg}, Dark={StaticResource PrimaryBgDark}}">
-                                        <Label Text="+" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
-                                               TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            <SwipeItems Mode="Reveal" SwipeBehaviorOnInvoked="RemainOpen">
+                                <SwipeItemView>
+                                    <ctl:HoldRepeatButton Text="+" FontSize="20" FontAttributes="Bold"
+                                                          WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
+                                                          BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                                          TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}"
+                                                          RepeatCommand="{Binding IncrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
+                                                          RepeatCommandParameter="{Binding .}" />
+                                </SwipeItemView>
+                                <SwipeItemView>
+                                    <Border WidthRequest="60" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
+                                        <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" FontSize="16" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                                     </Border>
                                 </SwipeItemView>
                                 <SwipeItemView>
-                                    <Border WidthRequest="64" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
-                                        <Label Text="{Binding Quantity, StringFormat='{0:0.###}'}" FontSize="16" FontAttributes="Bold"
-                                               HorizontalOptions="Center" VerticalOptions="Center"
-                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                    </Border>
-                                </SwipeItemView>
-                                <SwipeItemView Command="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" CommandParameter="{Binding .}">
-                                    <Border WidthRequest="52" Margin="2" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
-                                        <Label Text="−" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
-                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                    </Border>
+                                    <ctl:HoldRepeatButton Text="−" FontSize="20" FontAttributes="Bold"
+                                                          WidthRequest="50" Margin="2" Padding="0" CornerRadius="12"
+                                                          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}"
+                                                          TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                                          RepeatCommand="{Binding DecrementCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
+                                                          RepeatCommandParameter="{Binding .}" />
                                 </SwipeItemView>
                             </SwipeItems>
                         </SwipeView.RightItems>
-                        <Border Style="{StaticResource Card}" Padding="10">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding ToggleExpandCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
-                                                      CommandParameter="{Binding .}" />
-                            </Border.GestureRecognizers>
+                        <Border Style="{StaticResource Card}" Padding="10"
+                                ctl:RowGestures.TapCommand="{Binding ToggleExpandCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
+                                ctl:RowGestures.LongPressCommand="{Binding OpenLineModalCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
+                                ctl:RowGestures.CommandParameter="{Binding .}">
                             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <ctl:Thumb Source="{Binding ImageKey}" Size="40" Radius="8" />
                                 <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
@@ -148,6 +154,9 @@
         <Border Grid.Row="2" StrokeThickness="1" Padding="16,12"
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnOutsideTapped" />
+            </Border.GestureRecognizers>
             <VerticalStackLayout Spacing="10">
                 <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsEmpty, Converter={StaticResource Invert}}">
                     <Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
@@ -158,6 +167,62 @@
                         IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
             </VerticalStackLayout>
         </Border>
+
+        <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsLineModalOpen}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseLineModalCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="14" BindingContext="{Binding SelectedLine}" x:DataType="services:SupplyCartLine">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <ctl:Thumb Source="{Binding ImageKey}" Size="48" Radius="10" />
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="{Binding ProductName}" FontAttributes="Bold" FontSize="16"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding UnitName}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="16" HorizontalOptions="Center" Margin="0,4">
+                        <ctl:HoldRepeatButton Text="−" FontSize="24" WidthRequest="56" HeightRequest="56" CornerRadius="16" Padding="0"
+                                              Style="{StaticResource BtnOutline}" BorderWidth="1"
+                                              RepeatCommand="{Binding DecrementSelectedCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" />
+                        <Border Grid.Column="1" StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
+                                StrokeShape="RoundRectangle 12" BackgroundColor="Transparent" WidthRequest="100">
+                            <Entry Text="{Binding SelectedQtyText, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}"
+                                   Keyboard="Numeric" HorizontalTextAlignment="Center" VerticalOptions="Center"
+                                   FontSize="22" FontAttributes="Bold" HeightRequest="56" Margin="0"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                   Completed="OnQtyEntryCompleted" Unfocused="OnQtyEntryUnfocused" />
+                        </Border>
+                        <ctl:HoldRepeatButton Grid.Column="2" Text="+" FontSize="24" WidthRequest="56" HeightRequest="56" CornerRadius="16" Padding="0"
+                                              Style="{StaticResource BtnOutline}" BorderWidth="1"
+                                              RepeatCommand="{Binding IncrementSelectedCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{svc:T purchase_price}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                            <Border Style="{StaticResource InputWrap}" Padding="12,0">
+                                <Entry Keyboard="Numeric" FontSize="14" Text="{Binding PriceText}" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="{svc:T selling_price}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                            <Border Style="{StaticResource InputWrap}" Padding="12,0">
+                                <Entry Keyboard="Numeric" FontSize="14" Text="{Binding SalePriceText}" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Text="O'chirish" Style="{StaticResource BtnOutline}"
+                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                            BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                            Command="{Binding RemoveSelectedCommand, Source={RelativeSource AncestorType={x:Type vm:ReceiveCartViewModel}}}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
 
         <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsSupplierModalOpen}">
             <Grid.GestureRecognizers>
