@@ -108,7 +108,7 @@ export class PosProductDialog {
         return;
       }
       const changed = await lastValueFrom(
-        this.dialog.open(ProductDialog, { data: product, width: '640px' }).afterClosed(),
+        this.dialog.open<ProductDialog, unknown, boolean>(ProductDialog, { data: product, width: '640px' }).afterClosed(),
       );
       if (changed) this.ref.close('reload');
     } catch (e) {
@@ -119,7 +119,7 @@ export class PosProductDialog {
   async receive(): Promise<void> {
     const done = await lastValueFrom(
       this.dialog
-        .open(PosReceiveDialog, { data: this.data, width: '460px' })
+        .open<PosReceiveDialog, unknown, boolean>(PosReceiveDialog, { data: this.data, width: '460px' })
         .afterClosed(),
     );
     if (done) this.ref.close('reload');

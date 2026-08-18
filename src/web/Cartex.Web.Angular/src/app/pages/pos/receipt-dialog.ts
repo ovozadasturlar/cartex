@@ -50,9 +50,9 @@ export class PosReceiptDialog implements OnInit {
 
   // Eski chaqiruvlar chekni to'g'ridan-to'g'ri uzatadi, yangilari — obyekt bilan.
   readonly receipt: Receipt =
-    'receipt' in this.data ? (this.data as ReceiptDialogData).receipt : (this.data as Receipt);
-  private readonly saleId = 'receipt' in this.data ? (this.data as ReceiptDialogData).saleId ?? null : null;
-  readonly isPosCheckout = 'receipt' in this.data ? !!(this.data as ReceiptDialogData).posCheckout : false;
+    'receipt' in this.data ? this.data.receipt : this.data;
+  private readonly saleId = 'receipt' in this.data ? this.data.saleId ?? null : null;
+  readonly isPosCheckout = 'receipt' in this.data ? !!this.data.posCheckout : false;
 
   readonly qr = signal<string | null>(null);
 
@@ -102,7 +102,7 @@ export class PosReceiptDialog implements OnInit {
   async correct(): Promise<void> {
     if (this.saleId === null) return;
     const ok = await lastValueFrom(
-      this.dialog.open(ConfirmDialog, { data: 'correct_sale_confirm', width: '400px' }).afterClosed(),
+      this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'correct_sale_confirm', width: '400px' }).afterClosed(),
     );
     if (!ok) return;
     try {

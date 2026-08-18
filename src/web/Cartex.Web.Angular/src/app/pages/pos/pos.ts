@@ -613,14 +613,14 @@ export class Pos implements OnInit {
 
   async openQuickRates(): Promise<void> {
     const saved = await lastValueFrom(
-      this.dialog.open(QuickRatesDialog, { width: '460px' }).afterClosed(),
+      this.dialog.open<QuickRatesDialog, unknown, boolean>(QuickRatesDialog, { width: '460px' }).afterClosed(),
     );
     if (saved) await this.refreshTiles();
   }
 
   async newProduct(): Promise<void> {
     const created = await lastValueFrom(
-      this.dialog.open(ProductDialog, { data: null, width: '640px' }).afterClosed(),
+      this.dialog.open<ProductDialog, unknown, boolean>(ProductDialog, { data: null, width: '640px' }).afterClosed(),
     );
     if (created) await this.refreshTiles();
   }
@@ -638,7 +638,7 @@ export class Pos implements OnInit {
     if (!warehouseId) return;
     const result = await lastValueFrom(
       this.dialog
-        .open(PosProductDialog, { data: { stock: tile, warehouseId }, width: '520px' })
+        .open<PosProductDialog, unknown, string>(PosProductDialog, { data: { stock: tile, warehouseId }, width: '520px' })
         .afterClosed(),
     );
     if (result === 'add') this.addTile(tile);

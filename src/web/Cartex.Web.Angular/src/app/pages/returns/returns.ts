@@ -294,7 +294,7 @@ export class Returns implements OnInit {
 
   async clearEditor(): Promise<void> {
     const confirmed = await lastValueFrom(
-      this.dialog.open(ConfirmDialog, { data: 'clear_confirm', width: '380px' }).afterClosed(),
+      this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'clear_confirm', width: '380px' }).afterClosed(),
     );
     if (!confirmed) return;
     this.lines.set([]);
