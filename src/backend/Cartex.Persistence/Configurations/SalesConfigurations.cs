@@ -53,7 +53,9 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(x => x.ReturnNoChargeAmount).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.Property(x => x.DocumentNumber).HasMaxLength(40).IsRequired();
-        builder.HasIndex(x => x.DocumentNumber).IsUnique();
+        // Raqamlashdan oldingi savdolar bo'sh qiymat bilan qoladi — unikallik faqat
+        // haqiqiy raqamlarga tegishli, aks holda migratsiya to'ldirilgan bazada yiqiladi.
+        builder.HasIndex(x => x.DocumentNumber).IsUnique().HasFilter("\"document_number\" <> ''");
         builder.Property(x => x.ReceiptToken).HasMaxLength(40).IsRequired();
         builder.HasIndex(x => x.ReceiptToken).IsUnique();
         builder.Property(x => x.Note).HasMaxLength(1000);

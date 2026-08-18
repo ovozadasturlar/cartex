@@ -5423,7 +5423,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("DocumentNumber")
                         .IsUnique()
-                        .HasDatabaseName("ix_sales_document_number");
+                        .HasDatabaseName("ix_sales_document_number")
+                        .HasFilter("\"document_number\" <> ''");
 
                     b.HasIndex("ReceiptToken")
                         .IsUnique()

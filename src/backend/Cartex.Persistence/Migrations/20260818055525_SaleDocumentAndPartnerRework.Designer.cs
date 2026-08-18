@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260816220529_DropPartnerSpecialties")]
-    partial class DropPartnerSpecialties
+    [Migration("20260818055525_SaleDocumentAndPartnerRework")]
+    partial class SaleDocumentAndPartnerRework
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1128,7 +1128,7 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("created_by");
 
-                    b.Property<decimal>("CreditLimit")
+                    b.Property<decimal?>("CreditLimit")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("credit_limit");
@@ -5426,7 +5426,8 @@ namespace Cartex.Persistence.Migrations
 
                     b.HasIndex("DocumentNumber")
                         .IsUnique()
-                        .HasDatabaseName("ix_sales_document_number");
+                        .HasDatabaseName("ix_sales_document_number")
+                        .HasFilter("\"document_number\" <> ''");
 
                     b.HasIndex("ReceiptToken")
                         .IsUnique()

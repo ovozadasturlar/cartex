@@ -6,11 +6,27 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cartex.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class PartnerPublicity : Migration
+    public partial class SaleDocumentAndPartnerRework : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "rounding_amount",
+                table: "sales");
+
+            migrationBuilder.DropColumn(
+                name: "rounding_amount",
+                table: "carts");
+
+            migrationBuilder.AddColumn<string>(
+                name: "document_number",
+                table: "sales",
+                type: "character varying(40)",
+                maxLength: 40,
+                nullable: false,
+                defaultValue: "");
+
             migrationBuilder.AddColumn<string>(
                 name: "public_about",
                 table: "partner_profiles",
@@ -67,6 +83,32 @@ namespace Cartex.Persistence.Migrations
                 nullable: false,
                 defaultValue: false);
 
+            migrationBuilder.AddColumn<bool>(
+                name: "owner_enabled",
+                table: "features",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.AlterColumn<decimal>(
+                name: "credit_limit",
+                table: "customers",
+                type: "numeric(18,2)",
+                precision: 18,
+                scale: 2,
+                nullable: true,
+                oldClrType: typeof(decimal),
+                oldType: "numeric(18,2)",
+                oldPrecision: 18,
+                oldScale: 2);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_sales_document_number",
+                table: "sales",
+                column: "document_number",
+                unique: true,
+                filter: "\"document_number\" <> ''");
+
             migrationBuilder.CreateIndex(
                 name: "ix_partner_profiles_public_visible",
                 table: "partner_profiles",
@@ -77,8 +119,16 @@ namespace Cartex.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
+                name: "ix_sales_document_number",
+                table: "sales");
+
+            migrationBuilder.DropIndex(
                 name: "ix_partner_profiles_public_visible",
                 table: "partner_profiles");
+
+            migrationBuilder.DropColumn(
+                name: "document_number",
+                table: "sales");
 
             migrationBuilder.DropColumn(
                 name: "public_about",
@@ -111,6 +161,42 @@ namespace Cartex.Persistence.Migrations
             migrationBuilder.DropColumn(
                 name: "public_visible",
                 table: "partner_profiles");
+
+            migrationBuilder.DropColumn(
+                name: "owner_enabled",
+                table: "features");
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "rounding_amount",
+                table: "sales",
+                type: "numeric(18,2)",
+                precision: 18,
+                scale: 2,
+                nullable: false,
+                defaultValue: 0m);
+
+            migrationBuilder.AlterColumn<decimal>(
+                name: "credit_limit",
+                table: "customers",
+                type: "numeric(18,2)",
+                precision: 18,
+                scale: 2,
+                nullable: false,
+                defaultValue: 0m,
+                oldClrType: typeof(decimal),
+                oldType: "numeric(18,2)",
+                oldPrecision: 18,
+                oldScale: 2,
+                oldNullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "rounding_amount",
+                table: "carts",
+                type: "numeric(14,2)",
+                precision: 14,
+                scale: 2,
+                nullable: false,
+                defaultValue: 0m);
         }
     }
 }
