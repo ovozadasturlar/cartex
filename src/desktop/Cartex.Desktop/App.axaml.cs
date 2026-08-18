@@ -30,6 +30,7 @@ public partial class App : Application
 		{
 			var splash = new SplashWindow();
 			splash.Show();
+			NativeSplash.Close();
 			Dispatcher.UIThread.Post(() => Startup(desktop, splash), DispatcherPriority.Background);
 		}
 

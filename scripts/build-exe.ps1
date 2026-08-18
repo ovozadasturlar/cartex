@@ -25,6 +25,7 @@ $arguments = @(
     '-p:PublishSingleFile=true',
     '-p:IncludeNativeLibrariesForSelfExtract=true',
     '-p:PublishTrimmed=false',
+    '-p:PublishReadyToRun=true',
     '-o', $stageDir
 )
 
