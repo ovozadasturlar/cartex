@@ -167,6 +167,14 @@ dotnet_diagnostic.MA0074.severity = none
 # Method length is a smell, not a rule; the pricing path is long because the arithmetic is.
 dotnet_diagnostic.MA0051.severity = none
 
+# In-process store notifications deliberately use Action events: there is no sender/args
+# payload to carry, and the (sender, e) ceremony would add noise at every subscription site.
+dotnet_diagnostic.MA0046.severity = none
+
+# Triple-slash is reserved for real XML docs; implementation notes use //. RCS1139 fires on
+# the bare /// style and the fix is the style itself, enforced by this file staying warning-free.
+dotnet_diagnostic.RCS1139.severity = warning
+
 # Kept ON deliberately — these are the reasons the analyzer is here at all:
 #   MA0045  sync-over-async (Result/Wait) — deadlocks a UI thread
 #   MA0045  sync-over-async (Result/Wait) — deadlocks a UI thread

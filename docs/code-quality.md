@@ -305,6 +305,9 @@ Har bir o'chirilgan qoida yonida **nega** o'chirilgani yozilgan (`.editorconfig`
 | `MA0040` CancellationToken | 2732 | **`suggestion`** — haqiqiy sinf, lekin alohida ish. Yashirilmadi, qarz sifatida qayd etildi |
 | `MA0009` ReDoS | 6 | **Tuzatildi** — pastda |
 | `MA0045` sync-over-async | 6 | Faqat testlarda; o'sha yerda so'rov oqimi yo'q, o'chirildi |
+| `MA0045` CTS.Cancel mobilda | 13 | **Yechildi (2026-08-18)** — takrorlanadigan bekor qilish naqshi `Cartex.Mobile.Core.Debounce` ga yig'ildi; sinxron bekor qilish ataylab (chaqiruvchilar setter/ctor), suppression bitta joyda sabab bilan. `Result`/`Wait` himoyasi kuchda qoladi |
+| `MA0046` Action event'lar | 5 | O'chirildi — ichki store xabarlari ataylab `Action`: sender/args yuki yo'q, marosim shart emas |
+| `RCS1139` yalang'och `///` | 30 | **Tuzatildi (2026-08-18)** — `///` faqat haqiqiy XML doc uchun; izohlar `//` bilan (mobil fayllar o'girildi) |
 | Qolgan mayda | ~20 | Tuzatildi yoki sabab bilan o'chirildi |
 
 Yakuniy holat: **0 ogohlantirish**.
