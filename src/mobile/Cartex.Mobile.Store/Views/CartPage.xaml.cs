@@ -12,6 +12,7 @@ public partial class CartPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _vm = vm;
+        _vm.RowInteracted = CloseOpenSwipe;
         _vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(CartViewModel.IsCustomerModalOpen) && !_vm.IsCustomerModalOpen)
@@ -116,14 +117,15 @@ public partial class CartPage : ContentPage
 
     private void OnCartScrolled(object? sender, ItemsViewScrolledEventArgs e) => CloseOpenSwipe();
 
-    private void CloseOpenSwipe()
+    private bool CloseOpenSwipe()
     {
         if (_openSwipeView is null)
-            return;
+            return false;
 
         _openSwipeView.Close();
         if (_openSwipeView.BindingContext is Services.CartLine line)
             line.IsSwiped = false;
         _openSwipeView = null;
+        return true;
     }
 }

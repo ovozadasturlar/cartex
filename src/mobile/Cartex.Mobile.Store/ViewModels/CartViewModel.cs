@@ -52,10 +52,15 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private string _selectedOriginalPriceText = "";
     [ObservableProperty] private bool _hasPriceOverride;
 
-    partial void OnSelectedProductChanged(CartLine? value)
+    partial void OnSelectedProductChanged(CartLine? value) => SyncSelectedTexts();
+
+    /// Ayni shu qator qayta tanlanganda setter o'zgarishsiz o'tib ketadi, matnlar esa
+    /// qatordagi eski qiymatda qolib keyingi commit'da uni qaytarib yozadi — shuning uchun
+    /// tanlash nuqtalarida sinxron har doim qo'lda chaqiriladi.
+    private void SyncSelectedTexts()
     {
-        SelectedQuantityText = value?.Quantity.ToString("0.###") ?? "0";
-        SelectedPriceText = value?.UnitPrice.ToString("0.##") ?? "0";
+        SelectedQuantityText = SelectedProduct?.Quantity.ToString("0.###") ?? "0";
+        SelectedPriceText = SelectedProduct?.UnitPrice.ToString("0.##") ?? "0";
         RefreshPriceState();
     }
 
@@ -378,10 +383,40 @@ public partial class CartViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    /// Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
+    /// yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
+    public Func<bool>? RowInteracted { get; set; }
+
+    /// Qator bosilganda narx tahriri ochiladi (desktopdagi qatorda tahrirlashga mos);
+    /// ruxsat bo'lmasa avvalgidek mahsulot oynasi ochiladi.
+    [RelayCommand]
+    private void ToggleExpandLine(CartLine line)
+    {
+        if (RowInteracted?.Invoke() == true) return;
+        if (!CanOverridePrice)
+        {
+            OpenProductModal(line);
+            return;
+        }
+        foreach (var other in Lines)
+            if (!ReferenceEquals(other, line))
+                other.IsExpanded = false;
+        if (!line.IsExpanded)
+        {
+            SelectedProduct = line;
+            SyncSelectedTexts();
+        }
+        line.IsExpanded = !line.IsExpanded;
+    }
+
     [RelayCommand]
     private void OpenProductModal(CartLine line)
     {
+        if (RowInteracted?.Invoke() == true) return;
+        foreach (var other in Lines)
+            other.IsExpanded = false;
         SelectedProduct = line;
+        SyncSelectedTexts();
         IsProductModalOpen = true;
         SelectedProductImage = _images.FromKey(line.ImageKey) ?? "";
     }
@@ -418,6 +453,7 @@ public partial class CartViewModel : ObservableObject
     private void SetPriceFromText()
     {
         if (SelectedProduct is null || !CanOverridePrice) return;
+        var previous = SelectedProduct.UnitPrice;
         if (decimal.TryParse(
                 SelectedPriceText.Trim().Replace(',', '.'),
                 System.Globalization.NumberStyles.Number,
@@ -427,6 +463,10 @@ public partial class CartViewModel : ObservableObject
             && _cart.SetPrice(SelectedProduct.VariantId, price))
         {
             SelectedPriceText = price.ToString("0.##");
+            // Tahrir yopilish asnosida chala terilgan narx ham saqlanib qolishi mumkin —
+            // natija ko'zga tashlansin, aks holda savdo noto'g'ri narxda jim ketadi.
+            if (price != previous)
+                Ui.Toast($"{Loc.Instance["price"]}: {price:N0}");
         }
         else
         {

@@ -14,6 +14,7 @@ public sealed partial class CartLine : ObservableObject
     [ObservableProperty] private decimal _unitPrice;
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private bool _isSwiped;
+    [ObservableProperty] private bool _isExpanded;
     public bool AllowsFractional { get; set; }
     public decimal LineTotal => UnitPrice * Quantity;
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
