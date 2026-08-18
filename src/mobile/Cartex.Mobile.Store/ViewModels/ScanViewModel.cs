@@ -403,6 +403,8 @@ public partial class ScanViewModel : ObservableObject
             var info = await Task.Run(() => _productsApi.GetVariantPriceInfoAsync(product.VariantId, warehouseId));
             if (info.LastPurchasePrice is > 0 and { } last)
                 _supplyCart.SetPurchasePrice(product.VariantId, last);
+            if (product.SellingPrice <= 0 && info.SellingPrice is > 0 and { } selling)
+                _supplyCart.SetSellingPrice(product.VariantId, selling);
         }
         catch
         {

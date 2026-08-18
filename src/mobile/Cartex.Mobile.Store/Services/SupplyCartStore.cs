@@ -12,7 +12,9 @@ public sealed partial class SupplyCartLine : ObservableObject
     public string? ImageKey { get; set; }
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private decimal _purchasePrice;
+    [ObservableProperty] private decimal _sellingPrice;
     [ObservableProperty] private bool _isSwiped;
+    [ObservableProperty] private bool _isExpanded;
 
     public decimal LineTotal => Quantity * PurchasePrice;
 
@@ -24,15 +26,29 @@ public sealed partial class SupplyCartLine : ObservableObject
         set
         {
             _priceText = value;
-            PurchasePrice = decimal.TryParse(value?.Replace(" ", "").Replace(',', '.'),
-                System.Globalization.NumberStyles.Number,
-                System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
-                ? parsed
-                : 0;
+            PurchasePrice = Parse(value);
+        }
+    }
+
+    public string SalePriceText
+    {
+        get => _salePriceText ??= SellingPrice > 0 ? SellingPrice.ToString("0.##") : "";
+        set
+        {
+            _salePriceText = value;
+            SellingPrice = Parse(value);
         }
     }
 
     private string? _priceText;
+    private string? _salePriceText;
+
+    private static decimal Parse(string? value) =>
+        decimal.TryParse(value?.Replace(" ", "").Replace(',', '.'),
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+            ? parsed
+            : 0;
 
     partial void OnQuantityChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
     partial void OnPurchasePriceChanged(decimal value) => OnPropertyChanged(nameof(LineTotal));
@@ -41,6 +57,7 @@ public sealed partial class SupplyCartLine : ObservableObject
 public sealed class SupplyCartStore
 {
     private const string Key = "supply_cart_draft";
+    private const string SupplierKey = "supply_cart_supplier";
 
     public List<SupplyCartLine> Lines { get; } = [];
 
@@ -48,8 +65,17 @@ public sealed class SupplyCartStore
 
     public int Count => Lines.Count;
 
+    public long? SupplierId { get; private set; }
+    public string? SupplierName { get; private set; }
+
     public SupplyCartStore()
     {
+        var supplier = Preferences.Get(SupplierKey, "");
+        if (supplier.Split('|', 2) is [{ Length: > 0 } id, var name] && long.TryParse(id, out var supplierId))
+        {
+            SupplierId = supplierId;
+            SupplierName = name;
+        }
         var json = Preferences.Get(Key, "");
         if (string.IsNullOrEmpty(json)) return;
         try
@@ -63,6 +89,7 @@ public sealed class SupplyCartStore
                 UnitName = l.UnitName,
                 Quantity = l.Quantity,
                 PurchasePrice = l.PurchasePrice,
+                SellingPrice = l.SellingPrice,
                 ImageKey = l.ImageKey
             }));
         }
@@ -72,7 +99,16 @@ public sealed class SupplyCartStore
         }
     }
 
-    public void Add(ProductLookupDto product, decimal purchasePrice = 0)
+    public void SetSupplier(long? id, string? name)
+    {
+        SupplierId = id;
+        SupplierName = name;
+        if (id is null) Preferences.Remove(SupplierKey);
+        else Preferences.Set(SupplierKey, $"{id}|{name}");
+        Changed?.Invoke();
+    }
+
+    public void Add(ProductLookupDto product, decimal purchasePrice = 0, decimal sellingPrice = 0)
     {
         var line = Lines.FirstOrDefault(l => l.VariantId == product.VariantId);
         if (line is null)
@@ -83,6 +119,7 @@ public sealed class SupplyCartStore
                 UnitName = product.UnitName,
                 Quantity = product.PackQty,
                 PurchasePrice = purchasePrice,
+                SellingPrice = sellingPrice > 0 ? sellingPrice : product.SellingPrice,
                 ImageKey = product.ImageKey
             });
         else
@@ -106,6 +143,13 @@ public sealed class SupplyCartStore
         Save(debouncePersistence: true);
     }
 
+    public void SetSellingPrice(long variantId, decimal price)
+    {
+        if (Lines.FirstOrDefault(l => l.VariantId == variantId) is not { } line) return;
+        line.SalePriceText = price > 0 ? price.ToString("0.##") : "";
+        Save(debouncePersistence: true);
+    }
+
     /// Narx qatorning o'zida tahrirlanadi, shuning uchun ro'yxatni qayta qurmasdan
     /// faqat saqlash rejalashtiriladi.
     public void PersistSoon() => SchedulePersistence();
@@ -119,10 +163,13 @@ public sealed class SupplyCartStore
     public void Clear()
     {
         Lines.Clear();
+        SupplierId = null;
+        SupplierName = null;
         var pending = Interlocked.Exchange(ref _persistCts, null);
         pending?.Cancel();
         pending?.Dispose();
         Preferences.Remove(Key);
+        Preferences.Remove(SupplierKey);
         Changed?.Invoke();
     }
 
@@ -145,7 +192,7 @@ public sealed class SupplyCartStore
         pending?.Cancel();
         pending?.Dispose();
         var draft = Lines
-            .Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey, l.PurchasePrice))
+            .Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey, l.PurchasePrice, l.SellingPrice))
             .ToList();
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
     }
@@ -173,5 +220,5 @@ public sealed class SupplyCartStore
     }
 
     private sealed record DraftLine(long VariantId, string ProductName, string UnitName, decimal Quantity,
-        string? ImageKey = null, decimal PurchasePrice = 0);
+        string? ImageKey = null, decimal PurchasePrice = 0, decimal SellingPrice = 0);
 }
