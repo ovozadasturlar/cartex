@@ -66,9 +66,7 @@ public sealed class MobileOfflineService(
 
     private void StopLoop()
     {
-        var cts = Interlocked.Exchange(ref _loopCts, null);
-        cts?.Cancel();
-        cts?.Dispose();
+        Debounce.Cancel(ref _loopCts);
     }
 
     public void MarkServerUnavailable()

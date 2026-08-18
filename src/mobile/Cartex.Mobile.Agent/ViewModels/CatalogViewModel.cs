@@ -27,7 +27,7 @@ public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService 
     public bool IsEmpty => !IsLoading && Items.Count == 0;
     public CartService Cart => cart;
 
-    partial void OnSearchChanged(string value) => Debounce();
+    partial void OnSearchChanged(string value) => DebounceSearch();
     partial void OnCategoryIdChanged(long? value) => Apply();
     partial void OnIsGridChanged(bool value) => Preferences.Set("catalog_grid", value);
 
@@ -62,10 +62,9 @@ public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService 
         foreach (var g in groups) Categories.Add(g);
     }
 
-    private void Debounce()
+    private void DebounceSearch()
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = Task.Run(async () =>
         {
             try

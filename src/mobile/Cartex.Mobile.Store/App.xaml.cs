@@ -40,16 +40,22 @@ public partial class App : Application
 		return window;
 	}
 
-	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(async () =>
+	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(() => _ = HandleSessionEndAsync());
+
+	private static async Task HandleSessionEndAsync()
 	{
-		if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
-		AppLock.Disable();
-		await shell.GoToAsync("//login");
 		try
 		{
+			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
+			AppLock.Disable();
+			await shell.GoToAsync("//login");
 			if (shell.CurrentPage is { } page)
 				await page.DisplayAlertAsync(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
 		}
-		catch { }
-	});
+		catch
+		{
+			// Best-effort: login ekraniga o'tishning o'zi asosiy natija; dialog yoki
+			// navigatsiya yiqilsa foydalanuvchi baribir login sahifasida qoladi.
+		}
+	}
 }

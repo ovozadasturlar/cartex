@@ -33,8 +33,8 @@ public partial class ReceiveCartViewModel : ObservableObject
     [ObservableProperty] private SupplyCartLine? _selectedLine;
     [ObservableProperty] private string _selectedQtyText = "";
 
-    /// Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
-    /// yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
+    // Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
+    // yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
     public Func<bool>? RowInteracted { get; set; }
 
     public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi)
@@ -88,8 +88,7 @@ public partial class ReceiveCartViewModel : ObservableObject
 
     private async Task SearchSuppliersAsync(string term)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         if (string.IsNullOrWhiteSpace(term))
         {
             Suppliers.Clear();
@@ -163,7 +162,7 @@ public partial class ReceiveCartViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-    /// Bir vaqtda bitta qator ochiq turadi: boshqasiga bosilganda avvalgisi yopiladi.
+    // Bir vaqtda bitta qator ochiq turadi: boshqasiga bosilganda avvalgisi yopiladi.
     [RelayCommand]
     private void ToggleExpand(SupplyCartLine line)
     {

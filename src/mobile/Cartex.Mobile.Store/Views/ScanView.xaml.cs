@@ -102,7 +102,7 @@ public partial class ScanView : ContentView, ISectionView
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ScanViewModel.ProductActionsExpanded) && !_vm.ProductActionsExpanded)
-            MainThread.BeginInvokeOnMainThread(async () => await CollapseProductActionsAsync());
+            MainThread.BeginInvokeOnMainThread(() => _ = CollapseProductActionsAsync());
         if (e.PropertyName == nameof(ScanViewModel.OverlayVisible) && MainPage.Current is { } page)
             page.BarVisible = !_vm.OverlayVisible;
     }
@@ -110,9 +110,16 @@ public partial class ScanView : ContentView, ISectionView
     private async Task CollapseProductActionsAsync()
     {
         if (!ProductActionMenu.IsVisible) return;
-        await Task.WhenAll(
-            ProductActionMenu.FadeToAsync(0, 140),
-            ProductActionMenu.TranslateToAsync(0, -12, 140, Easing.CubicIn));
+        try
+        {
+            await Task.WhenAll(
+                ProductActionMenu.FadeToAsync(0, 140),
+                ProductActionMenu.TranslateToAsync(0, -12, 140, Easing.CubicIn));
+        }
+        catch
+        {
+            // Best-effort animatsiya: uzilib qolsa menyu shunchaki fade'siz yashiriladi.
+        }
         if (!_vm.ProductActionsExpanded)
             ProductActionMenu.IsVisible = false;
     }

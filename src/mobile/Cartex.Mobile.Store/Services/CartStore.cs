@@ -183,9 +183,7 @@ public sealed class CartStore
 
     public void Clear()
     {
-        var pending = Interlocked.Exchange(ref _persistCts, null);
-        pending?.Cancel();
-        pending?.Dispose();
+        Debounce.Cancel(ref _persistCts);
         Lines.Clear();
         CustomerId = null;
         CustomerName = null;
@@ -242,9 +240,7 @@ public sealed class CartStore
 
     private void PersistNow()
     {
-        var pending = Interlocked.Exchange(ref _persistCts, null);
-        pending?.Cancel();
-        pending?.Dispose();
+        Debounce.Cancel(ref _persistCts);
         var draft = new Draft(
             Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey,
                 l.AllowsFractional, l.OriginalPrice)).ToList(),
@@ -255,11 +251,7 @@ public sealed class CartStore
 
     private void SchedulePersistence()
     {
-        var next = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _persistCts, next);
-        previous?.Cancel();
-        previous?.Dispose();
-        _ = PersistAfterQuietPeriodAsync(next);
+        _ = PersistAfterQuietPeriodAsync(Debounce.Restart(ref _persistCts));
     }
 
     private async Task PersistAfterQuietPeriodAsync(CancellationTokenSource owner)

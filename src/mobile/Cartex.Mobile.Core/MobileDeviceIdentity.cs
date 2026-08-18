@@ -4,8 +4,8 @@ public static class MobileDeviceIdentity
 {
     private static string? _stableId;
 
-    /// Derived from the OS device identity where possible so the phone keeps its trust
-    /// after the app is reinstalled; a stored GUID is only the fallback.
+    // Derived from the OS device identity where possible so the phone keeps its trust
+    // after the app is reinstalled; a stored GUID is only the fallback.
     public static string DeviceId
     {
         get

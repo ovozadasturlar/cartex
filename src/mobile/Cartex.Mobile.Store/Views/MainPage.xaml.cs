@@ -32,9 +32,11 @@ public partial class MainPage : ContentPage
         }
     }
 
-    /// Bo'lim birinchi marta ochilganda XAML yoyilishi animatsiya bilan bir vaqtda tushadi
-    /// va kadr tashlanadi. Uy ekrani chiqqach, qolganlari bo'sh kadrlarda birma-bir
-    /// tayyorlanadi — shundan keyin har o'tish bir xil silliq bo'ladi.
+    // Bo'lim birinchi marta ochilganda XAML yoyilishi animatsiya bilan bir vaqtda tushadi
+    // va kadr tashlanadi. Uy ekrani chiqqach, qolganlari bo'sh kadrlarda birma-bir
+    // tayyorlanadi — shundan keyin har o'tish bir xil silliq bo'ladi.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Kadr-ba-kadr isitish ataylab fire-and-forget: DispatchAsync kutilsa isitish bir kadrga yig'ilib qoladi.")]
     private void WarmSections()
     {
         var next = 1;
@@ -64,8 +66,8 @@ public partial class MainPage : ContentPage
 
     private ISectionView? Active => _current >= 0 ? _sections[_current] as ISectionView : null;
 
-    /// Bo'lim ichidagi overlay ochilganda panel yashiriladi; panel bitta bo'lgani uchun
-    /// buni bo'limning o'zi so'raydi.
+    // Bo'lim ichidagi overlay ochilganda panel yashiriladi; panel bitta bo'lgani uchun
+    // buni bo'limning o'zi so'raydi.
     public bool BarVisible
     {
         get => Bar.IsVisible;
@@ -105,7 +107,7 @@ public partial class MainPage : ContentPage
     });
 }
 
-/// Bo'limga navigatsiya bilan qiymat uzatish (masalan savdolar ro'yxatini ochish).
+// Bo'limga navigatsiya bilan qiymat uzatish (masalan savdolar ro'yxatini ochish).
 public interface IArgumentAware
 {
     void Apply(string argument);

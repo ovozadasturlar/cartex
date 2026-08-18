@@ -8,8 +8,8 @@ public sealed class SessionStore
     private string? _refresh;
     private Task? _loading;
 
-    /// Tokenlar Android keystore'dan o'qiladi va bu ~1 sekund oladi. Ilova qaysi ekrandan
-    /// boshlashini shu sirsiz bayroq hal qiladi, shunda keystore kutilmaydi.
+    // Tokenlar Android keystore'dan o'qiladi va bu ~1 sekund oladi. Ilova qaysi ekrandan
+    // boshlashini shu sirsiz bayroq hal qiladi, shunda keystore kutilmaydi.
     public static bool HasSession => Preferences.Get(HasSessionKey, Preferences.ContainsKey("user_fullname"));
 
     public string ServerUrl

@@ -57,9 +57,9 @@ public partial class CartPage : ContentPage
         return base.OnBackButtonPressed();
     }
 
-    /// The totals hide behind the stepper as the row opens, so they follow the real drag
-    /// distance. SwipeEnded reports the row as open even after a swipe back, which used to
-    /// leave the totals hidden until the row was touched again.
+    // The totals hide behind the stepper as the row opens, so they follow the real drag
+    // distance. SwipeEnded reports the row as open even after a swipe back, which used to
+    // leave the totals hidden until the row was touched again.
     private const double RevealedOffset = 4;
 
     private void OnSwipeStarted(object? sender, SwipeStartedEventArgs e)

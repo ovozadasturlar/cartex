@@ -441,7 +441,7 @@ public partial class ScanViewModel : ObservableObject
         if (!SearchVisible)
         {
             KeyboardDismissal.Hide();
-            _searchCts?.Cancel();
+            Debounce.Cancel(ref _searchCts);
             IsSearching = false;
             SearchText = "";
             SearchResults.Clear();
@@ -476,7 +476,7 @@ public partial class ScanViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         SearchResults.Clear();
         _activeSearch = null;
         _loadedSearchPage = 0;
@@ -764,7 +764,7 @@ public partial class ScanViewModel : ObservableObject
             IsDetecting = true;
     }
 
-    [GeneratedRegex("^[0-9a-f]{32}$")]
+    [GeneratedRegex("^[0-9a-f]{32}$", RegexOptions.None, matchTimeoutMilliseconds: 200)]
     private static partial Regex HandoffCode();
 
     partial void OnPrintCopiesChanged(int value) => OnPropertyChanged(nameof(PrintTotalText));

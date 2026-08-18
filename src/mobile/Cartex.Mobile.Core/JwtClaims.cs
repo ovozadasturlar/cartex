@@ -2,8 +2,8 @@ using System.Text.Json;
 
 namespace Cartex.Mobile.Core;
 
-/// Tokenni faqat o'qiydi — imzo serverda tekshiriladi, klient da'volarni UI uchun ishlatadi.
-/// `System.IdentityModel.Tokens.Jwt` o'rniga shu ishlatiladi: u ishga tushishda ~150 ms yeydi.
+// Tokenni faqat o'qiydi — imzo serverda tekshiriladi, klient da'volarni UI uchun ishlatadi.
+// `System.IdentityModel.Tokens.Jwt` o'rniga shu ishlatiladi: u ishga tushishda ~150 ms yeydi.
 public sealed class JwtClaims
 {
     private static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);

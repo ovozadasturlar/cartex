@@ -4,9 +4,9 @@ using Cartex.Shared.Models.Settings;
 
 namespace Cartex.Mobile.Store.Services;
 
-/// Do'kon siyosati telefonda ham kerak: navbat o'chirilgan bo'lsa ilova uni umuman
-/// ko'rsatmasligi kerak (NAVBAT-06). Oxirgi qiymat saqlanadi, shunda ilova internetsiz
-/// ochilganda ham to'g'ri ko'rinishda ishga tushadi.
+// Do'kon siyosati telefonda ham kerak: navbat o'chirilgan bo'lsa ilova uni umuman
+// ko'rsatmasligi kerak (NAVBAT-06). Oxirgi qiymat saqlanadi, shunda ilova internetsiz
+// ochilganda ham to'g'ri ko'rinishda ishga tushadi.
 public sealed class SalesPolicyCache(ISettingsApi settingsApi)
 {
     private const string CacheKey = "sales_policy";

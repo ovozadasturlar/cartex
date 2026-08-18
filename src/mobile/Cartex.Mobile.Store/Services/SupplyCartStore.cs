@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cartex.Mobile.Core;
 using Cartex.Shared.Models.Products;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -18,8 +19,8 @@ public sealed partial class SupplyCartLine : ObservableObject
 
     public decimal LineTotal => Quantity * PurchasePrice;
 
-    /// Kiritish uchun alohida matn: raqamli bog'lanish har bosilgan harfda qayta
-    /// formatlanib terishni buzadi, shuning uchun xom matn shu yerda turadi.
+    // Kiritish uchun alohida matn: raqamli bog'lanish har bosilgan harfda qayta
+    // formatlanib terishni buzadi, shuning uchun xom matn shu yerda turadi.
     public string PriceText
     {
         get => _priceText ??= PurchasePrice > 0 ? PurchasePrice.ToString("0.##") : "";
@@ -44,9 +45,9 @@ public sealed partial class SupplyCartLine : ObservableObject
         }
     }
 
-    /// Bitta narx ikki joyda tahrirlanadi (qator ostidagi maydon va modal). Matn
-    /// yozilayotgan maydonni qayta formatlab terishni buzmaslik uchun jonli bildirish
-    /// yo'q — mirror ko'ringan payti shu bilan yangilanadi.
+    // Bitta narx ikki joyda tahrirlanadi (qator ostidagi maydon va modal). Matn
+    // yozilayotgan maydonni qayta formatlab terishni buzmaslik uchun jonli bildirish
+    // yo'q — mirror ko'ringan payti shu bilan yangilanadi.
     public void RefreshPriceTexts()
     {
         _priceText = null;
@@ -180,8 +181,8 @@ public sealed class SupplyCartStore
         Save(debouncePersistence: true);
     }
 
-    /// Narx qatorning o'zida tahrirlanadi, shuning uchun ro'yxatni qayta qurmasdan
-    /// faqat saqlash rejalashtiriladi.
+    // Narx qatorning o'zida tahrirlanadi, shuning uchun ro'yxatni qayta qurmasdan
+    // faqat saqlash rejalashtiriladi.
     public void PersistSoon() => SchedulePersistence();
 
     public void Remove(long variantId)
@@ -195,9 +196,7 @@ public sealed class SupplyCartStore
         Lines.Clear();
         SupplierId = null;
         SupplierName = null;
-        var pending = Interlocked.Exchange(ref _persistCts, null);
-        pending?.Cancel();
-        pending?.Dispose();
+        Debounce.Cancel(ref _persistCts);
         Preferences.Remove(Key);
         Preferences.Remove(SupplierKey);
         Changed?.Invoke();
@@ -218,9 +217,7 @@ public sealed class SupplyCartStore
 
     private void PersistNow()
     {
-        var pending = Interlocked.Exchange(ref _persistCts, null);
-        pending?.Cancel();
-        pending?.Dispose();
+        Debounce.Cancel(ref _persistCts);
         var draft = Lines
             .Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.Quantity, l.ImageKey, l.PurchasePrice, l.SellingPrice))
             .ToList();
@@ -229,11 +226,7 @@ public sealed class SupplyCartStore
 
     private void SchedulePersistence()
     {
-        var next = new CancellationTokenSource();
-        var previous = Interlocked.Exchange(ref _persistCts, next);
-        previous?.Cancel();
-        previous?.Dispose();
-        _ = PersistAfterQuietPeriodAsync(next);
+        _ = PersistAfterQuietPeriodAsync(Debounce.Restart(ref _persistCts));
     }
 
     private async Task PersistAfterQuietPeriodAsync(CancellationTokenSource owner)

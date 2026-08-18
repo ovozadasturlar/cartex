@@ -2,8 +2,8 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Store.Services;
 
-/// Ishga tushishdagi kalit/baza ishlari fonda bajariladi — UI thread'da bajarilsa birinchi
-/// kadr shuncha kechikadi. Faqat navigatsiya UI thread'da qoladi.
+// Ishga tushishdagi kalit/baza ishlari fonda bajariladi — UI thread'da bajarilsa birinchi
+// kadr shuncha kechikadi. Faqat navigatsiya UI thread'da qoladi.
 public sealed class StartupService(MobileAuthService auth, MobileOfflineService offline)
 {
     public async Task RunAsync()

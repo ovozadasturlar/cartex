@@ -1,4 +1,4 @@
-﻿using BarcodeScanning;
+using BarcodeScanning;
 using Cartex.ApiClient;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
@@ -113,8 +113,8 @@ public static class MauiProgram
         return app;
     }
 
-    /// Birinchi ekran shu servislarni so'raganda ular saqlangan JSON'ni ochadi. UI thread'da
-    /// bu ~200 ms turib qolish, shuning uchun fonda oldindan tayyorlanadi.
+    // Birinchi ekran shu servislarni so'raganda ular saqlangan JSON'ni ochadi. UI thread'da
+    // bu ~200 ms turib qolish, shuning uchun fonda oldindan tayyorlanadi.
     private static void Warm(IServiceProvider services) => _ = Task.Run(() =>
     {
         services.GetRequiredService<CartStore>();

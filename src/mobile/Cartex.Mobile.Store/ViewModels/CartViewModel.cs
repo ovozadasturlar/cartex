@@ -54,9 +54,9 @@ public partial class CartViewModel : ObservableObject
 
     partial void OnSelectedProductChanged(CartLine? value) => SyncSelectedTexts();
 
-    /// Ayni shu qator qayta tanlanganda setter o'zgarishsiz o'tib ketadi, matnlar esa
-    /// qatordagi eski qiymatda qolib keyingi commit'da uni qaytarib yozadi — shuning uchun
-    /// tanlash nuqtalarida sinxron har doim qo'lda chaqiriladi.
+    // Ayni shu qator qayta tanlanganda setter o'zgarishsiz o'tib ketadi, matnlar esa
+    // qatordagi eski qiymatda qolib keyingi commit'da uni qaytarib yozadi — shuning uchun
+    // tanlash nuqtalarida sinxron har doim qo'lda chaqiriladi.
     private void SyncSelectedTexts()
     {
         SelectedQuantityText = SelectedProduct?.Quantity.ToString("0.###") ?? "0";
@@ -139,7 +139,7 @@ public partial class CartViewModel : ObservableObject
     [RelayCommand]
     private void UndoClear()
     {
-        _undoToken?.Cancel();
+        Debounce.Cancel(ref _undoToken);
         CanUndoClear = false;
         if (_undo.Count == 0) return;
         _cart.Restore(_undo);
@@ -166,8 +166,7 @@ public partial class CartViewModel : ObservableObject
 
     private async Task SearchCustomersAsync(string term)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         if (string.IsNullOrWhiteSpace(term))
         {
             Customers.Clear();
@@ -280,7 +279,7 @@ public partial class CartViewModel : ObservableObject
     [RelayCommand]
     private void CloseParticipantModal()
     {
-        _partnerSearchCts?.Cancel();
+        Debounce.Cancel(ref _partnerSearchCts);
         IsParticipantModalOpen = false;
         ParticipantSearch = "";
         PartnerResults.Clear();
@@ -383,12 +382,12 @@ public partial class CartViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-    /// Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
-    /// yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
+    // Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
+    // yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
     public Func<bool>? RowInteracted { get; set; }
 
-    /// Qator bosilganda narx tahriri ochiladi (desktopdagi qatorda tahrirlashga mos);
-    /// ruxsat bo'lmasa avvalgidek mahsulot oynasi ochiladi.
+    // Qator bosilganda narx tahriri ochiladi (desktopdagi qatorda tahrirlashga mos);
+    // ruxsat bo'lmasa avvalgidek mahsulot oynasi ochiladi.
     [RelayCommand]
     private void ToggleExpandLine(CartLine line)
     {
@@ -531,8 +530,7 @@ public partial class CartViewModel : ObservableObject
 
     private async Task SearchPartnersAsync(string term)
     {
-        _partnerSearchCts?.Cancel();
-        var owner = _partnerSearchCts = new CancellationTokenSource();
+        var owner = Debounce.Restart(ref _partnerSearchCts);
         PartnerResults.Clear();
         HasPartnerResults = false;
         if (!IsParticipantModalOpen || string.IsNullOrWhiteSpace(term)) return;

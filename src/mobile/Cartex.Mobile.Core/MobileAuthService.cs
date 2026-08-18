@@ -57,9 +57,9 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     public event Action? SessionInvalidated;
 
-    /// Refresh tokeni har yangilashda aylanadi, shuning uchun tekshirish ham aynan shu qulf
-    /// ostidagi yo'ldan o'tadi: eskirgan token bilan ikkinchi urinish 401 qaytarib
-    /// foydalanuvchini bekordan-bekorga tizimdan chiqarib yuborardi.
+    // Refresh tokeni har yangilashda aylanadi, shuning uchun tekshirish ham aynan shu qulf
+    // ostidagi yo'ldan o'tadi: eskirgan token bilan ikkinchi urinish 401 qaytarib
+    // foydalanuvchini bekordan-bekorga tizimdan chiqarib yuborardi.
     public Task ValidateSessionAsync() => EnsureFreshTokenAsync(CancellationToken.None);
 
     public async Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken)

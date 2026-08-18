@@ -26,10 +26,10 @@ public class LiquidTabBar : Grid
     private readonly record struct GlyphFit(double FontSize, double Dx, double Dy);
     private static GlyphFit[]? _fits;
 
-    /// MDI gliflarining siyohi em qutida turlicha o'lcham va joyda turadi, shuning uchun
-    /// bir xil FontSize hamda oddiy markazlash ularni notekis ko'rsatadi. Har glif shriftning
-    /// o'zidan o'lchanadi: balandligi IconInk ga, siyoh markazi quti markaziga keltiriladi —
-    /// glif almashsa hech narsa qo'lda sozlanmaydi.
+    // MDI gliflarining siyohi em qutida turlicha o'lcham va joyda turadi, shuning uchun
+    // bir xil FontSize hamda oddiy markazlash ularni notekis ko'rsatadi. Har glif shriftning
+    // o'zidan o'lchanadi: balandligi IconInk ga, siyoh markazi quti markaziga keltiriladi —
+    // glif almashsa hech narsa qo'lda sozlanmaydi.
     private static GlyphFit[] MeasureGlyphs()
     {
         var fits = new GlyphFit[TabCount];
@@ -129,7 +129,7 @@ public class LiquidTabBar : Grid
         Loaded += OnLoaded;
     }
 
-    /// Panel bitta va u `MainPage` da yashaydi; bosilgan tab shu orqali xabar qilinadi.
+    // Panel bitta va u `MainPage` da yashaydi; bosilgan tab shu orqali xabar qilinadi.
     public Action<int>? Selected { get; set; }
 
     public void Select(int index, int animateFrom)
@@ -178,8 +178,8 @@ public class LiquidTabBar : Grid
         from.Green + (to.Green - from.Green) * t,
         from.Blue + (to.Blue - from.Blue) * t);
 
-    /// `position` — tomchining ustunlar bo'yicha kasrli o'rni, shuning uchun u ikki tab
-    /// orasida ham tura oladi va bir butun harakat sifatida suriladi.
+    // `position` — tomchining ustunlar bo'yicha kasrli o'rni, shuning uchun u ikki tab
+    // orasida ham tura oladi va bir butun harakat sifatida suriladi.
     private void Apply(float position, float presence)
     {
         _drawable.Position = position;

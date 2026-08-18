@@ -227,8 +227,7 @@ public partial class CartEditViewModel(
 
     private void DebounceProductSearch(string value)
     {
-        _productSearchCts?.Cancel();
-        var owner = _productSearchCts = new CancellationTokenSource();
+        var owner = Debounce.Restart(ref _productSearchCts);
         _ = SearchProductsAsync(value, owner);
     }
 
@@ -279,8 +278,7 @@ public partial class CartEditViewModel(
 
     private void DebounceCustomerSearch(string value)
     {
-        _customerSearchCts?.Cancel();
-        var owner = _customerSearchCts = new CancellationTokenSource();
+        var owner = Debounce.Restart(ref _customerSearchCts);
         _ = SearchCustomersAsync(value, owner);
     }
 

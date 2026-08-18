@@ -2,11 +2,9 @@ using System.Windows.Input;
 
 namespace Cartex.Mobile.Core.Controls;
 
-/// <summary>
-/// Executes once on press, then repeats with acceleration while the pointer is held.
-/// RepeatCommand is intentionally separate from Button.Command so release does not
-/// execute the action a second time.
-/// </summary>
+// Executes once on press, then repeats with acceleration while the pointer is held.
+// RepeatCommand is intentionally separate from Button.Command so release does not
+// execute the action a second time.
 public sealed class HoldRepeatButton : Button
 {
     public static readonly BindableProperty RepeatCommandProperty = BindableProperty.Create(
@@ -103,10 +101,6 @@ public sealed class HoldRepeatButton : Button
 
     private void StopRepeating()
     {
-        var cts = Interlocked.Exchange(ref _repeatCts, null);
-        if (cts is null)
-            return;
-        cts.Cancel();
-        cts.Dispose();
+        Debounce.Cancel(ref _repeatCts);
     }
 }

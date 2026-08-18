@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using Cartex.ApiClient.Api;
@@ -53,7 +53,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _changeText = "";
     [ObservableProperty] private string _debtText = "";
     [ObservableProperty] private bool _canSelfSell;
-    /// Navbat siyosati o'chirilgan bo'lsa bu tugma umuman chizilmaydi (NAVBAT-06).
+    // Navbat siyosati o'chirilgan bo'lsa bu tugma umuman chizilmaydi (NAVBAT-06).
     [ObservableProperty] private bool _canQueue = true;
     [ObservableProperty] private bool _canEditNote = true;
     [ObservableProperty] private bool _isMulticurrency;
@@ -69,7 +69,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _payableText = "";
     [ObservableProperty] private bool _canDiscount;
 
-    /// Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
+    // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
     [ObservableProperty] private bool _hasShortfall;
 
     public bool IsSimplePayment => !IsMulticurrency;
@@ -78,7 +78,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     public bool HasParticipants => Participants.Count > 0;
     public bool CanStoreExcessAsCredit => HasCustomer && Paid > Payable;
 
-    /// What the customer actually hands over once the discount is off.
+    // What the customer actually hands over once the discount is off.
     public decimal Payable => Math.Max(0, _totalAmount - _discount);
 
     private string _code = "";
@@ -195,8 +195,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     partial void OnCashTextChanged(string value) => Recalc();
     partial void OnDiscountTextChanged(string value) => Recalc();
 
-    /// Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
-    /// yetmagan qismni chegirma maydoniga yozadi (CHEG-10).
+    // Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
+    // yetmagan qismni chegirma maydoniga yozadi (CHEG-10).
     [RelayCommand]
     private void FillDiscountFromTender()
     {

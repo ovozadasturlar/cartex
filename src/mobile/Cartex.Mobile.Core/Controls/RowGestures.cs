@@ -2,9 +2,9 @@ using System.Windows.Input;
 
 namespace Cartex.Mobile.Core.Controls;
 
-/// MAUI'da long-press jesti yo'q, TapGestureRecognizer bilan yonma-yon esa native
-/// long-press ishlamay qoladi. Shu sabab tap ham, long-press ham Android'ning o'z
-/// Click/LongClick mexanizmidan olinadi — u long-press'dan keyingi click'ni o'zi yutadi.
+// MAUI'da long-press jesti yo'q, TapGestureRecognizer bilan yonma-yon esa native
+// long-press ishlamay qoladi. Shu sabab tap ham, long-press ham Android'ning o'z
+// Click/LongClick mexanizmidan olinadi — u long-press'dan keyingi click'ni o'zi yutadi.
 public static class RowGestures
 {
     public static readonly BindableProperty TapCommandProperty = BindableProperty.CreateAttached(
