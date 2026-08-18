@@ -4,7 +4,6 @@ using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Customers;
 using Cartex.Application.Common.Messaging;
-using Cartex.Shared.Models.Customers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

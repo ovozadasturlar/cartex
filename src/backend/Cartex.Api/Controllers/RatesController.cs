@@ -12,10 +12,10 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RequiresFeature(FeatureCatalog.Multicurrency)]
 public class RatesController(ISender sender) : ControllerBase
 {
     [HttpGet]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetCurrent()
     {
@@ -24,6 +24,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{code}/history")]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetHistory(string code)
     {
@@ -32,6 +33,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Rates.Edit)]
     public async Task<ActionResult<long>> Set(SetExchangeRateCommand command)
     {
@@ -39,17 +41,20 @@ public class RatesController(ISender sender) : ControllerBase
         return Ok(id);
     }
 
+    // Narx ko'rsatish uchun zarur reference ma'lumot: har qanday xodim o'qiy oladi,
+    // aks holda oddiy sotuvchi klientlari 403 olib ishlay olmaydi.
     [HttpGet("currencies")]
-    [HasPermission(AppPermissions.Currencies.View)]
     public async Task<ActionResult<IReadOnlyCollection<CurrencyDto>>> GetCurrencies([FromQuery] bool onlyEnabled = false) =>
         Ok(await sender.Send(new GetCurrenciesQuery(onlyEnabled)));
 
     [HttpPost("currencies")]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Currencies.Create)]
     public async Task<ActionResult<long>> CreateCurrency(CreateCurrencyCommand command) =>
         Ok(await sender.Send(command));
 
     [HttpPut("currencies/{code}")]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Currencies.Edit)]
     public async Task<IActionResult> UpdateCurrency(string code, UpdateCurrencyCommand command)
     {
@@ -58,6 +63,7 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("currencies/{code}")]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
     [HasPermission(AppPermissions.Currencies.Delete)]
     public async Task<IActionResult> DeleteCurrency(string code)
     {

@@ -11,6 +11,7 @@ public class FeatureConfiguration : IEntityTypeConfiguration<Feature>
         builder.ToTable("features");
         builder.Property(x => x.Code).HasMaxLength(40).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(80).IsRequired();
+        builder.Property(x => x.OwnerEnabled).HasDefaultValue(true);
         builder.HasIndex(x => x.Code).IsUnique();
     }
 }

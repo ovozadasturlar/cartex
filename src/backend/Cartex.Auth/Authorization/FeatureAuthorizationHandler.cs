@@ -1,19 +1,13 @@
-using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Cartex.Auth.Authorization;
 
+// SOZ-15: feature — tizim holati, foydalanuvchi imtiyozi emas; wildcard ham bo'ysunadi.
 public class FeatureAuthorizationHandler(IFeatureStateProvider features) : AuthorizationHandler<FeatureRequirement>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, FeatureRequirement requirement)
     {
-        if (context.User.Claims.Any(c => c.Type == "permission" && c.Value == AppPermissions.Wildcard))
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
         foreach (var feature in requirement.Feature.Split('|'))
             if (await features.IsEnabledAsync(feature))
             {

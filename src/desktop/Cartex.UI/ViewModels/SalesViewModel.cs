@@ -1979,9 +1979,17 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             SelectedQueueRow = restored;
             if (restored is null) SelectedQueueItems.Clear();
             else if (IsQueuePanelOpen) await LoadQueueItemsAsync(restored);
+            _queueLoadFailed = false;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            if (!_queueLoadFailed && ApiErrors.Describe(ex) is { Length: > 0 } message)
+                _toast.Warning(message);
+            _queueLoadFailed = true;
+        }
     }
+
+    private bool _queueLoadFailed;
 
     [RelayCommand]
     private async Task OpenQueueCartAsync(QueueRow row)

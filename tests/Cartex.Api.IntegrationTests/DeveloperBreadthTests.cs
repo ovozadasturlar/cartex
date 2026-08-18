@@ -36,8 +36,10 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
     }
 
     [Fact]
-    public async Task DisabledFeature_BlocksAdmin_ButNotDeveloper()
+    public async Task DisabledFeature_Blocks_Everyone_Even_Wildcard()
     {
+        // SOZ-15: feature tekshiruvi hech kimni istisno qilmaydi — wildcard (developer) ham bo'ysunadi;
+        // qutqaruv yo'li — feature boshqaruv endpoint'lari feature bilan qulflanmaydi.
         var developer = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
 
@@ -52,7 +54,9 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
             Assert.Equal(HttpStatusCode.Forbidden, adminResp.StatusCode);
 
             var devResp = await developer.GetAsync("/api/ordering/carts/none");
-            Assert.NotEqual(HttpStatusCode.Forbidden, devResp.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, devResp.StatusCode);
+
+            (await developer.GetAsync("/api/features")).EnsureSuccessStatusCode();
         }
         finally
         {
