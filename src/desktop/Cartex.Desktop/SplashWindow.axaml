@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Cartex.Desktop.SplashWindow"
+        Width="440" Height="270"
+        CanResize="False"
+        WindowDecorations="None"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+
+    <Border CornerRadius="16" Background="White" BorderBrush="#E3E6E1" BorderThickness="1">
+        <Grid RowDefinitions="*,Auto">
+            <StackPanel VerticalAlignment="Center" Spacing="6">
+                <Image Source="/Assets/app-icon.png" Width="92" Height="92" />
+                <TextBlock Text="Cartex" FontSize="30" FontWeight="Bold" Foreground="#23241F"
+                           HorizontalAlignment="Center" />
+                <TextBlock Text="Savdo boshqaruvi tizimi" FontSize="13" Foreground="#8A9088"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Margin="30,0,30,20" Spacing="10">
+                <ProgressBar IsIndeterminate="True" Height="4" MinHeight="4" CornerRadius="2"
+                             Foreground="#275E38" Background="#EDF0EC" />
+                <TextBlock x:Name="VersionText" FontSize="11" Foreground="#B0B5AD"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Cartex.UI;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
@@ -22,6 +23,20 @@ public partial class App : Application
 	}
 
 	public override void OnFrameworkInitializationCompleted()
+	{
+		// Og'ir tayyorgarlikdan oldin splash ko'rsatiladi — aks holda dastur ochilguncha
+		// hech narsa ko'rinmaydi va foydalanuvchi ishga tushmadi deb qayta bosadi.
+		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		{
+			var splash = new SplashWindow();
+			splash.Show();
+			Dispatcher.UIThread.Post(() => Startup(desktop, splash), DispatcherPriority.Background);
+		}
+
+		base.OnFrameworkInitializationCompleted();
+	}
+
+	private void Startup(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splash)
 	{
 		// 1. AppData papkasini aniqlaymiz va mavjud bo'lmasa yaratamiz
 		string appDataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cartex");
@@ -55,27 +70,24 @@ public partial class App : Application
 
 		LocalizationManager.Instance.LoadLanguage(settings.Language);
 
-		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		var nav = provider.GetRequiredService<NavigationService>();
+		var window = new MainWindow { DataContext = nav };
+
+		if (settings.RememberMe && provider.GetRequiredService<AuthService>().TryRestore())
 		{
-			var nav = provider.GetRequiredService<NavigationService>();
-			var window = new MainWindow { DataContext = nav };
-
-			if (settings.RememberMe && provider.GetRequiredService<AuthService>().TryRestore())
-			{
-				var mainVm = provider.GetRequiredService<MainViewModel>();
-				mainVm.Initialize();
-				nav.NavigateTo(mainVm);
-				provider.GetRequiredService<ReferenceCache>();
-				_ = provider.GetRequiredService<AuthService>().ValidateSessionAsync();
-			}
-			else
-			{
-				nav.NavigateTo(provider.GetRequiredService<LoginViewModel>());
-			}
-
-			desktop.MainWindow = window;
+			var mainVm = provider.GetRequiredService<MainViewModel>();
+			mainVm.Initialize();
+			nav.NavigateTo(mainVm);
+			provider.GetRequiredService<ReferenceCache>();
+			_ = provider.GetRequiredService<AuthService>().ValidateSessionAsync();
+		}
+		else
+		{
+			nav.NavigateTo(provider.GetRequiredService<LoginViewModel>());
 		}
 
-		base.OnFrameworkInitializationCompleted();
+		desktop.MainWindow = window;
+		window.Show();
+		splash.Close();
 	}
 }
