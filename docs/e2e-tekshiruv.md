@@ -12,7 +12,8 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `TEKSHIRILMOQDA`
+> **Tekshirilgan commit:** `aff495b131ece367d49252f4d94f2f571a995297`
+> (`aff495b1` — «Verify the release end to end and fix the defects it surfaced»)
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
 > avtomatik to'plamlar (Application 385, Integration 91, Unit 207, Architecture 20, UI 10),
 > HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web va i18n. **Istisno:** yakuniy jonli
@@ -28,6 +29,10 @@ git diff --name-only <tekshirilgan-commit>..HEAD
 chiqqan fayllarni §5 dagi jadvaldan qidirib, faqat mos qatorlardagi buyruqlar bajariladi.
 Hech bir fayl jadvalga tushmasa (mas. faqat `docs/` o'zgargan bo'lsa) — qayta tekshiruv talab
 qilinmaydi. Yangi to'liq tekshiruv o'tkazilganda shu blokdagi commit yangilanadi.
+
+> **Eslatma:** shu qatorning o'zi baseline'dan **keyingi** commitda yozilgan (hash faqat commit
+> qilingandan keyin ma'lum bo'ladi). U faqat `docs/` ga tegadi, ya'ni yuqoridagi qoida bo'yicha
+> qayta tekshiruv talab qilmaydi.
 
 ---
 
