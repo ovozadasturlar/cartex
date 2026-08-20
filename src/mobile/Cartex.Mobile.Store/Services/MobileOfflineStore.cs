@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.OfflineCache;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Supplies;
 using SQLite;
 
 namespace Cartex.Mobile.Store.Services;
@@ -58,6 +60,13 @@ public sealed class MobileOfflinePartner
     [Indexed] public long? CustomerId { get; set; }
 }
 
+public sealed class MobileOfflineSupplier
+{
+    [PrimaryKey] public long Id { get; set; }
+    [Indexed] public string Name { get; set; } = "";
+    public string? Phone { get; set; }
+}
+
 public sealed class MobileOfflineOutbox
 {
     [PrimaryKey, AutoIncrement] public int Id { get; set; }
@@ -73,6 +82,7 @@ public sealed class MobileOfflineOutbox
     public string Status { get; set; } = "pending";
     public string? Error { get; set; }
     public DateTime OccurredAt { get; set; }
+    public DateTime? PushedAt { get; set; }
 }
 
 public sealed class MobileOfflineMeta
@@ -83,6 +93,12 @@ public sealed class MobileOfflineMeta
 
 public sealed class MobileOfflineStore
 {
+    // HUB-07: yo'ldosh navbati HUB'ning lizingiga emas, shu doimiy kalitga yoziladi. Aks holda
+    // vakolat boshqa qurilmaga ko'chganda (yangi lease/epoch) yuborilmagan qatorlar hech qaysi
+    // so'rovga tushmay qolardi — pul jimgina yo'qolardi.
+    public const long SatelliteLeaseId = -1;
+    public const long SatelliteEpoch = 0;
+
     private const string PayloadKeyName = "offline_payload_key_v2";
     private readonly SQLiteAsyncConnection _db = new(Path.Combine(
         FileSystem.AppDataDirectory, "offline-store-v2.db3"));
@@ -109,94 +125,184 @@ public sealed class MobileOfflineStore
         await _db.CreateTableAsync<MobileOfflineCustomer>();
         await _db.CreateTableAsync<MobileOfflineParticipantRole>();
         await _db.CreateTableAsync<MobileOfflinePartner>();
+        await _db.CreateTableAsync<MobileOfflineSupplier>();
         await _db.CreateTableAsync<MobileOfflineOutbox>();
         await _db.CreateTableAsync<MobileOfflineMeta>();
     }
 
-    public async Task ReplaceSnapshotAsync(OfflineSnapshotDto snapshot)
+    // `owner` — navbat kimning nomiga yozilgani. Snapshot'dagi lizing bilan bir xil emas: HUB
+    // katalogi o'z lizingini olib keladi, yuborilmagan qatorlar esa yo'ldosh chelagida turadi.
+    public async Task ReplaceSnapshotAsync(OfflineSnapshotDto snapshot, MobileOfflineCredential owner)
     {
         await InitializeAsync();
         await _db.RunInTransactionAsync(c =>
         {
             c.DeleteAll<MobileOfflineProduct>();
-            c.InsertAll(snapshot.Products.Select(x => new MobileOfflineProduct
-            {
-                VariantId = x.VariantId,
-                ProductName = x.ProductName,
-                CategoryName = x.CategoryName,
-                UnitName = x.UnitName,
-                Dimension = x.Dimension,
-                Quantity = x.Quantity,
-                SellingPrice = x.SellingPrice,
-                AllowsAmountEntry = x.AllowsAmountEntry,
-                AllowsFractional = x.AllowsFractional
-            }));
+            c.InsertAll(snapshot.Products.Select(Product));
             c.DeleteAll<MobileOfflineBarcode>();
-            c.InsertAll(snapshot.Barcodes.Select(x => new MobileOfflineBarcode
-            {
-                Code = x.Code,
-                VariantId = x.VariantId,
-                PackQty = x.PackQty
-            }));
+            c.InsertAll(snapshot.Barcodes.Select(Barcode));
             c.DeleteAll<MobileOfflineCustomer>();
-            c.InsertAll(snapshot.Customers.Select(x => new MobileOfflineCustomer
-            {
-                Id = x.Id,
-                FullName = x.FullName,
-                Phone = x.Phone,
-                CardBarcode = x.CardBarcode,
-                DiscountPct = x.DiscountPct,
-                DebtBalance = x.DebtBalance,
-                CreditLimit = x.CreditLimit
-            }));
-            c.DeleteAll<MobileOfflineParticipantRole>();
-            c.InsertAll((snapshot.ParticipantRoles ?? []).Select(x => new MobileOfflineParticipantRole
-            {
-                Id = x.Id,
-                Key = x.Key,
-                Label = x.SingularLabel,
-                IsRequired = x.IsRequired,
-                CanEqualBuyer = x.CanEqualBuyer,
-                MaxCount = x.MaxCount,
-                SortOrder = x.SortOrder
-            }));
-            c.DeleteAll<MobileOfflinePartner>();
-            c.InsertAll((snapshot.Partners ?? []).Select(x => new MobileOfflinePartner
-            {
-                PartnerId = x.PartnerId,
-                PartyId = x.PartyId,
-                PartnerCode = x.PartnerCode,
-                FullName = x.FullName,
-                Phone = x.Phone,
-                CustomerId = x.CustomerId
-            }));
+            c.InsertAll(snapshot.Customers.Select(Customer));
+            c.DeleteAll<MobileOfflineSupplier>();
+            c.InsertAll((snapshot.Suppliers ?? []).Select(Supplier));
+            ReplaceParties(c, snapshot);
 
-            var pending = c.Table<MobileOfflineOutbox>()
-                .Where(x => x.LeaseId == snapshot.LeaseId && x.Epoch == snapshot.Epoch
-                    && (x.Status == "pending" || x.Status == "error"))
-                .OrderBy(x => x.Sequence)
-                .ToList();
-            foreach (var item in pending.Where(x => x.Kind == "sale.create"))
-                ReapplySale(c, Decrypt(item.PayloadCipher));
-
-            Put(c, "base_currency", snapshot.BaseCurrency);
-            Put(c, "allow_debt_sales", snapshot.AllowDebtSales ? "1" : "0");
-            Put(c, "allow_insufficient_stock_sales", snapshot.AllowInsufficientStockSales ? "1" : "0");
-            Put(c, "snapshot_version", snapshot.SnapshotVersion.ToString());
-            Put(c, "last_sync", snapshot.ServerTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+            foreach (var item in PendingProjections(c, owner.LeaseId, owner.Epoch))
+                ApplyProjection(c, item.Kind, Decrypt(item.PayloadCipher), 1);
+            PutSnapshotMeta(c, snapshot);
         });
+    }
+
+    // OFF-53: delta faqat kelgan qatorlarni almashtiradi va `Removed*` dagilarini o'chiradi.
+    // Rol/hamkor ro'yxatlari serverdan har doim to'liq keladi, shuning uchun ular almashtiriladi.
+    public async Task ApplyDeltaAsync(OfflineSnapshotDto snapshot, MobileOfflineCredential owner)
+    {
+        await InitializeAsync();
+        await _db.RunInTransactionAsync(c =>
+        {
+            foreach (var id in snapshot.RemovedProductIds) c.Delete<MobileOfflineProduct>(id);
+            foreach (var code in snapshot.RemovedBarcodeCodes) c.Delete<MobileOfflineBarcode>(code);
+            foreach (var id in snapshot.RemovedCustomerIds) c.Delete<MobileOfflineCustomer>(id);
+            foreach (var id in snapshot.RemovedSupplierIds) c.Delete<MobileOfflineSupplier>(id);
+            foreach (var row in snapshot.Products) c.InsertOrReplace(Product(row));
+            foreach (var row in snapshot.Barcodes) c.InsertOrReplace(Barcode(row));
+            foreach (var row in snapshot.Customers) c.InsertOrReplace(Customer(row));
+            foreach (var row in snapshot.Suppliers ?? []) c.InsertOrReplace(Supplier(row));
+            ReplaceParties(c, snapshot);
+
+            // Serverdan kelgan qatorda hali yuborilmagan mahalliy amallar ko'rinmaydi. Ular
+            // faqat yangilangan kalitlar uchun qayta qo'llanadi: filtrsiz qo'llash tegilmagan
+            // qatorlarga ikkinchi marta tushib, qoldiqni ikki barobar kamaytirardi.
+            var variantIds = snapshot.Products.Select(x => x.VariantId).ToHashSet();
+            var customerIds = snapshot.Customers.Select(x => x.Id).ToHashSet();
+            if (variantIds.Count > 0 || customerIds.Count > 0)
+                foreach (var item in PendingProjections(c, owner.LeaseId, owner.Epoch))
+                    ApplyProjection(c, item.Kind, Decrypt(item.PayloadCipher), 1, variantIds, customerIds);
+            PutSnapshotMeta(c, snapshot);
+        });
+    }
+
+    // HUB-09: yo'ldoshga beriladigan katalog shu keshdan olinadi.
+    public async Task<(List<MobileOfflineProduct> Products, List<MobileOfflineBarcode> Barcodes,
+        List<MobileOfflineCustomer> Customers, List<MobileOfflineSupplier> Suppliers)> GetSnapshotAsync()
+    {
+        await InitializeAsync();
+        return (await _db.Table<MobileOfflineProduct>().ToListAsync(),
+            await _db.Table<MobileOfflineBarcode>().ToListAsync(),
+            await _db.Table<MobileOfflineCustomer>().ToListAsync(),
+            await _db.Table<MobileOfflineSupplier>().ToListAsync());
+    }
+
+    public async Task<(int Products, int Barcodes, int Customers, int Suppliers)> CountSnapshotAsync()
+    {
+        await InitializeAsync();
+        return (await _db.Table<MobileOfflineProduct>().CountAsync(),
+            await _db.Table<MobileOfflineBarcode>().CountAsync(),
+            await _db.Table<MobileOfflineCustomer>().CountAsync(),
+            await _db.Table<MobileOfflineSupplier>().CountAsync());
+    }
+
+    private static MobileOfflineProduct Product(Cartex.Shared.Models.Stocks.StockOnHandDto x) => new()
+    {
+        VariantId = x.VariantId,
+        ProductName = x.ProductName,
+        CategoryName = x.CategoryName,
+        UnitName = x.UnitName,
+        Dimension = x.Dimension,
+        Quantity = x.Quantity,
+        SellingPrice = x.SellingPrice,
+        AllowsAmountEntry = x.AllowsAmountEntry,
+        AllowsFractional = x.AllowsFractional
+    };
+
+    private static MobileOfflineBarcode Barcode(OfflineBarcodeDto x) => new()
+    {
+        Code = x.Code,
+        VariantId = x.VariantId,
+        PackQty = x.PackQty
+    };
+
+    private static MobileOfflineCustomer Customer(OfflineCustomerDto x) => new()
+    {
+        Id = x.Id,
+        FullName = x.FullName,
+        Phone = x.Phone,
+        CardBarcode = x.CardBarcode,
+        DiscountPct = x.DiscountPct,
+        DebtBalance = x.DebtBalance,
+        CreditLimit = x.CreditLimit
+    };
+
+    private static MobileOfflineSupplier Supplier(OfflineSupplierDto x) => new()
+    {
+        Id = x.Id,
+        Name = x.Name,
+        Phone = x.Phone
+    };
+
+    private static void ReplaceParties(SQLiteConnection c, OfflineSnapshotDto snapshot)
+    {
+        c.DeleteAll<MobileOfflineParticipantRole>();
+        c.InsertAll((snapshot.ParticipantRoles ?? []).Select(x => new MobileOfflineParticipantRole
+        {
+            Id = x.Id,
+            Key = x.Key,
+            Label = x.SingularLabel,
+            IsRequired = x.IsRequired,
+            CanEqualBuyer = x.CanEqualBuyer,
+            MaxCount = x.MaxCount,
+            SortOrder = x.SortOrder
+        }));
+        c.DeleteAll<MobileOfflinePartner>();
+        c.InsertAll((snapshot.Partners ?? []).Select(x => new MobileOfflinePartner
+        {
+            PartnerId = x.PartnerId,
+            PartyId = x.PartyId,
+            PartnerCode = x.PartnerCode,
+            FullName = x.FullName,
+            Phone = x.Phone,
+            CustomerId = x.CustomerId
+        }));
+    }
+
+    private static List<MobileOfflineOutbox> PendingProjections(SQLiteConnection c, long leaseId, long epoch) =>
+        c.Table<MobileOfflineOutbox>()
+            .Where(x => x.LeaseId == leaseId && x.Epoch == epoch
+                && (x.Status == "pending" || x.Status == "error"))
+            .OrderBy(x => x.Sequence)
+            .ToList();
+
+    private static void PutSnapshotMeta(SQLiteConnection c, OfflineSnapshotDto snapshot)
+    {
+        Put(c, "base_currency", snapshot.BaseCurrency);
+        Put(c, "allow_debt_sales", snapshot.AllowDebtSales ? "1" : "0");
+        Put(c, "allow_insufficient_stock_sales", snapshot.AllowInsufficientStockSales ? "1" : "0");
+        Put(c, "snapshot_version", snapshot.SnapshotVersion.ToString());
+        Put(c, "last_sync", snapshot.ServerTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
     }
 
     public async Task PrepareLeaseAsync(MobileOfflineCredential credential)
     {
         await InitializeAsync();
+        // Qurilma o'z vakolatini olganda yo'ldosh chelagida qolgan yuborilmagan qatorlar yangi
+        // lizingga ko'chiriladi — aks holda ular faqat HUB orqali ketadigan bo'lib, HUB
+        // ko'tarilmasa navbatda abadiy qolardi. Server EventId bo'yicha dedup qiladi: HUB
+        // ularni allaqachon olgan bo'lsa ikkinchi marta qo'llanmaydi.
+        var adopt = credential.LeaseId == SatelliteLeaseId ? 0 : SatelliteLeaseId;
         await _db.RunInTransactionAsync(c =>
         {
-            var next = credential.LastAcceptedSequence + 1;
-            var legacy = c.Table<MobileOfflineOutbox>()
-                .Where(x => x.LeaseId == 0 && (x.Status == "pending" || x.Status == "error"))
+            // Ko'chirilgan qator lizingdagi mavjud qatorlardan keyin raqamlanadi: bir xil
+            // sequence ikki qatorda bo'lsa serverda butun zanjir `sequence_conflict` bilan to'xtardi.
+            var max = c.Table<MobileOfflineOutbox>()
+                .Where(x => x.LeaseId == credential.LeaseId && x.Epoch == credential.Epoch)
+                .OrderByDescending(x => x.Sequence)
+                .FirstOrDefault()?.Sequence ?? 0;
+            var next = Math.Max(credential.LastAcceptedSequence + 1, max + 1);
+            var orphans = c.Table<MobileOfflineOutbox>()
+                .Where(x => (x.LeaseId == 0 || x.LeaseId == adopt)
+                    && (x.Status == "pending" || x.Status == "error"))
                 .OrderBy(x => x.Id).ToList();
-            foreach (var row in legacy)
+            foreach (var row in orphans)
             {
                 row.LeaseId = credential.LeaseId;
                 row.Epoch = credential.Epoch;
@@ -204,11 +310,7 @@ public sealed class MobileOfflineStore
                 row.EventId = string.IsNullOrWhiteSpace(row.EventId) ? Guid.NewGuid().ToString("D") : row.EventId;
                 c.Update(row);
             }
-            var max = c.Table<MobileOfflineOutbox>()
-                .Where(x => x.LeaseId == credential.LeaseId && x.Epoch == credential.Epoch)
-                .OrderByDescending(x => x.Sequence)
-                .FirstOrDefault()?.Sequence ?? 0;
-            Put(c, "next_sequence", Math.Max(next, max + 1).ToString());
+            Put(c, "next_sequence", next.ToString());
         });
     }
 
@@ -217,49 +319,184 @@ public sealed class MobileOfflineStore
         MobileOfflineCredential credential,
         long actorUserId)
     {
-        await InitializeAsync();
         var idempotencyKey = string.IsNullOrWhiteSpace(sale.IdempotencyKey)
             ? Guid.NewGuid().ToString("N")
             : sale.IdempotencyKey;
         sale = sale with { IdempotencyKey = idempotencyKey, ApplyAutoDiscount = false, UseCustomerAdvance = false };
-        var json = JsonSerializer.Serialize(sale, JsonOptions);
-        var cipher = Encrypt(json);
-        await _db.RunInTransactionAsync(c =>
+        await EnqueueAsync("sale.create", JsonSerializer.Serialize(sale, JsonOptions),
+            idempotencyKey!, credential, actorUserId, c =>
         {
-            var nextRow = c.Find<MobileOfflineMeta>("next_sequence");
-            var next = nextRow is not null && long.TryParse(nextRow.Value, out var parsed)
-                ? parsed
-                : credential.LastAcceptedSequence + 1;
-            var grouped = sale.Items.GroupBy(x => x.VariantId)
-                .Select(x => new { VariantId = x.Key, Quantity = x.Sum(y => y.Quantity) })
-                .ToList();
             var allowInsufficient = c.Find<MobileOfflineMeta>("allow_insufficient_stock_sales")?.Value == "1";
-            foreach (var line in grouped)
+            foreach (var line in sale.Items.GroupBy(x => x.VariantId)
+                         .Select(x => new { VariantId = x.Key, Quantity = x.Sum(y => y.Quantity) }))
             {
                 var product = c.Find<MobileOfflineProduct>(line.VariantId)
                     ?? throw new InvalidOperationException("Mahsulot oflayn keshda topilmadi.");
                 if (!allowInsufficient && product.Quantity < line.Quantity)
                     throw new InvalidOperationException($"{product.ProductName}: oflayn qoldiq yetarli emas.");
             }
+        });
+    }
+
+    public async Task EnqueuePaymentAsync(
+        CreateCustomerPaymentRequest payment,
+        MobileOfflineCredential credential,
+        long actorUserId) =>
+        await EnqueueAsync("customer.payment.create", JsonSerializer.Serialize(payment, JsonOptions),
+            payment.IdempotencyKey!, credential, actorUserId, c =>
+        {
+            if (c.Find<MobileOfflineCustomer>(payment.CustomerId) is null)
+                throw new InvalidOperationException("Mijoz oflayn keshda topilmadi.");
+        });
+
+    public async Task EnqueueSupplyAsync(
+        CreateSupplyRequest supply,
+        MobileOfflineCredential credential,
+        long actorUserId) =>
+        await EnqueueAsync("supply.create", JsonSerializer.Serialize(supply, JsonOptions),
+            supply.IdempotencyKey!, credential, actorUserId);
+
+    // HUB-06: yo'ldoshdan kelgan hodisa o'z EventId'si bilan yoziladi va HUB ketma-ketligini
+    // oladi; takror yuborilsa mavjud qatorning ketma-ketligi qaytariladi, ikkinchi qator yaratilmaydi.
+    public async Task<long> EnqueueFromSatelliteAsync(
+        string kind,
+        string json,
+        string idempotencyKey,
+        Guid eventId,
+        DateTime occurredAt,
+        MobileOfflineCredential credential,
+        long actorUserId)
+    {
+        Action<SQLiteConnection> validate = kind switch
+        {
+            "sale.create" => SaleValidator(json),
+            "customer.payment.create" => PaymentValidator(json),
+            "supply.create" => _ => { },
+            _ => throw new InvalidOperationException("Bu amal turi HUB orqali qabul qilinmaydi.")
+        };
+        return await EnqueueAsync(kind, json, idempotencyKey, credential, actorUserId,
+            validate, eventId, occurredAt);
+    }
+
+    private static Action<SQLiteConnection> SaleValidator(string json)
+    {
+        var sale = JsonSerializer.Deserialize<CreateSaleRequest>(json, JsonOptions)
+            ?? throw new InvalidOperationException("Oflayn savdo ma'lumoti noto'g'ri.");
+        return c =>
+        {
+            var allowInsufficient = c.Find<MobileOfflineMeta>("allow_insufficient_stock_sales")?.Value == "1";
+            foreach (var line in sale.Items.GroupBy(x => x.VariantId)
+                         .Select(x => new { VariantId = x.Key, Quantity = x.Sum(y => y.Quantity) }))
+            {
+                var product = c.Find<MobileOfflineProduct>(line.VariantId)
+                    ?? throw new InvalidOperationException("Mahsulot oflayn keshda topilmadi.");
+                if (!allowInsufficient && product.Quantity < line.Quantity)
+                    throw new InvalidOperationException($"{product.ProductName}: oflayn qoldiq yetarli emas.");
+            }
+        };
+    }
+
+    private static Action<SQLiteConnection> PaymentValidator(string json)
+    {
+        var payment = JsonSerializer.Deserialize<CreateCustomerPaymentRequest>(json, JsonOptions)
+            ?? throw new InvalidOperationException("Oflayn to'lov ma'lumoti noto'g'ri.");
+        return c =>
+        {
+            if (c.Find<MobileOfflineCustomer>(payment.CustomerId) is null)
+                throw new InvalidOperationException("Mijoz oflayn keshda topilmadi.");
+        };
+    }
+
+    private async Task<long> EnqueueAsync(
+        string kind,
+        string json,
+        string idempotencyKey,
+        MobileOfflineCredential credential,
+        long actorUserId,
+        Action<SQLiteConnection>? validate = null,
+        Guid? eventId = null,
+        DateTime? occurredAt = null)
+    {
+        await InitializeAsync();
+        var cipher = Encrypt(json);
+        var sequence = 0L;
+        await _db.RunInTransactionAsync(c =>
+        {
+            if (eventId is { } id)
+            {
+                var key = id.ToString("D");
+                var existing = c.Table<MobileOfflineOutbox>().FirstOrDefault(x => x.EventId == key);
+                if (existing is not null)
+                {
+                    sequence = existing.Sequence;
+                    return;
+                }
+            }
+
+            validate?.Invoke(c);
+            var nextRow = c.Find<MobileOfflineMeta>("next_sequence");
+            var next = nextRow is not null && long.TryParse(nextRow.Value, out var parsed)
+                ? parsed
+                : credential.LastAcceptedSequence + 1;
             c.Insert(new MobileOfflineOutbox
             {
-                EventId = Guid.NewGuid().ToString("D"),
+                EventId = (eventId ?? Guid.NewGuid()).ToString("D"),
                 LeaseId = credential.LeaseId,
                 Epoch = credential.Epoch,
                 Sequence = next,
                 ActorUserId = actorUserId,
-                Kind = "sale.create",
-                IdempotencyKey = idempotencyKey!,
+                Kind = kind,
+                IdempotencyKey = idempotencyKey,
                 PayloadCipher = cipher,
-                OccurredAt = DateTime.UtcNow
+                OccurredAt = occurredAt ?? DateTime.UtcNow
             });
-            foreach (var line in grouped)
-            {
-                var product = c.Find<MobileOfflineProduct>(line.VariantId)!;
-                product.Quantity -= line.Quantity;
-                c.Update(product);
-            }
+            ApplyProjection(c, kind, json, 1);
             Put(c, "next_sequence", (next + 1).ToString());
+            sequence = next;
+        });
+        return sequence;
+    }
+
+    public async Task<bool> CancelPendingAsync(int outboxId)
+    {
+        await InitializeAsync();
+        var cancelled = false;
+        await _db.RunInTransactionAsync(c =>
+        {
+            var item = c.Find<MobileOfflineOutbox>(outboxId);
+            if (item is null || item.Status != "pending" || item.PushedAt is not null) return;
+            ApplyProjection(c, item.Kind, Decrypt(item.PayloadCipher), -1);
+            c.Delete(item);
+            var later = c.Table<MobileOfflineOutbox>()
+                .Where(x => x.LeaseId == item.LeaseId && x.Epoch == item.Epoch && x.Sequence > item.Sequence)
+                .OrderBy(x => x.Sequence)
+                .ToList();
+            foreach (var row in later)
+            {
+                row.Sequence--;
+                c.Update(row);
+            }
+            var meta = c.Find<MobileOfflineMeta>("next_sequence");
+            if (meta is not null && long.TryParse(meta.Value, out var next) && next > item.Sequence)
+                Put(c, "next_sequence", (next - 1).ToString());
+            cancelled = true;
+        });
+        return cancelled;
+    }
+
+    public async Task MarkPushedAsync(IReadOnlyCollection<int> ids)
+    {
+        await InitializeAsync();
+        var now = DateTime.UtcNow;
+        await _db.RunInTransactionAsync(c =>
+        {
+            foreach (var id in ids)
+            {
+                var item = c.Find<MobileOfflineOutbox>(id);
+                if (item is null || item.PushedAt is not null) continue;
+                item.PushedAt = now;
+                c.Update(item);
+            }
         });
     }
 
@@ -326,11 +563,30 @@ public sealed class MobileOfflineStore
             .FirstOrDefaultAsync(x => x.CustomerId == customerId);
     }
 
+    public async Task<List<MobileOfflineSupplier>> SearchSuppliersAsync(string term, int limit)
+    {
+        await InitializeAsync();
+        var normalized = term.Trim().ToLowerInvariant();
+        var query = _db.Table<MobileOfflineSupplier>();
+        if (normalized.Length > 0)
+            query = query.Where(x => x.Name.ToLower().Contains(normalized));
+        return await query.OrderBy(x => x.Name).Take(limit).ToListAsync();
+    }
+
     public async Task<List<MobileOfflineOutbox>> GetPendingAsync(long leaseId, long epoch, int limit)
     {
         await InitializeAsync();
         return await _db.Table<MobileOfflineOutbox>()
             .Where(x => x.LeaseId == leaseId && x.Epoch == epoch && x.Status == "pending")
+            .OrderBy(x => x.Sequence).Take(limit).ToListAsync();
+    }
+
+    public async Task<List<MobileOfflineOutbox>> GetQueueAsync(long leaseId, long epoch, int limit)
+    {
+        await InitializeAsync();
+        return await _db.Table<MobileOfflineOutbox>()
+            .Where(x => x.LeaseId == leaseId && x.Epoch == epoch
+                && (x.Status == "pending" || x.Status == "error"))
             .OrderBy(x => x.Sequence).Take(limit).ToListAsync();
     }
 
@@ -355,6 +611,18 @@ public sealed class MobileOfflineStore
         return (await _db.FindAsync<MobileOfflineMeta>(key))?.Value;
     }
 
+    public async Task SetMetaAsync(string key, string value)
+    {
+        await InitializeAsync();
+        await _db.InsertOrReplaceAsync(new MobileOfflineMeta { Key = key, Value = value });
+    }
+
+    public async Task RemoveMetaAsync(string key)
+    {
+        await InitializeAsync();
+        await _db.DeleteAsync<MobileOfflineMeta>(key);
+    }
+
     public async Task ClearProjectionAsync()
     {
         await InitializeAsync();
@@ -365,21 +633,62 @@ public sealed class MobileOfflineStore
             c.DeleteAll<MobileOfflineCustomer>();
             c.DeleteAll<MobileOfflineParticipantRole>();
             c.DeleteAll<MobileOfflinePartner>();
+            c.DeleteAll<MobileOfflineSupplier>();
             c.DeleteAll<MobileOfflineMeta>();
         });
     }
 
-    private void ReapplySale(SQLiteConnection connection, string json)
+    private static void ApplyProjection(
+        SQLiteConnection c,
+        string kind,
+        string json,
+        int sign,
+        HashSet<long>? variantIds = null,
+        HashSet<long>? customerIds = null)
     {
-        var sale = JsonSerializer.Deserialize<CreateSaleRequest>(json, JsonOptions);
-        if (sale is null) return;
-        foreach (var line in sale.Items.GroupBy(x => x.VariantId)
-                     .Select(x => new { VariantId = x.Key, Quantity = x.Sum(y => y.Quantity) }))
+        switch (kind)
         {
-            var product = connection.Find<MobileOfflineProduct>(line.VariantId);
-            if (product is null) continue;
-            product.Quantity -= line.Quantity;
-            connection.Update(product);
+            case "sale.create":
+            {
+                var sale = JsonSerializer.Deserialize<CreateSaleRequest>(json, JsonOptions);
+                if (sale is null) return;
+                foreach (var line in sale.Items.GroupBy(x => x.VariantId))
+                {
+                    if (variantIds?.Contains(line.Key) == false) continue;
+                    var product = c.Find<MobileOfflineProduct>(line.Key);
+                    if (product is null) continue;
+                    product.Quantity -= sign * line.Sum(x => x.Quantity);
+                    c.Update(product);
+                }
+                return;
+            }
+            case "customer.payment.create":
+            {
+                var payment = JsonSerializer.Deserialize<CreateCustomerPaymentRequest>(json, JsonOptions);
+                if (payment is null) return;
+                if (customerIds?.Contains(payment.CustomerId) == false) return;
+                var customer = c.Find<MobileOfflineCustomer>(payment.CustomerId);
+                if (customer is null) return;
+                customer.DebtBalance -= sign * payment.Tenders.Sum(x => x.Amount);
+                c.Update(customer);
+                return;
+            }
+            case "supply.create":
+            {
+                var supply = JsonSerializer.Deserialize<CreateSupplyRequest>(json, JsonOptions);
+                if (supply is null) return;
+                foreach (var line in supply.Items.Where(x => x.UnitId is null && x.PackId is null))
+                {
+                    if (variantIds?.Contains(line.VariantId) == false) continue;
+                    var product = c.Find<MobileOfflineProduct>(line.VariantId);
+                    if (product is null) continue;
+                    product.Quantity += sign * line.Quantity;
+                    if (sign > 0 && line.SellingPrice is { } price)
+                        product.SellingPrice = price;
+                    c.Update(product);
+                }
+                return;
+            }
         }
     }
 

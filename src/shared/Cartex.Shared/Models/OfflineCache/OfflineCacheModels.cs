@@ -61,6 +61,8 @@ public sealed record OfflineParticipantRoleDto(
     int MaxCount,
     int SortOrder);
 
+public sealed record OfflineSupplierDto(long Id, string Name, string? Phone);
+
 public sealed record OfflinePartnerDto(
     long PartnerId,
     long PartyId,
@@ -68,6 +70,8 @@ public sealed record OfflinePartnerDto(
     string FullName,
     string? Phone,
     long? CustomerId);
+
+public sealed record OfflineSnapshotTotals(int Products, int Barcodes, int Customers, int Suppliers);
 
 public sealed record OfflineSnapshotDto(
     string BaseCurrency,
@@ -81,7 +85,24 @@ public sealed record OfflineSnapshotDto(
     long Epoch = 0,
     long SnapshotVersion = 0,
     List<OfflineParticipantRoleDto>? ParticipantRoles = null,
-    List<OfflinePartnerDto>? Partners = null);
+    List<OfflinePartnerDto>? Partners = null,
+    List<OfflineSupplierDto>? Suppliers = null)
+{
+    /// OFF-53: to'liq snapshotda klient keshni butunlay almashtiradi, deltada faqat kelgan
+    /// qatorlarni upsert qiladi va `Removed*` ro'yxatlaridagini o'chiradi.
+    public bool IsFull { get; init; } = true;
+
+    /// Kesh mahsulot qatorlari `StockOnHandDto.VariantId` bo'yicha kalitlangan — bu ro'yxat
+    /// ham variant kalitini olib yuradi, aks holda klient o'chiriladigan qatorni topa olmaydi.
+    public IReadOnlyList<long> RemovedProductIds { get; init; } = [];
+    public IReadOnlyList<long> RemovedCustomerIds { get; init; } = [];
+    public IReadOnlyList<long> RemovedSupplierIds { get; init; } = [];
+    public IReadOnlyList<string> RemovedBarcodeCodes { get; init; } = [];
+
+    /// OFF-54(d): butun kesh bo'yicha jami sanoq (delta emas) — klient sanog'i mos kelmasa
+    /// keyingi siklda to'liq snapshot so'raydi.
+    public OfflineSnapshotTotals Totals { get; init; } = new(0, 0, 0, 0);
+}
 
 public sealed record OfflineSyncEventRequest(
     Guid EventId,
@@ -97,6 +118,21 @@ public sealed record OfflineSyncBatchRequest(
     long Epoch,
     string LeaseToken,
     IReadOnlyList<OfflineSyncEventRequest> Events);
+
+public sealed record OfflineSyncSkipRequest(
+    long LeaseId,
+    long Epoch,
+    string LeaseToken,
+    OfflineSyncEventRequest Event,
+    string? Reason = null);
+
+public sealed record OfflineSyncImportRequest(
+    long LeaseId,
+    long Epoch,
+    string LeaseToken,
+    IReadOnlyList<OfflineSyncEventRequest> Events,
+    bool SkipRejected = false,
+    IReadOnlyList<Guid>? SkipEventIds = null);
 
 public sealed record OfflineSyncEventResult(
     Guid EventId,

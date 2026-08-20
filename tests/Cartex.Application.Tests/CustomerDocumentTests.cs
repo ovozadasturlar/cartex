@@ -1,4 +1,6 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.CustomerPayments.Commands;
 using Cartex.Application.CustomerReturns.Commands;
 using Cartex.Application.Customers.Commands;
@@ -35,6 +37,13 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
         return (branchId, warehouseId, businessId, adminId, variantId);
     }
 
+    private async Task AllowCustomerCreditAsync()
+    {
+        using var scope = Fixture.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ISettingsService>()
+            .SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings { AllowCustomerCredit = true });
+    }
+
     private async Task<long> CreateCustomerAsync(string prefix = "Hujjat Mijoz")
     {
         using var scope = Fixture.CreateScope();
@@ -47,6 +56,8 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
     public async Task Payment_is_immutable_idempotent_and_keeps_overpayment_as_advance()
     {
         var (branchId, warehouseId, _, _, variantId) = await SetupAsync();
+        // QARZ-20: ortiqcha to'lov avansda qolishi uchun haqdorlik yoniq bo'lishi shart
+        await AllowCustomerCreditAsync();
         var customerId = await CreateCustomerAsync();
 
         long saleId;
@@ -225,6 +236,8 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
     public async Task Customer_credit_refund_is_immutable_and_statement_reconciles_by_currency()
     {
         var (branchId, _, _, _, _) = await SetupAsync();
+        // QARZ-20: qarzsiz mijozning to'lovi butunlay avansga tushadi
+        await AllowCustomerCreditAsync();
         var customerId = await CreateCustomerAsync("Avans qaytaruv");
 
         using (var scope = Fixture.CreateScope())

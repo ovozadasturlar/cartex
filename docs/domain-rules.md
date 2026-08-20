@@ -219,7 +219,8 @@ Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**
 |---|---|
 | `QARZ-01` | Qarz — hisob (`Account`) va tranzaksiyalar defteri. Mijozdagi ustun emas. Har valyuta uchun alohida hisob. |
 | `QARZ-02` | Qarzga savdo `AllowDebtSales` siyosatiga va mijozning kredit limitiga bo'ysunadi. Mijozsiz qarz bo'lmaydi. |
-| `QARZ-03` | To'lov savdolarga **FIFO** taqsimlanadi: avval muddati yaqinlari, muddatsizlari oxirida. Ortiqcha to'lov mijoz avansiga tushadi. |
+| `QARZ-03` | To'lov savdolarga **FIFO** taqsimlanadi: avval muddati yaqinlari, muddatsizlari oxirida. Ortiqcha to'lov mijoz avansiga tushadi — lekin bu `QARZ-20` bilan cheklangan: haqdorlik sozlamasi o'chiq bo'lsa (standart holat) ortiqcha to'lov umuman qabul qilinmaydi. |
+| `QARZ-20` | **Ortiqcha to'lov haqdorlik sozlamasiga bo'ysunadi.** `AllowCustomerCredit` o'chiq bo'lsa do'kon mijozga qarzdor bo'lishni istamaydi, shuning uchun **onlayn** to'lovda qarzdan ortiq summa qabul qilinmaydi (`payment_exceeds_debt`) — kassir farqni naqd qaytaradi, xuddi savdodagi qaytim kabi. Sozlama yoniq bo'lsa ortiqcha summa `QARZ-03` bo'yicha avansga tushadi. **Istisno — oflayn replay:** u yerda pul allaqachon olingan va hodisa o'tmishda sodir bo'lgan, shuning uchun `OFF-21` ustun turadi va ortiqcha summa sozlamadan qat'i nazar avansga yoziladi (rad etish pulni yo'qotardi). Klient interfeysi sozlama o'chiq bo'lganda qarzdan ortiq summa kiritishga yo'l qo'ymaydi. **Konvertatsiya qoldig'i ortiqcha to'lov hisoblanmaydi:** chet valyutadagi taqsimot 4 xonada kesilgani uchun aynan qarzcha to'langanda ham kursga bog'liq mayda qoldiq qolishi mumkin (`0.0001 × kurs` dan kichik) — u rad etishga sabab bo'lmaydi. |
 | `QARZ-04` | **Qarz kechirimi yopilgan savdoni o'zgartirmaydi.** U — bugungi yangi hodisa (`DebtWriteOff`), chunki savdo smenaga tushgan, unga qarab cashback va hamkor mukofoti hisoblangan. Savdoning summasi, chegirmasi va qatorlari tegilmaydi; mijoz balansi esa nolga tushadi. |
 | `QARZ-05` | Kechirilgan qarzdan **hamkorga mukofot berilmaydi** — u olingan pul emas. Mukofot faqat haqiqatan to'langan qismdan hisoblanadi. |
 | `QARZ-06` | Kechirim alohida ruxsat talab qiladi va savdo siyosatidagi chegaraga bo'ysunadi (`MaxDebtWriteOffAmount`, `MaxDebtWriteOffPercent`). Sabab majburiy, auditga yoziladi, hisobotda alohida ko'rinadi. Chegarasiz kechirim — o'g'irlik kanali. |
@@ -263,6 +264,7 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `QARZ-19` | Qarzga berilgan pul hujjatda alohida ko'rinadi: `AdvanceBaseAmount` + `LoanBaseAmount` = `TotalBaseAmount`, va bu klient DTO'siga ham chiqadi — mijoz qo'lidagi qog'ozda qaysi qismi qarz bo'lganini ko'rishi shart (`HUJJ-03`). |
 | `QARZ-10` | Har qanday pul chiqimi ochiq smenani talab qiladi va kassa qoldig'ini kamaytiradi. Smena yopilishida u ham hisobga olinadi. |
 | `QARZ-11` | Mijozning yakuniy holati bitta son bilan ifodalanadi: **qarzdor** (musbat qarz) yoki **haqdor** (musbat avans). Ikkalasi bir vaqtda musbat bo'lib turishi mumkin, chunki ular alohida valyutalarda bo'lishi mumkin — hisobotda har valyuta alohida ko'rsatiladi. |
+| `QARZ-21` | **Pul majburiyati ochiq mijoz o'chirilmaydi.** Tekshiruvga **qarz va avans** kiradi (`customer_balance_open`) — ikkalasi ham haqiqiy pul: qarz do'kon oladigan, avans do'kon **qaytaradigan** pul. Avansi bor mijozni o'chirish do'konning qarzini ro'yxatdan yo'qotadi, mijoz esa puli uchun kelganda hech qanday yozuv qolmaydi. **Bonus bunga kirmaydi:** u pul emas, sodiqlik balansi, va har xarid keshbek yozgani uchun deyarli har mijozda qoladi — bonusni ham shartga qo'shish o'chirishni umuman imkonsiz qilardi (bonusni nolga tushiradigan amal yo'q). O'chirilgan mijoz **soft-delete** bo'lgani uchun bonus yo'qolmaydi, yozuvi bilan birga qoladi. |
 
 **Qabul mezoni — `QARZ-07` / `QARZ-08`**
 
@@ -330,6 +332,8 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `RUXSAT-02` | Rol/ruxsat tekshiruvi `Application`/`Auth` da bo'ladi, `Api` da emas. Klient tekshiruvi faqat qulaylik uchun; server baribir qayta tekshiradi. |
 | `RUXSAT-03` | E'lon qilingan, lekin hech qayerda tekshirilmaydigan ruxsat bo'lmasligi kerak — yo tekshiriladi, yo o'chiriladi. |
 | `RUXSAT-04` | Modul o'chirilgan bo'lsa (feature flag), u UI'da umuman ko'rinmaydi va serverda ham yopiq bo'ladi. |
+| `RUXSAT-05` | **So'rov tanasidagi hech bir maydon ruxsat tekshiruvini o'chira olmaydi.** Tekshiruvga ta'sir qiladigan belgilar (mas. savdo navbatdagi savatdan yakunlanayotgani, oflayn replay ekani, narx oldindan ruxsatlangani) faqat **server ichida** o'rnatiladi va JSON'dan o'qilmaydi. Aks holda ruxsati kam foydalanuvchi shu maydonni yuborib tekshiruvni chetlab o'tardi. |
+| `RUXSAT-06` | **Savdo yaratish va savatni yakunlash — ikki xil ruxsat.** `sales.create` to'g'ridan-to'g'ri savdo ochish huquqi; `sales.checkout` esa **boshqa xodim tayyorlagan navbatdagi savatni** yakunlash huquqi. Faqat `sales.checkout` bor kassir navbat oqimi orqali ishlay oladi, lekin bo'sh joydan savdo yarata olmaydi (`RUXSAT-05` bilan birga o'qiladi). |
 
 ---
 
@@ -432,6 +436,40 @@ ikkalasiga ham ishonmay qo'yadi — va qaysi biri to'g'ri ekanini bilishning ilo
 
 ---
 
+## 12a. Smena va Z-hisobot
+
+Smena — kassa yashigining ochiq davri. Uning yagona vazifasi: kun oxirida **yashikdagi pul
+hisobga to'g'ri kelishi**. Shuning uchun bu yerdagi har qoida bitta savolga xizmat qiladi —
+"yashikda qancha bo'lishi kerak edi va nega".
+
+| ID | Qoida |
+|---|---|
+| `SMENA-01` | Bir foydalanuvchining bitta filialda **bir vaqtning o'zida bitta ochiq smenasi** bo'ladi. Bu faqat dastur tekshiruvi emas — **bazada shartli unikal indeks** bilan majburlanadi. Sabab: tekshirib-keyin-yozish (check-then-insert) ikki qurilmadan yoki tugma ikki marta bosilganda ikkita ochiq smena yaratadi, keyin savdolar ular orasida tasodifiy taqsimlanadi va **birorta Z-hisobot yashikka mos kelmaydi**. |
+| `SMENA-02` | **Naqd yashikka tegadi — demak ochiq smena talab qiladi.** Naqd savdo, naqd qarz to'lovi, naqd qaytarish, kassa chiqimi — ochiq smenasiz rad etiladi. Kartadagi (yashikka tegmaydigan) amallar smenasiz ham o'tadi. |
+| `SMENA-03` | **Kutilgan naqd** = boshlang'ich qoldiq + naqd savdo − naqd qaytarish/qaytim + kassa kirimi − kassa chiqimi + naqd qarz to'lovi − naqd ta'minot to'lovi. Bu ro'yxat **to'liq** bo'lishi shart: yashikdan chiqadigan har qanday pul (jumladan hamkorga naqd mukofot, `QARZ-10`) hisobga olinadi, aks holda kassirda soxta kamomad chiqadi. |
+| `SMENA-04` | Yopishda kassir **sanagan** naqd yoziladi. Sanalgan bilan kutilganning farqi — **biznes fakti** (kam yoki ortiqcha), xato emas: u yashirilmaydi, tuzatilmaydi va hujjatda saqlanadi. |
+| `SMENA-05` | Z-hisobot **saqlanmaydi, har safar daftar yozuvlaridan qayta hisoblanadi**. Shundan kelib chiqadigan majburiyat: yopilgan smenaga keyin yozuv qo'shilmaydi. Keyinroq qilingan tuzatish (bekor qilish, qaytarish) puli **joriy** smenaga tushadi — aks holda kecha chop etilgan Z-hisobot orqadan o'zgarib ketadi. |
+| `SMENA-06` | Chet valyutadagi naqd **alohida yuritiladi**: har valyuta o'z boshlang'ich qoldig'i, o'z sanog'i va o'z kutilgan qiymatiga ega. Bazaviy valyuta alohida qator sifatida yuborilmaydi — u smenaning o'zida. |
+| `SMENA-08` | **Smenaning boshlang'ich qoldig'i daftarga yozilmaydi.** U kassirga beriladigan mayda pul: har smenada qaytariladi va biznes puli sifatida hisoblanmaydi. Ikkita amaliy oqibat: (1) kutilgan naqdda u alohida had bo'lib turadi (`SMENA-03`), daftardan kelmaydi; (2) naqd chiqim (mas. hamkorga mukofot) **daftardagi kassa qoldig'i** bilan cheklanadi, ya'ni yashikda jismonan boshlang'ich qoldiq turgan bo'lsa ham undan to'lab bo'lmaydi (`cash_balance_insufficient`). Bu ataylab: boshlang'ich qoldiqni sarflab yuborish smenani yopishda kamomad bo'lib chiqardi. |
+| `SMENA-07` | Z-hisobotning har hadi **o'z ustunida** ko'rinadi va ustunlar aralashmaydi: naqd savdo `CashSales`, naqd qaytarish/qaytim `CashReturns`, **naqd qarz to'lovi `DebtPayIn`** (kassa kirimi `PayIn` emas), ta'minot to'lovi `SupplyPayOut`, qolgan har qanday kirim/chiqim `PayIn`/`PayOut`. Sabab: ega "bugun qarzdan qancha tushdi" degan savolga hisobotdan to'g'ridan-to'g'ri javob oladi; qarz to'lovi kassa kirimiga qo'shib yuborilsa bu son yo'qoladi. |
+
+### Qabul mezoni — `SMENA-03`
+
+> **Berilgan:** smena **100 000** boshlang'ich qoldiq bilan ochilgan; **300 000** lik naqd savdo
+> bo'lgan; egasi kassaga **200 000** kirim qilgan; ustaga **400 000 naqd hamkor mukofoti**
+> berilgan (daftardagi kassa qoldig'i 300 000 + 200 000 = 500 000, ya'ni `SMENA-08` bo'yicha
+> yetarli).
+> **U holda:** kutilgan naqd = 100 000 + 300 000 + 200 000 − 400 000 = **200 000**.
+> Kassir yashikda 200 000 sanaydi va farq **0** chiqadi — mukofot chiqim sifatida hisobga
+> olingani uchun undan 400 000 kamomad talab qilinmaydi.
+
+> **Ma'lum og'ish (`SMENA-05`):** savdoni bekor qilish daftarga **asl** smena bilan yoziladi
+> (`VoidSaleCommand`). Standart sozlamada bekor qilish oynasi joriy smena bilan cheklangani uchun
+> amalda bu holat yuzaga kelmaydi; oyna "kun"/"doim" qilib qo'yilsa qoida buziladi. Tuzatish
+> egasining qaroriga qoldirilgan.
+
+---
+
 ## 13. Qamrov holati
 
 > **Halol baho:** bu hujjat hozircha savdo/narx/qaytarish o'zagini qamraydi — bu mavjud
@@ -465,13 +503,13 @@ ikkalasiga ham ishonmay qo'yadi — va qaysi biri to'g'ri ekanini bilishning ilo
 | **Audit izi** | ⬜ | `AutomaticAuditTests` |
 | **Soft delete** | ⬜ | `SoftDeleteTests` |
 | **Ta'minot va ta'minotchi qarzi** | ⬜ eng katta bo'shliq (~28 test) | `Supply*Tests`, `Supplier*Tests` |
-| **Smena va Z-hisobot** | ⬜ | `ShiftTests`, `ShiftDisciplineTests`, `ShiftCurrencyValidationTests` |
+| **Smena va Z-hisobot** | ✅ §12a (bitta ma'lum og'ish bilan) | `ShiftTests`, `ShiftDisciplineTests`, `ShiftCurrencyValidationTests` |
 | **Mahsulot ko'rinishi va katalog** | ⬜ | `ProductVisibilityTests`, `StockDiscountBadgeTests` |
 | **Mahsulot importi** | ⬜ | `ProductImportTests` |
 | **Qarz eslatmasi, bildirishnomalar** | ⬜ | `DebtReminderTests`, `NotificationJournalTests` |
 | **Chop etish qurilmasi ishonchi** | ⬜ | `PrintDeviceTrustTests`, `PrintingPolicyTests` |
 | **Hisobotlar** | ✅ | `ReportsTests`, `SalesReportTests`, `ReportDayBucketingTests`, `ReportReconciliationTests` |
-| Offline savdo va sinxronizatsiya | ⬜ test ham yo'q | — |
+| Offline savdo va sinxronizatsiya | ✅ §15 | `OfflineSkipTests`, `OfflineSalePricingTests`, `OfflinePaymentReplayTests`, `OfflineSupplyReplayTests`, `OfflineImportTests`, `OfflineImportSelectionTests`, `OfflineSnapshotSectionsTests`, `OfflineStockPolicyTests`, `OfflineSplitBrainGuardTests` |
 | Prepack (qadoq) | ⬜ test ham yo'q | — |
 | Hamkor mutaxassisligi, ommaviy katalog | 🟡 model va UI bor, ommaviy sahifa (Mirror) qolgan | — |
 | Agent (mobil savdo) oqimi | ⬜ | — |
@@ -502,3 +540,163 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 - Invariantlar (`CHEG-02`, `CHEG-03`, `QAYT-02`) har stsenariyda qo'shimcha tasdiq sifatida
   tekshirilishi mumkin — ular universal.
 - Agar qoida noaniq bo'lsa, taxmin qilib test yozilmaydi — spetsifikatorga savol beriladi.
+
+---
+
+## 15. Oflayn rejim va sinxronizatsiya
+
+Oflayn rejim — **vakolat (lease)** modeli: biznesga bir vaqtda bitta qurilma, bitta ombor.
+Qurilma amallarni lokal navbatga (outbox) yozadi, internet qaytgach serverga ketma-ket
+qayta ijro (replay) qilinadi. Server — yagona hakam (`SOZ-03`): oflayn klient tekshiruvi
+faqat qulaylik, replay'da hamma biznes qoidalari qayta tekshiriladi.
+
+### Navbat va yaxlitlik
+
+| ID | Qoida |
+|---|---|
+| `OFF-01` | Har oflayn amal `EventId` (global unikal), qurilma bo'yicha **qat'iy o'suvchi `Sequence`** va `IdempotencyKey` bilan yoziladi. Server faqat `LastAcceptedSequence + 1` ni qabul qiladi. Bir xil `EventId` bir xil mazmun bilan qayta kelsa — `AlreadyApplied` (hujjat ikkilanmaydi); boshqa mazmun bilan kelsa — konflikt. |
+| `OFF-02` | Qo'llab-quvvatlanadigan amal turlari: `sale.create`, `customer.payment.create`, `supply.create`. Boshqa tur rad etiladi. |
+| `OFF-03` | **Rad etilgan amal navbatni abadiy to'sib qo'ymaydi.** Server rad etgan (Rejected) amal qurilmada xatolik ro'yxatida ko'rinadi va ikki yo'l bor: **qayta urinish** (o'sha `EventId`/`Sequence` bilan qayta yuboriladi — vaqtinchalik sabab yo'qolgan bo'lsa o'tadi) yoki **o'tkazib yuborish (skip)** — server o'sha `Sequence` ni `Skipped` deb jurnalga yozadi (hujjat yaratilmaydi, ledger o'zgarmaydi) va navbat davom etadi. Skip ham `EventId` bo'yicha idempotent. Qo'llangan (Applied) amalni skip qilib bo'lmaydi. |
+| `OFF-04` | Hali serverga **umuman jo'natilmagan** oflayn amalni qurilmaning o'zida bekor qilish mumkin — bu hujjatni bekor qilish emas (hujjat hali yaratilmagan, `HUJJ-05` buzilmaydi). Bekor qilinganda lokal zaxira/qarz proyeksiyasi tiklanadi va keyingi jo'natilmagan amallar sequence bo'yicha siljiydi. Serverga bir marta bo'lsa ham jo'natilgan amal faqat `OFF-03` yo'li bilan yopiladi. Klientda bekor qilish savdoni bekor qilish ruxsati bilan ko'rsatiladi. |
+| `OFF-05` | Naqd pul tegadigan oflayn amal replay'da ham **hujjat muallifining ochiq smenasini** talab qiladi (savdo bilan bir xil semantika) — smena intizomi oflaynda bekor bo'lmaydi. Smena yopiq bo'lsa amal rad etiladi va `OFF-03` bo'yicha keyinroq qayta uriniladi. |
+
+### Oflayn savdo
+
+| ID | Qoida |
+|---|---|
+| `OFF-10` | Oflayn savdo har qatorda **kassir ko'rgan/kiritgan narxni** olib yuradi (hodisa vaqtidagi narx — `PUL-04` mantig'i). Replay'da bu narxlar navbatdagi savat kabi **oldindan ruxsatlangan** (`NARX-04`/`NAVBAT-05`): sinxronlashayotgan foydalanuvchidan qayta ruxsat so'ralmaydi. Narx serverdagi joriy katalogdan past bo'lib qolsa `NARX-02` bo'yicha farq chegirma bo'ladi, yuqori bo'lsa `NARX-03` bo'yicha kiritilgan narxda o'tadi — savdo jami mijoz to'lagan pulga teng bo'lib qoladi. |
+| `OFF-11` | Oflayn replay **katalog narxini hech qachon yangilamaydi** (`NARX-06` oflayn savdoga qo'llanmaydi): eskirgan kesh narxi operator kiritgan yangi narx emas. O'tkazib yuborilgan oshishlar auditga `salePriceUpSkipped` bilan yoziladi. |
+| `OFF-12` | Oflayn savdoda avto (loyalty) chegirma qo'llanmaydi — kassir ko'rmagan chegirma hujjatga kirmaydi. Oflayn kiritilgan qo'lda chegirma narx kabi oldindan ruxsatlangan hisoblanadi. |
+| `OFF-13` | Bonus to'lov, prepack va ko'p valyutali to'lov oflayn savdoda taqiqlanadi — bular server holatiga jonli bog'liq. Qarzga savdo kesh siyosati (`AllowDebtSales`) va mijoz limiti bo'yicha klientda tekshiriladi, replay'da server qat'iy qayta tekshiradi (`QARZ-02`). |
+| `OFF-14` | Zaxira yetishmasligi **siyosatga bo'ysunadi** (`SOZ-03`): `AllowInsufficientStockSales` yoniq bo'lsa oflayn savdo keshda ham, replay'da ham qoldiq tanqisligiga qaramay o'tadi (qoldiq minusga ketadi); o'chiq bo'lsa keshda bloklanadi, replay'da boshqa qurilma sotib qo'ygan holatda rad etiladi va `OFF-03` yo'li bilan hal qilinadi. |
+| `OFF-16` | **Oflayn oynada qoldiq nazorati siyosat bilan yumshatiladi.** `AllowNegativeStockWhenOffline` yoqilgan bo'lsa, vakolat egasi "jim" bo'lgan paytda (`OFF-15` sharti: yurak urishi 60 soniyadan qari) onlayn savdolar bloklanmaydi — qoldiq yetmasa ham savdo o'tadi va tanqislik deficit partiyasiga yoziladi (`OFF-14` dagi mexanizm). Yumshatish **faqat shu oynada va faqat vakolat omborida** amal qiladi; oddiy ish rejimida qoldiq nazorati o'z kuchida qoladi — `AllowInsufficientStockSales` dan farqi shu (u har doim, hamma yerda ochiq). Sozlama o'chiq bo'lsa `OFF-15` dagi blok qo'llanadi. |
+| `OFF-17` | **Yumshatilgan har savdo ogohlantirish qoldiradi.** `OFF-16` yo'li bilan qoldiqni minusga tushirgan savdo javobida `stock_negative_offline` ogohlantirishi qaytariladi (savdo bekor qilinmaydi), mijoz ilovasi uni kassirga ko'rsatadi va auditga `saleStockNegativeOffline` yoziladi — `NARX-07` dagi `salePriceUpSkipped` bilan bir xil tartibda, savdo audit yozuvining tarkibiy hodisasi sifatida. Hodisa tarkibi har bir tanqis variant uchun bitta qator: `{ WarehouseId, VariantId, Shortfall }` (`Shortfall` — qoldiqdan qancha oshib ketilgani, musbat son). Bo'sh tarkibli hodisa qoidani bajarmagan hisoblanadi: egaga «qaysi tovar, qayerda, qancha» kerak. Ogohlantirish — egaga "bu tovar ikki joyda sotilgan bo'lishi mumkin" degan signal; qoldiq keyin inventarizatsiya yoki kirim bilan to'g'rilanadi. |
+| `OFF-18` | **Replay ham rad etmaydi.** `AllowNegativeStockWhenOffline` yoqiq bo'lsa, oflayn hodisa qoldiq yetishmasligi sababli rad etilmaydi (`OFF-14` ning rad etish shoxi o'rniga) — qo'llanadi va `OFF-17` ogohlantirishini yozadi. Sabab: hodisa allaqachon sodir bo'lgan, tovar mijozga berilgan; uni rad etish ma'lumotni yo'qotadi. |
+| `OFF-15` | **Split-brain qo'riqchisi ombor bilan cheklanadi.** Vakolat egasining yurak urishi 60 soniyadan qari bo'lsa (qurilma aloqasiz — ehtimol keshdan sotmoqda), faqat **vakolat omboridan** qilinayotgan onlayn savdolar `offline_authority_possibly_active` bilan rad etiladi. Boshqa ombor/filial savdolari **hech qachon** bloklanmaydi — ularda jismoniy to'qnashuv mumkin emas. `AllowInsufficientStockSales` yoniq bo'lsa blok umuman qo'llanmaydi: do'kon minus qoldiqni tan olgan, to'qnashuv `OFF-14` yo'li bilan o'z-o'zidan hal bo'ladi. Yurak urishi yangi bo'lsa ko'p qurilmali onlayn ish odatdagidek davom etadi. |
+| `OFF-19` | **Oflayn oyna abadiy ochiq qolmaydi.** Oyna vakolat egasining yurak urishi 60 soniyadan qari bo'lganda ochiladi va yurak urishidan **24 soat to'lganda yopiladi** (chegara inklyuziv: aynan 24:00:00 da oyna yopiq hisoblanadi): bunday vakolat "tashlab ketilgan" hisoblanadi — na `OFF-15` bloki, na `OFF-16` yumshatishi qo'llanadi, do'kon odatdagi qoldiq nazorati bilan ishlaydi. Sabab: yo'qolgan (buzilgan, o'g'irlangan) qurilma do'konni abadiy blokda ham, abadiy minus qoldiq rejimida ham ushlab turmasligi kerak. Qurilmaning oxirgi faolligi Qurilmalar sahifasida ko'rinadi va ega vakolatni majburan bo'shatishi mumkin; o'sha qurilmaning navbati yo'qolmaydi — `OFF-40..44` bo'yicha fayl orqali ko'chiriladi va `OFF-18` bo'yicha qabul qilinadi. |
+
+### Oflayn mijoz to'lovi
+
+| ID | Qoida |
+|---|---|
+| `OFF-20` | Oflayn faqat **oddiy to'lov** qabul qilinadi: tender qatorlari + avto-taqsimot. Kechirim (write-off), aniq savdoga qo'lda taqsimot va mijozga pul berish oflayn qabul qilinmaydi. |
+| `OFF-21` | Replay'da taqsimot `QARZ-03` bo'yicha serverdagi **joriy** qarzga qilinadi; **ortiqcha summa avansga o'tadi**. To'lov "qarzdan oshib ketdi" deb rad etilmaydi — pul qabul qilingan, u hech qachon noto'g'ri bo'lmaydi. |
+| `OFF-22` | Oflayn to'lovni yaratgan foydalanuvchi hujjatda muallif bo'ladi (`ActorUserId`). Replay'da muallif faolligi va to'lov qabul qilish ruxsati qayta tekshiriladi; sinxronlashayotgan foydalanuvchi boshqa odam bo'lsa ham to'lov o'z muallifi nomidan o'tadi. |
+
+### Oflayn kirim (ta'minot)
+
+| ID | Qoida |
+|---|---|
+| `OFF-30` | Oflayn kirim faqat **qarzga** bo'ladi: `PaidCash = PaidCard = 0` va faqat **baza valyutada** (kurs eskirgan bo'lishi mumkin — `PUL-04`). To'lovli yoki chet valyutali kirim oflayn rad etiladi. Ta'minotchiga to'lov keyin, onlayn holatda qilinadi. |
+| `OFF-31` | Kirim `IdempotencyKey` bilan himoyalanadi (foydalanuvchi doirasida): bir xil kalit bilan qayta kelgan kirim **yangi hujjat yaratmaydi**, avvalgisini qaytaradi. Bu onlayn kirim uchun ham amal qiladi. |
+| `OFF-32` | Oflayn kirim replay'da yaratuvchisi nomidan o'tadi va uning kirim yaratish ruxsati qayta tekshiriladi. Kirimda sotish narxi kiritilgan bo'lsa katalog yangilanadi — bu operator kiritgan yangi narx (`OFF-11` dagi taqiq bunga tegmaydi). |
+
+### Favqulodda eksport/import (qurilma ishdan chiqqanda)
+
+Vakolatli qurilma internetga qayta ulana olmasa (buzildi, ustaga ketdi), navbatdagi
+amallar faylga chiqariladi va istalgan internetli qurilmadan serverga yuklanadi.
+Ma'lumot hech qachon qayta qo'lda kiritilmaydi.
+
+| ID | Qoida |
+|---|---|
+| `OFF-40` | **Eksport internetsiz ishlaydi**: navbatdagi yuborilmagan (`pending` va `error`) amallar bitta JSON faylga chiqariladi — lease identifikatori, epoch, lease-token va har amalning to'liq konverti (`EventId`, `Sequence`, `Kind`, `IdempotencyKey`, `OccurredAt`, `ActorUserId`, payload) bilan. Token faylda bo'lgani uchun fayl lease egaligining isboti hisoblanadi. |
+| `OFF-41` | **Import** istalgan qurilmadan, autentifikatsiyalangan foydalanuvchi tomonidan `devices.revoke` ruxsati bilan qilinadi. Server faylni lease-token bo'yicha tekshiradi; qurilma mosligi talab qilinmaydi (qurilma o'lgan), lease **bekor qilingan bo'lsa ham** qabul qilinadi (amallar — tarixiy faktlar). Boshqa hamma tekshiruv (dedup, sequence, aktor ruxsatlari, biznes qoidalari) oddiy sinxronizatsiya bilan **bir xil**. |
+| `OFF-42` | **Takror yuklash xavfsiz**: import va oddiy sinxronizatsiya bir xil `EventId` dedup'idan o'tadi. Fayl ikki marta yuklansa, yoki asl qurilma tuzalib qaytib o'z navbatini yuborsa — allaqachon qo'llanganlari `AlreadyApplied` bo'ladi, faqat yuklanmaganlari qo'llanadi. Hech narsa ikkilanmaydi, hech narsa yo'qolmaydi. |
+| `OFF-43` | Import natijasi har amal bo'yicha hisobot qaytaradi (Applied / AlreadyApplied / Rejected+sabab / Skipped). Rad etilgan amal zanjirni to'xtatadi (`OFF-03` semantikasi); import **auto-skip** rejimida chaqirilsa, rad etilgan amal `Skipped` deb qayd etilib zanjir davom etadi. Auto-skip'siz importni sabab bartaraf etilgach (masalan, smena ochilgach) qayta yuklash mumkin — `OFF-42` kafolati bilan. |
+| `OFF-44` | Import oldidan fayl mazmuni ko'rsatiladi va har amalni alohida tanlash mumkin: tanlanganlari qo'llanadi, tanlab BEKOR qilinganlari esa **serverda `Skipped` sifatida qayd etiladi** — hech bir amal "izsiz" o'chirilmaydi. Sabab: ta'mirlangan qurilma qaytib o'z navbatini yuborganda server bu amallarni `EventId` bo'yicha taniydi va ular **qayta yaratilib ketmaydi** (`OFF-42`). Amallar fayldagi tartibda (sequence) qayta ishlanadi. |
+
+### Oflayn imkoniyatlar profili
+
+| ID | Qoida |
+|---|---|
+| `OFF-50` | Har qurilma o'z oflayn profilini tanlaydi: **Savdo**, **Mijoz qarzi to'lovi**, **Kirim** — har biri alohida yoqiladi/o'chiriladi (standart: hammasi yoqiq). Bu ruxsat emas, qulaylik va ma'lumot-minimizatsiya: server replay'da ruxsat va qoidalarni baribir to'liq tekshiradi. |
+| `OFF-51` | Kesh **faqat yoqilgan imkoniyatlar uchun kerakli ma'lumotni saqlaydi**: Savdo → mahsulot+shtrix+mijoz; To'lov → mijoz; Kirim → mahsulot+shtrix+ta'minotchi. Snapshot serverdan shu kesim bilan tortiladi; o'chirilgan imkoniyatga tegishli bo'lim keshda saqlanmaydi. Masalan, faqat "To'lov" yoqiq bo'lsa — mahsulot va ta'minotchi ma'lumotlari qurilmada turmaydi. |
+| `OFF-53` | **Snapshot delta bilan yangilanadi.** Klient `since` (oxirgi muvaffaqiyatli snapshotdagi `serverTime`) yuboradi; server faqat shundan keyin o'zgargan qatorlarni va keshdan chiqarilishi kerak bo'lgan yozuvlar ro'yxatini (`removed*`) qaytaradi. O'chirish ro'yxatlari **kesh qatorining kaliti** bilan yuritiladi: mahsulot uchun bu `VariantId` (kesh varianti bo'yicha kalitlangan), mijoz/ta'minotchi uchun `Id`, shtrix-kod uchun kodning o'zi. Klient avval o'chiradi, keyin upsert qiladi — shunda shtrix-kod bir variantdan boshqasiga ko'chgan holat to'g'ri hal bo'ladi. `since` yuborilmasa yoki server to'liqlikni kafolatlay olmasa, javob `isFull=true` bilan to'liq snapshot bo'ladi va klient keshni butunlay almashtiradi. Klient hech qachon serverga ko'rsatilmagan qatorni o'zicha o'chirmaydi. |
+| `OFF-54` | **Delta to'liqligi kafolatlari:** (a) taqqoslash **server soatida** bajariladi — klient o'z soatidan foydalanmaydi; (b) server `since` dan **60 soniya** oldindan filtrlaydi: yozuv vaqti tranzaksiya boshida qo'yiladi, commit esa kech bo'lishi mumkin (masalan katta Excel import) — oyna shu farqni qoplaydi; takror kelgan qator idempotent upsert bilan yutiladi, tushib qolgani esa qaytmaydi; oyna vakolat olingan lahzadan (`ClaimedAt`) orqaga surilmaydi — undan oldingi hamma narsa klientning majburiy birinchi to'liq snapshotida bor; (c) mahsulot "o'zgargan" deb hisoblanadi, agar uning kartochkasi, varianti, **narx qatori**, qoldig'i, shtrix-kodi **yoki** filial assortimenti yozuvi shu vaqtdan keyin o'zgargan bo'lsa — narx keshdagi qatorning bir qismi, uni o'tkazib yuborish do'konni noto'g'ri narxda sottiradi; (d) javobda har bo'lim bo'yicha jami sanoq (`totals`) qaytadi — klient keshidagi sanoq mos kelmasa, keyingi siklda to'liq snapshot so'raydi. |
+| `OFF-55` | Vakolat `epoch` i o'zgargan yoki `since` server chegarasidan (7 kun) qari bo'lsa delta berilmaydi — to'liq snapshot qaytariladi. Bu keshning sezdirmay eskirib qolishidan saqlaydi. |
+| `OFF-52` | O'chirilgan imkoniyatning amali oflaynda UI'da bloklanadi (`offline_pos_limited`). Profil o'zgartirilganda snapshot qayta tortiladi va kesh yangi profilga moslanadi — ortiqcha bo'limlar tozalanadi. |
+
+### Vaqtinchalik HUB (do'kon tarmog'idagi relay)
+
+> Oflayn kesh bitta qurilmani ishlatib turadi. HUB — o'sha qurilmaning **transport roli**: internet uzilganda do'kondagi qolgan qurilmalar bulut o'rniga unga ulanib ishlashda davom etadi. HUB biznes qarori qabul qilmaydi, ikkinchi baza yaratmaydi, birlashtirish (merge) qilmaydi — u faqat **bitta navbatga** yo'l ochadi.
+
+| ID | Qoida |
+|---|---|
+| `HUB-01` | **HUB — vakolat egasining roli, alohida mahsulot emas.** Uni faqat oflayn vakolatga ega qurilma bajaradi — vakolat qurilma turiga bog'liq emas, kompyuter ham, telefon ham bo'lishi mumkin. Vakolat ko'chsa, rol ham ko'chadi; vakolat bekor qilinsa rol darhol tugaydi. Telefon HUB bo'lganda xizmat **ko'rinadigan bildirishnomali fon xizmati** sifatida ishlaydi — aks holda ekran o'chishi bilan Android jarayonni to'xtatib, tinglovchini jim qilib qo'yardi. Alohida server o'rnatilmaydi, ikkinchi ma'lumotlar bazasi bo'lmaydi. |
+| `HUB-02` | **Standart holat — o'chiq.** Rol egasining oflayn sozlamalarida yoqiladi (`offline_cache` imkoniyatiga bog'liq). Yoqilgan bo'lsa ham HUB **faqat bulut ishlamayotganda** xizmat qiladi: bulut ochiq bo'lsa qurilmalar to'g'ridan to'g'ri bulut bilan ishlaydi. |
+| `HUB-03` | **Sun'iy yo'ldosh (satellite)** — vakolati yo'q va bulutga ulana olmayotgan qurilma. U HUB orqali savdo, mijoz to'lovi va kirim qila oladi — ya'ni `OFF-50` dagi uchta amal turi. Boshqa amallar (mahsulot tahriri, bonus, valyuta, navbatga qo'yish) HUB rejimida ham mumkin emas. |
+| `HUB-04` | **Ishonch bulutdan olinadi, tarmoqdan emas — va guvohnoma bearer emas.** Har qurilma o'zida ECDSA P-256 juftligini yaratadi va shaxsiy kalitni hech qachon tarmoqqa bermaydi (kompyuterda himoyalangan fayl, telefonda `SecureStorage` — batafsili `docs/security.md`). Guvohnoma so'ralganda qurilma **o'z ochiq kalitini** (`pk`) yuboradi; server ECDSA P-256 kaliti bilan ikki turdagi guvohnoma imzolaydi: HUB uchun (`leaseId`, `epoch`, `warehouseId`, `deviceId`, `pk`) va qurilma uchun (`businessId`, `deviceId`, `userId`, `pk`) — **qurilma guvohnomasida ombor yo'q**: xodim bir nechta omborda ishlashi mumkin, ombor esa HUB tomonidan majburlanadi (`HUB-10`). Do'kon tarmog'idagi ulanish **o'zaro TLS** (mTLS): ikkala tomon o'z kaliti ustidagi o'z-o'zini imzolagan sertifikatni ko'rsatadi, sertifikat markazi (CA) yo'q va zanjir tekshirilmaydi — **yagona shart**: tomonning TLS sertifikatidagi ochiq kalit uning guvohnomasidagi `pk` ga teng bo'lishi va guvohnomaning o'zi serverning keshlangan ochiq kaliti bilan tekshiruvdan o'tishi. Shu ikki shart birga qurilmaning shaxsiy kalitga **egaligini** isbotlaydi: tarmoqda ushlab olingan guvohnoma yolg'iz o'zi hech qayerga kirgizmaydi, chunki kalit qurilmadan chiqmaydi — ya'ni o'g'irlangan guvohnoma bilan na soxta HUB ko'tarib bo'ladi, na katalog o'qib bo'ladi. **Guvohnoma tarmoqqa tarqatilmaydi:** e'londa u yo'q (`HUB-11`) va autentifikatsiyasiz beriladigan ochiq salom ham yo'q — guvohnoma faqat qo'l siqishdan keyin, TLS ichida almashinadi. Qo'l siqishning o'zi kanalni shifrlaydi — mijoz ismi, telefoni va qarzi ochiq uchmaydi. Guvohnomasi yo'q, muddati o'tgan, `pk` siz eski formatdagi yoki kalitini isbotlay olmagan tomon ulanmaydi. Guvohnoma muddati 30 kun; onlayn qurilma uni davriy (har 5 daqiqada) va oflayndan qaytgan zahoti yangilaydi, javobda **joriy vakolat `epoch`i** ham keladi (`HUB-05`) — alohida so'rov qilinsa, o'sha so'rov yiqilgan qurilma `epoch`siz qolib, eski HUB'ni qabul qilib qo'yardi. |
+| `HUB-05` | **HUB ruxsat tekshirmaydi.** Rol, ruxsat va biznes qoidalari `OFF-50` dagi kabi **bulutda, replay paytida** tekshiriladi. HUB kelgan so'rovda faqat to'rt narsani tekshiradi: imzo haqiqiy, muddati o'tmagan, `businessId` o'ziniki bilan mos va so'rov egasi TLS'da o'sha guvohnomadagi `pk` ga egaligini isbotlagan (`HUB-04`). Ombor mosligi hodisa tarkibida tekshiriladi (`HUB-10`), `epoch` esa **teskari yo'nalishda** — yo'ldosh HUB guvohnomasidagi `epoch`ni bulutdan o'qigan oxirgi `epoch` bilan solishtiradi va undan eskisiga ulanmaydi; bulutdan o'qilgan `epoch` **faqat oldinga** siljiydi, kechikkan javob uni orqaga torta olmaydi. Bulutda faol vakolat umuman bo'lmasa (`epoch = 0`) hech bir HUB qabul qilinmaydi va yo'ldosh rejimi ochilmaydi — bu ataylab fail-closed. Sabab: guvohnoma 30 kun yashaydi, ya'ni vakolatni allaqachon boy bergan qurilma ham o'zini HUB deb ko'rsatib, savdolarni hech qachon bulutga bormaydigan navbatga yig'ib qo'yishi mumkin edi. Ruxsat mantig'i esa HUB'ga topshirilmaydi: HUB — do'konda turgan oddiy qurilma, unga ishonib topshirish xavfsizlik chegarasini pasaytirardi. |
+| `HUB-06` | **Bitta navbat, bitta ketma-ketlik.** Sun'iy yo'ldoshdan kelgan hodisa HUB'ning **o'z navbatiga** yoziladi va HUB'ning keyingi `Sequence` raqamini oladi. `EventId` yo'ldoshniki bo'lib qoladi — takrorlanish shu bo'yicha yutiladi (`OFF-01`). Ya'ni bulut uchun HUB rejimidagi savdo oddiy oflayn savdodan farq qilmaydi. |
+| `HUB-07` | **Yo'ldosh serverga to'g'ridan to'g'ri yubormaydi.** HUB **qabul qilgan** hodisa faqat HUB orqali bulutga boradi. Yo'ldosh o'sha hodisani keyin o'zi yuborishga urinmaydi — aks holda bitta savdo ikki manbadan kelib, `OFF-01` dedupiga ortiqcha yuk bo'ladi va operator uchun holat chalkashadi. Qoida faqat qabul qilingan qatorga tegishli: HUB hech qachon ko'rmagan, ya'ni buferda yotgan qatorlar `HUB-08` bo'yicha boshqa yo'l bilan chiqishi mumkin. HUB butunlay ishdan chiqsa, uning navbati `OFF-40..44` bo'yicha fayl orqali ko'chiriladi. |
+| `HUB-08` | **Yo'ldoshda faqat transport buferi bo'ladi va u vakolatga bog'lanmaydi.** Hodisa avval qurilmada yoziladi, keyin HUB'ga yuboriladi; HUB javob bermasa bufer saqlanadi va qayta uriniladi. Bufer — kesh emas: unda biznes holati saqlanmaydi, faqat yuborilmagan hodisalar turadi. **Bufer HUB vakolatiga (lease) bog'lanmaydi:** vakolat boshqa qurilmaga ko'chsa yoki HUB butunlay yo'qolsa ham yuborilmagan qatorlar yo'qolmaydi — ular navbat ro'yxatida ko'rinib turadi va o'sha ombordagi yangi HUB topilishi bilan o'sha yo'l bilan yuboriladi, qurilmaning o'zi vakolat olsa esa o'z navbatiga ko'chib to'g'ridan to'g'ri bulutga ketadi. Ko'chirishda `EventId` o'zgarmaydi: hodisa avvalgi HUB'ga yetib ulgurgan bo'lsa bulut uni `OFF-01`/`HUB-06` dedupi bilan yutadi va ikkinchi hujjat yaratilmaydi; ketma-ketlik raqami yangi navbatdagi mavjud maksimumdan keyin beriladi, aks holda takrorlangan `Sequence` butun zanjirni to'xtatardi. Ko'chirish **faqat ombor bir xil bo'lganda** bajariladi (`HUB-10`) — boshqa ombor vakolatiga o'tkazilgan qator baribir rad etilardi; mos ombor topilmasa qatorlar buferda ko'rinib turaveradi va `OFF-40..44` dagi fayl yo'li bilan ham chiqarilishi mumkin. Buferda yuborilmagan qator turganda katalog almashtirilmaydi: yuborilmagan savdo lokal qoldiqdan allaqachon ayirgan, katalogni ustiga yozish o'sha ayirmani o'chirib, tovarni ikkinchi marta sottirardi. |
+| `HUB-09` | **Katalog HUB keshidan o'qiladi.** Yo'ldosh mahsulot, narx, qoldiq, shtrix-kod va mijoz ma'lumotini HUB'ning oflayn keshidan **o'sha `OfflineSnapshotDto` shartnomasi** bilan oladi. HUB har safar **to'liq** nusxa beradi (`isFull=true`): uning keshi proyeksiya, o'zgarishlar jurnali emas — qator qachon o'zgarganini bilmaydi, do'kon tarmog'ida esa to'liq nusxa arzon va yo'ldosh keshi oyna tugashi bilan baribir tashlanadi. `totals` butun kesh sanog'ini beradi (`OFF-54(d)`). HUB o'zidan ma'lumot o'ylab chiqarmaydi va bulutdan mustaqil yangilanmaydi. |
+| `HUB-10` | **Ombor HUB'niki, qoldiq HUB'da yagona nuqtada hisoblanadi.** Hodisa tarkibidagi `warehouseId` HUB vakolat omboriga teng bo'lishi shart — teng bo'lmasa hodisa rad etiladi (`hub_warehouse_mismatch`), chunki HUB proyeksiyasi faqat o'z omborini yuritadi va boshqa omborni kamaytirish ikkala qoldiqni ham buzardi. Yo'ldoshning savdosi HUB proyeksiyasiga darhol tushadi, shuning uchun oyna ichida ikki qurilma oxirgi donani ikki marta sota olmaydi. Qoldiq yetishmasa `OFF-14`/`OFF-16` siyosati o'z kuchida qoladi. |
+| `HUB-11` | **Topish — uch kanalli zinapoya, ustiga qo'lda ulash; birinchi javob bergan emas, eng yangisi yutadi.** Yo'ldosh HUB'ni shu tartibda qidiradi: (a) **saqlangan manzil** — oxirgi muvaffaqiyatli ulanish manzili qisqa chegara (3 soniya) bilan darhol sinaladi, aks holda DHCP bilan ko'chgan manzil qolgan kanallarning butun vaqtini yeb qo'yardi; (b) **tarmoqdagi e'lon** — HUB o'zini har 10 soniyada lokal tarmoqqa e'lon qiladi (`businessId`, `warehouseId`, `epoch`, `deviceName`, port), yo'ldosh 12 soniyalik oynani oxirigacha tinglaydi va eng katta `epoch`li e'lonni oladi — birinchi javobni olish begona qurilma uchun oddiy poygaga aylanardi. E'londa **guvohnoma yo'q**: u shifrlanmagan broadcast, guvohnoma esa faqat TLS ichida beriladi (`HUB-04`); (c) **tarmoqni faol tekshirish** — e'lon kelmasa yo'ldosh o'zining lokal `/24` tarmog'idagi manzillarni xizmat portida o'zi so'rab chiqadi, chunki ko'p router qurilmalararo e'lonni bloklaydi (client isolation, broadcast filtri) va e'lonsiz ham yo'l qolishi shart. Bularning ustiga (d) **qo'lda ulash** — HUB egasining sozlamalarida `cartexhub:` prefiksli QR turadi, yo'ldosh uni bir marta skanerlaydi yoki manzilni qo'lda kiritadi; bu ham o'sha chegarada (3 soniya) sinaladi. **Manzil sxemasi hamma kanalda `https://` va faqat lokal IPv4**: domen nomi oflaynda tekshirib bo'lmaydi, shifrlanmagan `http://` esa umuman qabul qilinmaydi — eski `http://` saqlangan manzil birinchi urinishda yiqiladi va tozalanadi. QR serverning `cartexsrv:` QR'idan ataylab boshqa prefiksda: protokol ham, ishonch manbai ham boshqa, ya'ni bittasini ikkinchisining o'rniga skanerlash qurilmani noto'g'ri rejimga o'tkazib yubormaydi. **Qabul sharti hamma kanal uchun bir xil** va bitta joyda tekshiriladi: imzo serverning keshlangan ochiq kaliti bilan haqiqiy, muddati o'tmagan, `businessId` o'ziniki bilan mos, roli `hub`, `leaseId` musbat, `epoch` bulutdan o'qilgan oxirgi `epoch`dan eski emas (`HUB-05`), salom javobidagi `epoch` guvohnomadagisiga teng va **TLS'dagi server sertifikatining ochiq kaliti guvohnomadagi `pk` ga teng** (`HUB-04`) — oxirgi shart bo'lmasa, haqiqiy guvohnomani ushlab olgan soxta HUB butun smena savdosini o'ziga yig'ib olardi. **"Eng katta `epoch` yutadi" qoidasi ham hamma kanalga tegishli**: e'lon oynasi oxirigacha eshitiladi, faol tekshirishning barcha nomzodlari solishtiriladi, saqlangan manzil javob bergan taqdirda ham tarmoq bir marta so'raladi va uni faqat **qat'iy kattaroq** `epoch` almashtiradi (teng bo'lsa saqlangan manzil qoladi) — aks holda vakolat ko'chganidan keyin hali javob berayotgan eski rol egasi shunchaki tanish manzil bo'lgani uchun yutib ketardi. Shartga javob bermagan tomon **jimgina tashlanadi** — qidiruv davom etaveradi, foydalanuvchiga xato ko'rsatilmaydi. Hech bir kanal topmasa saqlangan manzil o'chiriladi, aks holda keyingi har bir urinish o'lik manzilning kutish vaqtidan boshlanardi. Faol tekshirish faqat bulut ochilmayotgan paytda va faqat o'z lokal tarmog'ida bajariladi (`HUB-12`). Bulut ochilishi bilan yo'ldosh HUB'dan uziladi va bulutga qaytadi — bunga foydalanuvchi aralashuvi kerak emas. |
+| `HUB-12` | **Ma'lumot do'kondan chiqmaydi, tarmoqda ochiq uchmaydi va qidiruv do'kon tarmog'idan tashqariga chiqmaydi.** HUB faqat lokal manzillardan kelgan ulanishni qabul qiladi, tashqi manzilga xizmat qilmaydi. Butun almashuv **shifrlangan** kanalda (TLS 1.2/1.3) va ikkala tomon autentifikatsiyalangan holda boradi: `/hub/hello` ham guvohnoma va kalit egaligini talab qiladi, ya'ni HUB guvohnomasi ham, katalog (mijoz ismi, telefoni, qarzi) ham kalitini isbotlamagan tomonga berilmaydi. Yo'ldosh HUB'ga **bulut tokenini yubormaydi** — faqat guvohnomasini beradi: guvohnoma o'g'irlansa ham u bilan na bulutga, na HUB'ga kirib bo'ladi (`HUB-04`), jonli token bilan esa bo'lardi. Parol, PIN va boshqa maxfiy ma'lumot HUB orqali o'tmaydi. **Faol tekshirishning chegarasi:** faqat bulutga ulana olmagan paytda, faqat qurilmaning o'z lokal `/24` tarmog'ida va telefonda **faqat Wi-Fi yoki Ethernet** ulanishida — mobil internetda operatorning CGNAT manzillari ham "lokal" ko'rinadi va tekshirish begona abonent qurilmalariga tushardi, ularga esa qo'l siqishda klient sertifikati va guvohnoma ketardi; shuning uchun mobil internetda na tekshirish, na saqlangan manzil sinaladi. Bir vaqtda ochiq ulanishlar soni, so'rov tanasi hajmi va so'rov vaqti cheklangan — bitta qurilma tinglovchini band qilib, do'kon savdosini to'xtatib qo'ya olmaydi. |
+| `HUB-13` | **Chek har qurilmada lokal chiqadi.** HUB chop etish serveri emas; tarmoq orqali chop etish `SOZ-14` bo'yicha alohida yo'l bilan ishlaydi va bulut talab qiladi. |
+
+**Qabul mezoni — `HUB-06`**
+
+> **Berilgan:** internet yo'q; kassa kompyuteri HUB, telefon yo'ldosh.
+> **Qachonki:** telefon HUB orqali savdo qilsa va keyin internet qaytsa,
+> **U holda:** savdo HUB navbatidan bitta ketma-ketlikda bulutga boradi, telefon uni
+> qayta yubormaydi, bulutda bitta hujjat yaratiladi va qoldiq bir marta kamayadi.
+
+**Qabul mezoni — `HUB-04`**
+
+> **Berilgan:** do'kon Wi-Fi'sida begona qurilma turibdi va u haqiqiy HUB guvohnomasini
+> to'liq ko'chirib olgan (masalan e'lonni yoki eski nusxani ushlab).
+> **Qachonki:** o'sha qurilma shu guvohnoma bilan soxta HUB ko'tarsa yoki haqiqiy HUB'ning
+> `/hub/hello`, `/hub/catalog`, `/hub/events` marshrutlariga murojaat qilsa,
+> **U holda:** yo'ldosh uni **qabul qilmaydi** va HUB uni **rad etadi** — guvohnomadagi `pk`
+> ga mos shaxsiy kalit unda yo'q. `pk` siz eski formatdagi guvohnoma ham rad etiladi.
+
+**Qabul mezoni — `HUB-08`**
+
+> **Berilgan:** yo'ldoshda HUB-A (epoch 5) ga yuborilmagan 2 qator bor; vakolat o'sha ombor
+> ichida HUB-B (epoch 6) ga ko'chdi va HUB-A endi javob bermaydi.
+> **Qachonki:** yo'ldosh HUB-B ni topib unga ulansa,
+> **U holda:** o'sha 2 qator yo'qolmaydi va ro'yxatdan tushib qolmaydi — ular HUB-B navbatiga
+> `EventId` i o'zgarmagan holda yuboriladi, katalog esa bufer bo'shaguncha almashtirilmaydi.
+> Hodisa HUB-A orqali bulutga yetib ulgurgan bo'lsa, bulutda ikkinchi hujjat yaratilmaydi.
+
+**Qabul mezoni — `OFF-44`**
+
+> **Berilgan:** fayl importida operator 3 amaldan 2-sini (savdo) tanlovdan chiqardi.
+> **Qachonki:** import yakunlansa,
+> **U holda:** 1- va 3-amallar qo'llanadi, 2-amal serverda `Skipped` bo'lib qayd etiladi,
+> hujjat yaratilmaydi. Keyin ta'mirlangan qurilma o'sha savdoni o'zi yuborsa —
+> `AlreadyApplied` qaytadi va savdo **yaratilmaydi**.
+
+**Qabul mezoni — `OFF-42`**
+
+> **Berilgan:** buzilgan qurilma faylida 3 amal (seq 5,6,7); fayl internetli qurilmadan
+> yuklandi va uchchalasi Applied bo'ldi. Keyin buzilgan qurilma tuzalib, internetga ulandi
+> va o'z navbatini o'zi yubordi.
+> **U holda:** uchchala amal `AlreadyApplied` qaytadi, serverda hujjatlar ikkilanmaydi,
+> qurilma navbati toza yakunlanadi.
+
+**Qabul mezoni — `OFF-10`**
+
+> **Berilgan:** oflayn kesh'da mahsulot narxi 10 000; kassir 2 dona sotdi, mijoz 20 000 naqd to'ladi.
+> Oflayn paytda serverda narx 12 000 ga ko'tarildi.
+> **Qachonki:** savdo sinxronlansa,
+> **U holda:** savdo jami **20 000** bo'ladi (mijoz to'lagan pul), qator katalog narxi 12 000 dan
+> 2 000×2 = 4 000 chegirma bilan yoziladi (`NARX-02`), qarz yoki qaytim paydo **bo'lmaydi**,
+> katalog narxi **12 000 bo'lib qoladi** (`OFF-11`) va sinxronlashayotgan foydalanuvchidan
+> narx ruxsati so'ralmaydi.
+
+**Qabul mezoni — `OFF-21`**
+
+> **Berilgan:** mijoz qarzi kesh'da 100 000; kassir oflayn 100 000 to'lov qabul qildi.
+> Oflayn paytda boshqa filialda mijoz 40 000 to'lab, qarz 60 000 ga tushdi.
+> **Qachonki:** to'lov sinxronlansa,
+> **U holda:** 60 000 qarzga taqsimlanadi, **40 000 avansga o'tadi**, hujjat rad etilmaydi.
+
+**Qabul mezoni — `OFF-03`**
+
+> **Berilgan:** navbatda 3 amal (seq 5, 6, 7); seq 5 replay'da rad etildi.
+> **Qachonki:** foydalanuvchi seq 5 ni o'tkazib yuborsa (skip),
+> **U holda:** server seq 5 ni `Skipped` deb yozadi, `LastAcceptedSequence = 5` bo'ladi,
+> seq 6 va 7 muvaffaqiyatli qo'llanadi. Skip'ni takror yuborish holatni o'zgartirmaydi.

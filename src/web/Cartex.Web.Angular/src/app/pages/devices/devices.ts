@@ -2,15 +2,20 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
+import {
+  OfflineApi, OfflineCacheState, OfflineExportFile, OfflineSyncEventResult,
+} from '../../core/api/offline.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
+import { OfflineImportChoice, OfflineImportDialog, OfflineImportResultDialog } from './offline-import-dialog';
 
 interface DeviceSession {
   id: number;
@@ -76,6 +81,37 @@ const CLIENT_APPS: Record<string, string> = {
         @if (myOthers().length) {
           <p class="hint">{{ t('terminate_all_hint') }}</p>
         }
+      }
+
+      @if (offline(); as off) {
+        <p class="sec">{{ t('offline_cache') }}</p>
+        <div class="cx-card card">
+          @if (off.deviceId) {
+            <div class="row">
+              <div class="dico holder"><mat-icon>cloud_off</mat-icon></div>
+              <div class="info">
+                <span class="name">{{ off.deviceName || t('device_unknown') }}</span>
+                <span class="meta">{{ t('offline_cache_holder') }} • {{ off.warehouseName }}</span>
+                <span class="meta">{{ t('last_active') }}{{ off.lastHeartbeatAt | cxDate }}</span>
+                <span class="meta">{{ t('offline_cache_queue') }}: {{ off.lastReportedPendingCount }}</span>
+              </div>
+              @if (canRevoke) {
+                <button matButton class="danger" (click)="releaseOffline(off, t)">
+                  {{ t('offline_cache_release_remote') }}
+                </button>
+              }
+            </div>
+          } @else {
+            <p class="free">{{ t('offline_cache_free') }}</p>
+          }
+          @if (canRevoke) {
+            <button class="term-row" (click)="filePick.click()">
+              <mat-icon>upload_file</mat-icon>
+              {{ t('offline_import') }}
+            </button>
+            <input #filePick type="file" accept=".json,application/json" hidden (change)="importQueue($event, t)" />
+          }
+        </div>
       }
 
       @if (myOthers().length) {
@@ -202,6 +238,7 @@ const CLIENT_APPS: Record<string, string> = {
 
       &.me { background: var(--cx-brand-soft); color: var(--cx-brand); }
       &.phone { background: var(--cx-success-soft); color: var(--cx-success); }
+      &.holder { background: var(--cx-warning-soft); color: var(--cx-warning); }
 
       mat-icon { font-size: 21px; width: 21px; height: 21px; }
     }
@@ -236,6 +273,7 @@ const CLIENT_APPS: Record<string, string> = {
       mat-icon { font-size: 20px; width: 42px; height: 20px; text-align: center; }
     }
     .hint { margin: 6px 0 0 4px; font-size: 12px; color: var(--cx-text-3); max-width: 640px; }
+    .free { margin: 4px 8px 10px; font-size: 13px; color: var(--cx-text-3); }
   `,
 })
 export class Devices implements OnInit {
@@ -243,11 +281,14 @@ export class Devices implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
   private readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
+  private readonly offlineApi = inject(OfflineApi);
 
   readonly canViewAll = this.auth.hasPermission('devices.viewAll');
   readonly canRevoke = this.auth.hasPermission('devices.revoke');
   readonly loading = signal(true);
   readonly sessions = signal<DeviceSession[]>([]);
+  readonly offline = signal<OfflineCacheState | null>(null);
   readonly editGroup = signal<string | null>(null);
   readonly selected = signal<Set<number>>(new Set());
 
@@ -276,6 +317,7 @@ export class Devices implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    void this.loadOffline();
   }
 
   isCurrent(s: DeviceSession): boolean {
@@ -367,6 +409,81 @@ export class Devices implements OnInit {
     if (failed > 0) this.notify.error(new Error(this.transloco.translate('device_revoke_failed')));
     else this.notify.success(this.transloco.translate('device_revoked'));
     await this.load();
+  }
+
+  async releaseOffline(state: OfflineCacheState, t: (key: string) => string): Promise<void> {
+    if (!this.canRevoke || !state.leaseId) return;
+    if (!confirm(t('offline_cache_remote_release_confirm'))) return;
+    try {
+      await lastValueFrom(this.offlineApi.release(state.leaseId, 'Web orqali majburan uzildi'));
+      this.notify.success(this.transloco.translate('success'));
+      await this.loadOffline();
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  async importQueue(event: Event, t: (key: string) => string): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    input.value = '';
+    let parsed: OfflineExportFile | null;
+    try {
+      parsed = JSON.parse(text) as OfflineExportFile;
+    } catch {
+      parsed = null;
+    }
+    if (!parsed || parsed.cartexOfflineExport !== 1 || !Array.isArray(parsed.events) || !parsed.events.length) {
+      this.notify.error(new Error(t('offline_import_invalid')));
+      return;
+    }
+    const choice = await lastValueFrom(
+      this.dialog
+        .open<OfflineImportDialog, OfflineExportFile, OfflineImportChoice>(OfflineImportDialog, {
+          data: parsed,
+          width: '520px',
+        })
+        .afterClosed(),
+    );
+    if (!choice) return;
+    const skip = new Set(choice.skipEventIds);
+    const results: OfflineSyncEventResult[] = [];
+    this.loading.set(true);
+    try {
+      for (let i = 0; i < parsed.events.length; i += 500) {
+        const chunk = parsed.events.slice(i, i + 500);
+        const skipInChunk = chunk.filter((x) => skip.has(x.eventId)).map((x) => x.eventId);
+        const batch = await lastValueFrom(
+          this.offlineApi.import({
+            leaseId: parsed.leaseId,
+            epoch: parsed.epoch,
+            leaseToken: parsed.leaseToken,
+            events: chunk,
+            skipRejected: choice.skipRejected,
+            skipEventIds: skipInChunk.length ? skipInChunk : undefined,
+          }),
+        );
+        results.push(...batch.results);
+        if (!choice.skipRejected && batch.results.some((r) => r.status === 'Rejected')) break;
+      }
+    } catch (e) {
+      this.notify.error(e);
+      return;
+    } finally {
+      this.loading.set(false);
+    }
+    await lastValueFrom(this.dialog.open(OfflineImportResultDialog, { data: results }).afterClosed());
+    await this.loadOffline();
+  }
+
+  private async loadOffline(): Promise<void> {
+    try {
+      this.offline.set(await lastValueFrom(this.offlineApi.state()));
+    } catch {
+      this.offline.set(null);
+    }
   }
 
   private revokeUrl(session: DeviceSession): string {

@@ -142,6 +142,11 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private ISettingsApi _settingsApi = null!;
     private ReferenceCache _cache = null!;
 
+    private static bool IsOfflineMode =>
+        ServiceLocator.Resolve<OfflineSyncService>().ShouldUseOffline;
+
+    private static OfflineStore Offline => ServiceLocator.Resolve<OfflineStore>();
+
     private async Task EnsureCurrenciesAsync()
     {
         try
@@ -405,7 +410,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        if (await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
+        if (!IsOfflineMode && await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
         {
             await QuickProduct.OpenCommand.ExecuteAsync(null);
             QuickProduct.Name = name;
@@ -495,7 +500,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         EntryOptions.Clear();
         if (product?.Id is not { } id) { LineEntry = null; return; }
-        foreach (var option in BuildEntryOptions(id)) EntryOptions.Add(option);
+        var options = BuildEntryOptions(id);
+        foreach (var option in IsOfflineMode ? options.Where(o => o.PackId is null && o.Ratio == 1) : options)
+            EntryOptions.Add(option);
         LineEntry = EntryOptions.FirstOrDefault();
     }
 
@@ -505,6 +512,25 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         try
         {
+            if (IsOfflineMode)
+            {
+                var cached = await Offline.SearchProductsAsync(null, int.MaxValue);
+                _variantDimensions.Clear();
+                _variantStockUnits.Clear();
+                _variantPacks.Clear();
+                _variantImages.Clear();
+                var offlineOptions = new List<IdOption>(cached.Count);
+                foreach (var product in cached)
+                {
+                    offlineOptions.Add(new IdOption(product.VariantId, product.ProductName));
+                    _variantStockUnits[product.VariantId] = (0, product.UnitName);
+                }
+                ProductOptions = offlineOptions;
+                _allUnits.Clear();
+                RebuildEntryOptions(LineProduct);
+                return;
+            }
+
             var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
             var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
             var products = await productsTask;
@@ -555,6 +581,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         if (product?.Id is not { } variantId || SelectedWarehouse?.Id is not { } warehouseId) return;
         if (IsMulticurrency && SupplyCurrency != _baseCurrency) return;
+        if (IsOfflineMode)
+        {
+            if (await Offline.GetProductAsync(variantId) is { } cached
+                && LineProduct?.Id == variantId && LineSellingPrice == 0)
+                LineSellingPrice = cached.SellingPrice;
+            return;
+        }
         var priceSnapshot = LinePrice;
         var sellingSnapshot = LineSellingPrice;
         var entrySnapshot = LineEntry;
@@ -741,6 +774,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
     private async Task LoadSuppliesAsync()
     {
+        if (IsOfflineMode) { OnPropertyChanged(nameof(IsEmpty)); return; }
         try
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
@@ -769,6 +803,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task Export(string format)
     {
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
@@ -790,6 +825,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenDetail(SupplyDto supply)
     {
         if (supply is null) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -830,6 +866,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenPaymentAsync()
     {
         if (Detail?.SupplierId is not { } supplierId || !DetailCanPay) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         var remains = Detail.TotalAmount - Detail.PaidCash - Detail.PaidCard - Detail.PaidTransfer - Detail.PaidBank;
         IsDetailOpen = false;
         await OpenPaymentModalAsync(supplierId, Detail.Id,
@@ -840,6 +877,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenEditAsync()
     {
         if (Detail is null || !CanEdit) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         if (Items.Count > 0 && !await _dialog.ConfirmAsync(L["supply_edit_discard"], L["supply_edit"])) return;
         await Task.WhenAll(EnsureCurrenciesAsync(), EnsureEntryCatalogAsync());
 
@@ -884,6 +922,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task VoidSupplyAsync()
     {
         if (Detail is null) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         if (!await _dialog.ConfirmDangerAsync(L["supply_void_confirm"], L["supply_void"])) return;
         try
         {
@@ -966,6 +1005,19 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public async Task LoadAsync()
     {
         RaisePermissions();
+        if (IsOfflineMode)
+        {
+            SupplierOptions.Clear();
+            SupplierChoices.Clear();
+            if (!_supplierRequired) SupplierChoices.Add(new IdOption(null, L["none"]));
+            foreach (var s in await Offline.GetSuppliersAsync())
+            {
+                SupplierOptions.Add(new IdOption(s.Id, s.Name));
+                SupplierChoices.Add(new IdOption(s.Id, s.Name));
+            }
+            OnPropertyChanged(nameof(IsEmpty));
+            return;
+        }
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -1019,6 +1071,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             ResetLine();
         }
 
+        if (IsOfflineMode)
+        {
+            SupplyCurrency = _baseCurrency;
+            if (ServiceLocator.Resolve<OfflineSyncService>().Credential?.WarehouseId is { } leaseWarehouseId)
+            {
+                var lease = WarehouseOptions.FirstOrDefault(o => o.Id == leaseWarehouseId);
+                if (lease is null)
+                {
+                    lease = new IdOption(leaseWarehouseId, L["warehouse"]);
+                    WarehouseOptions.Add(lease);
+                }
+                SelectedWarehouse = lease;
+            }
+        }
+
         IsEditOpen = true;
     }
 
@@ -1043,6 +1110,20 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
         LineBarcode = "";
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+
+        if (IsOfflineMode)
+        {
+            var cachedBarcode = await Offline.GetBarcodeAsync(code);
+            if (cachedBarcode is not null && await Offline.GetProductAsync(cachedBarcode.VariantId) is { } cachedProduct)
+            {
+                AddProductOption(new IdOption(cachedProduct.VariantId, cachedProduct.ProductName));
+                var cachedQty = cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
+                await AddOrMergeAsync(cachedProduct.VariantId, cachedProduct.ProductName, cachedQty, warehouseId, entry: null);
+                return;
+            }
+            _toast.Warning(L["barcode_not_found"]);
+            return;
+        }
 
         try
         {
@@ -1079,9 +1160,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        var stockingUnit = _variantStockUnits.TryGetValue(variantId, out var s)
-            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
-            : null;
+        var stockingName = _variantStockUnits.TryGetValue(variantId, out var s)
+            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)?.ShortName ?? s.ShortName
+            : "";
 
         var line = new SupplyLine
         {
@@ -1091,8 +1172,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             Quantity = quantity,
             UnitId = unitId,
             PackId = packId,
-            UnitName = entry?.ShortName ?? stockingUnit?.ShortName ?? "",
-            StockingUnitName = stockingUnit?.ShortName ?? "",
+            UnitName = entry?.ShortName ?? stockingName,
+            StockingUnitName = stockingName,
             Ratio = entry?.Ratio is { } r && r > 0 ? r : 1,
             PricePerStockingUnit = pricePerStockingUnit,
             PurchasePrice = purchasePrice ?? 0,
@@ -1102,6 +1183,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         Items.Add(line);
 
         if (purchasePrice is not null) return;
+
+        if (IsOfflineMode)
+        {
+            if (line.SellingPrice is null or 0 && await Offline.GetProductAsync(variantId) is { SellingPrice: > 0 } cached)
+                line.SellingPrice = cached.SellingPrice;
+            return;
+        }
 
         try
         {
@@ -1148,6 +1236,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task ImportExcelAsync()
     {
         if (!CanImport) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             var picked = await _filePicker.PickSpreadsheetAsync();
@@ -1187,6 +1276,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task ImportTemplateAsync()
     {
         if (!CanImport) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             await using var content = await _api.GetImportTemplateAsync();
@@ -1231,6 +1321,28 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var date = DateOnly.FromDateTime(SupplyDate.Date);
         long supplyId = 0;
 
+        if (IsOfflineMode)
+        {
+            if (!SettingsService.Instance.OfflineAllowSupplies) { _toast.Warning(L["offline_pos_limited"]); return; }
+            if (editId is not null || supplyCurrency is not null
+                || date != DateOnly.FromDateTime(DateTime.Today)) { _toast.Warning(L["offline_pos_limited"]); return; }
+            var leaseWarehouseId = ServiceLocator.Resolve<OfflineSyncService>().Credential?.WarehouseId;
+            if (SelectedWarehouse.Id != leaseWarehouseId) { _toast.Warning(L["offline_supply_warehouse"]); return; }
+            try
+            {
+                await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSupplyAsync(new OfflineSupplyDraft(
+                    supplierId, SelectedWarehouse.Id.Value,
+                    [.. Items.Select(i => new OfflineSupplyLineDraft(i.VariantId, i.StockingQuantity,
+                        i.PricePerStockingUnitValue, i.ExpiredAt, i.SellingPrice))]));
+            }
+            catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+            Items.Clear();
+            ResetLine();
+            IsEditOpen = false;
+            _toast.Success(L["offline_supply_queued"]);
+            return;
+        }
+
         try
         {
             var request = new CreateSupplyRequest(
@@ -1241,7 +1353,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                     i.UnitId, i.SellingPrice, i.PackId, i.PricePerStockingUnit ? "PerStockingUnit" : "PerEntry"))],
                 0,
                 0,
-                supplyCurrency);
+                supplyCurrency,
+                editId is null ? Guid.NewGuid().ToString("N") : null);
             using (_busy.Begin(L["loading"]))
             {
                 if (editId is { } id) await _api.UpdateAsync(id, request);

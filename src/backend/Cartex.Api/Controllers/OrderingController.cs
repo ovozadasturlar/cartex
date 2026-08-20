@@ -3,6 +3,7 @@ using Cartex.Application.Ordering.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Ordering;
+using Cartex.Shared.Models.Sales;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -96,12 +97,12 @@ public class OrderingController(ISender sender) : ControllerBase
 
     [HttpPost("carts/{code}/checkout")]
     [HasPermission(AppPermissions.Sales.Checkout)]
-    public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
+    public async Task<ActionResult<CreateSaleResult>> Checkout(string code, CheckoutCartRequest request)
     {
         var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList();
         var payments = request.Payments?.Select(x => new SalePaymentDto(
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
-        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus)
+        var sale = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus)
         {
             IdempotencyKey = request.IdempotencyKey,
             Items = items,
@@ -114,7 +115,7 @@ public class OrderingController(ISender sender) : ControllerBase
             DiscountAmount = request.DiscountAmount,
             Note = request.Note
         });
-        return Ok(saleId);
+        return Ok(sale);
     }
 
     [HttpPost("carts/{code}/requeue")]

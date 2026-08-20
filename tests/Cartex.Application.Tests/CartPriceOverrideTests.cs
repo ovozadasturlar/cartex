@@ -77,7 +77,7 @@ public sealed class CartPriceOverrideTests(DatabaseFixture fixture) : DatabaseTe
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            saleId = await sender.Send(new CheckoutCartCommand(code, overridePrice, 0, 0));
+            saleId = (await sender.Send(new CheckoutCartCommand(code, overridePrice, 0, 0))).SaleId;
         }
 
         using (var scope = Fixture.CreateScope())

@@ -176,6 +176,11 @@ table {
     gap: 12px;
   }
 
+  .pair > button {
+    align-self: center;
+    justify-self: start;
+  }
+
   .full {
     width: 100%;
   }

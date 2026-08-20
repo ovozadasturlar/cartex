@@ -97,7 +97,7 @@ public sealed class QueuedCartDiscountTests(DatabaseFixture fixture) : DatabaseT
     private async Task<long> CheckoutAsync(CheckoutCartCommand command)
     {
         using var scope = Fixture.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<ISender>().Send(command);
+        return (await scope.ServiceProvider.GetRequiredService<ISender>().Send(command)).SaleId;
     }
 
     private async Task StatusAsync(string code, CartStatus status, string? reason = null)

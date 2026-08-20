@@ -1,4 +1,5 @@
-﻿using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Catalog;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Settings;
@@ -13,7 +14,7 @@ using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
-public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false)
+public record GetStockOnHandQuery(long WarehouseId, long? CategoryId = null, string? Search = null, int Page = 1, int PageSize = 50, bool ForSale = false, IReadOnlyCollection<long>? VariantIds = null)
     : IRequest<StockOnHandPageDto>;
 
 public sealed class GetStockOnHandQueryHandler(
@@ -45,30 +46,6 @@ public sealed class GetStockOnHandQueryHandler(
             .GroupBy(s => s.VariantId)
             .Select(g => new { VariantId = g.Key, OnHand = g.Sum(s => s.Quantity), NearestExpiry = g.Min(s => s.ExpiredAt) });
 
-        var branchId = 0L;
-        var policy = new SalesPolicySettings();
-        long[] activeVariantIds = [];
-        long[] forceVisibleVariantIds = [];
-        long[] forceHiddenVariantIds = [];
-        if (request.ForSale)
-        {
-            branchId = await db.Warehouses
-                .Where(x => x.Id == request.WarehouseId)
-                .Select(x => x.BranchId)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (branchId == 0)
-                throw new NotFoundException("Warehouse not found.");
-            policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-
-            var catalog = await db.BranchCatalogEntries
-                .Where(x => x.BranchId == branchId)
-                .Select(x => new { x.VariantId, x.FirstActivityAt, x.VisibilityOverride })
-                .ToListAsync(cancellationToken);
-            activeVariantIds = catalog.Where(x => x.FirstActivityAt != null).Select(x => x.VariantId).ToArray();
-            forceVisibleVariantIds = catalog.Where(x => x.VisibilityOverride == BranchCatalogVisibilityOverride.ForceVisible).Select(x => x.VariantId).ToArray();
-            forceHiddenVariantIds = catalog.Where(x => x.VisibilityOverride == BranchCatalogVisibilityOverride.ForceHidden).Select(x => x.VariantId).ToArray();
-        }
-
         var baseCurrency = await currency.BaseAsync(cancellationToken);
         var priceCurrencies = await db.ProductPrices
             .Where(p => p.WarehouseId == request.WarehouseId || p.WarehouseId == null)
@@ -79,6 +56,27 @@ public sealed class GetStockOnHandQueryHandler(
             await currency.RateAsync(code, cancellationToken);
 
         var variantQuery = db.ProductVariants.AsNoTracking();
+
+        if (request.VariantIds is { } requested)
+        {
+            var ids = requested as long[] ?? [.. requested];
+            variantQuery = ids.Length == 0
+                ? variantQuery.Where(_ => false)
+                : variantQuery.Where(v => ids.Contains(v.Id));
+        }
+
+        if (request.ForSale)
+        {
+            var branchId = await db.Warehouses
+                .Where(x => x.Id == request.WarehouseId)
+                .Select(x => x.BranchId)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (branchId == 0)
+                throw new NotFoundException("Warehouse not found.");
+            var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+            variantQuery = await CatalogVisibility.ForSaleAsync(
+                variantQuery, db, policy, branchId, request.WarehouseId, cancellationToken);
+        }
 
         if (subtree is not null)
         {
@@ -112,7 +110,6 @@ public sealed class GetStockOnHandQueryHandler(
                 ProductName = v.Product.Name,
                 v.Product.CategoryId,
                 v.Product.ManufacturerId,
-                v.Product.IsEnabled,
                 CategoryName = v.Product.Category == null ? null : v.Product.Category!.Name,
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
@@ -153,31 +150,7 @@ public sealed class GetStockOnHandQueryHandler(
             }
         }
 
-        if (request.ForSale)
-        {
-            query = query.Where(o => o.IsEnabled);
-            if (forceHiddenVariantIds.Length > 0)
-                query = query.Where(o => !forceHiddenVariantIds.Contains(o.VariantId));
-            if (!policy.ShowUnlistedProducts)
-            {
-                var visibleVariantIds = activeVariantIds.Concat(forceVisibleVariantIds).Distinct().ToArray();
-                query = visibleVariantIds.Length == 0
-                    ? query.Where(_ => false)
-                    : query.Where(o => visibleVariantIds.Contains(o.VariantId));
-            }
-            if (!policy.ShowOutOfStock)
-            {
-                var inStockVariantIds = await stockTotals
-                    .Where(x => x.OnHand > 0)
-                    .Select(x => x.VariantId)
-                    .ToArrayAsync(cancellationToken);
-                var visibleVariantIds = inStockVariantIds.Concat(forceVisibleVariantIds).Distinct().ToArray();
-                query = visibleVariantIds.Length == 0
-                    ? query.Where(_ => false)
-                    : query.Where(o => visibleVariantIds.Contains(o.VariantId));
-            }
-        }
-        else
+        if (!request.ForSale)
         {
             var stockedVariantIds = await stockTotals.Select(x => x.VariantId).ToArrayAsync(cancellationToken);
             query = stockedVariantIds.Length == 0
@@ -197,7 +170,10 @@ public sealed class GetStockOnHandQueryHandler(
             .Select(g => new { Quantity = g.Sum(x => x.OnHand), Value = g.Sum(x => x.OnHand * x.Price) })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var ordered = query.OrderBy(o => o.ProductName);
+        // Bir xil nomli variantlar ko'p: yagona kalitsiz tartib sahifalar orasida beqaror bo'ladi
+        // va bir qator ikki sahifaga tushib, boshqasi umuman chiqmaydi. Oflayn snapshot shu
+        // sahifalar bilan yig'iladi — tushib qolgan qator keshdan "o'chirilgan" deb hisoblanardi.
+        var ordered = query.OrderBy(o => o.ProductName).ThenBy(o => o.VariantId);
         var page = request.Page <= 0 || request.PageSize <= 0
             ? await ordered.ToListAsync(cancellationToken)
             : await ordered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);

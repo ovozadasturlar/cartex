@@ -22,6 +22,7 @@
   "current_debt": "Текущий долг",
   "customers_subtitle": "База клиентов, долги и бонусы",
   "dashboard_subtitle": "Ваш бизнес одним взглядом",
+  "debt_left": "Останется долг",
   "delete_confirm": "Действительно удалить?",
   "edit_branch": "Изменить филиал",
   "edit_warehouse": "Изменить склад",
@@ -48,6 +49,7 @@
   "no_products": "Товары не найдены",
   "no_sales": "Продажи не найдены",
   "no_shifts": "Смен пока нет",
+  "offline_import_invalid": "Неверный формат файла",
   "old_data": "Старое значение",
   "open_receipt": "Открыть чек",
   "operation": "Операция",
@@ -82,5 +84,9 @@
   "users_subtitle": "Пользователи системы и права доступа",
   "warehouse_subtitle": "Остатки, малый остаток и истекающие сроки",
   "warehouses": "Склады",
-  "warehouses_subtitle": "Склады по филиалам"
+  "warehouses_subtitle": "Склады по филиалам",
+  "write_off": "Простить",
+  "write_off_reason": "Причина прощения",
+  "write_off_reason_required": "Укажите причину",
+  "write_off_rest": "Простить остаток"
 }

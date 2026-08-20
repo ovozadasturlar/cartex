@@ -17,6 +17,7 @@ public record CreateSupplyRequest(
     List<CreateSupplyItemRequest> Items,
     decimal PaidCash = 0,
     decimal PaidCard = 0,
-    string? Currency = null);
+    string? Currency = null,
+    string? IdempotencyKey = null);
 
 public record AttachSupplierPaymentsRequest(List<long> TransactionIds);

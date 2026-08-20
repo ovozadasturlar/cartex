@@ -21,7 +21,9 @@ public partial class CustomerDetailViewModel(
     ICustomerReturnsApi customerReturnsApi,
     IRatesApi ratesApi,
     MobilePermissions permissions,
-    MobileAuthService auth) : ObservableObject, IQueryAttributable
+    MobileAuthService auth,
+    SalesPolicyCache policy,
+    MobileOfflineService offline) : ObservableObject, IQueryAttributable
 {
     public ObservableCollection<CurrencyBalanceRow> Debts { get; } = [];
     public ObservableCollection<CurrencyBalanceRow> Credits { get; } = [];
@@ -43,6 +45,9 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private string _paymentAmount = "";
     [ObservableProperty] private string _paymentNote = "";
     [ObservableProperty] private string _paymentMethod = "Cash";
+    [ObservableProperty] private string _writeOffAmount = "";
+    [ObservableProperty] private string _writeOffReason = "";
+    [ObservableProperty] private bool _canWriteOffDebt;
     [ObservableProperty] private CurrencyDto? _selectedCurrency;
     [ObservableProperty] private bool _canReceivePayment;
     [ObservableProperty] private bool _canMessage;
@@ -90,9 +95,14 @@ public partial class CustomerDetailViewModel(
     public bool HasPaymentDebt => PaymentDebt > 0;
     public string PaymentDebtText => $"{PaymentDebt:N0} {SelectedCurrency?.Code}";
     public string PaymentRemainingText => $"{Math.Max(0, PaymentDebt - ParsedPaymentAmount):N0}";
+    public bool ShowWriteOff => CanWriteOffDebt && HasPaymentDebt;
+    public string DebtLeftText => $"{Math.Max(0, PaymentDebt - ParsedPaymentAmount - ParsedWriteOff):N0}";
 
-    private decimal ParsedPaymentAmount => decimal.TryParse(
-        PaymentAmount.Trim().Replace(',', '.'),
+    private decimal ParsedPaymentAmount => ParseAmount(PaymentAmount);
+    private decimal ParsedWriteOff => ParseAmount(WriteOffAmount);
+
+    private static decimal ParseAmount(string text) => decimal.TryParse(
+        text.Trim().Replace(',', '.'),
         System.Globalization.NumberStyles.Number,
         System.Globalization.CultureInfo.InvariantCulture,
         out var amount) && amount > 0 ? amount : 0;
@@ -102,7 +112,15 @@ public partial class CustomerDetailViewModel(
         ? PaymentDebt.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
         : "";
 
+    [RelayCommand]
+    private void FillRestWriteOff()
+    {
+        var rest = Math.Max(0, PaymentDebt - ParsedPaymentAmount);
+        WriteOffAmount = rest > 0 ? rest.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "";
+    }
+
     partial void OnPaymentAmountChanged(string value) => NotifyPaymentPreview();
+    partial void OnWriteOffAmountChanged(string value) => NotifyPaymentPreview();
     partial void OnSelectedCurrencyChanged(CurrencyDto? value) => NotifyPaymentPreview();
 
     private void NotifyPaymentPreview()
@@ -111,11 +129,14 @@ public partial class CustomerDetailViewModel(
         OnPropertyChanged(nameof(HasPaymentDebt));
         OnPropertyChanged(nameof(PaymentDebtText));
         OnPropertyChanged(nameof(PaymentRemainingText));
+        OnPropertyChanged(nameof(ShowWriteOff));
+        OnPropertyChanged(nameof(DebtLeftText));
     }
 
     private long _customerId;
     private bool _timelineLoaded;
     private bool _financeLoaded;
+    private string _paymentIdempotencyKey = Guid.NewGuid().ToString("N");
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -206,7 +227,12 @@ public partial class CustomerDetailViewModel(
         PaymentAmount = "";
         PaymentNote = "";
         PaymentMethod = "Cash";
+        WriteOffAmount = "";
+        WriteOffReason = "";
         SelectedCurrency = Currencies.FirstOrDefault(x => x.IsBase) ?? Currencies.FirstOrDefault();
+        // Kalit oyna ochilganda bir marta beriladi: javob yo'qolib qayta bosilsa server o'sha to'lovni
+        // qaytaradi, yangi to'lov hujjati yaratmaydi.
+        _paymentIdempotencyKey = Guid.NewGuid().ToString("N");
         IsPaymentOpen = true;
     }
 
@@ -220,12 +246,21 @@ public partial class CustomerDetailViewModel(
     private async Task SavePaymentAsync()
     {
         if (Customer is null || SelectedCurrency is null || IsBusy) return;
-        if (!decimal.TryParse(PaymentAmount.Trim().Replace(',', '.'),
-                System.Globalization.NumberStyles.Number,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out var amount) || amount <= 0)
+        var amount = ParsedPaymentAmount;
+        var writeOff = ShowWriteOff ? ParsedWriteOff : 0;
+        if (amount <= 0 && writeOff <= 0)
         {
             Error = Loc.Instance["amount_invalid"];
+            return;
+        }
+        if (writeOff > 0 && string.IsNullOrWhiteSpace(WriteOffReason))
+        {
+            Error = Loc.Instance["write_off_reason_required"];
+            return;
+        }
+        if (writeOff > 0 && offline.ShouldUseOffline)
+        {
+            Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
             return;
         }
 
@@ -233,17 +268,28 @@ public partial class CustomerDetailViewModel(
         Error = null;
         try
         {
-            var result = await customerPaymentsApi.CreateAsync(new CreateCustomerPaymentRequest(
-                Customer.Id,
-                auth.DefaultBranchId,
-                [new CustomerPaymentTenderRequest(PaymentMethod, SelectedCurrency.Code, amount)],
-                AutoAllocateDebt: true,
-                Note: string.IsNullOrWhiteSpace(PaymentNote) ? null : PaymentNote.Trim(),
-                IdempotencyKey: Guid.NewGuid().ToString("N")));
-            IsPaymentOpen = false;
-            Ui.Toast(result.AdvanceBaseAmount > 0
-                ? Loc.Instance["payment_saved_with_advance"]
-                : Loc.Instance["payment_saved"]);
+            if (writeOff > 0)
+            {
+                await customersApi.RepayDebtAsync(Customer.Id, new RepayDebtRequest(
+                    amount, PaymentMethod == "Card", SelectedCurrency.Code, SelectedCurrency.Code,
+                    _paymentIdempotencyKey, writeOff, WriteOffReason.Trim()));
+                IsPaymentOpen = false;
+                Ui.Toast(Loc.Instance["payment_saved"]);
+            }
+            else
+            {
+                var result = await customerPaymentsApi.CreateAsync(new CreateCustomerPaymentRequest(
+                    Customer.Id,
+                    auth.DefaultBranchId,
+                    [new CustomerPaymentTenderRequest(PaymentMethod, SelectedCurrency.Code, amount)],
+                    AutoAllocateDebt: true,
+                    Note: string.IsNullOrWhiteSpace(PaymentNote) ? null : PaymentNote.Trim(),
+                    IdempotencyKey: _paymentIdempotencyKey));
+                IsPaymentOpen = false;
+                Ui.Toast(result.AdvanceBaseAmount > 0
+                    ? Loc.Instance["payment_saved_with_advance"]
+                    : Loc.Instance["payment_saved"]);
+            }
             await LoadAsync();
         }
         catch (Exception ex)
@@ -267,6 +313,7 @@ public partial class CustomerDetailViewModel(
         try
         {
             CanReceivePayment = permissions.Has("customer_payments.create");
+            CanWriteOffDebt = permissions.Has("customer_payments.writeOffDebt") && policy.Current.AllowDebtWriteOff;
             CanMessage = permissions.Has("customers.message");
             CanViewStatement = permissions.Has("statements.view");
 
@@ -384,6 +431,7 @@ public partial class CustomerDetailViewModel(
         OnPropertyChanged(nameof(TotalSpentText));
         OnPropertyChanged(nameof(LastPurchaseText));
         OnPropertyChanged(nameof(HasCreditLimit));
+        OnPropertyChanged(nameof(CreditLimitText));
         OnPropertyChanged(nameof(CreditUsedRatio));
         OnPropertyChanged(nameof(CreditUsedText));
         OnPropertyChanged(nameof(IsOverLimit));

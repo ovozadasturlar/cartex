@@ -29,6 +29,7 @@ public static class MauiProgram
         Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
             handler.PlatformView.BackgroundTintList =
                 Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        Platforms.Android.HubForegroundBootstrap.Register();
 #endif
 
         var session = new SessionStore();
@@ -55,8 +56,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<MobilePrintDispatcher>();
         builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
         builder.Services.AddSingleton<SalesPolicyCache>();
+        builder.Services.AddSingleton<MobileFeaturesCache>();
         builder.Services.AddSingleton<MobileOfflineStore>();
+        builder.Services.AddSingleton<HubIdentityService>();
+        builder.Services.AddSingleton<HubLinkService>();
         builder.Services.AddSingleton<MobileOfflineService>();
+        builder.Services.AddSingleton<MobileHubHostService>();
+        builder.Services.AddSingleton<StoreSignOut>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
         builder.Services.AddSingleton<StartupService>();
 
@@ -66,6 +72,8 @@ public static class MauiProgram
         builder.Services.AddTransient<ChangePasswordViewModel>();
         builder.Services.AddTransient<DevicesViewModel>();
         builder.Services.AddTransient<ProfileViewModel>();
+        builder.Services.AddTransient<OfflineSettingsViewModel>();
+        builder.Services.AddTransient<OfflineImportViewModel>();
         builder.Services.AddTransient<HomeViewModel>();
         builder.Services.AddTransient<ScanViewModel>();
         builder.Services.AddTransient<CartViewModel>();
@@ -84,10 +92,13 @@ public static class MauiProgram
         builder.Services.AddTransient<BarcodeAttachViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<ServerScanPage>();
         builder.Services.AddTransient<PinPage>();
         builder.Services.AddTransient<SecurityPage>();
         builder.Services.AddTransient<ChangePasswordPage>();
         builder.Services.AddTransient<DevicesPage>();
+        builder.Services.AddTransient<OfflineSettingsPage>();
+        builder.Services.AddTransient<OfflineImportPage>();
         builder.Services.AddSingleton<MainPage>();
         builder.Services.AddSingleton<HomeView>();
         builder.Services.AddSingleton<TradeView>();
@@ -120,6 +131,7 @@ public static class MauiProgram
         services.GetRequiredService<CartStore>();
         services.GetRequiredService<SupplyCartStore>();
         services.GetRequiredService<SalesPolicyCache>();
+        services.GetRequiredService<MobileFeaturesCache>();
         services.GetRequiredService<WarehouseContext>();
     });
 

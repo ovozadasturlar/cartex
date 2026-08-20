@@ -11,19 +11,31 @@ public sealed class SalesPolicyCache(ISettingsApi settingsApi)
 {
     private const string CacheKey = "sales_policy";
     private SalesPolicyDto? _current;
+    private Task? _inFlight;
+    private bool _loaded;
 
-    public SalesPolicyDto Current => _current ??= Read();
+    // Saqlangan yozuv logout'da o'chiriladi — u yo'q bo'lsa xotiradagi nusxa boshqa
+    // do'konniki, shuning uchun qaytadan yuklanadi.
+    public SalesPolicyDto Current => _current is { } current && Preferences.ContainsKey(CacheKey)
+        ? current
+        : _current = Read();
+
+    public Task EnsureLoadedAsync() =>
+        _loaded && Preferences.ContainsKey(CacheKey)
+            ? Task.CompletedTask
+            : _inFlight is { IsCompleted: false } inFlight ? inFlight : _inFlight = RefreshAsync();
 
     public async Task<SalesPolicyDto> RefreshAsync()
     {
         try
         {
             _current = await settingsApi.GetSalesPolicyAsync();
+            _loaded = true;
             Preferences.Set(CacheKey, JsonSerializer.Serialize(_current));
         }
         catch
         {
-            _current ??= Read();
+            _current = Read();
         }
         return _current;
     }

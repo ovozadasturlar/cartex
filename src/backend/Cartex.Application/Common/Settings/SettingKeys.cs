@@ -16,5 +16,6 @@ public static class SettingKeys
     public const string HardwareKey = "hardwareKey";
     public const string LoginMethods = "loginMethods";
     public const string OfflineCache = "offlineCache";
+    public const string HubAttestationKey = "hubAttestationKey";
     public const string Onboarded = "onboarded";
 }

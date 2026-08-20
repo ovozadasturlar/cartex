@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace Cartex.Desktop;
@@ -15,9 +16,46 @@ internal static class NativeSplash
     private static WndProcDelegate? _wndProc;
     private static double _s = 1;
     private static int _marquee;
+    private static Palette _colors = Palette.Light;
+
+    /// GDI ranglari BGR tartibida (0x00BBGGRR), shuning uchun qiymatlar CSS'dagidan teskari yozilgan.
+    private readonly record struct Palette(
+        uint Background, uint Title, uint Subtitle, uint Monogram, uint Accent, uint Track)
+    {
+        public static readonly Palette Light = new(0xFFFFFF, 0x1F2423, 0x88908A, 0x1F2423, 0x385E27, 0xECF0ED);
+        public static readonly Palette Dark = new(0x241D1A, 0xF9F5F1, 0xB8A394, 0xF9F5F1, 0x578A39, 0x39312D);
+    }
+
+    /// Splash Avalonia'dan oldin chiziladi, shuning uchun mavzuni sozlama faylidan o'zi o'qiydi —
+    /// aks holda qorong'i mavzuda oq oyna chaqnab, keyin qorong'i ilova ochilardi.
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Oyna Win32 xabar sikligacha sinxron chiziladi; kichik sozlama fayli.")]
+    private static Palette ReadPalette()
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cartex", "settings.json");
+            if (!File.Exists(path)) return Palette.Light;
+            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            return document.RootElement.TryGetProperty("Theme", out var theme)
+                   && theme.ValueKind == System.Text.Json.JsonValueKind.Number
+                   && theme.GetInt32() == 1
+                ? Palette.Dark
+                : Palette.Light;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+                                              or System.Text.Json.JsonException)
+        {
+            return Palette.Light;
+        }
+    }
 
     public static void Show()
     {
+        if (!OperatingSystem.IsWindows()) return;
+        _colors = ReadPalette();
         SetProcessDpiAwarenessContext(new IntPtr(-4));
         var thread = new Thread(Run) { IsBackground = true, Name = "NativeSplash" };
         thread.SetApartmentState(ApartmentState.STA);
@@ -97,15 +135,15 @@ internal static class NativeSplash
     private static void Paint(IntPtr hwnd)
     {
         var hdc = BeginPaint(hwnd, out var ps);
-        var white = CreateSolidBrush(0xFFFFFF);
+        var background = CreateSolidBrush(_colors.Background);
         var full = new RECT { Left = 0, Top = 0, Right = Px(BaseW), Bottom = Px(BaseH) };
-        FillRect(hdc, ref full, white);
-        DeleteObject(white);
+        FillRect(hdc, ref full, background);
+        DeleteObject(background);
         SetBkMode(hdc, 1 /*TRANSPARENT*/);
 
         DrawMonogram(hdc);
-        DrawCentered(hdc, "Cartex", 30, 700, 0x1F2423, 126);
-        DrawCentered(hdc, "Savdo boshqaruvi tizimi", 13, 400, 0x88908A, 170);
+        DrawCentered(hdc, "Cartex", 30, 700, _colors.Title, 126);
+        DrawCentered(hdc, "Savdo boshqaruvi tizimi", 13, 400, _colors.Subtitle, 170);
         DrawBar(hdc);
 
         EndPaint(hwnd, ref ps);
@@ -120,9 +158,9 @@ internal static class NativeSplash
         var kern = Px(8);
         var x = (Px(BaseW) - (sizeC.cx + sizeX.cx - kern)) / 2;
         var y = Px(34);
-        SetTextColor(hdc, 0x1F2423);
+        SetTextColor(hdc, _colors.Monogram);
         TextOutW(hdc, x, y, "C", 1);
-        SetTextColor(hdc, 0x385E27);
+        SetTextColor(hdc, _colors.Accent);
         TextOutW(hdc, x + sizeC.cx - kern, y + (sizeC.cy - sizeX.cy), "x", 1);
         SelectObject(hdc, old);
         DeleteObject(font);
@@ -142,7 +180,7 @@ internal static class NativeSplash
     private static void DrawBar(IntPtr hdc)
     {
         var track = new RECT { Left = Px(30), Top = Px(224), Right = Px(BaseW - 30), Bottom = Px(228) };
-        var trackBrush = CreateSolidBrush(0xECF0ED);
+        var trackBrush = CreateSolidBrush(_colors.Track);
         FillRect(hdc, ref track, trackBrush);
         DeleteObject(trackBrush);
 
@@ -155,7 +193,7 @@ internal static class NativeSplash
             Bottom = track.Bottom,
         };
         if (segment.Right <= segment.Left) return;
-        var brush = CreateSolidBrush(0x385E27);
+        var brush = CreateSolidBrush(_colors.Accent);
         FillRect(hdc, ref segment, brush);
         DeleteObject(brush);
     }

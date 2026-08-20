@@ -57,7 +57,9 @@ public static class ShiftCalculator
         var baseAccountId = cashAccounts.FirstOrDefault(a => a.Currency == baseCode)?.Id;
         var baseTerms = Terms(baseAccountId);
         var payIn = txns.Where(t => t.OperationType == OperationType.CashIn).Sum(t => t.Amount);
-        var payOut = txns.Where(t => t.OperationType == OperationType.CashOut).Sum(t => t.Amount);
+        // QARZ-10: hamkorga naqd mukofot ham yashikdan chiqadi, shuning uchun kutilgan naqdni kamaytiradi.
+        var payOut = txns.Where(t => t.OperationType == OperationType.CashOut
+            || (t.OperationType == OperationType.PartnerRewardCash && t.FromAccountId != null)).Sum(t => t.Amount);
 
         var expected = shift.OpeningFloat + baseTerms.Sales - baseTerms.Returns + payIn - payOut
             + baseTerms.DebtIn - baseTerms.SupplyOut - baseTerms.ChangeOut;

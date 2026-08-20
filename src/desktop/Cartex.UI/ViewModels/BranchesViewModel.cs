@@ -137,7 +137,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void CloseCatalog()
     {
-        _catalogSearchCts?.Cancel();
+        Debounce.Cancel(ref _catalogSearchCts);
         IsCatalogOpen = false;
     }
 
@@ -149,8 +149,7 @@ public partial class BranchesViewModel : ViewModelBase, ILoadable
         if (!IsCatalogOpen)
             return;
 
-        _catalogSearchCts?.Cancel();
-        var cts = _catalogSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _catalogSearchCts);
         _ = DebouncedCatalogSearchAsync(cts.Token);
     }
 

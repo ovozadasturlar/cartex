@@ -77,11 +77,11 @@ public sealed record CreateSaleCommand(
     public string? IdempotencyKey { get; init; }
     public bool ApplyAutoDiscount { get; init; } = true;
     public decimal CreditAmount { get; init; }
-    public bool FromQueuedCart { get; init; }
     public bool UseCustomerAdvance { get; init; } = true;
     public List<ParticipantInput>? Participants { get; init; }
     public string? Note { get; init; }
 
+    [JsonIgnore] public bool FromQueuedCart { get; init; }
     [JsonIgnore] public bool FromOfflineSync { get; init; }
     [JsonIgnore] public long? OfflineActorUserId { get; init; }
     [JsonIgnore] public IReadOnlyDictionary<long, decimal>? PreauthorizedPrices { get; init; }
@@ -133,7 +133,7 @@ public sealed class CreateSaleCommandHandler(
             ?? throw new NotFoundException("Warehouse not found.");
 
         if (!request.FromOfflineSync)
-            await offlineAuthority.EnsureOnlineMutationAllowedAsync(warehouse.BranchId, cancellationToken);
+            await offlineAuthority.EnsureOnlineMutationAllowedAsync(warehouse.BranchId, warehouse.Id, cancellationToken);
 
         if (warehouse.AssignedUserId != userId &&
             await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
@@ -293,6 +293,13 @@ public sealed class CreateSaleCommandHandler(
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
+        // OFF-16: qoldiq nazorati vakolat egasi jim bo'lgan oynada yumshatiladi. OFF-18: replay
+        // uchun oyna sharti qo'yilmaydi — hodisa allaqachon sodir bo'lgan, tovar mijozga berilgan.
+        var offlineStockRelief = policy.AllowNegativeStockWhenOffline
+            && !policy.AllowInsufficientStockSales
+            && (request.FromOfflineSync
+                || await offlineAuthority.IsOfflineWindowOpenAsync(request.WarehouseId, cancellationToken));
+
         // Stock is allocated before the totals so the sale adds up from the very rows it will
         // store: a line split across batches rounds once per row, not once per line.
         await stockAllocator.PreloadAsync(request.WarehouseId,
@@ -303,13 +310,21 @@ public sealed class CreateSaleCommandHandler(
         {
             var line = resolvedItems[index];
             var allocations = await stockAllocator.AllocateAsync(request.WarehouseId, line.Item.VariantId,
-                line.Quantity, policy.AllowInsufficientStockSales, cancellationToken);
+                line.Quantity, policy.AllowInsufficientStockSales || offlineStockRelief, cancellationToken);
             foreach (var allocation in allocations)
             {
                 saleRows.Add(new SaleRow(index, allocation.Batch, allocation.Quantity, line));
                 allocation.Batch.Quantity -= allocation.Quantity;
             }
         }
+
+        // OFF-17: yumshatish ishlagani deficit partiyasiga tushgan qatordan bilinadi — o'sha
+        // qatorning miqdori aynan tanqislik.
+        var offlineShortfalls = saleRows
+            .Where(r => offlineStockRelief && r.Batch.IsDeficit)
+            .GroupBy(r => r.Line.Item.VariantId)
+            .Select(g => new { VariantId = g.Key, Shortfall = g.Sum(r => r.Quantity) })
+            .ToList();
 
         // Each component is capped by what its rows have left, so no line can go below zero;
         // anything that will not fit is dropped from the header too, keeping the two in step.
@@ -606,8 +621,9 @@ public sealed class CreateSaleCommandHandler(
         // NARX-06/07: the sale is priced already; this only decides whether the catalogue follows.
         // One mistyped price must not be able to rewrite the catalogue, but it must not stop the
         // sale either — the customer is standing at the till.
+        // OFF-11: oflayn replay katalogni yangilamaydi — kesh narxi operator kiritgan yangi narx emas.
         var skippedIncreases = new List<CatalogPrice>();
-        if (!policy.UpdateCatalogPriceOnSale)
+        if (!policy.UpdateCatalogPriceOnSale || request.FromOfflineSync)
         {
             skippedIncreases.AddRange(priceIncreases.Values);
             priceIncreases.Clear();
@@ -654,6 +670,10 @@ public sealed class CreateSaleCommandHandler(
             audit.Add("salePriceUpSkipped", "product_prices", null,
                 skippedIncreases.Select(x => new { x.Source.VariantId, x.Source.WarehouseId, Entered = x.Amount }));
 
+        if (offlineShortfalls.Count > 0)
+            audit.Add("saleStockNegativeOffline", "stocks", null,
+                offlineShortfalls.Select(x => new { request.WarehouseId, x.VariantId, x.Shortfall }));
+
         await db.SaveChangesAsync(cancellationToken);
 
         audit.SetOutcome("sale.completed", "sales", sale.Id, new
@@ -682,7 +702,8 @@ public sealed class CreateSaleCommandHandler(
             await db.Prepacks.Where(p => prepackIds.Contains(p.Id))
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.SoldSaleId, sale.Id), cancellationToken);
 
-        return new CreateSaleResult(sale.Id, sale.ReceiptToken);
+        return new CreateSaleResult(sale.Id, sale.ReceiptToken,
+            offlineShortfalls.Count > 0 ? ["stock_negative_offline"] : null);
     }
 
     private async Task PostLedgerAsync(

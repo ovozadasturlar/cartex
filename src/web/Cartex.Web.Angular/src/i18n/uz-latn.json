@@ -22,6 +22,7 @@
   "current_debt": "Joriy qarz",
   "customers_subtitle": "Mijozlar bazasi, qarzlar va bonuslar",
   "dashboard_subtitle": "Biznesingiz bir qarashda",
+  "debt_left": "Qarzda qoladi",
   "delete_confirm": "Rostdan ham o'chirilsinmi?",
   "edit_branch": "Filialni tahrirlash",
   "edit_warehouse": "Omborni tahrirlash",
@@ -48,6 +49,7 @@
   "no_products": "Mahsulot topilmadi",
   "no_sales": "Sotuvlar topilmadi",
   "no_shifts": "Hozircha smenalar yo'q",
+  "offline_import_invalid": "Fayl formati noto'g'ri",
   "old_data": "Oldingi qiymat",
   "open_receipt": "Chekni ochish",
   "operation": "Operatsiya",
@@ -82,5 +84,9 @@
   "users_subtitle": "Tizim foydalanuvchilari va kirish huquqlari",
   "warehouse_subtitle": "Qoldiqlar, kam qoldiq va muddati yaqin mahsulotlar",
   "warehouses": "Omborlar",
-  "warehouses_subtitle": "Filiallar bo'yicha omborlar"
+  "warehouses_subtitle": "Filiallar bo'yicha omborlar",
+  "write_off": "Kechirish",
+  "write_off_reason": "Kechirish sababi",
+  "write_off_reason_required": "Kechirish uchun sabab yozing",
+  "write_off_rest": "Qolganini kechirish"
 }

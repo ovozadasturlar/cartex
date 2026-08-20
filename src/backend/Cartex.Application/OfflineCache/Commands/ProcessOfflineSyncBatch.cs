@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
+using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Participants;
 using Cartex.Application.CustomerPayments.Commands;
 using Cartex.Application.Sales.Commands;
+using Cartex.Application.Supplies.Commands;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Common.Exceptions;
@@ -10,6 +12,7 @@ using Cartex.Persistence;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.OfflineCache;
 using Cartex.Shared.Models.Sales;
+using Cartex.Shared.Models.Supplies;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -103,11 +106,13 @@ public sealed record ApplyOfflineSyncEventCommand(
     long LeaseId,
     long Epoch,
     string LeaseToken,
-    OfflineSyncEventRequest Event) : ICommand<OfflineSyncEventResult>;
+    OfflineSyncEventRequest Event,
+    bool ForImport = false) : ICommand<OfflineSyncEventResult>;
 
 public sealed class ApplyOfflineSyncEventCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
+    ICurrencyService currency,
     ISender sender)
     : IRequestHandler<ApplyOfflineSyncEventCommand, OfflineSyncEventResult>
 {
@@ -129,11 +134,16 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
         if (rawPayload.Length > 512 * 1024)
             throw new BusinessRuleException("Oflayn amal hajmi 512 KB dan oshmasligi kerak.", "offline_payload_too_large");
         var payloadHash = OfflineLeaseSecurity.Hash(rawPayload);
+        var kind = OfflineEventKinds.Normalize(row.Kind);
 
-        var lease = await OfflineLeaseSecurity.RequireActiveAsync(db, currentUser,
-            request.LeaseId, request.Epoch, request.LeaseToken, true, cancellationToken);
+        var lease = request.ForImport
+            ? await OfflineLeaseSecurity.RequireForImportAsync(db, currentUser,
+                request.LeaseId, request.Epoch, request.LeaseToken, true, cancellationToken)
+            : await OfflineLeaseSecurity.RequireActiveAsync(db, currentUser,
+                request.LeaseId, request.Epoch, request.LeaseToken, true, cancellationToken);
         if (effectiveActorId != actorId)
-            await EnsureReplayActorAsync(effectiveActorId, lease.BusinessId, lease.BranchId, cancellationToken);
+            await EnsureReplayActorAsync(effectiveActorId, lease.BusinessId, lease.BranchId,
+                OfflineEventKinds.ReplayActorPermissions(kind), cancellationToken);
         var existing = await db.OfflineSyncEvents.AsNoTracking()
             .FirstOrDefaultAsync(x => x.EventId == row.EventId, cancellationToken);
         if (existing is not null)
@@ -141,13 +151,16 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             if (existing.OfflineAuthorityLeaseId != lease.Id
                 || existing.Sequence != row.Sequence
                 || existing.PayloadHash != payloadHash
-                || !string.Equals(existing.Kind, NormalizeKind(row.Kind), StringComparison.Ordinal)
+                || !string.Equals(existing.Kind, kind, StringComparison.Ordinal)
                 || !string.Equals(existing.IdempotencyKey, row.IdempotencyKey, StringComparison.Ordinal))
                 throw new ConflictException("EventId boshqa mazmun bilan avval ishlatilgan.", "offline_event_conflict");
 
-            lease.LastHeartbeatAt = DateTime.UtcNow;
-            lease.Version++;
-            await db.SaveChangesAsync(cancellationToken);
+            if (!request.ForImport)
+            {
+                lease.LastHeartbeatAt = DateTime.UtcNow;
+                lease.Version++;
+                await db.SaveChangesAsync(cancellationToken);
+            }
             return new OfflineSyncEventResult(row.EventId, row.Sequence, "AlreadyApplied",
                 existing.ResultEntityId, existing.ResultCode);
         }
@@ -160,16 +173,14 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
                 x.OfflineAuthorityLeaseId == lease.Id && x.Sequence == row.Sequence, cancellationToken))
             throw new ConflictException("Bu sequence avval ishlatilgan.", "offline_sequence_conflict");
 
-        var kind = NormalizeKind(row.Kind);
-        if (kind == "customer.payment.create" && effectiveActorId != actorId)
-            throw new BusinessRuleException(
-                "Boshqa foydalanuvchining oflayn mijoz to'lovi hali qo'llanmaydi.",
-                "offline_payment_actor_mismatch");
         var (entityId, resultCode) = kind switch
         {
-            "sale.create" => await ApplySaleAsync(
+            OfflineEventKinds.Sale => await ApplySaleAsync(
                 rawPayload, row.IdempotencyKey, effectiveActorId, cancellationToken),
-            "customer.payment.create" => await ApplyCustomerPaymentAsync(rawPayload, row.IdempotencyKey, cancellationToken),
+            OfflineEventKinds.Payment => await ApplyCustomerPaymentAsync(
+                rawPayload, row.IdempotencyKey, effectiveActorId, cancellationToken),
+            OfflineEventKinds.Supply => await ApplySupplyAsync(
+                rawPayload, row.IdempotencyKey, effectiveActorId, cancellationToken),
             _ => throw new BusinessRuleException($"Oflayn amal turi qo'llanmaydi: {row.Kind}", "offline_event_kind_unsupported")
         };
 
@@ -192,7 +203,10 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             ProcessedAt = now
         });
         lease.LastAcceptedSequence = row.Sequence;
-        lease.LastHeartbeatAt = now;
+        // Import o'lik qurilma nomidan — heartbeat yangilanmaydi, aks holda split-brain
+        // qo'riqchisi qurilmani tirik deb o'ylaydi.
+        if (!request.ForImport)
+            lease.LastHeartbeatAt = now;
         lease.LastSyncAt = now;
         lease.Version++;
         await db.SaveChangesAsync(cancellationToken);
@@ -211,6 +225,13 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
         var participants = dto.Participants?.Select(x =>
             new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList();
+        // OFF-10: kassir ko'rgan narx va kiritilgan chegirma navbatdagi savat kabi
+        // oldindan ruxsatlangan — sinxronlashayotgan foydalanuvchidan qayta so'ralmaydi.
+        var preauthorizedPrices = dto.Items
+            .Where(x => x.UnitPrice is not null)
+            .GroupBy(x => x.VariantId)
+            .Where(x => x.Select(i => i.UnitPrice!.Value).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().UnitPrice!.Value);
         var result = await sender.Send(new CreateSaleCommand(
             WarehouseId: dto.WarehouseId,
             CustomerId: dto.CustomerId,
@@ -230,7 +251,9 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             UseCustomerAdvance = dto.UseCustomerAdvance,
             Participants = participants,
             FromOfflineSync = true,
-            OfflineActorUserId = actorUserId
+            OfflineActorUserId = actorUserId,
+            PreauthorizedPrices = preauthorizedPrices.Count > 0 ? preauthorizedPrices : null,
+            PreauthorizedDiscountAmount = dto.DiscountAmount
         }, cancellationToken);
         return (result.SaleId, result.ReceiptToken);
     }
@@ -238,21 +261,63 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
     private async Task<(long Id, string Code)> ApplyCustomerPaymentAsync(
         string payload,
         string idempotencyKey,
+        long actorUserId,
         CancellationToken cancellationToken)
     {
         var dto = Deserialize<CreateCustomerPaymentRequest>(payload);
+        // OFF-20: oflayn faqat oddiy to'lov — taqsimotni server QARZ-03 bo'yicha o'zi qiladi.
+        if (dto.Allocations is { Count: > 0 } || !dto.AutoAllocateDebt)
+            throw new BusinessRuleException(
+                "Oflayn to'lovda qo'lda taqsimot qo'llanmaydi.",
+                "offline_payment_allocations_unsupported");
         var result = await sender.Send(new CreateCustomerPaymentCommand(
             dto.CustomerId,
             dto.BranchId,
             dto.Tenders.Select(x => new CustomerPaymentTenderInput(
                 ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList(),
-            dto.Allocations?.Select(x => new CustomerPaymentAllocationInput(
-                x.Currency, x.Amount, x.SaleId)).ToList(),
-            dto.AutoAllocateDebt,
+            null,
+            true,
             dto.BusinessDate,
             dto.Note,
-            idempotencyKey), cancellationToken);
+            idempotencyKey)
+        {
+            FromOfflineSync = true,
+            OfflineActorUserId = actorUserId
+        }, cancellationToken);
         return (result.Id, result.DocumentNumber);
+    }
+
+    private async Task<(long Id, string Code)> ApplySupplyAsync(
+        string payload,
+        string idempotencyKey,
+        long actorUserId,
+        CancellationToken cancellationToken)
+    {
+        var dto = Deserialize<CreateSupplyRequest>(payload);
+        // OFF-30: oflayn kirim faqat qarzga va faqat baza valyutada.
+        if (dto.PaidCash != 0 || dto.PaidCard != 0)
+            throw new BusinessRuleException(
+                "Oflayn kirim faqat qarzga bo'ladi — to'lov onlaynda qilinadi.",
+                "offline_supply_payment_unsupported");
+        var baseCode = await currency.BaseAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(dto.Currency)
+            && !string.Equals(dto.Currency.Trim(), baseCode, StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException(
+                "Oflayn kirim faqat baza valyutada bo'ladi.",
+                "offline_supply_currency_unsupported");
+        var supplyId = await sender.Send(new CreateSupplyCommand(
+            dto.SupplierId,
+            dto.WarehouseId,
+            dto.SupplyDate,
+            dto.Items.Select(x => new CreateSupplyItemDto(
+                x.VariantId, x.Quantity, x.PurchasePrice, x.ExpiredAt,
+                x.UnitId, x.SellingPrice, x.PackId, ParsePriceBasis(x.PriceBasis))).ToList())
+        {
+            IdempotencyKey = idempotencyKey,
+            FromOfflineSync = true,
+            OfflineActorUserId = actorUserId
+        }, cancellationToken);
+        return (supplyId, supplyId.ToString());
     }
 
     private static T Deserialize<T>(string payload) where T : class =>
@@ -264,17 +329,16 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             ? method
             : throw new BusinessRuleException($"To'lov turi noto'g'ri: {value}", "invalid_payment_method");
 
-    private static string NormalizeKind(string value) => value.Trim().ToLowerInvariant() switch
-    {
-        "sale" or "sale.create" => "sale.create",
-        "payment" or "customer.payment" or "customer.payment.create" => "customer.payment.create",
-        var normalized => normalized
-    };
+    private static SupplyPriceBasis ParsePriceBasis(string value) =>
+        Enum.TryParse<SupplyPriceBasis>(value, true, out var basis)
+            ? basis
+            : throw new BusinessRuleException($"Kirim narx asosi noto'g'ri: {value}", "invalid_price_basis");
 
     private async Task EnsureReplayActorAsync(
         long actorUserId,
         long businessId,
         long branchId,
+        string[] permissions,
         CancellationToken cancellationToken)
     {
         var valid = await db.Users.AsNoTracking().AnyAsync(x =>
@@ -285,8 +349,7 @@ public sealed class ApplyOfflineSyncEventCommandHandler(
             && (x.UserRoles.Any(ur => ur.Role.IsActive && ur.Role.AccessAll)
                 || x.UserRoles.Any(ur => ur.Role.IsActive && ur.Role.RolePermissions.Any(rp =>
                     rp.Permission.IsEnabled
-                    && (rp.Permission.Name == AppPermissions.Sales.Create
-                        || rp.Permission.Name == AppPermissions.Sales.Checkout))))
+                    && permissions.Contains(rp.Permission.Name))))
             && (x.UserRoles.Any(ur => ur.Role.IsActive && ur.Role.AccessAll)
                 || x.DefaultBranchId == branchId
                 || x.UserBranches.Any(ub => ub.BranchId == branchId)), cancellationToken);

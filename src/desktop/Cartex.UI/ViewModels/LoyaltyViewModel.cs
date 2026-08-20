@@ -137,8 +137,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
 
     partial void OnCustomerSearchChanged(string value)
     {
-        _customerSearchCts?.Cancel();
-        var cts = _customerSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _customerSearchCts);
         _ = DebouncedCustomerSearchAsync(cts.Token);
     }
 

@@ -16,6 +16,7 @@ import { CustomersApi, SalesApi } from '../../core/api.service';
 import type { CustomerStatement } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
 import { CustomerPartner, PartnersApi } from '../../core/api/partners.api';
+import { SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxEnumPipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
@@ -602,6 +603,22 @@ export class PartnerPublicityDialog {
           <mat-label>{{ t('amount') }}</mat-label>
           <input matInput type="number" min="0" [(ngModel)]="amount" cdkFocusInitial />
         </mat-form-field>
+        @if (canWriteOff()) {
+          <div class="pair">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('write_off') }}</mat-label>
+              <input matInput type="number" min="0" [(ngModel)]="writeOff" />
+            </mat-form-field>
+            <button matButton (click)="writeOffRest()">{{ t('write_off_rest') }}</button>
+          </div>
+          @if ((writeOff ?? 0) > 0) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+              <mat-label>{{ t('write_off_reason') }}</mat-label>
+              <input matInput [(ngModel)]="writeOffReason" required />
+            </mat-form-field>
+          }
+          <p class="hint">{{ t('debt_left') }}: {{ debtLeft }}</p>
+        }
         <mat-slide-toggle [(ngModel)]="viaCard">{{ t('via_card') }}</mat-slide-toggle>
       </div>
       <div mat-dialog-actions align="end">
@@ -616,21 +633,47 @@ export class PartnerPublicityDialog {
 export class RepayDebtDialog implements OnInit {
   private readonly api = inject(CustomersApi);
   private readonly ratesApi = inject(RatesApi);
+  private readonly settingsApi = inject(SettingsApi);
+  private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
   private readonly ref = inject(MatDialogRef<RepayDebtDialog>);
   private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
   private readonly idempotencyKey = newUuid();
 
   readonly busy = signal(false);
   readonly multicurrency = signal(false);
+  readonly canWriteOff = signal(false);
   readonly debtCurrencies = signal<string[]>([]);
   readonly payCurrencies = signal<string[]>([]);
   amount: number | null = null;
   viaCard = false;
+  writeOff: number | null = 0;
+  writeOffReason = '';
   debtCurrency: string | null = null;
   payCurrency: string | null = null;
 
+  get debt(): number {
+    const balance =
+      this.multicurrency() && this.debtCurrency
+        ? (this.customer.debtBalances.find((b) => b.currency === this.debtCurrency)?.amount ?? 0)
+        : (this.customer.debtBalance ?? 0);
+    return Math.max(0, balance);
+  }
+
+  get debtLeft(): number {
+    return Math.max(0, this.debt - (this.amount ?? 0) - (this.writeOff ?? 0));
+  }
+
+  writeOffRest(): void {
+    this.writeOff = Math.max(0, this.debt - (this.amount ?? 0));
+  }
+
   async ngOnInit(): Promise<void> {
+    if (this.auth.hasPermission('customer_payments.writeOffDebt')) {
+      const policy = await lastValueFrom(this.settingsApi.salesPolicy()).catch(() => null);
+      this.canWriteOff.set(policy?.allowDebtWriteOff ?? false);
+    }
     try {
       const business = await lastValueFrom(this.ratesApi.business());
       if (!business.salesMulticurrency) return;
@@ -649,6 +692,11 @@ export class RepayDebtDialog implements OnInit {
   }
 
   async save(message: string): Promise<void> {
+    const writeOff = this.canWriteOff() ? Math.max(0, this.writeOff ?? 0) : 0;
+    if (writeOff > 0 && !this.writeOffReason.trim()) {
+      this.notify.error(this.transloco.translate('write_off_reason_required'));
+      return;
+    }
     this.busy.set(true);
     try {
       await lastValueFrom(
@@ -658,6 +706,8 @@ export class RepayDebtDialog implements OnInit {
           debtCurrency: this.multicurrency() ? this.debtCurrency : null,
           payCurrency: this.multicurrency() ? this.payCurrency : null,
           idempotencyKey: this.idempotencyKey,
+          writeOff,
+          writeOffReason: writeOff > 0 ? this.writeOffReason.trim() : null,
         }),
       );
       this.notify.success(message);

@@ -65,8 +65,13 @@
             </VerticalStackLayout>
         </ScrollView>
         <VerticalStackLayout VerticalOptions="End" Padding="28,0,28,20" Spacing="10">
-            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding IsServerVisible}">
-                <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+            <Border Style="{StaticResource InputWrap}" Padding="14,2,6,2" IsVisible="{Binding IsServerVisible}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+                    <Button Grid.Column="1" Text="{StaticResource IcScan}" BackgroundColor="Transparent" FontFamily="MDI" FontSize="20"
+                            Padding="8,0" WidthRequest="42" Command="{Binding ScanServerCommand}"
+                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                </Grid>
             </Border>
             <Label Text="{Binding ServerText}" Style="{StaticResource MutedLabel}"
                    FontSize="12" HorizontalOptions="Center">

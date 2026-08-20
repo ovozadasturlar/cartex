@@ -49,8 +49,7 @@ public partial class LoginViewModel : ViewModelBase
 
     private void CloseQr()
     {
-        _qrCts?.Cancel();
-        _qrCts = null;
+        Debounce.Cancel(ref _qrCts);
         IsQrOpen = false;
         QrImage = null;
     }
@@ -127,8 +126,7 @@ public partial class LoginViewModel : ViewModelBase
 
     private void StopDrivePolling()
     {
-        _driveCts?.Cancel();
-        _driveCts = null;
+        Debounce.Cancel(ref _driveCts);
     }
 
     public AppTheme CurrentTheme

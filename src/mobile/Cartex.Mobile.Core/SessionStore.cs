@@ -55,6 +55,10 @@ public sealed class SessionStore
         Preferences.Set(HasSessionKey, false);
         Preferences.Remove("user_fullname");
         Preferences.Remove("user_role");
+        // Modul ro'yxati va savdo siyosati o'sha serverdagi o'sha foydalanuvchiga tegishli —
+        // boshqa do'konga kirilganda eskisi ishlatilmasligi kerak.
+        Preferences.Remove("enabled_features");
+        Preferences.Remove("sales_policy");
         SecureStorage.Remove("access_token");
         SecureStorage.Remove("refresh_token");
     }

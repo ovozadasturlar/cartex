@@ -198,7 +198,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         _suppressReload = true;
         SearchText = string.Empty;
         FilterCategory = null;
@@ -782,8 +782,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     partial void OnSearchTextChanged(string value)
     {
         if (_suppressReload) return;
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -802,8 +801,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private void ScheduleFilterReload()
     {
         if (_suppressReload) return;
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
     partial void OnIsNewChanged(bool value)

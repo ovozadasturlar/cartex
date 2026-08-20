@@ -800,8 +800,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _toast.Success(L["cart_loaded"]);
             return true;
         }
-        catch
+        catch (Exception exception)
         {
+            _toast.Error(ApiErrors.Describe(exception));
             return false;
         }
     }
@@ -1024,8 +1025,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private void SchedulePreview()
     {
-        _previewCts?.Cancel();
-        var cts = _previewCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _previewCts);
         _ = PreviewAsync(cts.Token);
     }
 
@@ -1050,7 +1050,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     private async Task RefreshPreviewNowAsync()
     {
-        _previewCts?.Cancel();
+        Debounce.Cancel(ref _previewCts);
         if (CartItems.Count == 0 || IsOfflineMode)
         {
             SetAutoDiscount(0);
@@ -1143,8 +1143,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _productSearchCts?.Cancel();
-        var cts = _productSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _productSearchCts);
         _ = DebouncedProductsAsync(cts.Token);
     }
 
@@ -1165,8 +1164,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     private static bool IsOfflineMode =>
-        ServiceLocator.Resolve<OfflineSyncService>().IsEnabled &&
-        !ServiceLocator.Resolve<ConnectivityService>().IsOnline;
+        ServiceLocator.Resolve<OfflineSyncService>().ShouldUseOffline;
 
     private static OfflineStore Offline => ServiceLocator.Resolve<OfflineStore>();
 
@@ -1476,8 +1474,16 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!_supplierRequired) SupplierOptions.Add(new IdOption(null, L["none"]));
         try
         {
-            var suppliers = await _cache.GetAsync(CacheKeys.Suppliers, () => _suppliersApi.GetAllAsync());
-            foreach (var s in suppliers) SupplierOptions.Add(new IdOption(s.Id, s.Name));
+            if (IsOfflineMode)
+            {
+                foreach (var s in await Offline.GetSuppliersAsync())
+                    SupplierOptions.Add(new IdOption(s.Id, s.Name));
+            }
+            else
+            {
+                var suppliers = await _cache.GetAsync(CacheKeys.Suppliers, () => _suppliersApi.GetAllAsync());
+                foreach (var s in suppliers) SupplierOptions.Add(new IdOption(s.Id, s.Name));
+            }
         }
         catch { }
         ReceiveSupplier = SupplierOptions.FirstOrDefault(o => o.Id == _lastSupplierId) ?? SupplierOptions.FirstOrDefault();
@@ -1487,7 +1493,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task OpenReceive()
     {
-        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
+        if (IsOfflineMode && !SettingsService.Instance.OfflineAllowSupplies)
+        {
+            _toast.Warning(L["offline_pos_limited"]);
+            return;
+        }
         ReceiveQuantity = Math.Max(0, _detailRequestedQty - (DetailProduct?.Quantity ?? 0));
         ReceivePurchasePrice = 0;
         _lastPurchasePrice = 0;
@@ -1496,6 +1506,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         ReceiveCurrency = _baseCurrency;
         IsReceiveOpen = true;
         await EnsureSuppliersAsync();
+        if (IsOfflineMode) return;
         if (DetailProduct is not { } product || Branch.CurrentWarehouseId is not { } warehouseId) return;
         try
         {
@@ -1528,13 +1539,46 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         var currency = IsMulticurrency && ReceiveCurrency != _baseCurrency ? ReceiveCurrency : null;
         var sellingPrice = ReceiveSellingPrice > 0 && (currency is not null || ReceiveSellingPrice != product.SellingPrice)
             ? ReceiveSellingPrice : (decimal?)null;
+        if (IsOfflineMode)
+        {
+            if (currency is not null) { _toast.Warning(L["offline_pos_limited"]); return; }
+            try
+            {
+                await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSupplyAsync(new OfflineSupplyDraft(
+                    supplierId, warehouseId,
+                    [new OfflineSupplyLineDraft(product.VariantId, ReceiveQuantity, ReceivePurchasePrice,
+                        ReceiveExpiry is { } offlineExp ? DateOnly.FromDateTime(offlineExp) : null, sellingPrice)]));
+            }
+            catch (Exception ex)
+            {
+                _toast.Error(ApiErrors.Describe(ex));
+                return;
+            }
+            _lastSupplierId = supplierId;
+            var patched = product with
+            {
+                Quantity = product.Quantity + ReceiveQuantity,
+                SellingPrice = sellingPrice ?? product.SellingPrice
+            };
+            var patchedIndex = Products.IndexOf(product);
+            if (patchedIndex >= 0) Products[patchedIndex] = patched;
+            DetailProduct = patched;
+            foreach (var item in CartItems.Where(c => c.VariantId == patched.VariantId && !c.IsPrepack))
+            {
+                item.Available = patched.Quantity;
+                item.ProductDetail = patched;
+            }
+            IsReceiveOpen = false;
+            _toast.Success(L["offline_supply_queued"]);
+            return;
+        }
         try
         {
             using (_busy.Begin(L["loading"]))
                 await _suppliesApi.CreateAsync(new CreateSupplyRequest(supplierId, warehouseId, DateOnly.FromDateTime(DateTime.Today),
                     [new CreateSupplyItemRequest(product.VariantId, ReceiveQuantity, ReceivePurchasePrice,
                         ReceiveExpiry is { } exp ? DateOnly.FromDateTime(exp) : null, null, sellingPrice)],
-                    Currency: currency));
+                    Currency: currency, IdempotencyKey: Guid.NewGuid().ToString("N")));
 
             _lastSupplierId = supplierId;
             _cache.Invalidate(CacheKeys.Suppliers);
@@ -1751,8 +1795,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     partial void OnCustomerSearchChanged(string value)
     {
-        _customerSearchCts?.Cancel();
-        var cts = _customerSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _customerSearchCts);
         _ = DebouncedCustomerSearchAsync(cts.Token);
     }
 
@@ -2017,7 +2060,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         // Siyosat bilan bir vaqtda yuklanadi, shuning uchun kalitni o'qishdan oldin kutiladi —
         // aks holda birinchi ochilishda navbat o'chirilgan bo'lsa ham ko'rinib ketardi.
         try { await policyTask; } catch { }
-        if (!_auth.HasPermission("sales.view") || !_queueAllowed)
+        var features = SettingsService.Instance.EnabledFeatures;
+        var queueFeatureOn = features.Contains("ordering") || features.Contains("store");
+        if (!_auth.HasPermission("sales.view") || !_queueAllowed || !queueFeatureOn)
         {
             CanSeeQueue = false;
             IsQueuePanelOpen = false;
@@ -2114,11 +2159,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!IsOfflineMode) await RefreshPreviewNowAsync();
         if (PaidBonusBase > 0 && SelectedCustomer is null) { _toast.Warning(L["bonus_customer_required"]); return; }
 
+        if (DebtAmount > 0 && !DebtCoveredByCredit && !_allowDebtSales) { _toast.Warning(L["debt_sales_disabled"]); return; }
         if (DebtAmount > 0 && SelectedCustomer is null && !DebtCoveredByCredit) { _toast.Warning(L["debt_customer_required"]); return; }
 
         if (_customerAlwaysRequired && SelectedCustomer is null) { _toast.Warning(L["sale_customer_required"]); return; }
-
-        if (DebtAmount > 0 && !DebtCoveredByCredit && !_allowDebtSales) { _toast.Warning(L["debt_sales_disabled"]); return; }
         if (DebtAmount > 0 && !DebtCoveredByCredit && _requireDebtDueDate && DebtDueDate is null)
         {
             DueDateMissing = true;
@@ -2127,7 +2171,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
 
         if (!ServiceLocator.Resolve<ConnectivityService>().IsOnline &&
-            !ServiceLocator.Resolve<OfflineSyncService>().IsEnabled)
+            !ServiceLocator.Resolve<OfflineSyncService>().ShouldUseOffline)
         {
             _toast.Warning(L["offline_pos_blocked"]);
             return;
@@ -2135,6 +2179,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
         if (IsOfflineMode)
         {
+            if (!SettingsService.Instance.OfflineAllowSales)
+            {
+                _toast.Warning(L["offline_pos_limited"]);
+                return;
+            }
             if (PaidBonus > 0 || CartItems.Any(i => i.IsPrepack) ||
                 (IsMulticurrency && PaymentRows.Any(r => r.Amount > 0)))
             {
@@ -2147,7 +2196,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 return;
             }
             var draft = new OfflineSaleDraft(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard,
-                CartItems.Select(c => new OfflineSaleItemDraft(c.VariantId, c.Quantity, CanOverridePrice ? c.PriceOverride : null)).ToList(),
+                CartItems.Select(c => new OfflineSaleItemDraft(c.VariantId, c.Quantity, c.UnitPrice)).ToList(),
                 DiscountAmount,
                 DebtAmount > 0 && !DebtCoveredByCredit && DebtDueDate is { } offlineDue ? DateOnly.FromDateTime(offlineDue.Date) : null);
             try
@@ -2169,7 +2218,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         {
             if (_activeCartCode is { } queuedCode)
             {
-                long queuedSaleId;
+                CreateSaleResult queued;
                 using (_busy.Begin(L["loading"]))
                 {
                     await SyncActiveCartAsync();
@@ -2184,7 +2233,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                         .ToList();
 
                     _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
-                    queuedSaleId = await _orderingApi.CheckoutAsync(
+                    queued = await _orderingApi.CheckoutAsync(
                         queuedCode,
                         new CheckoutCartRequest(cash, card, bonus)
                         {
@@ -2203,7 +2252,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                 var queuedCustomerId = SelectedCustomer?.Id;
                 ClearCart();
                 _toast.Success(L["sale_completed"]);
-                await ShowQueuedReceiptAsync(queuedSaleId, queuedCustomerId);
+                WarnOfflineStock(queued.Warnings);
+                await ShowReceiptAsync(queued.ReceiptToken, queuedCustomerId);
                 await Task.WhenAll(LoadProductsAsync(), LoadQueueAsync());
                 return;
             }
@@ -2240,6 +2290,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             var customerId = SelectedCustomer?.Id;
             ClearCart();
             _toast.Success(L["sale_completed"]);
+            WarnOfflineStock(result.Warnings);
             await ShowReceiptAsync(result.ReceiptToken, customerId);
             await LoadProductsAsync();
         }
@@ -2249,15 +2300,11 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
     }
 
-    /// Checkout answers with the sale id alone, so the token the receipt dialog needs is read back.
-    private async Task ShowQueuedReceiptAsync(long saleId, long? customerId)
+    /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
+    private void WarnOfflineStock(IReadOnlyList<string>? warnings)
     {
-        try
-        {
-            var sale = await _salesApi.GetByIdAsync(saleId);
-            await ShowReceiptAsync(sale.ReceiptToken, customerId);
-        }
-        catch (Exception ex) { _toast.Warning(ApiErrors.Describe(ex)); }
+        if (warnings?.Contains("stock_negative_offline") == true)
+            _toast.Warning(L["stock_negative_offline_warning"]);
     }
 
     private async Task ShowReceiptAsync(string token, long? customerId = null)

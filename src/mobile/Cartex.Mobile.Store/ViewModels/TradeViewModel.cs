@@ -20,7 +20,8 @@ public partial class TradeViewModel(
     WarehouseContext warehouse,
     OrderingHubService orderingHub,
     MobilePrintDispatcher printDispatcher,
-    SalesPolicyCache policy) : ObservableObject, IQueryAttributable
+    SalesPolicyCache policy,
+    MobileFeaturesCache features) : ObservableObject, IQueryAttributable
 {
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -50,7 +51,7 @@ public partial class TradeViewModel(
     [ObservableProperty] private string _selectedStatus = "Open";
     [ObservableProperty] private string _salesPeriod = "today";
     [ObservableProperty] private string _salesSearch = "";
-    [ObservableProperty] private bool _hasQueueAccess = true;
+    [ObservableProperty] private bool _hasQueueAccess;
     [ObservableProperty] private bool _hasSalesAccess = true;
     [ObservableProperty] private bool _hasZReportAccess;
     [ObservableProperty] private bool _isBusy;
@@ -67,6 +68,7 @@ public partial class TradeViewModel(
     public bool IsQueue => Section == "queue";
     public bool IsSales => Section == "sales";
     public bool IsZReports => Section == "zreports";
+    public bool ShowQueueSection => IsQueue && HasQueueAccess;
     public bool IsQueueEmpty => Carts.Count == 0;
     public bool IsSalesEmpty => Sales.Count == 0;
     public bool IsZReportsEmpty => Shifts.Count == 0;
@@ -78,14 +80,13 @@ public partial class TradeViewModel(
         orderingHub.Resynced -= OnHubResynced;
         orderingHub.Resynced += OnHubResynced;
         _ = orderingHub.EnsureStartedAsync();
-        HasQueueAccess = permissions.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll")
-            && policy.Current.AllowSaleQueue;
         HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
         HasZReportAccess = permissions.HasAny("shifts.view", "shifts.viewAll") && printDispatcher.CanPrintZReport;
-        if (!HasQueueAccess && HasSalesAccess)
-            Section = "sales";
-        else if (!HasQueueAccess && HasZReportAccess)
-            Section = "zreports";
+        await Task.WhenAll(policy.EnsureLoadedAsync(), features.EnsureLoadedAsync());
+        HasQueueAccess = permissions.HasAny("sales.pick", "sales.view")
+            && policy.Current.AllowSaleQueue && features.QueueEnabled;
+        if (IsQueue && !HasQueueAccess && (HasSalesAccess || HasZReportAccess))
+            Section = HasSalesAccess ? "sales" : "zreports";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
         if (DateTime.UtcNow - _lastLoadedAt < TimeSpan.FromSeconds(45)) return;
         await LoadAsync();
@@ -115,8 +116,11 @@ public partial class TradeViewModel(
         OnPropertyChanged(nameof(IsQueue));
         OnPropertyChanged(nameof(IsSales));
         OnPropertyChanged(nameof(IsZReports));
+        OnPropertyChanged(nameof(ShowQueueSection));
         _ = LoadAsync();
     }
+
+    partial void OnHasQueueAccessChanged(bool value) => OnPropertyChanged(nameof(ShowQueueSection));
 
     [RelayCommand]
     private void ShowQueue() => Section = "queue";
@@ -281,9 +285,9 @@ public partial class TradeViewModel(
                 await LoadZReportsCoreAsync();
             _lastLoadedAt = DateTime.UtcNow;
         }
-        catch
+        catch (Exception ex)
         {
-            Error = Loc.Instance["err_no_connection"];
+            Error = ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"];
         }
         finally
         {
@@ -346,9 +350,9 @@ public partial class TradeViewModel(
         if (!string.IsNullOrWhiteSpace(SalesSearch))
             queryBuilder = queryBuilder.Search(SalesSearch.Trim());
         if (fromDate.HasValue)
-            queryBuilder = queryBuilder.Filter("FromDate", fromDate.Value.ToString("o"));
+            queryBuilder = queryBuilder.Filter("FromDate", fromDate.Value.ToUniversalTime().ToString("o"));
         if (toDate.HasValue)
-            queryBuilder = queryBuilder.Filter("ToDate", toDate.Value.ToString("o"));
+            queryBuilder = queryBuilder.Filter("ToDate", toDate.Value.ToUniversalTime().ToString("o"));
         if (warehouse.WarehouseId is { } salesWarehouseId)
             queryBuilder = queryBuilder.Filter("WarehouseId", salesWarehouseId.ToString());
 

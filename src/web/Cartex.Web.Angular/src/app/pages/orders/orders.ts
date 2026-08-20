@@ -292,10 +292,10 @@ export class OrderDialog implements OnInit {
     if (!this.canCheckout) return;
     this.busy.set(true);
     try {
-      const saleId = await lastValueFrom(
+      const sale = await lastValueFrom(
         this.api.checkout(this.code, this.paidCash || 0, this.paidCard || 0, this.paidBonus || 0),
       );
-      this.notify.success(`${message} #${saleId}`);
+      this.notify.success(`${message} #${sale.saleId}`);
       this.ref.close(true);
     } catch (e) {
       this.notify.error(e);

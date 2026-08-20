@@ -23,6 +23,11 @@ public sealed class SalesPolicySettings
     public bool ShowOutOfStock { get; set; }
     public bool ShowUnlistedProducts { get; set; } = true;
     public bool AllowInsufficientStockSales { get; set; }
+
+    /// Qoldiq nazorati faqat oflayn oynada — vakolat egasi jim bo'lgan paytda va faqat vakolat
+    /// omborida — yumshatiladi (OFF-16). `AllowInsufficientStockSales` dan farqi shu: u har doim
+    /// va hamma yerda ochiq.
+    public bool AllowNegativeStockWhenOffline { get; set; }
     public bool AllowRetroactiveCashback { get; set; }
     public string SaleCorrectionWindow { get; set; } = "Shift";
     public int SaleCorrectionDays { get; set; } = 1;

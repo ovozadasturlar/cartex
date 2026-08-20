@@ -300,6 +300,10 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
   &.cx-toast-err .mdc-snackbar__surface {
     border-left: 4px solid var(--cx-danger);
   }
+
+  &.cx-toast-warn .mdc-snackbar__surface {
+    border-left: 4px solid var(--cx-warning);
+  }
 }
 
 .cx-seg {

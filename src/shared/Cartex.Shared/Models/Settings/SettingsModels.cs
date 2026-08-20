@@ -136,6 +136,7 @@ public sealed record SalesPolicyDto
     public bool ShowOutOfStock { get; init; }
     public bool ShowUnlistedProducts { get; init; } = true;
     public bool AllowInsufficientStockSales { get; init; }
+    public bool AllowNegativeStockWhenOffline { get; init; }
     public bool AllowRetroactiveCashback { get; init; }
     public string SaleCorrectionWindow { get; init; } = "Shift";
     public int SaleCorrectionDays { get; init; } = 1;

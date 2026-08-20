@@ -61,9 +61,13 @@ public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthSer
         return true;
     }
 
-    private void Set(WarehouseDto warehouse)
+    // HUB-10: yo'ldosh rejimida ombor tanlanmaydi — u HUB'niki bo'ladi, chunki ekrandagi
+    // qoldiq ham, narx ham o'sha ombordan kelgan.
+    public void Force(long id, string name)
     {
-        Preferences.Set(Key, warehouse.Id);
-        Preferences.Set(Key + "_name", warehouse.Name);
+        Preferences.Set(Key, id);
+        Preferences.Set(Key + "_name", name);
     }
+
+    private void Set(WarehouseDto warehouse) => Force(warehouse.Id, warehouse.Name);
 }

@@ -43,6 +43,7 @@ public sealed record SaleReturnSummaryDto(
 
 public sealed record SaleDetailDto(
     long Id,
+    string DocumentNumber,
     DateTime SaleDate,
     string Status,
     string ReceiptToken,

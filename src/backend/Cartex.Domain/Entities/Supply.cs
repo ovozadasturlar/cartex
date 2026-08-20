@@ -19,6 +19,7 @@ public class Supply : SoftDeleteEntity, IBranchScoped
     public string Currency { get; set; } = "UZS";
     public decimal Rate { get; set; } = 1m;
     public DateOnly SupplyDate { get; set; }
+    public string? IdempotencyKey { get; set; }
 
     public ICollection<SupplyItem> Items { get; set; } = [];
 }

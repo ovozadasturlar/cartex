@@ -23,8 +23,11 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("barcode_attach", typeof(BarcodeAttachPage));
         Routing.RegisterRoute("change-password", typeof(ChangePasswordPage));
         Routing.RegisterRoute("devices", typeof(DevicesPage));
+        Routing.RegisterRoute("offline-import", typeof(OfflineImportPage));
+        Routing.RegisterRoute("offline-settings", typeof(OfflineSettingsPage));
         Routing.RegisterRoute("pin", typeof(PinPage));
         Routing.RegisterRoute("security", typeof(SecurityPage));
+        Routing.RegisterRoute("server-scan", typeof(ServerScanPage));
         if (SessionStore.HasSession) CurrentItem = MainTab;
     }
 

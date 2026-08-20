@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.OfflineImportDialog"
+             x:DataType="vm:OfflineImportDialogViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="520"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            BoxShadow="0 18 50 0 #33000000">
+        <StackPanel Margin="22" Spacing="14">
+            <TextBlock Text="{Binding L[offline_import]}" Classes="h2" />
+            <TextBlock Text="{Binding L[offline_import_select_hint]}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextMuted}" FontSize="12" />
+            <ScrollViewer MaxHeight="320">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OfflineImportRow">
+                            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding KindText}" FontWeight="SemiBold" FontSize="13"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Text="{Binding When}" FontSize="12"
+                                               Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Details}" FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <CheckBox IsChecked="{Binding SkipRejected}" Content="{Binding L[offline_import_skip_label]}" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Classes="outline" Command="{Binding CancelCommand}" Content="{Binding L[cancel]}" />
+                <Button Classes="brand" Command="{Binding AcceptCommand}" Content="{Binding L[offline_import]}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

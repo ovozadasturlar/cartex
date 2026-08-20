@@ -167,6 +167,9 @@ public partial class MainViewModel : ViewModelBase
         _ = LoadFeaturesAsync();
         Connectivity.Start();
         ServiceLocator.Resolve<OfflineSyncService>().Start();
+        var hub = ServiceLocator.Resolve<HubHostService>();
+        hub.Start();
+        _ = hub.RefreshAttestationAsync();
         _ = ServiceLocator.Resolve<PrintHostService>().StartAsync();
         _ = ServiceLocator.Resolve<PrintStatusHubService>().EnsureStartedAsync();
         _ = Branch.LoadAsync();
@@ -282,16 +285,34 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             var enabled = await _featuresApi.GetEnabledAsync();
-            if (enabled is { Count: > 0 })
-            {
-                _enabledFeatures.Clear();
-                foreach (var code in enabled) _enabledFeatures.Add(code);
-                SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
-                BuildMenu();
-                BuildPalette();
-            }
+            // Menyu keshdagi ro'yxat bilan allaqachon qurilgan: ro'yxat o'zgarmagan bo'lsa qayta
+            // qurish faqat tanlovni uzadi (ItemsSource almashadi) va sahifani bekorga qayta yaratadi.
+            if (enabled is not { Count: > 0 } || _enabledFeatures.SetEquals(enabled)) return;
+
+            _enabledFeatures.Clear();
+            foreach (var code in enabled) _enabledFeatures.Add(code);
+            SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
+            var openKey = SelectedMenuItem?.Key;
+            BuildMenu();
+            RestoreSelection(openKey);
+            BuildPalette();
         }
         catch { }
+    }
+
+    /// Menyu qayta qurilgach ro'yxatdagi obyektlar almashadi va tanlov uziladi; ochiq sahifa
+    /// kaliti bo'yicha tiklanadi, tiklab bo'lmasa (imkoniyat o'chirilgan yoki hali hech narsa
+    /// ochilmagan) boshlang'ich sahifa tanlanadi — aks holda oyna bo'sh qolardi.
+    private void RestoreSelection(string? openKey)
+    {
+        if (IsSettingsActive) return;
+        var restored = openKey is null
+            ? null
+            : MenuSections.SelectMany(s => s.Items).FirstOrDefault(m => m.Key == openKey);
+        if (restored is not null)
+            SelectedMenuItem = restored;
+        else
+            SelectLanding();
     }
 
     private void SelectLanding()
@@ -344,6 +365,10 @@ public partial class MainViewModel : ViewModelBase
 
         IsSettingsActive = false;
         newValue.IsActive = true;
+        // Menyu qayta qurilganda band obyekti almashadi; ayni sahifa ochiq bo'lsa uni qayta
+        // yaratish savat kabi to'ldirilgan holatni yo'qotardi.
+        if (oldValue?.Key == newValue.Key && CurrentPage?.GetType() == newValue.ViewModelType)
+            return;
         RememberPage(newValue.Key);
         CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
         CurrentPageTitle = newValue.Title;

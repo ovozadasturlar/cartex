@@ -47,14 +47,16 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
         await Send(x => x.Send(new AddCashMovementCommand(TillFloat, IsPayOut: false)));
     }
 
-    private async Task SetPolicyAsync(bool allowCustomerLoans, decimal? maxCustomerLoan = null)
+    private async Task SetPolicyAsync(bool allowCustomerLoans, decimal? maxCustomerLoan = null,
+        bool allowCustomerCredit = false)
     {
         using var scope = Fixture.CreateScope();
         await scope.ServiceProvider.GetRequiredService<ISettingsService>()
             .SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings
             {
                 AllowCustomerLoans = allowCustomerLoans,
-                MaxCustomerLoan = maxCustomerLoan
+                MaxCustomerLoan = maxCustomerLoan,
+                AllowCustomerCredit = allowCustomerCredit
             });
     }
 
@@ -201,7 +203,8 @@ public class CustomerCashLoanTests(DatabaseFixture fixture) : DatabaseTest(fixtu
     {
         var s = await SetupAsync();
         await AsAdminAsync(s);
-        await SetPolicyAsync(allowCustomerLoans: true);
+        // QARZ-20: ortiqcha to'lov avansga tushishi uchun haqdorlik yoniq bo'lishi shart
+        await SetPolicyAsync(allowCustomerLoans: true, allowCustomerCredit: true);
 
         var customerId = await CreateCustomerAsync(Advance);
         var tillBefore = await TillAsync(s.Branch);

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,7 +22,6 @@ import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
 import { BusinessApi } from '../../core/api/misc.api';
 import { Currency, RatesApi } from '../../core/api/finance.api';
 import { NotifyService } from '../../core/notify.service';
-import { SalesApi } from '../../core/api.service';
 import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
 import { EmptyState } from '../../shared/empty-state';
@@ -62,7 +62,6 @@ const PAGE_SIZE = 40;
 })
 export class Pos implements OnInit {
   private readonly api = inject(PosApi);
-  private readonly salesApi = inject(SalesApi);
   private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
@@ -700,7 +699,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
     this.paying.set(true);
     try {
       if (this.activeQueueCode) {
-        const saleId = await lastValueFrom(this.orderingApi.checkout(
+        const queued = await lastValueFrom(this.orderingApi.checkout(
           this.activeQueueCode,
           this.isMulticurrency() ? 0 : this.cash(),
           this.isMulticurrency() ? 0 : this.card(),
@@ -720,16 +719,16 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           },
         ));
         this.activeQueueCode = null;
+        this.warnOfflineStock(queued.warnings);
 
         // Navbatdan yakunlangan savdo ham chekini ko'rsatadi: kassir uchun bu oddiy
         // savdodan farq qilmaydi, chek esa faqat shu yerda chiqariladi.
         try {
-          const detail = await lastValueFrom(this.salesApi.detail(saleId));
-          const receipt = await lastValueFrom(this.api.receipt(detail.receiptToken));
+          const receipt = await lastValueFrom(this.api.receipt(queued.receiptToken));
           await lastValueFrom(
             this.dialog
               .open(PosReceiptDialog, {
-                data: { receipt, saleId, posCheckout: true },
+                data: { receipt, saleId: queued.saleId, posCheckout: true },
                 maxWidth: '94vw',
                 autoFocus: false,
               })
@@ -765,6 +764,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
         applyAutoDiscount: true,
       };
       const result = await lastValueFrom(this.api.createSale(payload));
+      this.warnOfflineStock(result.warnings);
       if (this.activeQueueCode) {
         lastValueFrom(this.orderingApi.updateStatus(this.activeQueueCode, 'CheckedOut')).catch(() => {});
         this.activeQueueCode = null;
@@ -787,9 +787,17 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       this.reset();
       this.focusScan();
     } catch (e) {
-      this.notify.error(e);
+      const code = e instanceof HttpErrorResponse ? (e.error as { code?: string } | null)?.code : null;
+      this.notify.error(code === 'offline_authority_possibly_active' ? t('offline_pos_blocked') : e);
     } finally {
       this.paying.set(false);
+    }
+  }
+
+  /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
+  private warnOfflineStock(warnings?: string[] | null): void {
+    if (warnings?.includes('stock_negative_offline')) {
+      this.notify.warn(this.transloco.translate('stock_negative_offline_warning'));
     }
   }
 

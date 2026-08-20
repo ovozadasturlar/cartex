@@ -371,8 +371,12 @@ public sealed class PrinterService : IPrinterService
     public PrinterCapabilities GetPrinterCapabilities(string? printerName) =>
         new(WindowsImagePrinter.SupportsColor(printerName));
 
-    public void PrintReceipt(ReceiptDto receipt) =>
-        PrintReceipt(receipt, _settings.ReceiptPrinter ?? "", _settings.ReceiptCopies);
+    public void PrintReceipt(ReceiptDto receipt)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.ReceiptPrinter))
+            throw new InvalidOperationException(LocalizationManager.Instance["printer_not_set"]);
+        PrintReceipt(receipt, _settings.ReceiptPrinter, _settings.ReceiptCopies);
+    }
 
     public void PrintReceipt(ReceiptDto receipt, string printerName, int copies)
         => PrintReceipt(receipt, printerName, copies, ReceiptOptions);

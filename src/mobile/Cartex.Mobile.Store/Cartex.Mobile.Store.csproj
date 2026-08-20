@@ -50,6 +50,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Cartex.Mobile.Core\Cartex.Mobile.Core.csproj" />
 		<ProjectReference Include="..\..\shared\Cartex.ApiClient\Cartex.ApiClient.csproj" />
+		<ProjectReference Include="..\..\shared\Cartex.Hub\Cartex.Hub.csproj" />
 		<ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
 	</ItemGroup>
 

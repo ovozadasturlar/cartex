@@ -21,8 +21,20 @@ public interface IOfflineCacheApi
     Task<OfflineSnapshotDto> GetSnapshotAsync(
         [Query] long leaseId,
         [Query] long epoch,
-        [Header("X-Offline-Lease-Token")] string leaseToken);
+        [Header("X-Offline-Lease-Token")] string leaseToken,
+        [Query] string? sections = null,
+        // Round-trip format shart: oddiy formatda UTC belgisi yo'qoladi va delta oynasi soatlarga siljiydi.
+        [Query(Format = "o")] DateTime? since = null);
+
+    [Post("/api/offline-cache/hub-attestation")]
+    Task<HubAttestationDto> GetHubAttestationAsync([Body] HubAttestationRequest request);
 
     [Post("/api/offline-cache/sync/batches")]
     Task<OfflineSyncBatchResult> SyncBatchAsync([Body] OfflineSyncBatchRequest request);
+
+    [Post("/api/offline-cache/sync/skip")]
+    Task<OfflineSyncEventResult> SkipAsync([Body] OfflineSyncSkipRequest request);
+
+    [Post("/api/offline-cache/sync/import")]
+    Task<OfflineSyncBatchResult> ImportAsync([Body] OfflineSyncImportRequest request);
 }

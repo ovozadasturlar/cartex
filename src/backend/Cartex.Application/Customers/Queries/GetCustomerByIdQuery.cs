@@ -3,6 +3,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
@@ -37,7 +38,17 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
                 c.PreferredLanguage,
                 c.Accounts.Where(a => a.Type == AccountType.CustomerAdvance).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
                     : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
-                c.Party.Note))
+                c.Party.Note)
+            {
+                DebtBalances = c.Accounts
+                    .Where(a => a.Type == AccountType.Debt && a.Balance != 0)
+                    .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))
+                    .ToList(),
+                CreditBalances = c.Accounts
+                    .Where(a => a.Type == AccountType.CustomerAdvance && a.Balance != 0)
+                    .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))
+                    .ToList()
+            })
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

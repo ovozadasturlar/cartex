@@ -115,6 +115,63 @@
                 </VerticalStackLayout>
             </Border>
         </Grid>
+
+        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsOfflinePayOpen}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseOfflinePayCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="14">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="{svc:T receive_payment}" FontSize="20" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Label Text="{Binding OfflinePayName}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{svc:T customer_debt}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding OfflinePayDebtText}" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    </Grid>
+
+                    <Border Style="{StaticResource InputWrap}">
+                        <Entry Text="{Binding OfflinePayAmount}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" FontSize="18" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Text="{svc:T pay_cash}" Style="{StaticResource BtnOutline}" HeightRequest="46"
+                                Command="{Binding SelectOfflinePayMethodCommand}" CommandParameter="Cash">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOfflinePayCash}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                    <Setter Property="BorderWidth" Value="0" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1" Text="{svc:T pay_card}" Style="{StaticResource BtnOutline}" HeightRequest="46"
+                                Command="{Binding SelectOfflinePayMethodCommand}" CommandParameter="Card">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOfflinePayCard}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                    <Setter Property="BorderWidth" Value="0" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                        <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}" Command="{Binding CloseOfflinePayCommand}" />
+                        <Button Grid.Column="1" Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveOfflinePayCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
     </Grid>
     </Grid>
 </ContentView>

@@ -7,11 +7,12 @@ using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 using Cartex.Shared.Models.Ordering;
+using Cartex.Shared.Models.Sales;
 using Cartex.Application.Common.Participants;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public sealed record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus) : ICommand<long>
+public sealed record CheckoutCartCommand(string Code, decimal PaidCash, decimal PaidCard, decimal PaidBonus) : ICommand<CreateSaleResult>
 {
     public string? IdempotencyKey { get; init; }
     public List<CheckoutCartItemDto>? Items { get; init; }
@@ -30,22 +31,22 @@ public sealed class CheckoutCartCommandHandler(
     ISender sender,
     ICurrentUser currentUser,
     ICartNotifier notifier,
-    IAuditService audit) : IRequestHandler<CheckoutCartCommand, long>
+    IAuditService audit) : IRequestHandler<CheckoutCartCommand, CreateSaleResult>
 {
-    public async Task<long> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
+    public async Task<CreateSaleResult> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
-        var completed = await db.ExecuteInTransactionAsync<(long SaleId, long? CartId, long? BranchId, string? CartKind)>(async () =>
+        var completed = await db.ExecuteInTransactionAsync<(CreateSaleResult Sale, long? CartId, long? BranchId, string? CartKind)>(async () =>
         {
             var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
             var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
             if (idempotencyKey is not null)
             {
-                var existingSaleId = await db.Sales
+                var existing = await db.Sales
                     .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
-                    .Select(s => (long?)s.Id)
+                    .Select(s => new CreateSaleResult(s.Id, s.ReceiptToken))
                     .FirstOrDefaultAsync(cancellationToken);
-                if (existingSaleId is not null)
-                    return (existingSaleId.Value, CartId: null, BranchId: null, CartKind: null);
+                if (existing is not null)
+                    return (existing, CartId: null, BranchId: null, CartKind: null);
             }
 
             var cart = await db.Carts
@@ -110,14 +111,14 @@ public sealed class CheckoutCartCommandHandler(
             cart.Version++;
             await db.SaveChangesAsync(cancellationToken);
 
-            return (result.SaleId, CartId: cart.Id, cart.BranchId, CartKind: cart.Kind.ToString());
+            return (result, CartId: cart.Id, cart.BranchId, CartKind: cart.Kind.ToString());
         }, cancellationToken);
 
         if (completed.CartId is not null)
             audit.SetOutcome("cart.checked_out", "carts", completed.CartId, new
             {
                 request.Code,
-                completed.SaleId,
+                completed.Sale.SaleId,
                 request.PaidCash,
                 request.PaidCard,
                 request.PaidBonus,
@@ -131,6 +132,6 @@ public sealed class CheckoutCartCommandHandler(
             }, "Savat savdo sifatida yakunlandi", completed.BranchId);
         if (completed.CartKind is not null)
             await notifier.CartsChangedAsync(completed.CartKind, cancellationToken);
-        return completed.SaleId;
+        return completed.Sale;
     }
 }

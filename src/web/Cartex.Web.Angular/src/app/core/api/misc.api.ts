@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { CreateSaleResult } from './pos.api';
 
 export interface CartListItem {
   id: number;
@@ -188,8 +189,8 @@ export class OrderingApi {
       debtDueDate: string | null;
       creditAmount?: number;
     },
-  ): Observable<number> {
-    return this.http.post<number>(`/api/ordering/carts/${code}/checkout`, {
+  ): Observable<CreateSaleResult> {
+    return this.http.post<CreateSaleResult>(`/api/ordering/carts/${code}/checkout`, {
       paidCash,
       paidCard,
       paidBonus,

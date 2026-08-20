@@ -97,13 +97,13 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         }
     }
 
+    // Bekor qilish kutiladi: aks holda so'rov hali yo'ldayligida chaqiruvchi server
+    // manzilini almashtirsa, refresh token yangi (ishonchsiz) hostga ketishi mumkin.
     public Task LogoutAsync()
     {
         var refresh = session.RefreshToken;
         session.Clear();
-        if (!string.IsNullOrEmpty(refresh))
-            _ = RevokeAsync(refresh);
-        return Task.CompletedTask;
+        return string.IsNullOrEmpty(refresh) ? Task.CompletedTask : RevokeAsync(refresh);
     }
 
     private async Task RevokeAsync(string refresh)

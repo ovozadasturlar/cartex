@@ -214,8 +214,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
 
     partial void OnCustomerSearchChanged(string value)
     {
-        _customerSearchCts?.Cancel();
-        var cts = _customerSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _customerSearchCts);
         _ = DebouncedCustomerSearchAsync(cts.Token);
     }
 
@@ -253,7 +252,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     private void CloseCustomerPicker()
     {
         IsCustomerPickerOpen = false;
-        _customerSearchCts?.Cancel();
+        Debounce.Cancel(ref _customerSearchCts);
     }
 
     [RelayCommand]

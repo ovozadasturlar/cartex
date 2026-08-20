@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Partners;
 using Cartex.Shared.Models.Sales;
@@ -78,6 +79,9 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _payOutNote = "";
     [ObservableProperty] private decimal _repayAmount;
     [ObservableProperty] private bool _repayViaCard;
+    [ObservableProperty] private decimal _repayWriteOff;
+    [ObservableProperty] private string _repayWriteOffReason = "";
+    [ObservableProperty] private bool _canWriteOff;
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private string? _repayDebtCurrency;
     [ObservableProperty] private string? _repayPayCurrency;
@@ -267,17 +271,43 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public bool RepayIsOverpay => RepayAmountInDebtCurrency > RepayDebtTotal;
     public decimal RepayOverpayAmount => Math.Max(0, RepayAmountInDebtCurrency - RepayDebtTotal);
 
+    /// QARZ-20: haqdorlik o'chiq bo'lsa ortiqcha to'lov avansga aylanmaydi va server uni rad etadi —
+    /// kassir buni saqlashdan oldin ko'rishi kerak, aks holda amal yarim yo'lda to'xtaydi.
+    [ObservableProperty] private bool _allowCustomerCredit;
+    public bool RepayOverpayBlocked => RepayIsOverpay && !AllowCustomerCredit;
+    public bool RepayShowsAdvance => RepayIsOverpay && AllowCustomerCredit;
+    private decimal RepayWriteOffInDebtCurrency
+    {
+        get
+        {
+            var debtRate = RateOf(RepayDebtCurrency);
+            return debtRate > 0 ? Math.Round(RepayWriteOff / debtRate, 2) : RepayWriteOff;
+        }
+    }
+    public decimal RepayDebtLeft => Math.Max(0, RepayRemaining - RepayWriteOffInDebtCurrency);
+
     private void NotifyRepayPreview()
     {
         OnPropertyChanged(nameof(RepayDebtTotal));
         OnPropertyChanged(nameof(RepayRemaining));
         OnPropertyChanged(nameof(RepayIsOverpay));
         OnPropertyChanged(nameof(RepayOverpayAmount));
+        OnPropertyChanged(nameof(RepayOverpayBlocked));
+        OnPropertyChanged(nameof(RepayShowsAdvance));
+        OnPropertyChanged(nameof(RepayDebtLeft));
     }
 
     partial void OnRepayAmountChanged(decimal value) => NotifyRepayPreview();
     partial void OnRepayDebtCurrencyChanged(string? value) => NotifyRepayPreview();
     partial void OnRepayPayCurrencyChanged(string? value) => NotifyRepayPreview();
+    partial void OnRepayWriteOffChanged(decimal value) => NotifyRepayPreview();
+
+    [RelayCommand]
+    private void ForgiveRest()
+    {
+        var debtRate = RateOf(RepayDebtCurrency);
+        RepayWriteOff = debtRate > 0 ? Math.Round(RepayRemaining * debtRate, 2) : RepayRemaining;
+    }
 
     [RelayCommand]
     private void FillRepayAmount()
@@ -413,7 +443,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         SelectedCustomer = null;
         Customers.Clear();
         Totals = new CustomerTotalsDto(0, 0, 0);
@@ -471,6 +501,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanOpenPublicity));
     }
 
+    private static bool IsOfflineMode =>
+        ServiceLocator.Resolve<OfflineSyncService>().ShouldUseOffline;
+
+    private static OfflineStore Offline => ServiceLocator.Resolve<OfflineStore>();
+
     public async Task LoadAsync()
     {
         RaisePermissions();
@@ -479,6 +514,19 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         try
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            if (IsOfflineMode)
+            {
+                var baseCurrency = await Offline.GetMetaAsync("base_currency") ?? _baseCurrency;
+                Customers.Clear();
+                foreach (var c in await Offline.SearchCustomersAsync(search, 200))
+                    Customers.Add(new CustomerDto(c.Id, c.FullName, null, null, c.Phone, null, c.CardBarcode,
+                        c.DiscountPct, 0, c.DebtBalance, c.CreditLimit)
+                    {
+                        DebtBalances = c.DebtBalance > 0 ? [new CurrencyAmountDto(baseCurrency, c.DebtBalance)] : []
+                    });
+                OnPropertyChanged(nameof(IsEmpty));
+                return;
+            }
             var pagedTask = _api.QueryAsync(QueryRequest.Create()
                 .Page(Paging.Page, Paging.PageSize)
                 .Sort(Paging.SortBy, Paging.Descending)
@@ -500,8 +548,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -517,9 +564,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     private CancellationToken NewLedgerToken()
     {
-        _ledgerCts?.Cancel();
-        _ledgerCts?.Dispose();
-        return (_ledgerCts = new CancellationTokenSource()).Token;
+        return Debounce.Restart(ref _ledgerCts).Token;
     }
 
     partial void OnSelectedCustomerChanged(CustomerDto? value)
@@ -536,7 +581,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         _ledgerCustomerId = value?.Id ?? 0;
         LedgerPaging.Page = 1;
         SalesPaging.Page = 1;
-        if (value is null) { _ledgerCts?.Cancel(); return; }
+        if (value is null) { Debounce.Cancel(ref _ledgerCts); return; }
         _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
         Statement = null;
         if (IsSalesTab) _ = LoadSalesAsync(value.Id);
@@ -784,6 +829,10 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         if (SelectedCustomer is null) return;
         RepayAmount = 0;
         RepayViaCard = false;
+        RepayWriteOff = 0;
+        RepayWriteOffReason = "";
+        CanWriteOff = false;
+        _ = LoadRepayPolicyAsync();
         _ = EnsureCurrenciesAsync();
         RepayDebtCurrencies.Clear();
         foreach (var b in SelectedCustomer.DebtBalances) RepayDebtCurrencies.Add(b.Currency);
@@ -795,6 +844,19 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelRepay() => IsRepayOpen = false;
+
+    private async Task LoadRepayPolicyAsync()
+    {
+        try
+        {
+            var policy = await _cache.GetAsync(CacheKeys.SalesPolicy,
+                ServiceLocator.Resolve<ISettingsApi>().GetSalesPolicyAsync);
+            AllowCustomerCredit = policy.AllowCustomerCredit;
+            CanWriteOff = policy.AllowDebtWriteOff && _auth.HasPermission("customer_payments.writeOffDebt");
+        }
+        catch { }
+        NotifyRepayPreview();
+    }
 
     [RelayCommand]
     private void OpenPayOut()
@@ -840,14 +902,63 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private async Task RepayAsync()
     {
         if (!_auth.HasPermission("customers.receivePayment")) return;
-        if (SelectedCustomer is null || RepayAmount <= 0) { _toast.Error(L["error"]); return; }
+        if (SelectedCustomer is null || RepayAmount + RepayWriteOff <= 0) { _toast.Error(L["error"]); return; }
+        // QARZ-20: server ham rad etadi, lekin kassir sababni saqlashdan oldin ko'rgani ma'qul.
+        if (RepayOverpayBlocked)
+        {
+            _toast.Error(L["repay_overpay_blocked"]);
+            return;
+        }
+        if (RepayWriteOff > 0 && string.IsNullOrWhiteSpace(RepayWriteOffReason))
+        {
+            _toast.Error(L["write_off_reason_required"]);
+            return;
+        }
         var id = SelectedCustomer.Id;
+        if (IsOfflineMode)
+        {
+            if (RepayWriteOff > 0)
+            {
+                _toast.Warning(L["offline_pos_limited"]);
+                return;
+            }
+            if (!SettingsService.Instance.OfflineAllowPayments)
+            {
+                _toast.Warning(L["offline_pos_limited"]);
+                return;
+            }
+            var baseCurrency = await Offline.GetMetaAsync("base_currency") ?? _baseCurrency;
+            if (IsMulticurrency &&
+                ((RepayDebtCurrency ?? baseCurrency) != baseCurrency || (RepayPayCurrency ?? baseCurrency) != baseCurrency))
+            {
+                _toast.Warning(L["offline_pos_limited"]);
+                return;
+            }
+            try
+            {
+                await ServiceLocator.Resolve<OfflineSyncService>().EnqueuePaymentAsync(new OfflinePaymentDraft(
+                    id, ServiceLocator.Resolve<BranchContextService>().CurrentBranchId, RepayAmount, RepayViaCard));
+            }
+            catch (Exception ex)
+            {
+                _toast.Error(ApiErrors.Describe(ex));
+                return;
+            }
+            IsRepayOpen = false;
+            _toast.Success(L["offline_payment_queued"]);
+            await LoadAsync();
+            SelectedCustomer = Customers.FirstOrDefault(c => c.Id == id);
+            return;
+        }
         try
         {
             using (_busy.Begin(L["loading"]))
                 await _api.RepayDebtAsync(id, new RepayDebtRequest(RepayAmount, RepayViaCard,
                     IsMulticurrency ? RepayDebtCurrency : null,
-                    IsMulticurrency ? RepayPayCurrency : null));
+                    IsMulticurrency ? RepayPayCurrency : null,
+                    Guid.NewGuid().ToString("N"),
+                    RepayWriteOff,
+                    Trim(RepayWriteOffReason)));
             IsRepayOpen = false;
             _toast.Success(L["success"]);
             await LoadAsync();

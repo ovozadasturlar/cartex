@@ -17,6 +17,17 @@ export class NotifyService {
     });
   }
 
+  /// Ogohlantirish amalni to'xtatmaydi, shuning uchun tasdiqlash tugmasi bilan va uzoqroq
+  /// turadi — kassir uni sezmay o'tib ketmasligi kerak.
+  warn(message: string): void {
+    this.snack.open(message, 'OK', {
+      duration: 8000,
+      horizontalPosition: 'right',
+      verticalPosition: 'top',
+      panelClass: 'cx-toast-warn',
+    });
+  }
+
   error(err: unknown): void {
     this.snack.open(this.describe(err), 'OK', {
       duration: 5000,

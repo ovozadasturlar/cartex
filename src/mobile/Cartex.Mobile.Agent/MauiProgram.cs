@@ -76,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DaySummaryViewModel>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<ServerScanPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<CustomersPage>();
         builder.Services.AddTransient<CustomerPage>();

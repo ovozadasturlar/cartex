@@ -118,7 +118,8 @@ public sealed class PrintHostService
         {
             try
             {
-                if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host"))
+                if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host")
+                    || !SettingsService.Instance.EnabledFeatures.Contains("remote_printing"))
                 {
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
                     continue;
@@ -276,6 +277,8 @@ public sealed class PrintHostService
 
     private async Task ProcessAssignedAsync(CancellationToken cancellationToken)
     {
+        if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host")
+            || !SettingsService.Instance.EnabledFeatures.Contains("remote_printing")) return;
         if (!_processLock.Wait(0)) return;
         try
         {

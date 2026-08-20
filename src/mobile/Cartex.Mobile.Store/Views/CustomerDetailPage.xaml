@@ -438,6 +438,24 @@
                         </Button>
                     </Grid>
 
+                    <VerticalStackLayout Spacing="14" IsVisible="{Binding ShowWriteOff}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding WriteOffAmount}" Placeholder="{svc:T write_off}" Keyboard="Numeric" FontSize="18" />
+                            </Border>
+                            <Button Grid.Column="1" Text="{svc:T write_off_rest}" Style="{StaticResource BtnSecondary}" FontSize="12.5" Padding="12,0"
+                                    Command="{Binding FillRestWriteOffCommand}" />
+                        </Grid>
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding WriteOffReason}" Placeholder="{svc:T write_off_reason}" />
+                        </Border>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{svc:T debt_left}" Style="{StaticResource MutedLabel}" FontSize="12.5" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding DebtLeftText}" FontAttributes="Bold" FontSize="15"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </Grid>
+                    </VerticalStackLayout>
+
                     <Border Style="{StaticResource InputWrap}">
                         <Editor Text="{Binding PaymentNote}" Placeholder="{svc:T note_placeholder}" AutoSize="TextChanges" />
                     </Border>

@@ -183,8 +183,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     partial void OnSearchTextChanged(string value)
     {
         if (_suppressReload) return;
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 

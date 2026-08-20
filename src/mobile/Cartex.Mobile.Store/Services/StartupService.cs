@@ -4,7 +4,7 @@ namespace Cartex.Mobile.Store.Services;
 
 // Ishga tushishdagi kalit/baza ishlari fonda bajariladi — UI thread'da bajarilsa birinchi
 // kadr shuncha kechikadi. Faqat navigatsiya UI thread'da qoladi.
-public sealed class StartupService(MobileAuthService auth, MobileOfflineService offline)
+public sealed class StartupService(MobileAuthService auth, MobileOfflineService offline, MobileHubHostService hubHost)
 {
     public async Task RunAsync()
     {
@@ -15,6 +15,7 @@ public sealed class StartupService(MobileAuthService auth, MobileOfflineService 
             return;
         }
         _ = Task.Run(offline.StartAsync);
+        hubHost.Start();
         _ = Task.Run(auth.ValidateSessionAsync);
         if (AppLock.PinEnabled)
             await Shell.Current.GoToAsync("pin", false);

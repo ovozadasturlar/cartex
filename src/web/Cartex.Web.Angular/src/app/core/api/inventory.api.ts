@@ -134,6 +134,7 @@ export interface CreateSupply {
   items: CreateSupplyItem[];
   paidCash: number;
   paidCard: number;
+  idempotencyKey?: string;
 }
 
 export interface UpdateSupply {

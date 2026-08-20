@@ -68,6 +68,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [NotifyPropertyChangedFor(nameof(AllowInsufficientStockSalesHint))]
     private bool _allowInsufficientStockSales;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllowNegativeStockOfflineHint))]
+    private bool _allowNegativeStockWhenOffline;
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AllowRetroactiveCashbackHint))]
     private bool _allowRetroactiveCashback;
     [ObservableProperty]
@@ -125,6 +128,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     public string ShowOutOfStockHint => Hint(ShowOutOfStock, "show_out_of_stock");
     public string ShowUnlistedProductsHint => Hint(ShowUnlistedProducts, "show_unlisted_products");
     public string AllowInsufficientStockSalesHint => Hint(AllowInsufficientStockSales, "allow_insufficient_stock_sales");
+    public string AllowNegativeStockOfflineHint => Hint(AllowNegativeStockWhenOffline, "allow_negative_stock_offline");
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
@@ -156,6 +160,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             ShowOutOfStock = _loaded.ShowOutOfStock;
             ShowUnlistedProducts = _loaded.ShowUnlistedProducts;
             AllowInsufficientStockSales = _loaded.AllowInsufficientStockSales;
+            AllowNegativeStockWhenOffline = _loaded.AllowNegativeStockWhenOffline;
             AllowRetroactiveCashback = _loaded.AllowRetroactiveCashback;
             UpdateCatalogPriceOnSale = _loaded.UpdateCatalogPriceOnSale;
             AllowDebtWriteOff = _loaded.AllowDebtWriteOff;
@@ -199,6 +204,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 ShowOutOfStock = ShowOutOfStock,
                 ShowUnlistedProducts = ShowUnlistedProducts,
                 AllowInsufficientStockSales = AllowInsufficientStockSales,
+                AllowNegativeStockWhenOffline = AllowNegativeStockWhenOffline,
                 AllowRetroactiveCashback = AllowRetroactiveCashback,
                 UpdateCatalogPriceOnSale = UpdateCatalogPriceOnSale,
                 AllowDebtWriteOff = AllowDebtWriteOff,

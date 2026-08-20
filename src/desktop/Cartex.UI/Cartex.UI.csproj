@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\shared\Cartex.ApiClient\Cartex.ApiClient.csproj" />
+    <ProjectReference Include="..\..\shared\Cartex.Hub\Cartex.Hub.csproj" />
     <ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
   </ItemGroup>
 

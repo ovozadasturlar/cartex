@@ -71,7 +71,7 @@
         <!-- Sub-filters Header -->
         <Grid Grid.Row="1">
             <!-- Queue Status Chips -->
-            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding IsQueue}">
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding ShowQueueSection}">
                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding QueueStatuses}" Spacing="8">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:QueueStatusChip">
@@ -127,7 +127,7 @@
         <RefreshView Grid.Row="2" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
             <Grid>
                 <!-- QUEUE SECTION -->
-                <CollectionView ItemsSource="{Binding Carts}" IsVisible="{Binding IsQueue}">
+                <CollectionView ItemsSource="{Binding Carts}" IsVisible="{Binding ShowQueueSection}">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:TradeQueueRow">
                             <SwipeView Margin="0,0,0,10">

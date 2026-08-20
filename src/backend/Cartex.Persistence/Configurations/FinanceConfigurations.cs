@@ -164,6 +164,9 @@ public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
         builder.Property(x => x.CountedCash).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.HasIndex(x => new { x.UserId, x.BranchId, x.Status });
+        builder.HasIndex(x => new { x.UserId, x.BranchId })
+            .IsUnique()
+            .HasFilter("\"status\" = 'Open' AND \"is_deleted\" = false");
 
         builder.HasOne(x => x.User)
             .WithMany()

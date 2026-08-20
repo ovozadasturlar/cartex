@@ -22,6 +22,7 @@
   "current_debt": "Current debt",
   "customers_subtitle": "Customer base, debts and bonuses",
   "dashboard_subtitle": "Your business at a glance",
+  "debt_left": "Debt remaining",
   "delete_confirm": "Really delete?",
   "edit_branch": "Edit branch",
   "edit_warehouse": "Edit warehouse",
@@ -48,6 +49,7 @@
   "no_products": "No products found",
   "no_sales": "No sales found",
   "no_shifts": "No shifts yet",
+  "offline_import_invalid": "Invalid file format",
   "old_data": "Old value",
   "open_receipt": "Open receipt",
   "operation": "Operation",
@@ -82,5 +84,9 @@
   "users_subtitle": "System users and access",
   "warehouse_subtitle": "Stock on hand, low stock and expiring items",
   "warehouses": "Warehouses",
-  "warehouses_subtitle": "Warehouses by branch"
+  "warehouses_subtitle": "Warehouses by branch",
+  "write_off": "Write off",
+  "write_off_reason": "Write-off reason",
+  "write_off_reason_required": "Enter a write-off reason",
+  "write_off_rest": "Write off remainder"
 }

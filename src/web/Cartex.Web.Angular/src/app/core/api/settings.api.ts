@@ -83,6 +83,7 @@ export interface SalesPolicy {
   showOutOfStock: boolean;
   showUnlistedProducts: boolean;
   allowInsufficientStockSales: boolean;
+  allowNegativeStockWhenOffline: boolean;
   allowRetroactiveCashback: boolean;
   saleCorrectionWindow: string;
   saleCorrectionDays: number;

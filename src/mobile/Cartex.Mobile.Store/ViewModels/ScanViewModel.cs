@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
+using Cartex.Hub;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
@@ -32,6 +33,8 @@ public partial class ScanViewModel : ObservableObject
     private readonly MobilePrintDispatcher _printDispatcher;
     private readonly BarcodeLabelSettingsCache _labelSettings;
     private readonly MobileOfflineService _offline;
+    private readonly SessionStore _session;
+    private readonly StoreSignOut _signOut;
 
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint_store"];
@@ -88,7 +91,7 @@ public partial class ScanViewModel : ObservableObject
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline, SessionStore session, StoreSignOut signOut)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
@@ -103,6 +106,8 @@ public partial class ScanViewModel : ObservableObject
         _printDispatcher = printDispatcher;
         _labelSettings = labelSettings;
         _offline = offline;
+        _session = session;
+        _signOut = signOut;
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
@@ -140,6 +145,16 @@ public partial class ScanViewModel : ObservableObject
 
         if (value.StartsWith("cartexqr:", StringComparison.OrdinalIgnoreCase))
             await ApproveQrAsync(value["cartexqr:".Length..]);
+        else if (QrActions.TryServer(value, out var serverUrl))
+            await ConnectServerAsync(serverUrl);
+        // HUB QR'i bulut serveri QR'i emas: boshqa prefiks, boshqa protokol va boshqa ishonch.
+        else if (HubQr.TryParse(value, out var hubEndpoint))
+            await LinkHubAsync(hubEndpoint);
+        else if (QrActions.IsWifi(value))
+        {
+            await QrActions.HandleWifiAsync(value);
+            Resume();
+        }
         else if (HandoffCode().IsMatch(value))
             await OpenHandoffAsync(value);
         else
@@ -172,6 +187,86 @@ public partial class ScanViewModel : ObservableObject
         {
             await FlashAsync(Loc.Instance["err_no_connection"]);
         }
+    }
+
+    private async Task ConnectServerAsync(string url)
+    {
+        var page = Shell.Current.CurrentPage;
+        if (page is null)
+        {
+            Resume();
+            return;
+        }
+        if (QrActions.IsSameServer(url, _session.ServerUrl))
+        {
+            Ui.Toast(Loc.Instance["server_already_connected"]);
+            Resume();
+            return;
+        }
+        // Lease hali o'qilmagan bo'lsa navbat sanog'i nol chiqadi va yuborilmagan
+        // amallar qo'riqchisi ishlamay qoladi.
+        await _offline.StartAsync();
+        if (await _offline.PendingCountAsync() + await _offline.ErrorCountAsync() > 0)
+        {
+            await page.DisplayAlertAsync(Loc.Instance["server"], Loc.Instance["server_switch_pending"], Loc.Instance["ok"]);
+            Resume();
+            return;
+        }
+        if (!await page.DisplayAlertAsync(
+                Loc.Instance["server"], string.Format(Loc.Instance["server_connect_confirm"], url),
+                Loc.Instance["yes"], Loc.Instance["no"]))
+        {
+            Resume();
+            return;
+        }
+        if (!await QrActions.ProbeServerAsync(url))
+        {
+            await page.DisplayAlertAsync(Loc.Instance["server"], Loc.Instance["server_unreachable"], Loc.Instance["ok"]);
+            Resume();
+            return;
+        }
+        // Eski do'kon nusxasi yangi serverda ishlatilmasligi kerak; navbat bo'sh ekani
+        // yuqorida tekshirilgani uchun bu yerda hech narsa yo'qolmaydi.
+        await _signOut.RunAsync();
+        await _offline.DeactivateLocalAsync();
+        _session.ServerUrl = url;
+        await Shell.Current.GoToAsync("//login");
+        Ui.Toast(Loc.Instance["server_switch_login"]);
+    }
+
+    // HUB-11: e'lonni bloklaydigan tarmoqda ulanishning qo'l bilan boriladigan yo'li.
+    private async Task LinkHubAsync(Uri endpoint)
+    {
+        var page = Shell.Current.CurrentPage;
+        if (page is null)
+        {
+            Resume();
+            return;
+        }
+        await _offline.StartAsync();
+        if (_offline.IsEnabled || _offline.IsSatellite)
+        {
+            Ui.Toast(Loc.Instance["hub_link_not_needed"]);
+            Resume();
+            return;
+        }
+        if (!await page.DisplayAlertAsync(
+                Loc.Instance["hub_link_title"],
+                string.Format(Loc.Instance["hub_link_confirm"], endpoint.Host),
+                Loc.Instance["yes"], Loc.Instance["no"]))
+        {
+            Resume();
+            return;
+        }
+
+        Status = Loc.Instance["hub_searching"];
+        if (!await _offline.LinkToHubAsync(endpoint))
+        {
+            await FlashAsync(Loc.Instance["hub_link_failed"]);
+            return;
+        }
+        Ui.Toast(Loc.Instance["hub_linked"]);
+        Resume();
     }
 
     private async Task OpenHandoffAsync(string code)
@@ -237,6 +332,7 @@ public partial class ScanViewModel : ObservableObject
         var product = await _offline.FindProductAsync(barcode);
         if (product is null)
         {
+            if (await TryOpenLinkAsync(barcode)) return;
             Ui.Vibrate(2);
             await FlashAsync(Loc.Instance["offline_product_not_cached"]);
             return;
@@ -254,12 +350,20 @@ public partial class ScanViewModel : ObservableObject
         Ui.Vibrate();
     }
 
-    private Task HandleUnknownBarcodeAsync(string barcode)
+    private async Task HandleUnknownBarcodeAsync(string barcode)
     {
+        if (await TryOpenLinkAsync(barcode)) return;
         Ui.Vibrate(2);
         UnknownBarcode = barcode;
         UnknownBarcodeVisible = true;
-        return Task.CompletedTask;
+    }
+
+    private async Task<bool> TryOpenLinkAsync(string barcode)
+    {
+        if (!QrActions.IsHttpUrl(barcode)) return false;
+        await QrActions.OpenLinkAsync(barcode);
+        Resume();
+        return true;
     }
 
     [RelayCommand]
@@ -390,7 +494,6 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task ReceiveStockAsync()
     {
-        if (BlockOnlineMutationWhileOffline()) return;
         if (_product is null) return;
         var product = _product;
         var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == product.VariantId);
@@ -402,7 +505,7 @@ public partial class ScanViewModel : ObservableObject
 
         // Tannarx qo'lda kiritiladi, lekin oxirgi xarid narxi bilan oldindan to'ldiriladi —
         // aks holda kassir har safar noldan yozadi va nol qolib ketish xavfi tug'iladi.
-        if (existing is not null || _warehouse.WarehouseId is not { } warehouseId) return;
+        if (existing is not null || _offline.ShouldUseOffline || _warehouse.WarehouseId is not { } warehouseId) return;
         try
         {
             var info = await Task.Run(() => _productsApi.GetVariantPriceInfoAsync(product.VariantId, warehouseId));

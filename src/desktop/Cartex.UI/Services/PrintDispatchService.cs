@@ -203,15 +203,23 @@ public sealed class PrintDispatchService
             PrintJobKind.ZReport => "printing.z_reports.print",
             _ => "printing.documents.print"
         };
-        if (!_auth.HasPermission("printing.remote.use"))
-            throw new UnauthorizedAccessException("Tarmoq orqali chop etish ruxsati kerak.");
         if (!_auth.HasPermission(permission))
             throw new UnauthorizedAccessException("Ushbu turdagi chop etish ruxsati kerak.");
+        var label = kindLabel ?? PrintNotificationText.Kind(kind);
+
+        // Tarmoq chop etish imkoniyati/ruxsati bo'lmagan do'konda server konveyeri ishlamaydi —
+        // hujjat to'g'ridan-to'g'ri shu kompyuterning printerida chiqadi.
+        if (!_auth.HasPermission("printing.remote.use"))
+        {
+            if (printLocally is null)
+                throw new UnauthorizedAccessException("Tarmoq orqali chop etish ruxsati kerak.");
+            printLocally();
+            _toast.Success(string.Format(LocalizationManager.Instance["print_completed"], label, string.Empty));
+            return;
+        }
         var targetBranchId = branchId ?? _branch.CurrentBranchId;
         if (targetBranchId is null)
             throw new InvalidOperationException("Chop etish uchun filial tanlanmagan.");
-
-        var label = kindLabel ?? PrintNotificationText.Kind(kind);
         _ = TryFlushOfflineAsync();
         await _statusHub.EnsureStartedAsync();
         try

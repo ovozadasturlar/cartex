@@ -22,6 +22,7 @@ public static class SalesPolicyMapping
         ShowOutOfStock = cfg.ShowOutOfStock,
         ShowUnlistedProducts = cfg.ShowUnlistedProducts,
         AllowInsufficientStockSales = cfg.AllowInsufficientStockSales,
+        AllowNegativeStockWhenOffline = cfg.AllowNegativeStockWhenOffline,
         AllowRetroactiveCashback = cfg.AllowRetroactiveCashback,
         SaleCorrectionWindow = cfg.SaleCorrectionWindow,
         SaleCorrectionDays = cfg.SaleCorrectionDays,
@@ -55,6 +56,7 @@ public static class SalesPolicyMapping
         cfg.ShowOutOfStock = dto.ShowOutOfStock;
         cfg.ShowUnlistedProducts = dto.ShowUnlistedProducts;
         cfg.AllowInsufficientStockSales = dto.AllowInsufficientStockSales;
+        cfg.AllowNegativeStockWhenOffline = dto.AllowNegativeStockWhenOffline;
         cfg.AllowRetroactiveCashback = dto.AllowRetroactiveCashback;
         cfg.SaleCorrectionWindow = dto.SaleCorrectionWindow;
         cfg.SaleCorrectionDays = dto.SaleCorrectionDays;

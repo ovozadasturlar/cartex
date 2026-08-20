@@ -32,7 +32,11 @@ public static class DependencyInjection
         services.AddSingleton<ReceiptDialogService>();
         services.AddSingleton<OfflineStore>();
         services.AddSingleton<OfflineLeaseCredentialStore>();
+        services.AddSingleton<HubIdentityService>();
+        services.AddSingleton<HubCredentialStore>();
+        services.AddSingleton<HubClientService>();
         services.AddSingleton<OfflineSyncService>();
+        services.AddSingleton<HubHostService>();
         services.AddSingleton(LocalizationManager.Instance);
 
         services.AddSingleton<ToastService>();

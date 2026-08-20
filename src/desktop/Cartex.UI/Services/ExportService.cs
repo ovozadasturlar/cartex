@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using Cartex.ApiClient.Api;
@@ -75,6 +76,8 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
         catch { return null; }
     }
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Task.Run ichida, UI oqimidan tashqarida; Excel/PDF yozuvchilar ham sinxron API.")]
     private static void WriteCsv<T>(Stream stream, IReadOnlyList<ExportColumn<T>> columns, IReadOnlyList<T> rows)
     {
         using var writer = new StreamWriter(stream, new UTF8Encoding(true));

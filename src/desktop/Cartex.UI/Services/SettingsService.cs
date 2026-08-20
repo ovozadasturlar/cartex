@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cartex.UI.Models;
 
@@ -118,6 +119,30 @@ public sealed class SettingsService
         set { _data.OfflineWarehouseId = value; Save(); }
     }
 
+    public bool HubEnabled
+    {
+        get => _data.HubEnabled;
+        set { _data.HubEnabled = value; Save(); }
+    }
+
+    public bool OfflineAllowSales
+    {
+        get => _data.OfflineAllowSales;
+        set { _data.OfflineAllowSales = value; Save(); }
+    }
+
+    public bool OfflineAllowPayments
+    {
+        get => _data.OfflineAllowPayments;
+        set { _data.OfflineAllowPayments = value; Save(); }
+    }
+
+    public bool OfflineAllowSupplies
+    {
+        get => _data.OfflineAllowSupplies;
+        set { _data.OfflineAllowSupplies = value; Save(); }
+    }
+
     public bool SettingsSidebarCollapsed
     {
         get => _data.SettingsSidebarCollapsed;
@@ -136,6 +161,8 @@ public sealed class SettingsService
         set { _data.EnabledFeatures = value; Save(); }
     }
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Konstruktordan chaqiriladi; kichik lokal sozlama fayli.")]
     private SettingsData Load()
     {
         try
@@ -151,6 +178,8 @@ public sealed class SettingsService
         return new SettingsData();
     }
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Chaqiruvchilar property setter'lar; kichik lokal sozlama fayli.")]
     private void Save()
     {
         if (_settingsPath is null) return;
@@ -173,6 +202,10 @@ public sealed class SettingsService
         public string? DeviceId { get; set; }
         public bool OfflineCacheEnabled { get; set; }
         public long OfflineWarehouseId { get; set; }
+        public bool OfflineAllowSales { get; set; } = true;
+        public bool OfflineAllowPayments { get; set; } = true;
+        public bool OfflineAllowSupplies { get; set; } = true;
+        public bool HubEnabled { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
         public bool PosListMode { get; set; }
         public List<string> EnabledFeatures { get; set; } = ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];

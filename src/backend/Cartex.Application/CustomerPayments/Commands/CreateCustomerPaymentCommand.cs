@@ -11,6 +11,7 @@ using Cartex.Persistence;
 using Cartex.Shared.Models.Customers;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 namespace Cartex.Application.CustomerPayments.Commands;
 
@@ -28,7 +29,11 @@ public sealed record CreateCustomerPaymentCommand(
     string? Note = null,
     string? IdempotencyKey = null,
     decimal WriteOffAmount = 0,
-    string? WriteOffReason = null) : ICommand<CustomerPaymentCreatedDto>;
+    string? WriteOffReason = null) : ICommand<CustomerPaymentCreatedDto>
+{
+    [JsonIgnore] public bool FromOfflineSync { get; init; }
+    [JsonIgnore] public long? OfflineActorUserId { get; init; }
+}
 
 public sealed class CreateCustomerPaymentCommandHandler(
     IApplicationDbContext db,
@@ -41,7 +46,10 @@ public sealed class CreateCustomerPaymentCommandHandler(
 {
     public async Task<CustomerPaymentCreatedDto> Handle(CreateCustomerPaymentCommand request, CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        var authenticatedUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        if (request.OfflineActorUserId.HasValue && !request.FromOfflineSync)
+            throw new ForbiddenException("Offline actor can only be used by the replay pipeline.");
+        var userId = request.OfflineActorUserId ?? authenticatedUserId;
         if (!currentUser.HasPermission(AppPermissions.CustomerPayments.Create)
             && !currentUser.HasPermission(AppPermissions.Customers.ReceivePayment))
             throw new ForbiddenException("Mijoz to'lovini qabul qilishga ruxsat yo'q.");
@@ -76,7 +84,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
         var customer = await db.Customers.FirstOrDefaultAsync(x => x.Id == request.CustomerId, cancellationToken)
             ?? throw new NotFoundException("Customer not found.", "customer_not_found");
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll)
-            && customer.AssignedUserId != currentUser.UserId)
+            && customer.AssignedUserId != userId)
             throw new NotFoundException("Customer not found.", "customer_not_found");
 
         var baseCode = await currency.BaseAsync(cancellationToken);
@@ -305,6 +313,19 @@ public sealed class CreateCustomerPaymentCommandHandler(
         document.WriteOffReason = writtenOffBase > 0 ? NormalizeOptional(request.WriteOffReason) : null;
         // Kechirim pul emas — ortiqcha avansga faqat haqiqatan olingan puldan hisoblanadi.
         document.AdvanceBaseAmount = Math.Max(0, totalBase - allocatedBase);
+
+        // QARZ-20: haqdorlik o'chiq bo'lsa do'kon mijozga qarzdor bo'lmaydi — kassir farqni
+        // qaytaradi. Oflayn replay istisno (`OFF-21`): pul allaqachon olingan, rad etish uni yo'qotardi.
+        // Chet valyutadagi taqsimot 4 xonada kesiladi, shuning uchun aynan qarzcha to'langanda ham
+        // kursga bog'liq mayda qoldiq qoladi — u ortiqcha to'lov emas, konvertatsiya qoldig'i.
+        var conversionResidue = document.Allocations.Count == 0
+            ? 0m
+            : document.Allocations.Max(x => 0.0001m * x.Rate);
+        if (document.AdvanceBaseAmount > conversionResidue
+            && !policy.AllowCustomerCredit && !request.FromOfflineSync)
+            throw new BusinessRuleException(
+                "Haqdorlik o'chirilgan — qarzdan ortiq to'lov qabul qilinmaydi.", "payment_exceeds_debt");
+
         if (document.AdvanceBaseAmount > 0)
         {
             var advance = await ledger.CustomerAccountAsync(

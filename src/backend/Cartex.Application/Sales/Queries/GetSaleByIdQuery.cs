@@ -25,6 +25,7 @@ public sealed class GetSaleByIdQueryHandler(
 
         var sale = await query.Select(x => new SaleDetailDto(
             x.Id,
+            x.DocumentNumber,
             x.CreatedAt,
             x.Status.ToString(),
             x.ReceiptToken,

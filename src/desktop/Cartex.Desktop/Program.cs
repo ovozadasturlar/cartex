@@ -2,7 +2,7 @@ using Avalonia;
 
 namespace Cartex.Desktop;
 
-class Program
+static class Program
 {
     [STAThread]
     public static void Main(string[] args)

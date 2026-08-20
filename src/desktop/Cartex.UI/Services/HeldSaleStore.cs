@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cartex.Shared.Models.Customers;
 using Cartex.UI.ViewModels;
@@ -16,7 +17,8 @@ public sealed class HeldSaleStore : IHeldSaleStore
 
     private readonly string? _path;
 
-    private sealed record StoredItem(long VariantId, string ProductName, decimal UnitPrice, decimal OriginalPrice, decimal Quantity);
+    private sealed record StoredItem(long VariantId, string ProductName, decimal UnitPrice, decimal OriginalPrice, decimal Quantity,
+        long? PrepackId = null, bool AllowsAmountEntry = false, bool AllowsFractional = false);
     private sealed record StoredHold(string Label, List<StoredItem> Items, decimal PaidCash, decimal PaidCard, decimal PaidBonus, CustomerDto? Customer, DateTime HeldAt);
 
     public HeldSaleStore()
@@ -41,7 +43,12 @@ public sealed class HeldSaleStore : IHeldSaleStore
 
             var result = valid.Select(s => new HeldSale(
                 s.Label,
-                s.Items.Select(i => new CartItem { VariantId = i.VariantId, ProductName = i.ProductName, UnitPrice = i.UnitPrice, OriginalPrice = i.OriginalPrice, Quantity = i.Quantity }).ToList(),
+                s.Items.Select(i => new CartItem
+                {
+                    VariantId = i.VariantId, ProductName = i.ProductName, UnitPrice = i.UnitPrice,
+                    OriginalPrice = i.OriginalPrice, Quantity = i.Quantity, PrepackId = i.PrepackId,
+                    AllowsAmountEntry = i.AllowsAmountEntry, AllowsFractional = i.AllowsFractional
+                }).ToList(),
                 s.PaidCash, s.PaidCard, s.PaidBonus, s.Customer, s.HeldAt)).ToList();
 
             if (valid.Count != stored.Count) Persist(valid);
@@ -53,9 +60,12 @@ public sealed class HeldSaleStore : IHeldSaleStore
     public void Save(IEnumerable<HeldSale> sales) =>
         Persist(sales.Select(s => new StoredHold(
             s.Label,
-            s.Items.Select(i => new StoredItem(i.VariantId, i.ProductName, i.UnitPrice, i.OriginalPrice, i.Quantity)).ToList(),
+            s.Items.Select(i => new StoredItem(i.VariantId, i.ProductName, i.UnitPrice, i.OriginalPrice, i.Quantity,
+                i.PrepackId, i.AllowsAmountEntry, i.AllowsFractional)).ToList(),
             s.PaidCash, s.PaidCard, s.PaidBonus, s.Customer, s.HeldAt)).ToList());
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Chaqiruvchilar sinxron VM buyruqlari; fayl bir necha KB lokal JSON.")]
     private void Persist(IEnumerable<StoredHold> holds)
     {
         if (_path is null) return;

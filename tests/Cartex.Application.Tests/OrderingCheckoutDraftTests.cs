@@ -77,10 +77,10 @@ public sealed class OrderingCheckoutDraftTests(DatabaseFixture fixture) : Databa
         long saleId;
         using (var scope = Fixture.CreateScope())
         {
-            saleId = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CheckoutCartCommand(code, 0, 0, 0)
+            saleId = (await scope.ServiceProvider.GetRequiredService<ISender>().Send(new CheckoutCartCommand(code, 0, 0, 0)
             {
                 IdempotencyKey = "queue-payment-partner-checkout"
-            });
+            })).SaleId;
         }
 
         using var check = Fixture.CreateScope();

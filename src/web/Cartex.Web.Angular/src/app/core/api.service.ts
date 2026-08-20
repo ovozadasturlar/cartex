@@ -157,6 +157,8 @@ export class CustomersApi {
       debtCurrency: string | null;
       payCurrency: string | null;
       idempotencyKey: string;
+      writeOff: number;
+      writeOffReason: string | null;
     },
   ): Observable<void> {
     return this.http.post<void>(`/api/customers/${id}/repay-debt`, body);

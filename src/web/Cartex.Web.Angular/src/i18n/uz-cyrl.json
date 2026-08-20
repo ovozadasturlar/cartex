@@ -22,6 +22,7 @@
   "current_debt": "Жорий қарз",
   "customers_subtitle": "Мижозлар базаси, қарзлар ва бонуслар",
   "dashboard_subtitle": "Бизнесингиз бир қарашда",
+  "debt_left": "Қарзда қолади",
   "delete_confirm": "Ростдан ҳам ўчирилсинми?",
   "edit_branch": "Филиални таҳрирлаш",
   "edit_warehouse": "Омборни таҳрирлаш",
@@ -48,6 +49,7 @@
   "no_products": "Маҳсулот топилмади",
   "no_sales": "Сотувлар топилмади",
   "no_shifts": "Ҳозирча сменалар йўқ",
+  "offline_import_invalid": "Файл формати нотўғри",
   "old_data": "Олдинги қиймат",
   "open_receipt": "Чекни очиш",
   "operation": "Операция",
@@ -82,5 +84,9 @@
   "users_subtitle": "Тизим фойдаланувчилари ва кириш ҳуқуқлари",
   "warehouse_subtitle": "Қолдиқлар, кам қолдиқ ва муддати яқин маҳсулотлар",
   "warehouses": "Омборлар",
-  "warehouses_subtitle": "Филиаллар бўйича омборлар"
+  "warehouses_subtitle": "Филиаллар бўйича омборлар",
+  "write_off": "Кечириш",
+  "write_off_reason": "Кечириш сабаби",
+  "write_off_reason_required": "Кечириш учун сабаб ёзинг",
+  "write_off_rest": "Қолганини кечириш"
 }

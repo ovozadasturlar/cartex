@@ -581,7 +581,28 @@ public static class DemoDataSeeder
             var refund = Math.Round(qty * item.UnitPrice * (1 - (sale.TotalAmount > 0 ? sale.DiscountAmount / (sale.TotalAmount + sale.DiscountAmount) : 0)), 2);
             refund = Math.Min(refund, sale.PaidCash);
             var d = (int)(sale.CreatedAt.Date - today0).TotalDays;
-            Post(OperationType.Sale, refund, cash, null, sale.UserId, sale.CreatedAt.AddHours(3), sale, shift: dayShift.GetValueOrDefault(d));
+            var at = sale.CreatedAt.AddHours(3);
+            var doc = new CustomerReturnDocument
+            {
+                BranchId = branch1.Id, Warehouse = wh1, UserId = sale.UserId, CreatedAt = at,
+                DocumentNumber = $"RET-{at:yyMMdd}-{Guid.NewGuid().ToString("N")[..8]}",
+                BusinessDate = DateOnly.FromDateTime(at), Status = BusinessDocumentStatus.Posted,
+                GrossAmount = refund, RefundAmount = refund
+            };
+            doc.Lines.Add(new CustomerReturnLine
+            {
+                Sale = sale, SaleItem = item, VariantId = item.VariantId, Stock = item.Stock,
+                Quantity = qty, UnitPrice = item.UnitPrice, LineAmount = refund,
+                Condition = ReturnItemCondition.Sellable, Disposition = InventoryDisposition.SellableRestock
+            });
+            doc.Settlements.Add(new CustomerReturnSettlement
+            {
+                Method = ReturnSettlementMethod.Cash, Amount = refund, AmountBase = refund
+            });
+            var refundTx = Post(OperationType.CustomerRefund, refund, cash, null, sale.UserId, at, sale, shift: dayShift.GetValueOrDefault(d));
+            refundTx.Description = doc.DocumentNumber;
+            doc.Transactions.Add(refundTx);
+            context.Add(doc);
             sale.RefundedCash = refund;
             sale.Status = qty >= item.Quantity ? SaleStatus.Returned : SaleStatus.PartialReturn;
             item.Stock.Quantity += qty;

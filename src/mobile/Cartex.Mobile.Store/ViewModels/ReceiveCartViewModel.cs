@@ -15,6 +15,8 @@ public partial class ReceiveCartViewModel : ObservableObject
     private readonly WarehouseContext _warehouse;
     private readonly ISuppliesApi _suppliesApi;
     private readonly ISuppliersApi _suppliersApi;
+    private readonly MobileOfflineService _offline;
+    private readonly SalesPolicyCache _policy;
     private CancellationTokenSource? _searchCts;
 
     public ObservableCollection<SupplyCartLine> Lines { get; } = [];
@@ -37,12 +39,14 @@ public partial class ReceiveCartViewModel : ObservableObject
     // yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
     public Func<bool>? RowInteracted { get; set; }
 
-    public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi)
+    public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi, MobileOfflineService offline, SalesPolicyCache policy)
     {
         _cart = cart;
         _warehouse = warehouse;
         _suppliesApi = suppliesApi;
         _suppliersApi = suppliersApi;
+        _offline = offline;
+        _policy = policy;
     }
 
     public void Appear()
@@ -98,19 +102,29 @@ public partial class ReceiveCartViewModel : ObservableObject
         try
         {
             await Task.Delay(350, cts.Token);
-            var rows = await _suppliersApi.GetAllAsync(term);
+            var rows = _offline.ShouldUseOffline
+                ? await _offline.SearchSuppliersAsync(term, 10)
+                : await _suppliersApi.GetAllAsync(term);
             if (cts.IsCancellationRequested) return;
-            Suppliers.Clear();
-            foreach (var supplier in rows.Take(10))
-                Suppliers.Add(supplier);
-            HasSuppliers = Suppliers.Count > 0;
+            ShowSuppliers(rows);
         }
         catch (OperationCanceledException) { }
         catch
         {
-            Suppliers.Clear();
-            HasSuppliers = false;
+            _offline.MarkServerUnavailable();
+            if (_offline.IsEnabled && !cts.IsCancellationRequested)
+                ShowSuppliers(await _offline.SearchSuppliersAsync(term, 10));
+            else
+                ShowSuppliers([]);
         }
+    }
+
+    private void ShowSuppliers(IReadOnlyList<SupplierDto> rows)
+    {
+        Suppliers.Clear();
+        foreach (var supplier in rows.Take(10))
+            Suppliers.Add(supplier);
+        HasSuppliers = Suppliers.Count > 0;
     }
 
     [RelayCommand]
@@ -128,6 +142,11 @@ public partial class ReceiveCartViewModel : ObservableObject
     [RelayCommand]
     private void OpenSupplierModal()
     {
+        if (_offline.ShouldUseOffline)
+        {
+            Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
+            return;
+        }
         NewSupplierName = SupplierSearch;
         NewSupplierPhone = "";
         IsSupplierModalOpen = true;
@@ -272,6 +291,11 @@ public partial class ReceiveCartViewModel : ObservableObject
             Ui.Toast(string.Format(Loc.Instance["err_purchase_price_required"], priceless.ProductName));
             return;
         }
+        if (_offline.ShouldUseOffline)
+        {
+            await SubmitOfflineAsync();
+            return;
+        }
         if (!await _warehouse.EnsureSelectedAsync())
         {
             Ui.Toast(Loc.Instance["warehouse_none"]);
@@ -299,6 +323,44 @@ public partial class ReceiveCartViewModel : ObservableObject
         catch
         {
             Ui.Toast(Loc.Instance["err_no_connection"]);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task SubmitOfflineAsync()
+    {
+        if (!_offline.SuppliesCapability)
+        {
+            Ui.Toast(Loc.Instance["offline_capability_off"]);
+            return;
+        }
+        if (_policy.Current.RequireSupplier && _cart.SupplierId is null)
+        {
+            Ui.Toast(Loc.Instance["err_select_supplier"]);
+            return;
+        }
+        if (_warehouse.WarehouseId is not { } warehouseId)
+        {
+            Ui.Toast(Loc.Instance["warehouse_none"]);
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            await _offline.EnqueueSupplyAsync(new MobileOfflineSupplyDraft(
+                _cart.SupplierId, warehouseId,
+                _cart.Lines.Select(l => new MobileOfflineSupplyLineDraft(l.VariantId, l.Quantity, l.PurchasePrice,
+                    l.SellingPrice > 0 ? l.SellingPrice : null)).ToList()));
+            _cart.Clear();
+            Ui.Toast(Loc.Instance["offline_supply_queued"]);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            Ui.Toast(ex.Message);
         }
         finally
         {

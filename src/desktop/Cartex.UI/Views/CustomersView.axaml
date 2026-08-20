@@ -471,7 +471,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="N0" Watermark="{Binding L[unlimited]}" />
+                            <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="N0" PlaceholderText="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Spacing="5">
@@ -631,12 +631,34 @@
                         <ToggleSwitch IsChecked="{Binding RepayViaCard}"
                                       OffContent="{Binding L[cash]}" OnContent="{Binding L[card]}" />
                     </StackPanel>
-                    <Border IsVisible="{Binding RepayIsOverpay}" Background="{DynamicResource SuccessBg}"
+                    <StackPanel Spacing="5" IsVisible="{Binding CanWriteOff}">
+                        <TextBlock Text="{Binding L[write_off]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Button Classes="icon" Command="{Binding ForgiveRestCommand}"
+                                    ToolTip.Tip="{Binding L[write_off_rest]}" VerticalAlignment="Stretch">
+                                <mi:MaterialIcon Kind="Eraser" Width="18" Height="18" />
+                            </Button>
+                            <NumericUpDown Grid.Column="2" Value="{Binding RepayWriteOff, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" FontSize="18" MinHeight="44" />
+                        </Grid>
+                        <TextBox Text="{Binding RepayWriteOffReason}" PlaceholderText="{Binding L[write_off_reason]}" MinHeight="38" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[debt_left]}" FontSize="12.5" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                            <TextBlock Grid.Column="1" Text="{Binding RepayDebtLeft, StringFormat='{}{0:N0}'}"
+                                       FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
+                        </Grid>
+                    </StackPanel>
+                    <Border IsVisible="{Binding RepayShowsAdvance}" Background="{DynamicResource SuccessBg}"
                             CornerRadius="10" Padding="12,9">
                         <TextBlock FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}">
                             <Run Text="{Binding L[advance], Mode=OneWay}" />
                             <Run Text="{Binding RepayOverpayAmount, StringFormat='{}{0:N0}', Mode=OneWay}" />
                         </TextBlock>
+                    </Border>
+                    <Border IsVisible="{Binding RepayOverpayBlocked}" Background="{DynamicResource WarningBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock Text="{Binding L[repay_overpay_blocked]}" FontSize="12.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimary}" />
                     </Border>
                 </StackPanel>
         </c:ModalCard>

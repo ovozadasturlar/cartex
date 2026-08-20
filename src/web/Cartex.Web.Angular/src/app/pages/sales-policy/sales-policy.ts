@@ -72,6 +72,7 @@ export class SalesPolicySettings implements OnInit {
     { key: 'show_out_of_stock', field: 'showOutOfStock' },
     { key: 'show_unlisted_products', field: 'showUnlistedProducts' },
     { key: 'allow_insufficient_stock_sales', field: 'allowInsufficientStockSales' },
+    { key: 'allow_negative_stock_offline', field: 'allowNegativeStockWhenOffline' },
   ] as const;
 
   // The loaded document is kept whole. Saving spreads over it, so a field this screen does not
@@ -94,6 +95,7 @@ export class SalesPolicySettings implements OnInit {
     showOutOfStock: false,
     showUnlistedProducts: true,
     allowInsufficientStockSales: false,
+    allowNegativeStockWhenOffline: false,
     allowRetroactiveCashback: false,
     saleCorrectionWindow: 'Shift',
     saleCorrectionDays: 1,

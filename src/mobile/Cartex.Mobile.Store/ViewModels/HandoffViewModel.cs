@@ -5,7 +5,6 @@ using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Ordering;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using QRCoder;
 using Refit;
 
 namespace Cartex.Mobile.Store.ViewModels;
@@ -250,7 +249,7 @@ public partial class HandoffViewModel(IOrderingApi orderingApi) : ObservableObje
         CanCancel = actions.Contains("cancel");
         CanOpenSale = actions.Contains("openSale") && cart.SaleId.HasValue;
         CanRequeue = actions.Contains("requeue");
-        QrSource = CanShowQr ? BuildQr(cart.AggregateCode) : null;
+        QrSource = CanShowQr ? QrImage.From(cart.AggregateCode) : null;
 
         if (IsSold && !_soldNotified)
         {
@@ -274,14 +273,6 @@ public partial class HandoffViewModel(IOrderingApi orderingApi) : ObservableObje
         OnPropertyChanged(nameof(HasCancellationReason));
         OnPropertyChanged(nameof(HasParticipants));
         OnPropertyChanged(nameof(HasError));
-    }
-
-    private static ImageSource BuildQr(string value)
-    {
-        using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode(value, QRCodeGenerator.ECCLevel.M);
-        var png = new PngByteQRCode(data).GetGraphic(12);
-        return ImageSource.FromStream(() => new MemoryStream(png));
     }
 
     private static string Describe(Exception exception) => exception is ApiException api

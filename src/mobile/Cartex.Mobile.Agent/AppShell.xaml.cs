@@ -27,6 +27,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("day-summary", typeof(DaySummaryPage));
         Routing.RegisterRoute("pin", typeof(PinPage));
         Routing.RegisterRoute("security", typeof(SecurityPage));
+        Routing.RegisterRoute("server-scan", typeof(ServerScanPage));
     }
 
     protected override void OnNavigated(ShellNavigatedEventArgs args)

@@ -24,6 +24,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     private readonly MobilePermissions _permissions;
     private readonly MobileOfflineService _offline;
     private readonly SalesPolicyCache _policy;
+    private readonly MobileFeaturesCache _features;
 
     public ObservableCollection<CheckoutLine> Items { get; } = [];
     public ObservableCollection<CheckoutParticipantLine> Participants { get; } = [];
@@ -96,9 +97,11 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         WarehouseContext warehouse,
         MobilePermissions permissions,
         MobileOfflineService offline,
-        SalesPolicyCache policy)
+        SalesPolicyCache policy,
+        MobileFeaturesCache features)
     {
         _policy = policy;
+        _features = features;
         _orderingApi = orderingApi;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
@@ -124,6 +127,13 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         await _offline.StartAsync();
         if (_offline.ShouldUseOffline)
         {
+            if (!_offline.SalesCapability)
+            {
+                await Shell.Current.CurrentPage.DisplayAlertAsync(
+                    Loc.Instance["checkout"], Loc.Instance["offline_capability_off"], Loc.Instance["ok"]);
+                await Shell.Current.GoToAsync("..");
+                return;
+            }
             if (!string.IsNullOrEmpty(_code))
             {
                 await Shell.Current.CurrentPage.DisplayAlertAsync(
@@ -144,6 +154,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
         var businessTask = _businessApi.GetAsync();
         var currenciesTask = _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
+        var gatingTask = Task.WhenAll(_policy.EnsureLoadedAsync(), _features.EnsureLoadedAsync());
         Task<CartDto?> cartTask = string.IsNullOrEmpty(_code)
             ? Task.FromResult<CartDto?>(null)
             : LoadServerCartAsync();
@@ -182,6 +193,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             Currencies.Add(new CurrencyDto(BaseCurrency, BaseCurrency, true, true, true, true, 1, DateTime.UtcNow));
         }
 
+        await gatingTask;
         if (_serverCart is not null)
             ApplyServerCart(_serverCart);
         else
@@ -300,7 +312,9 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         catch (Exception ex)
         {
             if (IsConnectionFailure(ex)) _offline.MarkServerUnavailable();
-            Error = Describe(ex);
+            var message = Describe(ex);
+            Error = message;
+            Ui.Toast(message);
         }
         finally { IsBusy = false; NotifyError(); }
     }
@@ -331,7 +345,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
             var aggregates = PaymentAggregates();
             var creditAmount = CreditAmount();
-            await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(aggregates.Cash, aggregates.Card, aggregates.Bonus)
+            var sale = await _orderingApi.CheckoutAsync(codeToCheckout, new CheckoutCartRequest(aggregates.Cash, aggregates.Card, aggregates.Bonus)
             {
                 IdempotencyKey = CheckoutIdempotencyKey(),
                 Payments = BuildPaymentRequests(),
@@ -345,6 +359,12 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
             if (string.IsNullOrEmpty(_code))
                 _localCart.Clear();
+            // OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
+            if (sale.Warnings?.Contains("stock_negative_offline") == true)
+                await Shell.Current.CurrentPage.DisplayAlertAsync(
+                    Loc.Instance["checkout"],
+                    Loc.Instance["stock_negative_offline_warning"],
+                    Loc.Instance["ok"]);
             Ui.Toast(Loc.Instance["sale_done"]);
             await Shell.Current.GoToAsync("..");
         }
@@ -465,7 +485,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CustomerName = _localCart.CustomerName ?? "";
         NoteText = _localCart.Note;
         _totalAmount = _localCart.Total;
-        CanQueue = _policy.Current.AllowSaleQueue;
+        CanQueue = _permissions.HasAny("sales.pick", "sales.create")
+            && _policy.Current.AllowSaleQueue && _features.QueueEnabled;
         CanEditNote = true;
         OnPropertyChanged(nameof(HasParticipants));
     }

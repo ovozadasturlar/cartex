@@ -308,6 +308,7 @@ Har bir o'chirilgan qoida yonida **nega** o'chirilgani yozilgan (`.editorconfig`
 | `MA0045` CTS.Cancel mobilda | 13 | **Yechildi (2026-08-18)** — takrorlanadigan bekor qilish naqshi `Cartex.Mobile.Core.Debounce` ga yig'ildi; sinxron bekor qilish ataylab (chaqiruvchilar setter/ctor), suppression bitta joyda sabab bilan. `Result`/`Wait` himoyasi kuchda qoladi |
 | `MA0046` Action event'lar | 5 | O'chirildi — ichki store xabarlari ataylab `Action`: sender/args yuki yo'q, marosim shart emas |
 | `RCS1139` yalang'och `///` | 30 | **Tuzatildi (2026-08-18)** — `///` faqat haqiqiy XML doc uchun; izohlar `//` bilan (mobil fayllar o'girildi) |
+| Desktop qoldig'i (2026-08-18) | 26 | **Tuzatildi** — CTS.Cancel naqshi `Cartex.UI.Services.Debounce` ga (mobil bilan bir xil helper); `BarcodeSyntax` regex'iga 200 ms chegara (MA0009); sinxron lokal fayl IO (settings/held-sales/kalit fayli/`Task.Run` ichidagi CSV) ataylab sinxron — joyida sabab bilan suppression (MA0045); `MA0132`, `AVLN5001`, `RCS1102`, `CA1416` to'g'ridan-to'g'ri tuzatildi |
 | Qolgan mayda | ~20 | Tuzatildi yoki sabab bilan o'chirildi |
 
 Yakuniy holat: **0 ogohlantirish**.

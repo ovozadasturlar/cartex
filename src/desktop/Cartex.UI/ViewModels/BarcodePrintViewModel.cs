@@ -114,8 +114,7 @@ public partial class BarcodePrintViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 

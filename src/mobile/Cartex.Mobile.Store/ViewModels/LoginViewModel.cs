@@ -10,7 +10,7 @@ namespace Cartex.Mobile.Store.ViewModels;
 public partial class LoginViewModel(
     MobileAuthService auth,
     SessionStore session,
-    MobileOfflineService offline) : ObservableObject
+    MobileOfflineService offline) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
@@ -32,6 +32,15 @@ public partial class LoginViewModel(
 
     [RelayCommand]
     private void ToggleServer() => IsServerVisible = !IsServerVisible;
+
+    [RelayCommand]
+    private Task ScanServerAsync() => Shell.Current.GoToAsync("server-scan");
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("server", out var value))
+            ServerUrl = (string)value;
+    }
 
     [RelayCommand]
     private void ToggleEye()

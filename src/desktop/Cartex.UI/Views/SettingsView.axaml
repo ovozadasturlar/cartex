@@ -56,12 +56,38 @@
 
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding ServerQr, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding L[server_qr]}" FontWeight="SemiBold" FontSize="15"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding L[server_qr_hint]}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextMuted}" />
+                    <Border Width="180" Height="180" Background="White" CornerRadius="8" Padding="8"
+                            HorizontalAlignment="Left">
+                        <Image Source="{Binding ServerQr}" />
+                    </Border>
+                    <TextBlock Text="{Binding ServerQrUrl}" FontSize="12"
+                               Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     IsVisible="{Binding OfflineVisible}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="{Binding L[offline_cache]}" FontWeight="SemiBold" FontSize="15"
                                Foreground="{DynamicResource TextPrimary}" />
                     <TextBlock Text="{Binding L[offline_cache_hint]}" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextMuted}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[offline_profile]}" FontSize="12.5" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <StackPanel Orientation="Horizontal" Spacing="18">
+                            <CheckBox IsChecked="{Binding OfflineAllowSales}" Content="{Binding L[offline_profile_sales]}" />
+                            <CheckBox IsChecked="{Binding OfflineAllowPayments}" Content="{Binding L[offline_profile_payments]}" />
+                            <CheckBox IsChecked="{Binding OfflineAllowSupplies}" Content="{Binding L[offline_profile_supplies]}" />
+                        </StackPanel>
+                    </StackPanel>
                     <TextBlock Text="{Binding OfflineHolderText}" FontSize="12.5"
                                Foreground="{DynamicResource TextSecondary}" />
                     <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding CanEnableOffline}">
@@ -82,8 +108,90 @@
                     <StackPanel Spacing="10" IsVisible="{Binding OfflineEnabled}">
                         <TextBlock Text="{Binding OfflineSyncText}" FontSize="12.5"
                                    Foreground="{DynamicResource TextSecondary}" />
-                        <Button Classes="danger" Command="{Binding ToggleOfflineCommand}" Content="{Binding L[disconnect]}"
-                                HorizontalAlignment="Left" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[hub_enable]}" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="{Binding HubStatusText}" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding HubEnabled}" VerticalAlignment="Center" />
+                        </Grid>
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding HubQr, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding L[hub_qr]}" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding L[hub_qr_hint]}" FontSize="12" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextMuted}" />
+                            <Border Width="180" Height="180" Background="White" CornerRadius="8" Padding="8"
+                                    HorizontalAlignment="Left">
+                                <Image Source="{Binding HubQr}" />
+                            </Border>
+                            <TextBlock Text="{Binding HubQrUrl}" FontSize="12"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                        <Button Classes="danger" Command="{Binding ToggleOfflineCommand}"
+                                Content="{Binding L[disconnect]}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding QueueRows}" IsVisible="{Binding HasQueueRows}"
+                              AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="None"
+                              CanUserResizeColumns="False" CanUserSortColumns="False" MaxHeight="260">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center" Margin="4,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding KindText}" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" />
+                                                <TextBlock Text="{Binding When}" FontSize="12"
+                                                           Foreground="{DynamicResource TextMuted}" />
+                                                <TextBlock Text="{Binding Details}" FontSize="12"
+                                                           Foreground="{DynamicResource TextSecondary}"
+                                                           IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Error}" FontSize="11.5" TextWrapping="Wrap"
+                                                       Foreground="#DC2626" IsVisible="{Binding IsError}" />
+                                            <TextBlock Text="{Binding Warning}" FontSize="11.5" TextWrapping="Wrap"
+                                                       Foreground="#D97706"
+                                                       IsVisible="{Binding Warning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Button Classes="icon" IsVisible="{Binding CanAct}"
+                                                    Command="{Binding $parent[DataGrid].DataContext.RetryQueueRowCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[offline_retry]}">
+                                                <mi:MaterialIcon Kind="Refresh" Width="16" Height="16" />
+                                            </Button>
+                                            <Button Classes="icon" IsVisible="{Binding CanAct}"
+                                                    Command="{Binding $parent[DataGrid].DataContext.DiscardQueueRowCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[offline_discard]}">
+                                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                                            </Button>
+                                            <Button Classes="icon" IsVisible="{Binding CanCancel}"
+                                                    Command="{Binding $parent[DataGrid].DataContext.CancelQueueRowCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[offline_cancel]}">
+                                                <mi:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Classes="outline" Command="{Binding ExportQueueCommand}"
+                                Content="{Binding L[offline_export]}" IsVisible="{Binding HasQueueRows}" />
+                        <Button Classes="outline" Command="{Binding ImportQueueCommand}"
+                                Content="{Binding L[offline_import]}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

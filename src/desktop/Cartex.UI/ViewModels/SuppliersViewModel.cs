@@ -123,7 +123,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         SelectedSupplier = null;
         Suppliers.Clear();
         Totals = new SupplierTotalsDto(0, 0, 0);
@@ -208,8 +208,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -225,9 +224,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private CancellationToken NewLedgerToken()
     {
-        _ledgerCts?.Cancel();
-        _ledgerCts?.Dispose();
-        return (_ledgerCts = new CancellationTokenSource()).Token;
+        return Debounce.Restart(ref _ledgerCts).Token;
     }
 
     partial void OnSelectedSupplierChanged(SupplierDto? value)
@@ -242,7 +239,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         _detailSupplierId = value?.Id ?? 0;
         LedgerPaging.Page = 1;
         SuppliesPaging.Page = 1;
-        if (value is null) { _ledgerCts?.Cancel(); return; }
+        if (value is null) { Debounce.Cancel(ref _ledgerCts); return; }
         _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
         if (IsSuppliesTab) _ = LoadSuppliesAsync(value.Id);
     }

@@ -47,14 +47,28 @@ public class OfflineCacheController(ISender sender) : ControllerBase
         Ok(await sender.Send(new HeartbeatOfflineCacheCommand(
             request.LeaseId, request.Epoch, request.LeaseToken, request.PendingCount)));
 
+    [HttpPost("hub-attestation")]
+    [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<HubAttestationDto>> GetHubAttestation(HubAttestationRequest request) =>
+        Ok(await sender.Send(new GetHubAttestationQuery(request.PublicKey)));
+
     [HttpGet("snapshot")]
     [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<OfflineSnapshotDto>> GetSnapshot(
         [FromQuery] long leaseId,
         [FromQuery] long epoch,
-        [FromHeader(Name = "X-Offline-Lease-Token")] string leaseToken)
+        [FromHeader(Name = "X-Offline-Lease-Token")] string leaseToken,
+        [FromQuery] string? sections = null,
+        [FromQuery] DateTime? since = null)
     {
-        var snapshot = await sender.Send(new GetOfflineSnapshotQuery(leaseId, epoch, leaseToken));
+        var parts = string.IsNullOrWhiteSpace(sections)
+            ? null
+            : sections.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var snapshot = await sender.Send(new GetOfflineSnapshotQuery(leaseId, epoch, leaseToken,
+            parts is null || parts.Contains("sales", StringComparer.OrdinalIgnoreCase),
+            parts is null || parts.Contains("payments", StringComparer.OrdinalIgnoreCase),
+            parts is null || parts.Contains("supplies", StringComparer.OrdinalIgnoreCase),
+            since));
         return Ok(snapshot);
     }
 
@@ -63,4 +77,17 @@ public class OfflineCacheController(ISender sender) : ControllerBase
     public async Task<ActionResult<OfflineSyncBatchResult>> Sync(OfflineSyncBatchRequest request) =>
         Ok(await sender.Send(new ProcessOfflineSyncBatch(
             request.LeaseId, request.Epoch, request.LeaseToken, request.Events)));
+
+    [HttpPost("sync/skip")]
+    [HasPermission(AppPermissions.Sales.Create, AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<OfflineSyncEventResult>> Skip(OfflineSyncSkipRequest request) =>
+        Ok(await sender.Send(new SkipOfflineSyncEventCommand(
+            request.LeaseId, request.Epoch, request.LeaseToken, request.Event, request.Reason)));
+
+    [HttpPost("sync/import")]
+    [HasPermission(AppPermissions.Devices.Revoke)]
+    public async Task<ActionResult<OfflineSyncBatchResult>> Import(OfflineSyncImportRequest request) =>
+        Ok(await sender.Send(new ImportOfflineSyncCommand(
+            request.LeaseId, request.Epoch, request.LeaseToken, request.Events, request.SkipRejected,
+            request.SkipEventIds)));
 }

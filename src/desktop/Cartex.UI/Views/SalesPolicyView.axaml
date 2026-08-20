@@ -355,6 +355,16 @@
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowInsufficientStockSales}" />
                             </Grid>
                         </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_negative_stock_offline]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowNegativeStockOfflineHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowNegativeStockWhenOffline}" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 

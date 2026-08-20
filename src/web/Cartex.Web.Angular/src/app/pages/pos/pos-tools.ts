@@ -16,7 +16,7 @@ import { Prepack, PrepacksApi } from '../../core/api/prepacks.api';
 import { ProductsCatalogApi } from '../../core/api/catalog.api';
 import { SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
-import { CxMoneyPipe, isoDay } from '../../core/format';
+import { CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { RemotePrintService } from '../../core/remote-print.service';
 import { ProductDialog } from '../products/product-dialog';
@@ -205,6 +205,7 @@ export class PosReceiveDialog implements OnInit {
 
   private readonly data = inject<{ stock: StockOnHand; warehouseId: number }>(MAT_DIALOG_DATA);
   readonly stock = this.data.stock;
+  private readonly idempotencyKey = newUuid();
   readonly busy = signal(false);
   readonly suppliers = signal<Supplier[]>([]);
   readonly supplierRequired = signal(false);
@@ -257,6 +258,7 @@ export class PosReceiveDialog implements OnInit {
           ],
           paidCash: 0,
           paidCard: 0,
+          idempotencyKey: this.idempotencyKey,
         }),
       );
       this.notify.success(message);

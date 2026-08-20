@@ -5705,6 +5705,11 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_shifts");
 
+                    b.HasIndex("UserId", "BranchId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shifts_user_id_branch_id")
+                        .HasFilter("\"status\" = 'Open' AND \"is_deleted\" = false");
+
                     b.HasIndex("UserId", "BranchId", "Status")
                         .HasDatabaseName("ix_shifts_user_id_branch_id_status");
 
@@ -6169,6 +6174,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -6219,11 +6229,13 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_supplies_supplier_id");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_supplies_user_id");
-
                     b.HasIndex("WarehouseId")
                         .HasDatabaseName("ix_supplies_warehouse_id");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_supplies_user_id_idempotency_key")
+                        .HasFilter("\"idempotency_key\" IS NOT NULL");
 
                     b.ToTable("supplies", (string)null);
                 });

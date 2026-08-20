@@ -26,6 +26,7 @@
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Cartex.ApiClient/Cartex.ApiClient.csproj" />
+    <Project Path="src/shared/Cartex.Hub/Cartex.Hub.csproj" />
     <Project Path="src/shared/Cartex.Shared/Cartex.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">

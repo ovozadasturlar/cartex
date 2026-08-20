@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\backend\Cartex.Application\Cartex.Application.csproj" />
     <ProjectReference Include="..\..\src\backend\Cartex.Infrastructure\Cartex.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\shared\Cartex.ApiClient\Cartex.ApiClient.csproj" />
+    <ProjectReference Include="..\..\src\shared\Cartex.Hub\Cartex.Hub.csproj" />
     <ProjectReference Include="..\..\src\desktop\Cartex.UI\Cartex.UI.csproj" />
   </ItemGroup>
 

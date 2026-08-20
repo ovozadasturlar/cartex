@@ -1,3 +1,5 @@
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.Customers.Commands;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Tests.Common;
@@ -25,6 +27,13 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
+    }
+
+    private async Task AllowCustomerCreditAsync()
+    {
+        using var scope = Fixture.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ISettingsService>()
+            .SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings { AllowCustomerCredit = true });
     }
 
     private async Task<long> CreateCustomerAsync(decimal creditLimit = 10_000_000m)
@@ -132,11 +141,13 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         Assert.Equal(cardBefore + debt, await BranchBalanceAsync(branch1, AccountType.Card));
     }
 
+    // QARZ-03, QARZ-20: haqdorlik yoniq — qarz yopiladi, ortgani avansga tushadi.
     [Fact]
-    public async Task Repay_more_than_debt_throws_and_keeps_balance()
+    public async Task Repay_more_than_debt_closes_debt_and_credits_advance()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await AllowCustomerCreditAsync();
         await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
@@ -146,11 +157,11 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await Assert.ThrowsAsync<BusinessRuleException>(() =>
-                sender.Send(new RepayCustomerDebtCommand(customerId, debt + 1m, false)));
+            await sender.Send(new RepayCustomerDebtCommand(customerId, debt + 1m, false));
         }
 
-        Assert.Equal(debt, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await DebtBalanceAsync(customerId));
+        Assert.Equal(1m, await AdvanceBalanceAsync(customerId));
     }
 
     [Fact]

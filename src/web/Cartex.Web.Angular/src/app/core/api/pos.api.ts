@@ -58,6 +58,8 @@ export interface CreateSalePayload {
 export interface CreateSaleResult {
   saleId: number;
   receiptToken: string;
+  /// OFF-17: savdo yakunlanadi, lekin kassirga ko'rsatiladigan kod bo'lishi mumkin.
+  warnings?: string[] | null;
 }
 
 export interface ZReportCurrency {

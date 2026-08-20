@@ -59,6 +59,7 @@ export class SupplyCreate implements OnInit {
   readonly editId = Number(this.route.snapshot.paramMap.get('id')) || null;
   readonly isEdit = this.editId !== null;
   private editCurrency: string | null = null;
+  private readonly idempotencyKey = newUuid();
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -276,6 +277,7 @@ export class SupplyCreate implements OnInit {
           items,
           paidCash: supplierId === null ? 0 : this.paidCash,
           paidCard: supplierId === null ? 0 : this.paidCard,
+          idempotencyKey: this.idempotencyKey,
       };
       if (this.editId) {
         await lastValueFrom(this.api.updateSupply(this.editId, {

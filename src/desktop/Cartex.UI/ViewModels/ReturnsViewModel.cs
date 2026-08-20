@@ -104,7 +104,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         Documents.Clear();
         CloseEditor();
         SearchText = "";
@@ -152,8 +152,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedAsync(cts.Token, () => { Paging.Page = 1; return LoadAsync(); });
     }
 
@@ -412,7 +411,7 @@ public partial class ReturnsViewModel : ViewModelBase, ILoadable
         SelectedCustomer = null;
         Note = "";
         RefundInCash = false;
-        BusinessDate = DateTime.Today;
+        BusinessDate = DateTimeOffset.Now;
         _idempotencyKey = null;
         ClearLineDraft();
         NotifyEditor();

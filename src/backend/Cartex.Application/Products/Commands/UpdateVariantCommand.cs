@@ -62,7 +62,21 @@ public sealed class UpdateVariantCommandHandler(
         }
 
         var current = variant.Barcodes.Select(b => b.Code).ToHashSet();
-        foreach (var input in desired.Values.Where(b => !current.Contains(b.Code)))
+        var added = desired.Values.Where(b => !current.Contains(b.Code)).ToList();
+        if (added.Count > 0)
+        {
+            // Kod boshqa variantda band bo'lsa ham qo'shilardi. Bazada `code` yagona emas, oflayn
+            // kesh esa uni kalit qilib saqlaydi — takroriy kod snapshotni butunlay yiqitardi.
+            var codes = added.Select(b => b.Code).ToList();
+            var taken = await db.Barcodes
+                .Where(b => codes.Contains(b.Code) && b.VariantId != variant.Id)
+                .Select(b => b.Code)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (taken is not null)
+                throw new BusinessRuleException($"Bu barkod allaqachon mavjud: {taken}");
+        }
+
+        foreach (var input in added)
         {
             Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, input.PackQty);
             db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = input.PackQty });

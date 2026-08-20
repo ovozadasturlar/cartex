@@ -3,6 +3,7 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Refit;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class HomeViewModel(
     IOrderingApi ordering,
     ISalesApi sales,
     SalesPolicyCache policy,
+    MobileFeaturesCache features,
     SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _greeting = "";
@@ -46,10 +48,6 @@ public partial class HomeViewModel(
         await session.LoadAsync();
         HasAccess = perms.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
         if (!HasAccess) return;
-        // NAVBAT-06: navbat do'kon siyosati bilan o'chirilgan bo'lsa, ilovada u haqda
-        // hech narsa ko'rinmasligi kerak.
-        _ = Task.Run(policy.RefreshAsync);
-        ShowQueue = perms.HasAny("sales.pick", "sales.create", "sales.view") && policy.Current.AllowSaleQueue;
         ShowStats = perms.HasAny("sales.view", "sales.viewAll");
         var name = auth.FullName;
         Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);
@@ -60,6 +58,12 @@ public partial class HomeViewModel(
         CartCount = cart.Count;
         SupplyCount = supplyCart.Count;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
+        // NAVBAT-06: navbat do'kon siyosati yoki modul bilan o'chirilgan bo'lsa, ilovada u
+        // haqda hech narsa ko'rinmasligi kerak — shuning uchun ko'rinish shu ikkisi
+        // yuklangandan keyin hisoblanadi.
+        await Task.WhenAll(policy.RefreshAsync(), features.RefreshAsync());
+        ShowQueue = perms.HasAny("sales.pick", "sales.view")
+            && policy.Current.AllowSaleQueue && features.QueueEnabled;
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }
@@ -93,9 +97,9 @@ public partial class HomeViewModel(
             }
             _loadedAt = DateTime.UtcNow;
         }
-        catch
+        catch (Exception ex)
         {
-            Error = Loc.Instance["err_no_connection"];
+            Error = ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"];
         }
     }
 
@@ -104,7 +108,12 @@ public partial class HomeViewModel(
         if (!ShowStats) return [];
         try
         {
-            return await sales.GetDailyTotalsAsync(fromDate: DateTime.Today.AddDays(-6), toDate: DateTime.Today.AddDays(1));
+            // Chegaralar mahalliy kun boshidan olinadi, lekin serverga instant sifatida yuboriladi —
+            // aks holda oyna mintaqa farqicha siljib, birinchi va oxirgi kun to'liq chiqmaydi.
+            return await sales.GetDailyTotalsAsync(
+                fromDate: DateTime.Today.AddDays(-6).ToUniversalTime(),
+                toDate: DateTime.Today.AddDays(1).ToUniversalTime(),
+                tzOffsetMinutes: (int)DateTimeOffset.Now.Offset.TotalMinutes);
         }
         catch
         {

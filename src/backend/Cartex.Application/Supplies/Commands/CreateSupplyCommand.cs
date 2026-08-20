@@ -10,6 +10,8 @@ using Cartex.Domain.Enums;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Products;
 using Cartex.Application.Common.Measurement;
+using Cartex.Domain.Authorization;
+using System.Text.Json.Serialization;
 
 namespace Cartex.Application.Supplies.Commands;
 
@@ -30,13 +32,34 @@ public record CreateSupplyCommand(
     List<CreateSupplyItemDto> Items,
     decimal PaidCash = 0,
     decimal PaidCard = 0,
-    string? Currency = null) : ICommand<long>;
+    string? Currency = null) : ICommand<long>
+{
+    public string? IdempotencyKey { get; init; }
+    [JsonIgnore] public bool FromOfflineSync { get; init; }
+    [JsonIgnore] public long? OfflineActorUserId { get; init; }
+}
 
 public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IBranchCatalogService branchCatalog, IAuditService audit, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateSupplyCommand, long>
 {
     public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        var authenticatedUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        if (request.OfflineActorUserId.HasValue && !request.FromOfflineSync)
+            throw new ForbiddenException("Offline actor can only be used by the replay pipeline.");
+        var userId = request.OfflineActorUserId ?? authenticatedUserId;
+        if (!currentUser.HasPermission(AppPermissions.Supplies.Create))
+            throw new ForbiddenException("Kirim yaratishga ruxsat yo'q.");
+
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var existing = await db.Supplies
+                .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
+                .Select(s => (long?)s.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return existing.Value;
+        }
 
         if (request.SupplierId is null)
         {
@@ -67,7 +90,8 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             SupplyDate = request.SupplyDate,
             TotalAmount = lines.Sum(l => l.resolved.Quantity * l.resolved.Price),
             Currency = supplyCurrency,
-            Rate = supplyRate
+            Rate = supplyRate,
+            IdempotencyKey = idempotencyKey
         };
 
         foreach (var (item, resolved) in lines)

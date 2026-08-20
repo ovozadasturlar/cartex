@@ -116,7 +116,7 @@ public class CustomersController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Customers.ReceivePayment)]
     public async Task<IActionResult> RepayDebt(long id, [FromBody] RepayDebtRequest request)
     {
-        await sender.Send(new RepayCustomerDebtCommand(id, request.Amount, request.ViaCard, request.DebtCurrency, request.PayCurrency, request.IdempotencyKey));
+        await sender.Send(new RepayCustomerDebtCommand(id, request.Amount, request.ViaCard, request.DebtCurrency, request.PayCurrency, request.IdempotencyKey, request.WriteOff, request.WriteOffReason));
         return Ok();
     }
 
