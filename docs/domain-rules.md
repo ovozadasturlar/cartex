@@ -436,7 +436,7 @@ ikkalasiga ham ishonmay qo'yadi — va qaysi biri to'g'ri ekanini bilishning ilo
 
 | ID | Qoida |
 |---|---|
-| `HIS-01` | **Daromad** — savdo qiymati, qaytarilgan qism chiqarib tashlangan holda. Qamrovga `Completed` va `PartialReturn` holatidagi savdolar kiradi. |
+| `HIS-01` | **Daromad** — savdo qiymati, qaytarilgan qism chiqarib tashlangan holda. Qamrovga `Completed` va `PartialReturn` holatidagi savdolar kiradi. **To'liq qaytarilgan savdo** (`Returned`) qamrovdan butunlay chiqadi: na daromadga, na savdolar soniga kiradi — aks holda o'rtacha chek nolga tortilib, ko'rsatkich buziladi. |
 | `HIS-02` | To'lov taqsimoti **aynan o'sha savdolar** ustida hisoblanadi: bir xil status filtri, bir xil vaqt oralig'i, bir xil ombor filtri. Qisman qaytarilgan savdoni taqsimotdan chiqarib tashlash pulni hisobotdan yo'q qiladi. |
 | `HIS-03` | Taqsimotda pulning **barcha kelish yo'llari** ko'rsatiladi: naqd, karta, bonus, **avans**, qarz. Bittasi tushib qolsa, ustunlar yig'indisi daromadga yetmaydi va farqning sababi ko'rinmaydi. |
 | `HIS-04` | **Invariant:** `naqd + karta + bonus + avans + qarz − kredit − qaytarilgan = daromad`. Bu yerda *kredit* — mijoz ortiqcha bergan va avansiga yozilgan pul (savdo qiymatiga kirmaydi), *qaytarilgan* — qaytarilgan tovarning chegirmadan keyingi qiymati. |

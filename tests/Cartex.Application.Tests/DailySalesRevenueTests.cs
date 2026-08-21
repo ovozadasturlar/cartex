@@ -5,6 +5,7 @@ using Cartex.Application.Sales.Queries;
 using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -176,5 +177,39 @@ public class DailySalesRevenueTests(DatabaseFixture fixture) : DatabaseTest(fixt
         Fixture.CurrentUser.Granted.Add(AppPermissions.Sales.ViewAll);
 
         Assert.Equal((2, 9000m), await DailyAsync());
+    }
+
+    private async Task ReturnFullyAsync(long saleId)
+    {
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await scope.ServiceProvider.GetRequiredService<ISender>()
+            .Send(await TestReturns.ForSaleAsync(db, saleId));
+    }
+
+    private async Task<SaleStatus> StatusAsync(long saleId)
+    {
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.Sales.Where(x => x.Id == saleId).Select(x => x.Status).SingleAsync();
+    }
+
+    [Fact]
+    public async Task HIS_01_daily_revenue_leaves_out_fully_returned_sales_entirely()
+    {
+        var setup = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(setup.AdminId, setup.BusinessId, setup.BranchId);
+        await TestShift.OpenAsync(Fixture);
+
+        var variantId = await CreateProductAsync("Kunlik to'liq qaytish", 1500m, 20m, setup.WarehouseId);
+        await SellAsync(setup.WarehouseId, 6000m, 0m, (variantId, 4m));
+        var returnedId = await SellAsync(setup.WarehouseId, 3000m, 0m, (variantId, 2m));
+
+        Assert.Equal((2, 9000m), await DailyAsync());
+
+        await ReturnFullyAsync(returnedId);
+        Assert.Equal(SaleStatus.Returned, await StatusAsync(returnedId));
+
+        Assert.Equal((1, 6000m), await DailyAsync());
     }
 }
