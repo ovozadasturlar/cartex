@@ -74,7 +74,8 @@ public sealed class CheckoutCartCommandHandler(
 
             cart.CustomerId = request.CustomerId ?? cart.CustomerId;
             var saleItems = request.Items is { Count: > 0 }
-                ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)).ToList()
+                ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)
+                    { ExpectedUnitPrice = i.ExpectedUnitPrice }).ToList()
                 : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPriceOverride)).ToList();
             var preauthorizedPrices = cart.Items
                 .Where(i => i.UnitPriceOverride != null)

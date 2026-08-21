@@ -2229,7 +2229,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     // Navbatdan kelgan chegirma har doim yuboriladi: uni kiritgan sotuvchi
                     // ruxsatini serverning o'zi tekshirgan; yakunlovchi ruxsatisiz ham saqlanadi.
                     var checkoutItems = CartItems
-                        .Select(c => new CheckoutCartItemDto(c.VariantId, c.Quantity, c.PriceOverride))
+                        .Select(c => new CheckoutCartItemDto(c.VariantId, c.Quantity, c.PriceOverride)
+                            { ExpectedUnitPrice = c.IsPrepack ? null : c.OriginalPrice })
                         .ToList();
 
                     _saleIdempotencyKey ??= Guid.NewGuid().ToString("N");
@@ -2266,7 +2267,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var items = CartItems.Select(c => new CreateSaleItemRequest(c.VariantId, c.Quantity,
-                    c.IsPrepack ? null : CanOverridePrice ? c.PriceOverride : null, c.PrepackId)).ToList();
+                    c.IsPrepack ? null : CanOverridePrice ? c.PriceOverride : null, c.PrepackId)
+                    { ExpectedUnitPrice = c.IsPrepack ? null : c.OriginalPrice }).ToList();
                 var request = new CreateSaleRequest(warehouseId.Value, SelectedCustomer?.Id, PaidCash, PaidCard, PaidBonus, items)
                 {
                     DiscountAmount = DiscountAmount,
@@ -2296,8 +2298,34 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         }
         catch (Exception ex)
         {
+            if (ApiErrors.CodeOf(ex) == "price_changed" && ApplyPriceChanges(ex)) return;
             _toast.Error(ApiErrors.Describe(ex));
         }
+    }
+
+    /// NARX-09: server savdoni yaratmadi, chunki savatdagi narx eskirgan. Yangi narxlarni savatga
+    /// qo'yamiz va kassirga nima o'zgarganini aytamiz — u yangi jamini ko'rib qayta tasdiqlaydi.
+    private bool ApplyPriceChanges(Exception ex)
+    {
+        var changes = ApiErrors.DetailsOf<List<PriceChangeDto>>(ex);
+        if (changes is not { Count: > 0 }) return false;
+
+        var lines = new List<string>();
+        foreach (var change in changes)
+        {
+            var item = CartItems.FirstOrDefault(c => c.VariantId == change.VariantId && !c.IsPrepack);
+            if (item is null) continue;
+            var wasOverridden = item.UnitPrice != item.OriginalPrice;
+            item.OriginalPrice = change.Current;
+            if (!wasOverridden) item.UnitPrice = change.Current;
+            lines.Add($"{change.ProductName}: {change.Expected:N0} → {change.Current:N0}");
+        }
+        if (lines.Count == 0) return false;
+
+        _saleIdempotencyKey = null;
+        NotifyTotals();
+        _toast.Warning($"{L["price_changed_warning"]} {string.Join("; ", lines)}");
+        return true;
     }
 
     /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.

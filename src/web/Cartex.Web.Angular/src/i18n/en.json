@@ -57,6 +57,7 @@
   "orders_subtitle": "Online orders and load list",
   "payment_breakdown": "Payment breakdown",
   "payments": "Payments",
+  "price_changed_warning": "The price changed — the cart was updated, confirm the new total:",
   "product_types_subtitle": "Manage product types",
   "products_subtitle": "Product catalog and stock",
   "rates_subtitle": "Manage exchange rates",

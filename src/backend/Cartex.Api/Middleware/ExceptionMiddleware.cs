@@ -59,6 +59,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             ["correlationId"] = context.TraceIdentifier
         };
         if (extensions is not null) problem["errors"] = extensions;
+        if (exception is DomainException { Details: { } details }) problem["details"] = details;
 
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = statusCode;

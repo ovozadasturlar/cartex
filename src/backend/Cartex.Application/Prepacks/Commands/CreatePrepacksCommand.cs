@@ -39,10 +39,9 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
         var now = DateTime.UtcNow;
         var expiresAt = request.ExpiresHours is { } hours ? now.AddHours(hours) : (DateTime?)null;
 
-        var result = new List<PrepackLabelDto>();
+        var prepacks = new List<Prepack>();
         for (var i = 0; i < request.Count; i++)
-        {
-            var prepack = new Prepack
+            prepacks.Add(new Prepack
             {
                 BranchId = warehouse.BranchId,
                 WarehouseId = warehouse.Id,
@@ -52,14 +51,16 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
                 LabelCode = $"PP{RandomNumberGenerator.GetInt32(0, 1_000_000_000):D9}{RandomNumberGenerator.GetInt32(0, 10)}",
                 Status = PrepackStatus.Active,
                 ExpiresAt = expiresAt
-            };
-            db.Prepacks.Add(prepack);
-            result.Add(new PrepackLabelDto(0, prepack.LabelCode, variant.Name, variant.UnitName, prepack.Quantity,
-                Math.Round(prepack.UnitPrice * prepack.Quantity, 2)));
-        }
+            });
 
+        db.Prepacks.AddRange(prepacks);
+        // HUJJ-07: identifikator saqlangandan keyin o'qiladi — aks holda klientga 0 ketardi.
         await db.SaveChangesAsync(cancellationToken);
-        return result;
+
+        return prepacks
+            .Select(p => new PrepackLabelDto(p.Id, p.LabelCode, variant.Name, variant.UnitName, p.Quantity,
+                Math.Round(p.UnitPrice * p.Quantity, 2)))
+            .ToList();
     }
 }
 

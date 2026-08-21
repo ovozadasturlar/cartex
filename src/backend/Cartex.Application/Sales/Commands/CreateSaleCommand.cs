@@ -27,6 +27,7 @@ public record CreateSaleItemDto(
     decimal Quantity,
     decimal? UnitPrice = null,
     long? PrepackId = null,
+    decimal? ExpectedUnitPrice = null,
     [property: JsonIgnore] long? StockId = null,
     [property: JsonIgnore] string? SourceCurrency = null,
     [property: JsonIgnore] decimal? SourceRate = null);
@@ -226,6 +227,7 @@ public sealed class CreateSaleCommandHandler(
 
         var resolvedItems = new List<ResolvedSaleLine>();
         var priceOverrides = new List<(long VariantId, decimal CatalogPrice, decimal EnteredPrice)>();
+        var priceChanges = new List<PriceChangeDto>();
         var priceIncreases = new Dictionary<ProductPrice, CatalogPrice>();
 
         foreach (var item in request.Items)
@@ -260,6 +262,21 @@ public sealed class CreateSaleCommandHandler(
                 catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
             }
 
+            // NARX-09: kassir ekranda ko'rgan narx bilan hisoblanadigan narx bir xil bo'lishi shart.
+            // NARX-10: oflayn replay tekshirilmaydi (narx qurilmada muhrlangan), qadoq qatorlari
+            // esa bu yergacha yetib kelmaydi — ular katalogdan narx olmaydi.
+            if (!request.FromOfflineSync
+                && item.ExpectedUnitPrice is { } expectedPrice
+                && expectedPrice != catalogPrice.Amount)
+            {
+                priceChanges.Add(new PriceChangeDto(
+                    item.VariantId,
+                    variants.First(v => v.Id == item.VariantId).ProductName,
+                    expectedPrice,
+                    catalogPrice.Amount));
+                continue;
+            }
+
             var enteredPrice = item.UnitPrice ?? catalogPrice.Amount;
             var priceDiscount = Math.Max(0, catalogPrice.Amount - enteredPrice) * item.Quantity;
             var unitPrice = Math.Max(catalogPrice.Amount, enteredPrice);
@@ -274,6 +291,14 @@ public sealed class CreateSaleCommandHandler(
             resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice,
                 catalogPrice.Currency, catalogPrice.Rate, priceDiscount));
         }
+
+        // NARX-09: bitta emas, o'zgargan hamma qator birdan aytiladi — kassir savdoni qayta-qayta
+        // urinib ko'rmasin. Yangi narxlar `details` da qaytadi, klient savatni yangilaydi.
+        if (priceChanges.Count > 0)
+            throw new BusinessRuleException(
+                "Savatdagi narx o'zgargan — yangi narxni tasdiqlab, qayta yakunlang.",
+                "price_changed")
+            { Details = priceChanges };
 
         var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 

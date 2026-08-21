@@ -1372,6 +1372,7 @@
   "stock_and_catalog": "Stock and catalogue",
   "stock_count": "Stock count",
   "stock_negative_offline_warning": "Careful: an offline register may be selling — this item's stock has gone negative.",
+  "price_changed_warning": "The price changed — the cart was updated, confirm the new total:",
   "stocking_unit": "Stocking unit",
   "storage_hint": "Where product and logo images are stored: on the server disk (simple install) or in S3-compatible storage (MinIO)",
   "storage_local": "Server disk",

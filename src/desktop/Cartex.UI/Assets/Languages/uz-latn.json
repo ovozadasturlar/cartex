@@ -1372,6 +1372,7 @@
   "stock_and_catalog": "Ombor va katalog",
   "stock_count": "Inventarizatsiya",
   "stock_negative_offline_warning": "Diqqat: oflayn kassa ishlayotgan bo'lishi mumkin — bu tovar qoldig'i minusga tushdi.",
+  "price_changed_warning": "Narx o'zgardi — savat yangilandi, yangi summani tasdiqlang:",
   "stocking_unit": "Asosiy birlik",
   "storage_hint": "Mahsulot va logo rasmlari qayerda saqlanadi: server diskida (oddiy o'rnatish uchun) yoki S3-mos xotirada (MinIO)",
   "storage_local": "Server diski",

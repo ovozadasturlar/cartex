@@ -57,6 +57,7 @@
   "orders_subtitle": "Онлайн-заказы и лист загрузки",
   "payment_breakdown": "Способы оплаты",
   "payments": "Платежи",
+  "price_changed_warning": "Цена изменилась — корзина обновлена, подтвердите новую сумму:",
   "product_types_subtitle": "Управление типами товаров",
   "products_subtitle": "Каталог товаров и остатки",
   "rates_subtitle": "Управление курсами валют",

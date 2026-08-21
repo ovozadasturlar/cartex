@@ -12,7 +12,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { Category, CurrentShift, PosApi, ProductLookup, StockOnHand } from '../../core/api/pos.api';
+import { Category, CurrentShift, PosApi, PriceChange, ProductLookup, StockOnHand } from '../../core/api/pos.api';
 import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
@@ -711,6 +711,8 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
               variantId: l.variantId,
               quantity: l.qty,
               unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+              // NARX-09: ekranda ko'rsatilgan katalog narxi — server o'zinikiga solishtiradi.
+              expectedUnitPrice: l.originalPrice,
             })),
             discountAmount: this.discount(),
             note: this.note().trim() || null,
@@ -756,6 +758,8 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           variantId: l.variantId,
           quantity: l.qty,
           unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+          // NARX-09: ekranda ko'rsatilgan katalog narxi — server o'zinikiga solishtiradi.
+          expectedUnitPrice: l.originalPrice,
         })),
         discountAmount: this.discount(),
         note: this.note().trim() || null,
@@ -788,10 +792,37 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
       this.focusScan();
     } catch (e) {
       const code = e instanceof HttpErrorResponse ? (e.error as { code?: string } | null)?.code : null;
+      if (code === 'price_changed' && this.applyPriceChanges(e as HttpErrorResponse)) return;
       this.notify.error(code === 'offline_authority_possibly_active' ? t('offline_pos_blocked') : e);
     } finally {
       this.paying.set(false);
     }
+  }
+
+  /// NARX-09: savdo yaratilmadi, chunki savatdagi narx eskirgan. Yangi narxlarni qo'yamiz va
+  /// kassirga nima o'zgarganini aytamiz — u yangi jamini ko'rib qayta tasdiqlaydi.
+  private applyPriceChanges(error: HttpErrorResponse): boolean {
+    const changes = (error.error as { details?: PriceChange[] } | null)?.details;
+    if (!changes?.length) return false;
+    const byVariant = new Map(changes.map((c) => [c.variantId, c]));
+    const lines = this.cart()
+      .filter((l) => byVariant.has(l.variantId))
+      .map((l) => {
+        const change = byVariant.get(l.variantId)!;
+        return `${change.productName}: ${change.expected} → ${change.current}`;
+      });
+    if (!lines.length) return false;
+
+    this.cart.update((cart) =>
+      cart.map((l) => {
+        const change = byVariant.get(l.variantId);
+        if (!change) return l;
+        const overridden = l.price !== l.originalPrice;
+        return { ...l, originalPrice: change.current, price: overridden ? l.price : change.current };
+      }),
+    );
+    this.notify.warn(`${this.transloco.translate('price_changed_warning')} ${lines.join('; ')}`);
+    return true;
   }
 
   /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.

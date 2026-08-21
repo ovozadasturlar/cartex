@@ -200,6 +200,8 @@ yo'q foydalanuvchi. Har topilma **koddan qayta tasdiqlangan** — quyida faqat t
 | `T-5` | Mobil qarz to'lovida idempotentlik kaliti **har urinishda yangidan** yaratilardi | Javob yo'qolib kassir qayta bosса — **ikkinchi haqiqiy to'lov hujjati** | Kalit to'lov oynasi ochilganda bir marta beriladi |
 | `T-6` | Ushlab turilgan savdoda qadoq (prepack) ma'lumoti diskda yo'qolardi | Kompyuter o'chib-yonsa qadoq oddiy qatorga aylanadi, `Prepack` qatori `Active` qolib **ikkinchi marta sotilishi** mumkin | `PrepackId` va miqdor rejimlari ham saqlanadigan bo'ldi (eski fayllar mos qoladi) |
 | `T-7` | Mobil savdo ro'yxatida sana chegarasi mahalliy vaqtda yuborilardi | Server parse semantikasiga bog'liqlik | Chegaralar aniq `ToUniversalTime()` bilan yuboriladi (`HomeViewModel` bilan bir xil) |
+| `T-8` — **HAL QILINDI** (`NARX-09`, `NARX-10`) | **Savatdagi narx serverga yuborilmasdi.** Kassir savatga qo'shgandan keyin katalog narxi o'zgarsa (egasi tahrirlasa yoki boshqa kassa `NARX-06` bo'yicha yangilasa), server **joriy** katalog narxidan hisoblardi: narx ko'tarilganda farq jimgina qarzga yozilardi, tushganda esa «qaytim berildi» deb yozilib yashikda ortiqcha pul qolardi. | Endi klient har qatorda **ekranda ko'rsatgan katalog narxini** yuboradi; server farq topsa savdoni **yaratmaydi** — `price_changed` bilan yangi narxlarni qaytaradi, klient savatni yangilab kassirga nima o'zgarganini ko'rsatadi. Tafsilot uchun `DomainException` ga `Details` qo'shildi va u problem+json da `details` bo'lib chiqadi. Batafsil pastda. |
+| `T-13` | Yaratilgan qadoqning `Id` si klientga **doim `0`** qaytardi (`HUJJ-07`) | `CreatePrepacksCommand` DTO'ni `SaveChanges` dan **oldin** qurardi. Tashqi klient shu `Id` bilan ishlasa jimgina noto'g'ri qadoqqa murojaat qilardi; mavjud testlar buni bilmasdan `LabelCode` orqali aylanib o'tgan | Yozuvlar avval saqlanadi, `Id` keyin o'qiladi; qoida `HUJJ-07` bo'lib yozildi |
 
 **`T-3` bo'yicha muhim tuzatish — mustaqil test yozuvchi agent ushlab qoldi.** Birinchi
 variantda qoida **barcha** hisoblarni (bonusni ham) tekshirardi. Test yozuvchi buni sinab
@@ -214,11 +216,35 @@ kod emas, **qoidaning o'zi** ko'targan edi.
 
 | ID | Masala | Nega hozir tuzatilmadi |
 |---|---|---|
-| `T-8` (**eng muhim**) | **Savatdagi narx serverga yuborilmaydi.** Kassir savatga qo'shgandan keyin katalog narxi o'zgarsa (ikkinchi kassa qo'lda yuqori narxda sotsa, `UpdateCatalogPriceOnSale` standart yoniq), server **joriy** katalog narxidan hisoblaydi: narx ko'tarilgan bo'lsa farq jimgina qarzga yoziladi (mijoz biriktirilgan bo'lsa), tushgan bo'lsa "qaytim berildi" deb yoziladi va yashikda ortiqcha pul qoladi. | Yechim shartnomaga tegadi. Tavsiya: klient **ko'rgan jamini** (`ExpectedTotal`) yuborsin, server mos kelmasa `price_changed` bilan rad etsin va yangi jamini qaytarsin — kassir tasdiqlaydi. Narxni "override" sifatida yuborish **noto'g'ri** bo'lardi: u oddiy kassirdan `sales.priceOverride` ruxsatini talab qilib qo'yardi. |
 | `T-9` | Savdoni bekor qilish daftarga **asl** smena bilan yoziladi (`SMENA-05` og'ishi) | Standart sozlamada bekor qilish oynasi joriy smena bilan cheklangani uchun amalda yuzaga kelmaydi. Oyna "kun"/"doim" qilinsa kechagi Z-hisobot orqadan o'zgaradi. |
 | `T-10` | Hujjat raqami UTC kunidan olinadi, hisobot esa mahalliy kunga guruhlanadi | UTC+5 da 00:00–05:00 oralig'idagi savdo `SAL-<kecha>` raqamini oladi, hisobotda esa bugun turadi. To'g'ri yechim — do'konning vaqt mintaqasi sozlamasi va hujjat sanasini o'shandan olish. |
 | `T-11` | Agent (van) ilovasi: kredit limiti klientda tekshirilmaydi va kesh narxi `priceOverride` ga tushadi | Server rad etgan savdo navbatda "error" bo'lib qoladi — tovar berilgan, yozuv yo'q. Agent ilovasi hozir do'konda ishlatilmasa, ishga tushirishdan **oldin** hal qilinishi kerak. |
 | `T-12` | Ushlab turilgan savdolar smena yopilganda/chiqishda tozalanmaydi va `%LOCALAPPDATA%` da ochiq matnda (ichida mijoz ismi/telefoni) | Kassir B kassir A ning savatini ochishi mumkin. Tozalash siyosati — egasining qarori (parked savat ataylab qoldirilgan bo'lishi ham mumkin). |
+
+
+**`T-8` yechimi batafsil (`NARX-09`, `NARX-10`).** Muammo shundaki, kassir savatga qo'shgan
+lahzadagi narx bilan «Sotish» bosilgan lahzadagi katalog narxi bir xil bo'lmasligi mumkin edi:
+klient narxni faqat **qo'lda o'zgartirilganda** yuborardi, aks holda server narxni o'zining joriy
+katalogidan olardi. Natijada kassir 10 000 olib, tizim 12 000 hisoblashi mumkin edi.
+
+Yechim tanlanishida bitta muhim chekka bor edi: «narxni har doim yuboraylik» degan oddiy yo'l
+**noto'g'ri** — server yuborilgan narx katalogdan farq qilsa uni *narx o'zgartirish* deb qabul
+qiladi va oddiy kassirdan `sales.priceOverride` ruxsatini talab qilib qolardi. Shuning uchun
+yangi maydon ataylab **alohida**: `ExpectedUnitPrice` faqat **tekshirish** uchun, u hech qachon
+savdo narxiga aylanmaydi.
+
+| Qism | O'zgarish |
+|---|---|
+| Shartnoma | `CreateSaleItemRequest.ExpectedUnitPrice`, `CheckoutCartItemDto.ExpectedUnitPrice`, `PriceChangeDto` |
+| Server | `CreateSaleCommand` har qatorni joriy katalog narxi bilan solishtiradi; farq bo'lsa savdo yaratilmaydi, `price_changed` qaytadi. Qadoq qatorlari va oflayn replay tekshirilmaydi (`NARX-10`) |
+| Xato javobi | `DomainException.Details` qo'shildi va problem+json da `details` bo'lib chiqadi — klient matnni tahlil qilmasdan yangi narxni oladi |
+| Desktop | Ikkala yo'lda ham (to'g'ridan savdo va navbatdagi savatni yakunlash) ko'rilgan narx yuboriladi; `price_changed` kelsa savat narxlari yangilanadi, kassirga «nima o'zgardi» ro'yxati ko'rsatiladi |
+| Web | Xuddi shunday — ikkala yo'lda yuboriladi va savat yangilanadi |
+| Mobil | Store'ning onlayn yo'li savat (navbat) orqali ketadi; oflayn navbat esa `OFF-10` bo'yicha narxni qurilmada muhrlaydi va `NARX-10` bo'yicha tekshiruvdan ozod |
+
+Bitta joy **ataylab ochiq qoldirildi:** navbatdagi savat klient qatorlarni yubormasdan
+yakunlansa (server savatdagi narxni ishlatadi) tekshiruv o'tkazib yuboriladi. Buni yopish uchun
+savat qatoriga katalog narxining suratini saqlash kerak bo'ladi — bu alohida sxema o'zgarishi.
 
 ### Tekshirildi va muammo emas
 
@@ -284,6 +310,7 @@ buzilganda test yiqilishi ko'rsatildi, keyin asl holat qaytarildi.
 | `ShiftUniquenessTests` | `SMENA-01` | Ketma-ket va **parallel** ochish urinishlari ikkinchi ochiq smena yaratmaydi; bazada shartli unikal indeks borligi `pg_indexes` dan tekshiriladi |
 | `DeleteCustomerBalanceTests` | `QARZ-21` | Qarz va avans o'chirishni bloklaydi (`customer_balance_open`); faqat bonusi bor mijoz o'chiriladi va bonusi soft-delete tufayli saqlanadi |
 | `SalePermissionBypassTests` | `RUXSAT-05`, `RUXSAT-06` | So'rov tanasidagi `fromQueuedCart` 403 ni ochib yubormaydi (nazorat: **aynan o'sha tana** `sales.create` bor foydalanuvchida o'tadi); navbat oqimi buzilmagan |
+| `SaleExpectedPriceTests` | `NARX-09`…`NARX-12` | Narx ko'tarilganda ham, tushganda ham savdo yaratilmaydi va yangi narx qaytadi (daftar va qoldiq o'zgarmagani ham tekshiriladi); o'zgarmagan narx bloklanmaydi; narx yuborilmasa va qadoq qatorlarida tekshiruv o'tkazib yuboriladi; **oflayn replay rad etilmaydi**; navbatdagi savat yo'li ham qoplangan; `sales.priceOverride` ruxsatisiz ham ishlaydi; o'zgargan **hamma** qator bitta javobda, o'zgarmagani ro'yxatga tushmaydi; **kurs harakati** ham `price_changed` beradi |
 
 **Test yozgan agentlar hujjatdagi 11 ta bo'shliqni ko'rsatdi** — bu tekshiruvning kutilmagan,
 lekin eng qimmatli natijasi bo'ldi: nuqsonning bir qismi kodda emas, **qoidaning o'zida** edi.
@@ -344,7 +371,7 @@ so'ng sozlamalardan USB kalitni qayta ro'yxatdan o'tkazish.
 
 | Nima | Natija |
 |---|---|
-| `Cartex.Application.Tests` | 385/385 (9 tasi shu tekshiruvda qoidadan yozilgan yangi test) |
+| `Cartex.Application.Tests` | 396/396 (20 tasi shu tekshiruvda qoidadan yozilgan yangi test) |
 | `Cartex.Api.IntegrationTests` | 91/91 (yangi: `ShopDayChain`, `SalesPolicyMatrix`, `SalePermissionBypass`) |
 | `Cartex.UnitTests` | 207/207 |
 | `Cartex.ArchitectureTests` | 20/20 |

@@ -49,7 +49,7 @@ export interface CreateSalePayload {
   paidCash: number;
   paidCard: number;
   paidBonus: number;
-  items: { variantId: number; quantity: number; unitPrice?: number | null }[];
+  items: { variantId: number; quantity: number; unitPrice?: number | null; expectedUnitPrice?: number | null }[];
   debtDueDate?: string | null;
   idempotencyKey: string;
   applyAutoDiscount: boolean;
@@ -203,4 +203,12 @@ export class PosApi {
   cashMovement(payload: { amount: number; isPayOut: boolean; reason?: string | null; expenseCategoryId?: number | null }): Observable<void> {
     return this.http.post<void>('/api/shifts/cash-movement', payload);
   }
+}
+
+/// NARX-09: `price_changed` xatosining `details` qismi.
+export interface PriceChange {
+  variantId: number;
+  productName: string;
+  expected: number;
+  current: number;
 }

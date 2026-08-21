@@ -2,7 +2,11 @@
 
 namespace Cartex.Shared.Models.Ordering;
 
-public record CheckoutCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null);
+public record CheckoutCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null)
+{
+    /// NARX-09: yakunlash ekranida ko'rsatilgan katalog narxi (faqat tekshirish uchun).
+    public decimal? ExpectedUnitPrice { get; init; }
+}
 
 /// Everything past the tender is named, not positional: two adjacent optional decimals are one
 /// slip away from paying out the rounding as a discount, and the compiler cannot see the swap.

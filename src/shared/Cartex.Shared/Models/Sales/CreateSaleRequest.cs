@@ -2,7 +2,12 @@
 
 namespace Cartex.Shared.Models.Sales;
 
-public record CreateSaleItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
+public record CreateSaleItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null)
+{
+    /// NARX-09: klient ekranda ko'rsatgan katalog narxi. Faqat tekshirish uchun — savdo narxiga
+    /// aylanmaydi va narx o'zgartirish ruxsatini talab qilmaydi.
+    public decimal? ExpectedUnitPrice { get; init; }
+}
 
 public record SalePaymentRequest(string Method, string Currency, decimal Amount);
 
@@ -25,3 +30,7 @@ public sealed record CreateSaleRequest(
     public List<ParticipantSelectionRequest>? Participants { get; init; }
     public string? Note { get; init; }
 }
+
+/// NARX-09: savdo `price_changed` bilan rad etilganda qaytadigan tafsilot — qaysi mahsulot,
+/// klient ko'rgan narx va serverdagi joriy narx.
+public sealed record PriceChangeDto(long VariantId, string ProductName, decimal Expected, decimal Current);

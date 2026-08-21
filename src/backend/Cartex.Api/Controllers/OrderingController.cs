@@ -99,7 +99,8 @@ public class OrderingController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<CreateSaleResult>> Checkout(string code, CheckoutCartRequest request)
     {
-        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList();
+        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)
+            { ExpectedUnitPrice = x.ExpectedUnitPrice }).ToList();
         var payments = request.Payments?.Select(x => new SalePaymentDto(
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
         var sale = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus)

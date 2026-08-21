@@ -6,6 +6,10 @@ namespace Cartex.Domain.Common.Exceptions;
 public abstract class DomainException(string message, string code) : Exception(message)
 {
     public string Code { get; } = code;
+
+    /// Xato bilan birga qaytadigan tuzilgan ma'lumot (problem+json dagi `details`). Kassirga
+    /// "nima o'zgardi" ni ko'rsatish uchun: matnni tahlil qilish talab qilinmasin.
+    public object? Details { get; init; }
 }
 
 public sealed class NotFoundException(string message, string code = "not_found") : DomainException(message, code);
