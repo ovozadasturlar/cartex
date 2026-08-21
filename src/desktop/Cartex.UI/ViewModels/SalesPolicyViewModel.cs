@@ -44,6 +44,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal? _maxDebtWriteOffAmount;
     [ObservableProperty] private decimal? _maxDebtWriteOffPercent;
     [ObservableProperty] private decimal? _maxPriceIncreasePercent;
+    [ObservableProperty] private int _priceDriftWindowMinutes = 60;
     [ObservableProperty] private decimal _defaultMinStock;
     [ObservableProperty] private decimal _staleRateDays = 3;
     [ObservableProperty]
@@ -151,6 +152,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             MaxDebtWriteOffAmount = _loaded.MaxDebtWriteOffAmount;
             MaxDebtWriteOffPercent = _loaded.MaxDebtWriteOffPercent;
             MaxPriceIncreasePercent = _loaded.MaxPriceIncreasePercent;
+            PriceDriftWindowMinutes = _loaded.PriceDriftWindowMinutes;
             DefaultMinStock = _loaded.DefaultMinStock;
             StaleRateDays = _loaded.StaleRateDays;
             AllowDebtSales = _loaded.AllowDebtSales;
@@ -195,6 +197,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 MaxDebtWriteOffAmount = MaxDebtWriteOffAmount,
                 MaxDebtWriteOffPercent = MaxDebtWriteOffPercent,
                 MaxPriceIncreasePercent = MaxPriceIncreasePercent,
+                PriceDriftWindowMinutes = PriceDriftWindowMinutes,
                 DefaultMinStock = DefaultMinStock,
                 StaleRateDays = (int)Math.Clamp(StaleRateDays, 1, 30),
                 AllowDebtSales = AllowDebtSales,

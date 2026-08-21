@@ -200,8 +200,10 @@ yo'q foydalanuvchi. Har topilma **koddan qayta tasdiqlangan** — quyida faqat t
 | `T-5` | Mobil qarz to'lovida idempotentlik kaliti **har urinishda yangidan** yaratilardi | Javob yo'qolib kassir qayta bosса — **ikkinchi haqiqiy to'lov hujjati** | Kalit to'lov oynasi ochilganda bir marta beriladi |
 | `T-6` | Ushlab turilgan savdoda qadoq (prepack) ma'lumoti diskda yo'qolardi | Kompyuter o'chib-yonsa qadoq oddiy qatorga aylanadi, `Prepack` qatori `Active` qolib **ikkinchi marta sotilishi** mumkin | `PrepackId` va miqdor rejimlari ham saqlanadigan bo'ldi (eski fayllar mos qoladi) |
 | `T-7` | Mobil savdo ro'yxatida sana chegarasi mahalliy vaqtda yuborilardi | Server parse semantikasiga bog'liqlik | Chegaralar aniq `ToUniversalTime()` bilan yuboriladi (`HomeViewModel` bilan bir xil) |
-| `T-8` — **HAL QILINDI** (`NARX-09`, `NARX-10`) | **Savatdagi narx serverga yuborilmasdi.** Kassir savatga qo'shgandan keyin katalog narxi o'zgarsa (egasi tahrirlasa yoki boshqa kassa `NARX-06` bo'yicha yangilasa), server **joriy** katalog narxidan hisoblardi: narx ko'tarilganda farq jimgina qarzga yozilardi, tushganda esa «qaytim berildi» deb yozilib yashikda ortiqcha pul qolardi. | Endi klient har qatorda **ekranda ko'rsatgan katalog narxini** yuboradi; server farq topsa savdoni **yaratmaydi** — `price_changed` bilan yangi narxlarni qaytaradi, klient savatni yangilab kassirga nima o'zgarganini ko'rsatadi. Tafsilot uchun `DomainException` ga `Details` qo'shildi va u problem+json da `details` bo'lib chiqadi. Batafsil pastda. |
+| `T-8` — **HAL QILINDI** (`NARX-09`…`NARX-14`) | **Savatdagi narx serverga yuborilmasdi.** Kassir savatga qo'shgandan keyin katalog narxi o'zgarsa, server **joriy** katalog narxidan hisoblardi: narx ko'tarilganda farq jimgina qarzga yozilardi, tushganda esa «qaytim berildi» deb yozilib yashikda ortiqcha pul qolardi. | Endi kassir **ko'rgan narx savdo narxi** bo'ladi: klient uni yuboradi, server esa narx va kurs tarixidan «bu narx yaqinda haqiqatan katalogda turganmi» deb tasdiqlaydi. Tasdiqlansa savdo o'sha narxda o'tadi (ruxsat talab qilinmaydi, auditga `salePriceDrift`); tasdiqlanmasa `price_changed`. Batafsil pastda. |
 | `T-13` | Yaratilgan qadoqning `Id` si klientga **doim `0`** qaytardi (`HUJJ-07`) | `CreatePrepacksCommand` DTO'ni `SaveChanges` dan **oldin** qurardi. Tashqi klient shu `Id` bilan ishlasa jimgina noto'g'ri qadoqqa murojaat qilardi; mavjud testlar buni bilmasdan `LabelCode` orqali aylanib o'tgan | Yozuvlar avval saqlanadi, `Id` keyin o'qiladi; qoida `HUJJ-07` bo'lib yozildi |
+| `T-14` | Splash oynasidagi logotip buzuq ko'rinardi | Logotip ilovaning vektor logotipi emas, Segoe UI dagi «C» va «x» harflaridan yasalgan va qo'lda kiritilgan **manfiy kern** bilan bir-biriga tiqilgan edi; harflar ustma-ust tushib, «C» ning yoyi kesilib ko'rinardi. Vertikal siljish esa umuman ishlamasdi: `GetTextExtentPoint32W` ikkala harf uchun ham bir xil **qator balandligini** qaytaradi, ya'ni hisoblangan farq doim nol edi | Splash endi `Controls/CxLogo.axaml` dagi **aynan o'sha vektor konturlarini** chizadi (GDI `Polygon`) — logotip ilova bilan bir xil |
+| `T-15` | USB kalit bilan kirish muvaffaqiyatsiz bo'lsa «Foydalanuvchi nomi yoki parol noto'g'ri» deyilardi | Kalit yo'lida hech narsa terilmaydi — kassir o'zini xato qilgan deb o'ylaydi va parolni qayta-qayta terib ko'radi, aslida kalit ro'yxatdan o'tmagan yoki bekor qilingan | Kalit yo'li o'z xabarini oladi: «Bu USB kalit tanilmadi — u ro'yxatdan o'tmagan yoki bekor qilingan» (to'rt tilda). Jonli tekshirildi |
 
 **`T-3` bo'yicha muhim tuzatish — mustaqil test yozuvchi agent ushlab qoldi.** Birinchi
 variantda qoida **barcha** hisoblarni (bonusni ham) tekshirardi. Test yozuvchi buni sinab
@@ -222,29 +224,63 @@ kod emas, **qoidaning o'zi** ko'targan edi.
 | `T-12` | Ushlab turilgan savdolar smena yopilganda/chiqishda tozalanmaydi va `%LOCALAPPDATA%` da ochiq matnda (ichida mijoz ismi/telefoni) | Kassir B kassir A ning savatini ochishi mumkin. Tozalash siyosati — egasining qarori (parked savat ataylab qoldirilgan bo'lishi ham mumkin). |
 
 
-**`T-8` yechimi batafsil (`NARX-09`, `NARX-10`).** Muammo shundaki, kassir savatga qo'shgan
-lahzadagi narx bilan «Sotish» bosilgan lahzadagi katalog narxi bir xil bo'lmasligi mumkin edi:
-klient narxni faqat **qo'lda o'zgartirilganda** yuborardi, aks holda server narxni o'zining joriy
-katalogidan olardi. Natijada kassir 10 000 olib, tizim 12 000 hisoblashi mumkin edi.
+**`T-8` yechimi batafsil (`NARX-09`…`NARX-14`).** Muammo: kassir savatga qo'shgan lahzadagi narx
+bilan «Sotish» bosilgan lahzadagi katalog narxi bir xil bo'lmasligi mumkin edi — klient narxni
+faqat **qo'lda o'zgartirilganda** yuborardi, aks holda server narxni o'zining **joriy**
+katalogidan olardi. Natijada kassir 10 000 olib, tizim 12 000 hisoblashi va farq jimgina qarzga
+yoki «qaytim»ga aylanishi mumkin edi.
 
-Yechim tanlanishida bitta muhim chekka bor edi: «narxni har doim yuboraylik» degan oddiy yo'l
-**noto'g'ri** — server yuborilgan narx katalogdan farq qilsa uni *narx o'zgartirish* deb qabul
-qiladi va oddiy kassirdan `sales.priceOverride` ruxsatini talab qilib qolardi. Shuning uchun
-yangi maydon ataylab **alohida**: `ExpectedUnitPrice` faqat **tekshirish** uchun, u hech qachon
-savdo narxiga aylanmaydi.
+**Birinchi yondashuv rad etildi.** Dastlab men farq topilganda savdoni **rad etadigan** qilgan
+edim. Ega buni to'g'ri tanqid qildi: rad etish **pul olingandan keyin** sodir bo'ladi — kassirning
+qo'lida pul bor, savdo yo'q; mijoz ketib qolsa yoki qayta savdolashishni istamasa, do'kon mijozni
+yo'qotadi. Real POS tizimlari bunday ishlamaydi: narx **skanerlash lahzasida muhrlanadi**, narx
+o'zgarishi esa **keyingi** chekka tegishli. Loyihaning o'z doktrinasi (`OFF-10`) ham xuddi shuni
+aytadi — oflaynda kassir ko'rgan narx muhrlanadi va server uni qabul qiladi.
+
+**Yakuniy yechim:** kassir ko'rgan narx savdo narxi bo'ladi — lekin server uni **taxmin bilan
+emas, tarixdan tanib** qabul qiladi.
 
 | Qism | O'zgarish |
 |---|---|
-| Shartnoma | `CreateSaleItemRequest.ExpectedUnitPrice`, `CheckoutCartItemDto.ExpectedUnitPrice`, `PriceChangeDto` |
-| Server | `CreateSaleCommand` har qatorni joriy katalog narxi bilan solishtiradi; farq bo'lsa savdo yaratilmaydi, `price_changed` qaytadi. Qadoq qatorlari va oflayn replay tekshirilmaydi (`NARX-10`) |
-| Xato javobi | `DomainException.Details` qo'shildi va problem+json da `details` bo'lib chiqadi — klient matnni tahlil qilmasdan yangi narxni oladi |
-| Desktop | Ikkala yo'lda ham (to'g'ridan savdo va navbatdagi savatni yakunlash) ko'rilgan narx yuboriladi; `price_changed` kelsa savat narxlari yangilanadi, kassirga «nima o'zgardi» ro'yxati ko'rsatiladi |
-| Web | Xuddi shunday — ikkala yo'lda yuboriladi va savat yangilanadi |
-| Mobil | Store'ning onlayn yo'li savat (navbat) orqali ketadi; oflayn navbat esa `OFF-10` bo'yicha narxni qurilmada muhrlaydi va `NARX-10` bo'yicha tekshiruvdan ozod |
+| Sxema | Yangi `product_price_history` jadvali: narxning tugagan versiyasi o'z amal qilish oynasi bilan |
+| Tarix yozuvi | `PriceHistoryInterceptor` — saqlash nuqtasida avtomatik (`NARX-14`), ya'ni narxni o'zgartiradigan **har qanday** yo'l (qo'lda tahrir, import, savdodan yangilash) buni unuta olmaydi |
+| Server | Yuborilgan narx joriy katalogdan farq qilsa, u oyna ichida (standart **1 soat**, `PriceDriftWindowMinutes`) katalogda turganmi — narx **va kurs** tarixidan qidiriladi. Topilsa savdo o'sha narxda o'tadi va ruxsat talab qilinmaydi; topilmasa `price_changed` |
+| Audit | Qabul qilingan siljish `salePriceDrift` bo'lib yoziladi (variant, ko'rilgan narx, katalog narxi) — ega hisobotdan ko'radi |
+| Shartnoma | `CreateSaleItemRequest.ExpectedUnitPrice`, `CheckoutCartItemDto.ExpectedUnitPrice`, `PriceChangeDto`; xato javobiga `DomainException.Details` (problem+json dagi `details`) |
+| Desktop / Web | Ikkala yo'lda ham (to'g'ridan savdo va navbatdagi savatni yakunlash) ko'rilgan narx yuboriladi; `price_changed` kelsa savat narxlari yangilanadi va kassirga «nima o'zgardi» ko'rsatiladi |
+| Mobil | Store'ning onlayn yo'li savat (navbat) orqali ketadi; oflayn navbat `OFF-10` bo'yicha narxni qurilmada muhrlaydi va `NARX-13` bo'yicha tekshiruvdan ozod |
 
-Bitta joy **ataylab ochiq qoldirildi:** navbatdagi savat klient qatorlarni yubormasdan
-yakunlansa (server savatdagi narxni ishlatadi) tekshiruv o'tkazib yuboriladi. Buni yopish uchun
-savat qatoriga katalog narxining suratini saqlash kerak bo'ladi — bu alohida sxema o'zgarishi.
+**Nega «narxni har doim yuboraylik» kifoya qilmaydi:** server yuborilgan narx katalogdan farq
+qilsa uni *narx o'zgartirish* deb qabul qiladi va oddiy kassirdan `sales.priceOverride` ruxsatini
+talab qilib qolardi — kassir hech narsa qilmagan holda 403 olardi. Tarixdan tanish aynan shu
+farqni ajratadi: **do'kon narxni o'zgartirgan** holat bilan **kassir narxni o'zgartirgan** holatni.
+
+**Jonli signal** (narx o'zgarganda savatni yangilash) alohida yaxshilanish sifatida ochiq
+qoldirildi: u oynani qisqartiradi, lekin yopmaydi (narx aytilgan summa bilan «Sotish» orasida ham
+o'zgarishi mumkin), oflaynda ishlamaydi, va savat sonini **jimgina** almashtirsa hozirgi
+nuqsonning aynan o'zini qaytaradi — shuning uchun u faqat qatorga belgi qo'yishi kerak.
+
+
+### `T-8` jonli tekshiruvi (desktop, haqiqiy kliklar)
+
+Yechim ish beradimi degan savolga hujjat emas, jonli sinov javob berdi:
+
+| Qadam | Natija |
+|---|---|
+| Savatga «FUM lenta 19mm» qo'shildi (katalog **4 000**) | savat 4 000 ni muhrladi |
+| Boshqa ekranda katalog narxi **5 500** qilindi | `product_price_history` ga eski narx **avtomatik** tushdi (4 000, o'z oynasi bilan) — `NARX-14` |
+| Savatga qaytilib «Sotish» bosildi (naqd 4 000) | **savdo o'tdi va 4 000 da yozildi**, `discount_amount = 0` — `NARX-09`, `NARX-15` |
+| Katalog holati | **5 500 bo'lib qoldi** — siljish katalogni ortga qaytarmadi |
+| Audit | savdoning audit yozuvida `salePriceDrift` hodisasi: `Seen 4000 / Catalog 5500` — `NARX-10` |
+| Telefon (Store) | o'sha savdo darhol ko'rindi: «Bugungi tushum 4 000 · 1 ta savdo · FUM lenta 19mm · Naqd» |
+
+Ya'ni ega ko'targan ssenariy — mijoz pulni bergan, kassir «Sotish» bosgan — endi mijozni
+yo'qotmaydi va kassa yashigi chek bilan mos qoladi.
+
+**Sozlama joyi.** `PriceDriftWindowMinutes` dastlab faqat server tomonida qoldirilgan edi;
+`SalesPolicyContractTests` buni **rad etdi** — loyihaning invarianti «saqlanadigan siyosat va
+tashqi shartnoma bir xil maydonlarga ega» deydi. Testni yumshatish o'rniga kod to'g'rilandi:
+sozlama endi DTO'da, desktop va web'ning «Savdo siyosati» ekranida, to'rt tilda izohi bilan.
 
 ### Tekshirildi va muammo emas
 
@@ -371,7 +407,7 @@ so'ng sozlamalardan USB kalitni qayta ro'yxatdan o'tkazish.
 
 | Nima | Natija |
 |---|---|
-| `Cartex.Application.Tests` | 396/396 (20 tasi shu tekshiruvda qoidadan yozilgan yangi test) |
+| `Cartex.Application.Tests` | 400/400 (24 tasi shu tekshiruvda qoidadan yozilgan yangi test) |
 | `Cartex.Api.IntegrationTests` | 91/91 (yangi: `ShopDayChain`, `SalesPolicyMatrix`, `SalePermissionBypass`) |
 | `Cartex.UnitTests` | 207/207 |
 | `Cartex.ArchitectureTests` | 20/20 |

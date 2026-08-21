@@ -104,6 +104,11 @@
         </mat-form-field>
         <p class="hint">{{ t('catalog_price_hint') }}</p>
       }
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+        <mat-label>{{ t('price_drift_window') }}</mat-label>
+        <input matInput type="number" min="0" max="1440" [(ngModel)]="model.priceDriftWindowMinutes" [disabled]="!canManage" />
+      </mat-form-field>
+      <p class="hint">{{ t('price_drift_window_hint') }}</p>
     </div>
 
     <div class="cx-card section">

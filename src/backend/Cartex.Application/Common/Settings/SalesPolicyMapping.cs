@@ -34,6 +34,7 @@ public static class SalesPolicyMapping
         MaxCustomerLoan = cfg.MaxCustomerLoan,
         UpdateCatalogPriceOnSale = cfg.UpdateCatalogPriceOnSale,
         MaxPriceIncreasePercent = cfg.MaxPriceIncreasePercent,
+        PriceDriftWindowMinutes = cfg.PriceDriftWindowMinutes,
         CustomerRequirement = cfg.CustomerRequirement,
         AllowReturnOnVoidedSale = cfg.AllowReturnOnVoidedSale,
         AllowFreeReturnLines = cfg.AllowFreeReturnLines,
@@ -68,6 +69,7 @@ public static class SalesPolicyMapping
         cfg.MaxCustomerLoan = dto.MaxCustomerLoan;
         cfg.UpdateCatalogPriceOnSale = dto.UpdateCatalogPriceOnSale;
         cfg.MaxPriceIncreasePercent = dto.MaxPriceIncreasePercent;
+        cfg.PriceDriftWindowMinutes = dto.PriceDriftWindowMinutes;
         cfg.CustomerRequirement = dto.CustomerRequirement;
         cfg.AllowReturnOnVoidedSale = dto.AllowReturnOnVoidedSale;
         cfg.AllowFreeReturnLines = dto.AllowFreeReturnLines;

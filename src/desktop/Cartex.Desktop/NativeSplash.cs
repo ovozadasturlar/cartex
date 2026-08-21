@@ -149,21 +149,58 @@ internal static class NativeSplash
         EndPaint(hwnd, ref ps);
     }
 
+    // Splash logotipi ilovaning o'z logotipi bilan bir xil bo'lishi uchun shrift harflari emas,
+    // `Controls/CxLogo.axaml` dagi aynan o'sha vektor konturlari chiziladi.
+    private const string LogoViewBoxPathC = "M245 24L267 24L299 28L316 32L351 45L389 68L407 83L427 104L426 107L367 172L355 158L333 138L317 128L293 118L275 114L246 113L210 121L183 135L170 145L153 162L137 185L128 204L122 223L118 249L118 271L123 301L132 325L144 346L155 360L179 382L201 395L232 405L246 407L282 405L300 400L325 388L344 374L366 350L429 413L423 422L401 443L365 468L342 479L317 488L271 496L224 494L184 484L145 466L129 456L107 438L89 420L74 401L64 386L50 359L37 321L30 280L31 232L41 185L62 138L87 103L120 71L158 47L193 33L213 28Z";
+    private const string LogoViewBoxPathX = "M602 51L718 52L717 56L681 102L555 260L556 265L709 455L718 467L717 470L596 469L495 338L492 338L488 342L458 380L448 391L446 391L384 329L384 325L388 319L433 263L428 253L385 199L384 196L388 189L443 128L446 128L449 131L488 180L494 185Z";
+    private const double LogoViewBoxW = 751;
+    private const double LogoViewBoxH = 529;
+
     private static void DrawMonogram(IntPtr hdc)
     {
-        var font = CreateFontW(-Px(66), 0, 0, 0, 900, 0, 0, 0, 0, 0, 0, 5 /*CLEARTYPE*/, 0, "Segoe UI");
-        var old = SelectObject(hdc, font);
-        GetTextExtentPoint32W(hdc, "C", 1, out var sizeC);
-        GetTextExtentPoint32W(hdc, "x", 1, out var sizeX);
-        var kern = Px(8);
-        var x = (Px(BaseW) - (sizeC.cx + sizeX.cx - kern)) / 2;
-        var y = Px(34);
-        SetTextColor(hdc, _colors.Monogram);
-        TextOutW(hdc, x, y, "C", 1);
-        SetTextColor(hdc, _colors.Accent);
-        TextOutW(hdc, x + sizeC.cx - kern, y + (sizeC.cy - sizeX.cy), "x", 1);
-        SelectObject(hdc, old);
-        DeleteObject(font);
+        var height = Px(84);
+        var scale = height / LogoViewBoxH;
+        var left = (Px(BaseW) - (int)Math.Round(LogoViewBoxW * scale)) / 2;
+        var top = Px(30);
+
+        SetPolyFillMode(hdc, 2 /*WINDING*/);
+        FillPolygon(hdc, LogoViewBoxPathC, scale, left, top, _colors.Monogram, 0);
+        // Vektorda "x" konturi 9 birlik chiziq bilan qalinlashtirilgan — u ham ko'chiriladi.
+        FillPolygon(hdc, LogoViewBoxPathX, scale, left, top, _colors.Accent, (int)Math.Round(9 * scale));
+    }
+
+    private static void FillPolygon(IntPtr hdc, string path, double scale, int dx, int dy, uint color, int outline)
+    {
+        var points = ParsePath(path, scale, dx, dy);
+        if (points.Length < 3) return;
+
+        var brush = CreateSolidBrush(color);
+        var pen = outline > 0 ? CreatePen(0 /*PS_SOLID*/, outline, color) : GetStockObject(8 /*NULL_PEN*/);
+        var oldBrush = SelectObject(hdc, brush);
+        var oldPen = SelectObject(hdc, pen);
+        Polygon(hdc, points, points.Length);
+        SelectObject(hdc, oldBrush);
+        SelectObject(hdc, oldPen);
+        DeleteObject(brush);
+        if (outline > 0) DeleteObject(pen);
+    }
+
+    private static POINT[] ParsePath(string path, double scale, int dx, int dy)
+    {
+        var tokens = path.Split(['M', 'L', 'Z'], StringSplitOptions.RemoveEmptyEntries);
+        var points = new POINT[tokens.Length];
+        var count = 0;
+        foreach (var token in tokens)
+        {
+            var space = token.IndexOf(' ');
+            if (space <= 0) continue;
+            points[count++] = new POINT
+            {
+                X = dx + (int)Math.Round(int.Parse(token[..space]) * scale),
+                Y = dy + (int)Math.Round(int.Parse(token[(space + 1)..]) * scale)
+            };
+        }
+        return count == points.Length ? points : points[..count];
     }
 
     private static void DrawCentered(IntPtr hdc, string text, int size, int weight, uint color, int top)
@@ -279,5 +316,9 @@ internal static class NativeSplash
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr CreateFontW(int height, int width, int escapement, int orientation, int weight, uint italic, uint underline, uint strikeOut, uint charSet, uint outPrecision, uint clipPrecision, uint quality, uint pitchAndFamily, string faceName);
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] private static extern bool GetTextExtentPoint32W(IntPtr hdc, string text, int length, out SIZE size);
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] private static extern bool TextOutW(IntPtr hdc, int x, int y, string text, int length);
+    [DllImport("gdi32.dll")] private static extern bool Polygon(IntPtr hdc, POINT[] points, int count);
+    [DllImport("gdi32.dll")] private static extern int SetPolyFillMode(IntPtr hdc, int mode);
+    [DllImport("gdi32.dll")] private static extern IntPtr CreatePen(int style, int width, uint color);
+    [DllImport("gdi32.dll")] private static extern IntPtr GetStockObject(int index);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse, int heightEllipse);
 }

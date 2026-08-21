@@ -168,3 +168,26 @@ public class StockTransferConfiguration : IEntityTypeConfiguration<StockTransfer
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public class ProductPriceHistoryConfiguration : IEntityTypeConfiguration<ProductPriceHistory>
+{
+    public void Configure(EntityTypeBuilder<ProductPriceHistory> builder)
+    {
+        builder.ToTable("product_price_history");
+        builder.Property(x => x.Currency).HasMaxLength(3);
+        builder.Property(x => x.SellingPrice).HasPrecision(14, 2);
+
+        builder.HasOne(x => x.Variant)
+            .WithMany()
+            .HasForeignKey(x => x.VariantId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Warehouse)
+            .WithMany()
+            .HasForeignKey(x => x.WarehouseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // NARX-10: qidiruv har doim "shu variant, shu ombor, oynadan keyin tugagan" kesimida boradi.
+        builder.HasIndex(x => new { x.VariantId, x.WarehouseId, x.EffectiveTo });
+    }
+}

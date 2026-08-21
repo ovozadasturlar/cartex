@@ -33,6 +33,10 @@ public sealed class SalesPolicySettings
     public int SaleCorrectionDays { get; set; } = 1;
 
     /// Savdoda katalogdan yuqori narx kiritilsa, katalog narxi yangilanadimi (NARX-06).
+    /// NARX-10: kassir ko'rgan narx shu oyna ichida katalogda turgan bo'lsa savdo o'sha narxda
+    /// o'tadi. 0 — tarixdan qidirilmaydi, ya'ni har qanday farq savdoni to'xtatadi.
+    public int PriceDriftWindowMinutes { get; set; } = 60;
+
     public bool UpdateCatalogPriceOnSale { get; set; } = true;
 
     /// Ixtiyoriy imkoniyatlarning kalitlari (SOZ-08). Chegara maydoni imkoniyatni butunlay

@@ -148,6 +148,10 @@ public sealed record SalesPolicyDto
     public decimal? MaxCustomerLoan { get; init; }
     public bool UpdateCatalogPriceOnSale { get; init; } = true;
     public decimal? MaxPriceIncreasePercent { get; init; }
+
+    /// NARX-10: kassir ko'rgan narx shu oyna ichida katalogda turgan bo'lsa savdo o'sha narxda
+    /// o'tadi; 0 — har qanday farq savdoni to'xtatadi.
+    public int PriceDriftWindowMinutes { get; init; } = 60;
     public string CustomerRequirement { get; init; } = "OnDebt";
     public bool AllowReturnOnVoidedSale { get; init; }
     public bool AllowFreeReturnLines { get; init; } = true;

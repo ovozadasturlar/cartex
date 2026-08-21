@@ -4,8 +4,8 @@ namespace Cartex.Shared.Models.Sales;
 
 public record CreateSaleItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null)
 {
-    /// NARX-09: klient ekranda ko'rsatgan katalog narxi. Faqat tekshirish uchun — savdo narxiga
-    /// aylanmaydi va narx o'zgartirish ruxsatini talab qilmaydi.
+    /// NARX-09: klient ekranda ko'rsatgan katalog narxi — savdo aynan shu narxda yakunlanadi.
+    /// Server uni narx tarixidan tanib qabul qiladi (`NARX-10`), tanimasa savdo yaratilmaydi.
     public decimal? ExpectedUnitPrice { get; init; }
 }
 

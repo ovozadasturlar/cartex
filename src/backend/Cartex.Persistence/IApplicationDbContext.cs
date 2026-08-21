@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<Warehouse> Warehouses { get; }
     DbSet<Stock> Stocks { get; }
     DbSet<ProductPrice> ProductPrices { get; }
+    DbSet<ProductPriceHistory> ProductPriceHistory { get; }
     DbSet<StockTransfer> StockTransfers { get; }
     DbSet<Customer> Customers { get; }
     DbSet<Supplier> Suppliers { get; }

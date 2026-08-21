@@ -204,7 +204,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            HandleLoginError(ex);
+            HandleLoginError(ex, keyLogin: true);
         }
         finally
         {
@@ -252,7 +252,7 @@ public partial class LoginViewModel : ViewModelBase
         ex is System.Net.Http.HttpRequestException or TaskCanceledException
         || ex.InnerException is System.Net.Http.HttpRequestException or System.Net.Sockets.SocketException;
 
-    private void HandleLoginError(Exception ex)
+    private void HandleLoginError(Exception ex, bool keyLogin = false)
     {
         if (IsConnectionError(ex))
         {
@@ -263,7 +263,7 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
         ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
-            ? L["login_error"]
+            ? L[keyLogin ? "key_login_error" : "login_error"]
             : ex.Message;
     }
 

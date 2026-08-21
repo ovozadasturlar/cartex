@@ -95,6 +95,7 @@ export interface SalesPolicy {
   maxCustomerLoan: number | null;
   updateCatalogPriceOnSale: boolean;
   maxPriceIncreasePercent: number | null;
+  priceDriftWindowMinutes: number;
   customerRequirement: string;
   allowReturnOnVoidedSale: boolean;
   allowFreeReturnLines: boolean;

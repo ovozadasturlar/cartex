@@ -58,6 +58,8 @@
   "payment_breakdown": "Payment breakdown",
   "payments": "Payments",
   "price_changed_warning": "The price changed — the cart was updated, confirm the new total:",
+  "price_drift_window": "Stale price acceptance window (minutes)",
+  "price_drift_window_hint": "If the price changes after the item was added to the cart, a sale within this window completes at the price the cashier saw. 0 — any difference stops the sale.",
   "product_types_subtitle": "Manage product types",
   "products_subtitle": "Product catalog and stock",
   "rates_subtitle": "Manage exchange rates",

@@ -107,6 +107,7 @@ export class SalesPolicySettings implements OnInit {
     maxCustomerLoan: null,
     updateCatalogPriceOnSale: true,
     maxPriceIncreasePercent: null,
+    priceDriftWindowMinutes: 60,
     customerRequirement: 'OnDebt',
     allowReturnOnVoidedSale: false,
     allowFreeReturnLines: true,

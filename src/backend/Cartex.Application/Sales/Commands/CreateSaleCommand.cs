@@ -225,9 +225,71 @@ public sealed class CreateSaleCommandHandler(
             return new CatalogPrice(price, Math.Round(price.SellingPrice * rate, 2), code, rate);
         }
 
+        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+
+        // NARX-10: kassir ko'rgan narx joriy katalogdan farq qilsa, uni tarixdan tanib olamiz.
+        // Ikkala jadval faqat shu holat yuzaga kelganda o'qiladi — oddiy savdo qo'shimcha
+        // so'rovsiz o'tadi.
+        var priceNow = DateTime.UtcNow;
+        var driftWindow = TimeSpan.FromMinutes(Math.Max(0, policy.PriceDriftWindowMinutes));
+        var cutoff = priceNow - driftWindow;
+        var hasDrift = !request.FromOfflineSync && request.Items.Any(i =>
+            i.PrepackId is null && i.ExpectedUnitPrice is { } seen && PriceOf(i.VariantId) is { } p && seen != p.Amount);
+
+        List<ProductPriceHistory> priceHistory = [];
+        var rateVersions = new Dictionary<string, List<decimal>>(StringComparer.OrdinalIgnoreCase);
+        if (hasDrift && driftWindow > TimeSpan.Zero)
+        {
+            priceHistory = await db.ProductPriceHistory
+                .Where(h => variantIds.Contains(h.VariantId)
+                    && (h.WarehouseId == warehouse.Id || h.WarehouseId == null)
+                    && h.EffectiveTo >= cutoff)
+                .ToListAsync(cancellationToken);
+
+            var codes = prices.Select(p => p.Currency.Trim().ToUpperInvariant())
+                .Concat(priceHistory.Select(h => h.Currency.Trim().ToUpperInvariant()))
+                .Distinct().Where(c => c != baseCode).ToList();
+            if (codes.Count > 0)
+            {
+                var rateRows = await db.ExchangeRates
+                    .Where(r => codes.Contains(r.Code) && r.EffectiveAt <= priceNow)
+                    .OrderByDescending(r => r.EffectiveAt)
+                    .Select(r => new { r.Code, r.Rate, r.EffectiveAt })
+                    .ToListAsync(cancellationToken);
+                foreach (var group in rateRows.GroupBy(r => r.Code, StringComparer.OrdinalIgnoreCase))
+                {
+                    // Oyna ichida kuchga kirgan kurslar + oyna boshida kuchda bo'lgani (NARX-12).
+                    var inWindow = group.Where(r => r.EffectiveAt >= cutoff).Select(r => r.Rate).ToList();
+                    var atStart = group.FirstOrDefault(r => r.EffectiveAt < cutoff);
+                    if (atStart is not null) inWindow.Add(atStart.Rate);
+                    rateVersions[group.Key] = inWindow.Distinct().ToList();
+                }
+            }
+        }
+
+        bool WasRecentlyInForce(long variantId, decimal seenPrice)
+        {
+            foreach (var version in priceHistory.Where(h => h.VariantId == variantId))
+                if (Matches(version.SellingPrice, version.Currency)) return true;
+
+            // Narx o'zgarmagan, lekin kurs o'zgargan bo'lishi mumkin (NARX-12).
+            var current = prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == warehouse.Id)
+                ?? prices.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == null);
+            return current is not null && Matches(current.SellingPrice, current.Currency);
+
+            bool Matches(decimal amount, string currencyCode)
+            {
+                var code = currencyCode.Trim().ToUpperInvariant();
+                if (code == baseCode) return Math.Round(amount, 2) == seenPrice;
+                return rateVersions.TryGetValue(code, out var rates)
+                    && rates.Any(rate => Math.Round(amount * rate, 2) == seenPrice);
+            }
+        }
+
         var resolvedItems = new List<ResolvedSaleLine>();
         var priceOverrides = new List<(long VariantId, decimal CatalogPrice, decimal EnteredPrice)>();
         var priceChanges = new List<PriceChangeDto>();
+        var priceDrifts = new List<PriceChangeDto>();
         var priceIncreases = new Dictionary<ProductPrice, CatalogPrice>();
 
         foreach (var item in request.Items)
@@ -262,19 +324,31 @@ public sealed class CreateSaleCommandHandler(
                 catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
             }
 
-            // NARX-09: kassir ekranda ko'rgan narx bilan hisoblanadigan narx bir xil bo'lishi shart.
-            // NARX-10: oflayn replay tekshirilmaydi (narx qurilmada muhrlangan), qadoq qatorlari
-            // esa bu yergacha yetib kelmaydi — ular katalogdan narx olmaydi.
+            // NARX-09/NARX-10: kassir ko'rgan narx savdo narxi bo'ladi — lekin faqat u yaqinda
+            // haqiqatan katalogda turgan bo'lsa. Aks holda savdo yaratilmaydi.
+            // NARX-13: oflayn replay tekshirilmaydi; qadoq qatorlari bu yergacha yetib kelmaydi.
             if (!request.FromOfflineSync
-                && item.ExpectedUnitPrice is { } expectedPrice
-                && expectedPrice != catalogPrice.Amount)
+                && item.ExpectedUnitPrice is { } seenPrice
+                && seenPrice != catalogPrice.Amount)
             {
-                priceChanges.Add(new PriceChangeDto(
+                if (!WasRecentlyInForce(item.VariantId, seenPrice))
+                {
+                    priceChanges.Add(new PriceChangeDto(
+                        item.VariantId,
+                        variants.First(v => v.Id == item.VariantId).ProductName,
+                        seenPrice,
+                        catalogPrice.Amount));
+                    continue;
+                }
+
+                priceDrifts.Add(new PriceChangeDto(
                     item.VariantId,
                     variants.First(v => v.Id == item.VariantId).ProductName,
-                    expectedPrice,
+                    seenPrice,
                     catalogPrice.Amount));
-                continue;
+                // Shu savdo uchun katalog narxi — kassir ko'rgani. Quyidagi mantiq o'zgarmaydi:
+                // kassir ustiga narx kiritgan bo'lsa, u ko'rgan narxga nisbatan o'lchanadi.
+                catalogPrice = catalogPrice with { Amount = seenPrice };
             }
 
             var enteredPrice = item.UnitPrice ?? catalogPrice.Amount;
@@ -300,7 +374,6 @@ public sealed class CreateSaleCommandHandler(
                 "price_changed")
             { Details = priceChanges };
 
-        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
 
         // Navbatdagi savatga ruxsatli foydalanuvchi kiritib qo'ygan narx yakunlovchidan
         // qayta ruxsat talab qilmaydi; faqat yangi/o'zgartirilgan narx tekshiriladi.
@@ -694,6 +767,12 @@ public sealed class CreateSaleCommandHandler(
         if (skippedIncreases.Count > 0)
             audit.Add("salePriceUpSkipped", "product_prices", null,
                 skippedIncreases.Select(x => new { x.Source.VariantId, x.Source.WarehouseId, Entered = x.Amount }));
+
+        // NARX-10: savdo kassir ko'rgan narxda o'tdi, katalog esa boshqa narxda turibdi —
+        // egasi buni hisobotdan ko'rishi kerak.
+        if (priceDrifts.Count > 0)
+            audit.Add("salePriceDrift", "product_prices", null,
+                priceDrifts.Select(x => new { x.VariantId, Seen = x.Expected, Catalog = x.Current }));
 
         if (offlineShortfalls.Count > 0)
             audit.Add("saleStockNegativeOffline", "stocks", null,

@@ -94,24 +94,27 @@ qanday qilingan" degan savolga javob bera olmaydi — bu ataylab shunday.
 | `NARX-08` | Mahsulotning avvalgi katalog narxi `0` bo'lsa, bu **oshirish emas, birinchi narx** — `MaxPriceIncreasePercent` unga qo'llanmaydi. Aks holda narxi belgilanmagan mahsulot abadiy `0` da qolardi. |
 | `NARX-04` | Narxni o'zgartirish `sales.priceOverride` ruxsatini talab qiladi. **Istisno:** navbatdagi savatga ruxsatli foydalanuvchi kiritib qo'ygan narx yakunlovchidan qayta ruxsat talab qilmaydi (oldindan ruxsat berilgan). Yakunlashda **yangi** yoki **o'zgartirilgan** narx esa talab qiladi. |
 | `NARX-05` | Narxi umuman belgilanmagan mahsulotni narx kiritmasdan sotib bo'lmaydi. |
-| `NARX-09` | **Kassir ko'rgan narx bilan hisoblangan narx bir xil bo'lishi shart.** Savatga qo'shilgandan keyin katalog narxi o'zgargan bo'lishi mumkin (egasi tahrirlagan yoki `NARX-06` bo'yicha boshqa kassa yangilagan). Shuning uchun klient har qatorda **ekranda ko'rsatgan katalog narxini** ham yuboradi; server o'zining joriy narxi bilan solishtiradi va farq bo'lsa savdoni **yaratmaydi** — `price_changed` xatosi bilan yangi narxni qaytaradi, kassir ko'rib qayta tasdiqlaydi. Sabab: aks holda kassir 10 000 olib, tizim 12 000 hisoblaydi va farq jimgina qarzga yoki «qaytim»ga aylanadi. Bu narx **o'zgartirish emas**: yuborilgan qiymat faqat tekshirish uchun, u hech qachon savdo narxiga aylanmaydi va `sales.priceOverride` ruxsatini talab qilmaydi. |
-| `NARX-10` | `NARX-09` tekshiruvi **oflayn replay'ga qo'llanmaydi**: u yerda narx `OFF-10` bo'yicha qurilmada muhrlangan va oldindan ruxsatlangan, hodisa esa o'tmishda sodir bo'lgan — rad etish savdoni yo'qotardi. **Qadoq (prepack)** qatorlari ham tekshirilmaydi: ularning narxi qadoq yaratilganda muhrlanadi va katalogdan olinmaydi. Klient narxni umuman yubormasa tekshiruv o'tkazib yuboriladi — shartnoma ataylab orqaga mos qoldirilgan. |
-| `NARX-11` | **O'zgargan hamma qator birdan aytiladi.** Javob bitta emas, **ro'yxat** qaytaradi: `variantId`, mahsulot nomi, klient ko'rgan narx va joriy narx. Sabab: aks holda uch qatori o'zgargan savat kassirni uch marta rad javobiga majbur qilardi. |
-| `NARX-12` | Solishtirish **bazaviy valyutaga o'girilgan** narx ustida boradi (`NARX-01` dagi kabi, kursga ko'paytirilib yaxlitlangan) — chunki kassir ekranda aynan shu sonni ko'radi. Shundan kelib chiqadi: chet valyutadagi mahsulotda **kurs o'zgarsa ham** `price_changed` chiqadi. Bu to'g'ri: mijozdan olinadigan summa haqiqatan boshqacha bo'ladi. |
-
+| `NARX-09` | **Kassir ko'rgan narx — savdo narxi.** Savatga qo'shilgan lahzadagi narx muhrlanadi va savdo o'sha narxda o'tadi; katalog narxining keyingi o'zgarishi **keyingi savdolarga** tegishli. Sabab: kassir summani aytadi, mijoz pulni beradi — shundan keyin boshqa summa hisoblash mijozni yo'qotadi va kassa yashigini chek bilan ziddiyatga solib qo'yadi. Shuning uchun klient har qatorda **ekranda ko'rsatgan katalog narxini** yuboradi va server savdoni o'sha narxda yakunlaydi. |
+| `NARX-10` | **Server yuborilgan narxni tekshiradi, lekin ishonch bilan.** U narx **haqiqatan yaqinda katalogda turganini** narx tarixidan qidiradi (oyna sozlamasi `PriceDriftWindowMinutes`, standart **60**; `0` — tarixdan umuman qidirilmaydi, ya'ni har qanday farq savdoni to'xtatadi. Sozlamalar ekranida — «Savdo siyosati» bo'limida). Kurs o'zgarishi ham hisobga olinadi (`NARX-12`). Topilsa: savdo o'sha narxda o'tadi, `sales.priceOverride` ruxsati **talab qilinmaydi** (kassir hech narsa o'zgartirmagan — narx do'kon tomonidan o'zgargan) va auditga `salePriceDrift` yoziladi: variant, kassir ko'rgan narx, joriy narx. Topilmasa (soxta narx yoki juda eski savat): savdo **yaratilmaydi**, `price_changed` qaytadi va kassir yangi narx bilan qayta yakunlaydi. |
+| `NARX-15` | Qabul qilingan siljish savdoga **kassir ko'rgan narx bilan, chegirmasiz** yoziladi (`UnitPrice` = o'sha narx, `DiscountAmount` = 0). U soxta chegirmaga aylantirilmaydi: chegirma — kassirning qarori, siljish esa do'konning narx o'zgartirishi. Shu sababli qabul qilingan siljish `NARX-06`/`NARX-07` katalog yangilashini ham **ishga tushirmaydi** — aks holda ega tushirgan narx birinchi savdodanoq o'z-o'zidan ortga ko'tarilib ketardi. |
+| `NARX-11` | `price_changed` javobida o'zgargan **hamma qator birdan** qaytadi — `variantId`, mahsulot nomi, klient ko'rgan narx va joriy narx ro'yxati; ikkala son ham **bazaviy valyutada** (`NARX-12`). Aks holda uch qatori eskirgan savat kassirni uch marta rad javobiga majbur qilardi. |
+| `NARX-12` | Solishtirish **bazaviy valyutaga o'girilgan** narx ustida boradi (`NARX-01` dagi kabi) — chunki kassir ekranda aynan shu sonni ko'radi. Shundan kelib chiqadi: narx tarixida ham, **kurs tarixida** ham qidiriladi, ya'ni oyna ichida kurs o'zgargan bo'lsa kassir ko'rgan son baribir tanib olinadi. |
+| `NARX-13` | Tekshiruv **oflayn replay'ga qo'llanmaydi** (`OFF-10`: narx qurilmada muhrlangan va oldindan ruxsatlangan, hodisa o'tmishda sodir bo'lgan) va **qadoq (prepack)** qatorlariga ham (ularning narxi qadoq yaratilganda muhrlanadi, katalogdan olinmaydi). Klient narxni umuman yubormasa tekshiruv o'tkazib yuboriladi — shartnoma ataylab orqaga mos. |
+| `NARX-14` | **Narx tarixi avtomatik yoziladi.** `ProductPrice` ning sotuv narxi yoki valyutasi o'zgarganda **eski qiymat** o'z amal qilish oynasi bilan tarixga tushadi. Yozuv saqlash nuqtasida (interceptor) bajariladi, chaqiruvchi koddan emas — aks holda keyin qo'shiladigan yangi narx o'zgartirish yo'li tarixni yozishni unutardi. Ketma-ket oynalar **tutash** bo'ladi: tugagan oynaning oxiri keyingisining boshi bilan bir xil vaqt muhriga ega. |
 > **`NARX-07` mezoni.** Katalog narxi 100 000, `MaxPriceIncreasePercent = 10`.
 > Sotuvchi 105 000 kiritsa (5% oshish) — savdo 105 000 da o'tadi **va** katalog 105 000 bo'ladi.
 > Sotuvchi 130 000 kiritsa (30% oshish) — savdo baribir 130 000 da o'tadi, lekin katalog
 > **100 000 bo'lib qoladi**. Sabab: bitta xato terish butun katalogni buza olmasligi kerak,
 > lekin kassirni ham to'xtatib qo'ymaslik kerak — mijoz kassada turibdi.
 
-> **`NARX-09` mezoni.** Katalog narxi 10 000 bo'lganda kassir mahsulotni savatga qo'shdi.
-> Shu orada narx **12 000** bo'ldi (egasi tahrirladi yoki boshqa kassa `NARX-06` bo'yicha
-> yangiladi). Kassir mijozdan **10 000** oldi va «Sotish» bosdi.
-> **U holda:** savdo **yaratilmaydi** — `price_changed` qaytadi va javobda o'sha qatorning yangi
-> narxi ko'rsatiladi. Kassir yangi jamini ko'rib, mijozdan farqni olib, qayta tasdiqlaydi.
-> **Aslo bo'lmasligi kerak:** savdo 12 000 da o'tib, 2 000 mijozga jimgina qarz yozilishi;
-> yoki narx tushganda 2 000 «qaytim berildi» deb yozilib, kassa yashigida ortiqcha pul qolishi.
+> **`NARX-09` / `NARX-10` mezoni.** Katalog narxi 10 000 bo'lganda kassir mahsulotni savatga
+> qo'shdi. Shu orada narx **12 000** bo'ldi. Kassir mijozdan **10 000** oldi va «Sotish» bosdi.
+> **U holda:** savdo **o'tadi va aynan 10 000 da yoziladi** — mijozdan qayta pul so'ralmaydi,
+> kassa yashigi chek bilan mos bo'lib qoladi. Auditga `salePriceDrift` yoziladi (10 000 → 12 000),
+> katalog **12 000 bo'lib qolaveradi** va keyingi savdo 12 000 da ketadi.
+> **Aksincha:** agar yuborilgan 10 000 narx tarixida topilmasa (mas. savat kechadan qolgan yoki
+> son soxta), savdo **yaratilmaydi** — `price_changed` qaytadi va kassir yangi narxda qayta
+> yakunlaydi. Bunday holatda ham hech qachon "jimgina boshqa summa" hisoblanmaydi.
 
 ---
 
