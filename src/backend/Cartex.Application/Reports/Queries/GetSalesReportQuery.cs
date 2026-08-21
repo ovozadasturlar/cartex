@@ -93,6 +93,28 @@ public sealed class GetSalesReportQueryHandler(IApplicationDbContext db) : IRequ
             .OrderBy(d => d.Date)
             .ToList();
 
+        // HIS-07: bitta kunni qamragan oraliqda kun kesimi bitta nuqta bo'lib qoladi va kun
+        // ichidagi harakat ko'rinmaydi, shuning uchun o'sha kun soatlarga bo'linadi. Qiymat
+        // kunlik qator bilan aynan bir manbadan (`lines`) olinadi — yig'indilari mos kelishi shart.
+        var hourly = new List<HourlySalesDto>();
+        if (to - from <= TimeSpan.FromDays(1) && sales.Count > 0)
+        {
+            var hourById = sales.ToDictionary(s => s.Id, s => (s.CreatedAt + offset).Hour);
+            var byHour = lines
+                .GroupBy(l => hourById[l.SaleId])
+                .ToDictionary(g => g.Key, g => (Revenue: g.Sum(x => x.Revenue), Profit: g.Sum(x => x.Profit)));
+            var countByHour = sales.GroupBy(s => hourById[s.Id]).ToDictionary(g => g.Key, g => g.Count());
+
+            // Savdosiz soat qatordan tushib qolmaydi: grafikda uzilish emas, tinch soat ko'rinsin.
+            var first = countByHour.Keys.Min();
+            var last = countByHour.Keys.Max();
+            hourly = [.. Enumerable.Range(first, last - first + 1).Select(hour =>
+            {
+                var totals = byHour.GetValueOrDefault(hour);
+                return new HourlySalesDto(hour, totals.Revenue, totals.Profit, countByHour.GetValueOrDefault(hour));
+            })];
+        }
+
         return new SalesReportDto(
             revenue,
             profit,
@@ -100,6 +122,7 @@ public sealed class GetSalesReportQueryHandler(IApplicationDbContext db) : IRequ
             count > 0 ? revenue / count : 0,
             count > 0 ? sales.Max(s => s.TotalAmount) : 0,
             topProducts,
-            daily);
+            daily,
+            hourly);
     }
 }

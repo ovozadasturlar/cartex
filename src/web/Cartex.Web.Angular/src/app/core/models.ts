@@ -148,6 +148,13 @@ export interface DailySales {
   count: number;
 }
 
+export interface HourlySales {
+  hour: number;
+  revenue: number;
+  profit: number;
+  count: number;
+}
+
 export interface SalesReport {
   revenue: number;
   profit: number;
@@ -156,6 +163,7 @@ export interface SalesReport {
   maxSale: number;
   topProducts: TopProduct[];
   daily: DailySales[];
+  hourly: HourlySales[];
 }
 
 export interface DailyCashFlow {

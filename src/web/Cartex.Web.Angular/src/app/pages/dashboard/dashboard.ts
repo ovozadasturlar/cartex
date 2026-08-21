@@ -43,12 +43,18 @@ export class Dashboard implements OnInit {
   readonly debt = signal<DebtAgingReport | null>(null);
   readonly low = signal<LowStock[] | null>(null);
 
-  readonly chartPoints = computed<ChartPoint[]>(() =>
-    (this.report()?.daily ?? []).map((d) => ({
+  /// HIS-07: bitta kun so'ralganda grafik soatlar bo'yicha chiziladi — bir kunlik oraliqda
+  /// kun kesimi bitta nuqta bo'lib qolar va kun ichidagi harakat ko'rinmasdi.
+  readonly chartPoints = computed<ChartPoint[]>(() => {
+    const hourly = this.report()?.hourly ?? [];
+    if (hourly.length) {
+      return hourly.map((h) => ({ label: `${String(h.hour).padStart(2, '0')}:00`, value: h.revenue }));
+    }
+    return (this.report()?.daily ?? []).map((d) => ({
       label: `${d.date.slice(8, 10)}.${d.date.slice(5, 7)}`,
       value: d.revenue,
-    })),
-  );
+    }));
+  });
 
   readonly topItems = computed<BarItem[]>(() =>
     (this.report()?.topProducts ?? []).slice(0, 6).map((p) => ({
