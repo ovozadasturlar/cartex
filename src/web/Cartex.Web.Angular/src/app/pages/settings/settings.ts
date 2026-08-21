@@ -7,6 +7,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { TranslocoModule } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
+import { FeaturesService } from '../../core/features.service';
 import { NavSection, SETTINGS_SECTIONS } from '../../core/nav';
 
 @Component({
@@ -18,10 +19,18 @@ import { NavSection, SETTINGS_SECTIONS } from '../../core/nav';
 export class Settings {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly enabledFeatures = inject(FeaturesService).enabled;
 
-  readonly sections: NavSection[] = SETTINGS_SECTIONS
-    .map((s) => ({ ...s, items: s.items.filter((i) => !i.permission || this.auth.hasPermission(i.permission)) }))
-    .filter((s) => s.items.length > 0);
+  /// RUXSAT-04: yon menyu qobiq menyusi bilan bir xil qoidada — ruxsat ham, modul ham ochiq
+  /// bo'lgandagina. Ro'yxat hali kelmagan bo'lsa modul yopiq deb qaralmaydi.
+  readonly sections = computed<NavSection[]>(() => SETTINGS_SECTIONS
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((i) =>
+        (!i.permission || this.auth.hasPermission(i.permission))
+        && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)),
+    }))
+    .filter((s) => s.items.length > 0));
 
   readonly collapsed = signal(localStorage.getItem('cartex.settingsNav') === '1');
   readonly isPhone = toSignal(
@@ -51,8 +60,9 @@ export class Settings {
   }
 
   constructor() {
-    if (this.router.url === '/settings' && this.sections.length) {
-      void this.router.navigateByUrl(this.sections[0].items[0].route, { replaceUrl: true });
+    const open = this.sections();
+    if (this.router.url === '/settings' && open.length) {
+      void this.router.navigateByUrl(open[0].items[0].route, { replaceUrl: true });
     }
   }
 }

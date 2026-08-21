@@ -3,7 +3,7 @@
     <div class="settings-mobile-nav">
       <div class="mobile-title"><mat-icon>settings</mat-icon><strong>{{ t('settings') }}</strong></div>
       <select (change)="navigate($event)" [attr.aria-label]="t('settings')">
-        @for (section of sections; track section.labelKey) {
+        @for (section of sections(); track section.labelKey) {
           <optgroup [label]="t(section.labelKey!)">
             @for (item of section.items; track item.route) {
               <option [value]="item.route" [selected]="item.route === currentRoute()">{{ t(item.labelKey) }}</option>
@@ -22,7 +22,7 @@
           <mat-icon>menu</mat-icon>
         </button>
       </div>
-      @for (section of sections; track section.labelKey) {
+      @for (section of sections(); track section.labelKey) {
         @if (!compact()) {
           <div class="section-label">{{ t(section.labelKey!) }}</div>
         }
