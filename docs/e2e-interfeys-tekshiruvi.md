@@ -136,6 +136,17 @@ ya'ni bajarib bo'lmaydigan boshqaruv taklif qilinmaydi.
 | `M-8` | Savat qoldig'i («Savatni davom ettirish») savdo moduli o'chirilganda ham ko'rinardi — bosilsa yakunlab bo'lmasdi | `HasCart` endi `CanSell` bilan birga hisoblanadi |
 | `M-9` | To'liq huquqli (`AccessAll`) foydalanuvchida modul ruxsatlari tokendan olib tashlanmaydi, shuning uchun **faqat ruxsatga** tayangan bo'limlar egaga o'chiq modulda ham ko'rinardi (mas. tarmoq printerlari) | Bunday bo'limlarga modul tekshiruvi qo'shildi; qolganlari (hamkorlar, oflayn kassa) javob kelmaganda o'zini yashiradi |
 
+### Qamrov o'lchovi
+
+Serverdagi `HasPermission(...)` ruxsatlari klient kodidagi tekshiruvlar bilan solishtirildi:
+**132 ruxsatdan 127 tasi** kamida bitta klientda tekshiriladi. Qolgan 5 tasi — `partner_rewards.*`
+va `partners.roles.configure` — hali interfeysi yo'q (hech bir klient bu endpoint'larni
+chaqirmaydi), shuning uchun yashiriladigan tugma ham yo'q. Interfeysi qo'shilganda shu ro'yxat
+qayta ko'riladi.
+
+Skript: server kontrollerlaridagi ruxsat nomlari ajratib olinadi va to'rtala klient manbasidan
+qidiriladi — yangi endpoint qo'shilganda tekshiruvni takrorlash uchun yetarli.
+
 ## 7. Xulosa
 
 Pul tegadigan barcha asosiy oqimlar — savdo, chegirma, qaytim, qarz, qarz to'lovi, qaytarish,
