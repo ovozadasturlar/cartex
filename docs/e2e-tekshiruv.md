@@ -12,7 +12,8 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `91b90cd` — «Let the price the cashier saw win, verified against a short price history»
+> **Tekshirilgan commit:** `8d51b45` — «Show cash returns on the shift card and net returns out of the phone revenue»
+> **Interfeys tekshiruvi:** `docs/e2e-interfeys-tekshiruvi.md` — desktop va telefon tugmalar orqali o’tildi
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
 > avtomatik to'plamlar (Application 400, Integration 91, Unit 207, Architecture 20, UI 10),
 > HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web (lint/build/test) va i18n,
