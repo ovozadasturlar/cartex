@@ -12,7 +12,7 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `HEAD` — «Show the scanner full screen and keep the phone cart reachable»
+> **Tekshirilgan commit:** `d9f20f3d` — «Show the scanner full screen and keep the phone cart reachable»
 > **Interfeys tekshiruvi:** `docs/e2e-interfeys-tekshiruvi.md` — desktop va telefon tugmalar orqali o’tildi
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
 > avtomatik to'plamlar (Application 412, Integration 91, Unit 207, Architecture 20, UI 10),
