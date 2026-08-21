@@ -33,6 +33,15 @@ import { MatIconModule } from '@angular/material/icon';
     .tone-danger .badge { background: var(--cx-danger); }
     .tone-warning .badge { background: var(--cx-warning); }
     .tone-info .badge { background: var(--cx-info); }
+
+    /* Telefonda karta ensiz: raqam kartadan chiqib ketmasligi uchun o'lchamlar kichrayadi. */
+    @media (width <= 767px) {
+      .stat { padding: 12px; gap: 8px; }
+      .value { font-size: 19px; overflow-wrap: anywhere; }
+      .label, .hint { font-size: 11.5px; }
+      .badge { width: 34px; height: 34px; border-radius: 9px; }
+      .badge mat-icon { font-size: 19px; width: 19px; height: 19px; }
+    }
   `,
 })
 export class StatCard {

@@ -894,6 +894,11 @@
     gap: 0;
   }
 
+  /* Suzuvchi tugma oxirgi qatorni doimiy to'sib qolmasin. */
+  .catalog {
+    padding-bottom: 62px;
+  }
+
   .layout > .cart {
     display: none;
   }
@@ -905,6 +910,10 @@
   .layout.cart-open > .cart {
     display: flex;
     width: auto !important;
+
+    /* Pastdagi almashtirish tugmasi eng muhim tugmani ("Savdoni yakunlash") to'sib
+       qo'ymasligi uchun savat shuncha joy bo'shatadi. */
+    padding-bottom: 62px;
   }
 
   .cart-resizer {
@@ -921,9 +930,9 @@
 
   .cart-switch {
     position: fixed;
-    left: 12px;
+    left: calc(var(--cx-side-rail) + 12px);
     right: 12px;
-    bottom: calc(var(--cx-bottom-nav, 58px) + 10px);
+    bottom: calc(var(--cx-bottom-nav) + 12px);
     z-index: 20;
     display: flex;
     align-items: center;

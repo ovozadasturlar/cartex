@@ -473,9 +473,29 @@ body.dark {
 }
 
 /* Telefon: pastdagi panel balandligi bir joyda turadi — sahifalar shunga qarab joy qoldiradi. */
+/* Pastdagi panel balandligi va chap menyu eni: suzuvchi tugmalar shu ikkisiga tayanadi,
+   shuning uchun ular global e'lon qilinadi. Telefonda menyu ustma-ust ochiladi, ya'ni joy
+   egallamaydi. */
+:root {
+  --cx-bottom-nav: 0px;
+  --cx-side-rail: 64px;
+}
+
 @media (width <= 767px) {
   :root {
     --cx-bottom-nav: 66px;
+    --cx-side-rail: 0px;
+  }
+
+  /* Telefonda jadval kataklari ixchamlashadi — shunda ustunlar ekranga sig'adi. */
+  .cx-table-card table.mat-mdc-table {
+    --mat-table-row-item-label-text-size: 12.5px;
+    --mat-table-header-headline-size: 12px;
+  }
+
+  .cx-table-card .mat-mdc-cell,
+  .cx-table-card .mat-mdc-header-cell {
+    padding: 0 8px;
   }
 
   /* Jadval kichik ekranga sig'masa, sahifa emas, jadvalning o'zi surilsin. */
