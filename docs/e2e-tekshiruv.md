@@ -12,12 +12,13 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `0247ca6` — «Refuse a sale when the catalog price moved under the cashier»
-> (avvalgi baseline `aff495b1` shu commitga ko'chirildi)
+> **Tekshirilgan commit:** `91b90cd` — «Let the price the cashier saw win, verified against a short price history»
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
-> avtomatik to'plamlar (Application 396, Integration 91, Unit 207, Architecture 20, UI 10),
-> HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web va i18n. **Istisno:** yakuniy jonli
-> UI oqimlari — §4 dagi sabab bilan (kompyuter qulflangan + qayta seed sessiyalarni bekor qildi)
+> avtomatik to'plamlar (Application 400, Integration 91, Unit 207, Architecture 20, UI 10),
+> HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web (lint/build/test) va i18n,
+> hamda **jonli tekshiruv**: desktopda narx siljishi zanjiri haqiqiy kliklar bilan, telefonda
+> (Store) natijaning ko'rinishi. Web interfeysining o'zi qoplanmagan — brauzer kengaytmasiga
+> `localhost:4200` uchun ruxsat berilmagan.
 
 Bu commitda yuqoridagi qamrov to'liq tekshirilgan. Undan keyingi ishda **hammasini qaytadan
 tekshirish shart emas** — faqat tegilgan qismlar:
