@@ -464,3 +464,27 @@ body.dark {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Kamera skaneri butun ekranni egallaydi: ramka ichidagi tasvir imkon qadar katta bo'lsin. */
+.cx-scanner-panel .mat-mdc-dialog-surface {
+  padding: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+/* Telefon: pastdagi panel balandligi bir joyda turadi — sahifalar shunga qarab joy qoldiradi. */
+@media (width <= 767px) {
+  :root {
+    --cx-bottom-nav: 66px;
+  }
+
+  /* Jadval kichik ekranga sig'masa, sahifa emas, jadvalning o'zi surilsin. */
+  .cx-card table.mat-mdc-table,
+  table.mat-mdc-table {
+    min-width: 0;
+  }
+
+  .mat-mdc-table-sticky {
+    position: static !important;
+  }
+}

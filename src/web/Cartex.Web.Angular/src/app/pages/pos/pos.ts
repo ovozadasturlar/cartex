@@ -21,6 +21,7 @@ import { MoneyInputDirective } from '../../core/money-input.directive';
 import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
 import { BusinessApi } from '../../core/api/misc.api';
 import { Currency, RatesApi } from '../../core/api/finance.api';
+import { BarcodeScannerService } from '../../core/barcode-scanner.service';
 import { NotifyService } from '../../core/notify.service';
 import { QueueHubService } from '../../core/queue-hub.service';
 import { WarehouseContextService } from '../../core/warehouse-context.service';
@@ -35,6 +36,8 @@ import { FeaturesApi } from '../../core/api/misc.api';
 import { PosProductDialog, PrepackDialog, QuickRatesDialog } from './pos-tools';
 import { ProductDialog } from '../products/product-dialog';
 import { CartLine, PaymentRow, PosCartState, shortfallDiscount } from './pos-state';
+import { ScanFeedback, ScannerDialog } from '../../shared/scanner.dialog';
+import { LayoutService } from '../../core/layout.service';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
@@ -65,6 +68,13 @@ export class Pos implements OnInit {
   private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly layout = inject(LayoutService);
+  /// Katalog va savat yonma-yon sig'maganda (telefon va tor planshet) ular almashib turadi:
+  /// pastdagi tugma savatni ochadi va yopadi. Keng ekranda ikkalasi yonma-yon qolaveradi.
+  readonly stacked = computed(() => !this.layout.isSplitPos());
+  readonly cartOpen = signal(false);
+  /// Kamera tugmasi faqat u haqiqatan ishlaydigan qurilmada ko'rinadi (`https` + dvigatel).
+  readonly cameraScan = inject(BarcodeScannerService).supported;
   private readonly auth = inject(AuthService);
   private readonly features = inject(FeaturesApi);
   private readonly remotePrint = inject(RemotePrintService);
@@ -402,6 +412,31 @@ export class Pos implements OnInit {
       this.search = value.trim();
       this.reset();
     }, 300);
+  }
+
+  /// Kamera USB skaner bilan bir xil yo'ldan ketadi: kod topiladi va o'sha `addLookup` ga
+  /// beriladi — savdo mantig'i o'zgarmaydi, faqat kodni kiritish usuli qo'shiladi.
+  openCameraScan(): void {
+    const warehouseId = this.warehouseId();
+    if (!warehouseId || !this.canCreateCart) return;
+    this.dialog.open(ScannerDialog, {
+      data: {
+        handle: async (code: string): Promise<ScanFeedback> => {
+          try {
+            const found = await lastValueFrom(this.api.byBarcode(code, warehouseId));
+            this.addLookup(found);
+            return { ok: true, message: found.productName };
+          } catch {
+            return { ok: false, message: this.transloco.translate('barcode_not_found') };
+          }
+        },
+      },
+      panelClass: 'cx-scanner-panel',
+      width: '100vw',
+      maxWidth: '100vw',
+      height: '100dvh',
+      autoFocus: false,
+    });
   }
 
   async onScanEnter(input: HTMLInputElement): Promise<void> {

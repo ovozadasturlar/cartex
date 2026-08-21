@@ -182,8 +182,8 @@
                     }
                   </td>
                 </ng-container>
-                <tr mat-header-row *matHeaderRowDef="cols"></tr>
-                <tr mat-row *matRowDef="let r; columns: cols"></tr>
+                <tr mat-header-row *matHeaderRowDef="cols()"></tr>
+                <tr mat-row *matRowDef="let r; columns: cols()"></tr>
               </table>
             </div>
             <cx-paging-bar [meta]="h.meta" (changed)="onPage($event)" />

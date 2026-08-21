@@ -2,7 +2,8 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    <div class="layout" [style.grid-template-columns]="'minmax(0, 1fr) ' + cartWidth() + 'px'">
+    <div class="layout" [class.cart-open]="cartOpen()"
+         [style.grid-template-columns]="'minmax(0, 1fr) ' + cartWidth() + 'px'">
       <div class="catalog">
         <div class="toolbar">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
@@ -15,6 +16,12 @@
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
           </mat-form-field>
+          @if (cameraScan) {
+            <button matIconButton class="camera-btn" [disabled]="!canCreateCart"
+                    [matTooltip]="t('scan_with_camera')" (click)="openCameraScan()">
+              <mat-icon>photo_camera</mat-icon>
+            </button>
+          }
           @if (shiftRequired()) {
             @if (shift(); as s) {
               <span class="cx-chip ok shift-chip">
@@ -428,6 +435,16 @@
           </div>
         </div>
       </div>
+      @if (stacked()) {
+        <button type="button" class="cart-switch" (click)="cartOpen.set(!cartOpen())">
+          <mat-icon>{{ cartOpen() ? 'grid_view' : 'shopping_cart' }}</mat-icon>
+          <span class="label">{{ cartOpen() ? t('catalog') : t('cart') }}</span>
+          @if (cart().length) {
+            <span class="count">{{ cart().length }}</span>
+            <span class="sum cx-money">{{ total() | cxMoney }}</span>
+          }
+        </button>
+      }
     </div>
   }
 </div>

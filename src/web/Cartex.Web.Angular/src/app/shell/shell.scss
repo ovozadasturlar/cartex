@@ -302,9 +302,15 @@ mat-sidenav-content {
   }
 
   .global-search,
-  .wh-select,
   .user-name {
     display: none;
+  }
+
+  /* Ombor tanlash telefonda ham qoladi: u tanlanmasa kassa umuman ishlamaydi. */
+  .wh-select {
+    max-width: 34vw;
+    padding: 4px 6px;
+    font-size: 12px;
   }
 
   .content {

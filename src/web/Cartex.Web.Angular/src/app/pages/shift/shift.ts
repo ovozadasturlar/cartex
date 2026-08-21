@@ -22,6 +22,7 @@ import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
+import { LayoutService } from '../../core/layout.service';
 
 const money = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
 const date = new CxDatePipe();
@@ -100,7 +101,10 @@ export class Shift implements OnInit {
   readonly canViewAll = this.auth.hasPermission('shifts.viewAll');
   readonly canManageAll = this.auth.hasPermission('shifts.closeAll');
   readonly canCashOut = this.auth.hasPermission('sales.cashout');
-  readonly cols = ['cashier', 'opened', 'closed', 'float', 'counted', 'status', 'actions'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['cashier', 'opened', 'status', 'actions']
+    : ['cashier', 'opened', 'closed', 'float', 'counted', 'status', 'actions']);
 
   private readonly now = signal(Date.now());
   readonly duration = computed(() => {

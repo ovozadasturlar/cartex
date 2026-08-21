@@ -1,6 +1,4 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -9,10 +7,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { TranslocoService } from '@jsverse/transloco';
-import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { FeaturesService } from '../core/features.service';
-import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS } from '../core/nav';
+import { LayoutService } from '../core/layout.service';
+import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS, phoneNavItems } from '../core/nav';
 import { APP_LANGUAGES, PreferencesService } from '../core/preferences.service';
 import { WarehouseContextService } from '../core/warehouse-context.service';
 import { Logo } from '../shared/logo';
@@ -41,16 +39,10 @@ export class Shell {
   readonly preferences = inject(PreferencesService);
   readonly wh = inject(WarehouseContextService);
 
-  private readonly breakpoints = inject(BreakpointObserver);
-  readonly isDesktop = toSignal(
-    this.breakpoints.observe('(min-width: 1200px)').pipe(map((result) => result.matches)),
-    { initialValue: window.innerWidth >= 1200 },
-  );
-  readonly isPhone = toSignal(
-    this.breakpoints.observe('(max-width: 767px)').pipe(map((result) => result.matches)),
-    { initialValue: window.innerWidth <= 767 },
-  );
-  readonly isTablet = computed(() => !this.isDesktop() && !this.isPhone());
+  private readonly layout = inject(LayoutService);
+  readonly isDesktop = this.layout.isDesktop;
+  readonly isPhone = this.layout.isPhone;
+  readonly isTablet = this.layout.isTablet;
   readonly collapsed = signal(localStorage.getItem('cartex.sidenav') === 'collapsed');
   readonly tabletExpanded = signal(false);
   readonly compactNav = computed(
@@ -75,7 +67,12 @@ export class Shell {
   ));
   readonly languages = APP_LANGUAGES;
   readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
-  readonly mobileNav = computed(() => this.navSections().flatMap((section) => section.items).slice(0, 4));
+  /// Telefonda pastki panelga 4 ta joy bor, shuning uchun sahifalar menyudagi tartibda emas,
+  /// telefonda haqiqatan kerak bo'ladigan tartibda tanlanadi (`PHONE_NAV_ORDER`). Ro'yxat
+  /// foydalanuvchiga moslashadi: hisobot ruxsati yo'q kassir kassa/savdo/mijoz/mahsulotni
+  /// ko'radi, egaga boshqaruv paneli ham tushadi. Qolgani "Ko'proq" menyusida.
+  readonly mobileNav = computed(() =>
+    phoneNavItems(this.navSections().flatMap((section) => section.items)));
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('globalSearch');
   readonly searchQuery = signal('');
   readonly searchItems = computed(() => [...NAV_SECTIONS, ...SETTINGS_SECTIONS]

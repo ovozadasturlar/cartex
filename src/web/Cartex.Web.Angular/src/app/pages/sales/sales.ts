@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -12,6 +12,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { SalesApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { LayoutService } from '../../core/layout.service';
 import { CxDatePipe, CxMoneyPipe, newUuid, utcRange } from '../../core/format';
 import { Receipt, Sale, SaleDetail, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
@@ -62,10 +63,13 @@ export class Sales implements OnInit {
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly columns = [
-    'date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status',
-    ...(this.canReturn ? ['actions'] : []),
-  ];
+  private readonly layout = inject(LayoutService);
+  /// Telefon ekraniga yetti ustun sig'maydi. Ikkinchi darajalilari yashiriladi — satr
+  /// bosilganda chek oynasi baribir hammasini ko'rsatadi.
+  readonly columns = computed(() => this.layout.isPhone()
+    ? ['date', 'customer', 'total', 'status']
+    : ['date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status',
+       ...(this.canReturn ? ['actions'] : [])]);
 
   async ngOnInit(): Promise<void> {
     const { from, to } = utcRange(30);

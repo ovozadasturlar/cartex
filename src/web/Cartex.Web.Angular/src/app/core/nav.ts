@@ -12,6 +12,29 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/// Telefonning pastki panelidagi tartib. Ro'yxat menyu tartibidan farq qiladi: kichik ekranda
+/// avval kunlik ish (kassa, savdo, mijoz, mahsulot), keyin ko'rsatkichlar keladi. Bu yerda
+/// bo'lmagan sahifa telefonda yo'qolmaydi — "Ko'proq" menyusidan ochiladi.
+export const PHONE_NAV_ORDER: string[] = [
+  '/pos',
+  '/dashboard',
+  '/sales',
+  '/customers',
+  '/products',
+  '/shift',
+];
+
+/// Telefonning pastki paneli 4 ta joydan iborat. Tanlov foydalanuvchiga moslashadi: avval
+/// `PHONE_NAV_ORDER` dagi, unga **ochiq** bo'lgan sahifalar olinadi, joy qolsa menyudagi
+/// qolganlari qo'shiladi. Shunda hisobot ruxsati yo'q kassir ham, egasi ham o'ziga kerakli
+/// to'rttani ko'radi va hech bir sahifa yo'qolmaydi — qolgani "Ko'proq" menyusida.
+export function phoneNavItems(open: NavItem[], slots = 4): NavItem[] {
+  const ordered = PHONE_NAV_ORDER
+    .map((route) => open.find((item) => item.route === route))
+    .filter((item): item is NavItem => item !== undefined);
+  return [...ordered, ...open.filter((item) => !ordered.includes(item))].slice(0, slots);
+}
+
 export const NAV_SECTIONS: NavSection[] = [
   {
     labelKey: null,

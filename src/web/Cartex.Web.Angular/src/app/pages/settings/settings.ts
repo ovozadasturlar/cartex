@@ -1,4 +1,3 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +7,7 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { FeaturesService } from '../../core/features.service';
+import { LayoutService } from '../../core/layout.service';
 import { NavSection, SETTINGS_SECTIONS } from '../../core/nav';
 
 @Component({
@@ -33,14 +33,9 @@ export class Settings {
     .filter((s) => s.items.length > 0));
 
   readonly collapsed = signal(localStorage.getItem('cartex.settingsNav') === '1');
-  readonly isPhone = toSignal(
-    inject(BreakpointObserver).observe('(max-width: 699px)').pipe(map((result) => result.matches)),
-    { initialValue: window.innerWidth <= 699 },
-  );
-  readonly isTablet = toSignal(
-    inject(BreakpointObserver).observe('(min-width: 700px) and (max-width: 1099px)').pipe(map((result) => result.matches)),
-    { initialValue: window.innerWidth >= 700 && window.innerWidth <= 1099 },
-  );
+  private readonly layout = inject(LayoutService);
+  readonly isPhone = this.layout.isPhone;
+  readonly isTablet = this.layout.isTablet;
   readonly compact = computed(() => this.collapsed() || this.isTablet());
   readonly currentRoute = toSignal(
     this.router.events.pipe(

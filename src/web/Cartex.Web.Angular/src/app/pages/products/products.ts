@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -21,6 +21,7 @@ import { StatCard } from '../../shared/stat-card';
 import { ProductDialog } from './product-dialog';
 import { ProductImageDialog } from './product-image-dialog';
 import { ProductImportDialog } from './product-import-dialog';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-products',
@@ -61,7 +62,13 @@ export class Products implements OnInit, OnDestroy {
     items: [],
     meta: { totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
   });
-  readonly columns = ['image', 'name', 'code', 'barcode', 'unit', 'price', 'stock', 'active', ...(this.canDelete ? ['actions'] : [])];
+  private readonly layout = inject(LayoutService);
+  /// Telefonda mahsulot ro'yxati narx va qoldiq uchun ochiladi — kod, birlik va holat
+  /// ustunlari kartaga qoladi.
+  readonly columns = computed(() => this.layout.isPhone()
+    ? ['image', 'name', 'price', 'stock']
+    : ['image', 'name', 'code', 'barcode', 'unit', 'price', 'stock', 'active',
+       ...(this.canDelete ? ['actions'] : [])]);
 
   private search = '';
   private page = 1;

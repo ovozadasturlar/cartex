@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,6 +22,7 @@ import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
 import { CustomerEditDialog } from './customer-profile';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-customers',
@@ -55,7 +56,11 @@ export class Customers implements OnInit {
   readonly busy = signal(false);
   readonly totals = signal<CustomerTotals | null>(null);
   readonly paged = signal<Paged<Customer> | null>(null);
-  readonly cols = ['name', 'phone', 'debt', 'bonus', 'discount', 'credit'];
+  private readonly layout = inject(LayoutService);
+  /// Telefonda eng kerakli uchtasi qoladi; qolgani mijoz kartasida ko'rinadi.
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['name', 'debt', 'bonus']
+    : ['name', 'phone', 'debt', 'bonus', 'discount', 'credit']);
   readonly canCreate = this.auth.hasPermission('customers.create');
 
   search = '';
