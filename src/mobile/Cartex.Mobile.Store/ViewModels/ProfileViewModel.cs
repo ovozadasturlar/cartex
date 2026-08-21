@@ -11,6 +11,7 @@ public partial class ProfileViewModel(
     StoreSignOut signOut,
     WarehouseContext warehouseContext,
     MobileOfflineService offline,
+    MobileFeaturesCache features,
     MobilePermissions permissions) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
@@ -21,6 +22,7 @@ public partial class ProfileViewModel(
     [ObservableProperty] private string _footer = "";
     [ObservableProperty] private string _themeName = "";
     [ObservableProperty] private bool _offlineVisible;
+    [ObservableProperty] private bool _canViewDevices;
     [ObservableProperty] private string _offlineStatus = "";
 
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
@@ -35,7 +37,13 @@ public partial class ProfileViewModel(
         LanguageName = LangNames[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
         Footer = $"Cartex Do'kon {AppInfo.Current.VersionString} • {session.ServerUrl}";
         ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
-        OfflineVisible = permissions.Has("devices.revoke") && permissions.HasAny("sales.create", "sales.checkout");
+        CanViewDevices = permissions.Has("devices.view");
+        // RUXSAT-04: oflayn kassa — alohida modul. To'liq huquqli foydalanuvchida ruxsatlar
+        // tokendan olib tashlanmaydi, shuning uchun modul holati alohida so'raladi.
+        await features.EnsureLoadedAsync();
+        OfflineVisible = permissions.Has("devices.revoke")
+            && permissions.HasAny("sales.create", "sales.checkout")
+            && features.OfflineCacheEnabled;
         if (!OfflineVisible) return;
         // Vakolat kaliti saqlangan joydan o'qilmaguncha IsEnabled "yo'q" deydi, shuning
         // uchun holat faqat servis tayyor bo'lgach ko'rsatiladi.

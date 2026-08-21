@@ -203,14 +203,14 @@
                     <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
                         <Border Style="{StaticResource Card}" Padding="14,10">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="{svc:T today_total}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" FontSize="12" />
                                 <Label Text="{Binding TodayTotal}" FontSize="22" FontAttributes="Bold"
                                        TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
                             </VerticalStackLayout>
                         </Border>
                         <Border Grid.Column="1" Style="{StaticResource Card}" Padding="14,10">
                             <VerticalStackLayout Spacing="2">
-                                <Label Text="{svc:T sales_today}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{svc:T sales}" Style="{StaticResource MutedLabel}" FontSize="12" />
                                 <Label Text="{Binding TodayCount}" FontSize="22" FontAttributes="Bold"
                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             </VerticalStackLayout>

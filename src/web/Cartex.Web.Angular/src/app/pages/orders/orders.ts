@@ -63,7 +63,8 @@ export class Orders implements OnInit, OnDestroy {
   readonly status = signal('Open');
   readonly statuses = ['', 'Open', 'Confirmed', 'Ready', 'CheckedOut', 'Cancelled'];
   readonly cols = ['code', 'customer', 'warehouse', 'items', 'date', 'status'];
-  readonly canManage = this.auth.hasPermission('sales.pick|sales.create|sales.checkout');
+  // RUXSAT-06: savatni ochib ko'rish uchun o'qish huquqi yetarli — serverdagi shart ham shu.
+  readonly canOpen = this.auth.hasPermission('sales.view|sales.pick|sales.create|sales.checkout');
   readonly canViewLoad = this.auth.hasPermission('sales.view');
 
   async ngOnInit(): Promise<void> {
@@ -100,7 +101,7 @@ export class Orders implements OnInit, OnDestroy {
   }
 
   open(row: CartListItem): void {
-    if (!this.canManage) return;
+    if (!this.canOpen) return;
     this.dialog
       .open(OrderDialog, { data: row.aggregateCode, width: '640px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
@@ -207,13 +208,13 @@ export class Orders implements OnInit, OnDestroy {
               <mat-icon>point_of_sale</mat-icon>{{ t('complete_sale') }}
             </button>
           } @else {
-            @if (canPick && (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready')) {
+            @if (canManage && (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready')) {
               <button matButton class="danger" [disabled]="busy()" (click)="cancelOrder(t('success'))">{{ t('cancel') }}</button>
             }
-            @if (canCheckout && c.status === 'Open') {
+            @if (canManage && c.status === 'Open') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Confirmed', t('success'))">{{ t('confirm') }}</button>
             }
-            @if (canCheckout && c.status === 'Confirmed') {
+            @if (canManage && c.status === 'Confirmed') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Ready', t('success'))">{{ t('order_ready') }}</button>
             }
             @if (canCheckout && (c.status === 'Confirmed' || c.status === 'Ready')) {
@@ -239,7 +240,9 @@ export class OrderDialog implements OnInit {
   readonly busy = signal(true);
   readonly paying = signal(false);
   readonly cols = ['name', 'qty', 'price', 'total'];
-  readonly canPick = this.auth.hasPermission('sales.pick|sales.create|sales.checkout');
+  // RUXSAT-06: holatni o'zgartirish — navbat ishi (`sales.pick`/`sales.create`), to'lovni
+  // yakunlash esa alohida huquq (`sales.checkout`). Serverdagi taqsimot ham aynan shunday.
+  readonly canManage = this.auth.hasPermission('sales.pick|sales.create');
   readonly canCheckout = this.auth.hasPermission('sales.checkout');
 
   paidCash = 0;
@@ -266,7 +269,7 @@ export class OrderDialog implements OnInit {
   }
 
   async setStatus(status: string, message: string): Promise<void> {
-    if (!this.canPick || (status !== 'Cancelled' && !this.canCheckout)) return;
+    if (!this.canManage) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.api.updateStatus(this.code, status));
@@ -279,7 +282,7 @@ export class OrderDialog implements OnInit {
   }
 
   cancelOrder(message: string): void {
-    if (!this.canPick) return;
+    if (!this.canManage) return;
     this.dialog
       .open(ConfirmDialog, { data: 'order_cancel_confirm', width: '380px' })
       .afterClosed()

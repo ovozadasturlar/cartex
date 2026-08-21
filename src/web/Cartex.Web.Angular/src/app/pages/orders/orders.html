@@ -61,7 +61,7 @@
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let c; columns: cols" [class.clickable]="canManage" (click)="open(c)"></tr>
+            <tr mat-row *matRowDef="let c; columns: cols" [class.clickable]="canOpen" (click)="open(c)"></tr>
           </table>
         </div>
       } @else if (!busy()) {

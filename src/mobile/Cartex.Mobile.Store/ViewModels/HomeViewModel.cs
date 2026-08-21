@@ -63,11 +63,11 @@ public partial class HomeViewModel(
         // yuklangandan keyin hisoblanadi.
         await Task.WhenAll(policy.RefreshAsync(), features.RefreshAsync());
         ShowQueue = perms.HasAny("sales.pick", "sales.view")
-            && policy.Current.AllowSaleQueue && features.QueueEnabled;
+            && policy.Current.AllowSaleQueue && features.CartsEnabled;
         // RUXSAT-04: bu ilovada savdo savat orqali ketadi, ya'ni u modul o'chiq bo'lsa umuman
         // mumkin emas. Shunday holatda savdo tugmalari ko'rsatilmaydi — aks holda kassir savat
         // yig'ib, faqat oxirida "ruxsat yo'q" degan javob olardi.
-        CanSell = perms.HasAny("sales.create", "sales.checkout") && features.QueueEnabled;
+        CanSell = perms.HasAny("sales.create", "sales.checkout") && features.CartsEnabled;
         HasCart = CanSell && cart.Count > 0;
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();

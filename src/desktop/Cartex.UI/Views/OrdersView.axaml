@@ -33,24 +33,28 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Button Classes="icon" Margin="4,0"
                                                 Command="{Binding $parent[DataGrid].DataContext.ConfirmCommand}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanManageOrders}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[confirm]}">
                                             <mi:MaterialIcon Kind="CheckCircleOutline" Width="16" Height="16"
                                                              Foreground="{DynamicResource BrandPrimaryBrush}" />
                                         </Button>
                                         <Button Classes="icon" Margin="4,0"
                                                 Command="{Binding $parent[DataGrid].DataContext.MarkReadyCommand}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanManageOrders}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[order_ready]}">
                                             <mi:MaterialIcon Kind="PackageVariantClosedCheck" Width="16" Height="16"
                                                              Foreground="{DynamicResource InfoBrush}" />
                                         </Button>
                                         <Button Classes="icon" Margin="4,0"
                                                 Command="{Binding $parent[DataGrid].DataContext.TakeToPosCommand}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanTakeToPos}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[take_to_pos]}">
                                             <mi:MaterialIcon Kind="CashRegister" Width="16" Height="16"
                                                              Foreground="{DynamicResource TextPrimary}" />
                                         </Button>
                                         <Button Classes="icon" Margin="4,0"
                                                 Command="{Binding $parent[DataGrid].DataContext.CancelCommand}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanManageOrders}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[cancel]}">
                                             <mi:MaterialIcon Kind="CloseCircleOutline" Width="16" Height="16"
                                                              Foreground="{DynamicResource DangerBrush}" />

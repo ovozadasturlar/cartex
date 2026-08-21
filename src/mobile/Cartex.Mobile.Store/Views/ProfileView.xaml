@@ -64,7 +64,8 @@
                     <BoxView HeightRequest="1" Margin="58,0,10,0"
                              IsVisible="{Binding OfflineVisible}"
                              Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12"
+                          IsVisible="{Binding CanViewDevices}">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding OpenDevicesCommand}" />
                         </Grid.GestureRecognizers>
@@ -78,6 +79,7 @@
                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
                     </Grid>
                     <BoxView HeightRequest="1" Margin="58,0,10,0"
+                             IsVisible="{Binding CanViewDevices}"
                              Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">
                         <Grid.GestureRecognizers>

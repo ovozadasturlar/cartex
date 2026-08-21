@@ -12,13 +12,14 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `8d51b45` — «Show cash returns on the shift card and net returns out of the phone revenue»
+> **Tekshirilgan commit:** `db6b6188` — «Rule out fully returned sales from the daily revenue row»
 > **Interfeys tekshiruvi:** `docs/e2e-interfeys-tekshiruvi.md` — desktop va telefon tugmalar orqali o’tildi
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
-> avtomatik to'plamlar (Application 400, Integration 91, Unit 207, Architecture 20, UI 10),
-> HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web (lint/build/test) va i18n,
+> avtomatik to'plamlar (Application 405, Integration 91, Unit 207, Architecture 20, UI 10),
+> HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web (lint/build/56 test) va i18n,
 > hamda **jonli tekshiruv**: desktopda narx siljishi zanjiri haqiqiy kliklar bilan, telefonda
-> (Store) natijaning ko'rinishi. Web interfeysining o'zi qoplanmagan — brauzer kengaytmasiga
+> (Store) modul/ruxsat bo'yicha yashirilish va kunlik tushumning boshqaruv paneli bilan
+> mos kelishi. Web interfeysining o'zi qoplanmagan — brauzer kengaytmasiga
 > `localhost:4200` uchun ruxsat berilmagan.
 
 Bu commitda yuqoridagi qamrov to'liq tekshirilgan. Undan keyingi ishda **hammasini qaytadan

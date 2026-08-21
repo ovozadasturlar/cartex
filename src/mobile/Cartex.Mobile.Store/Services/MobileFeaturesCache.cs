@@ -12,7 +12,11 @@ public sealed class MobileFeaturesCache(IFeaturesApi featuresApi)
 
     public IReadOnlyList<string> Current => _current ??= Read();
 
-    public bool QueueEnabled =>
+    // Ilovadagi savdo savat orqali ketadi, savat esa `ordering` yoki `store` modulidan
+    // birortasi yoqilganda ochiq (serverdagi `RequiresFeature(Ordering, Store)` bilan bir xil).
+    public bool OfflineCacheEnabled => Current.Contains("offline_cache", StringComparer.OrdinalIgnoreCase);
+
+    public bool CartsEnabled =>
         Current.Contains("ordering", StringComparer.OrdinalIgnoreCase)
         || Current.Contains("store", StringComparer.OrdinalIgnoreCase);
 

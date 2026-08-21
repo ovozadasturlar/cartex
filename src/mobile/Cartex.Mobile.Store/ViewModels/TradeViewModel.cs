@@ -84,7 +84,7 @@ public partial class TradeViewModel(
         HasZReportAccess = permissions.HasAny("shifts.view", "shifts.viewAll") && printDispatcher.CanPrintZReport;
         await Task.WhenAll(policy.EnsureLoadedAsync(), features.EnsureLoadedAsync());
         HasQueueAccess = permissions.HasAny("sales.pick", "sales.view")
-            && policy.Current.AllowSaleQueue && features.QueueEnabled;
+            && policy.Current.AllowSaleQueue && features.CartsEnabled;
         if (IsQueue && !HasQueueAccess && (HasSalesAccess || HasZReportAccess))
             Section = HasSalesAccess ? "sales" : "zreports";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));

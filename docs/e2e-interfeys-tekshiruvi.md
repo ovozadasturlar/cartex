@@ -112,16 +112,40 @@ yagona holga keltirildi: **sahifa yoki tugma ruxsat ham, moduli ham ochiq bo'lga
 yoki server javob bermadi) modul **yopiq deb qaralmaydi** — aks holda aloqasiz ochilgan dastur
 menyusining yarmini yashirib qo'yardi. Ro'yxat kelgach menyu qayta quriladi.
 
-**`ViewAll` xulqi** tekshirildi va uchala klientda to'g'ri: `shifts.viewAll` yo'q bo'lsa smena
-ekranidagi «barcha kassirlar» filtri ko'rsatilmaydi, `devices.viewAll` yo'q bo'lsa server
-allaqachon faqat o'z sessiyalarini qaytaradi. Savdo tarixi va hisobotlar server tomonida
-`ApplySaleScope` bilan foydalanuvchi bo'yicha cheklanadi.
+**`ViewAll` xulqi** (`RUXSAT-07`) tekshirildi va uchala klientda to'g'ri: `shifts.viewAll` yo'q
+bo'lsa smena ekranidagi «barcha kassirlar» filtri ko'rsatilmaydi, `devices.viewAll` yo'q bo'lsa
+server allaqachon faqat o'z sessiyalarini qaytaradi. Savdo ro'yxati, jamilari va kunlik qatori
+server tomonida `ApplySaleScope` bilan foydalanuvchi bo'yicha cheklanadi — buni endi ikkita test
+qo'riqlaydi (`RUXSAT_07_daily_revenue_*`). Klientlarda «barcha xodimlar» degan filtr umuman yo'q,
+ya'ni bajarib bo'lmaydigan boshqaruv taklif qilinmaydi.
+
+> **Hisobotlar bundan mustasno:** `/api/reports/**` foydalanuvchi bo'yicha **cheklanmaydi** —
+> ular butun do'kon kesimini ko'rsatadi va `reports` moduli + `reports.view` ruxsati bilan
+> qo'riqlanadi. Ya'ni `reports.view` berish = «butun do'kon raqamlarini ko'rsatish». Kassirga bu
+> ruxsat berilmasin.
+
+### Shu bosqichda topilgan va tuzatilgan qismlar
+
+| ID | Topilma | Tuzatish |
+|---|---|---|
+| `M-3` | Telefondagi «Bugungi tushum» **61 670** emas, **69 350** ko'rsatardi — u savdolar summasini (brutto) olardi, boshqaruv paneli esa qaytarilgan qismni chiqarib tashlagan sof qiymatni | `sales/totals/daily` endi `HIS-01` ta'rifida hisoblaydi (`HIS-06`), telefon o'sha manbadan oladi. Jonli tekshirildi: telefon ham, panel ham **61 670** |
+| `M-4` | Uy ekranidagi tushum kartasi vaqtincha `reports` endpoint'idan olinardi — `reports` moduli o'chiq do'konda yoki `reports.view` yo'q kassirda karta ishlamay qolardi | So'rov `sales.view` ostidagi endpoint'ga qaytarildi: kartani ko'rsatadigan ruxsat bilan bir xil |
+| `M-5` | «Savdo» ichidagi karta har qanday oraliqda «Bugungi tushum» deb turardi (30 kun tanlansa ham) va uy ekrani bilan ikki xil son ko'rsatardi | Karta ro'yxat izohiga aylantirildi: «Jami» va «Savdolar» — desktop va webdagi kabi. «Bugungi tushum» faqat uy ekranida qoldi |
+| `M-6` | O'chiq modul sahifalari uchun metadata to'liq emas edi: desktopda boshqaruv paneli, webda kurslar, chop etish, audit va sodiqlik marshrutlari modulni bilmasdi | Metadata to'ldirildi; menyu va marshrut mosligini endi test qo'riqlaydi (`nav-routes.spec.ts`, 41 tasdiq) |
+| `M-7` | Modul o'chirilganda telefon «Ruxsat yo'q» derdi, agent ilovasi esa xom `feature_locked` matnini ko'rsatardi | Uchala klient endi modul yopiqligini alohida, tarjima qilingan xabar bilan aytadi |
+| `M-8` | Savat qoldig'i («Savatni davom ettirish») savdo moduli o'chirilganda ham ko'rinardi — bosilsa yakunlab bo'lmasdi | `HasCart` endi `CanSell` bilan birga hisoblanadi |
+| `M-9` | To'liq huquqli (`AccessAll`) foydalanuvchida modul ruxsatlari tokendan olib tashlanmaydi, shuning uchun **faqat ruxsatga** tayangan bo'limlar egaga o'chiq modulda ham ko'rinardi (mas. tarmoq printerlari) | Bunday bo'limlarga modul tekshiruvi qo'shildi; qolganlari (hamkorlar, oflayn kassa) javob kelmaganda o'zini yashiradi |
 
 ## 7. Xulosa
 
 Pul tegadigan barcha asosiy oqimlar — savdo, chegirma, qaytim, qarz, qarz to'lovi, qaytarish,
 kirim, smena yakuni — desktopda **tugmalar orqali** o'tildi va har biri bazada mustaqil
 tekshirildi. Hisob-kitobda **birorta xato topilmadi**: har son men qo'lda hisoblagan qiymatga
-aniq mos keldi. Topilgan olti nuqsondan beshtasi tuzatildi va jonli qayta tekshirildi; oltinchisi
-(`M-2`) — modul o'chiq bo'lganda telefon interfeysi oxirigacha yo'l qo'yishi — ochiq qoldi va
-yuqoridagi jadvalda tavsiflandi.
+aniq mos keldi. Topilgan nuqsonlarning hammasi (`M-1`…`M-9`) tuzatildi. `M-2` — modul o'chiq bo'lganda
+interfeysning oxirigacha yo'l qo'yishi — §6 dagi yagona ko'rinish qoidasi bilan yopildi va
+telefonda jonli tasdiqlandi: `store`/`ordering` o'chiq holatda savdo tugmalari ham, savat
+qoldig'i ham ko'rinmaydi, faqat yoqilgan modul («Kirim qilish») qoladi.
+
+Qoplanmagani: **web interfeysining o'zi** — brauzer kengaytmasida `localhost:4200` uchun ruxsat
+yo'q, shuning uchun web tugmalar orqali emas, faqat kod, test va build darajasida tekshirildi.
+**Desktopning jonli qayta tekshiruvi** ham USB kalit ulanishini talab qiladi.
