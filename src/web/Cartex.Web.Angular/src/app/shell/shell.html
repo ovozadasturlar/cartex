@@ -25,7 +25,7 @@
         }
       }
     </div>
-    @if (canOpenSettings) {
+    @if (canOpenSettings()) {
       <div class="side-bottom">
         <a class="nav-item" routerLink="/settings" routerLinkActive="active"
            [matTooltip]="t('settings')" matTooltipPosition="right" [matTooltipDisabled]="!compactNav()"

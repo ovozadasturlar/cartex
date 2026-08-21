@@ -109,7 +109,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         _warehouse = warehouse;
         _permissions = permissions;
         _offline = offline;
-        CanSelfSell = permissions.Has("sales.checkout");
+        // RUXSAT-04: savdo savat moduli orqali ketadi — modul o'chiq bo'lsa tugma ko'rsatilmaydi.
+        CanSelfSell = permissions.Has("sales.checkout") && features.QueueEnabled;
         CanDiscount = permissions.Has("sales.discount");
     }
 
@@ -468,7 +469,7 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CanQueue = false;
         CanEditNote = false;
         var actions = cart.AllowedActions ?? [];
-        CanSelfSell = _permissions.Has("sales.checkout") &&
+        CanSelfSell = _permissions.Has("sales.checkout") && _features.QueueEnabled &&
                       (actions.Contains("checkout") || actions.Contains("claim"));
         OnPropertyChanged(nameof(HasParticipants));
     }

@@ -51,7 +51,7 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
             var section = new MenuSection { Key = key, Title = L[titleKey] };
             foreach (var def in NavRegistry.SettingsPages.Where(d => d.SectionKey == key))
             {
-                if (def.Permission is not null && !_authService.HasPermission(def.Permission))
+                if (!def.IsAvailable(_authService.HasPermission))
                     continue;
                 section.Items.Add(new MenuItem
                 {

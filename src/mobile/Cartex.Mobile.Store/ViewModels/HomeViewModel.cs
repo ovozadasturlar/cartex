@@ -29,6 +29,7 @@ public partial class HomeViewModel(
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private int _supplyCount;
     [ObservableProperty] private bool _canReceiveStock;
+    [ObservableProperty] private bool _canSell;
     [ObservableProperty] private string _cartSummary = "";
     [ObservableProperty] private int _openCarts;
     [ObservableProperty] private string _todayCountText = "";
@@ -64,6 +65,10 @@ public partial class HomeViewModel(
         await Task.WhenAll(policy.RefreshAsync(), features.RefreshAsync());
         ShowQueue = perms.HasAny("sales.pick", "sales.view")
             && policy.Current.AllowSaleQueue && features.QueueEnabled;
+        // RUXSAT-04: bu ilovada savdo savat orqali ketadi, ya'ni u modul o'chiq bo'lsa umuman
+        // mumkin emas. Shunday holatda savdo tugmalari ko'rsatilmaydi — aks holda kassir savat
+        // yig'ib, faqat oxirida "ruxsat yo'q" degan javob olardi.
+        CanSell = perms.HasAny("sales.create", "sales.checkout") && features.QueueEnabled;
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }

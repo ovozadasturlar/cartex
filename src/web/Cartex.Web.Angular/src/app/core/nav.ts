@@ -20,6 +20,7 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'dashboard',
         icon: 'space_dashboard',
         route: '/dashboard',
+        feature: 'reports',
         permission: 'reports.view',
       },
       {
@@ -60,12 +61,14 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'supplies',
         icon: 'local_shipping',
         route: '/supplies',
+        feature: 'supplies',
         permission: 'supplies.view',
       },
       {
         labelKey: 'suppliers',
         icon: 'contact_phone',
         route: '/suppliers',
+        feature: 'suppliers',
         permission: 'suppliers.view',
       },
       {
@@ -78,6 +81,7 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'transfers',
         icon: 'swap_horiz',
         route: '/transfers',
+        feature: 'stock_transfers',
         permission: 'stock_transfers.view',
         requiresMultipleWarehouses: true,
       },
@@ -90,15 +94,17 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'accounts',
         icon: 'account_balance_wallet',
         route: '/accounts',
+        feature: 'accounts',
         permission: 'accounts.view',
       },
       {
         labelKey: 'transactions',
         icon: 'sync_alt',
         route: '/transactions',
+        feature: 'accounts',
         permission: 'transactions.view',
       },
-      { labelKey: 'reports', icon: 'insights', route: '/reports', permission: 'reports.view' },
+      { labelKey: 'reports', icon: 'insights', route: '/reports', permission: 'reports.view', feature: 'reports' },
     ],
   },
 ];
@@ -194,6 +200,7 @@ export const SETTINGS_SECTIONS: NavSection[] = [
         icon: 'loyalty',
         route: '/settings/loyalty',
         permission: 'loyalty.view',
+        feature: 'loyalty',
       },
       {
         labelKey: 'expense_categories',
@@ -219,7 +226,7 @@ export const SETTINGS_SECTIONS: NavSection[] = [
         route: '/settings/rates',
         permission: 'rates.view',
       },
-      { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
+      { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view', feature: 'audit' },
       {
         labelKey: 'reminders',
         icon: 'notifications_active',

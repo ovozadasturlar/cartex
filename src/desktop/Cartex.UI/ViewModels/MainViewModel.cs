@@ -161,7 +161,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(UserInitial));
 
         BuildMenu();
-        CanOpenSettings = NavRegistry.SettingsPages.Any(p => p.Permission is not null && _authService.HasPermission(p.Permission));
+        CanOpenSettings = NavRegistry.SettingsPages.Any(p => p.Permission is not null && p.IsAvailable(_authService.HasPermission));
         OnPropertyChanged(nameof(CanOpenSettings));
         BuildPalette();
         _ = LoadFeaturesAsync();
@@ -258,9 +258,7 @@ public partial class MainViewModel : ViewModelBase
             var section = new MenuSection { Key = key, Title = L[titleKey] };
             foreach (var def in NavRegistry.SidebarPages.Where(d => d.SectionKey == key))
             {
-                if (def.Permission is not null && !_authService.HasPermission(def.Permission))
-                    continue;
-                if (def.Feature is not null && !_enabledFeatures.Contains(def.Feature))
+                if (!def.IsAvailable(_authService.HasPermission))
                     continue;
                 section.Items.Add(new MenuItem
                 {

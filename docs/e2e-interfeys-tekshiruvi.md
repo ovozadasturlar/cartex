@@ -74,7 +74,7 @@ qoplangan.
 | `T-14` | Splash oynasidagi logotip buzuq | Birinchi taassurot; harflar ustma-ust tushardi | 🔧 Tuzatildi: endi ilovaning haqiqiy vektor logotipi chiziladi |
 | `T-15` | USB kalit xatosida «Foydalanuvchi nomi yoki parol noto'g'ri» | Kassir hech narsa termagan holda o'zini aybdor deb o'ylaydi | 🔧 Tuzatildi: kalit yo'li o'z xabarini oladi (to'rt tilda) |
 | `T-13` | Yaratilgan qadoqning `Id` si doim `0` qaytardi | Tashqi klient noto'g'ri qadoqqa murojaat qilardi (`HUJJ-07`) | 🔧 Tuzatildi |
-| `M-2` | Telefon savatni yakunlashga yo'l qo'yadi, so'ng «Ruxsat yo'q yoki modul yoqilmagan» deydi | Server to'g'ri bloklaydi (`store`/`ordering` modullari tarifda yo'q), lekin `RUXSAT-04` «modul o'chiq bo'lsa UI'da umuman ko'rinmasin» deydi — hozir oxirgi qadamda uziladi | ⚠️ **Ochiq** — pastdagi izohga qarang |
+| `M-2` | Telefon savatni yakunlashga yo'l qo'yardi, so'ng «Ruxsat yo'q yoki modul yoqilmagan» derdi | Server to'g'ri bloklaydi, lekin `RUXSAT-04` o'chiq modul UI'da umuman ko'rinmasligini talab qiladi — foydalanuvchida dastur buzuq degan taassurot qolardi | 🔧 Tuzatildi — §6 ga qarang: uchala klientda ko'rinish qoidasi «ruxsat + modul» qilib yagonalashtirildi |
 
 ---
 
@@ -95,7 +95,29 @@ Bular kod nuqsoni emas, **o'rnatish sozlamalari**. Ularsiz mijozda ishlamaydi:
 
 ---
 
-## 6. Xulosa
+## 6. Modul va ruxsat bo'yicha interfeys (`RUXSAT-04`)
+
+`M-2` topilmasi shuni ko'rsatdi: modul o'chiq bo'lsa server to'g'ri bloklaydi, lekin interfeys
+foydalanuvchini oxirigacha olib borib, faqat so'nggi qadamda «ruxsat yo'q» deydi. Bu dastur
+buzuq ishlayotgandek taassurot qoldiradi. Shuning uchun uchala klientda ko'rinish qoidasi
+yagona holga keltirildi: **sahifa yoki tugma ruxsat ham, moduli ham ochiq bo'lgandagina ko'rinadi.**
+
+| Klient | Nima qilindi |
+|---|---|
+| Desktop | `NavRegistry.IsAvailable(...)` — yagona qoida: ruxsat + modul. Uni endi asosiy menyu, sozlamalar menyusi va buyruqlar paneli birga ishlatadi (ilgari har biri o'zicha tekshirardi va faqat menyu modulni bilardi). Modul metadatasi to'ldirildi: ta'minot, ta'minotchilar, ko'chirishlar, hisoblar, tranzaksiyalar, hisobotlar, sodiqlik, audit, kurslar |
+| Web | `permissionGuard` endi modulni ham tekshiradi — o'chiq modul sahifasiga **URL orqali ham** kirib bo'lmaydi (ilgari mumkin edi). `landingGuard` kirgandan keyin faqat ochiq bo'limga tushiradi. Yon menyu, qidiruv va sozlamalar tugmasi bitta `FeaturesService` dan foydalanadi. Marshrutlar va menyu elementlariga modul metadatasi qo'shildi |
+| Mobil | Savdo shu ilovada savat moduli orqali ketadi: modul o'chiq bo'lsa «Yangi savdo» va «Savat» tugmalari **ko'rsatilmaydi**, yakunlash tugmasi ham chiqmaydi (`CanSell`, `CanSelfSell`) |
+
+**Noma'lum holat fail-open.** Modullar ro'yxati hali yuklanmagan bo'lsa (birinchi ishga tushirish
+yoki server javob bermadi) modul **yopiq deb qaralmaydi** — aks holda aloqasiz ochilgan dastur
+menyusining yarmini yashirib qo'yardi. Ro'yxat kelgach menyu qayta quriladi.
+
+**`ViewAll` xulqi** tekshirildi va uchala klientda to'g'ri: `shifts.viewAll` yo'q bo'lsa smena
+ekranidagi «barcha kassirlar» filtri ko'rsatilmaydi, `devices.viewAll` yo'q bo'lsa server
+allaqachon faqat o'z sessiyalarini qaytaradi. Savdo tarixi va hisobotlar server tomonida
+`ApplySaleScope` bilan foydalanuvchi bo'yicha cheklanadi.
+
+## 7. Xulosa
 
 Pul tegadigan barcha asosiy oqimlar — savdo, chegirma, qaytim, qarz, qarz to'lovi, qaytarish,
 kirim, smena yakuni — desktopda **tugmalar orqali** o'tildi va har biri bazada mustaqil

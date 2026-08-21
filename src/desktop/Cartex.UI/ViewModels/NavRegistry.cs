@@ -1,10 +1,25 @@
-﻿using Material.Icons;
+﻿using Cartex.UI.Services;
+using Material.Icons;
 
 namespace Cartex.UI.ViewModels;
 
 public static class NavRegistry
 {
     public record NavDef(string SectionKey, string Key, MaterialIconKind Icon, Type VmType, string? Permission, string? Feature = null);
+
+    /// RUXSAT-04: sahifa ruxsat ham, moduli ham ochiq bo'lgandagina ko'rinadi. Barcha menyular
+    /// (asosiy, sozlamalar, buyruqlar paneli) shu yagona qoidani ishlatadi — aks holda biri
+    /// yashirgan sahifa boshqasidan ochilib qolardi.
+    public static bool IsAvailable(this NavDef def, Func<string, bool> hasPermission) =>
+        (def.Permission is null || hasPermission(def.Permission))
+        && (def.Feature is null || IsFeatureOn(def.Feature));
+
+    /// Ro'yxat hali ma'lum bo'lmasa (birinchi ishga tushirish yoki server javob bermadi) modul
+    /// yopiq deb qaralmaydi: aks holda aloqasiz ochilgan dastur menyusining yarmini yashirib
+    /// qo'yardi. Ro'yxat kelgach menyu qayta quriladi.
+    public static bool IsFeatureOn(string feature) =>
+        SettingsService.Instance.EnabledFeatures is not { Count: > 0 } enabled
+        || enabled.Contains(feature, StringComparer.OrdinalIgnoreCase);
 
     public static readonly (string Key, string TitleKey)[] SidebarSections =
     [
@@ -25,13 +40,13 @@ public static class NavRegistry
         new("sales", "customers", MaterialIconKind.AccountGroup, typeof(CustomersViewModel), "customers.view"),
         new("inventory", "products", MaterialIconKind.PackageVariantClosed, typeof(ProductsViewModel), "products.view"),
         new("inventory", "inventory", MaterialIconKind.Warehouse, typeof(WarehouseViewModel), "stocks.view"),
-        new("inventory", "supplies", MaterialIconKind.TruckCheckOutline, typeof(SuppliesViewModel), "supplies.view"),
-        new("inventory", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view"),
+        new("inventory", "supplies", MaterialIconKind.TruckCheckOutline, typeof(SuppliesViewModel), "supplies.view", "supplies"),
+        new("inventory", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view", "suppliers"),
         new("inventory", "barcode_print", MaterialIconKind.BarcodeScan, typeof(BarcodePrintViewModel), "products.printBarcode"),
-        new("inventory", "transfers", MaterialIconKind.SwapHorizontal, typeof(TransfersViewModel), "stock_transfers.view"),
-        new("finance", "accounts", MaterialIconKind.WalletOutline, typeof(AccountsViewModel), "accounts.view"),
-        new("finance", "transactions", MaterialIconKind.SwapHorizontal, typeof(TransactionsViewModel), "transactions.view"),
-        new("finance", "reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view"),
+        new("inventory", "transfers", MaterialIconKind.SwapHorizontal, typeof(TransfersViewModel), "stock_transfers.view", "stock_transfers"),
+        new("finance", "accounts", MaterialIconKind.WalletOutline, typeof(AccountsViewModel), "accounts.view", "accounts"),
+        new("finance", "transactions", MaterialIconKind.SwapHorizontal, typeof(TransactionsViewModel), "transactions.view", "accounts"),
+        new("finance", "reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view", "reports"),
     ];
 
     public static readonly (string Key, string TitleKey)[] SettingsSections =
@@ -57,10 +72,10 @@ public static class NavRegistry
         new("access", "users", MaterialIconKind.AccountCog, typeof(UsersViewModel), "users.view"),
         new("access", "roles", MaterialIconKind.ShieldAccount, typeof(RolesViewModel), "roles.view"),
         new("access", "permissions_matrix", MaterialIconKind.ShieldKeyOutline, typeof(PermissionsMatrixViewModel), "roles.assignPermissions"),
-        new("system", "loyalty", MaterialIconKind.GiftOutline, typeof(LoyaltyViewModel), "loyalty.view"),
+        new("system", "loyalty", MaterialIconKind.GiftOutline, typeof(LoyaltyViewModel), "loyalty.view", "loyalty"),
         new("system", "expense_categories", MaterialIconKind.CashMinus, typeof(ExpenseCategoriesViewModel), "expense_categories.view"),
-        new("system", "audit", MaterialIconKind.History, typeof(AuditViewModel), "audit.view"),
-        new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.view"),
+        new("system", "audit", MaterialIconKind.History, typeof(AuditViewModel), "audit.view", "audit"),
+        new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.view", "multicurrency"),
         new("system", "reminders", MaterialIconKind.BellRingOutline, typeof(RemindersViewModel), "notifications.view"),
         new("system", "notification_journal", MaterialIconKind.MessageBadgeOutline, typeof(NotificationJournalViewModel), "notifications.journal.view"),
         new("system", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "settings.receipt|settings.barcodeLabel|printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch"),

@@ -9,9 +9,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import { TranslocoService } from '@jsverse/transloco';
-import { lastValueFrom, map } from 'rxjs';
-import { FeaturesApi } from '../core/api/misc.api';
+import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
+import { FeaturesService } from '../core/features.service';
 import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS } from '../core/nav';
 import { APP_LANGUAGES, PreferencesService } from '../core/preferences.service';
 import { WarehouseContextService } from '../core/warehouse-context.service';
@@ -37,7 +37,6 @@ import { Logo } from '../shared/logo';
 export class Shell {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly featuresApi = inject(FeaturesApi);
   private readonly transloco = inject(TranslocoService);
   readonly preferences = inject(PreferencesService);
   readonly wh = inject(WarehouseContextService);
@@ -58,7 +57,8 @@ export class Shell {
     () => (this.isDesktop() && this.collapsed()) || (this.isTablet() && !this.tabletExpanded()),
   );
   readonly user = this.auth.currentUser;
-  readonly enabledFeatures = signal<Set<string> | null>(null);
+  private readonly featuresService = inject(FeaturesService);
+  readonly enabledFeatures = this.featuresService.enabled;
   readonly navSections = computed(() => NAV_SECTIONS.map((s) => ({
     ...s,
     items: s.items.filter((i) =>
@@ -66,9 +66,13 @@ export class Shell {
       && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)
       && (!i.requiresMultipleWarehouses || this.wh.warehouses().length > 1)),
   })).filter((s) => s.items.length > 0));
-  readonly canOpenSettings = SETTINGS_SECTIONS.some((s) =>
-    s.items.some((i) => i.permission === null || this.auth.hasPermission(i.permission)),
-  );
+  /// RUXSAT-04: sozlamalar tugmasi faqat ichida ochiq sahifa bo'lsa ko'rinadi — modul yopiq
+  /// bo'lsa o'sha sahifa hisobga olinmaydi.
+  readonly canOpenSettings = computed(() => SETTINGS_SECTIONS.some((s) =>
+    s.items.some((i) =>
+      (i.permission === null || this.auth.hasPermission(i.permission))
+      && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)),
+  ));
   readonly languages = APP_LANGUAGES;
   readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
   readonly mobileNav = computed(() => this.navSections().flatMap((section) => section.items).slice(0, 4));
@@ -93,9 +97,7 @@ export class Shell {
 
   constructor() {
     if (this.canPickWarehouse) void this.wh.load();
-    lastValueFrom(this.featuresApi.enabled())
-      .then((features) => this.enabledFeatures.set(new Set(features)))
-      .catch(() => this.enabledFeatures.set(new Set()));
+    void this.featuresService.ensureLoaded();
   }
 
   onWarehouse(e: Event): void {

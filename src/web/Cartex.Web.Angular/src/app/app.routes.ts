@@ -14,7 +14,7 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         canActivate: [permissionGuard],
-        data: { permission: 'reports.view' },
+        data: { permission: 'reports.view' , feature: 'reports' },
         loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
@@ -38,7 +38,7 @@ export const routes: Routes = [
       {
         path: 'orders',
         canActivate: [permissionGuard],
-        data: { permission: 'sales.view|sales.pick|sales.create|sales.checkout' },
+        data: { permission: 'sales.view|sales.pick|sales.create|sales.checkout', feature: 'ordering' },
         loadComponent: () => import('./pages/orders/orders').then((m) => m.Orders),
       },
       {
@@ -57,7 +57,7 @@ export const routes: Routes = [
       {
         path: 'suppliers',
         canActivate: [permissionGuard],
-        data: { permission: 'suppliers.view' },
+        data: { permission: 'suppliers.view' , feature: 'suppliers' },
         loadComponent: () => import('./pages/suppliers/suppliers').then((m) => m.Suppliers),
       },
       {
@@ -69,7 +69,7 @@ export const routes: Routes = [
       {
         path: 'suppliers/:id',
         canActivate: [permissionGuard],
-        data: { permission: 'suppliers.view' },
+        data: { permission: 'suppliers.view' , feature: 'suppliers' },
         loadComponent: () =>
           import('./pages/suppliers/supplier-profile').then((m) => m.SupplierProfile),
       },
@@ -88,19 +88,19 @@ export const routes: Routes = [
       {
         path: 'supplies/new',
         canActivate: [permissionGuard],
-        data: { permission: 'supplies.create' },
+        data: { permission: 'supplies.create' , feature: 'supplies' },
         loadComponent: () => import('./pages/supplies/supply-create').then((m) => m.SupplyCreate),
       },
       {
         path: 'supplies/:id/edit',
         canActivate: [permissionGuard],
-        data: { permission: 'supplies.edit' },
+        data: { permission: 'supplies.edit' , feature: 'supplies' },
         loadComponent: () => import('./pages/supplies/supply-create').then((m) => m.SupplyCreate),
       },
       {
         path: 'supplies',
         canActivate: [permissionGuard],
-        data: { permission: 'supplies.view' },
+        data: { permission: 'supplies.view' , feature: 'supplies' },
         loadComponent: () => import('./pages/supplies/supplies').then((m) => m.Supplies),
       },
       {
@@ -113,26 +113,26 @@ export const routes: Routes = [
       {
         path: 'transfers',
         canActivate: [permissionGuard],
-        data: { permission: 'stock_transfers.view' },
+        data: { permission: 'stock_transfers.view' , feature: 'stock_transfers' },
         loadComponent: () => import('./pages/transfers/transfers').then((m) => m.Transfers),
       },
       {
         path: 'accounts',
         canActivate: [permissionGuard],
-        data: { permission: 'accounts.view' },
+        data: { permission: 'accounts.view' , feature: 'accounts' },
         loadComponent: () => import('./pages/accounts/accounts').then((m) => m.Accounts),
       },
       {
         path: 'transactions',
         canActivate: [permissionGuard],
-        data: { permission: 'transactions.view' },
+        data: { permission: 'transactions.view' , feature: 'accounts' },
         loadComponent: () =>
           import('./pages/transactions/transactions').then((m) => m.Transactions),
       },
       {
         path: 'reports',
         canActivate: [permissionGuard],
-        data: { permission: 'reports.view' },
+        data: { permission: 'reports.view' , feature: 'reports' },
         loadComponent: () => import('./pages/reports/reports').then((m) => m.Reports),
       },
       {

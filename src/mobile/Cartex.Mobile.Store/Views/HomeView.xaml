@@ -119,7 +119,7 @@
                     </Border>
 
                     <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-                        <VerticalStackLayout Spacing="7">
+                        <VerticalStackLayout Spacing="7" IsVisible="{Binding CanSell}">
                             <VerticalStackLayout.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding NewCartCommand}" />
                             </VerticalStackLayout.GestureRecognizers>
@@ -148,7 +148,7 @@
                             <Label Text="{svc:T queue}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Grid.Column="1" Spacing="7">
+                        <VerticalStackLayout Grid.Column="1" Spacing="7" IsVisible="{Binding CanSell}">
                             <VerticalStackLayout.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
                             </VerticalStackLayout.GestureRecognizers>

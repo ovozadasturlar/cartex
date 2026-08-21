@@ -163,7 +163,9 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     {
         StartPages.Clear();
         StartPages.Add(new StartPageOption(null, L["none"]));
-        foreach (var p in NavRegistry.SidebarPages)
+        // RUXSAT-04: moduli o'chiq sahifa boshlang'ich sahifa sifatida taklif qilinmaydi — aks holda
+        // foydalanuvchi kirgan zahoti ko'rinmaydigan bo'limga tushirilardi.
+        foreach (var p in NavRegistry.SidebarPages.Where(x => x.Feature is null || NavRegistry.IsFeatureOn(x.Feature)))
             StartPages.Add(new StartPageOption(p.Key, L[p.Key]));
     }
 
