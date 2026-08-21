@@ -14,7 +14,7 @@ public partial class HomeViewModel(
     CartStore cart,
     SupplyCartStore supplyCart,
     IOrderingApi ordering,
-    IReportsApi reports,
+    ISalesApi sales,
     SalesPolicyCache policy,
     MobileFeaturesCache features,
     SessionStore session) : ObservableObject
@@ -55,7 +55,6 @@ public partial class HomeViewModel(
         Initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => char.ToUpper(x[0])));
         WarehouseName = warehouse.WarehouseName is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
         CanReceiveStock = perms.Has("supplies.create");
-        HasCart = cart.Count > 0;
         CartCount = cart.Count;
         SupplyCount = supplyCart.Count;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
@@ -69,6 +68,7 @@ public partial class HomeViewModel(
         // mumkin emas. Shunday holatda savdo tugmalari ko'rsatilmaydi — aks holda kassir savat
         // yig'ib, faqat oxirida "ruxsat yo'q" degan javob olardi.
         CanSell = perms.HasAny("sales.create", "sales.checkout") && features.QueueEnabled;
+        HasCart = CanSell && cart.Count > 0;
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }
@@ -84,30 +84,30 @@ public partial class HomeViewModel(
             var queueTask = ShowQueue
                 ? Task.Run(() => ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue"))
                 : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
-            // HIS-01/HIS-02: "tushum" — qaytarilgan qism chiqarilgan sof qiymat, va u desktop
-            // boshqaruv paneli bilan bir manbadan olinadi, aks holda ikki ekran ikki xil son
-            // ko'rsatib, egasi ikkalasiga ham ishonmay qo'yadi.
-            var reportTask = ShowStats
-                ? Task.Run(() => reports.GetSalesReportAsync(
+            // HIS-06: "tushum" — qaytarilgan qism chiqarilgan sof qiymat, boshqaruv paneli bilan
+            // bir xil ta'rifda. So'rov `sales.view` ostida ketadi: shu karta ko'rinadigan ruxsat
+            // bilan bir xil, ya'ni `reports` moduli o'chirilgan do'konda ham ishlaydi.
+            var dailyTask = ShowStats
+                ? Task.Run(() => sales.GetDailyTotalsAsync(
+                    warehouse.WarehouseId,
                     DateTime.Today.AddDays(-6).ToUniversalTime(),
                     DateTime.Today.AddDays(1).ToUniversalTime(),
-                    warehouse.WarehouseId,
                     (int)DateTimeOffset.Now.Offset.TotalMinutes))
-                : Task.FromResult(new Cartex.Shared.Models.Reports.SalesReportDto(0, 0, 0, 0, 0, [], []));
-            await Task.WhenAll(queueTask, reportTask);
+                : Task.FromResult(new List<Cartex.Shared.Models.Sales.DailySalesPointDto>());
+            await Task.WhenAll(queueTask, dailyTask);
             if (ShowQueue) OpenCarts = queueTask.Result.Count;
             if (ShowStats)
             {
-                var report = reportTask.Result;
-                var today = report.Daily.FirstOrDefault(x => x.Date.Date == DateTime.Today);
-                var revenue = today?.Revenue ?? 0;
+                var daily = dailyTask.Result;
+                var today = daily.FirstOrDefault(x => x.Date.Date == DateTime.Today);
+                var revenue = today?.TotalAmount ?? 0;
                 var count = today?.Count ?? 0;
                 TodayCountText = string.Format(Loc.Instance["sales_count_fmt"], count);
                 TodayTotal = Money.Compact(revenue);
                 TodayTotalFull = Money.Text(revenue);
                 ShowTodayTotalFull = revenue >= 1_000_000;
                 AvgCheck = Money.Compact(count > 0 ? Math.Round(revenue / count) : 0);
-                BuildWeek(report.Daily);
+                BuildWeek(daily);
             }
             _loadedAt = DateTime.UtcNow;
         }
@@ -117,10 +117,10 @@ public partial class HomeViewModel(
         }
     }
 
-    private void BuildWeek(List<Cartex.Shared.Models.Reports.DailySalesDto> points)
+    private void BuildWeek(List<Cartex.Shared.Models.Sales.DailySalesPointDto> points)
     {
         var names = Loc.Instance["days_short"].Split(',');
-        var byDay = points.ToDictionary(x => x.Date.Date, x => x.Revenue);
+        var byDay = points.ToDictionary(x => x.Date.Date, x => x.TotalAmount);
         var values = new List<float>(7);
         var days = new List<string>(7);
         decimal sum = 0;

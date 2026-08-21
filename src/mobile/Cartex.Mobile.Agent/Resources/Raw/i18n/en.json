@@ -72,6 +72,7 @@
   "err_enter_amount": "Enter an amount",
   "err_fill_all": "Fill in all fields",
   "err_forbidden": "No permission or module not enabled",
+  "feature_locked": "This section is off — enable it in shop settings or in the plan",
   "err_name_required": "Name is required",
   "err_no_connection": "Could not connect to the server",
   "err_no_items": "No products added",

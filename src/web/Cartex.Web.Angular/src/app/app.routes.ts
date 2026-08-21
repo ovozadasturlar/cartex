@@ -218,7 +218,7 @@ export const routes: Routes = [
           },
           {
             path: 'loyalty',
-            data: { permission: 'loyalty.view' },
+            data: { permission: 'loyalty.view', feature: 'loyalty' },
             loadComponent: () => import('./pages/loyalty/loyalty').then((m) => m.Loyalty),
           },
           {
@@ -231,12 +231,12 @@ export const routes: Routes = [
           },
           {
             path: 'rates',
-            data: { permission: 'rates.view' },
+            data: { permission: 'rates.view', feature: 'multicurrency' },
             loadComponent: () => import('./pages/rates/rates').then((m) => m.Rates),
           },
           {
             path: 'audit',
-            data: { permission: 'audit.view' },
+            data: { permission: 'audit.view', feature: 'audit' },
             loadComponent: () => import('./pages/audit/audit').then((m) => m.Audit),
           },
           {
@@ -280,6 +280,7 @@ export const routes: Routes = [
             path: 'printing',
             data: {
               permission: 'printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch',
+              feature: 'remote_printing',
             },
             loadComponent: () => import('./pages/printing/printing').then((m) => m.Printing),
           },

@@ -219,12 +219,14 @@ export const SETTINGS_SECTIONS: NavSection[] = [
         icon: 'print',
         route: '/settings/printing',
         permission: 'printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch',
+        feature: 'remote_printing',
       },
       {
         labelKey: 'exchange_rates',
         icon: 'currency_exchange',
         route: '/settings/rates',
         permission: 'rates.view',
+        feature: 'multicurrency',
       },
       { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view', feature: 'audit' },
       {

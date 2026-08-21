@@ -135,6 +135,7 @@
   "err_debt_needs_customer": "A customer must be selected for a credit sale",
   "err_fill_all": "Fill in all fields",
   "err_forbidden": "No permission or module not enabled",
+  "feature_locked": "This section is off — enable it in shop settings or in the plan",
   "err_no_connection": "Could not connect to the server",
   "err_no_items": "No products added",
   "err_password_mismatch": "Passwords do not match",

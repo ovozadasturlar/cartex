@@ -72,6 +72,7 @@
   "err_enter_amount": "Summani kiriting",
   "err_fill_all": "Barcha maydonlarni to'ldiring",
   "err_forbidden": "Ruxsat yo'q yoki modul yoqilmagan",
+  "feature_locked": "Bu bo'lim yoqilmagan — do'kon sozlamalaridan yoki tarifdan yoqiladi",
   "err_name_required": "Nomi bo'sh bo'lmasin",
   "err_no_connection": "Serverga ulanib bo'lmadi",
   "err_no_items": "Tovar qo'shilmagan",

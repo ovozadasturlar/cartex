@@ -82,8 +82,10 @@ public sealed class NetworkPrintJobItem(PrintJobDto job, bool allowCancel, bool 
 
 public partial class PrintingViewModel
 {
-    public bool CanViewPrintNetwork => (_auth.HasPermission("printing.nodes.view")
-        && _auth.HasPermission("printing.routes.view")) || CanViewPrintJobs;
+    // RUXSAT-04: to'liq huquqli foydalanuvchining ruxsatlari modul o'chirilganda ham qolaveradi,
+    // shuning uchun bo'lim ko'rinishi modul holatidan ham so'raladi.
+    public bool CanViewPrintNetwork => NavRegistry.IsFeatureOn("remote_printing")
+        && ((_auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view")) || CanViewPrintJobs);
     public bool CanManagePrintNodes => _auth.HasPermission("printing.nodes.edit");
     public bool CanEditPrintRoutes => _auth.HasPermission("printing.routes.edit");
     public bool CanViewPrintRoutes => _auth.HasPermission("printing.nodes.view") && _auth.HasPermission("printing.routes.view");

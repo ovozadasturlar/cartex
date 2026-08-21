@@ -349,6 +349,7 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `RUXSAT-04` | Modul o'chirilgan bo'lsa (feature flag), u UI'da umuman ko'rinmaydi va serverda ham yopiq bo'ladi. |
 | `RUXSAT-05` | **So'rov tanasidagi hech bir maydon ruxsat tekshiruvini o'chira olmaydi.** Tekshiruvga ta'sir qiladigan belgilar (mas. savdo navbatdagi savatdan yakunlanayotgani, oflayn replay ekani, narx oldindan ruxsatlangani) faqat **server ichida** o'rnatiladi va JSON'dan o'qilmaydi. Aks holda ruxsati kam foydalanuvchi shu maydonni yuborib tekshiruvni chetlab o'tardi. |
 | `RUXSAT-06` | **Savdo yaratish va savatni yakunlash — ikki xil ruxsat.** `sales.create` to'g'ridan-to'g'ri savdo ochish huquqi; `sales.checkout` esa **boshqa xodim tayyorlagan navbatdagi savatni** yakunlash huquqi. Faqat `sales.checkout` bor kassir navbat oqimi orqali ishlay oladi, lekin bo'sh joydan savdo yarata olmaydi (`RUXSAT-05` bilan birga o'qiladi). |
+| `RUXSAT-07` | **Ko'rish qamrovi: o'ziniki yoki hammaniki.** `*.viewAll` ruxsati yo'q foydalanuvchi ro'yxatda, jamida va grafikda **faqat o'zi yaratgan** yozuvlarni ko'radi; bor bo'lsa — hammasini. Qamrov **serverda** qo'yiladi: klient yuborgan hech bir filtr uni kengaytira olmaydi. Klient esa bajarib bo'lmaydigan boshqaruvni ko'rsatmaydi — `viewAll` yo'q bo'lsa "barcha xodimlar" tanlovi umuman chiqmaydi. |
 
 ---
 
@@ -440,6 +441,7 @@ ikkalasiga ham ishonmay qo'yadi — va qaysi biri to'g'ri ekanini bilishning ilo
 | `HIS-03` | Taqsimotda pulning **barcha kelish yo'llari** ko'rsatiladi: naqd, karta, bonus, **avans**, qarz. Bittasi tushib qolsa, ustunlar yig'indisi daromadga yetmaydi va farqning sababi ko'rinmaydi. |
 | `HIS-04` | **Invariant:** `naqd + karta + bonus + avans + qarz − kredit − qaytarilgan = daromad`. Bu yerda *kredit* — mijoz ortiqcha bergan va avansiga yozilgan pul (savdo qiymatiga kirmaydi), *qaytarilgan* — qaytarilgan tovarning chegirmadan keyingi qiymati. |
 | `HIS-05` | Vaqt mintaqasi faqat **kunlarga ajratish** uchun ishlatiladi (`tzOffsetMinutes`), oraliq chegarasi uchun emas. Ikkala so'rov ham bir xil UTC oralig'ini oladi, aks holda bir xil savdo bittasiga tushib, ikkinchisiga tushmay qolardi. |
+| `HIS-06` | **Bir kun — bir son.** Kunlik tushum qatori (`sales.view` ostidagi) `HIS-01` bilan **bir xil** ta'rifda hisoblanadi: `Completed`/`PartialReturn`, qaytarilgan qism chiqarilgan, chegirma ulushiga mos. Shu bilan telefon va boshqaruv paneli bir kunga bir xil son ko'rsatadi. Qamrovi — `RUXSAT-07`. Bu qator `reports` moduliga bog'liq emas: `sales.view` bilan ko'rinadigan ekran o'chirilgan modul tufayli buzilmaydi. |
 
 ### Qabul mezoni — `HIS-04`
 

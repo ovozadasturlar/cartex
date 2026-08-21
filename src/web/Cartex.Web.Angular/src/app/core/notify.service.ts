@@ -40,7 +40,10 @@ export class NotifyService {
   private describe(err: unknown): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 0) return this.transloco.translate('err_server_unreachable');
-      if (err.status === 403) return this.transloco.translate('err_forbidden');
+      if (err.status === 403) {
+        const locked = (err.error as { title?: unknown } | null)?.title === 'feature_locked';
+        return this.transloco.translate(locked ? 'feature_locked' : 'err_forbidden');
+      }
       if (err.status >= 500) return this.transloco.translate('err_server_error');
       // problem+json as the API actually sends it; narrowing here keeps every caller honest.
       const body = err.error as { detail?: unknown; title?: unknown } | null | undefined;
