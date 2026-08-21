@@ -35,8 +35,10 @@ public partial class ScanView : ContentView, ISectionView
 
     public void Disappear()
     {
-        Reader.CameraEnabled = false;
+        // Avval chiroq o'chiriladi (bog'lanish orqali), keyin kamera yopiladi: kamera seansi
+        // chiroq yonib turganda uzilsa, ba'zi qurilmalarda chiroq yonib qolaveradi.
         _vm.Disappear();
+        Reader.CameraEnabled = false;
         HideProductActionsImmediately();
     }
 

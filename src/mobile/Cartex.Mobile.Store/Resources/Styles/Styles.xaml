@@ -27,6 +27,8 @@
     <x:String x:Key="IcHistory">&#xF02DA;</x:String>
     <x:String x:Key="IcCash">&#xF0116;</x:String>
     <x:String x:Key="IcMagnify">&#xF0349;</x:String>
+    <x:String x:Key="IcFlashlight">&#xF0244;</x:String>
+    <x:String x:Key="IcFlashlightOff">&#xF0245;</x:String>
     <x:String x:Key="IcClose">&#xF0156;</x:String>
     <x:String x:Key="IcDelete">&#xF01B4;</x:String>
     <x:String x:Key="IcClock">&#xF0150;</x:String>

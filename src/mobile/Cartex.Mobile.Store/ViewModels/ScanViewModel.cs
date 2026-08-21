@@ -57,6 +57,7 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _productActionsExpanded;
     [ObservableProperty] private bool _isBarcodeMode;
+    [ObservableProperty] private bool _torchOn;
     [ObservableProperty] private bool _isPrintingBarcode;
     [ObservableProperty] private BarcodeChoice? _selectedBarcode;
     [ObservableProperty] private int _printCopies = 1;
@@ -129,6 +130,9 @@ public partial class ScanViewModel : ObservableObject
     {
         _cart.Changed -= OnCartChanged;
         _supplyCart.Changed -= OnSupplyCartChanged;
+        // Chiroq sahifadan chiqilganda o'chadi: kamera to'xtaganda ham yonib qolsa,
+        // telefon bekorga qiziydi va batareya yeyiladi.
+        TorchOn = false;
     }
 
     private void OnCartChanged() => CartCount = _cart.Count;
@@ -536,6 +540,9 @@ public partial class ScanViewModel : ObservableObject
 
     [RelayCommand]
     private Task OpenCart() => Shell.Current.GoToAsync("cart");
+
+    [RelayCommand]
+    private void ToggleTorch() => TorchOn = !TorchOn;
 
     [RelayCommand]
     private void ToggleSearch()
