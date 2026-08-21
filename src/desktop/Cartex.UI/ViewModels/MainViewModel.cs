@@ -206,7 +206,7 @@ public partial class MainViewModel : ViewModelBase
         }
         foreach (var def in NavRegistry.SettingsPages)
         {
-            if (def.Permission is not null && !_authService.HasPermission(def.Permission)) continue;
+            if (!def.IsAvailable(_authService.HasPermission)) continue;
             var key = def.Key;
             _allPaletteItems.Add(new PaletteItem(L[key], def.Icon, () => OpenSettingsPage(key)));
         }

@@ -134,6 +134,9 @@ ya'ni bajarib bo'lmaydigan boshqaruv taklif qilinmaydi.
 | `M-6` | O'chiq modul sahifalari uchun metadata to'liq emas edi: desktopda boshqaruv paneli, webda kurslar, chop etish, audit va sodiqlik marshrutlari modulni bilmasdi | Metadata to'ldirildi; menyu va marshrut mosligini endi test qo'riqlaydi (`nav-routes.spec.ts`, 41 tasdiq) |
 | `M-7` | Modul o'chirilganda telefon «Ruxsat yo'q» derdi, agent ilovasi esa xom `feature_locked` matnini ko'rsatardi | Uchala klient endi modul yopiqligini alohida, tarjima qilingan xabar bilan aytadi |
 | `M-8` | Savat qoldig'i («Savatni davom ettirish») savdo moduli o'chirilganda ham ko'rinardi — bosilsa yakunlab bo'lmasdi | `HasCart` endi `CanSell` bilan birga hisoblanadi |
+| `M-10` | Desktopdagi **buyruqlar paneli** (Ctrl+K) sozlamalar sahifalarini faqat ruxsat bo'yicha suzardi — modul o'chiq bo'lsa ham «Valyuta kurslari» topilardi va bosilganda bo'sh sahifa ochilardi | Panel ham `NavRegistry.IsAvailable` ga o'tkazildi. Jonli tasdiq: `multicurrency` o'chiq holatda «kurs» qidiruvi hech narsa topmaydi, `audit` yoqiq bo'lgani uchun «Audit jurnali» topiladi |
+| `M-11` | Webdagi **sozlamalar yon menyusi** modulni bilmasdi (qobiq menyusi bilardi) — «Chop etish» va «Valyuta kurslari» o'chiq modulda ham turardi | Menyu qobiq bilan bir xil qoidaga o'tkazildi; URL orqali kirish esa allaqachon yopiq edi (tekshirildi: `/settings/rates` → boshqaruv paneliga qaytaradi) |
+| `M-12` | Boshqaruv panelidagi grafik bir kunlik oraliqda **bo'sh** ko'rinardi (bitta nuqtadan chiziq chizilmaydi) | Yolg'iz nuqta belgi sifatida chiziladi |
 | `M-9` | To'liq huquqli (`AccessAll`) foydalanuvchida modul ruxsatlari tokendan olib tashlanmaydi, shuning uchun **faqat ruxsatga** tayangan bo'limlar egaga o'chiq modulda ham ko'rinardi (mas. tarmoq printerlari) | Bunday bo'limlarga modul tekshiruvi qo'shildi; qolganlari (hamkorlar, oflayn kassa) javob kelmaganda o'zini yashiradi |
 
 ### Qamrov o'lchovi
@@ -157,6 +160,20 @@ interfeysning oxirigacha yo'l qo'yishi — §6 dagi yagona ko'rinish qoidasi bil
 telefonda jonli tasdiqlandi: `store`/`ordering` o'chiq holatda savdo tugmalari ham, savat
 qoldig'i ham ko'rinmaydi, faqat yoqilgan modul («Kirim qilish») qoladi.
 
-Qoplanmagani: **web interfeysining o'zi** — brauzer kengaytmasida `localhost:4200` uchun ruxsat
-yo'q, shuning uchun web tugmalar orqali emas, faqat kod, test va build darajasida tekshirildi.
-**Desktopning jonli qayta tekshiruvi** ham USB kalit ulanishini talab qiladi.
+Yakuniy bosqichda **uchala klient ham tugmalar orqali** o'tildi. Web'da USB kalitsiz kirilib,
+smena ochildi, savdo yakunlandi (Mufta PPR 20mm ×2 = 3 000, naqd) va natija uchala ekranda
+solishtirildi:
+
+| Ekran | Bugungi tushum | Savdo soni |
+|---|---|---|
+| Web boshqaruv paneli | 64 670 | 4 |
+| Desktop boshqaruv paneli | 64 670 | 4 |
+| Telefon (Store) uy ekrani | 64 670 | 4 |
+
+`HIS-04` invarianti web'da jonli tekshirildi: `39 000 + 33 350 − 7 680 = 64 670` — daromad bilan
+aynan mos. Qoldiq ham to'g'ri harakatlandi (Mufta 153 → 151 dona, uchala ro'yxatda bir xil),
+smena esa web'da ochilib desktopda «Smena ochiq» bo'lib ko'rindi.
+
+Desktopga USB kalit orqali kirildi. `cartex-muqimjon.key` bazani qayta urug'lantirishdan keyin
+ro'yxatdan o'chib ketgan («Bu USB kalit tanilmadi»), shuning uchun `cartex-developer.key` bilan
+kirildi — mijozga o'rnatishdan oldin kalitlar qaytadan ro'yxatdan o'tkazilishi kerak.
