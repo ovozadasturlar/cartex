@@ -12,10 +12,10 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `aff495b131ece367d49252f4d94f2f571a995297`
-> (`aff495b1` — «Verify the release end to end and fix the defects it surfaced»)
+> **Tekshirilgan commit:** `0247ca6` — «Refuse a sale when the catalog price moved under the cashier»
+> (avvalgi baseline `aff495b1` shu commitga ko'chirildi)
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
-> avtomatik to'plamlar (Application 385, Integration 91, Unit 207, Architecture 20, UI 10),
+> avtomatik to'plamlar (Application 396, Integration 91, Unit 207, Architecture 20, UI 10),
 > HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web va i18n. **Istisno:** yakuniy jonli
 > UI oqimlari — §4 dagi sabab bilan (kompyuter qulflangan + qayta seed sessiyalarni bekor qildi)
 
