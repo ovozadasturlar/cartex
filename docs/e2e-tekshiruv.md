@@ -12,14 +12,16 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `91ae546a` — «Filter the command palette by module too»
+> **Tekshirilgan commit:** `HEAD` — «Show the scanner full screen and keep the phone cart reachable»
 > **Interfeys tekshiruvi:** `docs/e2e-interfeys-tekshiruvi.md` — desktop va telefon tugmalar orqali o’tildi
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
-> avtomatik to'plamlar (Application 405, Integration 91, Unit 207, Architecture 20, UI 10),
+> avtomatik to'plamlar (Application 412, Integration 91, Unit 207, Architecture 20, UI 10),
 > HTTP E2E zanjirlari, tanqidiy nyuans tekshiruvi (§2a), web (lint/build/56 test) va i18n,
 > hamda **jonli tekshiruv**: desktopda narx siljishi zanjiri haqiqiy kliklar bilan, telefonda
-> (Store) modul/ruxsat bo'yicha yashirilish, hamda **web interfeysida tugmalar orqali savdo**
-> va natijaning uchala klientda bir xil chiqishi (64 670 / 4 ta savdo).
+> (Store) modul/ruxsat bo'yicha yashirilish, **web interfeysida tugmalar orqali savdo**
+> va natijaning uchala klientda bir xil chiqishi (64 670 / 4 ta savdo), hamda **web'ning
+> telefon va planshet ko'rinishi** — telefonda savdo yakunlangani va kamera skaneri
+> (`docs/e2e-interfeys-tekshiruvi.md` §6a).
 
 Bu commitda yuqoridagi qamrov to'liq tekshirilgan. Undan keyingi ishda **hammasini qaytadan
 tekshirish shart emas** — faqat tegilgan qismlar:

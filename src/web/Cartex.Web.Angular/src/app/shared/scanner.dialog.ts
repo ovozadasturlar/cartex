@@ -57,7 +57,7 @@ const REPEAT_GUARD_MS = 1500;
     </div>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; height: 100%; }
     .scanner { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; }
     video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .frame {

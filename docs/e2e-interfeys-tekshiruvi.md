@@ -150,6 +150,67 @@ qayta ko'riladi.
 Skript: server kontrollerlaridagi ruxsat nomlari ajratib olinadi va to'rtala klient manbasidan
 qidiriladi — yangi endpoint qo'shilganda tekshiruvni takrorlash uchun yetarli.
 
+## 6a. Kichik ekranlar: telefon va planshet
+
+Web endi uch o'lchamda ishlaydi. Chegaralar bitta joyda (`core/layout.service.ts`): telefon
+`≤767px`, planshet `768–1199px`, kompyuter `≥1200px`; kassadagi katalog/savat bo'linishi esa
+`≥1000px` dan boshlanadi — ilgari har sahifa o'z chegarasini tanlagani uchun (600, 640, 699,
+720, 900, 1000...) bir qurilmada bir bo'lim telefon, boshqasi planshet ko'rinishida chiqardi.
+
+| O'lcham | Ko'rinish |
+|---|---|
+| Kompyuter | **O'zgarmagan** — to'liq menyu, katalog va savat yonma-yon |
+| Planshet | Ikonkali tor menyu, to'liq yuqori panel, katalog va savat almashadi |
+| Telefon | Pastda 4 ta bo'lim + «Menyu», ustunlar kamayadi, ko'rsatkich kartalari ikkitadan |
+
+**Telefonda nima ko'rinadi.** Pastki panel `PHONE_NAV_ORDER` bo'yicha to'ldiriladi
+(kassa → boshqaruv paneli → savdo tarixi → mijozlar → mahsulotlar → smena) va **foydalanuvchiga
+moslashadi**: hisobot ruxsati yo'q kassir kassa/savdo/mijoz/mahsulotni ko'radi, egaga boshqaruv
+paneli ham tushadi. Hech bir sahifa yo'qolmaydi — qolgani «Menyu» dan ochiladi. Ombor tanlash
+telefonda ham qoldirildi: u tanlanmasa kassa umuman ishlamaydi.
+
+### Kamera skaneri
+
+Skaner brauzerning **o'z `BarcodeDetector`** dvigatelida ishlaydi. Android Chrome'da u Google
+ML Kit ustida turadi — ya'ni Cartex Do'kon ilovasidagi `BarcodeScanning.Native.Maui` bilan bir
+xil o'qish sifati, qo'shimcha kutubxonasiz. Kod topilgach USB skaner bilan **bir xil yo'ldan**
+ketadi (`byBarcode → addLookup`), shuning uchun savdo mantig'i o'zgarmagan.
+
+> **Deploy sharti:** brauzer kameraga faqat **xavfsiz kontekst**da ruxsat beradi — `https://`
+> yoki `localhost`. `http://192.168.x.x` da `navigator.mediaDevices` umuman mavjud emas.
+> Mijozga o'rnatilganda web HTTPS orqali berilishi shart. Dvigatel yo'q brauzerda (iOS Safari,
+> Windows Chrome) kamera tugmasi ko'rsatilmaydi — qo'lda kiritish ishlayveradi.
+
+### Jonli tekshiruv (telefon: Android Chrome 151, 360×708)
+
+`adb reverse tcp:4200 tcp:4200` orqali telefon `localhost` ga ulandi (shu bilan xavfsiz
+kontekst ham ta'minlandi). Tekshirilgani:
+
+- qurilma imkoniyatlari: `isSecureContext ✓`, `BarcodeDetector ✓`, `requestVideoFrameCallback ✓`,
+  formatlar ro'yxatida `code_128`, `ean_13`, `qr_code` va boshqalar bor;
+- kassa telefon ko'rinishida ochildi: kamera tugmasi, ikkitadan mahsulot, pastda savat chizig'i;
+- skaner butun ekranni egalladi, kamera **1080×1920** kadr berdi, chiroq tugmasi chiqdi;
+- **dvigatel bizning yorlig'imizni o'qidi:** `barcode-print` sahifasi chizgan Code 128 yorliq
+  (`Amerikanka PPR 20mm` → `4780003000016`) birinchi urinishda to'g'ri dekodlandi;
+- o'sha kod kassa yo'lidan o'tkazilganda savatga tushdi: «Savat 1 · 12 000».
+
+Qolgani — yorliqni haqiqiy yorug'likda kameraga tutib ko'rish; u qo'l bilan bajariladi.
+
+### Kichik ekranda topilib tuzatilgan qismlar
+
+| Topilma | Tuzatish |
+|---|---|
+| «Savdoni yakunlash» pastdagi suzuvchi chiziq ostida qolardi | Savat pastdan joy bo'shatadi |
+| Ko'rsatkich kartalari ustma-ust turib ro'yxatni ekrandan chiqarardi | Telefonda ikkitadan |
+| Katta raqam kartadan chiqib ketardi | Telefonda shrift va nishon kichrayadi |
+| Jadval `min-width` bilan majburlangani uchun ko'ndalang surish kerak edi | Telefonda ustunlar kam, `min-width` olib tashlanadi |
+| Ombor tanlash telefonda umuman yashiringan edi | Qaytarildi (kassa ishlashi uchun shart) |
+| Planshetda suzuvchi tugma chap menyu ostida qolardi | `--cx-side-rail` bo'yicha suriladi |
+| Skaner oynasi chetida sahifa ko'rinib turardi | Skaner ekranga o'zi biriktiriladi |
+
+Testlar: `phoneNavItems` (panel tanlovi, 5 ta) va `scannerBlock` (kamera nega ochilmagani:
+https / dvigatel / kamera, 5 ta). Mutatsiya bilan tekshirildi — tartib buzilsa test yiqiladi.
+
 ## 7. Xulosa
 
 Pul tegadigan barcha asosiy oqimlar — savdo, chegirma, qaytim, qarz, qarz to'lovi, qaytarish,

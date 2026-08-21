@@ -466,10 +466,22 @@ body.dark {
 }
 
 /* Kamera skaneri butun ekranni egallaydi: ramka ichidagi tasvir imkon qadar katta bo'lsin. */
+.cx-scanner-panel .mat-mdc-dialog-container,
 .cx-scanner-panel .mat-mdc-dialog-surface {
+  height: 100%;
   padding: 0;
   border-radius: 0;
   background: #000;
+}
+
+/* Skaner ekranga o'zi biriktiriladi: dialog qutisining o'lchamini CDK ichki uslub bilan
+   belgilaydi va u kichik ekranda chetidan joy qoldiradi — kamera tasviri esa butun ekranni
+   egallashi kerak. */
+.cx-scanner-panel cx-scanner-dialog {
+  position: fixed;
+  inset: 0;
+  display: block;
+  z-index: 1;
 }
 
 /* Telefon: pastdagi panel balandligi bir joyda turadi — sahifalar shunga qarab joy qoldiradi. */
