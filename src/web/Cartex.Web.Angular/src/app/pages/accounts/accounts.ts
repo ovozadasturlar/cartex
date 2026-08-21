@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,6 +14,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 const typeKeys: Record<string, string> = {
   Cash: 'acct_cash',
@@ -49,7 +50,10 @@ export class Accounts implements OnInit {
   readonly busy = signal(false);
   readonly totals = signal<AccountsTotals | null>(null);
   readonly paged = signal<Paged<Account> | null>(null);
-  readonly columns = ['name', 'type', 'currency', 'balance', 'owner'];
+  private readonly layout = inject(LayoutService);
+  readonly columns = computed(() => this.layout.isPhone()
+    ? ['name', 'type', 'balance']
+    : ['name', 'type', 'currency', 'balance', 'owner']);
 
   private search = '';
   private page = 1;

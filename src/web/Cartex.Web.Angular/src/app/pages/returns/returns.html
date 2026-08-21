@@ -40,8 +40,8 @@
             <th mat-header-cell *matHeaderCellDef>{{ t('total') }}</th>
             <td mat-cell *matCellDef="let r" class="cx-money">{{ r.refundAmount | cxMoney }}</td>
           </ng-container>
-          <tr mat-header-row *matHeaderRowDef="docCols"></tr>
-          <tr mat-row *matRowDef="let row; columns: docCols" class="clickable" (click)="openDetail(row)"></tr>
+          <tr mat-header-row *matHeaderRowDef="docCols()"></tr>
+          <tr mat-row *matRowDef="let row; columns: docCols()" class="clickable" (click)="openDetail(row)"></tr>
         </table>
         <cx-paging-bar [meta]="meta()" (changed)="onPage($event)" />
       } @else if (!loading()) {

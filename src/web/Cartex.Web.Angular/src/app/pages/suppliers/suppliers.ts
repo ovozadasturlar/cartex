@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -21,6 +21,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-suppliers',
@@ -62,7 +63,10 @@ export class Suppliers implements OnInit {
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly cols = ['name', 'phone', 'payable', 'actions'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['name', 'payable', 'actions']
+    : ['name', 'phone', 'payable', 'actions']);
   readonly canCreate = this.auth.hasPermission('suppliers.create');
   readonly canEdit = this.auth.hasPermission('suppliers.edit');
   readonly canPay = this.auth.hasPermission('suppliers.pay');

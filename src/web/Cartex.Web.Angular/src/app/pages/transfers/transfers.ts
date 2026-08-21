@@ -19,6 +19,7 @@ import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
+import { LayoutService } from '../../core/layout.service';
 
 const statusKeys: Record<string, string> = {
   Sent: 'status_sent',
@@ -57,7 +58,10 @@ export class Transfers implements OnInit {
   readonly pageSize = signal(20);
   readonly canCreate = this.auth.hasPermission('stock_transfers.create');
   readonly canReceive = this.auth.hasPermission('stock_transfers.receive');
-  readonly cols = ['date', 'product', 'qty', 'from', 'to', 'status', 'user', 'actions'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['date', 'product', 'qty', 'status']
+    : ['date', 'product', 'qty', 'from', 'to', 'status', 'user', 'actions']);
 
   async ngOnInit(): Promise<void> {
     await this.load();

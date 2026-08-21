@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +16,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-transactions',
@@ -46,7 +47,10 @@ export class Transactions implements OnInit {
   readonly busy = signal(false);
   readonly totals = signal<TransactionsTotals | null>(null);
   readonly paged = signal<Paged<Transaction> | null>(null);
-  readonly columns = ['date', 'type', 'amount', 'from', 'to', 'user'];
+  private readonly layout = inject(LayoutService);
+  readonly columns = computed(() => this.layout.isPhone()
+    ? ['date', 'type', 'amount']
+    : ['date', 'type', 'amount', 'from', 'to', 'user']);
   readonly operationTypes = ['Sale', 'DebtCharge', 'DebtPay', 'Cashback', 'BonusSpend', 'SupplyPay', 'CashIn', 'CashOut'];
 
   dateFrom = isoDay(new Date(Date.now() - 29 * 86400000));

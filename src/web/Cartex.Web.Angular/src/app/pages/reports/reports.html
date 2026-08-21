@@ -24,7 +24,7 @@
   <section class="cx-card block pad">
     <h2>{{ t('cash_flow') }}</h2>
     @if (flowRows().length) {
-      <cx-line-chart [series]="cashFlowSeries()" [labels]="cashFlowLabels()" />
+      <cx-line-chart [series]="cashFlowSeries()" [labels]="cashFlowLabels()" [height]="160" />
     } @else {
       <cx-empty-state [icon]="'show_chart'" [message]="t('no_data')" />
     }

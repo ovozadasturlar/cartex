@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -20,6 +20,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 function dayStart(day: string): string {
   return new Date(day + 'T00:00:00').toISOString();
@@ -69,7 +70,10 @@ export class Supplies implements OnInit {
   readonly page = signal(1);
   readonly pageSize = signal(20);
   readonly canCreate = this.auth.hasPermission('supplies.create');
-  readonly cols = ['date', 'supplier', 'warehouse', 'total', 'user'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['date', 'supplier', 'total']
+    : ['date', 'supplier', 'warehouse', 'total', 'user']);
 
   fromDate = isoDay(new Date(Date.now() - 29 * 86_400_000));
   toDate = isoDay(new Date());

@@ -69,8 +69,8 @@
                   }
                 </td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr mat-row *matRowDef="let s; columns: cols" class="clickable" (click)="open(s)"></tr>
+              <tr mat-header-row *matHeaderRowDef="cols()"></tr>
+              <tr mat-row *matRowDef="let s; columns: cols()" class="clickable" (click)="open(s)"></tr>
             </table>
           </div>
           <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />

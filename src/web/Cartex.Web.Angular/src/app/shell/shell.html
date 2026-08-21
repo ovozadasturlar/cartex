@@ -4,6 +4,18 @@
     <div class="side-brand">
       <cx-logo [size]="compactNav() ? 28 : 34" [wordmark]="!compactNav()" />
     </div>
+    @if (isPhone() && canPickWarehouse && wh.warehouses().length > 1) {
+      <!-- Telefonda yuqori panel tor: ombor tanlagich u yerda mavzu va til tugmalarini
+           siqib chiqarardi, shuning uchun u menyuga ko'chirildi. -->
+      <label class="side-warehouse">
+        <mat-icon>home_storage</mat-icon>
+        <select (change)="onWarehouse($event)">
+          @for (w of wh.warehouses(); track w.id) {
+            <option [value]="w.id" [selected]="w.id === wh.selectedWarehouseId()">{{ w.name }}</option>
+          }
+        </select>
+      </label>
+    }
     <div class="side-nav">
       @for (section of navSections(); track section.labelKey) {
         @if (section.labelKey) {

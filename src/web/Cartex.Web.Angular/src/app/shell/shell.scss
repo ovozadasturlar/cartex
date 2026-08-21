@@ -302,15 +302,9 @@ mat-sidenav-content {
   }
 
   .global-search,
-  .user-name {
-    display: none;
-  }
-
-  /* Ombor tanlash telefonda ham qoladi: u tanlanmasa kassa umuman ishlamaydi. */
+  .user-name,
   .wh-select {
-    max-width: 34vw;
-    padding: 4px 6px;
-    font-size: 12px;
+    display: none;
   }
 
   .content {
@@ -349,12 +343,53 @@ mat-sidenav-content {
       cursor: pointer;
 
       mat-icon { width: 22px; height: 22px; font-size: 22px; }
-      span { width: 100%; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+      /* Yozuv ikonka ostida markazda tursin va o'z katagidan chiqmasin. */
+      padding: 0 2px;
+      min-width: 0;
+
+      span {
+        width: 100%;
+        overflow: hidden;
+        font-size: 10px;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       &.active {
         background: var(--cx-brand-soft);
         color: var(--cx-brand);
       }
     }
+  }
+}
+
+/* Telefon menyusidagi ombor tanlagich: yuqori panelda joy yo'q, shuning uchun u shu yerda. */
+.side-warehouse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--cx-border);
+  border-radius: 10px;
+  background: var(--cx-bg);
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--cx-text-2);
+    font-size: 20px;
+  }
+
+  select {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cx-text-1);
+    font: inherit;
+    font-size: 13.5px;
+    outline: none;
   }
 }

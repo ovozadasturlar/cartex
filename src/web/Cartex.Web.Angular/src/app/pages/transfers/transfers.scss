@@ -9,6 +9,11 @@
 table {
   width: 100%;
   min-width: 760px;
+
+  /* Telefonda ustunlar kamaytirilgan — jadval ekranga sig'adi. */
+  @media (width <= 767px) {
+    min-width: 0;
+  }
 }
 
 .num {

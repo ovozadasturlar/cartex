@@ -25,6 +25,7 @@ export interface ChartSeries {
     }
     <div class="plot">
       <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" preserveAspectRatio="none" class="chart"
+           [style.height.px]="height()"
            (mousemove)="onMove($event)" (mouseleave)="hover.set(null)">
         <defs>
           @for (s of allSeries(); track $index) {
@@ -80,7 +81,7 @@ export interface ChartSeries {
   styles: `
     :host { display: block; }
     .plot { position: relative; }
-    .chart { width: 100%; height: 200px; display: block; }
+    .chart { width: 100%; display: block; }
     .grid { stroke: var(--cx-border); stroke-width: 1; }
     .cursor { stroke: var(--cx-text-3); stroke-width: 1; stroke-dasharray: 4 3; }
     .dot {
@@ -110,6 +111,8 @@ export interface ChartSeries {
   `,
 })
 export class LineChart {
+  /// Chizma balandligi: kartaning qolgan qismiga qarab sahifa o'zi tanlaydi.
+  readonly height = input(200);
   readonly points = input<ChartPoint[]>([]);
   readonly series = input<ChartSeries[]>([]);
   readonly labels = input<string[]>([]);

@@ -27,6 +27,7 @@ import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { PagingMeta } from '../../core/paging';
 import { ReturnDetailDialog } from './return-detail.dialog';
+import { LayoutService } from '../../core/layout.service';
 import {
   ReturnLine,
   addSource,
@@ -107,7 +108,10 @@ export class Returns implements OnInit {
   note = '';
   refundInCash = true;
 
-  readonly docCols = ['number', 'date', 'customer', 'lines', 'refund'];
+  private readonly layout = inject(LayoutService);
+  readonly docCols = computed(() => this.layout.isPhone()
+    ? ['date', 'customer', 'refund']
+    : ['number', 'date', 'customer', 'lines', 'refund']);
   readonly editorCols = ['product', 'taken', 'quantity', 'price', 'total', 'reason', 'remove'];
 
   // The helpers are pure and shared with the unit tests, so the template reaches them here.

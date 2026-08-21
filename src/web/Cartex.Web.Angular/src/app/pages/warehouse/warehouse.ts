@@ -23,6 +23,7 @@ import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-warehouse',
@@ -75,7 +76,10 @@ export class Warehouse implements OnInit {
     totalPages: Math.ceil((this.onHand()?.totalCount ?? 0) / this.pageSize()),
   }));
 
-  readonly onHandCols = ['name', 'code', 'category', 'unit', 'qty', 'price', 'expiry'];
+  private readonly layout = inject(LayoutService);
+  readonly onHandCols = computed(() => this.layout.isPhone()
+    ? ['name', 'qty', 'price']
+    : ['name', 'code', 'category', 'unit', 'qty', 'price', 'expiry']);
   readonly lowStockCols = ['name', 'unit', 'onHand', 'minStock'];
   readonly expiringCols = ['name', 'warehouse', 'qty', 'expiredAt'];
 
