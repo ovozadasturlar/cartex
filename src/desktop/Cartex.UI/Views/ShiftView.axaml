@@ -128,6 +128,11 @@
                                         <TextBlock Text="{Binding CurrentDisplay.BonusUsed, StringFormat='{}{0:N0}'}" Classes="statval"
                                                    Classes.dim="{Binding CurrentDisplay.BonusUsed, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="{Binding L[cash_returns]}" Classes="caption" />
+                                        <TextBlock Text="{Binding CurrentDisplay.CashReturns, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.CashReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                    </StackPanel>
                                 </Grid>
                             </StackPanel>
                         </Border>

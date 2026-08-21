@@ -14,7 +14,7 @@ public partial class HomeViewModel(
     CartStore cart,
     SupplyCartStore supplyCart,
     IOrderingApi ordering,
-    ISalesApi sales,
+    IReportsApi reports,
     SalesPolicyCache policy,
     MobileFeaturesCache features,
     SessionStore session) : ObservableObject
@@ -79,21 +79,30 @@ public partial class HomeViewModel(
             var queueTask = ShowQueue
                 ? Task.Run(() => ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue"))
                 : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
-            var totalsTask = ShowStats
-                ? Task.Run(() => sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1)))
-                : Task.FromResult(new Cartex.Shared.Models.Sales.SalesTotalsDto(0, 0, 0, 0));
-            var dailyTask = Task.Run(LoadDailySafeAsync);
-            await Task.WhenAll(queueTask, totalsTask, dailyTask);
+            // HIS-01/HIS-02: "tushum" — qaytarilgan qism chiqarilgan sof qiymat, va u desktop
+            // boshqaruv paneli bilan bir manbadan olinadi, aks holda ikki ekran ikki xil son
+            // ko'rsatib, egasi ikkalasiga ham ishonmay qo'yadi.
+            var reportTask = ShowStats
+                ? Task.Run(() => reports.GetSalesReportAsync(
+                    DateTime.Today.AddDays(-6).ToUniversalTime(),
+                    DateTime.Today.AddDays(1).ToUniversalTime(),
+                    warehouse.WarehouseId,
+                    (int)DateTimeOffset.Now.Offset.TotalMinutes))
+                : Task.FromResult(new Cartex.Shared.Models.Reports.SalesReportDto(0, 0, 0, 0, 0, [], []));
+            await Task.WhenAll(queueTask, reportTask);
             if (ShowQueue) OpenCarts = queueTask.Result.Count;
             if (ShowStats)
             {
-                var totals = totalsTask.Result;
-                TodayCountText = string.Format(Loc.Instance["sales_count_fmt"], totals.Count);
-                TodayTotal = Money.Compact(totals.TotalAmount);
-                TodayTotalFull = Money.Text(totals.TotalAmount);
-                ShowTodayTotalFull = totals.TotalAmount >= 1_000_000;
-                AvgCheck = Money.Compact(totals.Count > 0 ? Math.Round(totals.TotalAmount / totals.Count) : 0);
-                BuildWeek(dailyTask.Result);
+                var report = reportTask.Result;
+                var today = report.Daily.FirstOrDefault(x => x.Date.Date == DateTime.Today);
+                var revenue = today?.Revenue ?? 0;
+                var count = today?.Count ?? 0;
+                TodayCountText = string.Format(Loc.Instance["sales_count_fmt"], count);
+                TodayTotal = Money.Compact(revenue);
+                TodayTotalFull = Money.Text(revenue);
+                ShowTodayTotalFull = revenue >= 1_000_000;
+                AvgCheck = Money.Compact(count > 0 ? Math.Round(revenue / count) : 0);
+                BuildWeek(report.Daily);
             }
             _loadedAt = DateTime.UtcNow;
         }
@@ -103,28 +112,10 @@ public partial class HomeViewModel(
         }
     }
 
-    private async Task<List<Cartex.Shared.Models.Sales.DailySalesPointDto>> LoadDailySafeAsync()
-    {
-        if (!ShowStats) return [];
-        try
-        {
-            // Chegaralar mahalliy kun boshidan olinadi, lekin serverga instant sifatida yuboriladi —
-            // aks holda oyna mintaqa farqicha siljib, birinchi va oxirgi kun to'liq chiqmaydi.
-            return await sales.GetDailyTotalsAsync(
-                fromDate: DateTime.Today.AddDays(-6).ToUniversalTime(),
-                toDate: DateTime.Today.AddDays(1).ToUniversalTime(),
-                tzOffsetMinutes: (int)DateTimeOffset.Now.Offset.TotalMinutes);
-        }
-        catch
-        {
-            return [];
-        }
-    }
-
-    private void BuildWeek(List<Cartex.Shared.Models.Sales.DailySalesPointDto> points)
+    private void BuildWeek(List<Cartex.Shared.Models.Reports.DailySalesDto> points)
     {
         var names = Loc.Instance["days_short"].Split(',');
-        var byDay = points.ToDictionary(x => x.Date.Date, x => x.TotalAmount);
+        var byDay = points.ToDictionary(x => x.Date.Date, x => x.Revenue);
         var values = new List<float>(7);
         var days = new List<string>(7);
         decimal sum = 0;
