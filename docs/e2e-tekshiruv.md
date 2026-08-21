@@ -12,7 +12,7 @@ Belgilar: ✅ o'tdi · ❌ nuqson · 🔧 tuzatildi · ⏳ jarayonda · 🤝 foy
 
 ## 0. Tekshirilgan commit (baseline)
 
-> **Tekshirilgan commit:** `HEAD` — «Filter the command palette by module too»
+> **Tekshirilgan commit:** `91ae546a` — «Filter the command palette by module too»
 > **Interfeys tekshiruvi:** `docs/e2e-interfeys-tekshiruvi.md` — desktop va telefon tugmalar orqali o’tildi
 > **Sana:** 2026-08-21 · **Qamrov:** §1–§4 dagi hamma narsa — baza invariantlari (11/11),
 > avtomatik to'plamlar (Application 405, Integration 91, Unit 207, Architecture 20, UI 10),
