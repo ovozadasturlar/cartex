@@ -324,7 +324,15 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     private static readonly CustomerDto EmptyCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public string EditTitle => L[IsNew ? "customer_new" : "customer_edit"];
-    partial void OnIsNewChanged(bool value) => OnPropertyChanged(nameof(EditTitle));
+
+    // QARZ-23: boshlang'ich qoldiq defterga yozadi — mijoz yaratish ruxsati yetarli emas.
+    public bool CanEnterOpeningBalance => IsNew && _auth.HasPermission("customers.openingBalance");
+
+    partial void OnIsNewChanged(bool value)
+    {
+        OnPropertyChanged(nameof(EditTitle));
+        OnPropertyChanged(nameof(CanEnterOpeningBalance));
+    }
     public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen || IsPublicityOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));

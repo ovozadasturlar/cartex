@@ -14,7 +14,8 @@ public partial class CustomersViewModel(
     ICustomersApi customersApi,
     MobilePermissions permissions,
     MobileOfflineService offline,
-    MobileAuthService auth) : ObservableObject
+    MobileAuthService auth,
+    SalesPolicyCache policy) : ObservableObject
 {
     private const int PageSize = 30;
     public RangeObservableCollection<StoreCustomerRow> Customers { get; } = [];
@@ -25,6 +26,8 @@ public partial class CustomersViewModel(
     [ObservableProperty] private bool _isCreateModalOpen;
     [ObservableProperty] private string _newCustomerName = "";
     [ObservableProperty] private string _newCustomerPhone = "";
+    // SOZ-02a: bo'sh qoldirilsa limit cheklanmagan bo'ladi, 0 esa qarzni butunlay yopadi.
+    [ObservableProperty] private string _newCustomerCreditLimit = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoadingMore;
@@ -182,6 +185,8 @@ public partial class CustomersViewModel(
         }
         NewCustomerName = "";
         NewCustomerPhone = "";
+        // SOZ-17: forma do'kon standarti bilan ochiladi, kassir uni tozalab cheksiz qila oladi.
+        NewCustomerCreditLimit = policy.Current.DefaultCreditLimit?.ToString("0.##") ?? "";
         IsCreateModalOpen = true;
     }
 
@@ -205,7 +210,10 @@ public partial class CustomersViewModel(
         try
         {
             var name = NewCustomerName.Trim();
-            var id = await customersApi.CreateAsync(new CreateCustomerRequest(name, NewCustomerPhone.Trim(), null, 0));
+            var limitText = NewCustomerCreditLimit.Replace(" ", "");
+            decimal? creditLimit = decimal.TryParse(limitText, out var parsed) ? parsed : null;
+            var id = await customersApi.CreateAsync(
+                new CreateCustomerRequest(name, NewCustomerPhone.Trim(), null, 0, CreditLimit: creditLimit));
             IsCreateModalOpen = false;
             await Shell.Current.GoToAsync($"customer/detail?id={id}");
         }

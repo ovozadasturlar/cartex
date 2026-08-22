@@ -108,6 +108,14 @@
                         </Border>
                     </VerticalStackLayout>
 
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T credit_limit}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding NewCustomerCreditLimit}" Keyboard="Numeric"
+                                   Placeholder="{svc:T unlimited}" />
+                        </Border>
+                    </VerticalStackLayout>
+
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
                         <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}" Command="{Binding CloseCreateModalCommand}" />
                         <Button Grid.Column="1" Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCustomerCommand}" />

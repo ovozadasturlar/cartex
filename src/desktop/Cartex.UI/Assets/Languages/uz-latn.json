@@ -813,6 +813,7 @@
   "perm_customers.loan": "Mijozga qarzga naqd berish",
   "perm_customers.manage": "Mijozlarni yaratish/tahrirlash",
   "perm_customers.message": "Mijozga xabar yuborish",
+  "perm_customers.openingBalance": "Mijozni mavjud qarz yoki avans bilan ochish",
   "perm_customers.receivePayment": "Mijoz qarzi uchun to'lov qabul qilish",
   "perm_customers.refund": "Mijozga pul va avansni qaytarish",
   "perm_customers.view": "Mijozlarni ko'rish",

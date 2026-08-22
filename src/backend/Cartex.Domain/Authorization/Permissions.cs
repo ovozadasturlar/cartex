@@ -178,6 +178,7 @@ public static class AppPermissions
         public const string ReceivePayment = "customers.receivePayment";
         public const string Refund = "customers.refund";
         public const string Loan = "customers.loan";
+        public const string OpeningBalance = "customers.openingBalance";
         public const string Act = "customers.act";
         public const string Message = "customers.message";
     }
@@ -418,6 +419,7 @@ public static class AppPermissions
             P(Customers.ReceivePayment, "Receive customer debt payment", true, Customers.View, Rates.View),
             P(Customers.Refund, "Pay an approved customer refund", true, Customers.View, Rates.View),
             P(Customers.Loan, "Hand cash to a customer as a debt", false, Customers.Refund),
+            P(Customers.OpeningBalance, "Open a customer with an existing debt or advance", true, Customers.Create),
             P(Customers.Act, "Generate a consolidated act for a customer", false, Customers.View, Sales.View),
             P(Customers.Message, "Send messages to customers", true, Customers.View),
             P(CustomerPayments.View, "View customer payment documents", true, Customers.View),
@@ -521,7 +523,8 @@ public static class AppPermissions
                 [Suppliers.Create, Suppliers.Edit, Suppliers.Pay, Supplies.View, Accounts.View, Transactions.View]),
             new PermissionBundleDefinition("accountant", "Hisobchi",
                 [Accounts.View, Transactions.View, Reports.View, Reports.Export,
-                    Customers.ReceivePayment, Customers.Refund, CustomerPayments.View,
+                    Customers.ReceivePayment, Customers.Refund, Customers.OpeningBalance,
+                    CustomerPayments.View,
                     CustomerPayments.Create, CustomerPayments.Void, CustomerPayments.WriteOffDebt,
                     Returns.View, Returns.Approve,
                     Statements.View, Statements.Export,

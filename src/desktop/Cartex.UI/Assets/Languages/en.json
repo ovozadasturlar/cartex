@@ -813,6 +813,7 @@
   "perm_customers.loan": "Hand cash to a customer as a debt",
   "perm_customers.manage": "Create/edit customers",
   "perm_customers.message": "Send messages to customers",
+  "perm_customers.openingBalance": "Open a customer with an existing debt or advance",
   "perm_customers.receivePayment": "Receive customer debt payment",
   "perm_customers.refund": "Refund money and credit to customer",
   "perm_customers.view": "View customers",

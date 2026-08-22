@@ -813,6 +813,7 @@
   "perm_customers.loan": "Выдача денег клиенту в долг",
   "perm_customers.manage": "Создание/изменение клиентов",
   "perm_customers.message": "Отправка сообщений клиентам",
+  "perm_customers.openingBalance": "Создание клиента с существующим долгом или авансом",
   "perm_customers.receivePayment": "Приём оплаты долга клиента",
   "perm_customers.refund": "Возврат денег и аванса клиенту",
   "perm_customers.view": "Просмотр клиентов",

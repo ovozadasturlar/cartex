@@ -485,7 +485,7 @@
                                  MinHeight="70" MaxHeight="140" />
                     </StackPanel>
                     <CheckBox IsChecked="{Binding EditNotificationsOptOut}" Content="{Binding L[notifications_opt_out]}" />
-                    <StackPanel Spacing="5" IsVisible="{Binding IsNew}">
+                    <StackPanel Spacing="5" IsVisible="{Binding CanEnterOpeningBalance}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">
                             <NumericUpDown Value="{Binding EditOpeningBalance, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="10000" FormatString="N0" />

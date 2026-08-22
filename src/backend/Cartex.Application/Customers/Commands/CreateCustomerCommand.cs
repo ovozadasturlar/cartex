@@ -20,6 +20,11 @@ public sealed class CreateCustomerCommandHandler(
 {
     public async Task<long> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
+        // QARZ-23: qoldiq defterga yozadi — mijoz yaratishdan alohida ruxsat talab qiladi.
+        if (request.OpeningBalance != 0 && !currentUser.HasPermission(AppPermissions.Customers.OpeningBalance))
+            throw new ForbiddenException(
+                "Boshlang'ich qoldiq kiritishga ruxsat yo'q.", "opening_balance_forbidden");
+
         var phone = Phones.Normalize(request.Phone);
         var businessId = currentUser.BusinessId
             ?? await db.Businesses.Select(x => (long?)x.Id).FirstOrDefaultAsync(cancellationToken)

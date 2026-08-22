@@ -971,7 +971,7 @@
                                            PlaceholderText="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
-                    <StackPanel Spacing="5">
+                    <StackPanel Spacing="5" IsVisible="{Binding CanSetOpeningBalance}">
                         <c:FieldLabel Text="{Binding L[opening_balance]}" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">
                             <NumericUpDown Value="{Binding NewCustomerOpening, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="10000"

@@ -354,6 +354,9 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     public bool CanOverridePrice => _auth.HasPermission("sales.priceOverride");
     public bool CanCreateCart => _auth.HasPermission("sales.create");
     public bool CanCheckout => _auth.HasPermission("sales.checkout");
+
+    // QARZ-23: boshlang'ich qoldiq pul majburiyatini yaratadi, shuning uchun o'z ruxsati bor.
+    public bool CanSetOpeningBalance => _auth.HasPermission("customers.openingBalance");
     public bool ShowSingleCurrencyPayments => CanCheckout && !IsMulticurrency;
     public bool ShowMulticurrencyPayments => CanCheckout && IsMulticurrency;
     public bool CanCreateProduct => _auth.HasPermission("products.create");
