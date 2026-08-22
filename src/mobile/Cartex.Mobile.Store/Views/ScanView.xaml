@@ -110,8 +110,9 @@
         </Border>
 
         <!-- Natijalar sarlavha ostidan ochiladi. Yuqori chekinish sarlavha balandligiga teng:
-             12 tepa + 48 maydon + 10 oraliq + 52 tugma + 12 oraliq. -->
-        <Border Style="{StaticResource Card}" Margin="12,134,12,12"
+             12 tepa + 48 maydon + 10 oraliq + 52 tugma + 12 oraliq. Pastda esa tab paneli
+             (29 + 62) turadi — natijalarning oxirgi qatori uning ostida qolib ketmasin. -->
+        <Border Style="{StaticResource Card}" Margin="12,134,12,104"
                 IsVisible="{Binding SearchOpen}">
             <Grid RowDefinitions="Auto,*" RowSpacing="10">
                 <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"
