@@ -15,7 +15,9 @@ public sealed record CustomerRefundCreatedDto(
     string DocumentNumber,
     decimal TotalBaseAmount,
     decimal AdvanceBaseAmount = 0,
-    decimal LoanBaseAmount = 0);
+    decimal LoanBaseAmount = 0,
+    /// Hujjatni bekor qilmaydigan ogohlantirishlar (masalan `credit_limit_exceeded`, QARZ-22).
+    IReadOnlyList<string>? Warnings = null);
 
 public sealed record CustomerRefundTenderDto(
     string Method,

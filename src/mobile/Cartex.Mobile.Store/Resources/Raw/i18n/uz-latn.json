@@ -445,6 +445,7 @@
   "status_open": "Navbatda",
   "stock_label": "Qoldiq: ",
   "stock_negative_offline_warning": "Diqqat: oflayn kassa ishlayotgan bo'lishi mumkin — bu tovar qoldig'i minusga tushdi.",
+  "credit_limit_exceeded_warning": "Diqqat: mijozning qarzi kredit limitidan oshib ketdi.",
   "supplier": "Yetkazib beruvchi",
   "tab_customer": "Mijoz",
   "tab_home": "Asosiy",

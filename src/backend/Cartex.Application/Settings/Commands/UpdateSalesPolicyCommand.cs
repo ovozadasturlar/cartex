@@ -26,6 +26,8 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
     public UpdateSalesPolicyCommandValidator()
     {
         RuleFor(x => x.Policy.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
+        RuleFor(x => x.Policy.CreditLimitEnforcement).Must(p => p is "Block" or "Warn");
+        RuleFor(x => x.Policy.DefaultCreditLimit).GreaterThanOrEqualTo(0).When(x => x.Policy.DefaultCreditLimit is not null);
         RuleFor(x => x.Policy.MaxDiscountPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDiscountPercent is not null);
         RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxDebtWriteOffAmount is not null);
         RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDebtWriteOffPercent is not null);

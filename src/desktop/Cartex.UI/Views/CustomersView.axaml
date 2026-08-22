@@ -141,7 +141,7 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Width="*" Binding="{Binding CreditLimit, StringFormat='{}{0:N0}'}"
+                            <DataGridTextColumn Width="*" Binding="{Binding CreditLimit, Converter={x:Static conv:CreditLimitConverter.Instance}}"
                                                 Header="{Binding [credit_limit], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -260,7 +260,7 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBlock Text="{Binding SelectedCustomerDisplay.CreditLimit, StringFormat='{}{0:N0}'}"
+                        <TextBlock Text="{Binding SelectedCustomerDisplay.CreditLimit, Converter={x:Static conv:CreditLimitConverter.Instance}}"
                                    FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
                     </StackPanel>
                 </Border>

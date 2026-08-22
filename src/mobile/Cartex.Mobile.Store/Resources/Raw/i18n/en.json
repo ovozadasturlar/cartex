@@ -445,6 +445,7 @@
   "status_open": "In queue",
   "stock_label": "In stock: ",
   "stock_negative_offline_warning": "Careful: an offline register may be selling — this item's stock has gone negative.",
+  "credit_limit_exceeded_warning": "Careful: this customer's debt has passed their credit limit.",
   "supplier": "Supplier",
   "tab_customer": "Customer",
   "tab_home": "Home",

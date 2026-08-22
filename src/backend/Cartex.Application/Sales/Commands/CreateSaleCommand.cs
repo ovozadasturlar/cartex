@@ -643,6 +643,7 @@ public sealed class CreateSaleCommandHandler(
         await currency.EnsureSalesAllowedAsync(debtCurrency, cancellationToken);
         var debtRate = debtCurrency == baseCode ? 1m : await currency.RateAsync(debtCurrency, cancellationToken);
 
+        var creditLimitExceeded = false;
         if (debtAmount > 0 && request.CustomerId is not null)
         {
             var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId.Value, cancellationToken)
@@ -658,7 +659,8 @@ public sealed class CreateSaleCommandHandler(
                 if (!policy.AllowDebtSales && currentDebt + debtAmount > 0)
                     throw new BusinessRuleException("Nasiya savdo o'chirilgan.");
                 if (customer.CreditLimit is { } creditLimit && currentDebt + debtAmount > creditLimit)
-                    throw new BusinessRuleException("Qarz limiti oshib ketdi.");
+                    creditLimitExceeded = CreditLimits.WarnOrThrow(
+                        creditLimit, policy, "Qarz limiti oshib ketdi.", request.FromOfflineSync);
             }
         }
 
@@ -797,6 +799,7 @@ public sealed class CreateSaleCommandHandler(
             sale.ChangeAmount,
             sale.CreditAmount,
             origin = request.FromOfflineSync ? "offlineSync" : request.FromQueuedCart ? "queue" : "online",
+            creditLimitExceeded,
             payments = sale.Payments.Select(x => new { x.Method, x.Currency, x.Amount, x.Rate, x.AmountBase }),
             participants = sale.Participants.Select(x => new { x.RoleDefinitionId, x.PartyId, x.RoleLabelSnapshot }),
             items = resolvedItems.Select(x => new { x.Item.VariantId, x.Quantity, x.UnitPrice, x.Currency, x.Rate })
@@ -806,8 +809,10 @@ public sealed class CreateSaleCommandHandler(
             await db.Prepacks.Where(p => prepackIds.Contains(p.Id))
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.SoldSaleId, sale.Id), cancellationToken);
 
-        return new CreateSaleResult(sale.Id, sale.ReceiptToken,
-            offlineShortfalls.Count > 0 ? ["stock_negative_offline"] : null);
+        List<string>? warnings = null;
+        if (offlineShortfalls.Count > 0) (warnings ??= []).Add("stock_negative_offline");
+        if (creditLimitExceeded) (warnings ??= []).Add("credit_limit_exceeded");
+        return new CreateSaleResult(sale.Id, sale.ReceiptToken, warnings);
     }
 
     private async Task PostLedgerAsync(

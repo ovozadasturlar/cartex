@@ -101,6 +101,8 @@ export interface SalesPolicy {
   allowFreeReturnLines: boolean;
   requireReturnReason: boolean;
   allowSaleQueue: boolean;
+  creditLimitEnforcement: string;
+  defaultCreditLimit: number | null;
 }
 
 export interface LoginMethods {

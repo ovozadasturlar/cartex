@@ -251,6 +251,18 @@
                         <Border Classes="row" IsVisible="{Binding AllowDebtSales}">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[credit_limit_enforcement]}" Classes="field" />
+                                    <TextBlock Text="{Binding CreditLimitEnforcementHint}" Classes="hint" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding CreditLimitEnforcements}"
+                                          SelectedIndex="{Binding CreditLimitEnforcementIndex}"
+                                          MinWidth="180" MinHeight="38" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row" IsVisible="{Binding AllowDebtSales}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
                                     <TextBlock Text="{Binding L[require_debt_due_date]}" Classes="field" />
                                     <TextBlock Text="{Binding RequireDebtDueDateHint}" Classes="hint" />
                                 </StackPanel>
@@ -292,6 +304,14 @@
                             <TextBlock Text="{Binding L[max_customer_loan]}" Classes="hint" />
                             <NumericUpDown Value="{Binding MaxCustomerLoan}"
                                            Minimum="0" Increment="1000" FormatString="N0" HorizontalAlignment="Left" Width="220" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding AllowDebtSales}">
+                            <TextBlock Text="{Binding L[default_credit_limit]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding DefaultCreditLimit}" Minimum="0" Increment="100000"
+                                           FormatString="N0" HorizontalAlignment="Left" Width="220"
+                                           PlaceholderText="{Binding L[unlimited]}" />
+                            <TextBlock Text="{Binding L[default_credit_limit_hint]}" Classes="hint" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

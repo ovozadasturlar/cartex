@@ -97,6 +97,7 @@ public sealed class CreateCustomerRefundCommandHandler(
             if (row.Value > covered) loans[row.Key] = row.Value - covered;
         }
 
+        var creditLimitExceeded = false;
         if (loans.Count > 0)
         {
             if (!policy.AllowCustomerLoans)
@@ -112,7 +113,7 @@ public sealed class CreateCustomerRefundCommandHandler(
                 throw new BusinessRuleException(
                     $"Qarzga berish {policy.MaxCustomerLoan:N0} dan osha olmaydi.", "customer_loan_limit");
 
-            // QARZ-18: unlike goods debt, this one is checked on the server — cash is leaving the till.
+            // QARZ-18: savdodagi qarz bilan bir xil yo'l — ikkalasi ham serverda, bir sozlama bilan.
             if (customer.CreditLimit is { } creditLimit)
             {
                 var debts = await db.Accounts
@@ -123,8 +124,8 @@ public sealed class CreateCustomerRefundCommandHandler(
                 foreach (var debt in debts)
                     debtBase += Math.Round(debt.Balance * await currency.RateAsync(debt.Currency, cancellationToken), 2);
                 if (debtBase + loanBase > creditLimit)
-                    throw new BusinessRuleException(
-                        $"Mijozning qarz chegarasi {creditLimit:N0} dan oshib ketadi.", "credit_limit_exceeded");
+                    creditLimitExceeded = CreditLimits.WarnOrThrow(creditLimit, policy,
+                        $"Mijozning qarz chegarasi {creditLimit:N0} dan oshib ketadi.");
             }
         }
 
@@ -218,7 +219,8 @@ public sealed class CreateCustomerRefundCommandHandler(
         }, document.LoanBaseAmount > 0 ? "Mijozga qarzga pul berildi" : "Mijozga avansdan pul qaytarildi", branchId);
 
         return new CustomerRefundCreatedDto(document.Id, document.DocumentNumber, document.TotalBaseAmount,
-            document.AdvanceBaseAmount, document.LoanBaseAmount);
+            document.AdvanceBaseAmount, document.LoanBaseAmount,
+            creditLimitExceeded ? [CreditLimits.Warning] : null);
     }
 
     private static AccountType AccountTypeFor(PaymentMethod method) => method switch

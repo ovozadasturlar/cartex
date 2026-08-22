@@ -39,7 +39,9 @@ public static class SalesPolicyMapping
         AllowReturnOnVoidedSale = cfg.AllowReturnOnVoidedSale,
         AllowFreeReturnLines = cfg.AllowFreeReturnLines,
         RequireReturnReason = cfg.RequireReturnReason,
-        AllowSaleQueue = cfg.AllowSaleQueue
+        AllowSaleQueue = cfg.AllowSaleQueue,
+        CreditLimitEnforcement = cfg.CreditLimitEnforcement,
+        DefaultCreditLimit = cfg.DefaultCreditLimit
     };
 
     public static void Apply(SalesPolicySettings cfg, SalesPolicyDto dto)
@@ -75,5 +77,7 @@ public static class SalesPolicyMapping
         cfg.AllowFreeReturnLines = dto.AllowFreeReturnLines;
         cfg.RequireReturnReason = dto.RequireReturnReason;
         cfg.AllowSaleQueue = dto.AllowSaleQueue;
+        cfg.CreditLimitEnforcement = dto.CreditLimitEnforcement;
+        cfg.DefaultCreditLimit = dto.DefaultCreditLimit;
     }
 }

@@ -424,7 +424,7 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('credit_limit') }}</mat-label>
-            <input matInput type="number" min="0" [(ngModel)]="creditLimit" />
+            <input matInput type="number" min="0" [(ngModel)]="creditLimit" [placeholder]="t('unlimited')" />
           </mat-form-field>
         </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">

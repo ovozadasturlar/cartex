@@ -42,6 +42,8 @@ export class SalesPolicySettings implements OnInit {
   // "Optional" olib tashlandi: qarz mijozsiz baribir mumkin emas, shuning uchun u "OnDebt"
   // bilan bir xil ishlardi. "OnBonus" esa haqiqiy uchinchi holat.
   readonly customerRequirements = ['OnDebt', 'OnBonus', 'Always'];
+  // QARZ-22: limitdan oshishni rad etish yoki ogohlantirib o'tkazish.
+  readonly creditLimitEnforcements = ['Block', 'Warn'];
 
   /// Har qatorning tarjima kaliti va model maydoni. Izoh matni shu kalitdan `_on` / `_off`
   /// qo'shimchasi bilan olinadi, shunda kalitning hozirgi holati nimani anglatishi ko'rinadi.
@@ -109,6 +111,8 @@ export class SalesPolicySettings implements OnInit {
     maxPriceIncreasePercent: null,
     priceDriftWindowMinutes: 60,
     customerRequirement: 'OnDebt',
+    creditLimitEnforcement: 'Block',
+    defaultCreditLimit: null,
     allowReturnOnVoidedSale: false,
     allowFreeReturnLines: true,
     requireReturnReason: false,

@@ -445,6 +445,7 @@
   "status_open": "Навбатда",
   "stock_label": "Қолдиқ: ",
   "stock_negative_offline_warning": "Диққат: офлайн касса ишлаётган бўлиши мумкин — бу товар қолдиғи минусга тушди.",
+  "credit_limit_exceeded_warning": "Диққат: мижознинг қарзи кредит лимитидан ошиб кетди.",
   "supplier": "Етказиб берувчи",
   "tab_customer": "Мижоз",
   "tab_home": "Асосий",

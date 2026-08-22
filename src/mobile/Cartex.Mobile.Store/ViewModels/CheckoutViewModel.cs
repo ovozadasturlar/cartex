@@ -361,11 +361,13 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             if (string.IsNullOrEmpty(_code))
                 _localCart.Clear();
             // OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
-            if (sale.Warnings?.Contains("stock_negative_offline") == true)
-                await Shell.Current.CurrentPage.DisplayAlertAsync(
-                    Loc.Instance["checkout"],
-                    Loc.Instance["stock_negative_offline_warning"],
-                    Loc.Instance["ok"]);
+            // QARZ-22: siyosat ogohlantirishga qo'yilgan bo'lsa, limitdan oshgani ham shu yerdan ko'rinadi.
+            foreach (var warning in new[] { "stock_negative_offline", "credit_limit_exceeded" })
+                if (sale.Warnings?.Contains(warning) == true)
+                    await Shell.Current.CurrentPage.DisplayAlertAsync(
+                        Loc.Instance["checkout"],
+                        Loc.Instance[$"{warning}_warning"],
+                        Loc.Instance["ok"]);
             Ui.Toast(Loc.Instance["sale_done"]);
             await Shell.Current.GoToAsync("..");
         }

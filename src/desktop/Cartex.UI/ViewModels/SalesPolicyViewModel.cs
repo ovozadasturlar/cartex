@@ -25,6 +25,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
         FillOptions(ShiftPolicies, ShiftPolicyCodes, code => L[$"shift_policy_{code.ToLowerInvariant()}"]);
         FillOptions(CorrectionWindows, CorrectionWindowCodes, code => L[$"correction_{code.ToLowerInvariant()}"]);
         FillOptions(CustomerRequirements, CustomerRequirementCodes, code => L[$"customer_req_{code.ToLowerInvariant()}"]);
+        FillOptions(CreditLimitEnforcements, CreditLimitEnforcementCodes, code => L[$"credit_limit_{code.ToLowerInvariant()}"]);
     }
 
     private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
@@ -32,10 +33,13 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     // "Optional" olib tashlandi: u "OnDebt" bilan bir xil ishlardi. "OnBonus" esa haqiqiy
     // uchinchi holat — do'kon cashback bersa, mijozsiz savdo bonusni yo'qotadi.
     private static readonly string[] CustomerRequirementCodes = ["OnDebt", "OnBonus", "Always"];
+    // QARZ-22: limitdan oshishni rad etish yoki ogohlantirib o'tkazish.
+    private static readonly string[] CreditLimitEnforcementCodes = ["Block", "Warn"];
 
     public ObservableCollection<string> ShiftPolicies { get; } = [];
     public ObservableCollection<string> CorrectionWindows { get; } = [];
     public ObservableCollection<string> CustomerRequirements { get; } = [];
+    public ObservableCollection<string> CreditLimitEnforcements { get; } = [];
 
     [ObservableProperty] private int _shiftPolicyIndex = 1;
     [ObservableProperty] private int _correctionWindowIndex = 1;
@@ -93,7 +97,11 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [NotifyPropertyChangedFor(nameof(AllowCustomerLoansHint))]
     private bool _allowCustomerLoans;
     [ObservableProperty] private decimal? _maxCustomerLoan;
+    [ObservableProperty] private decimal? _defaultCreditLimit;
     [ObservableProperty] private int _customerRequirementIndex = 1;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CreditLimitEnforcementHint))]
+    private int _creditLimitEnforcementIndex;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AllowReturnOnVoidedSaleHint))]
     private bool _allowReturnOnVoidedSale;
@@ -118,6 +126,8 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     public string AllowSaleQueueHint => Hint(AllowSaleQueue, "allow_sale_queue");
     public string UpdateCatalogPriceOnSaleHint => Hint(UpdateCatalogPriceOnSale, "update_catalog_price_on_sale");
     public string AllowDebtSalesHint => Hint(AllowDebtSales, "allow_debt_sales");
+    public string CreditLimitEnforcementHint =>
+        L[$"credit_limit_{CodeAt(CreditLimitEnforcementCodes, CreditLimitEnforcementIndex, "Block").ToLowerInvariant()}_hint"];
     public string RequireDebtDueDateHint => Hint(RequireDebtDueDate, "require_debt_due_date");
     public string AllowCustomerCreditHint => Hint(AllowCustomerCredit, "allow_customer_credit");
     public string AllowRetroactiveCashbackHint => Hint(AllowRetroactiveCashback, "allow_retroactive_cashback");
@@ -171,7 +181,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowConsolidatedAct = _loaded.AllowConsolidatedAct;
             AllowCustomerLoans = _loaded.AllowCustomerLoans;
             MaxCustomerLoan = _loaded.MaxCustomerLoan;
+            DefaultCreditLimit = _loaded.DefaultCreditLimit;
             CustomerRequirementIndex = Math.Max(0, Array.IndexOf(CustomerRequirementCodes, _loaded.CustomerRequirement));
+            CreditLimitEnforcementIndex = Math.Max(0, Array.IndexOf(CreditLimitEnforcementCodes, _loaded.CreditLimitEnforcement));
             AllowReturnOnVoidedSale = _loaded.AllowReturnOnVoidedSale;
             AllowFreeReturnLines = _loaded.AllowFreeReturnLines;
             RequireReturnReason = _loaded.RequireReturnReason;
@@ -216,7 +228,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 AllowConsolidatedAct = AllowConsolidatedAct,
                 AllowCustomerLoans = AllowCustomerLoans,
                 MaxCustomerLoan = MaxCustomerLoan,
+                DefaultCreditLimit = DefaultCreditLimit,
                 CustomerRequirement = CodeAt(CustomerRequirementCodes, CustomerRequirementIndex, _loaded.CustomerRequirement),
+                CreditLimitEnforcement = CodeAt(CreditLimitEnforcementCodes, CreditLimitEnforcementIndex, _loaded.CreditLimitEnforcement),
                 AllowReturnOnVoidedSale = AllowReturnOnVoidedSale,
                 AllowFreeReturnLines = AllowFreeReturnLines,
                 RequireReturnReason = RequireReturnReason,

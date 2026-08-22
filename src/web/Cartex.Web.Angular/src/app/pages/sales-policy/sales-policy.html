@@ -146,6 +146,23 @@
           <input matInput type="number" min="0" [(ngModel)]="model.maxCustomerLoan" [disabled]="!canManage" />
         </mat-form-field>
       }
+      @if (model.allowDebtSales) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+          <mat-label>{{ t('credit_limit_enforcement') }}</mat-label>
+          <mat-select [(ngModel)]="model.creditLimitEnforcement" [disabled]="!canManage">
+            @for (code of creditLimitEnforcements; track code) {
+              <mat-option [value]="code">{{ t('credit_limit_' + code.toLowerCase()) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <p class="hint">{{ t('credit_limit_' + model.creditLimitEnforcement.toLowerCase() + '_hint') }}</p>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
+          <mat-label>{{ t('default_credit_limit') }}</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.defaultCreditLimit"
+                 [placeholder]="t('unlimited')" [disabled]="!canManage" />
+        </mat-form-field>
+        <p class="hint">{{ t('default_credit_limit_hint') }}</p>
+      }
     </div>
 
     <div class="cx-card section">

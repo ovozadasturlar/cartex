@@ -66,7 +66,7 @@
     <div class="cx-grid stats">
       <cx-stat-card [label]="t('debt')" [value]="debtText()" icon="money_off" [tone]="c.debtBalance > 0 ? 'danger' : 'default'" />
       <cx-stat-card [label]="t('bonus')" [value]="c.cashbackBalance | cxMoney" icon="redeem" tone="success" />
-      <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit | cxMoney" icon="credit_score" />
+      <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit === null ? t('unlimited') : (c.creditLimit | cxMoney)" icon="credit_score" />
     </div>
 
     @if (showPartner()) {

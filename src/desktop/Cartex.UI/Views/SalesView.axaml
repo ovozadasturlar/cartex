@@ -966,8 +966,9 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <c:FieldLabel Text="{Binding L[credit_limit]}" />
-                            <NumericUpDown Value="{Binding NewCustomerCreditLimit, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="100000"
-                                           FormatString="0.##" ShowButtonSpinner="False" MinHeight="40" />
+                            <NumericUpDown Value="{Binding NewCustomerCreditLimit}" Minimum="0" Increment="100000"
+                                           FormatString="0.##" ShowButtonSpinner="False" MinHeight="40"
+                                           PlaceholderText="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Spacing="5">

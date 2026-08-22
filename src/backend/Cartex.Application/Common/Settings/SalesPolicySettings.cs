@@ -77,6 +77,16 @@ public sealed class SalesPolicySettings
     /// Har qaytarish qatorida sabab majburiymi (QAYT-10).
     public bool RequireReturnReason { get; set; }
 
+    /// Mijoz kredit limitining qattiqligi (QARZ-22): "Block" (standart) — limitdan oshiradigan
+    /// qarz rad etiladi, "Warn" — savdo o'tadi va javobda ogohlantirish qaytadi. Taqiqni ochmaydi:
+    /// nol limit va o'chirilgan nasiya savdo har ikki rejimda ham rad etiladi.
+    public string CreditLimitEnforcement { get; set; } = "Block";
+
+    /// Yangi mijoz formasida oldindan turadigan qarz limiti (SOZ-17). Bo'sh — forma bo'sh
+    /// ochiladi va limit cheklanmagan bo'ladi. Server buni o'zi qo'llamaydi: bo'sh kelgan limit
+    /// cheklanmagan bo'lib saqlanadi, aks holda "cheklanmagan" ni ifodalashning iloji qolmasdi.
+    public decimal? DefaultCreditLimit { get; set; }
+
     /// Navbat ish uslubi yoqilganmi (NAVBAT-06). Bu tarif moduli emas — bir do'kon hamma
     /// narsani bitta kassada uradi, boshqasida yig'uvchi tayyorlab kassir pul oladi.
     public bool AllowSaleQueue { get; set; } = true;

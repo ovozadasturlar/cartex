@@ -445,6 +445,7 @@
   "status_open": "В очереди",
   "stock_label": "Остаток: ",
   "stock_negative_offline_warning": "Внимание: возможно, работает офлайн-касса — остаток этого товара ушёл в минус.",
+  "credit_limit_exceeded_warning": "Внимание: долг клиента превысил кредитный лимит.",
   "supplier": "Поставщик",
   "tab_customer": "Клиент",
   "tab_home": "Главная",

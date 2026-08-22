@@ -606,6 +606,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             _supplierRequired = policy.RequireSupplier;
             _customerAlwaysRequired = policy.CustomerRequirement == "Always";
             _queueAllowed = policy.AllowSaleQueue;
+            _defaultCreditLimit = policy.DefaultCreditLimit;
             CanPrintProforma = policy.PrintCartProforma;
             ShiftRequired = policy.ShiftPolicy != "Off";
             AllowCustomerCredit = policy.AllowCustomerCredit;
@@ -1785,7 +1786,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _newCustomerEmail = string.Empty;
     [ObservableProperty] private string _newCustomerCard = string.Empty;
     [ObservableProperty] private decimal _newCustomerDiscount;
-    [ObservableProperty] private decimal _newCustomerCreditLimit;
+    [ObservableProperty] private decimal? _newCustomerCreditLimit;
+    private decimal? _defaultCreditLimit;
     [ObservableProperty] private decimal _newCustomerOpening;
     [ObservableProperty] private int _newCustomerOpeningKindIndex;
     [ObservableProperty] private string? _newCustomerOpeningCurrency;
@@ -1859,7 +1861,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         NewCustomerEmail = string.Empty;
         NewCustomerCard = string.Empty;
         NewCustomerDiscount = 0;
-        NewCustomerCreditLimit = 0;
+        NewCustomerCreditLimit = _defaultCreditLimit;
         NewCustomerOpening = 0;
         NewCustomerOpeningKindIndex = 0;
         OpeningKinds.Clear();
@@ -2329,10 +2331,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     }
 
     /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
+    /// QARZ-22: siyosat ogohlantirishga qo'yilgan bo'lsa, limitdan oshgani ham shu yerdan ko'rinadi.
     private void WarnOfflineStock(IReadOnlyList<string>? warnings)
     {
         if (warnings?.Contains("stock_negative_offline") == true)
             _toast.Warning(L["stock_negative_offline_warning"]);
+        if (warnings?.Contains("credit_limit_exceeded") == true)
+            _toast.Warning(L["credit_limit_exceeded_warning"]);
     }
 
     private async Task ShowReceiptAsync(string token, long? customerId = null)

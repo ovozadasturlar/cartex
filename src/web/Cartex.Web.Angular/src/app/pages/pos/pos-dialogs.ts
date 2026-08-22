@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -111,7 +111,7 @@ import { EmptyState } from '../../shared/empty-state';
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('credit_limit') }}</mat-label>
-              <input matInput type="number" min="0" [(ngModel)]="nCreditLimit" />
+              <input matInput type="number" min="0" [(ngModel)]="nCreditLimit" [placeholder]="t('unlimited')" />
             </mat-form-field>
           </div>
           <button matButton="filled" class="save" [disabled]="!nName.trim() || !nPhone.trim() || saving()" (click)="create()">
@@ -175,7 +175,7 @@ export class CustomerPickerDialog implements OnInit {
   nAddress = '';
   nCard = '';
   nDiscount = 0;
-  nCreditLimit = 0;
+  nCreditLimit: number | null = inject<{ defaultCreditLimit?: number | null } | null>(MAT_DIALOG_DATA, { optional: true })?.defaultCreditLimit ?? null;
 
   constructor() {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed()).subscribe((v) => {
@@ -207,7 +207,7 @@ export class CustomerPickerDialog implements OnInit {
         address: this.nAddress.trim() || null,
         cardBarcode: this.nCard.trim() || null,
         discountPct: this.nDiscount || 0,
-        creditLimit: this.nCreditLimit || 0,
+        creditLimit: this.nCreditLimit ?? null,
       }));
       this.ref.close({
         id,
@@ -221,7 +221,7 @@ export class CustomerPickerDialog implements OnInit {
         discountPct: this.nDiscount || 0,
         cashbackBalance: 0,
         debtBalance: 0,
-        creditLimit: this.nCreditLimit || 0,
+        creditLimit: this.nCreditLimit ?? null,
         hasTelegram: false,
         debtBalances: [],
       } satisfies Customer);

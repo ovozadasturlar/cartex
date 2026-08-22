@@ -685,7 +685,12 @@ export class Pos implements OnInit {
 
   async attachCustomer(): Promise<void> {
     const picked: Customer | undefined = await lastValueFrom(
-this.dialog.open<CustomerPickerDialog, unknown, Customer>(CustomerPickerDialog, { autoFocus: 'input' }).afterClosed(),
+      this.dialog
+        .open<CustomerPickerDialog, unknown, Customer>(CustomerPickerDialog, {
+          autoFocus: 'input',
+          data: { defaultCreditLimit: this.policy()?.defaultCreditLimit ?? null },
+        })
+        .afterClosed(),
     );
     if (picked) this.customer.set(picked);
     this.focusScan();
@@ -861,9 +866,12 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
   }
 
   /// OFF-17: savdo bekor qilinmaydi, lekin kassir qoldiq minusga tushganini ko'rishi shart.
+  /// QARZ-22: siyosat ogohlantirishga qo'yilgan bo'lsa, limitdan oshgani ham shu yerdan ko'rinadi.
   private warnOfflineStock(warnings?: string[] | null): void {
-    if (warnings?.includes('stock_negative_offline')) {
-      this.notify.warn(this.transloco.translate('stock_negative_offline_warning'));
+    for (const warning of ['stock_negative_offline', 'credit_limit_exceeded']) {
+      if (warnings?.includes(warning)) {
+        this.notify.warn(this.transloco.translate(`${warning}_warning`));
+      }
     }
   }
 
