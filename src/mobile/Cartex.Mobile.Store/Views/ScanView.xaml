@@ -44,28 +44,13 @@
             </Button.Triggers>
         </Button>
 
-        <!-- Qidiruv maydoni doim yuqorida turadi: ilgari lupani bosib, keyin izlash kerak edi.
-             Ostida chapda mahsulot qo'shish, o'ngda kirim va savdo tugmalari. -->
+        <!-- Yuqorida amal tugmalari, ostida qidiruv maydoni: maydon o'z natijalariga tutash
+             turadi, ilgari esa lupani bosib, keyin izlash kerak edi — ikki qadam.
+             Maydon kamera ustida suzadi, shuning uchun u sahifa kartasi emas, pastdagi holat
+             yozuvi bilan bir xil yarim shaffof qoplama — aks holda tasvir o'rtasida yopishmagan
+             plita bo'lib ko'rinadi. -->
         <Grid VerticalOptions="Start" Margin="12,12,12,0" RowDefinitions="Auto,Auto" RowSpacing="10">
-            <Border Style="{StaticResource InputWrap}" HeightRequest="48" Padding="12,0"
-                    IsVisible="{Binding CanSearchProducts}">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                    <Label FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="18"
-                           VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                    <Entry x:Name="SearchBox" Grid.Column="1" Placeholder="{svc:T search_product}"
-                           Text="{Binding SearchText}" ReturnType="Search"
-                           Completed="OnSearchCompleted" Focused="OnSearchFocused" Unfocused="OnSearchUnfocused" />
-                    <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
-                            Padding="0" WidthRequest="32" HeightRequest="32" CornerRadius="16"
-                            BackgroundColor="Transparent"
-                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
-                            Command="{Binding CloseSearchCommand}"
-                            IsVisible="{Binding SearchOpen}" />
-                </Grid>
-            </Border>
-
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto">
                 <Button FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22" Padding="0"
                         WidthRequest="52" HeightRequest="52" CornerRadius="26"
                         Command="{Binding CreateProductFromSearchCommand}"
@@ -99,6 +84,25 @@
                     </Grid>
                 </HorizontalStackLayout>
             </Grid>
+
+            <Border Grid.Row="1" HeightRequest="48" Padding="12,0"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                    BackgroundColor="#B3000000"
+                    IsVisible="{Binding CanSearchProducts}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="18"
+                           VerticalOptions="Center" TextColor="#D7DEDA" />
+                    <Entry x:Name="SearchBox" Grid.Column="1" Placeholder="{svc:T search_product}"
+                           Text="{Binding SearchText}" ReturnType="Search"
+                           TextColor="White" PlaceholderColor="#9FA8A3"
+                           Completed="OnSearchCompleted" Focused="OnSearchFocused" Unfocused="OnSearchUnfocused" />
+                    <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
+                            Padding="0" WidthRequest="32" HeightRequest="32" CornerRadius="16"
+                            BackgroundColor="Transparent" TextColor="#D7DEDA"
+                            Command="{Binding CloseSearchCommand}"
+                            IsVisible="{Binding SearchOpen}" />
+                </Grid>
+            </Border>
         </Grid>
 
         <Border VerticalOptions="End" Margin="24,0,24,112" Padding="14,10"
@@ -109,9 +113,9 @@
                    TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
         </Border>
 
-        <!-- Natijalar sarlavha ostidan ochiladi. Yuqori chekinish sarlavha balandligiga teng:
-             12 tepa + 48 maydon + 10 oraliq + 52 tugma + 12 oraliq. Pastda esa tab paneli
-             (29 + 62) turadi — natijalarning oxirgi qatori uning ostida qolib ketmasin. -->
+        <!-- Natijalar qidiruv maydonining bevosita ostidan ochiladi. Yuqori chekinish sarlavha
+             balandligiga teng: 12 tepa + 52 tugma + 10 oraliq + 48 maydon + 12 oraliq. Pastda esa
+             tab paneli (29 + 62) turadi — natijalarning oxirgi qatori uning ostida qolib ketmasin. -->
         <Border Style="{StaticResource Card}" Margin="12,134,12,104"
                 IsVisible="{Binding SearchOpen}">
             <Grid RowDefinitions="Auto,*" RowSpacing="10">
