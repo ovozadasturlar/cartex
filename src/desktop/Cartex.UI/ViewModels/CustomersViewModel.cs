@@ -883,14 +883,18 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         var id = customer.Id;
         try
         {
+            CustomerRefundCreatedDto created;
             using (_busy.Begin(L["loading"]))
-                await _refundsApi.CreateAsync(new CreateCustomerRefundRequest(
+                created = await _refundsApi.CreateAsync(new CreateCustomerRefundRequest(
                     id,
                     null,
                     [new CustomerRefundTenderRequest(PayOutViaCard ? "Card" : "Cash", _baseCurrency, PayOutAmount)],
                     Note: string.IsNullOrWhiteSpace(PayOutNote) ? null : PayOutNote.Trim(),
                     IdempotencyKey: Guid.NewGuid().ToString("N")));
             IsPayOutOpen = false;
+            // QARZ-22: siyosat ogohlantirishga qo'yilgan bo'lsa, qarz limitidan oshgani ko'rinib tursin.
+            if (created.Warnings?.Contains("credit_limit_exceeded") == true)
+                _toast.Warning(L["credit_limit_exceeded_warning"]);
             _toast.Success(L["success"]);
             await LoadAsync();
             SelectedCustomer = Customers.FirstOrDefault(c => c.Id == id);
