@@ -61,9 +61,9 @@ public partial class ScanView : ContentView, ISectionView
             return true;
         }
 
-        if (_vm.SearchVisible)
+        if (_vm.SearchOpen)
         {
-            _vm.ToggleSearchCommand.Execute(null);
+            _vm.CloseSearchCommand.Execute(null);
             return true;
         }
 
@@ -143,6 +143,10 @@ public partial class ScanView : ContentView, ISectionView
     }
 
     private void OnSearchCompleted(object? sender, EventArgs e) => KeyboardDismissal.Hide();
+
+    private void OnSearchFocused(object? sender, FocusEventArgs e) => _vm.SetSearchFocused(true);
+
+    private void OnSearchUnfocused(object? sender, FocusEventArgs e) => _vm.SetSearchFocused(false);
 
     private void OnQuantityEntryUnfocused(object? sender, FocusEventArgs e) =>
         _vm.SetQuantityFromTextCommand.Execute(null);

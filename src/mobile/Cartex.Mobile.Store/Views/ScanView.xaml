@@ -25,11 +25,6 @@
                 Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                 BackgroundColor="Transparent" />
 
-        <Button FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="22" Padding="0"
-                WidthRequest="52" HeightRequest="52" CornerRadius="26"
-                VerticalOptions="Start" HorizontalOptions="Start" Margin="14,14,0,0"
-                Command="{Binding ToggleSearchCommand}" />
-
         <!-- Chiroq: qorong'i javonda shtrixkod o'qilmaydi. Tugma ramka bilan izoh o'rtasida,
              pastda turadi — telefonni bir qo'lda ushlab turib bosh barmoq yetadigan joyda.
              Yoqilganda sariq bo'ladi, ya'ni chiroq yonib qolgani ekranda ko'rinib turadi. -->
@@ -49,35 +44,62 @@
             </Button.Triggers>
         </Button>
 
-        <HorizontalStackLayout VerticalOptions="Start" HorizontalOptions="End"
-                               Margin="0,14,14,0" Spacing="8">
-            <Grid IsVisible="{Binding CanReceiveStock}">
-                <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="22" Padding="0"
+        <!-- Qidiruv maydoni doim yuqorida turadi: ilgari lupani bosib, keyin izlash kerak edi.
+             Ostida chapda mahsulot qo'shish, o'ngda kirim va savdo tugmalari. -->
+        <Grid VerticalOptions="Start" Margin="12,12,12,0" RowDefinitions="Auto,Auto" RowSpacing="10">
+            <Border Style="{StaticResource InputWrap}" HeightRequest="48" Padding="12,0"
+                    IsVisible="{Binding CanSearchProducts}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="18"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                    <Entry x:Name="SearchBox" Grid.Column="1" Placeholder="{svc:T search_product}"
+                           Text="{Binding SearchText}" ReturnType="Search"
+                           Completed="OnSearchCompleted" Focused="OnSearchFocused" Unfocused="OnSearchUnfocused" />
+                    <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
+                            Padding="0" WidthRequest="32" HeightRequest="32" CornerRadius="16"
+                            BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+                            Command="{Binding CloseSearchCommand}"
+                            IsVisible="{Binding SearchOpen}" />
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+                <Button FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22" Padding="0"
                         WidthRequest="52" HeightRequest="52" CornerRadius="26"
-                        Command="{Binding OpenSupplyCartCommand}" />
-                <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
-                        Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
-                        InputTransparent="True"
-                        IsVisible="{Binding SupplyCartCount, Converter={StaticResource Positive}}">
-                    <Label Text="{Binding SupplyCartCount}" FontSize="11" FontAttributes="Bold"
-                           TextColor="White" />
-                </Border>
+                        Command="{Binding CreateProductFromSearchCommand}"
+                        IsVisible="{Binding CanEditProduct}" />
+                <HorizontalStackLayout Grid.Column="2" Spacing="8">
+                    <Grid IsVisible="{Binding CanReceiveStock}">
+                        <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="22" Padding="0"
+                                WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                                Command="{Binding OpenSupplyCartCommand}" />
+                        <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                                Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                InputTransparent="True"
+                                IsVisible="{Binding SupplyCartCount, Converter={StaticResource Positive}}">
+                            <Label Text="{Binding SupplyCartCount}" FontSize="11" FontAttributes="Bold"
+                                   TextColor="White" />
+                        </Border>
+                    </Grid>
+                    <Grid>
+                        <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
+                                WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                                Command="{Binding OpenCartCommand}" />
+                        <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                                Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                InputTransparent="True"
+                                IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                            <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
+                        </Border>
+                    </Grid>
+                </HorizontalStackLayout>
             </Grid>
-            <Grid>
-                <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
-                        WidthRequest="52" HeightRequest="52" CornerRadius="26"
-                        Command="{Binding OpenCartCommand}" />
-                <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
-                        Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                        InputTransparent="True"
-                        IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
-                    <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
-                </Border>
-            </Grid>
-        </HorizontalStackLayout>
+        </Grid>
 
         <Border VerticalOptions="End" Margin="24,0,24,112" Padding="14,10"
                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
@@ -87,29 +109,12 @@
                    TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
         </Border>
 
-        <Border Style="{StaticResource Card}" Margin="12,8,12,8"
-                IsVisible="{Binding SearchVisible}">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <Border Style="{StaticResource InputWrap}">
-                        <Grid ColumnDefinitions="*,36">
-                            <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
-                                   Text="{Binding SearchText}" ReturnType="Search"
-                                   Completed="OnSearchCompleted" />
-                            <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
-                                    Padding="0" WidthRequest="36" HeightRequest="36" CornerRadius="18"
-                                    BackgroundColor="Transparent"
-                                    TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
-                                    Command="{Binding ClearSearchCommand}" />
-                        </Grid>
-                    </Border>
-                    <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22"
-                            Padding="0" WidthRequest="44" HeightRequest="44" CornerRadius="22"
-                            Style="{StaticResource BtnPrimary}"
-                            Command="{Binding CreateProductFromSearchCommand}"
-                            IsVisible="{Binding CanEditProduct}" />
-                </Grid>
-                <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never"
+        <!-- Natijalar sarlavha ostidan ochiladi. Yuqori chekinish sarlavha balandligiga teng:
+             12 tepa + 48 maydon + 10 oraliq + 52 tugma + 12 oraliq. -->
+        <Border Style="{StaticResource Card}" Margin="12,134,12,12"
+                IsVisible="{Binding SearchOpen}">
+            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"
                             IsVisible="{Binding SearchCategories.Count, Converter={StaticResource Positive}}">
                     <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SearchCategories}" Spacing="8">
                         <BindableLayout.ItemTemplate>
@@ -130,7 +135,7 @@
                         </BindableLayout.ItemTemplate>
                     </HorizontalStackLayout>
                 </ScrollView>
-                <CollectionView Grid.Row="2" ItemsSource="{Binding SearchResults}"
+                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}"
                                 RemainingItemsThreshold="5"
                                 RemainingItemsThresholdReachedCommand="{Binding LoadMoreResultsCommand}"
                                 IsVisible="{Binding IsSearching, Converter={StaticResource Invert}}">
@@ -160,7 +165,7 @@
                                            HorizontalOptions="Center" />
                     </CollectionView.Footer>
                 </CollectionView>
-                <ActivityIndicator Grid.Row="2" Margin="0,24" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
+                <ActivityIndicator Grid.Row="1" Margin="0,24" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
                                    VerticalOptions="Center" HorizontalOptions="Center" />
             </Grid>
         </Border>

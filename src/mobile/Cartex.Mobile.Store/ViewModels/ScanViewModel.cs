@@ -51,7 +51,10 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private int _supplyCartCount;
-    [ObservableProperty] private bool _searchVisible;
+    // Qidiruv paneli ochiqmi. Maydonning o'zi doim ko'rinadi — panelni fokus yoki yozilgan
+    // matn ochadi, lupa tugmasi emas: ilgari izlash uchun ikki qadam kerak bo'lardi.
+    [ObservableProperty] private bool _searchOpen;
+    [ObservableProperty] private bool _canSearchProducts;
     [ObservableProperty] private bool _isSearching;
     [ObservableProperty] private bool _isLoadingMoreResults;
     [ObservableProperty] private string _searchText = "";
@@ -114,6 +117,7 @@ public partial class ScanViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
         CanEditProduct = permissions.Has("products.edit");
         CanReceiveStock = permissions.Has("supplies.create");
+        CanSearchProducts = permissions.Has("products.view");
     }
 
     public void Appear()
@@ -130,6 +134,9 @@ public partial class ScanViewModel : ObservableObject
     {
         _cart.Changed -= OnCartChanged;
         _supplyCart.Changed -= OnSupplyCartChanged;
+        // Qidiruv yopiladi: bo'limga qaytilganda skaner darhol ishlashi kerak, ochiq qolgan
+        // panel esa kamerani to'xtatib turardi.
+        CloseSearch();
         // Chiroq sahifadan chiqilganda o'chadi: kamera to'xtaganda ham yonib qolsa,
         // telefon bekorga qiziydi va batareya yeyiladi.
         TorchOn = false;
@@ -139,7 +146,7 @@ public partial class ScanViewModel : ObservableObject
 
     public async Task HandleAsync(string value)
     {
-        if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchVisible) return;
+        if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchOpen) return;
         KeyboardDismissal.Hide();
         if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
@@ -544,33 +551,30 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private void ToggleTorch() => TorchOn = !TorchOn;
 
-    [RelayCommand]
-    private void ToggleSearch()
+    // Panel ochilganda kamera to'xtaydi: yozayotganda tasodifan tushgan shtrixkod
+    // foydalanuvchini boshqa ekranga olib ketmasin.
+    partial void OnSearchOpenChanged(bool value)
     {
-        if (!SearchVisible && !_permissions.Has("products.view"))
-        {
-            Ui.Toast(Loc.Instance["err_forbidden"]);
-            return;
-        }
-        SearchVisible = !SearchVisible;
-        if (!SearchVisible)
-        {
-            KeyboardDismissal.Hide();
-            Debounce.Cancel(ref _searchCts);
-            IsSearching = false;
-            SearchText = "";
-            _searchCategoryId = null;
-            foreach (var category in SearchCategories)
-                category.IsSelected = category.Id == 0;
-            SearchResults.Clear();
-            if (!OverlayVisible)
-                IsDetecting = true;
-        }
-        else
+        if (value)
         {
             IsDetecting = false;
             _ = EnsureSearchCategoriesAsync();
         }
+        else if (!OverlayVisible)
+            IsDetecting = true;
+    }
+
+    public void SetSearchFocused(bool focused)
+    {
+        if (focused)
+        {
+            if (CanSearchProducts) SearchOpen = true;
+            return;
+        }
+
+        // Bo'sh maydondan chiqilsa panel yopiladi — aks holda kamera bekorga to'xtab turardi.
+        if (SearchText.Length == 0 && _searchCategoryId is null)
+            CloseSearch();
     }
 
     private async Task EnsureSearchCategoriesAsync()
@@ -598,7 +602,18 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ClearSearch() => SearchText = "";
+    private void CloseSearch()
+    {
+        KeyboardDismissal.Hide();
+        Debounce.Cancel(ref _searchCts);
+        IsSearching = false;
+        _searchCategoryId = null;
+        foreach (var category in SearchCategories)
+            category.IsSelected = category.Id == 0;
+        SearchResults.Clear();
+        SearchText = "";
+        SearchOpen = false;
+    }
 
     [RelayCommand]
     private async Task CreateProductFromSearchAsync()
@@ -607,9 +622,7 @@ public partial class ScanViewModel : ObservableObject
         if (!CanEditProduct) return;
 
         var barcode = SearchText.Trim();
-        SearchVisible = false;
-        SearchText = "";
-        SearchResults.Clear();
+        CloseSearch();
         var route = string.IsNullOrWhiteSpace(barcode)
             ? "product/edit?id=0"
             : $"product/edit?id=0&barcode={Uri.EscapeDataString(barcode)}";
@@ -634,6 +647,8 @@ public partial class ScanViewModel : ObservableObject
             IsSearching = false;
             return;
         }
+
+        SearchOpen = true;
 
         var cts = _searchCts = new CancellationTokenSource();
         _activeSearch = text.Length < 2 ? null : text;
@@ -751,10 +766,7 @@ public partial class ScanViewModel : ObservableObject
         OverlayVisible = true;
         IsDetecting = false;
         ImageUrl = _images.FromKey(p.ImageKey, thumb: false);
-        
-        SearchVisible = false;
-        SearchText = "";
-        SearchResults.Clear();
+        CloseSearch();
     }
 
     private async Task FlashAsync(string message)
@@ -914,7 +926,7 @@ public partial class ScanViewModel : ObservableObject
         BarcodeChoices.Clear();
         UnknownBarcodeVisible = false;
         UnknownBarcode = "";
-        if (!SearchVisible)
+        if (!SearchOpen)
             IsDetecting = true;
     }
 
