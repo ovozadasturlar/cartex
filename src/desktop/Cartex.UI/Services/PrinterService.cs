@@ -79,6 +79,26 @@ public sealed record PrinterSettings
     public bool ProformaShowCartCode { get; init; } = true;
     public string? ZReportMode { get; init; }
     public int ZReportPaperWidth { get; init; }
+    public string? ReceiptLanguage { get; init; }
+    public string? ZReportLanguage { get; init; }
+    public string? ReceiptCharset { get; init; }
+    public int ReceiptCodeTable { get; init; } = -1;
+    public string? ReceiptPrintMode { get; init; }
+    public string? ReceiptTemplate { get; init; }
+    public int ReceiptRasterWidthDots { get; init; }
+    /// Termal boshning issiqligi va qog'oz sezgirligi har printerda har xil: bir xil raster
+    /// birida yupqa, boshqasida bo'yalib chiqadi. "light" | "medium" | "dark".
+    public string? ReceiptDarkness { get; init; }
+    public string? ReceiptCutMode { get; init; }
+    public int ReceiptFeedBeforeCut { get; init; } = 4;
+    /// Yozuv o'lchami ustunlar soni orqali beriladi: kamroq ustun = kattaroq shrift.
+    /// "normal" | "large" | "xlarge".
+    public string? ReceiptTextSize { get; init; }
+    /// Raster sifati: "fast" | "standard" | "high".
+    public string? ReceiptQuality { get; init; }
+    /// Printer qo'llab-quvvatlamagan kirill harflarini eng yaqiniga almashtirib, matn
+    /// rejimida qolish (қ->к, ғ->г, ҳ->х, ў->о).
+    public bool ReceiptFoldCyrillic { get; init; }
     public string? ZReportDocumentPaperSize { get; init; }
     public string? ZReportDocumentOrientation { get; init; }
     public int ZReportDocumentPagesPerSheet { get; init; } = 1;
@@ -103,7 +123,8 @@ public record ReceiptPrintOptions(
     bool ShowCustomerPhone = true,
     bool ShowCustomerEmail = false,
     byte[]? LogoRasterBytes = null,
-    string? OutputFilePath = null);
+    string? OutputFilePath = null,
+    string Template = "auto");
 
 public record LabelOptions(
     double WidthMm,
@@ -120,6 +141,8 @@ public record LabelOptions(
     bool ShowSku = false);
 
 public record PrinterCapabilities(bool SupportsColor);
+
+public sealed record DriverPaper(double WidthMm, int Columns);
 
 public static class LabelSize
 {
@@ -188,10 +211,12 @@ public sealed record ProformaPrintOptions(
     bool ShowNote = true,
     bool ShowCartCode = true)
 {
+    /// Sarlavha/yakuniy matn kiritilmagan bo'lsa chekniki meros bo'ladi — proforma odatda
+    /// o'sha chek printeridan chiqadi va bir xil brendlashni kutadi.
     public static ProformaPrintOptions Resolve(PrinterSettings s) => new(
-        s.ProformaHeaderText,
-        s.ProformaFooterText,
-        s.ProformaPaperWidth is 42 or 48 ? s.ProformaPaperWidth : 32,
+        string.IsNullOrWhiteSpace(s.ProformaHeaderText) ? s.ReceiptHeaderText : s.ProformaHeaderText,
+        string.IsNullOrWhiteSpace(s.ProformaFooterText) ? s.ReceiptFooterText : s.ProformaFooterText,
+        ReceiptPaper.IsValid(s.ProformaPaperWidth) ? s.ProformaPaperWidth : 0,
         s.ProformaPaperFormat is "A4" or "A5" ? s.ProformaPaperFormat : "Thermal",
         s.ProformaShowBusinessName,
         s.ProformaShowAddress,
@@ -204,9 +229,13 @@ public sealed record ProformaPrintOptions(
 
 public interface IPrinterService
 {
+    event Action? SettingsChanged;
     IReadOnlyList<string> GetInstalledPrinters();
     PrinterEndpointStatus GetPrinterStatus(string? printerName);
     PrinterCapabilities GetPrinterCapabilities(string? printerName);
+    DriverPaper? DriverReceiptPaper(string? printerName);
+    int ReceiptWidth(string? printerName, int? contentWidth = null);
+    int ReceiptRasterWidth(string? printerName, int? contentWidth = null);
     void EnsureAutoSetup();
     PrinterKind KindOf(string printerName);
     PrintTarget ReceiptTarget();
@@ -230,7 +259,6 @@ public interface IPrinterService
     void PrintZReport(ZReportDto report);
     void PrintZReport(ZReportDto report, string printerName, int copies, string? outputFilePath = null);
     string FormatZReport(ZReportDto report, int? paperWidth = null);
-    void PrintRaw(string? printerName, string text, string? outputFilePath = null);
     void PrintRawBytes(string? printerName, byte[] data, string? outputFilePath = null);
     void PrintDocument(string filePath, string? printerName);
     void PrintDocumentImages(IReadOnlyList<byte[]> imagePages);
@@ -243,6 +271,7 @@ public sealed class PrinterService : IPrinterService
     private readonly BranchContextService _branch;
     private readonly string? _path;
     private PrinterSettings _settings = new();
+    public event Action? SettingsChanged;
 
     public PrinterService(AuthService auth, BranchContextService branch)
     {
@@ -258,7 +287,7 @@ public sealed class PrinterService : IPrinterService
             ReceiptOptions = new ReceiptPrintOptions(
                 _settings.ReceiptHeaderText,
                 _settings.ReceiptFooterText,
-                _settings.ReceiptContentWidth is 42 or 48 ? _settings.ReceiptContentWidth : 32,
+                ReceiptPaper.Sanitize(_settings.ReceiptContentWidth),
                 _settings.ReceiptShowBusinessName,
                 _settings.ReceiptShowBranchName,
                 _settings.ReceiptShowAddress,
@@ -272,7 +301,8 @@ public sealed class PrinterService : IPrinterService
                 _settings.ReceiptPublicBaseUrl,
                 _settings.ReceiptShowLogo,
                 _settings.ReceiptShowCustomerPhone,
-                _settings.ReceiptShowCustomerEmail);
+                _settings.ReceiptShowCustomerEmail,
+                Template: _settings.ReceiptTemplate ?? "auto");
         }
         catch { _path = null; }
     }
@@ -282,6 +312,7 @@ public sealed class PrinterService : IPrinterService
     public void SaveSettings(PrinterSettings settings)
     {
         _settings = settings;
+        SettingsChanged?.Invoke();
         if (_path is null) return;
         try
         {
@@ -305,7 +336,10 @@ public sealed class PrinterService : IPrinterService
 
     public bool AutoPrintEnabled => _settings.AutoPrintReceipt && ReceiptTarget().Printer is not null;
 
-    public bool AutoPrintHandledByServer => _settings.CentralAutoPrint;
+    /// RUXSAT-04: modul o'chiq bo'lsa server hech narsa chop etmaydi — keshda qolgan eski
+    /// bayroq kassani "server chiqaradi" deb aldab, chekni umuman chiqarmay qo'ymasin.
+    public bool AutoPrintHandledByServer =>
+        _settings.CentralAutoPrint && SettingsService.Instance.IsFeatureOn("remote_printing");
 
     public string? BarcodePrinter => _settings.BarcodePrinter;
     public ReceiptPrintOptions? ReceiptOptions { get; set; }
@@ -371,6 +405,49 @@ public sealed class PrinterService : IPrinterService
     public PrinterCapabilities GetPrinterCapabilities(string? printerName) =>
         new(WindowsImagePrinter.SupportsColor(printerName));
 
+    public DriverPaper? DriverReceiptPaper(string? printerName)
+    {
+        var mm = WindowsImagePrinter.MaxPaperWidthMm(printerName);
+        return ReceiptPaper.ColumnsForMm(mm) is { } columns ? new DriverPaper(mm!.Value, columns) : null;
+    }
+
+    /// Kenglik zanjiri: shu kassada aniq tanlangan qiymat -> printer drayveridan aniqlangan
+    /// sinf -> biznes/kontent qiymati. "Avto" (0) yangi o'rnatishda hech narsa sozlamasdan
+    /// to'g'ri kenglikni beradi.
+    private bool ForcedTextOutput =>
+        string.Equals(_settings.ReceiptPrintMode, "text", StringComparison.OrdinalIgnoreCase);
+
+    /// Printer kattalashtirishi (`GS !`) butun songa bo'ladi va eng tiniq natijani
+    /// beradi; rasm esa kasr nisbatni ham uddalaydi, lekin harf shtrixi qalinlashadi.
+    private int TextMagnification => ReceiptPaper.TextMagnification(_settings.ReceiptTextSize);
+
+    private bool NeedsGraphicForTextSize =>
+        !ForcedTextOutput && ReceiptPaper.ApplyTextSize(48, _settings.ReceiptTextSize) != 48;
+
+    public int ReceiptWidth(string? printerName, int? contentWidth = null)
+    {
+        if (ReceiptPaper.IsValid(_settings.ReceiptPaperWidth)) return _settings.ReceiptPaperWidth;
+        var nominal = ReceiptNominalWidth(printerName, contentWidth);
+        return ReceiptPaper.Sanitize(NeedsGraphicForTextSize
+            ? ReceiptPaper.ApplyTextSize(nominal, _settings.ReceiptTextSize)
+            : nominal / TextMagnification);
+    }
+
+    /// Qog'ozning o'z kengligi — yozuv o'lchami tanlovisiz. Rasm har doim shu kenglikda
+    /// chiziladi: aks holda kamroq ustun tanlanganda rasm torayib, qog'ozning chap
+    /// tomoniga surilib chiqardi.
+    private int ReceiptNominalWidth(string? printerName, int? contentWidth = null) =>
+        DriverReceiptPaper(printerName)?.Columns
+        ?? (ReceiptPaper.IsValid(_settings.ReceiptPaperWidth)
+            ? _settings.ReceiptPaperWidth
+            : ReceiptPaper.Sanitize(contentWidth ?? _settings.ReceiptContentWidth));
+
+    public int ReceiptRasterWidth(string? printerName, int? contentWidth = null) =>
+        ReceiptPaper.RasterDots(
+            _settings.ReceiptRasterWidthDots,
+            WindowsImagePrinter.PrintableWidthDots(printerName),
+            ReceiptNominalWidth(printerName, contentWidth));
+
     public void PrintReceipt(ReceiptDto receipt)
     {
         if (string.IsNullOrWhiteSpace(_settings.ReceiptPrinter))
@@ -383,19 +460,31 @@ public sealed class PrinterService : IPrinterService
 
     public void PrintReceipt(ReceiptDto receipt, string printerName, int copies, ReceiptPrintOptions? options)
     {
-        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? options is null
-                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
-                : options with { Width = _settings.ReceiptPaperWidth }
-            : options;
-        var text = FormatReceipt(receipt, opts);
-        var link = opts?.ShowQrCode != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl)
-            ? $"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{receipt.ReceiptToken}"
+        var width = ReceiptWidth(printerName, options?.Width);
+        var opts = options is null
+            ? new ReceiptPrintOptions(null, null, width)
+            : options with { Width = width };
+        var document = FormatReceiptDocument(receipt, opts);
+        var profile = EscPosProfile.From(_settings);
+        // Kasr o'lchamni faqat rasm bera oladi; butun songa kattalashtirish esa
+        // printerning o'z shrifti bilan matn rejimida bajariladi.
+        var mode = NeedsGraphicForTextSize
+            ? "graphic"
+            : EscPos.ResolveOutputMode(
+                _settings.ReceiptPrintMode, document.Text, profile.Charset, profile.FoldCyrillic);
+        var raster = mode == "graphic"
+            ? ReceiptRasterRenderer.Render(document, ReceiptRasterWidth(printerName, width), _settings.ReceiptDarkness, _settings.ReceiptQuality)
             : null;
+        var bytes = EscPos.BuildDocument(
+            document,
+            document.QrContent,
+            opts.ShowLogo ? opts.LogoRasterBytes : null,
+            profile,
+            raster);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
             if (OperatingSystem.IsWindows() && !string.IsNullOrWhiteSpace(printerName))
-                RawPrinter.Send(printerName, BuildEscPosReceipt(text, link, opts?.LogoRasterBytes), "Cartex Receipt", opts?.OutputFilePath);
+                RawPrinter.Send(printerName, bytes, "Cartex Receipt", opts?.OutputFilePath);
         }
     }
 
@@ -415,6 +504,8 @@ public sealed class PrinterService : IPrinterService
             return;
         }
 
+        if (!ReceiptPaper.IsValid(options.Width))
+            options = options with { Width = ReceiptWidth(target.Printer) };
         var bytes = FormatProforma(document, cartCode, options, business);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
@@ -437,19 +528,25 @@ public sealed class PrinterService : IPrinterService
 
     public byte[] FormatProforma(PreviewDocument document, string? cartCode, ProformaPrintOptions options, BusinessDto? business = null)
     {
-        var w = options.Width is 42 or 48 ? options.Width : 32;
+        var w = ReceiptPaper.Sanitize(options.Width);
+        options = options with
+        {
+            HeaderText = string.IsNullOrWhiteSpace(options.HeaderText) ? _settings.ReceiptHeaderText : options.HeaderText,
+            FooterText = string.IsNullOrWhiteSpace(options.FooterText) ? _settings.ReceiptFooterText : options.FooterText
+        };
+        string T(string key) => ReceiptTexts.Get(key, _settings.ReceiptLanguage);
         var sb = new StringBuilder();
         if (options.ShowBusinessName && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
         if (options.ShowAddress && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
         if (options.ShowPhone && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
         if (!string.IsNullOrWhiteSpace(options.HeaderText)) sb.AppendLine(Center(options.HeaderText, w));
         sb.AppendLine(new string('=', w));
-        sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
+        sb.AppendLine(Center(T("not_receipt"), w));
         sb.AppendLine(new string('=', w));
         sb.AppendLine(document.CreatedAt.ToString("dd.MM.yyyy HH:mm"));
-        if (options.ShowCartCode && !string.IsNullOrWhiteSpace(cartCode)) sb.AppendLine($"Savat: {cartCode}");
-        if (options.ShowSeller && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Sotuvchi: {document.UserName}");
-        if (options.ShowCustomer && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
+        if (options.ShowCartCode && !string.IsNullOrWhiteSpace(cartCode)) sb.AppendLine($"{T("cart")}: {cartCode}");
+        if (options.ShowSeller && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"{T("seller")}: {document.UserName}");
+        if (options.ShowCustomer && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"{T("customer")}: {document.CustomerName}");
         sb.AppendLine(new string('-', w));
         foreach (var line in document.Lines)
         {
@@ -457,16 +554,16 @@ public sealed class PrinterService : IPrinterService
             sb.AppendLine(Row($"  {line.Quantity:0.###} {line.Unit} x {line.UnitPrice:N0}", $"{line.Amount:N0}", w));
         }
         sb.AppendLine(new string('-', w));
-        if (document.Discount > 0) sb.AppendLine(Row("Chegirma", $"-{document.Discount:N0}", w));
-        sb.AppendLine(Row("JAMI", $"{document.Total:N0}", w));
+        if (document.Discount > 0) sb.AppendLine(Row(T("discount"), $"-{document.Discount:N0}", w));
+        sb.AppendLine(Row(T("total"), $"{document.Total:N0}", w));
         if (options.ShowNote && !string.IsNullOrWhiteSpace(document.Note))
         {
             sb.AppendLine(new string('-', w));
-            sb.AppendLine($"Izoh: {document.Note}");
+            sb.AppendLine($"{T("note")}: {document.Note}");
         }
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(options.FooterText)) sb.AppendLine(Center(options.FooterText, w));
-        sb.AppendLine(Center(LocalizationManager.Instance["preview_not_receipt"], w));
+        sb.AppendLine(Center(T("not_receipt"), w));
         sb.AppendLine();
         sb.AppendLine();
         return BuildEscPosReceipt(sb.ToString(), null, null);
@@ -474,11 +571,10 @@ public sealed class PrinterService : IPrinterService
 
     public void PrintReturn(CustomerReturnDocumentDto document, string printerName, int copies, ReceiptPrintOptions? options, BusinessDto? business = null)
     {
-        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? options is null
-                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
-                : options with { Width = _settings.ReceiptPaperWidth }
-            : options;
+        var width = ReceiptWidth(printerName, options?.Width);
+        var opts = options is null
+            ? new ReceiptPrintOptions(null, null, width)
+            : options with { Width = width };
         var bytes = FormatReturn(document, opts, business);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
@@ -490,11 +586,10 @@ public sealed class PrinterService : IPrinterService
     public void PrintMoneyDocument(MoneyDocument document, bool isPayout, string printerName, int copies,
         ReceiptPrintOptions? options, BusinessDto? business = null)
     {
-        var opts = _settings.ReceiptPaperWidth is 32 or 42 or 48
-            ? options is null
-                ? new ReceiptPrintOptions(null, null, _settings.ReceiptPaperWidth)
-                : options with { Width = _settings.ReceiptPaperWidth }
-            : options;
+        var width = ReceiptWidth(printerName, options?.Width);
+        var opts = options is null
+            ? new ReceiptPrintOptions(null, null, width)
+            : options with { Width = width };
         var bytes = FormatMoneyDocument(document, isPayout, opts, business);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
         {
@@ -540,71 +635,68 @@ public sealed class PrinterService : IPrinterService
             return;
         }
 
-        var width = _settings.ZReportPaperWidth is 32 or 42 or 48
+        var width = ReceiptPaper.IsValid(_settings.ZReportPaperWidth)
             ? _settings.ZReportPaperWidth
-            : _settings.ReceiptPaperWidth;
+            : ReceiptWidth(printerName);
+        var bytes = BuildEscPosReceipt(FormatZReport(r, width), null);
         for (var i = 0; i < Math.Clamp(copies, 1, 100); i++)
-            PrintRaw(printerName, FormatZReport(r, width), outputFilePath);
+        {
+            if (OperatingSystem.IsWindows())
+                RawPrinter.Send(printerName, bytes, "Cartex ZReport", outputFilePath);
+        }
     }
 
     public string FormatZReport(ZReportDto r, int? paperWidth = null)
     {
         var configuredWidth = paperWidth
-            ?? (_settings.ZReportPaperWidth is 32 or 42 or 48
+            ?? (ReceiptPaper.IsValid(_settings.ZReportPaperWidth)
                 ? _settings.ZReportPaperWidth
                 : _settings.ReceiptPaperWidth);
-        var w = Math.Clamp(configuredWidth <= 0 ? 32 : configuredWidth, 24, 120);
-        var l = LocalizationManager.Instance;
+        var w = ReceiptPaper.Sanitize(configuredWidth);
+        string T(string key) => LocalizationManager.Instance.Get(_settings.ZReportLanguage, key);
         var sb = new StringBuilder();
         var branchName = _branch.SelectedBranch?.Name;
         var cashierName = _auth.UserInfo?.FullName ?? _auth.UserInfo?.Username;
         if (!string.IsNullOrWhiteSpace(branchName))
             sb.AppendLine(Center(branchName, w));
-        sb.AppendLine(Center(l["z_report"], w));
+        sb.AppendLine(Center(T("z_report"), w));
         sb.AppendLine(Center(DateTime.Now.ToString("dd.MM.yyyy HH:mm"), w));
         if (!string.IsNullOrWhiteSpace(cashierName))
-            sb.AppendLine(Row(l["cashier"], cashierName, w));
+            sb.AppendLine(Row(T("cashier"), cashierName, w));
         if (r.ShiftId > 0)
-            sb.AppendLine(Row(l["shift"], $"#{r.ShiftId}", w));
+            sb.AppendLine(Row(T("shift"), $"#{r.ShiftId}", w));
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Center(l["z_section_sales"], w));
-        sb.AppendLine(Row(l["cash_sales"], $"{r.CashSales:N0}", w));
-        if (r.CardSales > 0) sb.AppendLine(Row(l["card_sales"], $"{r.CardSales:N0}", w));
-        if (r.BonusUsed > 0) sb.AppendLine(Row(l["bonus_used"], $"{r.BonusUsed:N0}", w));
-        if (r.NewDebtIssued > 0) sb.AppendLine(Row(l["debt_issued"], $"{r.NewDebtIssued:N0}", w));
-        if (r.CashReturns > 0) sb.AppendLine(Row(l["cash_returns"], $"-{r.CashReturns:N0}", w));
-        if (r.CardReturns > 0) sb.AppendLine(Row(l["card_returns"], $"-{r.CardReturns:N0}", w));
-        sb.AppendLine(Row(l["sales_count"], $"{r.SalesCount:N0}", w));
+        sb.AppendLine(Center(T("z_section_sales"), w));
+        sb.AppendLine(Row(T("cash_sales"), $"{r.CashSales:N0}", w));
+        if (r.CardSales > 0) sb.AppendLine(Row(T("card_sales"), $"{r.CardSales:N0}", w));
+        if (r.BonusUsed > 0) sb.AppendLine(Row(T("bonus_used"), $"{r.BonusUsed:N0}", w));
+        if (r.NewDebtIssued > 0) sb.AppendLine(Row(T("debt_issued"), $"{r.NewDebtIssued:N0}", w));
+        if (r.CashReturns > 0) sb.AppendLine(Row(T("cash_returns"), $"-{r.CashReturns:N0}", w));
+        if (r.CardReturns > 0) sb.AppendLine(Row(T("card_returns"), $"-{r.CardReturns:N0}", w));
+        sb.AppendLine(Row(T("sales_count"), $"{r.SalesCount:N0}", w));
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Center(l["z_section_cash"], w));
-        sb.AppendLine(Row(l["opening_float"], $"{r.OpeningFloat:N0}", w));
-        if (r.PayIn > 0) sb.AppendLine(Row(l["pay_in"], $"{r.PayIn:N0}", w));
-        if (r.PayOut > 0) sb.AppendLine(Row(l["pay_out"], $"-{r.PayOut:N0}", w));
-        if (r.DebtPayIn > 0) sb.AppendLine(Row(l["debt_pay_in"], $"{r.DebtPayIn:N0}", w));
-        if (r.SupplyPayOut > 0) sb.AppendLine(Row(l["supply_pay_out"], $"-{r.SupplyPayOut:N0}", w));
+        sb.AppendLine(Center(T("z_section_cash"), w));
+        sb.AppendLine(Row(T("opening_float"), $"{r.OpeningFloat:N0}", w));
+        if (r.PayIn > 0) sb.AppendLine(Row(T("pay_in"), $"{r.PayIn:N0}", w));
+        if (r.PayOut > 0) sb.AppendLine(Row(T("pay_out"), $"-{r.PayOut:N0}", w));
+        if (r.DebtPayIn > 0) sb.AppendLine(Row(T("debt_pay_in"), $"{r.DebtPayIn:N0}", w));
+        if (r.SupplyPayOut > 0) sb.AppendLine(Row(T("supply_pay_out"), $"-{r.SupplyPayOut:N0}", w));
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Center(l["z_section_summary"], w));
-        sb.AppendLine(Row(l["expected_cash"], $"{r.ExpectedCash:N0}", w));
-        sb.AppendLine(Row(l["counted_cash"], $"{r.CountedCash:N0}", w));
-        sb.AppendLine(Row(l["difference"], $"{r.Difference:N0}", w));
+        sb.AppendLine(Center(T("z_section_summary"), w));
+        sb.AppendLine(Row(T("expected_cash"), $"{r.ExpectedCash:N0}", w));
+        sb.AppendLine(Row(T("counted_cash"), $"{r.CountedCash:N0}", w));
+        sb.AppendLine(Row(T("difference"), $"{r.Difference:N0}", w));
         foreach (var c in r.Currencies)
         {
             sb.AppendLine(new string('-', w));
             sb.AppendLine(Center(c.Currency, w));
-            sb.AppendLine(Row(l["expected_cash"], $"{c.ExpectedCash:N0}", w));
-            sb.AppendLine(Row(l["counted_cash"], $"{c.CountedCash:N0}", w));
-            sb.AppendLine(Row(l["difference"], $"{c.Difference:N0}", w));
+            sb.AppendLine(Row(T("expected_cash"), $"{c.ExpectedCash:N0}", w));
+            sb.AppendLine(Row(T("counted_cash"), $"{c.CountedCash:N0}", w));
+            sb.AppendLine(Row(T("difference"), $"{c.Difference:N0}", w));
         }
         sb.AppendLine();
         sb.AppendLine();
         return sb.ToString();
-    }
-
-    public void PrintRaw(string? printerName, string text, string? outputFilePath = null)
-    {
-        if (string.IsNullOrWhiteSpace(printerName)) return;
-        var bytes = Encoding.UTF8.GetBytes(text);
-        PrintRawBytes(printerName, bytes, outputFilePath);
     }
 
     public void PrintRawBytes(string? printerName, byte[] data, string? outputFilePath = null)
@@ -652,75 +744,53 @@ public sealed class PrinterService : IPrinterService
             outputFilePath);
     }
 
-    private static string FormatReceipt(ReceiptDto r, ReceiptPrintOptions? opts)
+    public static string FormatReceipt(ReceiptDto receipt, ReceiptPrintOptions? options) =>
+        FormatReceiptDocument(receipt, options).Text;
+
+    public static ReceiptTextDocument FormatReceiptDocument(ReceiptDto receipt, ReceiptPrintOptions? options)
     {
-        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
-        string T(string key) => ReceiptTexts.Get(key, r.Language);
-        var sb = new StringBuilder();
-        if (opts?.ShowBusinessName != false) sb.AppendLine(Center(r.BusinessName, w));
-        if (opts?.ShowBranchName != false && !string.IsNullOrWhiteSpace(r.BranchName)) sb.AppendLine(Center(r.BranchName, w));
-        if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(r.BranchAddress)) sb.AppendLine(Center(r.BranchAddress!, w));
-        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(r.BranchPhone)) sb.AppendLine(Center(r.BranchPhone!, w));
-        if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
-        sb.AppendLine(r.SaleDate.ToString("dd.MM.yyyy HH:mm"));
-        if (opts?.ShowReceiptNumber != false) sb.AppendLine($"{T("receipt_no")} {r.SaleId}");
-        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(r.UserName)) sb.AppendLine($"{T("cashier")}: {r.UserName}");
-        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(r.CustomerName)) sb.AppendLine($"{T("customer")}: {r.CustomerName}");
-        if (opts?.ShowCustomerPhone != false && !string.IsNullOrWhiteSpace(r.CustomerPhone)) sb.AppendLine($"Tel: {r.CustomerPhone}");
-        if (opts?.ShowCustomerEmail != false && !string.IsNullOrWhiteSpace(r.CustomerEmail)) sb.AppendLine($"Email: {r.CustomerEmail}");
-        sb.AppendLine(new string('-', w));
-        foreach (var i in r.Items)
-        {
-            sb.AppendLine(i.ProductName);
-            sb.AppendLine(Row($"  {i.Quantity:0.###} x {i.UnitPrice:N0}", $"{i.LineTotal:N0}", w));
-            if (i.DiscountAmount > 0)
-                sb.AppendLine(Row($"  {T("discount")} −{i.DiscountAmount:N0}", $"{i.LineTotal - i.DiscountAmount:N0}", w));
-        }
-        sb.AppendLine(new string('-', w));
-        if (r.DiscountAmount > 0) sb.AppendLine(Row(T("discount"), $"{r.DiscountAmount:N0}", w));
-        sb.AppendLine(Row(T("total"), $"{r.TotalAmount:N0}", w));
-        if (opts?.ShowPaymentDetails != false)
-        {
-            if (r.Payments.Count > 0)
-                foreach (var p in r.Payments)
-                    sb.AppendLine(Row(ReceiptTexts.PaymentLabel(p.Method, r.Language), p.IsForeign ? $"{p.Amount:N2} {p.Currency} ≈ {p.AmountBase:N0}" : $"{p.Amount:N0}", w));
-            else
-            {
-                if (r.PaidCash > 0) sb.AppendLine(Row(T("cash"), $"{r.PaidCash:N0}", w));
-                if (r.PaidCard > 0) sb.AppendLine(Row(T("card"), $"{r.PaidCard:N0}", w));
-                if (r.PaidBonus > 0) sb.AppendLine(Row(T("bonus"), $"{r.PaidBonus:N0}", w));
-            }
-            if (r.ChangeAmount > 0) sb.AppendLine(Row(T("change"), $"{r.ChangeAmount:N0}", w));
-            if (r.CreditAmount > 0) sb.AppendLine(Row(T("credit"), $"{r.CreditAmount:N0}", w));
-            if (r.DebtAmount > 0) sb.AppendLine(Row(T("debt"), $"{r.DebtAmount:N0}", w));
-            if (r.CashbackEarned > 0) sb.AppendLine(Row(T("cashback"), $"{r.CashbackEarned:N0}", w));
-        }
-        sb.AppendLine(new string('-', w));
-        sb.AppendLine(Center(T(r.DebtAmount > 0 ? "unpaid" : "paid"), w));
-        sb.AppendLine();
-        sb.AppendLine(Center(string.IsNullOrWhiteSpace(opts?.FooterText) ? T("thanks") : opts.FooterText, w));
-        if (opts?.ShowElectronicLink != false && !string.IsNullOrWhiteSpace(opts?.PublicReceiptBaseUrl))
-            sb.AppendLine($"{opts.PublicReceiptBaseUrl.TrimEnd('/')}/r/{r.ReceiptToken}");
-        sb.AppendLine();
-        sb.AppendLine();
-        return sb.ToString();
+        var value = options ?? new ReceiptPrintOptions(null, null, ReceiptPaper.DefaultWidth);
+        return ReceiptTextFormatter.Format(receipt, new ReceiptTextOptions(
+            value.HeaderText,
+            value.FooterText,
+            value.Width,
+            value.ShowBusinessName,
+            value.ShowBranchName,
+            value.ShowAddress,
+            value.ShowPhone,
+            value.ShowCashier,
+            value.ShowCustomer,
+            value.ShowReceiptNumber,
+            value.ShowPaymentDetails,
+            value.ShowQrCode,
+            value.ShowElectronicLink,
+            value.PublicReceiptBaseUrl,
+            value.ShowLogo,
+            value.ShowCustomerPhone,
+            value.ShowCustomerEmail,
+            value.Template));
     }
 
     public byte[] FormatReturn(CustomerReturnDocumentDto document, ReceiptPrintOptions? opts, BusinessDto? business = null)
     {
-        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        var w = ReceiptPaper.Sanitize(opts?.Width ?? 0);
+        string T(string key) => ReceiptTexts.Get(key, _settings.ReceiptLanguage);
         var sb = new StringBuilder();
+        var branchPhone = _branch.SelectedBranch?.Phone;
+        var phone = string.IsNullOrWhiteSpace(branchPhone)
+            ? business?.Phone
+            : branchPhone;
         if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
         if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
-        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(phone)) sb.AppendLine(Center(phone, w));
         if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
-        sb.AppendLine(Center("MAHSULOT QAYTARISH", w));
+        sb.AppendLine(Center(T("return_title"), w));
         sb.AppendLine(new string('=', w));
         sb.AppendLine(document.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
-        sb.AppendLine($"Hujjat № {document.DocumentNumber}");
-        sb.AppendLine($"Ombor: {document.WarehouseName}");
-        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"Xodim: {document.UserName}");
-        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"Mijoz: {document.CustomerName}");
+        sb.AppendLine($"{T("document_no")} {document.DocumentNumber}");
+        sb.AppendLine($"{T("warehouse")}: {document.WarehouseName}");
+        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(document.UserName)) sb.AppendLine($"{T("staff")}: {document.UserName}");
+        if (opts?.ShowCustomer != false && !string.IsNullOrWhiteSpace(document.CustomerName)) sb.AppendLine($"{T("customer")}: {document.CustomerName}");
         sb.AppendLine(new string('-', w));
         foreach (var line in document.Lines)
         {
@@ -728,13 +798,13 @@ public sealed class PrinterService : IPrinterService
             sb.AppendLine(Row($"  {line.Quantity:0.###} {line.UnitName} x {line.UnitPrice:N0}", $"{line.LineAmount:N0}", w));
         }
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Row("JAMI", $"{document.RefundAmount:N0}", w));
+        sb.AppendLine(Row(T("total"), $"{document.RefundAmount:N0}", w));
         foreach (var settlement in document.Settlements)
-            sb.AppendLine(Row($"  {SettlementLabel(settlement.Method)}", $"{settlement.AmountBase:N0}", w));
+            sb.AppendLine(Row($"  {SettlementLabel(settlement.Method, _settings.ReceiptLanguage)}", $"{settlement.AmountBase:N0}", w));
         if (!string.IsNullOrWhiteSpace(document.Note))
         {
             sb.AppendLine(new string('-', w));
-            sb.AppendLine($"Izoh: {document.Note}");
+            sb.AppendLine($"{T("note")}: {document.Note}");
         }
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(opts?.FooterText)) sb.AppendLine(Center(opts.FooterText, w));
@@ -745,38 +815,43 @@ public sealed class PrinterService : IPrinterService
 
     public byte[] FormatMoneyDocument(MoneyDocument doc, bool isPayout, ReceiptPrintOptions? opts, BusinessDto? business = null)
     {
-        var w = opts?.Width is 42 or 48 ? opts.Width : 32;
+        var w = ReceiptPaper.Sanitize(opts?.Width ?? 0);
+        string T(string key) => ReceiptTexts.Get(key, _settings.ReceiptLanguage);
         var sb = new StringBuilder();
+        var branchPhone = _branch.SelectedBranch?.Phone;
+        var phone = string.IsNullOrWhiteSpace(branchPhone)
+            ? business?.Phone
+            : branchPhone;
         if (opts?.ShowBusinessName != false && !string.IsNullOrWhiteSpace(business?.Name)) sb.AppendLine(Center(business.Name, w));
         if (opts?.ShowAddress != false && !string.IsNullOrWhiteSpace(business?.Address)) sb.AppendLine(Center(business.Address, w));
-        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(business?.Phone)) sb.AppendLine(Center(business.Phone, w));
+        if (opts?.ShowPhone != false && !string.IsNullOrWhiteSpace(phone)) sb.AppendLine(Center(phone, w));
         if (!string.IsNullOrWhiteSpace(opts?.HeaderText)) sb.AppendLine(Center(opts.HeaderText, w));
-        sb.AppendLine(Center(isPayout ? "PUL CHIQIMI" : "TO'LOV QABUL QILINDI", w));
+        sb.AppendLine(Center(T(isPayout ? "payout_title" : "payment_title"), w));
         sb.AppendLine(new string('=', w));
         sb.AppendLine(doc.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
-        sb.AppendLine($"Hujjat № {doc.Number}");
-        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(doc.UserName)) sb.AppendLine($"Xodim: {doc.UserName}");
-        if (!string.IsNullOrWhiteSpace(doc.CustomerName)) sb.AppendLine($"Mijoz: {doc.CustomerName}");
+        sb.AppendLine($"{T("document_no")} {doc.Number}");
+        if (opts?.ShowCashier != false && !string.IsNullOrWhiteSpace(doc.UserName)) sb.AppendLine($"{T("staff")}: {doc.UserName}");
+        if (!string.IsNullOrWhiteSpace(doc.CustomerName)) sb.AppendLine($"{T("customer")}: {doc.CustomerName}");
         sb.AppendLine(new string('-', w));
 
         foreach (var tender in doc.Tenders)
-            sb.AppendLine(Row(SettlementLabel(tender.Method), $"{tender.AmountBase:N0}", w));
+            sb.AppendLine(Row(SettlementLabel(tender.Method, _settings.ReceiptLanguage), $"{tender.AmountBase:N0}", w));
 
         sb.AppendLine(new string('-', w));
-        sb.AppendLine(Row(isPayout ? "BERILDI" : "QABUL QILINDI", $"{doc.TotalBase:N0}", w));
+        sb.AppendLine(Row(T(isPayout ? "given" : "received"), $"{doc.TotalBase:N0}", w));
 
         // The customer's copy has to say what the money did, not just how much moved.
-        if (doc.AdvanceBase > 0) sb.AppendLine(Row(isPayout ? "  Avansdan" : "  Avansga", $"{doc.AdvanceBase:N0}", w));
-        if (doc.LoanBase > 0) sb.AppendLine(Row("  Qarzga berildi", $"{doc.LoanBase:N0}", w));
-        if (doc.WriteOffBase > 0) sb.AppendLine(Row("  Kechirildi", $"{doc.WriteOffBase:N0}", w));
+        if (doc.AdvanceBase > 0) sb.AppendLine(Row($"  {T(isPayout ? "advance" : "to_advance")}", $"{doc.AdvanceBase:N0}", w));
+        if (doc.LoanBase > 0) sb.AppendLine(Row($"  {T("loan_given")}", $"{doc.LoanBase:N0}", w));
+        if (doc.WriteOffBase > 0) sb.AppendLine(Row($"  {T("forgiven")}", $"{doc.WriteOffBase:N0}", w));
 
         sb.AppendLine(new string('=', w));
-        sb.AppendLine(Row(doc.BalanceAfter >= 0 ? "QARZ QOLDIG'I" : "AVANS QOLDIG'I", $"{Math.Abs(doc.BalanceAfter):N0}", w));
+        sb.AppendLine(Row(T(doc.BalanceAfter >= 0 ? "debt_balance" : "advance_balance"), $"{Math.Abs(doc.BalanceAfter):N0}", w));
 
         if (!string.IsNullOrWhiteSpace(doc.Note))
         {
             sb.AppendLine(new string('-', w));
-            sb.AppendLine($"Izoh: {doc.Note}");
+            sb.AppendLine($"{T("note")}: {doc.Note}");
         }
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(opts?.FooterText)) sb.AppendLine(Center(opts.FooterText, w));
@@ -785,40 +860,27 @@ public sealed class PrinterService : IPrinterService
         return BuildEscPosReceipt(sb.ToString(), null, opts?.LogoRasterBytes);
     }
 
-    private static string SettlementLabel(string method) => method switch
+    private static string SettlementLabel(string method, string? language) => method switch
     {
-        "ReduceDebt" => "Qarzdan",
-        "Cash" => "Naqd",
-        "Card" => "Karta",
-        "Bonus" => "Bonus",
-        "CustomerAdvance" => "Avansga",
-        "NoCharge" => "Hisobsiz",
+        "ReduceDebt" => ReceiptTexts.Get("from_debt", language),
+        "Cash" => ReceiptTexts.Get("cash", language),
+        "Card" => ReceiptTexts.Get("card", language),
+        "Bonus" => ReceiptTexts.Get("bonus", language),
+        "CustomerAdvance" => ReceiptTexts.Get("to_advance", language),
+        "NoCharge" => ReceiptTexts.Get("no_charge", language),
         _ => method
     };
 
-    private static byte[] BuildEscPosReceipt(string text, string? qrContent, byte[]? logoRasterBytes = null)
+    private byte[] BuildEscPosReceipt(string text, string? qrContent, byte[]? logoRasterBytes = null)
     {
-        var output = new List<byte>(Encoding.UTF8.GetByteCount(text) + (qrContent?.Length ?? 0) + (logoRasterBytes?.Length ?? 0) + 64);
-        if (logoRasterBytes != null && logoRasterBytes.Length > 0)
-        {
-            output.AddRange(logoRasterBytes);
-        }
-        output.AddRange(Encoding.UTF8.GetBytes(text));
-
-        static void AddCommand(List<byte> bytes, params byte[] command) => bytes.AddRange(command);
-        if (!string.IsNullOrWhiteSpace(qrContent))
-        {
-            AddCommand(output, 0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05);
-            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
-
-            var data = Encoding.UTF8.GetBytes(qrContent);
-            var length = data.Length + 3;
-            AddCommand(output, 0x1D, 0x28, 0x6B, (byte)(length & 0xFF), (byte)(length >> 8), 0x31, 0x50, 0x30);
-            output.AddRange(data);
-            AddCommand(output, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30, 0x0A, 0x0A);
-        }
-        return output.ToArray();
+        var profile = EscPosProfile.From(_settings);
+        var width = ReceiptPaper.Sanitize(_settings.ReceiptContentWidth);
+        var document = ReceiptTextDocument.Plain(text, width);
+        var mode = EscPos.ResolveOutputMode(_settings.ReceiptPrintMode, text, profile.Charset);
+        var raster = mode == "graphic"
+            ? ReceiptRasterRenderer.Render(document, ReceiptRasterWidth(_settings.ReceiptPrinter, width), _settings.ReceiptDarkness, _settings.ReceiptQuality)
+            : null;
+        return EscPos.BuildDocument(document, qrContent, logoRasterBytes, profile, raster);
     }
 
     private static string Center(string s, int w)
