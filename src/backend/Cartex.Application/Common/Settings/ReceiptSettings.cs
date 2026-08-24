@@ -19,6 +19,7 @@ public sealed class ReceiptSettings
     public bool ShowLogo { get; set; } = true;
     public bool ShowCustomerPhone { get; set; } = true;
     public bool ShowCustomerEmail { get; set; } = true;
+    public string? Language { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string? PublicReceiptBaseUrl { get; set; }

@@ -1,4 +1,6 @@
-﻿using Cartex.Persistence;
+﻿using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
+using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Cartex.Shared.Models.Sales;
@@ -7,7 +9,7 @@ namespace Cartex.Application.Sales.Queries;
 
 public record GetReceiptByTokenQuery(string Token) : IRequest<ReceiptDto?>;
 
-public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
+public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db, ISettingsService settings) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
     public async Task<ReceiptDto?> Handle(GetReceiptByTokenQuery request, CancellationToken cancellationToken)
     {
@@ -52,12 +54,15 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.Status.ToString()))
             .FirstOrDefaultAsync(cancellationToken);
 
+        if (receipt is null) return null;
+        // Mijozning o'z tili birinchi; tanlanmagan bo'lsa do'konning chek tili ishlatiladi.
+        var configured = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
+
         // A line can be filled from several stock batches, but the customer should still see
         // one row per product with everything that came off it in a single figure.
-        return receipt is null
-            ? null
-            : receipt with
+        return receipt with
             {
+                Language = receipt.Language ?? configured?.Language ?? "uz-latn",
                 Items = [.. receipt.Items
                     .GroupBy(i => (i.ProductName, i.UnitName, i.UnitPrice))
                     .Select(g => new ReceiptItemDto(g.Key.ProductName, g.Sum(i => i.Quantity), g.Key.UnitName,

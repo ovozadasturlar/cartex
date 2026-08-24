@@ -12,7 +12,8 @@ public sealed record NotificationMessage(
 public sealed record NotificationProviderResult(
     string Provider,
     string? ProviderMessageId = null,
-    int Units = 1);
+    int Units = 1,
+    bool Pending = false);
 
 public interface INotificationService
 {

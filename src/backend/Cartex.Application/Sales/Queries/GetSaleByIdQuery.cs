@@ -40,11 +40,13 @@ public sealed class GetSaleByIdQueryHandler(
             x.Customer != null ? x.Customer.Phone : null,
             x.TotalAmount,
             x.DiscountAmount,
+            x.ManualDiscountAmount,
             x.PaidCash,
             x.PaidCard,
             x.PaidBonus,
             x.PaidAdvance,
             x.DebtAmount,
+            x.DebtDueDate,
             x.DebtCurrency,
             x.ChangeAmount,
             x.CreditAmount,
@@ -59,6 +61,7 @@ public sealed class GetSaleByIdQueryHandler(
                 i.ReturnedQuantity,
                 Math.Max(0, i.Quantity - i.ReturnedQuantity),
                 i.UnitPrice,
+                i.EnteredUnitPrice == 0 ? i.UnitPrice : i.EnteredUnitPrice,
                 i.PriceCurrency,
                 i.PriceRate,
                 i.Quantity * i.UnitPrice,
@@ -85,7 +88,7 @@ public sealed class GetSaleByIdQueryHandler(
         var actions = new List<string>();
         if (currentUser.HasPermission(AppPermissions.Printing.ReceiptPrint)) actions.Add("printReceipt");
         if (currentUser.HasPermission(AppPermissions.Printing.ReceiptReprint)) actions.Add("reprintReceipt");
-        if (sale.CustomerId.HasValue && currentUser.HasPermission(AppPermissions.Customers.Message))
+        if (currentUser.HasPermission(AppPermissions.Customers.Message))
             actions.Add("resendReceipt");
         if (sale.Items.Any(x => x.ReturnableQuantity > 0)
             && currentUser.HasPermission(AppPermissions.Returns.Create))

@@ -1,4 +1,5 @@
 ﻿using Cartex.Domain.Enums;
+using Cartex.Application.Common.Catalog;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Shared.Models.Reports;
@@ -39,11 +40,15 @@ public sealed class GetSalesBreakdownReportQueryHandler(IApplicationDbContext db
             itemsQuery = itemsQuery.Where(i => i.Sale.WarehouseId == wid);
 
         var categoryRows = await itemsQuery
-            .GroupBy(i => i.Variant.Product.Category != null ? i.Variant.Product.Category.Name : null)
-            .Select(g => new { Name = g.Key, Quantity = g.Sum(x => x.Quantity), Revenue = g.Sum(x => x.UnitPrice * x.Quantity) })
+            .GroupBy(i => i.Variant.Product.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Quantity = g.Sum(x => x.Quantity), Revenue = g.Sum(x => x.UnitPrice * x.Quantity) })
             .OrderByDescending(c => c.Revenue)
             .ToListAsync(cancellationToken);
-        var byCategory = categoryRows.Select(x => new CategorySalesDto(x.Name, x.Quantity, x.Revenue)).ToList();
+        var categoryPaths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
+        var byCategory = categoryRows.Select(x => new CategorySalesDto(
+            x.CategoryId is { } categoryId ? categoryPaths.GetValueOrDefault(categoryId) : null,
+            x.Quantity,
+            x.Revenue)).ToList();
 
         // Qaytarilgan qism savdo hisobotidagi daromaddan chiqarib tashlanadi, lekin pul allaqachon
         // kassaga tushgan. Shuning uchun u alohida ustun bo'lib turadi — shunda HIS-04 tenglashadi.

@@ -4,6 +4,7 @@ using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Common.Search;
+using Cartex.Application.Products.Queries;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
@@ -11,6 +12,7 @@ using Cartex.Domain.Enums;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Shared.Models.Stocks;
+using Cartex.Shared.Search;
 
 namespace Cartex.Application.Stocks.Queries;
 
@@ -108,9 +110,9 @@ public sealed class GetStockOnHandQueryHandler(
                 v.ProductId,
                 v.Code,
                 ProductName = v.Product.Name,
+                ProductSearchFold = v.Product.SearchFold,
                 v.Product.CategoryId,
                 v.Product.ManufacturerId,
-                CategoryName = v.Product.Category == null ? null : v.Product.Category!.Name,
                 UnitName = v.Product.Unit.Name,
                 Dimension = v.Product.Unit.Dimension,
                 v.Product.AmountEntryEnabled,
@@ -136,14 +138,18 @@ public sealed class GetStockOnHandQueryHandler(
             foreach (var token in search.Terms)
             {
                 var term = $"%{token.Value}%";
+                var folded = SearchFold.Fuzzy(token.Value);
+                var foldedTerm = $"%{folded}%";
                 query = token.Field switch
                 {
-                    CatalogSearchField.Name => query.Where(o => EF.Functions.ILike(o.ProductName, term)),
+                    CatalogSearchField.Name => query.Where(o => EF.Functions.ILike(o.ProductName, term)
+                        || (folded.Length > 0 && o.ProductSearchFold != null && EF.Functions.ILike(o.ProductSearchFold, foldedTerm))),
                     CatalogSearchField.Barcode => query.Where(o => db.Barcodes.Any(b => b.VariantId == o.VariantId && EF.Functions.ILike(b.Code, term))),
                     CatalogSearchField.Code => query.Where(o => o.Code != null && EF.Functions.ILike(o.Code, term)),
                     CatalogSearchField.Price when token.Price is { } price => query.Where(o => o.Price == price),
                     CatalogSearchField.Price => query.Where(_ => false),
                     _ => query.Where(o => EF.Functions.ILike(o.ProductName, term)
+                        || (folded.Length > 0 && o.ProductSearchFold != null && EF.Functions.ILike(o.ProductSearchFold, foldedTerm))
                         || (o.Code != null && EF.Functions.ILike(o.Code, term))
                         || db.Barcodes.Any(b => b.VariantId == o.VariantId && EF.Functions.ILike(b.Code, term)))
                 };
@@ -170,13 +176,35 @@ public sealed class GetStockOnHandQueryHandler(
             .Select(g => new { Quantity = g.Sum(x => x.OnHand), Value = g.Sum(x => x.OnHand * x.Price) })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // Bir xil nomli variantlar ko'p: yagona kalitsiz tartib sahifalar orasida beqaror bo'ladi
-        // va bir qator ikki sahifaga tushib, boshqasi umuman chiqmaydi. Oflayn snapshot shu
-        // sahifalar bilan yig'iladi — tushib qolgan qator keshdan "o'chirilgan" deb hisoblanardi.
-        var ordered = query.OrderBy(o => o.ProductName).ThenBy(o => o.VariantId);
-        var page = request.Page <= 0 || request.PageSize <= 0
-            ? await ordered.ToListAsync(cancellationToken)
-            : await ordered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+        var strictNameQuery = ProductCatalogSearch.StrictNameQuery(search);
+        var pageQuery = query;
+        Dictionary<long, int>? relevanceOrder = null;
+        if (strictNameQuery.Length > 0)
+        {
+            var candidates = await query
+                .Select(x => new { x.VariantId, x.ProductName })
+                .ToListAsync(cancellationToken);
+            var rankedIds = candidates
+                .OrderBy(x => ProductCatalogSearch.NameRank(x.ProductName, strictNameQuery))
+                .ThenBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.VariantId)
+                .Select(x => x.VariantId);
+            if (request.Page > 0 && request.PageSize > 0)
+                rankedIds = rankedIds.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize);
+            var pageIds = rankedIds.ToArray();
+            relevanceOrder = pageIds.Select((id, index) => (id, index)).ToDictionary(x => x.id, x => x.index);
+            pageQuery = query.Where(x => pageIds.Contains(x.VariantId));
+        }
+        else
+        {
+            pageQuery = query.OrderBy(x => x.ProductName).ThenBy(x => x.VariantId);
+            if (request.Page > 0 && request.PageSize > 0)
+                pageQuery = pageQuery.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize);
+        }
+
+        var page = await pageQuery.ToListAsync(cancellationToken);
+        if (relevanceOrder is not null)
+            page = page.OrderBy(x => relevanceOrder[x.VariantId]).ToList();
 
         var pageVariantIds = page.Select(o => o.VariantId).ToArray();
         var stockByVariant = await stockTotals
@@ -202,6 +230,7 @@ public sealed class GetStockOnHandQueryHandler(
 
         var today = DateOnly.FromDateTime(DateTime.Now);
 
+        var categoryPaths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
         var items = page
             .Select(o =>
             {
@@ -213,7 +242,8 @@ public sealed class GetStockOnHandQueryHandler(
                 var barcodes = barcodesByVariant.TryGetValue(o.VariantId, out var values) ? values : [];
                 var allowsAmountEntry = o.AmountEntryEnabled ?? o.DefaultAllowAmountEntry;
                 var allowsFractional = o.FractionalOverride ?? o.AllowFractional;
-                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, o.CategoryName, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes, allowsAmountEntry, allowsFractional);
+                var categoryPath = o.CategoryId is { } categoryId ? categoryPaths.GetValueOrDefault(categoryId) : null;
+                return new StockOnHandDto(o.VariantId, o.ProductName, o.CategoryId, categoryPath, o.UnitName, o.Dimension.ToString(), stock?.OnHand ?? 0m, o.Price, stock?.NearestExpiry, imageUrl, discountPct, o.Code, barcodes, allowsAmountEntry, allowsFractional);
             })
             .ToList();
 
@@ -223,12 +253,16 @@ public sealed class GetStockOnHandQueryHandler(
     private static IQueryable<ProductVariant> ApplySearch(IQueryable<ProductVariant> query, CatalogSearchTerm token)
     {
         var term = $"%{token.Value}%";
+        var folded = SearchFold.Fuzzy(token.Value);
+        var foldedTerm = $"%{folded}%";
         return token.Field switch
         {
-            CatalogSearchField.Name => query.Where(v => EF.Functions.ILike(v.Product.Name, term)),
+            CatalogSearchField.Name => query.Where(v => EF.Functions.ILike(v.Product.Name, term)
+                || (folded.Length > 0 && v.Product.SearchFold != null && EF.Functions.ILike(v.Product.SearchFold, foldedTerm))),
             CatalogSearchField.Barcode => query.Where(v => v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term))),
             CatalogSearchField.Code => query.Where(v => v.Code != null && EF.Functions.ILike(v.Code, term)),
             _ => query.Where(v => EF.Functions.ILike(v.Product.Name, term)
+                || (folded.Length > 0 && v.Product.SearchFold != null && EF.Functions.ILike(v.Product.SearchFold, foldedTerm))
                 || (v.Code != null && EF.Functions.ILike(v.Code, term))
                 || v.Barcodes.Any(b => EF.Functions.ILike(b.Code, term)))
         };

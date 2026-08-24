@@ -16,6 +16,8 @@ public sealed class SetFeatureCommandHandler(IApplicationDbContext db, IFeatureS
             ?? throw new NotFoundException("Feature not found.");
 
         feature.IsEnabled = request.IsEnabled;
+        if (!request.IsEnabled)
+            feature.OwnerEnabled = false;
 
         if (request.IsEnabled && request.Code is FeatureCatalog.PricingMulticurrency or FeatureCatalog.SalesMulticurrency)
         {
@@ -30,7 +32,10 @@ public sealed class SetFeatureCommandHandler(IApplicationDbContext db, IFeatureS
                 .Where(f => f.Code == FeatureCatalog.PricingMulticurrency || f.Code == FeatureCatalog.SalesMulticurrency)
                 .ToListAsync(cancellationToken);
             foreach (var child in children)
+            {
                 child.IsEnabled = false;
+                child.OwnerEnabled = false;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

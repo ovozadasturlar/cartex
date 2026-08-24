@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal? CreditLimit = null, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<long>;
+public record CreateCustomerCommand(string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal? CreditLimit = null, bool NotificationsOptOut = false, decimal OpeningBalance = 0, string? OpeningCurrency = null, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null, bool AllowMarketingSms = false) : ICommand<long>;
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
@@ -60,6 +60,7 @@ public sealed class CreateCustomerCommandHandler(
             DiscountPct = request.DiscountPct,
             CreditLimit = request.CreditLimit,
             NotificationsOptOut = request.NotificationsOptOut,
+            AllowMarketingSms = request.AllowMarketingSms,
             PreferredLanguage = request.PreferredLanguage ?? "uz-latn",
             Latitude = request.Latitude,
             Longitude = request.Longitude,

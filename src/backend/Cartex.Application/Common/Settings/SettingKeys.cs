@@ -11,6 +11,7 @@ public static class SettingKeys
     public const string Proforma = "proforma";
     public const string BarcodeLabel = "barcodeLabel";
     public const string SalesPolicy = "salesPolicy";
+    public const string ProductReference = "productReference";
     public const string Storage = "storage";
     public const string CloudBridge = "cloudBridge";
     public const string HardwareKey = "hardwareKey";

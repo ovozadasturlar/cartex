@@ -6,6 +6,7 @@ using Cartex.Auth.Services;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +70,13 @@ public sealed class RequestStoreOtpCommandHandler(
 
         var sm = await settings.GetAsync<SmsSettings>(SettingKeys.Sms, cancellationToken);
         if (sm is { Enabled: true } && !string.IsNullOrWhiteSpace(customer.Phone))
-            await sms.SendAsync(customer.Phone, text, cancellationToken);
+        {
+            var branchId = await db.Accounts.Where(x => x.CustomerId == customer.Id && x.BranchId != null)
+                .Select(x => x.BranchId).FirstOrDefaultAsync(cancellationToken);
+            branchId ??= await db.Branches.Select(x => (long?)x.Id).FirstOrDefaultAsync(cancellationToken);
+            await sms.SendAsync(customer.Phone, text,
+                new SmsSendContext(branchId, SmsGatewayJobKind.Manual, customer.Id, $"otp:{customer.Id}:{DateTime.UtcNow:yyyyMMddHHmm}"), cancellationToken);
+        }
     }
 }
 

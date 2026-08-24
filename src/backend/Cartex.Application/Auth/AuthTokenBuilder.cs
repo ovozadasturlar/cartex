@@ -19,7 +19,7 @@ public sealed class AuthTokenBuilder(
 {
     private const int RefreshLifetimeDays = 30;
     private const int AbsoluteLifetimeDays = 90;
-    private const int ReuseGraceSeconds = 30;
+    private const int ReuseGraceSeconds = 120;
 
     private IQueryable<User> UsersWithGraph() =>
         db.Users

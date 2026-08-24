@@ -12,6 +12,8 @@ using Cartex.Application.Auth;
 using Cartex.Auth.Services;
 using Cartex.Application.Printing;
 using Cartex.Application.OfflineCache;
+using Cartex.Application.Sms;
+using Cartex.Application.Notifications;
 
 namespace Cartex.Application;
 
@@ -47,6 +49,11 @@ public static class DependencyInjection
         services.AddScoped<IBranchCatalogService, BranchCatalogService>();
         services.AddScoped<PrintRoutingService>();
         services.AddScoped<ReceiptPrintPolicyService>();
+        services.AddScoped<SmsGatewayRoutingService>();
+        services.AddScoped<SmsGatewayService>();
+        services.AddScoped<SmsQuotaWarningService>();
+        services.AddScoped<ReceiptSmsService>();
+        services.AddTransient<ReceiptSmsSaleCompletedHandler>();
         services.AddScoped<IOfflineAuthorityGuard, OfflineAuthorityGuard>();
 
         return services;

@@ -7,7 +7,7 @@ using Cartex.Persistence;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal? CreditLimit = null, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null) : ICommand<Unit>;
+public record UpdateCustomerCommand(long Id, string FullName, string? Phone, string? CardBarcode, decimal DiscountPct, string? Email = null, string? LastName = null, string? Address = null, decimal? CreditLimit = null, bool NotificationsOptOut = false, string? PreferredLanguage = null, long? AssignedUserId = null, double? Latitude = null, double? Longitude = null, long? AgentId = null, string? Note = null, bool AllowMarketingSms = false) : ICommand<Unit>;
 
 public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<UpdateCustomerCommand, Unit>
 {
@@ -28,6 +28,7 @@ public sealed class UpdateCustomerCommandHandler(IApplicationDbContext db, ICurr
         customer.DiscountPct = request.DiscountPct;
         customer.CreditLimit = request.CreditLimit;
         customer.NotificationsOptOut = request.NotificationsOptOut;
+        customer.AllowMarketingSms = request.AllowMarketingSms;
         var party = await db.Parties.FirstAsync(x => x.Id == customer.PartyId, cancellationToken);
         party.FullName = request.FullName.Trim();
         party.Phone = customer.Phone;

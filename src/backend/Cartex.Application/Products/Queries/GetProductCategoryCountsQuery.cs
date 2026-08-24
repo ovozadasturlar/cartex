@@ -1,4 +1,5 @@
 ﻿using Cartex.Persistence;
+using Cartex.Application.Common.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Shared.Models.Products;
 
@@ -12,10 +13,13 @@ public sealed class GetProductCategoryCountsQueryHandler(IApplicationDbContext d
     public async Task<IReadOnlyCollection<CategoryCountDto>> Handle(GetProductCategoryCountsQuery request, CancellationToken cancellationToken)
     {
         var rows = await db.Products
-            .GroupBy(p => p.Category != null ? p.Category.Name : null)
-            .Select(g => new { Name = g.Key, Count = g.Count() })
+            .GroupBy(p => p.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
-        return rows.Select(x => new CategoryCountDto(x.Name, x.Count)).ToList();
+        var paths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
+        return rows.Select(x => new CategoryCountDto(
+            x.CategoryId is { } categoryId ? paths.GetValueOrDefault(categoryId) : null,
+            x.Count)).ToList();
     }
 }

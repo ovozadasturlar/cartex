@@ -1,8 +1,12 @@
 ﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Catalog;
 using Cartex.Persistence;
+using Cartex.Application.Common.Search;
+using Cartex.Shared.Models.Common;
 using Cartex.Shared.Models.Products;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Products.Queries;
 
@@ -29,19 +33,54 @@ public sealed class GetProductsQueryHandler(
         if (request.VariantId is { } variantId)
             query = query.Where(p => p.Variants.Any(v => v.Id == variantId));
 
+        var catalogSearch = CatalogSearch.Parse(request.Search);
         query = ProductCatalogSearch.Apply(query, request.Search);
         query = ProductCatalogSearch.ApplyPriceRange(query, request.MinPrice, request.MaxPrice);
         request.Search = null;
 
+        Dictionary<long, int>? relevanceOrder = null;
+        var pagingRequest = (FilteringRequest)request;
+        var strictNameQuery = ProductCatalogSearch.StrictNameQuery(catalogSearch);
+        if (strictNameQuery.Length > 0)
+        {
+            var filtered = query.AsFilterable(request);
+            var candidates = await filtered
+                .Select(x => new { x.Id, x.Name })
+                .ToListAsync(cancellationToken);
+            var total = candidates.Count;
+            IEnumerable<long> rankedIds = candidates
+                .OrderBy(x => ProductCatalogSearch.NameRank(x.Name, strictNameQuery))
+                .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Id)
+                .Select(x => x.Id);
+
+            if (request.Page <= 0 || request.PageSize <= 0)
+            {
+                if (total > PagingRequest.MaxUnboundedSize)
+                    throw new BusinessRuleException($"Natija juda katta ({total}). Iltimos, filtr yoki sahifalashdan foydalaning.");
+            }
+            else
+            {
+                var pageSize = Math.Min(request.PageSize, PagingRequest.MaxPageSize);
+                rankedIds = rankedIds.Skip((request.Page - 1) * pageSize).Take(pageSize);
+                writer.Write(new PagedListMetadata(total, request.Page, pageSize,
+                    (int)Math.Ceiling((double)total / pageSize)));
+            }
+
+            var pageIds = rankedIds.ToArray();
+            relevanceOrder = pageIds.Select((id, index) => (id, index)).ToDictionary(x => x.id, x => x.index);
+            query = filtered.Where(x => pageIds.Contains(x.Id));
+            pagingRequest = new FilteringRequest { Page = 0, PageSize = 0 };
+        }
+
         var rows = await query
-            .ToPagedListAsync(request,
+            .ToPagedListAsync(pagingRequest,
                 p => new
                 {
                     p.Id,
                     Variant = p.Variants.Where(v => v.IsDefault).Select(v => new { v.Id, v.Code }).FirstOrDefault(),
                     p.Name,
                     p.CategoryId,
-                    CategoryName = p.Category != null ? p.Category.Name : null,
                     p.UnitId,
                     UnitName = p.Unit.Name,
                     p.MinStock,
@@ -75,12 +114,16 @@ public sealed class GetProductsQueryHandler(
                 },
                 writer, cancellationToken);
 
+        if (relevanceOrder is not null)
+            rows = rows.OrderBy(x => relevanceOrder[x.Id]).ToList();
+
+        var categoryPaths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
         var list = rows
             .Select(r => new ProductDto(
                 r.Id,
                 r.Variant != null ? r.Variant.Id : 0,
                 r.Name,
-                r.CategoryName,
+                r.CategoryId is { } categoryId ? categoryPaths.GetValueOrDefault(categoryId) : null,
                 r.UnitName,
                 r.MinStock,
                 r.Barcodes,

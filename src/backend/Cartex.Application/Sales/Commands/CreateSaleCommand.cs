@@ -40,6 +40,7 @@ file sealed record ResolvedSaleLine(
     CreateSaleItemDto Item,
     decimal Quantity,
     decimal UnitPrice,
+    decimal EnteredUnitPrice,
     string Currency,
     decimal Rate,
     decimal PriceDiscount);
@@ -297,7 +298,8 @@ public sealed class CreateSaleCommandHandler(
             if (item.PrepackId is { } prepackId)
             {
                 var prepack = prepacks[prepackId];
-                resolvedItems.Add(new ResolvedSaleLine(item, prepack.Quantity, prepack.UnitPrice, baseCode, 1m, 0));
+                resolvedItems.Add(new ResolvedSaleLine(item, prepack.Quantity, prepack.UnitPrice,
+                    prepack.UnitPrice, baseCode, 1m, 0));
                 continue;
             }
 
@@ -362,7 +364,7 @@ public sealed class CreateSaleCommandHandler(
                 (!priceIncreases.TryGetValue(catalogPrice.Source, out var increase) || enteredPrice > increase.Amount))
                 priceIncreases[catalogPrice.Source] = new CatalogPrice(catalogPrice.Source, enteredPrice, catalogPrice.Currency, catalogPrice.Rate);
 
-            resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice,
+            resolvedItems.Add(new ResolvedSaleLine(item, item.Quantity, unitPrice, enteredPrice,
                 catalogPrice.Currency, catalogPrice.Rate, priceDiscount));
         }
 
@@ -672,6 +674,7 @@ public sealed class CreateSaleCommandHandler(
             CustomerId = request.CustomerId,
             TotalAmount = totalAmount,
             DiscountAmount = discountAmount,
+            ManualDiscountAmount = request.DiscountAmount,
             PaidCash = paidCash - changeAmount,
             PaidCard = paidCard,
             PaidBonus = paidBonus,
@@ -712,6 +715,7 @@ public sealed class CreateSaleCommandHandler(
                 Stock = row.Batch,
                 Quantity = row.Quantity,
                 UnitPrice = row.Line.UnitPrice,
+                EnteredUnitPrice = row.Line.EnteredUnitPrice,
                 DiscountAmount = row.Discount,
                 PriceCurrency = row.Line.Currency,
                 PriceRate = row.Line.Rate,

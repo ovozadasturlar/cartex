@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using Cartex.Shared.Search;
 
 public static class QueryExtensions
 {
@@ -211,12 +212,18 @@ public static class QueryExtensions
         if (string.IsNullOrWhiteSpace(search)) return null;
 
         var stringProps = GetCachedProperties(typeof(T))
-            .Where(p => p.PropertyType == typeof(string) && !IsSensitive(p.Name))
+            .Where(p => p.PropertyType == typeof(string)
+                && !IsSensitive(p.Name)
+                && !string.Equals(p.Name, "SearchFold", StringComparison.Ordinal))
             .ToList();
+        var foldProperty = GetCachedProperties(typeof(T))
+            .FirstOrDefault(p => p.PropertyType == typeof(string)
+                && string.Equals(p.Name, "SearchFold", StringComparison.Ordinal));
 
         Expression? all = null;
-        foreach (var token in search.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var rawToken in search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            var token = rawToken.ToLowerInvariant();
             Expression? any = null;
             foreach (var p in stringProps)
             {
@@ -224,6 +231,15 @@ public static class QueryExtensions
                 var notNull = Expression.NotEqual(member, Expression.Constant(null, typeof(string)));
                 var lower = Expression.Call(member, nameof(string.ToLower), Type.EmptyTypes);
                 var contains = Expression.Call(lower, nameof(string.Contains), Type.EmptyTypes, Expression.Constant(token));
+                var and = Expression.AndAlso(notNull, contains);
+                any = any is null ? and : Expression.OrElse(any, and);
+            }
+            var folded = SearchFold.Fuzzy(rawToken);
+            if (foldProperty is not null && folded.Length > 0)
+            {
+                var member = Expression.Property(param, foldProperty.Name);
+                var notNull = Expression.NotEqual(member, Expression.Constant(null, typeof(string)));
+                var contains = Expression.Call(member, nameof(string.Contains), Type.EmptyTypes, Expression.Constant(folded));
                 var and = Expression.AndAlso(notNull, contains);
                 any = any is null ? and : Expression.OrElse(any, and);
             }

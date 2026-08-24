@@ -49,7 +49,8 @@ public sealed class GetCustomersQueryHandler(
                         c.TelegramChatId != null,
                         c.PreferredLanguage,
                         0m,
-                        c.Party.Note),
+                        c.Party.Note,
+                        c.AllowMarketingSms),
                     Debts = db.Accounts
                         .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Debt && a.Balance != 0)
                         .Select(a => new CurrencyAmountDto(a.Currency, a.Balance))

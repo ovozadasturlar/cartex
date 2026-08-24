@@ -14,7 +14,8 @@ public sealed class SendCustomerMessageCommandHandler(
     ITelegramService telegram,
     ISmsService sms,
     IEmailService email,
-    IAuditService audit) : IRequestHandler<SendCustomerMessageCommand, Unit>
+    IAuditService audit,
+    Cartex.Domain.Common.ICurrentUser currentUser) : IRequestHandler<SendCustomerMessageCommand, Unit>
 {
     public async Task<Unit> Handle(SendCustomerMessageCommand request, CancellationToken cancellationToken)
     {
@@ -40,7 +41,9 @@ public sealed class SendCustomerMessageCommandHandler(
                 var sm = await settings.GetAsync<SmsSettings>(SettingKeys.Sms, cancellationToken);
                 if (sm is not { Enabled: true })
                     throw new BusinessRuleException("SMS sozlanmagan.");
-                await sms.SendAsync(customer.Phone, request.Text, cancellationToken);
+                await sms.SendAsync(customer.Phone, request.Text,
+                    new SmsSendContext(currentUser.DefaultBranchId, Cartex.Domain.Enums.SmsGatewayJobKind.Manual,
+                        customer.Id, $"manual:{Guid.NewGuid():N}"), cancellationToken);
                 break;
             case "email":
                 if (string.IsNullOrWhiteSpace(customer.Email))
@@ -54,7 +57,7 @@ public sealed class SendCustomerMessageCommandHandler(
                 throw new BusinessRuleException("Noto'g'ri kanal.");
         }
 
-        audit.Add("message", "customers", customer.Id, new { request.Channel, request.Text });
+        audit.Add("message", "customers", customer.Id, new { request.Channel, TextLength = request.Text.Length });
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }

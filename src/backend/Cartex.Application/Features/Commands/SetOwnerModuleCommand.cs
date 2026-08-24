@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Features.Commands;
 
-/// The owner's switch, kept apart from the vendor's. A shop turning a module off must not look
-/// like the tariff lost it, and a tariff change must not undo what the owner chose (SOZ-08).
+/// The owner's switch applies only while the vendor license is active (SOZ-08a).
 public sealed record SetOwnerModuleCommand(string Code, bool IsEnabled) : ICommand<Unit>;
 
 public sealed class SetOwnerModuleCommandHandler(
@@ -21,6 +20,9 @@ public sealed class SetOwnerModuleCommandHandler(
 
         var feature = await db.Features.FirstOrDefaultAsync(f => f.Code == request.Code, cancellationToken)
             ?? throw new NotFoundException("Feature not found.");
+
+        if (request.IsEnabled && !feature.IsEnabled)
+            throw new BusinessRuleException("Bu modul tarifingizda yo'q.", "module_not_licensed");
 
         feature.OwnerEnabled = request.IsEnabled;
         await db.SaveChangesAsync(cancellationToken);
