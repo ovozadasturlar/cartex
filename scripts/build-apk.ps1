@@ -60,7 +60,7 @@ $apk = Get-ChildItem -Path (Join-Path $repoRoot "src\mobile\Cartex.Mobile.$name\
 
 if (-not $apk) { throw 'Signed APK topilmadi.' }
 
-$outDir = Join-Path $repoRoot 'artifacts\mobile'
+$outDir = Join-Path $repoRoot 'artifacts'
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 $published = Join-Path $outDir $apk.Name
 Copy-Item -LiteralPath $apk.FullName -Destination $published -Force

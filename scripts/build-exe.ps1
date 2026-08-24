@@ -12,8 +12,8 @@ $env:MSBUILDDISABLENODEREUSE = '1'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $project = Join-Path $repoRoot 'src\desktop\Cartex.Desktop\Cartex.Desktop.csproj'
-$stageDir = Join-Path $repoRoot "src\desktop\Cartex.Desktop\bin\Release\publish-$Runtime"
-$outDir = Join-Path $repoRoot "artifacts\desktop\$Runtime"
+$stageDir = Join-Path $repoRoot "src\desktop\Cartex.Desktop\bin\Release\publish-$Runtime\"
+$outDir = Join-Path $repoRoot "artifacts"
 
 # Symbol fayllari ataylab o'chirilmaydi: Visual Studio ham shu bin\Release papkasiga .pdb yozadi
 # va ochiq tursa ularni ushlab turadi. Ularni yo'q qilmoqchi bo'lish MSB3061 ga olib keladi.

@@ -15,7 +15,7 @@ services:
       retries: 10
 
   api:
-    image: muqimjon/cartex-api
+    image: muqimjon/cartex-api:${CARTEX_VERSION:-0.0.2}
     build:
       context: ..
       dockerfile: src/backend/Cartex.Api/Dockerfile
@@ -49,7 +49,7 @@ services:
       - "127.0.0.1:5015:5015"
 
   web:
-    image: muqimjon/cartex-web
+    image: muqimjon/cartex-web:${CARTEX_VERSION:-0.0.2}
     build:
       context: ..
       dockerfile: src/web/Cartex.Web.Angular/Dockerfile

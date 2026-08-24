@@ -2,7 +2,7 @@
 ; Faqat mijoz ilovasi: API va PostgreSQL'ni o'rnatmaydi.
 
 #define AppName "Cartex Desktop"
-#define AppVersion "0.0.1"
+#define AppVersion "0.0.2"
 
 [Setup]
 AppId={{9C55D522-F2F4-43F3-A15B-114856CCB65E}
