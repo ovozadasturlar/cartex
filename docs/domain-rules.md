@@ -228,6 +228,46 @@ Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**
 
 ---
 
+## 4a. Savdoni tuzatish (bekor qilib savatga qaytarish)
+
+Tuzatish — kassirning eng keng tarqalgan xatosini tuzatish yo'li: savdo yakunlangandan
+keyin chekni ochib "tuzatish" bosiladi, savdo bekor qilinadi va savat qaytadi. Bekor
+qilishning o'zi `HUJJ-05` bo'yicha teskari hujjat; **savatni tiklash esa klient tomonidagi
+amal** — u hech qanday hujjat yaratmaydi va hech narsani qayta hisoblamaydi.
+
+| ID | Qoida |
+|---|---|
+| `TUZ-01` | **Tiklangan savat — yakunlash tugmasi bosilishidan oldingi holatning aynan o'zi.** Kassir hech bir ma'lumotni qayta kiritmaydi: nima ko'rgan bo'lsa, o'sha qaytadi. Bu qoida qolgan `TUZ-*` bandlarining maqsadi: har biri shu holatning bir bo'lagini kafolatlaydi. |
+| `TUZ-02` | **Qator narxi tiklanadi.** `NARX-02` bo'yicha `UnitPrice` katalog narxi bo'lib saqlanadi, shuning uchun kassir kiritgan narx alohida — `SaleItem.EnteredUnitPrice` — sifatida yoziladi. Tiklashda qatorning katalog narxi `UnitPrice`, kassir narxi `EnteredUnitPrice` bo'ladi. Narx pasaytirish shu yo'l bilan qayta yakunlashda yo'qolmaydi. |
+| `TUZ-03` | **Sarlavha chegirmasi tiklanadi, avtomatik chegirma tiklanmaydi.** Kassir qo'lda kiritgan chegirma `Sale.ManualDiscountAmount` sifatida alohida saqlanadi va aynan shu qiymat chegirma maydoniga qaytariladi. Avtomatik (loyalty) chegirma savatdan qayta hisoblanadi (`CHEG-06`) — aks holda u ikki marta qo'llanardi. `Sale.DiscountAmount` (jami) tiklashda ishlatilmaydi: u `CHEG-02` bo'yicha narx pasaytirish + qo'lda + avtomatik yig'indisi, uni chegirma maydoniga yozish chegirmani ikkilantiradi. |
+| `TUZ-04` | **To'lov tarkibi tiklanadi:** har to'lovning usuli, valyutasi va summasi savdodagidek qaytariladi. Ko'p valyuta o'chiq bo'lsa naqd/karta/bonus maydonlariga tushadi. |
+| `TUZ-05` | **Mijoz, izoh va qarz muddati tiklanadi.** Qarz muddati savdo yozuvidan olinadi (`Sale.DebtDueDate`) va uni klientga qaytarish savdo detali javobining bir qismi. |
+| `TUZ-06` | **Qoldiq holati har qatorda ko'rsatiladi.** Savatga tushgan **har bir** variant uchun joriy ombor qoldig'i so'raladi va yetmagan qator kassa ekranida yetmagan deb belgilanadi. Qoldiq "o'sha variant hozir yuklangan sahifada bor edimi" degan tasodifga bog'liq bo'lmaydi — variantlar ro'yxati bo'yicha aniq so'raladi. Qoida savatni tiklashning **barcha** yo'llariga tegishli: tuzatish, navbatdagi savat, ushlab turilgan savdo, oflayn tiklash. |
+| `TUZ-07` | **Tiklash taxmin qilmaydi.** Yuqoridagilardan birortasi tiklanmasa (masalan mahsulot o'chirilgan, ombor o'zgargan), kassirga aniq aytiladi; jimgina boshqa qiymat bilan to'ldirilmaydi va qator jimgina tushirib qoldirilmaydi. |
+
+### Qabul mezonlari
+
+**`TUZ-02` + `TUZ-03`**
+
+> **Berilgan:** katalog narxi 100 000 bo'lgan mahsulot 2 dona, kassir narxni 90 000 ga
+> tushirgan (narx pasaytirish chegirmasi 20 000); ustiga qo'lda 5 000 chegirma kiritilgan.
+> Savdo yakunlangan: `UnitPrice = 100 000`, `EnteredUnitPrice = 90 000`,
+> `ManualDiscountAmount = 5 000`, `Sale.DiscountAmount = 25 000`.
+> **Qachonki:** chek ochilib "tuzatish" bosilsa,
+> **U holda:** savatda qator **90 000** narx bilan turadi (katalog narxi 100 000 sifatida
+> saqlanib qoladi), chegirma maydonida **5 000** turadi. Jami yana **175 000** chiqadi —
+> 25 000 chegirma maydoniga yozilib, ikkinchi marta ayirilmaydi.
+
+**`TUZ-06`**
+
+> **Berilgan:** savdoda kassa ro'yxatining birinchi sahifasiga tushmaydigan mahsulot bor va
+> uning omborda qolgan miqdori savdodagidan kam.
+> **Qachonki:** savdo tuzatish uchun savatga qaytarilsa,
+> **U holda:** o'sha qator kassa ekranida **yetmagan** deb belgilanadi — mahsulot ro'yxatda
+> ko'rinib turgan-turmagani natijaga ta'sir qilmaydi.
+
+---
+
 ## 5. Qarz va to'lov
 
 | ID | Qoida |
@@ -362,9 +402,19 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `RUXSAT-02` | Rol/ruxsat tekshiruvi `Application`/`Auth` da bo'ladi, `Api` da emas. Klient tekshiruvi faqat qulaylik uchun; server baribir qayta tekshiradi. |
 | `RUXSAT-03` | E'lon qilingan, lekin hech qayerda tekshirilmaydigan ruxsat bo'lmasligi kerak — yo tekshiriladi, yo o'chiriladi. |
 | `RUXSAT-04` | Modul o'chirilgan bo'lsa (feature flag), u UI'da umuman ko'rinmaydi va serverda ham yopiq bo'ladi. |
+| `RUXSAT-04a` | **Imkoniyat bitta joyda aniqlanadi:** ruxsat **VA** modul **VA**, kerak bo'lsa, siyosat. Imkoniyat yopiq bo'lsa u butun ilova bo'yicha ko'rinmaydi; bir ekranda yashirib, boshqasida ko'rsatish taqiqlanadi. Savatning alohida ruxsati yo'q: u savdo yoki navbat imkoniyatiga bog'liq. |
 | `RUXSAT-05` | **So'rov tanasidagi hech bir maydon ruxsat tekshiruvini o'chira olmaydi.** Tekshiruvga ta'sir qiladigan belgilar (mas. savdo navbatdagi savatdan yakunlanayotgani, oflayn replay ekani, narx oldindan ruxsatlangani) faqat **server ichida** o'rnatiladi va JSON'dan o'qilmaydi. Aks holda ruxsati kam foydalanuvchi shu maydonni yuborib tekshiruvni chetlab o'tardi. |
 | `RUXSAT-06` | **Savdo yaratish va savatni yakunlash — ikki xil ruxsat.** `sales.create` to'g'ridan-to'g'ri savdo ochish huquqi; `sales.checkout` esa **boshqa xodim tayyorlagan navbatdagi savatni** yakunlash huquqi. Faqat `sales.checkout` bor kassir navbat oqimi orqali ishlay oladi, lekin bo'sh joydan savdo yarata olmaydi (`RUXSAT-05` bilan birga o'qiladi). |
 | `RUXSAT-07` | **Ko'rish qamrovi: o'ziniki yoki hammaniki.** `*.viewAll` ruxsati yo'q foydalanuvchi ro'yxatda, jamida va grafikda **faqat o'zi yaratgan** yozuvlarni ko'radi; bor bo'lsa — hammasini. Qamrov **serverda** qo'yiladi: klient yuborgan hech bir filtr uni kengaytira olmaydi. Klient esa bajarib bo'lmaydigan boshqaruvni ko'rsatmaydi — `viewAll` yo'q bo'lsa "barcha xodimlar" tanlovi umuman chiqmaydi. |
+
+**Qabul mezoni — `RUXSAT-04a`**
+
+> Savdo ruxsati bor, lekin `ordering` va `store` modullari ikkalasi ham o'chiq bo'lsa,
+> `CanSell` va `CanUseCart` yolg'on bo'ladi va savat hech bir ekranda, jumladan skanerda,
+> ko'rinmaydi. Modullardan biri yoqiq, lekin savdo va navbat ruxsatlari yo'q bo'lsa ham savat
+> ko'rinmaydi. `supplies.create` bor, lekin `supplies` moduli o'chiq bo'lsa kirim imkoniyati
+> ko'rinmaydi. Navbat siyosati o'chiq bo'lsa, navbat ruxsatlari va savdo moduli mavjud bo'lsa
+> ham navbat amali ko'rinmaydi.
 
 ---
 
@@ -430,6 +480,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-05` | Yangi sozlama uchdan uchgacha yetib borishi shart: sozlama klassi → API → kamida bitta klient UI. **Hech kim o'zgartira olmaydigan sozlama — nuqson.** |
 | `SOZ-06` | Sozlama o'zgarishi auditga yoziladi (kim, qachon, qaysi bo'lim). |
 | `SOZ-08` | Har bir ixtiyoriy imkoniyat **do'kon egasi o'chira oladigan** bo'lishi shart. Ikki mexanizm bor va ular turli savolga javob beradi: `Feature` — "bu modul shu do'konga sotilganmi" (vendor qarori, tarifga bog'liq, menyuni butunlay yashiradi); savdo siyosati — "do'kon buni ishlatadimi" (egasining qarori). Ish jarayoni sozlamasi hech qachon tarif feature'i qilinmaydi. |
+| `SOZ-08a` | **Litsenziya qatlami egasining kalitidan ustun.** Egasi `IsEnabled = false` bo'lgan modulni yoqa olmaydi: server `module_not_licensed` bilan rad etadi. Vendor litsenziyani o'chirganda `OwnerEnabled` ham `false` bo'ladi; litsenziya qayta yoqilganda egasining kaliti avtomatik yoqilmaydi. Klient Modullar ekranida litsenziyasiz modulni o'chiq va bosilmaydigan holatda, "Tarifingizda yo'q" sababi bilan ko'rsatadi. |
 | `SOZ-09` | Chegara maydoni (`Max...`) o'chirish vositasi **emas**: unda `0` — "chegara yo'q" degani (`SOZ-02`). Imkoniyatni yopish uchun alohida `Allow.../Print...` kaliti bo'lishi shart. |
 | `SOZ-10` | Kalit o'chirilganda: server operatsiyani **rad etadi** (`SOZ-03`) va klient tegishli tugma/maydonni **ko'rsatmaydi**. Faqat klientda yashirish yetarli emas. |
 | `SOZ-07` | Sozlama keshi chegaralangan muddatga ega; o'zgarish ilovani qayta ishga tushirmasdan kuchga kiradi. |
@@ -440,10 +491,206 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-14` | **Chop etish ikki joydan boshqariladi va ular turli savolga javob beradi.** Savdo siyosati — "do'kon shu qog'ozni beradimi" (eganing qarori, tugma ko'rinishini belgilaydi): `PrintMoneyDocuments`, `PrintCartProforma`. Chop etish bo'limi — "qaysi printer, qanday qog'oz, nechta nusxa" (texnik yo'naltirish). Ish jarayoni qarori chop etish bo'limiga, printer sozlamasi savdo siyosatiga qo'yilmaydi. |
 | `SOZ-15` | **Feature (tarif/modul) tekshiruvi hech kimni istisno qilmaydi — wildcard (`*`, developer) ham bo'ysunadi.** Feature — tizim holati, foydalanuvchi imtiyozi emas; aks holda vendor do'kon ko'rmaydigan tizimni ko'radi va nosozlik undan yashirinadi. Wildcard'ning ustunligi faqat ruxsatlarda: har qanday ruxsat tekshiruvidan o'tadi va rol/ruxsat/feature'larni boshqara oladi; o'chiq modulni ishlatmoqchi bo'lsa — avval uni (yoki tarifni) yoqib oladi. Qutqaruv yo'li: feature va litsenziyani boshqaruvchi endpoint'lar hech qachon feature bilan qulflanmaydi. |
 
+**Qabul mezoni — `SOZ-08a`**
+
+> **Berilgan:** modul litsenziyasi o'chiq (`IsEnabled = false`) va egasining kaliti ham o'chiq.
+> **Qachonki:** egasi modulni yoqishga urinsa,
+> **U holda:** amal `module_not_licensed` bilan rad etiladi va `OwnerEnabled = false` bo'lib qoladi.
+>
+> **Berilgan:** litsenziyasi va egasining kaliti yoqiq modul.
+> **Qachonki:** vendor litsenziyani o'chirsa,
+> **U holda:** `IsEnabled = false` va `OwnerEnabled = false` bo'ladi. Vendor litsenziyani qayta
+> yoqsa, faqat `IsEnabled = true` bo'ladi; `OwnerEnabled` egasi qayta yoqmaguncha `false` qoladi.
+
 **Ma'lum og'ishlar (tuzatilishi kerak):**
 - `RequireDebtDueDate` faqat klientda tekshiriladi, serverda emas → `SOZ-03` buzilgan.
 - `MaxDiscountPercent` standart holatda bo'sh, ya'ni ruxsati bor kassir istalgancha chegirma
   bera oladi → egasiga real qiymat qo'yish tavsiya etiladi.
+
+### Lokal-birinchi chop etish
+
+| ID | Qoida |
+|---|---|
+| `CHOP-01` | Desktop so'rov yuborgan qurilmaning o'zida shu tur uchun yoqilgan printer bo'lsa, chop etish siyosati `LocalFirst` va yoqilgan bo'lsa, lokal chop etish funksiyasi mavjud bo'lsa hamda `SOZ-14` dagi savdo siyosati qog'ozni taqiqlamasa, qog'oz server relay'ini kutmasdan lokal chiqadi. `PriorityOnly` boshqa qurilmaga ataylab yo'naltirishni saqlaydi va server orqali ketadi. |
+| `CHOP-02` | Chop etish yoki savdo siyosati keshi bo'sh, eskirgan yoki yangilanmay qolgan bo'lsa, klient noma'lum holatda lokal yo'lni taxmin qilmaydi va server yo'lida qoladi. Kesh login, filial almashishi va chop etish sozlamasi saqlanishida yangilanadi; 10 daqiqadan keyin dangasa yangilanadi. |
+| `CHOP-03` | Muvaffaqiyatli lokal chop etish kassirni audit yozuvi yuborilishini kutdirmaydi. Serverga `CompletedLocally` tarix yozuvi yuboriladi; yuborilmasa lokal jurnal saqlaydi va keyin qayta yuboradi. Bu tarix yozuvi `printing.remote.use` ruxsatini talab qilmaydi, lekin tur bo'yicha chop etish ruxsati, filial, payload va savdo siyosati tekshiruvlari saqlanadi. |
+| `CHOP-04` | `CompletedLocally` so'rov tanasidagi belgi savdo siyosatini chetlab o'tmaydi: `PrintMoneyDocuments` va `PrintCartProforma` o'chiq bo'lsa lokal tarix yozuvi ham rad etiladi (`SOZ-14`, `RUXSAT-05`). |
+| `CHOP-05` | Lokal tarix yozuvi idempotency kaliti bo'yicha deduplikatsiya qilinadi. Qog'oz allaqachon chiqqani sabab server tezlik chegarasidan oshgan yozuvni yo'qotmaydi: saqlaydi va auditda belgilaydi. Klient bir daqiqada `MaxCopiesPerMinute` dan oshadigan lokal chop etishni qog'oz chiqishidan oldin to'xtatadi. |
+| `CHOP-06` | Hub xabari host band paytda yo'qolmaydi: band chaqiruv tugagach kamida yana bir aylanish bajariladi. Hub ulanishi 30 soniyalik fallback so'rovidan mustaqil backoff bilan tiklanadi va obuna o'rnatilgach tayinlangan ishlar darhol olinadi. |
+| `CHOP-07` | Logo chekni ushlab turmaydi: yuklash chegaralangan, raster natija diskda kalit va kenglik bo'yicha keshlanadi va oldindan isitiladi. Chop etishda kesh tayyor bo'lmasa ko'pi bilan 1.5 soniyadan keyin chek logosiz chiqadi va kassir ogohlantiriladi. |
+| `CHOP-08` | Printer endpointlari va spooler holati ko'pi bilan 60 soniyada bir marta yoki printer sozlamasi o'zgarganda yangilanadi; heartbeat har safar Windows spooler'ini so'ramaydi. |
+| `CHOP-09` | Yo'naltirish siyosati filial va chop turi uchun umumiy: `LocalFirst` avval so'rov yuborgan qurilmaning mos printerini, keyin sticky va prioritet ro'yxatini, oxirida ruxsat berilgan fallback'ni tanlaydi; `PriorityOnly` faqat ro'yxat bo'yicha ishlaydi. So'rov yuborgan qurilmada printer bo'lmasa (jumladan telefon/web) `LocalFirst` prioritet printerga o'tadi. `AllowFallback = false`, bo'sh prioritet va lokal printer yo'qligi hech kimga tayinlamaslikning aniq usuli. Eski yoki noma'lum saqlangan rejim `LocalFirst` ga bir marta normallashtiriladi. Printer hostligi esa alohida qurilma holati: node `HostEnabled`, endpoint `IsEnabled` va qurilma `IsTrusted` bo'lishi shart. |
+
+**Qabul mezoni — `CHOP-01` / `CHOP-02`**
+
+> **Berilgan:** desktopda chek printeri yoqilgan va lokal chop etish mumkin.
+> **Qachonki:** siyosat `LocalFirst` va yoqilgan, savdo siyosati qog'ozga ruxsat bergan bo'lsa,
+> **U holda:** desktop lokal chop etadi. Siyosat `PriorityOnly`, o'chiq yoki kesh noma'lum bo'lsa,
+> server yo'li tanlanadi.
+
+**Qabul mezoni — `CHOP-09`**
+
+> **Berilgan:** siyosat `LocalFirst`; so'rov yuborgan desktopning mos printeri va prioritet
+> ro'yxatida boshqa printer bor.
+> **U holda:** desktopning o'z printeri tanlanadi. So'rov telefondan kelib, lokal node bo'lmasa,
+> prioritet printer tanlanadi. Prioritet ro'yxati bo'sh va `AllowFallback = false` bo'lsa hech
+> qanday printer tayinlanmaydi. Bazada noma'lum rejim saqlangan bo'lsa, o'qishda `LocalFirst`
+> qaytadi va shu qiymat bazaga saqlanadi.
+
+**Qabul mezoni — `CHOP-03` / `CHOP-04` / `CHOP-05`**
+
+> **Berilgan:** foydalanuvchida tur bo'yicha chop etish ruxsati bor, lekin
+> `printing.remote.use` yo'q.
+> **Qachonki:** u muvaffaqiyatli lokal chop etish tarixini `CompletedLocally` bilan yuborsa,
+> **U holda:** yozuv `Completed` holatda bir marta saqlanadi; ayni idempotency kaliti takrorlansa
+> ikkinchi ish yaratilmaydi. `CompletedLocally` o'chirilsa remote ruxsat yana talab qilinadi;
+> `PrintMoneyDocuments` o'chiq bo'lsa lokal tarix ham rad etiladi.
+
+### Qurilma SMS shlyuzi
+
+| ID | Qoida |
+|---|---|
+| `SMS-01` | Oddiy SIM'dan yuborilgan xabarda jo'natuvchi nomini almashtirib bo'lmaydi: mijoz telefon raqamini ko'radi. Do'kon nomi xabar matnining boshida turadi va klientlarda bu cheklov ochiq tushuntiriladi. |
+| `SMS-02` | Qurilma faqat do'kon egasi uni ishonchli deb belgilagan, SIM egasi aynan o'sha telefonda rozilik bergan, shlyuz yoqilgan va yurak urishi 90 soniyadan eski bo'lmagan holatda ish oladi. Do'kon egasining ishonchi SIM egasining roziligi o'rnini bosmaydi. |
+| `SMS-03` | SIM egasi rozilikni istalgan vaqtda qurilmadan bekor qiladi. Bekor qilish darhol kuchga kiradi va shu qurilmaga tayinlangan, hali yuborilmagan ishlar `Pending` holatiga qaytariladi. |
+| `SMS-04` | SIM operatori slot indeksi, operator nomi va subscription ID bilan aniqlanadi. Telefon raqami ishonchli o'qilmagani uchun egasi kiritgan raqam faqat yorliq; marshrutlash va yuborishga ta'sir qilmaydi. |
+| `SMS-05` | Oylik kvota faqat Cartex shu qurilma orqali yuborgan SMS qismlarini sanaydi. Qo'lda yuborilgan SMS va operatordagi haqiqiy qoldiq tizimga noma'lum; ko'p qismli xabar kvotadan qismlar sonicha ayriladi. Kvota davri `QuotaResetDay` (1–28) bo'yicha yangilanadi. |
+| `SMS-06` | Har qurilmada server va telefon majburlaydigan ikki chegara bor: `MinIntervalSeconds >= 2`, `1 <= MaxPerHour <= 300`. Standartlar 4 soniya va soatiga 60; ularni nol qilib o'chirish mumkin emas. Oxirgi soatda yuborilgan qismlar `MaxPerHour` ga yetgan yoki oxirgi yuborishdan minimal interval o'tmagan qurilma tanlanmaydi. |
+| `SMS-07` | Yo'naltirish mos qurilmalarni `Priority`, keyin `Id` bo'yicha tanlaydi. Roziliksiz, ishonchsiz, o'chiq, oflayn, kvotasi yoki tezlik chegarasi tugagan qurilma o'tkazib yuboriladi. Birinchi mos qurilma lease bilan tayinlanadi. |
+| `SMS-08` | SMS transporti foydalanuvchiga bitta tanlov sifatida ko'rsatiladi: do'kon telefoni, agregator yoki telefon ishlamasa agregator. Do'kon telefoni standart. Agregator tanlanmasa uning login, parol va sender qiymatlari saqlanmaydi; telefon ishlamasa agregator tanlovida `FallbackAfterMinutes >= 1` majburiy. Mos qurilma bo'lmasa ish yo'qolmaydi: `Pending` bo'lib kutadi. `FallbackProvider` standart `none`; `eskiz` yoki `playmobile` tanlansa va kutish o'tsa agregatorga beriladi. Bu pullik yo'l ekani sozlamalarda ochiq ko'rsatiladi. |
+| `SMS-09` | `Promotion` faqat `Customer.AllowMarketingSms = true` bo'lsa yaratiladi; roziliksiz mijoz uchun reklama ishi umuman yaratilmaydi. `DebtReminder` standart yoqiq, `ReceiptLink` standart o'chiq va mijoz so'raganda, `Manual` esa xodimning qo'lda yuborish amalidir. |
+| `SMS-10` | `IdempotencyKey` biznes ichida unikal: bir kalitni takror yuborish ikkinchi SMS ishini ham, ikkinchi xarajat yoki kvota ayirmasini ham yaratmaydi. |
+| `SMS-11` | Ishni faqat tayinlangan qurilma o'z host credential'i va amaldagi lease tokeni bilan oladi va holatini yangilaydi. Telefon raqami va matn to'liq loglanmaydi; boshqaruv endpointlari `sms.gateway.manage`, host endpointlari `sms.gateway.host` ruxsatini talab qiladi. |
+| `SMS-12` | SIM `Sent` natijasini qaytarganda ish yuborilgan hisoblanadi va qismlar soni kvotaga bir marta qo'shiladi; delivery callback keyin `Delivered` qiladi. Bir xil callback yoki lease qayta yuborilsa kvota ikkinchi marta ayrilmaydi. |
+| `SMS-13` | `SendReceiptOnSale` standart o'chiq: har savdodagi SMS operator xarajati va shartlariga bog'liq, shuning uchun uni do'kon egasi ataylab yoqadi. Yoqiq bo'lsa, SMS tizimi yoqilgan va mijoz telefoni mavjud savdo uchun chek havolasi `ReceiptLink` ishi sifatida savdo tranzaksiyasi yopilgandan keyin fon navbatida yaratiladi. SMS yaratilishi yoki yuborilishi xato bersa savdo bekor qilinmaydi. Bir savdo uchun avtomatik ish faqat bir marta yaratiladi (`receipt-sms:{saleId}`). |
+| `SMS-14` | Chek havolasi mijozning o'z xaridiga tegishli ish xabari: `AllowMarketingSms` talab qilinmaydi. `customers.message` ruxsati bor xodim chek dialogidan mijoz telefoniga uni qo'lda yubora oladi; mijoz yoki telefon bo'lmasa amal rad etiladi. Tasdiq oynasi server tayyorlagan qabul qiluvchi va to'liq SMS matnini ko'rsatadi; yuborish paytigacha ular o'zgarsa amal rad etilib, yangi tasdiq talab qilinadi. Har tasdiqlangan qo'lda yuborish yangi idempotency kaliti bilan alohida `ReceiptLink` ishini yaratadi va auditga yoziladi. |
+| `SMS-15` | SIM egasi rozilik berishdan oldin oylik limitni, kvota yangilanish kunini va tezlik chegaralarini telefonda belgilaydi. Limit bo'sh qolsa qurilma ro'yxatdan o'tmaydi; cheklanmagan limit faqat alohida, ataylab tanlangan holatda qabul qilinadi. Rozilik oynasi aynan kuchga kiradigan qiymatlarni ko'rsatadi. |
+| `SMS-16` | Limitni kamaytirish, minimal intervalni oshirish yoki soatlik maksimumni kamaytirish rozilik doirasini kengaytirmaydi va qayta rozilik talab qilmaydi. Limitni oshirish yoki cheklanmaganga o'tish, minimal intervalni kamaytirish yoxud soatlik maksimumni oshirish yangi rozilik talab qiladi; tasdiqlanmaguncha eski qiymatlar kuchda qoladi. Har o'zgarish eski va yangi qiymatlar bilan auditga yoziladi. |
+| `SMS-17` | Oylik limit SIM egasining sozlamasi. Do'kon egasi limitni, yangilanish kunini yoki tezlik chegaralarini faqat ko'radi; u faqat ishonch, yoqish/o'chirish, ustuvorlik va yo'naltirishni boshqaradi. |
+| `SMS-18` | Joriy davrda yuborilgan qismlar limitga teng yoki undan ko'p bo'lsa qurilmaga yangi ish berilmaydi. Limit kamayganda allaqachon yuborilgan ishlar va ularning holati o'zgarmaydi; progress 0–100% oralig'ida qisilib, oshib ketgan holat alohida ko'rsatiladi. |
+| `SMS-19` | Pauza rozilikni bekor qilmaydi. Pauzadagi qurilma ish olmaydi, lekin uning rozilik qiymatlari saqlanadi va qayta yoqish yangi rozilik talab qilmaydi. |
+| `SMS-20` | Yangi o'rnatishda SMS sinov rejimi yoqiq. Sinov rejimida ruxsat etilgan raqamlar ro'yxatiga kirmagan ish telefonda yuborilmaydi, `Simulated` bo'ladi va kvotadan ayrilmaydi; ro'yxatdagi raqam odatdagi yuborish va kvota qoidalariga bo'ysunadi. Sinov rejimi barcha SMS yuzalarida ko'rinadi. |
+| `SMS-21` | Bitta telefondagi har bir SIM alohida shlyuz yozuvidir. Yagonalik `(BranchId, DeviceId, SimSlot)` bo'yicha majburlanadi; har SIM o'z credential'i, roziligi, kvotasi, tezlik chegarasi, pauzasi va holatiga ega. Bitta SIM roziligini bekor qilish boshqa slotdagi SIM'ni to'xtatmaydi. |
+| `SMS-22` | Mijozning oxirgi muvaffaqiyatli SMS qurilmasi filial kesimida saqlanadi. Yangi ish avval shu SIM'ga beriladi. U yubora olmasa `ReceiptLink` va `Manual` standart 0 daqiqa kutadi, `DebtReminder` 15 daqiqa, `Promotion` 60 daqiqa; kutish tugagach boshqa mos SIM tanlanadi. Har tur uchun kutish alohida sozlanadi, `0` darhol zaxira tanloviga o'tadi. Bu sozlama faqat kamida ikkita shlyuz qurilmasida ko'rsatiladi va qayta urinish oralig'i emas. |
+| `SMS-23` | Sodiq SIM ishlatilmaganda mos qurilmalar qolgan kvota ulushi `(Quota - Sent) / Quota` bo'yicha kamayish tartibida tanlanadi; teng bo'lsa `Priority`, keyin `Id`. Cheklanmagan kvotali SIM mos cheklangan SIM'lardan keyin turadi. Shu bilan turli limitlar yuborish hajmiga mutanosib ishlatiladi. |
+| `SMS-24` | Tinch soatlar standart yoqiq va standart yuborish oralig'i 09:00–21:00. Oraliqdan tashqarida `DebtReminder` va `Promotion` keyingi boshlanish vaqtigacha `Pending` kutadi; `ReceiptLink` va `Manual` bu cheklovdan mustasno. Kutayotgan ishda sabab va keyingi urinish vaqti saqlanadi. |
+| `SMS-25` | `notification_deliveries` egaga ko'rinadigan yagona xabarnoma jurnalidir. Har device SMS ishi delivery va attempt bilan bog'lanadi; `sms_gateway_jobs` device navbati holatining yetakchi manbai bo'lib, uning `Pending`/`Sent`/`Delivered`/`Failed` o'zgarishi bog'langan delivery attempt'iga shu tranzaksiyada ko'chadi. SMS va boshqa sozlama yuzalarida ikkinchi jurnal bo'lmaydi; ular Xabarnomalar nazoratini kerakli kanal filtri bilan ochadi. |
+| `SMS-26` | SMS jurnalida holat, tur, SIM, mijoz va sana filtrlari hamda bugun/oy kesimidagi yuborilgan, kutayotgan va xato sonlari bo'ladi. Kutayotgan ishning sababi ko'rsatiladi. Telefon niqoblangan; to'liq raqam faqat xabarnomalar jurnalining maxfiy ma'lumot ruxsati bilan qaytadi. |
+| `SMS-27` | Jurnaldagi qayta urinish avvalgi ishni o'zgartirmay, shu delivery uchun yangi device attempt va yangi job yaratadi. Bekor qilish `Pending` yoki `Assigned` ishni yopadi. Boshqa qurilmaga o'tkazish faqat shu filialdagi hozir yubora oladigan SIM'ga tayinlaydi. Har uch amal foydalanuvchi, vaqt, ish va qurilma bilan auditga yoziladi. |
+| `SMS-28` | Qurilma kartasi joriy davrda yuborilgan qismlar, qolgan limit, oxirgi yuborish vaqti va shu filialda sodiq bog'langan mijozlar sonini ko'rsatadi. Mijoz profilidagi xabarlar tarixi notification jurnalidan vaqt, tur, holat va yuborgan SIM yorlig'i bilan olinadi. |
+| `SMS-29` | Har xabar turining matni va yuborilish shartlari bitta “Mijozga xabarlar” yuzasida turadi. Tinch soatlar shu yuzada ko'rsatiladi va `DebtReminder` hamda `Promotion` ga qo'llanishi, `ReceiptLink` va `Manual` mustasno ekani aytiladi. Shablon ostida shu tur ishlatadigan o'rin egallovchilar ko'rsatiladi. |
+| `SMS-30` | Xabar qanday chiqishi **bitta** sozlama: do'kon telefoni (SIM), agregator yoki telefon-keyin-agregator. Agregator tanlanmagan bo'lsa uning hisob ma'lumotlari va zaxiraga o'tish vaqti yuzada ko'rsatilmaydi. Standart — do'kon telefoni: u bepul, lekin mijoz raqamni ko'radi; agregator jo'natuvchi nomini bera oladi va telefon o'chiq bo'lsa ham yuboradi, ammo pullik. |
+| `SMS-31` | Sodiq SIM kutishi faqat filialda bittadan ortiq shlyuz qurilmasi bo'lganda ma'noga ega va faqat shunda ko'rsatiladi. U **qayta urinish oralig'i emas**: mijozga oxirgi marta xabar ketgan SIM shuncha daqiqa kutiladi, keyin boshqa mos SIM tanlanadi. Sozlama qurilmalar bo'limida turadi, tinch soatlar yonida emas — ular boshqa savolga javob beradi. |
+| `SMS-32` | Telefondagi shlyuz sahifasi kundalik holatni ko'rsatadi: tanlangan SIM, kvota bari va shu qurilmadan yuborilganlar. Limit, tezlik chegaralari, sinov xabari, pauza va rozilikni bekor qilish alohida sozlamalar sahifasida bo'ladi. Ro'yxatdan o'tmagan qurilmada ro'yxatdan o'tkazish oqimi asosiy ekranda qoladi. |
+
+**Qabul mezonlari — `SMS-02` / `SMS-07` / `SMS-08`**
+
+> **Berilgan:** birinchi qurilma ishonchli, lekin roziliksiz; ikkinchi qurilma rozilikli,
+> ammo kvotasi tugagan; uchinchi rozilikli va kvotali qurilmaning priority qiymati 30.
+> **Qachonki:** ish yo'naltirilsa,
+> **U holda:** dastlabki ikkitasi o'tkazib yuborilib, uchinchi qurilma tayinlanadi. Uchinchi ham
+> oflayn bo'lsa ish `Pending` qoladi; zaxira `none` bo'lsa agregatorga ketmaydi.
+> Transport do'kon telefoni bo'lsa agregator login, parol, sender va bazaviy URL qiymatlari
+> saqlanmaydi. Telefon ishlamasa agregator tanlovida kutish 0 bo'lsa so'rov rad etiladi;
+> faqat telefon yoki faqat agregator tanlovida kutish maydoni talab qilinmaydi.
+
+**Qabul mezonlari — `SMS-03` / `SMS-05` / `SMS-10` / `SMS-12`**
+
+> **Berilgan:** rozilikli qurilmaga 2 qismli ish tayinlangan va kvota 10 dan 3 tasi ishlatilgan.
+> **Qachonki:** telefon `Sent` ni ikki marta qaytarsa,
+> **U holda:** ish bir marta `Sent` bo'ladi va hisob 5 ga chiqadi, 7 ga emas. Shu idempotency
+> kaliti bilan yangi ish yaratilmaydi. Rozilik yuborishdan oldin bekor qilinsa ish `Pending` ga
+> qaytadi va boshqa mos qurilmaga berilishi mumkin.
+
+**Qabul mezoni — `SMS-06`**
+
+> `MinIntervalSeconds = 0`, `MaxPerHour = 0` yoki `MaxPerHour = 301` server validatsiyasidan
+> o'tmaydi. 60 daqiqa ichidagi yuborilgan qismlar limitga teng bo'lsa qurilma tanlanmaydi.
+
+**Qabul mezoni — `SMS-09`**
+
+> `AllowMarketingSms = false` mijozga `Promotion` yuborish so'ralganda ish yaratilmaydi va
+> agregator ham chaqirilmaydi. Mijoz rozilikni yoqqandan keyingina reklama ishi yaratiladi.
+
+**Qabul mezonlari — `SMS-13` / `SMS-14`**
+
+> **Berilgan:** SMS tizimi yoqiq, `SendReceiptOnSale = true`, savdoga telefonli mijoz biriktirilgan.
+> **Qachonki:** savdo muvaffaqiyatli yakunlansa,
+> **U holda:** savdo javobi SMS yuborilishini kutmaydi va commitdan keyin `ReceiptLink` turi bilan
+> `receipt-sms:{saleId}` kalitli bitta ish yaratiladi. Hodisa qayta ishlansa ham ikkinchi avtomatik
+> ish yaratilmaydi. `SendReceiptOnSale = false`, mijozsiz yoki telefonsiz savdoda ish yaratilmaydi.
+> SMS ishini yaratish xatosi saqlangan savdoni bekor qilmaydi.
+>
+> **Berilgan:** xodimda `customers.message` ruxsati va savdoda telefonli mijoz bor.
+> **Qachonki:** chek dialogida raqam va chek havolasi ko'rsatilgan tasdiqdan keyin SMS qo'lda
+> yuborilsa,
+> **U holda:** har bosish yangi kalitli `ReceiptLink` ishini yaratadi va auditga yoziladi.
+> Mijoz yoki telefon bo'lmasa tugma o'chiq, sababi ko'rinadi va server ham amalni rad etadi.
+
+**Qabul mezonlari — `SMS-15` / `SMS-16` / `SMS-17`**
+
+> Limit ham kiritilmagan, cheklanmagan ham tanlanmagan bo'lsa ro'yxatdan o'tish rad etiladi.
+> 2 000 limit, 4 soniya interval va soatiga 60 qiymati uchun berilgan rozilikda limit 1 500 ga
+> tushirilsa yangi dialog chiqmaydi. Limit 2 500 ga oshirilsa, interval 3 soniyaga tushirilsa yoki
+> soatlik maksimum 80 ga oshirilsa yangi rozilik talab qilinadi va tasdiqqacha 1 500 / 4 / 60
+> kuchda qoladi. Do'kon egasining qurilma yangilash amali bu uch qiymatni o'zgartira olmaydi.
+
+**Qabul mezonlari — `SMS-18` / `SMS-19`**
+
+> Joriy davrda 1 600 qism yuborilgan qurilma limiti 1 500 ga tushirilsa, avvalgi `Sent` ishlar
+> saqlanadi, yangi ish qurilmaga berilmaydi va progress 100% hamda limitdan oshgan holatni
+> ko'rsatadi. Qurilma pauzaga qo'yilsa ish olmaydi, lekin roziligi saqlanadi; pauza olib
+> tashlanganda qayta rozilik so'ralmaydi.
+
+**Qabul mezoni — `SMS-20`**
+
+> Sinov rejimida ruxsat ro'yxatiga kirmagan raqamga tayinlangan ish `Simulated` bo'ladi va
+> qurilma kvotasi o'zgarmaydi. Ruxsat ro'yxatidagi raqamga ish haqiqiy yuboriladi, `Sent`
+> bo'ladi va qismlar sonicha kvotadan ayriladi. Bir xil simulyatsiya callback'i holat yoki
+> kvotani ikkinchi marta o'zgartirmaydi.
+
+**Qabul mezonlari — `SMS-21` / `SMS-22`**
+
+> Bir `DeviceId` ning 0 va 1 slotlari alohida ro'yxatdan o'tadi. 0-slot roziligi bekor qilinsa
+> 1-slot faol qoladi va yangi ish oladi. Mijozning oxirgi xabari 0-slotdan ketgan bo'lsa va u
+> yubora olsa, keyingi ish ham 0-slotga beriladi. Uning kvotasi tugagan `DebtReminder` 15 daqiqa
+> `sticky_device` sababi bilan kutadi, so'ng 1-slotga o'tadi; kutish 0 bo'lsa darhol o'tadi.
+> Bitta shlyuz qurilmasi bo'lsa sodiq SIM kutishi sozlamada ko'rinmaydi, ikkinchi qurilma
+> qo'shilganda ko'rinadi va matn bu qiymat qayta urinish oralig'i emasligini aytadi.
+
+**Qabul mezoni — `SMS-23`**
+
+> Limitlari 3 000 va 500 bo'lgan ikkita bo'sh SIM'ga bir xil segmentli ketma-ket ishlar
+> yuborilganda tanlov qolgan ulushni tenglashtiradi: har 7 ishning taxminan 6 tasi katta limitli,
+> 1 tasi kichik limitli SIM'ga tushadi. Ulush teng bo'lsa kichik `Priority`, keyin kichik `Id` yutadi.
+
+**Qabul mezoni — `SMS-24`**
+
+> Yuborish oralig'i 09:00–21:00 va mahalliy vaqt 22:00 bo'lsa `DebtReminder` `quiet_hours`
+> sababi bilan ertalab 09:00 gacha `Pending` qoladi. Xuddi shu paytdagi `ReceiptLink` mos SIM'ga
+> darhol tayinlanadi.
+
+**Qabul mezonlari — `SMS-25` / `SMS-26` / `SMS-28`**
+
+> Device orqali yaratilgan SMS `notification_deliveries` da `Sms` kanal va `device` provayder
+> bilan ko'rinadi. Job `Sent`, `Delivered` yoki `Failed` bo'lganda unified jurnal ham shu holatni
+> ko'rsatadi. Maxfiy ruxsatsiz raqam niqoblangan. Mijoz filtri faqat shu mijoz tarixini, SIM filtri
+> faqat shu qurilma attempt'larini qaytaradi; qurilma kartasidagi sodiq mijozlar soni route jadvali
+> bilan teng.
+> SMS sozlamasida job ro'yxati, hisoblagichlar va job amallari bo'lmaydi; u yerdagi havola
+> Xabarnomalar nazoratini `Sms` kanali bilan filtrlangan holda ochadi.
+
+**Qabul mezoni — `SMS-29`**
+
+> Tinch soatlar va to'rtta xabar turi “Mijozga xabarlar” sahifasida turadi. Qarz eslatmasi
+> kartasida uning jadvali va chegaralari, chek havolasi kartasida savdo yakunidagi avtomatik
+> yuborish sharti bor. Har shablon ostida ishlatiladigan o'rin egallovchilar ko'rsatiladi.
+
+**Qabul mezoni — `SMS-27`**
+
+> `Failed` ishni qayta urinish eski ishni saqlab, yangi `Pending` job va delivery attempt yaratadi.
+> `Pending` ishni bekor qilish uni `Cancelled` qiladi. Mos boshqa SIM'ga o'tkazish ishni o'sha SIM'ga
+> tayinlaydi. Uchala amalning har biri `audit_logs` da alohida action sifatida paydo bo'ladi.
 
 ## 12. Hisobotlar
 
@@ -533,6 +780,7 @@ hisobga to'g'ri kelishi**. Shuning uchun bu yerdagi har qoida bitta savolga xizm
 | Navbat (savat) | 🟡 egalik/claim qoidalari yo'q | `CartKindTests`, `CartLifecycleOwnershipTests`, `OrderingCheckoutDraftTests` |
 | Ruxsat va rollar | 🟡 juda yupqa | `RolePermissionDependencyTests`, `AssignableRolesTests`, `RoleActivationTests` |
 | **Savdoni bekor qilish (void)** | ⬜ | `VoidSaleTests` |
+| **Savdoni tuzatish (savatga qaytarish)** | 🟡 qoidalar yozildi (`TUZ-01`…`TUZ-07`), testlar qolgan | `SaleCorrectionRestoreTests` |
 | **Miqdor siyosati (kasr, aniqlik)** | ⬜ | `QuantityPolicyTests` |
 | **Filial izolyatsiyasi** | ⬜ | `BranchIsolationTests`, `UserBranchScopeTests` |
 | **Raqobat (concurrency)** | ⬜ | `AccountConcurrencyTests`, `StockConcurrencyTests` |
@@ -554,7 +802,7 @@ hisobga to'g'ri kelishi**. Shuning uchun bu yerdagi har qoida bitta savolga xizm
 
 Pul tegadigan va ma'lumot yo'qotishi mumkin bo'lgan sohalar birinchi:
 
-1. Savdoni bekor qilish (void) — pulni orqaga qaytaradi, qoidasi yozilmagan
+1. Savdoni bekor qilish (void) — pulni orqaga qaytaradi, qoidasi yozilmagan (tuzatishdan keyingi savat tiklash qoidalari §4a da yozildi)
 2. Ta'minot va ta'minotchi qarzi — eng katta bo'shliq, tannarxga ta'sir qiladi
 3. Smena va Z-hisobot — kassa yakuni
 4. Raqobat invariantlari — bir partiyani ikki marta sotmaslik, hisob balansining buzilmasligi
@@ -576,6 +824,74 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 - Invariantlar (`CHEG-02`, `CHEG-03`, `QAYT-02`) har stsenariyda qo'shimcha tasdiq sifatida
   tekshirilishi mumkin — ular universal.
 - Agar qoida noaniq bo'lsa, taxmin qilib test yozilmaydi — spetsifikatorga savol beriladi.
+
+---
+
+## 14a. Mahsulot ma'lumotnoma katalogi
+
+| ID | Qoida |
+|---|---|
+| `MAKAT-01` | Ma'lumotnoma katalog tashqi manbadan lokal jadvalga ko'chirilgan mahsulot takliflaridir; u do'kon katalogi emas. Undagi qator foydalanuvchi mahsulot yaratishni tasdiqlamaguncha `products` jadvaliga kirmaydi. |
+| `MAKAT-02` | Shtrix kod qidirish tartibi qat'iy: avval do'kon katalogi, faqat u yerda topilmasa va imkoniyat yoqilgan bo'lsa ma'lumotnoma, undan keyin topilmadi holati. |
+| `MAKAT-03` | Do'kon katalogida mavjud shtrix kod bilan yangi mahsulot yaratilmaydi. Foydalanuvchiga shtrix kod qaysi mahsulotga tegishli ekani aniq ko'rsatiladi. |
+| `MAKAT-04` | Ma'lumotnomadagi sotish narxi faqat `AutoFillPrice` yoqilganida tahrirlanadigan taklif sifatida ko'rsatiladi. Standart holatda u qo'llanmaydi; tannarx ma'lumotnomadan hech qachon olinmaydi. |
+| `MAKAT-05` | Sinxronizatsiya barcode bo'yicha upsert qiladi va manbada yo'q yoki vaqtincha olinmagan mavjud qatorlarni o'chirmaydi. Bo'sh yoki yiqilgan manba lokal ma'lumotnomani yo'qotmaydi. |
+| `MAKAT-06` | Birlik, kategoriya va ishlab chiqaruvchi faqat nomi mavjud katalog yozuviga mos kelsa tanlanadi. Mos yozuv bo'lmasa yangi katalog yozuvi jimgina yaratilmaydi, matn taklif sifatida qoladi. |
+| `MAKAT-07` | Ma'lumotnoma standart holatda o'chiq. Manba sozlamalari, ustun moslashtirish va sinxronizatsiya natijasi egaga tegishli sozlamalar orqali boshqariladi; bu tarif moduli emas. |
+
+### Qabul mezonlari
+
+> **`MAKAT-02` / `MAKAT-03`.** Do'kon katalogida `4780000000001` shtrix kodli
+> «Suv» mavjud bo'lsa, shu kod kiritilganda ma'lumotnoma so'ralmaydi va yaratish
+> to'xtatiladi; foydalanuvchiga kod «Suv» mahsulotiga tegishli ekani ko'rsatiladi.
+
+> **`MAKAT-04`.** Ma'lumotnomada narx 12 000 bo'lsa, `AutoFillPrice` o'chiq holatda
+> yaratish formasi narxsiz ochiladi. Sozlama yoqilganda 12 000 «ma'lumotnomadan» belgisi
+> bilan taklif qilinadi va foydalanuvchi uni o'zgartira oladi. Tannarx har ikki holatda bo'sh.
+
+> **`MAKAT-05`.** Lokal ma'lumotnomada 100 qator turganda tashqi manba bo'sh javob
+> qaytarsa yoki vaqtincha ochilmasa, sinxronizatsiyadan keyin ham o'sha 100 qator saqlanadi.
+> Bir manbada bir barcode ikki marta kelsa lokal jadvalda u bitta qator bo'lib qoladi.
+
+---
+
+## 14b. Kategoriya daraxti
+
+| ID | Qoida |
+|---|---|
+| `KAT-01` | Kategoriya daraxti ko'pi bilan **3 daraja**: ildiz, bola va nabira. Yangi kategoriya yaratish ham, mavjudini boshqa ota-onaga ko'chirish ham bundan chuqur daraxt yaratsa server aniq `category_depth_exceeded` xatosi bilan rad etadi. Uch daraja tanlagich va to'liq yo'lni o'qiladigan saqlaydi. |
+| `KAT-02` | Kategoriya o'ziga yoki o'zining bevosita yoxud bilvosita avlodiga ota-ona qilib qo'yilmaydi. Server bunday siklni `category_cycle` xatosi bilan rad etadi; klient tekshiruvi faqat oldindan ko'rsatish uchun. |
+| `KAT-03` | `SortOrder` faqat bitta ota-ona ichidagi tartib. Qayta tartiblash tegishli sibling'larni `0` dan boshlab uzluksiz qayta raqamlaydi va boshqa shoxlarga tegmaydi. Bu sof ko'rinish o'zgarishi: kategoriya hisobotlari va mahsulot bog'lanishlarini o'zgartirmaydi. |
+| `KAT-04` | Ota-onani o'zgartirish ma'lumot o'zgarishi: kategoriya bo'yicha yig'iladigan natijalarni boshqa shoxga ko'chiradi. U `categories.edit` ruxsatini talab qiladi va auditga eski ota-ona, yangi ota-ona hamda yangi tartib bilan yoziladi. So'rov tanasidagi belgi bu tekshiruvni o'chira olmaydi (`RUXSAT-02`, `RUXSAT-05`). |
+| `KAT-05` | To'liq yo'l ota-onalar nomidan o'qishda hisoblanadi va bazada saqlanmaydi. Ajratgich hamma klient uchun bitta shared qiymat — `" / "`. Ota-ona nomi o'zgarsa avlod yo'li darhol yangilanadi. Sig'magan yo'lning **boshi** qisqartiriladi, oxirgi kategoriya saqlanadi: masalan `… / Yoritgichlar`. |
+| `KAT-06` | A kategoriyani B ga birlashtirish A ga bevosita bog'langan barcha mahsulotlarni B ga ko'chiradi, A ning bolalarini B ostiga olib o'tadi, sibling tartibini qayta hisoblaydi va A ni soft-delete qiladi. Amal `categories.edit` ruxsatini talab qiladi, bitta tranzaksiyada bajariladi va ko'chgan mahsulotlar soni bilan auditga yoziladi. B manba bilan bir xil yoki A ning avlodi bo'lsa amal rad etiladi; bolalarni B ostiga o'tkazish 3 darajadan oshirsa `KAT-01` bo'yicha butun amal rad etiladi. |
+
+### Qabul mezonlari
+
+> **`KAT-01`.** `Elektr → Yoritish → LED` uch darajali daraxtida `LED` ostiga yangi
+> kategoriya yaratish yoki mavjud kategoriyani ko'chirish `category_depth_exceeded` bilan
+> rad etiladi. `Yoritish` ostiga kategoriya qo'shish mumkin.
+
+> **`KAT-02`.** `Elektr → Yoritish → LED` daraxtida `Elektr`ning ota-onasini `Yoritish`
+> yoki `LED` qilish hamda kategoriyani o'ziga ota-ona qilish `category_cycle` bilan rad etiladi;
+> daraxt o'zgarmaydi.
+
+> **`KAT-03`.** A shoxida tartib `[A1=0, A2=1, A3=2]`, B shoxida
+> `[B1=0, B2=1]`. A3 birinchi o'ringa ko'chirilganda A shoxi `[A3=0, A1=1, A2=2]`
+> bo'ladi, B shoxidagi ikkala qiymat ham o'zgarmaydi va mahsulotlarning CategoryId qiymati
+> saqlanadi.
+
+> **`KAT-04`.** `categories.edit` ruxsatisiz A2 ni B ostiga ko'chirish rad etiladi. Ruxsat
+> bilan bajarilganda auditda A2, eski A, yangi B va yangi tartib qayd etiladi.
+
+> **`KAT-05`.** `Elektr mollari → Yoritgichlar` yo'li `Elektr mollari / Yoritgichlar` bo'ladi.
+> Ildiz nomi `Elektr jihozlari` ga o'zgarsa bola DTO'si keyingi o'qishda darhol
+> `Elektr jihozlari / Yoritgichlar` qaytaradi. Tor joyda yo'l `Elektr mollari / …` emas,
+> `… / Yoritgichlar` shaklida qisqaradi.
+
+> **`KAT-06`.** A ga 7 mahsulot, B ga 3 mahsulot bog'langan. A B ga birlashtirilganda jami
+> 10 mahsulot B ga bog'lanadi, A soft-delete bo'ladi, hech bir mahsulot yo'qolmaydi va auditda
+> ko'chgan son 7 deb yoziladi.
 
 ---
 

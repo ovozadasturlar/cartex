@@ -735,8 +735,9 @@ Aloqa yo'qolsa yuqorida **«Oflayn — mahalliy kesh bilan ishlayapsiz»** banne
 ### 20.1 Chek printeri
 
 1. **«Chek»** tabida **«Chop turi»** ni tanlang: **«Termal (80mm)»** — chek lentasi (odatiy holat) yoki **«Hujjat»** — oddiy printerda A4/A5 qog'ozga.
-2. Termal: **«Chek printeri»** ro'yxatidan tanlang, **«Qog'oz kengligi (belgi)»** — 32 belgi = 58mm qog'oz, 42–48 belgi = 80mm. **«Chek nusxalari»** — nechta nusxa chiqishi.
-3. Hujjat: printer, fizik qog'oz (A4/A5), yo'nalish (Portret/Albom), bir qog'ozga nechta chek sahifasi (1/2/4) — qog'oz tejash uchun.
+2. Termal: **«Chek printeri»** ro'yxatidan tanlang, **«Qog'oz kengligi (belgi)»** — «auto» printer drayveridan kenglikni o'zi aniqlaydi (58mm qog'oz → 32 belgi, 80mm → 48 belgi); ro'yxatda yo'q qiymatni (24–64) qo'lda yozish ham mumkin. **«Chek nusxalari»** — nechta nusxa chiqishi.
+3. Termal printer tili: **«Belgilar kodlash»** — chek noto'g'ri/g'alati belgilar bilan chiqsa shu yerdan tuzatiladi (lotin chek uchun CP437, kirill uchun CP866); **«Kod jadvali (ESC t)»** raqami printer modeliga qarab farq qilsa qo'lda o'zgartiriladi. **«Qog'ozni kesish»** — qisman / to'liq / kesilmasin, **«Kesishdan oldin surish»** — kesikdan oldin necha qator bo'sh surilishi. Bular shu kompyuterda saqlanadi — har kassa o'z printeriga mos sozlanadi.
+4. Hujjat: printer, fizik qog'oz (A4/A5), yo'nalish (Portret/Albom), bir qog'ozga nechta chek sahifasi (1/2/4) — qog'oz tejash uchun.
 
 ### 20.2 Chek tarkibi
 
