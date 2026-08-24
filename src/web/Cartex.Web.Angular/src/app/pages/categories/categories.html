@@ -1,5 +1,8 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('categories')" [subtitle]="t('categories_subtitle')">
+    <button mat-stroked-button (click)="toggleAll()">
+      <mat-icon>account_tree</mat-icon>{{ t(allExpanded() ? 'collapse_all' : 'expand_all') }}
+    </button>
     @if (canCreate) {
       <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add') }}</button>
     }
@@ -7,34 +10,58 @@
 
   <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
     <mat-icon matPrefix>search</mat-icon>
-    <input matInput #q [placeholder]="t('search')" (input)="search.set(q.value.trim())" />
+    <input matInput #q [placeholder]="t('search')" (input)="search(q.value)" />
   </mat-form-field>
 
-  <div class="cx-table-card">
+  <div class="tree-card">
     @if (loading()) {
       <mat-progress-bar mode="indeterminate" />
     }
-    @if (items().length) {
-      <div class="table-wrap">
-        <table mat-table [dataSource]="items()">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>{{ t('name') }}</th>
-            <td mat-cell *matCellDef="let c" class="strong">{{ c.name }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="parent">
-            <th mat-header-cell *matHeaderCellDef>{{ t('parent') }}</th>
-            <td mat-cell *matCellDef="let c">{{ c.parentName || '—' }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="description">
-            <th mat-header-cell *matHeaderCellDef>{{ t('description') }}</th>
-            <td mat-cell *matCellDef="let c" class="muted">{{ c.description || '—' }}</td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canEdit" (click)="openEdit(row)"></tr>
-        </table>
+    @if (visible().length) {
+      <div #treeScroll class="tree-scroll" cdkDropList [cdkDropListData]="visible()"
+           [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="dropped($event)">
+        @for (category of visible(); track category.id) {
+          <div class="tree-row" tabindex="0" [attr.data-id]="category.id"
+               [style.--tree-depth]="category.depth - 1"
+               [class.match]="category.isMatch"
+               [class.drop-before]="dropClass(category, 'before')"
+               [class.drop-after]="dropClass(category, 'after')"
+               [class.drop-child]="dropClass(category, 'child')"
+               [class.drop-invalid]="invalidDrop(category)"
+               cdkDrag [cdkDragData]="category" [cdkDragDisabled]="!canEdit || !!query()"
+               (cdkDragMoved)="dragMoved($event)" (cdkDragEnded)="dropState.set(null)"
+               (keydown)="keyMove($event, category)">
+            <span class="indent"></span>
+            <button mat-icon-button class="chevron" [class.open]="isExpanded(category)"
+                    [class.hidden]="!hasChildren(category)" (click)="toggle(category, $event)">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+            @if (canEdit) {
+              <button mat-icon-button class="drag-handle" cdkDragHandle [attr.aria-label]="t('category_move_hint')">
+                <mat-icon>drag_indicator</mat-icon>
+              </button>
+            } @else {
+              <span class="drag-space"></span>
+            }
+            <div class="category-title">
+              <strong>{{ category.name }}</strong>
+              <small>{{ category.fullPath || category.name }}</small>
+            </div>
+            <span class="description">{{ category.description || '—' }}</span>
+            <span class="count"><strong>{{ category.descendantProductCount }}</strong> {{ t('products_count') }}</span>
+            @if (canEdit) {
+              <button mat-icon-button (click)="openMerge(category, $event)" [attr.aria-label]="t('merge')">
+                <mat-icon>merge</mat-icon>
+              </button>
+              <button mat-icon-button (click)="openEdit(category, $event)" [attr.aria-label]="t('edit')">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+            <div class="drag-preview" *cdkDragPreview>
+              <mat-icon>category</mat-icon>{{ category.fullPath || category.name }}
+            </div>
+          </div>
+        }
       </div>
     } @else if (!loading()) {
       <cx-empty-state [icon]="'category'" [message]="t('no_data')" />
