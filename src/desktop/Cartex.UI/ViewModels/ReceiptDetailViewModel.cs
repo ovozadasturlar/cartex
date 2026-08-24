@@ -98,8 +98,33 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     private bool IsReturnable => IsSaleOpen || (Receipt?.Status == "Voided" && _allowReturnOnVoidedSale);
 
     public bool CanReturnSale => _auth.HasPermission("returns.create") && !IsPosCheckoutMode && Receipt is not null && IsReturnable;
-    public bool CanPrint => (_auth.HasPermission("printing.receipts.print") || _auth.HasPermission("printing.receipts.reprint")) && Receipt is not null;
+    /// Savdo yakunidagi oyna asl nusxani chiqaradi (print), tarixdan ochilgani esa doim
+    /// nusxa (reprint). Avto-chop yoqilgan bo'lsa qog'oz allaqachon chiqqan — qo'lda bosish
+    /// reprint, aks holda idempotensiya dedupe qilib hech narsa chiqarmasdi. Tugma amalda
+    /// ishlatiladigan ruxsat bilan ko'rsatiladi — ko'rinib turib "ruxsat yo'q" demasin.
+    private bool PrintAsReprint => !IsPosCheckoutMode || AutoPrintAlreadyRan;
+
+    private static bool AutoPrintAlreadyRan
+    {
+        get
+        {
+            try
+            {
+                var printer = ServiceLocator.Resolve<IPrinterService>();
+                return printer.AutoPrintEnabled || printer.AutoPrintHandledByServer;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+    }
+    public bool CanPrint => Receipt is not null
+        && _auth.HasPermission(PrintAsReprint ? "printing.receipts.reprint" : "printing.receipts.print");
     public bool CanCorrect => _auth.HasPermission("sales.void") && _saleId is > 0 && Receipt is not null && IsSaleOpen;
+    public bool ShowReceiptSms => _auth.HasPermission("customers.message") && _saleId is > 0 && Receipt is not null;
+    public bool CanSendReceiptSms => ShowReceiptSms && !string.IsNullOrWhiteSpace(Receipt?.CustomerPhone);
+    public string ReceiptSmsDisabledReason => CanSendReceiptSms ? string.Empty : L["customer_phone_missing"];
     public bool IsAnySubPanelOpen => IsCustomerPickerOpen;
 
     partial void OnIsCustomerPickerOpenChanged(bool value) => OnPropertyChanged(nameof(IsAnySubPanelOpen));
@@ -160,6 +185,9 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         OnPropertyChanged(nameof(CanReturnSale));
         OnPropertyChanged(nameof(CanPrint));
         OnPropertyChanged(nameof(CanCorrect));
+        OnPropertyChanged(nameof(ShowReceiptSms));
+        OnPropertyChanged(nameof(CanSendReceiptSms));
+        OnPropertyChanged(nameof(ReceiptSmsDisabledReason));
     }
 
     /// Faqat bekor qilingan chek ochilganda so'raladi — oddiy chekda bu savolning ma'nosi yo'q.
@@ -181,7 +209,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         if (Receipt is null || !CanPrint) return;
         try
         {
-            await _print.PrintReceiptAsync(Receipt, true);
+            await _print.PrintReceiptAsync(Receipt, PrintAsReprint);
         }
         catch (Exception ex)
         {
@@ -260,7 +288,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     {
         if (customer is null) return;
         CloseCustomerPicker();
-        await AssignCustomerToSaleAsync(customer.Id, $"{customer.FullName} {customer.LastName}".Trim());
+        await AssignCustomerToSaleAsync(customer.Id, $"{customer.FullName} {customer.LastName}".Trim(), customer.Phone);
     }
 
     [RelayCommand]
@@ -288,7 +316,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
                 created = await customersApi.GetByIdAsync(id);
             }
             CloseCustomerPicker();
-            await AssignCustomerToSaleAsync(created.Id, $"{created.FullName} {created.LastName}".Trim());
+            await AssignCustomerToSaleAsync(created.Id, $"{created.FullName} {created.LastName}".Trim(), created.Phone);
         }
         catch (Exception ex)
         {
@@ -296,7 +324,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
         }
     }
 
-    private async Task AssignCustomerToSaleAsync(long customerId, string custFullName)
+    private async Task AssignCustomerToSaleAsync(long customerId, string custFullName, string? phone)
     {
         if (_saleId is not { } saleId || saleId <= 0) return;
         try
@@ -308,9 +336,11 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
             _customerId = customerId;
             if (Receipt is not null)
             {
-                Receipt = Receipt with { CustomerId = customerId, CustomerName = custFullName };
+                Receipt = Receipt with { CustomerId = customerId, CustomerName = custFullName, CustomerPhone = phone };
                 OnPropertyChanged(nameof(Receipt));
                 OnPropertyChanged(nameof(CanAttachCustomer));
+                OnPropertyChanged(nameof(CanSendReceiptSms));
+                OnPropertyChanged(nameof(ReceiptSmsDisabledReason));
             }
         }
         catch (Exception ex)
@@ -322,6 +352,31 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
     // ==========================================
     // OTHER ACTIONS
     // ==========================================
+
+    [RelayCommand]
+    private async Task SendReceiptSmsAsync()
+    {
+        if (!CanSendReceiptSms || _saleId is not { } saleId)
+            return;
+        try
+        {
+            ReceiptSmsPreviewDto preview;
+            using (_busy.Begin(L["loading"]))
+                preview = await _salesApi.GetReceiptSmsPreviewAsync(saleId);
+            if (!await _dialog.ConfirmAsync(
+                    string.Format(L["receipt_sms_confirm"], preview.Recipient, preview.Text),
+                    L["send_receipt_sms"]))
+                return;
+
+            using (_busy.Begin(L["loading"]))
+                await _salesApi.SendReceiptSmsAsync(saleId, new SendReceiptSmsRequest(preview.ConfirmationToken));
+            _toast.Success(L["receipt_sms_queued"]);
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+        }
+    }
 
     [RelayCommand]
     private async Task CorrectSaleAsync()
@@ -341,7 +396,7 @@ public partial class ReceiptDetailViewModel : ViewModelBase, IDialogContext
             return;
         }
 
-        ServiceLocator.Resolve<PosHandoffService>().PendingCorrectionSaleId = saleId;
+        ServiceLocator.Resolve<SalesViewModel>().BeginCorrection(saleId);
         ServiceLocator.Resolve<NavigationService>().RequestMenuNavigation("pos");
         _toast.Success(L["sale_voided"]);
         RequestClose?.Invoke(this, ReceiptDialogResult.Corrected);
