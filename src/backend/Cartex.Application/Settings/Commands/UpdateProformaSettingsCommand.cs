@@ -1,4 +1,5 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Shared.Models.Printing;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using FluentValidation;
@@ -47,7 +48,7 @@ public sealed class UpdateProformaSettingsCommandValidator : AbstractValidator<U
 {
     public UpdateProformaSettingsCommandValidator()
     {
-        RuleFor(x => x.PaperWidth).Must(w => w is 32 or 42 or 48);
+        RuleFor(x => x.PaperWidth).Must(w => w == 0 || ReceiptPaper.IsValid(w));
         RuleFor(x => x.PaperFormat).Must(f => f is "Thermal" or "A5" or "A4");
         RuleFor(x => x.HeaderText).MaximumLength(200);
         RuleFor(x => x.FooterText).MaximumLength(200);

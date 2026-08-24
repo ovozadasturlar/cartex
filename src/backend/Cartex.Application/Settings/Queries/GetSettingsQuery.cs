@@ -35,7 +35,13 @@ public sealed class GetSettingsQueryHandler(
         return new SettingsDto(
             new TelegramSettingsDto(tg.Enabled, tg.ChatId, !string.IsNullOrEmpty(tg.BotToken), tokenLength),
             new EmailSettingsDto(em.Enabled, em.Host, em.Port, em.UseSsl, em.Username, em.FromAddress, em.FromName, !string.IsNullOrEmpty(em.Password)),
-            new SmsSettingsDto(sms.Enabled, sms.Provider, sms.Login, sms.Sender, sms.BaseUrl, !string.IsNullOrEmpty(sms.Password)),
+            new SmsSettingsDto(sms.Enabled, sms.Provider, sms.Login, sms.Sender, sms.BaseUrl, !string.IsNullOrEmpty(sms.Password),
+                sms.FallbackProvider, sms.FallbackAfterMinutes, sms.DebtReminderEnabled, sms.ReceiptLinkEnabled,
+                sms.PromotionEnabled, sms.ManualEnabled, sms.DebtReminderTemplate, sms.ReceiptLinkTemplate,
+                sms.PromotionTemplate, sms.ManualTemplate, sms.SendReceiptOnSale, sms.TestMode, sms.TestAllowedNumbers,
+                sms.DebtReminderStickyWaitMinutes, sms.ReceiptLinkStickyWaitMinutes,
+                sms.PromotionStickyWaitMinutes, sms.ManualStickyWaitMinutes, sms.QuietHoursEnabled,
+                sms.SendWindowStart, sms.SendWindowEnd),
             new NotificationSettingsDto(notif.Channels.Select(c => c.ToString()).ToList(), notif.CopyToAdmin, notif.PublicBaseUrl, notif.TelegramFormat.ToString(), notif.EmailFormat.ToString()));
     }
 }

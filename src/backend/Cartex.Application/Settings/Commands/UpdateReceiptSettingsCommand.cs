@@ -1,4 +1,6 @@
 using Cartex.Application.Common.Interfaces;
+using Cartex.Shared.Localization;
+using Cartex.Shared.Models.Printing;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using FluentValidation;
@@ -22,13 +24,15 @@ public record UpdateReceiptSettingsCommand(
     bool ShowElectronicLink = true,
     bool ShowLogo = true,
     bool ShowCustomerPhone = true,
-    bool ShowCustomerEmail = false) : ICommand<Unit>;
+    bool ShowCustomerEmail = false,
+    string? Language = null) : ICommand<Unit>;
 
 public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateReceiptSettingsCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateReceiptSettingsCommand request, CancellationToken cancellationToken)
     {
+        var current = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
         var cfg = new ReceiptSettings
         {
             HeaderText = string.IsNullOrWhiteSpace(request.HeaderText) ? null : request.HeaderText.Trim(),
@@ -47,7 +51,8 @@ public sealed class UpdateReceiptSettingsCommandHandler(ISettingsService setting
             ShowElectronicLink = request.ShowElectronicLink,
             ShowLogo = request.ShowLogo,
             ShowCustomerPhone = request.ShowCustomerPhone,
-            ShowCustomerEmail = request.ShowCustomerEmail
+            ShowCustomerEmail = request.ShowCustomerEmail,
+            Language = request.Language ?? current?.Language
         };
         audit.Add("settings", "settings", null, new { section = "receipt" });
         await settings.SetAsync(SettingKeys.Receipt, cfg, cancellationToken);
@@ -59,7 +64,8 @@ public sealed class UpdateReceiptSettingsCommandValidator : AbstractValidator<Up
 {
     public UpdateReceiptSettingsCommandValidator()
     {
-        RuleFor(x => x.PaperWidth).Must(w => w is 32 or 42 or 48);
+        RuleFor(x => x.PaperWidth).Must(w => w == 0 || ReceiptPaper.IsValid(w));
+        RuleFor(x => x.Language).Must(l => l is null || ReceiptTexts.Languages.Contains(l));
         RuleFor(x => x.PaperFormat).Must(f => f is "Thermal" or "A5" or "A4");
         RuleFor(x => x.HeaderText).MaximumLength(200);
         RuleFor(x => x.FooterText).MaximumLength(200);

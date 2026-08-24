@@ -9,7 +9,8 @@ public sealed class SendTestMessageCommandHandler(
     ISettingsService settings,
     ITelegramService telegram,
     IEmailService email,
-    ISmsService sms) : IRequestHandler<SendTestMessageCommand, Unit>
+    ISmsService sms,
+    Cartex.Domain.Common.ICurrentUser currentUser) : IRequestHandler<SendTestMessageCommand, Unit>
 {
     public async Task<Unit> Handle(SendTestMessageCommand request, CancellationToken cancellationToken)
     {
@@ -45,7 +46,9 @@ public sealed class SendTestMessageCommandHandler(
                         throw new BusinessRuleException("SMS sozlanmagan yoki o'chiq — provayder ma'lumotlarini kiritib saqlang");
                     if (string.IsNullOrWhiteSpace(recipient))
                         throw new BusinessRuleException("Qabul qiluvchi telefon raqami kiritilmagan");
-                    await sms.SendAsync(recipient, text, cancellationToken);
+                    await sms.SendAsync(recipient, text,
+                        new SmsSendContext(currentUser.DefaultBranchId, Cartex.Domain.Enums.SmsGatewayJobKind.Manual,
+                            IdempotencyKey: $"test:{Guid.NewGuid():N}"), cancellationToken);
                     break;
 
                 default:

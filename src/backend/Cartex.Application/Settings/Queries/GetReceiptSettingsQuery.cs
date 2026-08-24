@@ -31,6 +31,7 @@ public sealed class GetReceiptSettingsQueryHandler(ISettingsService settings)
             notification?.PublicBaseUrl,
             cfg.ShowLogo,
             cfg.ShowCustomerPhone,
-            cfg.ShowCustomerEmail);
+            cfg.ShowCustomerEmail,
+            cfg.Language ?? "uz-latn");
     }
 }
