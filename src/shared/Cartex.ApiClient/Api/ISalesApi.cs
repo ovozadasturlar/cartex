@@ -35,6 +35,12 @@ public interface ISalesApi
     [Post("/api/sales/{id}/resend-receipt")]
     Task ResendReceiptAsync(long id);
 
+    [Post("/api/sales/{id}/receipt-sms")]
+    Task<ReceiptSmsResultDto> SendReceiptSmsAsync(long id, [Body] SendReceiptSmsRequest request);
+
+    [Get("/api/sales/{id}/receipt-sms-preview")]
+    Task<ReceiptSmsPreviewDto> GetReceiptSmsPreviewAsync(long id);
+
     [Put("/api/sales/{id}/customer/{customerId}")]
     Task AssignCustomerAsync(long id, long customerId);
 }

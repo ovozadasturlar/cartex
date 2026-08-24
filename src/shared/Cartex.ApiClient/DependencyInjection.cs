@@ -9,7 +9,7 @@ namespace Cartex.ApiClient;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Func<CancellationToken, Task<string?>>? refreshAsync = null, Action? onUnauthorized = null, string clientName = "desktop", TimeSpan? timeout = null, Func<string?>? deviceIdProvider = null, Func<string?>? deviceNameProvider = null)
+    public static IServiceCollection AddApiClients(this IServiceCollection services, Func<string> baseUrlProvider, Func<string?> tokenProvider, Func<CancellationToken, Task<string?>>? refreshAsync = null, Func<CancellationToken, Task<string?>>? forceRefreshAsync = null, Action? onUnauthorized = null, string clientName = "desktop", TimeSpan? timeout = null, Func<string?>? deviceIdProvider = null, Func<string?>? deviceNameProvider = null)
     {
         var settings = new RefitSettings
         {
@@ -28,7 +28,7 @@ public static class DependencyInjection
             .ConfigurePrimaryHttpMessageHandler(() => primary)
             .SetHandlerLifetime(Timeout.InfiniteTimeSpan));
 
-        services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, onUnauthorized));
+        services.AddTransient(_ => new AuthTokenHandler(tokenProvider, refreshAsync, forceRefreshAsync, onUnauthorized));
         services.AddTransient<NoContentHandler>();
         services.AddTransient(_ => new BaseAddressHandler(baseUrlProvider));
         services.AddTransient(_ => new DeviceMetadataHandler(deviceIdProvider, deviceNameProvider));
@@ -54,6 +54,7 @@ public static class DependencyInjection
         RegisterAuthorized<IRolesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IPermissionsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IProductsApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IProductReferenceApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IProductTypesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ICategoriesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IUnitsApi>(services, settings, baseUrl, clientName, timeout);
@@ -91,6 +92,7 @@ public static class DependencyInjection
         RegisterAuthorized<IOfflineCacheApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IManufacturersApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IPrintingApi>(services, settings, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider);
+        RegisterAuthorized<ISmsGatewayApi>(services, settings, baseUrl, clientName, timeout, deviceIdProvider, deviceNameProvider);
 
         return services;
     }

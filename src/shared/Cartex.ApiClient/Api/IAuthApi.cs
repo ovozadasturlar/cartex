@@ -21,7 +21,7 @@ public interface IAuthApi
     Task<IApiResponse<LoginResponse>> PollQrAsync([Body] PollQrLoginRequest request, CancellationToken cancellationToken = default);
 
     [Post("/api/auth/refresh")]
-    Task<LoginResponse> RefreshAsync([Body] RefreshRequest request);
+    Task<LoginResponse> RefreshAsync([Body] RefreshRequest request, CancellationToken cancellationToken = default);
 
     [Post("/api/auth/logout")]
     Task LogoutAsync([Body] LogoutRequest request, CancellationToken cancellationToken = default);

@@ -12,6 +12,9 @@ public interface IStocksApi
     Task<StockOnHandPageDto> GetOnHandAsync([Query] long warehouseId, [Query] long? categoryId = null,
         [Query] string? search = null, [Query] int page = 1, [Query] int pageSize = 50, [Query] bool forSale = false);
 
+    [Post("/api/stocks/on-hand/by-variants")]
+    Task<List<StockOnHandDto>> GetOnHandByVariantsAsync([Query] long warehouseId, [Body] IReadOnlyList<long> variantIds);
+
     [Get("/api/stocks/expiring")]
     Task<List<ExpiringStockDto>> GetExpiringAsync([Query] int withinDays = 30);
 
