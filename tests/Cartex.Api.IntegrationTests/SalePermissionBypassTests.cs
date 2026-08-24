@@ -21,6 +21,7 @@ public class SalePermissionBypassTests(CartexApiFactory factory)
     {
         var developer = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await developer.PutAsJsonAsync("/api/features/store", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await developer.PutAsJsonAsync("/api/features/modules/store", new { isEnabled = true })).EnsureSuccessStatusCode();
 
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var permissions = await admin.GetFromJsonAsync<List<PermissionRow>>("/api/permissions");

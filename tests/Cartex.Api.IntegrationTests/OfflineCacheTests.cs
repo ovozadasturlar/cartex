@@ -14,6 +14,7 @@ public class OfflineCacheTests(CartexApiFactory factory)
     {
         var dev = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await dev.PutAsJsonAsync("/api/features/offline_cache", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await dev.PutAsJsonAsync("/api/features/modules/offline_cache", new { isEnabled = true })).EnsureSuccessStatusCode();
         try
         {
             var operatorClient = await AuthHelper.LoginAsync(

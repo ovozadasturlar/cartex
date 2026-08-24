@@ -64,6 +64,10 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
                 .EnsureSuccessStatusCode();
             (await developer.PutAsJsonAsync("/api/features/store", new { code = "store", isEnabled = true }))
                 .EnsureSuccessStatusCode();
+            (await developer.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true }))
+                .EnsureSuccessStatusCode();
+            (await developer.PutAsJsonAsync("/api/features/modules/store", new { isEnabled = true }))
+                .EnsureSuccessStatusCode();
         }
     }
 }

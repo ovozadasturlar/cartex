@@ -27,6 +27,8 @@ public sealed class OfflineAuthorityTests(CartexApiFactory factory)
             $"offline-b-{suffix}", "Offline B");
         (await first.PutAsJsonAsync("/api/features/offline_cache", new { isEnabled = true }))
             .EnsureSuccessStatusCode();
+        (await first.PutAsJsonAsync("/api/features/modules/offline_cache", new { isEnabled = true }))
+            .EnsureSuccessStatusCode();
 
         var existing = await first.GetFromJsonAsync<OfflineCacheStateDto>("/api/offline-cache");
         if (existing?.LeaseId is not null)

@@ -7,7 +7,7 @@ namespace Cartex.Api.IntegrationTests;
 [Collection("api")]
 public class SalesPolicyTests(CartexApiFactory factory)
 {
-    private sealed record IdName(long Id, string Name);
+    private sealed record IdName(long Id, string Name, bool IsOnline, long? AssignedUserId);
     private sealed record UserRow(long Id, string Username);
     private sealed record Product(long Id, long DefaultVariantId, string Name);
 
@@ -98,6 +98,10 @@ public class SalesPolicyTests(CartexApiFactory factory)
         var warehouseId = warehouses![0].Id;
         var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users");
         var adminId = users!.First(u => u.Username == "admin").Id;
+
+        foreach (var assigned in warehouses.Where(x => x.AssignedUserId == adminId))
+            (await admin.PutAsJsonAsync($"/api/warehouses/{assigned.Id}",
+                new { assigned.Name, assigned.IsOnline, assignedUserId = 0 })).EnsureSuccessStatusCode();
 
         var create = await admin.PostAsJsonAsync("/api/customers", new
         {

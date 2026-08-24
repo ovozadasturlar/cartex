@@ -16,6 +16,7 @@ public class OrderingLifecycleTests(CartexApiFactory factory)
     {
         var client = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await client.PutAsJsonAsync("/api/features/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await client.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
         return client;
     }
 

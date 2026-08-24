@@ -10,6 +10,7 @@ using Respawn.Graph;
 using Testcontainers.PostgreSql;
 using Xunit;
 using Cartex.Shared.Models.Common;
+using Cartex.Application.Common.Interfaces;
 
 namespace Cartex.Application.Tests.Common;
 
@@ -21,6 +22,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private Respawner _respawner = null!;
 
     public TestCurrentUser CurrentUser { get; } = new();
+    public TestProductReferenceSource ProductReferenceSource { get; } = new();
+    public RecordingNotificationService Notifications { get; } = new();
 
     public async ValueTask InitializeAsync()
     {
@@ -32,9 +35,12 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddScoped<IFeatureStateProvider, TestFeatureStates>();
         services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IProductReferenceSource>(ProductReferenceSource);
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPagingMetadataWriter, NoopPagingWriter>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier, NullCartNotifier>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPrintJobNotifier, NullPrintJobNotifier>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ISmsGatewayNotifier, NullSmsGatewayNotifier>();
+        services.AddSingleton<INotificationService>(Notifications);
         services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IRemoteImageFetcher, NullRemoteImageFetcher>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IImageProcessor, NullImageProcessor>();
@@ -64,6 +70,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async ValueTask ResetAsync()
     {
         CurrentUser.Reset();
+        ProductReferenceSource.Reset();
+        Notifications.Clear();
 
         await using (var connection = new NpgsqlConnection(_container.GetConnectionString()))
         {
@@ -95,6 +103,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
         public Task NotifyJobAvailableAsync(string deviceId, long jobId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task NotifyJobStatusChangedAsync(string deviceId, Cartex.Shared.Models.Printing.PrintJobStatusUpdate update, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class NullSmsGatewayNotifier : Cartex.Application.Common.Interfaces.ISmsGatewayNotifier
+    {
+        public Task NotifyJobAvailableAsync(string deviceId, int simSlot, long jobId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class NullRemoteImageFetcher : Cartex.Application.Common.Interfaces.IRemoteImageFetcher
@@ -130,6 +143,19 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await _services.DisposeAsync();
         await _container.DisposeAsync();
     }
+}
+
+public sealed class RecordingNotificationService : INotificationService
+{
+    public List<NotificationMessage> Messages { get; } = [];
+
+    public Task SendAsync(NotificationMessage message, CancellationToken cancellationToken = default)
+    {
+        Messages.Add(message);
+        return Task.CompletedTask;
+    }
+
+    public void Clear() => Messages.Clear();
 }
 
 [CollectionDefinition("database")]

@@ -55,6 +55,7 @@ public class StoreApiTests(CartexApiFactory factory)
     {
         var dev = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await dev.PutAsJsonAsync("/api/features/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await dev.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
 
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var created = await admin.PostAsJsonAsync("/api/customers", new { fullName = "Store " + phone, phone, discountPct = 0 });

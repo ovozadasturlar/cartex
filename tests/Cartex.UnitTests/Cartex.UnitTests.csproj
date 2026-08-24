@@ -29,4 +29,8 @@
     <Content Include="..\..\src\mobile\Cartex.Mobile.Agent\Resources\Raw\i18n\*.json" LinkBase="AgentLanguages" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\src\mobile\Cartex.Mobile.Core\AccessState.cs" Link="Mobile\AccessState.cs" />
+  </ItemGroup>
+
 </Project>

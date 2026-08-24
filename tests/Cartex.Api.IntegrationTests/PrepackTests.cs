@@ -83,6 +83,7 @@ public class PrepackTests(CartexApiFactory factory)
         finally
         {
             (await dev.PutAsJsonAsync("/api/features/prepack", new { isEnabled = true })).EnsureSuccessStatusCode();
+            (await dev.PutAsJsonAsync("/api/features/modules/prepack", new { isEnabled = true })).EnsureSuccessStatusCode();
         }
 
         var allowed = await seller.PostAsJsonAsync("/api/prepacks", body);

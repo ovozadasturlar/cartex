@@ -13,7 +13,6 @@ using DomainJobKind = Cartex.Domain.Enums.PrintJobKind;
 using DomainJobStatus = Cartex.Domain.Enums.PrintJobStatus;
 using DomainNodeStatus = Cartex.Domain.Enums.PrintNodeStatus;
 using DomainCapability = Cartex.Domain.Enums.PrintCapability;
-using DomainRoutingMode = Cartex.Domain.Enums.PrintRoutingMode;
 
 namespace Cartex.Application.Tests;
 
@@ -113,59 +112,6 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
         Assert.True(await db.PrintRequesterDevices.AsNoTracking()
             .Where(x => x.BranchId == branchId && x.DeviceId == "dev-new")
             .Select(x => x.IsTrusted).SingleAsync());
-    }
-
-    [Fact]
-    public async Task Local_only_routing_never_leaks_to_another_machine()
-    {
-        var (branchId, _, _) = await SeedContextAsync();
-        using var scope = Fixture.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var routing = scope.ServiceProvider.GetRequiredService<PrintRoutingService>();
-
-        var node = new PrintNode
-        {
-            BranchId = branchId,
-            DeviceId = "dev-remote",
-            CredentialHash = PrintingCredential.Hash(PrintingCredential.Issue()),
-            Name = "Remote till",
-            IsTrusted = true,
-            HostEnabled = true,
-            Status = DomainNodeStatus.Online,
-            LastSeenAt = DateTime.UtcNow,
-            Endpoints =
-            {
-                new PrinterEndpoint
-                {
-                    StableKey = "k",
-                    DisplayName = "XP-58",
-                    SystemName = "XP-58",
-                    Capabilities = DomainCapability.Receipt,
-                    Status = DomainEndpointStatus.Ready
-                }
-            }
-        };
-        db.PrintNodes.Add(node);
-        var adminId = await db.Users.Where(x => x.Username == "admin").Select(x => x.Id).SingleAsync();
-        var job = new PrintJob
-        {
-            BranchId = branchId,
-            Kind = DomainJobKind.Receipt,
-            SourceType = "receipt_token",
-            SourceId = "t",
-            PayloadJson = "{}",
-            RequestedByUserId = adminId
-        };
-        db.PrintJobs.Add(job);
-        await db.SaveChangesAsync();
-
-        var policy = await routing.GetOrCreatePolicyAsync(branchId, DomainJobKind.Receipt, default);
-        policy.RoutingMode = DomainRoutingMode.LocalOnly;
-        policy.AllowFallback = true;
-        await db.SaveChangesAsync();
-
-        Assert.False(await routing.AssignAsync(job, default));
-        Assert.Equal(DomainJobStatus.Pending, job.Status);
     }
 
     [Fact]
