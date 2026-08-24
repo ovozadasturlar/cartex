@@ -4,34 +4,38 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Categories;
+using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Storage;
+using Cartex.Shared.Models.Units;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
+public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttributable
 {
     private readonly IProductsApi _products;
     private readonly ICategoriesApi _categories;
-    private readonly IFeaturesApi _features;
+    private readonly IManufacturersApi _manufacturers;
     private readonly IRatesApi _rates;
     private readonly IUnitsApi _units;
     private readonly IStorageApi _storage;
     private readonly IBarcodesApi _barcodes;
     private readonly ImageUrlBuilder _images;
-    private readonly MobilePermissions _permissions;
 
     private long _variantId;
     private string? _initialBarcode;
     private bool _isCreate;
     private ProductDto? _product;
     private string? _imageKey;
+    private bool _isLoaded;
 
     public ObservableCollection<CategoryDto> Categories { get; } = [];
+    public ObservableCollection<UnitDto> Units { get; } = [];
+    public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
     public ObservableCollection<CurrencyDto> PriceCurrencies { get; } = [];
     public ObservableCollection<ProductBarcodeRow> Barcodes { get; } = [];
 
@@ -40,6 +44,8 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _code = "";
     [ObservableProperty] private string _imageLinkText = "";
     [ObservableProperty] private CategoryDto? _category;
+    [ObservableProperty] private UnitDto? _unit;
+    [ObservableProperty] private ManufacturerDto? _manufacturer;
     [ObservableProperty] private CurrencyDto? _priceCurrency;
     [ObservableProperty] private string? _previewUrl;
     [ObservableProperty] private bool _isBusy;
@@ -49,31 +55,31 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
 
-    public bool CanEdit => _permissions.Has(_isCreate ? "products.create" : "products.edit");
-    public bool CanCreateBarcode => _permissions.Has("barcodes.create") && !_isCreate;
-    public bool CanDeleteBarcode => _permissions.Has("barcodes.delete") && !_isCreate;
+    public bool CanEdit => _isCreate ? Access.CanCreateProduct : Access.CanEditProduct;
+    public bool CanCreateBarcode => Access.CanCreateBarcode && !_isCreate;
+    public bool CanDeleteBarcode => Access.CanDeleteBarcode && !_isCreate;
     public bool CanChoosePriceCurrency => PriceCurrencies.Count > 0;
 
     public ProductEditViewModel(
         IProductsApi products,
         ICategoriesApi categories,
-        IFeaturesApi features,
+        IManufacturersApi manufacturers,
         IRatesApi rates,
         IUnitsApi units,
         IStorageApi storage,
         IBarcodesApi barcodes,
         ImageUrlBuilder images,
-        MobilePermissions permissions)
+        AccessState access) : base(access)
     {
         _products = products;
         _categories = categories;
-        _features = features;
+        _manufacturers = manufacturers;
         _rates = rates;
         _units = units;
         _storage = storage;
         _barcodes = barcodes;
         _images = images;
-        _permissions = permissions;
+        ObserveAccess(nameof(CanEdit), nameof(CanCreateBarcode), nameof(CanDeleteBarcode));
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -91,23 +97,24 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
 
     public async Task AppearAsync()
     {
-        if (!CanEdit || _product is not null) return;
+        if (!CanEdit || _isLoaded) return;
         await RunAsync(async () =>
         {
-            foreach (var c in await _categories.GetAllAsync())
-                Categories.Add(c);
-
             if (!_isCreate)
             {
                 _product = (await _products.GetAllAsync(variantId: _variantId)).FirstOrDefault()
                     ?? throw new InvalidOperationException(Loc.Instance["product_not_found"]);
             }
 
+            await LoadCategoriesAsync(_product?.CategoryId);
+            await LoadUnitsAsync(_product?.UnitId);
+            await LoadManufacturersAsync(_product?.ManufacturerId);
             await LoadPriceCurrenciesAsync();
 
             if (_isCreate)
             {
                 Code = _initialBarcode ?? "";
+                _isLoaded = true;
                 return;
             }
 
@@ -117,15 +124,50 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             PriceText = product.SellingPrice?.ToString("0.##") ?? "";
             _imageKey = product.ImageKey;
             PreviewUrl = _images.FromKey(product.ImageKey);
-            Category = Categories.FirstOrDefault(c => c.Id == product.CategoryId);
             await LoadBarcodesAsync();
+            _isLoaded = true;
         });
+    }
+
+    private async Task LoadCategoriesAsync(long? selectedId = null)
+    {
+        var categoryId = selectedId ?? Category?.Id;
+        var categories = await _categories.GetAllAsync();
+        Categories.Clear();
+        foreach (var category in categories)
+            Categories.Add(category);
+        Category = categoryId is null ? null : Categories.FirstOrDefault(category => category.Id == categoryId);
+    }
+
+    private async Task LoadUnitsAsync(long? selectedId = null)
+    {
+        var unitId = selectedId ?? Unit?.Id;
+        var units = (await _units.GetAllAsync()).Where(unit => unit.IsEnabled);
+        Units.Clear();
+        foreach (var unit in units)
+            Units.Add(unit);
+        Unit = unitId is not null
+            ? Units.FirstOrDefault(unit => unit.Id == unitId)
+            : Units.FirstOrDefault(unit => unit.IsDefault && string.Equals(unit.Dimension, "Count", StringComparison.Ordinal))
+              ?? Units.FirstOrDefault(unit => unit.IsDefault)
+              ?? Units.FirstOrDefault();
+    }
+
+    private async Task LoadManufacturersAsync(long? selectedId = null)
+    {
+        var manufacturerId = selectedId ?? Manufacturer?.Id;
+        var manufacturers = await _manufacturers.GetAllAsync();
+        Manufacturers.Clear();
+        foreach (var manufacturer in manufacturers)
+            Manufacturers.Add(manufacturer);
+        Manufacturer = manufacturerId is null
+            ? null
+            : Manufacturers.FirstOrDefault(manufacturer => manufacturer.Id == manufacturerId);
     }
 
     private async Task LoadPriceCurrenciesAsync()
     {
-        var enabledFeatures = await _features.GetEnabledAsync();
-        if (!enabledFeatures.Contains("multicurrency_pricing", StringComparer.OrdinalIgnoreCase))
+        if (!Access.CanUsePricingMulticurrency)
             return;
 
         foreach (var currency in await _rates.GetCurrenciesAsync())
@@ -139,6 +181,31 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
                         ?? PriceCurrencies.FirstOrDefault(c => c.IsBase);
         OnPropertyChanged(nameof(CanChoosePriceCurrency));
     }
+
+    [RelayCommand]
+    private Task AddCategoryAsync() => RunAsync(async () =>
+    {
+        var name = await Shell.Current.CurrentPage.DisplayPromptAsync(
+            Loc.Instance["category"], Loc.Instance["name"], Loc.Instance["create"], Loc.Instance["cancel"]);
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var id = await _categories.CreateAsync(new CreateCategoryRequest(name.Trim(), null));
+        await LoadCategoriesAsync(id);
+    });
+
+    [RelayCommand]
+    private Task AddManufacturerAsync() => RunAsync(async () =>
+    {
+        var name = await Shell.Current.CurrentPage.DisplayPromptAsync(
+            Loc.Instance["manufacturer"], Loc.Instance["name"], Loc.Instance["create"], Loc.Instance["cancel"]);
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var id = await _manufacturers.CreateAsync(new SaveManufacturerRequest(name.Trim()));
+        await LoadManufacturersAsync(id);
+    });
+
+    [RelayCommand]
+    private void ClearManufacturer() => Manufacturer = null;
 
     [RelayCommand]
     private Task TakePhotoAsync() => RunAsync(async () =>
@@ -260,26 +327,25 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private Task SaveAsync() => RunAsync(async () =>
     {
-        if (string.IsNullOrWhiteSpace(Name)) throw new InvalidOperationException(Loc.Instance["err_fill_all"]);
+        if (string.IsNullOrWhiteSpace(Name) || Unit is null)
+            throw new InvalidOperationException(Loc.Instance["err_fill_all"]);
 
         var price = string.IsNullOrWhiteSpace(PriceText) ? (decimal?)null : Money.Parse(PriceText);
         var codeVal = string.IsNullOrWhiteSpace(Code) ? null : Code.Trim();
 
         if (_isCreate)
         {
-            var units = await _units.GetAllAsync();
-            var unitId = units.FirstOrDefault()?.Id ?? 0;
-
             await _products.CreateAsync(new CreateProductRequest(
                 Name.Trim(),
                 Category?.Id,
-                unitId,
+                Unit.Id,
                 0,
                 _initialBarcode != null ? [new BarcodeInput(_initialBarcode)] : null,
                 ImageKey: _imageKey,
                 Code: codeVal,
                 SellingPrice: price,
-                PriceCurrency: PriceCurrency?.Code));
+                PriceCurrency: PriceCurrency?.Code,
+                ManufacturerId: Manufacturer?.Id));
 
             Ui.Toast(Loc.Instance["saved_successfully"]);
             await Shell.Current.GoToAsync("..");
@@ -291,7 +357,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
         await _products.UpdateAsync(_product.Id, new UpdateProductRequest(
             Name.Trim(),
             Category?.Id,
-            _product.UnitId,
+            Unit.Id,
             _product.MinStock,
             _product.ProductTypeId,
             null,
@@ -302,7 +368,7 @@ public partial class ProductEditViewModel : ObservableObject, IQueryAttributable
             _product.VatRate,
             price,
             PriceCurrency?.Code ?? _product.PriceCurrency,
-            _product.ManufacturerId));
+            Manufacturer?.Id));
 
         WeakReferenceMessenger.Default.Send(new ProductChangedMessage(_variantId));
         Ui.Toast(Loc.Instance["saved_successfully"]);

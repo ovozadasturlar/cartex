@@ -69,7 +69,7 @@
                                    TextColor="White" />
                         </Border>
                     </Grid>
-                    <Grid>
+                    <Grid IsVisible="{Binding CanUseCart}">
                         <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
                                 WidthRequest="52" HeightRequest="52" CornerRadius="26"
                                 Command="{Binding OpenCartCommand}" />
@@ -269,7 +269,7 @@
                 <VerticalStackLayout Grid.Row="3" Padding="16,0,16,16" Spacing="10"
                                      IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}">
                     <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
-                            Command="{Binding AddToCartCommand}" />
+                            Command="{Binding AddToCartCommand}" IsVisible="{Binding CanUseCart}" />
                     <Button Text="{svc:T receive_stock}" Style="{StaticResource BtnOutline}"
                             Command="{Binding ReceiveStockCommand}"
                             IsVisible="{Binding CanReceiveStock}" />

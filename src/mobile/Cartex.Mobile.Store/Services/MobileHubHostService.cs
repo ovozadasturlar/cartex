@@ -12,7 +12,8 @@ public sealed class MobileHubHostService(
     MobileOfflineService offline,
     HubLinkService link,
     HubIdentityService identity,
-    WarehouseContext warehouse)
+    WarehouseContext warehouse,
+    MobileAuthService auth)
 {
     private const string EnabledKey = "hub_host_enabled";
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -62,7 +63,8 @@ public sealed class MobileHubHostService(
     }
 
     private bool ShouldServe() =>
-        Enabled
+        auth.UserId is not null
+        && Enabled
         && offline.IsEnabled
         && offline.ShouldUseOffline
         && link.Trust is not null

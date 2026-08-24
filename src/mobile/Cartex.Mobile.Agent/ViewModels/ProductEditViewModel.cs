@@ -16,7 +16,7 @@ public partial class ProductEditViewModel(
     IStorageApi storage,
     SyncService sync,
     ImageUrlBuilder images,
-    AppCapabilities caps) : ObservableObject, IQueryAttributable
+    AccessState access) : AccessAwareViewModel(access), IQueryAttributable
 {
     private long _variantId;
     private ProductDto? _product;
@@ -34,7 +34,7 @@ public partial class ProductEditViewModel(
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
 
-    public bool CanEdit => caps.CanManageProducts;
+    public bool CanEdit => Access.CanAgentEditProduct;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -44,6 +44,7 @@ public partial class ProductEditViewModel(
 
     public async Task AppearAsync()
     {
+        ObserveAccess(nameof(CanEdit));
         if (!CanEdit || _product is not null) return;
         await RunAsync(async () =>
         {

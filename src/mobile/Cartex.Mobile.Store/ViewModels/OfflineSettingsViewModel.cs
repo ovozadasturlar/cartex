@@ -22,7 +22,7 @@ public partial class OfflineSettingsViewModel(
     WarehouseContext warehouseContext,
     MobileOfflineService offline,
     IOfflineCacheApi offlineApi,
-    MobilePermissions permissions,
+    AccessState access,
     MobileHubHostService hubHost) : ObservableObject
 {
     [ObservableProperty] private bool _offlineEnabled;
@@ -271,7 +271,7 @@ public partial class OfflineSettingsViewModel(
     // qatorlar vakolat ko'chganda ham shu ro'yxatda ko'rinib turishi kerak.
     private async Task RefreshQueueAsync()
     {
-        var canVoid = permissions.Has("sales.void");
+        var canVoid = access.CanVoidSale;
         var rows = await offline.GetQueueRowsAsync();
         QueueRows.Clear();
         foreach (var row in rows)

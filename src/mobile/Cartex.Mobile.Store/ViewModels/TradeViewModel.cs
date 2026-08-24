@@ -16,12 +16,10 @@ public partial class TradeViewModel(
     IOrderingApi orderingApi,
     ISalesApi salesApi,
     IShiftsApi shiftsApi,
-    MobilePermissions permissions,
+    AccessState access,
     WarehouseContext warehouse,
     OrderingHubService orderingHub,
-    MobilePrintDispatcher printDispatcher,
-    SalesPolicyCache policy,
-    MobileFeaturesCache features) : ObservableObject, IQueryAttributable
+    MobilePrintDispatcher printDispatcher) : AccessAwareViewModel(access), IQueryAttributable
 {
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -51,9 +49,6 @@ public partial class TradeViewModel(
     [ObservableProperty] private string _selectedStatus = "Open";
     [ObservableProperty] private string _salesPeriod = "today";
     [ObservableProperty] private string _salesSearch = "";
-    [ObservableProperty] private bool _hasQueueAccess;
-    [ObservableProperty] private bool _hasSalesAccess = true;
-    [ObservableProperty] private bool _hasZReportAccess;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoadingMoreSales;
@@ -72,6 +67,11 @@ public partial class TradeViewModel(
     public bool IsQueueEmpty => Carts.Count == 0;
     public bool IsSalesEmpty => Sales.Count == 0;
     public bool IsZReportsEmpty => Shifts.Count == 0;
+    public bool HasSalesAccess => Access.CanViewSales;
+    public bool HasZReportAccess => Access.CanViewShifts && printDispatcher.CanPrintZReport;
+    public bool HasQueueAccess => Access.CanQueue;
+
+    private bool _observingAccess;
 
     public async Task AppearAsync()
     {
@@ -80,11 +80,12 @@ public partial class TradeViewModel(
         orderingHub.Resynced -= OnHubResynced;
         orderingHub.Resynced += OnHubResynced;
         _ = orderingHub.EnsureStartedAsync();
-        HasSalesAccess = permissions.HasAny("sales.view", "sales.viewAll");
-        HasZReportAccess = permissions.HasAny("shifts.view", "shifts.viewAll") && printDispatcher.CanPrintZReport;
-        await Task.WhenAll(policy.EnsureLoadedAsync(), features.EnsureLoadedAsync());
-        HasQueueAccess = permissions.HasAny("sales.pick", "sales.view")
-            && policy.Current.AllowSaleQueue && features.CartsEnabled;
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(HasSalesAccess), nameof(HasZReportAccess), nameof(HasQueueAccess), nameof(ShowQueueSection));
+            _observingAccess = true;
+        }
         if (IsQueue && !HasQueueAccess && (HasSalesAccess || HasZReportAccess))
             Section = HasSalesAccess ? "sales" : "zreports";
         SetSelectedStatus(QueueStatuses.First(x => x.Status == SelectedStatus));
@@ -119,8 +120,6 @@ public partial class TradeViewModel(
         OnPropertyChanged(nameof(ShowQueueSection));
         _ = LoadAsync();
     }
-
-    partial void OnHasQueueAccessChanged(bool value) => OnPropertyChanged(nameof(ShowQueueSection));
 
     [RelayCommand]
     private void ShowQueue() => Section = "queue";
@@ -242,7 +241,7 @@ public partial class TradeViewModel(
 
     [RelayCommand]
     private Task EditQueueAsync(TradeQueueRow row) =>
-        row.Cart.Status == "Open" && permissions.HasAny("sales.create", "sales.checkout")
+        row.Cart.Status == "Open" && Access.CanSell
             ? Shell.Current.GoToAsync($"checkout?code={row.Cart.AggregateCode}")
             : Task.CompletedTask;
 

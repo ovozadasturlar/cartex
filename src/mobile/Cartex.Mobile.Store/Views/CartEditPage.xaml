@@ -10,7 +10,7 @@
     x:DataType="vm:CartEditViewModel"
     Title="{svc:T edit_cart}">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto" IsVisible="{Binding CanUseCart}">
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
                 <VerticalStackLayout Spacing="8">

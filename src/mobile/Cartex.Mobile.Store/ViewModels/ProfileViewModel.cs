@@ -11,8 +11,7 @@ public partial class ProfileViewModel(
     StoreSignOut signOut,
     WarehouseContext warehouseContext,
     MobileOfflineService offline,
-    MobileFeaturesCache features,
-    MobilePermissions permissions) : ObservableObject
+    AccessState access) : AccessAwareViewModel(access)
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -21,12 +20,15 @@ public partial class ProfileViewModel(
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _footer = "";
     [ObservableProperty] private string _themeName = "";
-    [ObservableProperty] private bool _offlineVisible;
-    [ObservableProperty] private bool _canViewDevices;
     [ObservableProperty] private string _offlineStatus = "";
+
+    public bool CanViewDevices => Access.CanViewDevices;
+    public bool CanHostSms => Access.CanHostSms;
+    public bool OfflineVisible => Access.CanManageOffline;
 
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
     private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
+    private bool _observingAccess;
 
     public async Task AppearAsync()
     {
@@ -37,13 +39,12 @@ public partial class ProfileViewModel(
         LanguageName = LangNames[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
         Footer = $"Cartex Do'kon {AppInfo.Current.VersionString} • {session.ServerUrl}";
         ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
-        CanViewDevices = permissions.Has("devices.view");
-        // RUXSAT-04: oflayn kassa — alohida modul. To'liq huquqli foydalanuvchida ruxsatlar
-        // tokendan olib tashlanmaydi, shuning uchun modul holati alohida so'raladi.
-        await features.EnsureLoadedAsync();
-        OfflineVisible = permissions.Has("devices.revoke")
-            && permissions.HasAny("sales.create", "sales.checkout")
-            && features.OfflineCacheEnabled;
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(CanViewDevices), nameof(CanHostSms), nameof(OfflineVisible));
+            _observingAccess = true;
+        }
         if (!OfflineVisible) return;
         // Vakolat kaliti saqlangan joydan o'qilmaguncha IsEnabled "yo'q" deydi, shuning
         // uchun holat faqat servis tayyor bo'lgach ko'rsatiladi.
@@ -66,6 +67,9 @@ public partial class ProfileViewModel(
 
     [RelayCommand]
     private Task OpenSecurityAsync() => Shell.Current.GoToAsync("security");
+
+    [RelayCommand]
+    private Task OpenSmsGatewayAsync() => Shell.Current.GoToAsync("sms-gateway");
 
     [RelayCommand]
     private Task OpenOfflineSettingsAsync() => Shell.Current.GoToAsync("offline-settings");

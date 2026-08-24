@@ -8,7 +8,11 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthService auth) : ObservableObject
+public partial class HomeViewModel(
+    SyncService sync,
+    AgentDb db,
+    MobileAuthService auth,
+    AccessState access) : AccessAwareViewModel(access)
 {
     public ObservableCollection<VisitRow> Visits { get; } = [];
     public ObservableCollection<DayBar> WeekBars { get; } = [];
@@ -26,11 +30,17 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
     [ObservableProperty] private bool _visitsEmpty;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
-    [ObservableProperty] private bool _isOffline;
     [ObservableProperty] private string? _error;
+
+    public bool IsOffline => sync.IsOffline || Access.IsStale;
+    public string OfflineText => Access.IsStale
+        ? string.Format(Loc.Instance["access_stale_fmt"], Access.LastSuccessfulRefresh?.ToLocalTime().ToString("HH:mm") ?? "—")
+        : Loc.Instance["offline_banner"];
 
     public async Task AppearAsync()
     {
+        ObserveAccess(nameof(IsOffline), nameof(OfflineText));
+        await Access.EnsureLoadedAsync();
         await LoadLocalAsync();
         if (sync.LastAttempt is null || DateTime.Now - sync.LastAttempt > TimeSpan.FromMinutes(2))
             await SyncCommand.ExecuteAsync(null);
@@ -44,7 +54,8 @@ public partial class HomeViewModel(SyncService sync, AgentDb db, MobileAuthServi
         LastSync = await db.GetMetaAsync("last_sync") ?? "—";
         CustomerCount = await db.CountAsync<LocalCustomer>();
         ErrorCount = await db.CountOutboxAsync("error");
-        IsOffline = sync.IsOffline;
+        OnPropertyChanged(nameof(IsOffline));
+        OnPropertyChanged(nameof(OfflineText));
         Error = sync.LastError;
 
         var orders = await db.GetOrdersAsync();

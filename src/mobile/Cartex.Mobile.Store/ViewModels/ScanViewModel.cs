@@ -16,7 +16,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class ScanViewModel : ObservableObject
+public partial class ScanViewModel : AccessAwareViewModel
 {
     private const int SearchPageSize = 30;
 
@@ -26,7 +26,6 @@ public partial class ScanViewModel : ObservableObject
     private readonly IBarcodesApi _barcodesApi;
     private readonly ICategoriesApi _categoriesApi;
     private readonly WarehouseContext _warehouse;
-    private readonly MobilePermissions _permissions;
     private readonly CartStore _cart;
     private readonly SupplyCartStore _supplyCart;
     private readonly ImageUrlBuilder _images;
@@ -47,14 +46,11 @@ public partial class ScanViewModel : ObservableObject
     [ObservableProperty] private string? _imageUrl;
     [ObservableProperty] private decimal _quantity;
     [ObservableProperty] private string _quantityText = "1";
-    [ObservableProperty] private bool _canEditProduct;
-    [ObservableProperty] private bool _canReceiveStock;
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private int _supplyCartCount;
     // Qidiruv paneli ochiqmi. Maydonning o'zi doim ko'rinadi — panelni fokus yoki yozilgan
     // matn ochadi, lupa tugmasi emas: ilgari izlash uchun ikki qadam kerak bo'lardi.
     [ObservableProperty] private bool _searchOpen;
-    [ObservableProperty] private bool _canSearchProducts;
     [ObservableProperty] private bool _isSearching;
     [ObservableProperty] private bool _isLoadingMoreResults;
     [ObservableProperty] private string _searchText = "";
@@ -71,7 +67,11 @@ public partial class ScanViewModel : ObservableObject
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
     public ObservableCollection<SearchCategory> SearchCategories { get; } = [];
     public ObservableCollection<BarcodeChoice> BarcodeChoices { get; } = [];
-    public bool CanPrintBarcode => _printDispatcher.CanPrintBarcode;
+    public bool CanUseCart => Access.CanUseCart;
+    public bool CanPrintBarcode => Access.CanPrintBarcode && _printDispatcher.CanPrintBarcode;
+    public bool CanEditProduct => Access.CanEditProduct;
+    public bool CanReceiveStock => Access.CanReceiveStock;
+    public bool CanSearchProducts => Access.CanSearchProducts;
     public bool HasProductActions => CanEditProduct || CanPrintBarcode;
     public string PrintTotalText => $"{Loc.Instance["total"]}: {PrintCopies}";
     public string BarcodePreviewPrice => PrintWithPrice && _product is not null
@@ -95,7 +95,8 @@ public partial class ScanViewModel : ObservableObject
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, MobilePermissions permissions, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline, SessionStore session, StoreSignOut signOut)
+    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, AccessState access, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline, SessionStore session, StoreSignOut signOut)
+        : base(access)
     {
         _sessionsApi = sessionsApi;
         _productsApi = productsApi;
@@ -103,7 +104,6 @@ public partial class ScanViewModel : ObservableObject
         _barcodesApi = barcodesApi;
         _categoriesApi = categoriesApi;
         _warehouse = warehouse;
-        _permissions = permissions;
         _cart = cart;
         _supplyCart = supplyCart;
         _images = images;
@@ -115,9 +115,8 @@ public partial class ScanViewModel : ObservableObject
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
-        CanEditProduct = permissions.Has("products.edit");
-        CanReceiveStock = permissions.Has("supplies.create");
-        CanSearchProducts = permissions.Has("products.view");
+        ObserveAccess(nameof(CanUseCart), nameof(CanEditProduct), nameof(CanReceiveStock), nameof(CanSearchProducts),
+            nameof(CanPrintBarcode), nameof(HasProductActions));
     }
 
     public void Appear()
@@ -283,7 +282,7 @@ public partial class ScanViewModel : ObservableObject
     private async Task OpenHandoffAsync(string code)
     {
         if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
-        if (_permissions.HasAny("sales.create", "sales.checkout"))
+        if (Access.CanSell)
             await Shell.Current.GoToAsync($"checkout?code={code}");
         else
             Ui.Toast(Loc.Instance["err_forbidden"]);
@@ -416,7 +415,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private void AddToCart()
     {
-        if (_product is null || !TryCommitQuantity(showError: true)) return;
+        if (!CanUseCart || _product is null || !TryCommitQuantity(showError: true)) return;
         _cart.Add(_product, Quantity);
         Ui.Toast(Loc.Instance["added_to_cart"]);
         CloseOverlay();
@@ -505,7 +504,7 @@ public partial class ScanViewModel : ObservableObject
     [RelayCommand]
     private async Task ReceiveStockAsync()
     {
-        if (_product is null) return;
+        if (!CanReceiveStock || _product is null) return;
         var product = _product;
         var existing = _supplyCart.Lines.FirstOrDefault(l => l.VariantId == product.VariantId);
         var quantity = (existing?.Quantity ?? 0) + Quantity;
@@ -532,7 +531,7 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task OpenSupplyCart() => Shell.Current.GoToAsync("receive_cart");
+    private Task OpenSupplyCart() => CanReceiveStock ? Shell.Current.GoToAsync("receive_cart") : Task.CompletedTask;
 
     [RelayCommand]
     private void CloseOverlay()
@@ -546,7 +545,7 @@ public partial class ScanViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task OpenCart() => Shell.Current.GoToAsync("cart");
+    private Task OpenCart() => CanUseCart ? Shell.Current.GoToAsync("cart") : Task.CompletedTask;
 
     [RelayCommand]
     private void ToggleTorch() => TorchOn = !TorchOn;
@@ -585,7 +584,7 @@ public partial class ScanViewModel : ObservableObject
             var categories = await _categoriesApi.GetAllAsync();
             SearchCategories.Add(new SearchCategory(0, Loc.Instance["filter_all"]) { IsSelected = true });
             foreach (var category in categories)
-                SearchCategories.Add(new SearchCategory(category.Id, category.Name));
+                SearchCategories.Add(new SearchCategory(category.Id, category.FullPath ?? category.Name));
             _searchCategoriesLoaded = true;
         }
         catch { }

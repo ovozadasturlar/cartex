@@ -12,7 +12,7 @@
     x:DataType="vm:CartViewModel"
     Title="{svc:T cart_title}">
 
-    <Grid>
+    <Grid IsVisible="{Binding CanUseCart}">
         <Grid RowDefinitions="Auto,*,Auto">
             
             <VerticalStackLayout Padding="16,12" Spacing="10" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">

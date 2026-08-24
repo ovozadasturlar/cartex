@@ -81,6 +81,22 @@
                     <BoxView HeightRequest="1" Margin="58,0,10,0"
                              IsVisible="{Binding CanViewDevices}"
                              Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12"
+                          IsVisible="{Binding CanHostSms}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenSmsGatewayCommand}" />
+                        </Grid.GestureRecognizers>
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" WidthRequest="36" HeightRequest="36"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                            <Label Text="{StaticResource IcMessageText}" Style="{StaticResource Icon}" />
+                        </Border>
+                        <Label Grid.Column="1" Text="{svc:T sms_gateway_title}" FontSize="15" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Label Grid.Column="2" Text="›" FontSize="22" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Margin="58,0,10,0" IsVisible="{Binding CanHostSms}"
+                             Color="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="10,12">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding OpenChangePasswordCommand}" />

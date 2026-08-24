@@ -4,7 +4,7 @@ using Cartex.Shared.Models.Warehouses;
 
 namespace Cartex.Mobile.Store.Services;
 
-public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthService auth)
+public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthService auth, AccessState access)
 {
     private string Key => $"store_wh_{auth.UserId}";
 
@@ -31,7 +31,13 @@ public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthSer
         return await PickAsync(candidates);
     }
 
-    public async Task ChangeAsync() => await PickAsync(await CandidatesAsync());
+    public async Task ChangeAsync()
+    {
+        var before = WarehouseId;
+        await PickAsync(await CandidatesAsync());
+        if (WarehouseId != before)
+            await access.RefreshAsync();
+    }
 
     public void Reset()
     {

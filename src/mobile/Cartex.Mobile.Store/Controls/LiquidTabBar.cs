@@ -61,6 +61,7 @@ public class LiquidTabBar : Grid
     private readonly Grid _zones;
     private readonly Label[] _labels = new Label[TabCount];
     private readonly Label[] _icons = new Label[TabCount];
+    private readonly Grid[] _zoneViews = new Grid[TabCount];
     private readonly float[] _tints = new float[TabCount];
     private bool _animating;
     private bool _live;
@@ -115,6 +116,7 @@ public class LiquidTabBar : Grid
             text.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#6B7280"), Color.FromArgb("#9CA3AF"));
             _labels[i] = text;
             var zone = new Grid { BackgroundColor = Colors.Transparent, Children = { icon, text } };
+            _zoneViews[i] = zone;
             var tap = new TapGestureRecognizer();
             var captured = i;
             tap.Tapped += (_, _) => OnTap(captured);
@@ -131,6 +133,12 @@ public class LiquidTabBar : Grid
 
     // Panel bitta va u `MainPage` da yashaydi; bosilgan tab shu orqali xabar qilinadi.
     public Action<int>? Selected { get; set; }
+
+    public void SetAvailable(IReadOnlyList<bool> available)
+    {
+        for (var i = 0; i < TabCount; i++)
+            _zoneViews[i].IsVisible = i < available.Count && available[i];
+    }
 
     public void Select(int index, int animateFrom)
     {

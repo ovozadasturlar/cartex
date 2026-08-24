@@ -148,7 +148,7 @@
                             <Label Text="{svc:T queue}" Style="{StaticResource ActionLabel}" />
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Grid.Column="1" Spacing="7" IsVisible="{Binding CanSell}">
+                        <VerticalStackLayout Grid.Column="1" Spacing="7" IsVisible="{Binding CanUseCart}">
                             <VerticalStackLayout.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
                             </VerticalStackLayout.GestureRecognizers>

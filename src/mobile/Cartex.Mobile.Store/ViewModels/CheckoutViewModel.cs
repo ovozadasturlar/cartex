@@ -14,17 +14,14 @@ using Refit;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
+public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributable
 {
     private readonly IOrderingApi _orderingApi;
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
     private readonly CartStore _localCart;
     private readonly WarehouseContext _warehouse;
-    private readonly MobilePermissions _permissions;
     private readonly MobileOfflineService _offline;
-    private readonly SalesPolicyCache _policy;
-    private readonly MobileFeaturesCache _features;
 
     public ObservableCollection<CheckoutLine> Items { get; } = [];
     public ObservableCollection<CheckoutParticipantLine> Participants { get; } = [];
@@ -53,9 +50,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _paidText = "";
     [ObservableProperty] private string _changeText = "";
     [ObservableProperty] private string _debtText = "";
-    [ObservableProperty] private bool _canSelfSell;
-    // Navbat siyosati o'chirilgan bo'lsa bu tugma umuman chizilmaydi (NAVBAT-06).
-    [ObservableProperty] private bool _canQueue = true;
     [ObservableProperty] private bool _canEditNote = true;
     [ObservableProperty] private bool _isMulticurrency;
     [ObservableProperty] private string _baseCurrency = "UZS";
@@ -68,7 +62,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _excessText = "";
     [ObservableProperty] private string _discountText = "";
     [ObservableProperty] private string _payableText = "";
-    [ObservableProperty] private bool _canDiscount;
 
     // Faqat to'lov kiritilgan va u to'lanadigan summadan kam bo'lsa tugma ishlaydi.
     [ObservableProperty] private bool _hasShortfall;
@@ -78,6 +71,13 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     public bool CanAddPayment => Payments.Count < 20;
     public bool HasParticipants => Participants.Count > 0;
     public bool CanStoreExcessAsCredit => HasCustomer && Paid > Payable;
+    public bool CanUseCart => Access.CanUseCart;
+    public bool CanDiscount => Access.CanDiscount;
+    public bool CanQueue => _serverCart is null && Access.CanQueue;
+    public bool CanSelfSell => Access.CanSell
+        && (_serverCart?.AllowedActions is not { } actions
+            || actions.Contains("checkout")
+            || actions.Contains("claim"));
 
     // What the customer actually hands over once the discount is off.
     public decimal Payable => Math.Max(0, _totalAmount - _discount);
@@ -95,23 +95,17 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         IRatesApi ratesApi,
         CartStore localCart,
         WarehouseContext warehouse,
-        MobilePermissions permissions,
-        MobileOfflineService offline,
-        SalesPolicyCache policy,
-        MobileFeaturesCache features)
+        AccessState access,
+        MobileOfflineService offline)
+        : base(access)
     {
-        _policy = policy;
-        _features = features;
         _orderingApi = orderingApi;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _localCart = localCart;
         _warehouse = warehouse;
-        _permissions = permissions;
         _offline = offline;
-        // RUXSAT-04: savdo savat moduli orqali ketadi — modul o'chiq bo'lsa tugma ko'rsatilmaydi.
-        CanSelfSell = permissions.Has("sales.checkout") && features.CartsEnabled;
-        CanDiscount = permissions.Has("sales.discount");
+        ObserveAccess(nameof(CanUseCart), nameof(CanSelfSell), nameof(CanDiscount), nameof(CanQueue));
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -124,6 +118,8 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
     {
         if (IsLoaded) return;
         Error = null;
+
+        await Access.EnsureLoadedAsync();
 
         await _offline.StartAsync();
         if (_offline.ShouldUseOffline)
@@ -155,7 +151,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
 
         var businessTask = _businessApi.GetAsync();
         var currenciesTask = _ratesApi.GetCurrenciesAsync(onlyEnabled: true);
-        var gatingTask = Task.WhenAll(_policy.EnsureLoadedAsync(), _features.EnsureLoadedAsync());
         Task<CartDto?> cartTask = string.IsNullOrEmpty(_code)
             ? Task.FromResult<CartDto?>(null)
             : LoadServerCartAsync();
@@ -194,7 +189,6 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
             Currencies.Add(new CurrencyDto(BaseCurrency, BaseCurrency, true, true, true, true, 1, DateTime.UtcNow));
         }
 
-        await gatingTask;
         if (_serverCart is not null)
             ApplyServerCart(_serverCart);
         else
@@ -468,11 +462,9 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         BonusText = cart.PaidBonus > 0 ? QuantityInput.Format(cart.PaidBonus) : "";
         KeepExcessAsCredit = cart.CreditAmount > 0;
         UseCustomerAdvance = cart.UseCustomerAdvance;
-        CanQueue = false;
         CanEditNote = false;
-        var actions = cart.AllowedActions ?? [];
-        CanSelfSell = _permissions.Has("sales.checkout") && _features.CartsEnabled &&
-                      (actions.Contains("checkout") || actions.Contains("claim"));
+        OnPropertyChanged(nameof(CanQueue));
+        OnPropertyChanged(nameof(CanSelfSell));
         OnPropertyChanged(nameof(HasParticipants));
     }
 
@@ -488,9 +480,9 @@ public partial class CheckoutViewModel : ObservableObject, IQueryAttributable
         CustomerName = _localCart.CustomerName ?? "";
         NoteText = _localCart.Note;
         _totalAmount = _localCart.Total;
-        CanQueue = _permissions.HasAny("sales.pick", "sales.create")
-            && _policy.Current.AllowSaleQueue && _features.CartsEnabled;
         CanEditNote = true;
+        OnPropertyChanged(nameof(CanQueue));
+        OnPropertyChanged(nameof(CanSelfSell));
         OnPropertyChanged(nameof(HasParticipants));
     }
 

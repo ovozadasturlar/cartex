@@ -5,6 +5,7 @@ using Cartex.Shared.Models.OfflineCache;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Supplies;
 using SQLite;
+using SearchFolding = Cartex.Shared.Search.SearchFold;
 
 namespace Cartex.Mobile.Store.Services;
 
@@ -12,6 +13,7 @@ public sealed class MobileOfflineProduct
 {
     [PrimaryKey] public long VariantId { get; set; }
     [Indexed] public string ProductName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? CategoryName { get; set; }
     public string UnitName { get; set; } = "";
     public string Dimension { get; set; } = "";
@@ -32,6 +34,7 @@ public sealed class MobileOfflineCustomer
 {
     [PrimaryKey] public long Id { get; set; }
     [Indexed] public string FullName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     [Indexed] public string? CardBarcode { get; set; }
     public decimal DiscountPct { get; set; }
@@ -56,6 +59,7 @@ public sealed class MobileOfflinePartner
     [Indexed] public long PartyId { get; set; }
     public string PartnerCode { get; set; } = "";
     [Indexed] public string FullName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     [Indexed] public long? CustomerId { get; set; }
 }
@@ -64,6 +68,7 @@ public sealed class MobileOfflineSupplier
 {
     [PrimaryKey] public long Id { get; set; }
     [Indexed] public string Name { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
 }
 
@@ -206,6 +211,7 @@ public sealed class MobileOfflineStore
     {
         VariantId = x.VariantId,
         ProductName = x.ProductName,
+        SearchFold = SearchFolding.Fuzzy(x.ProductName),
         CategoryName = x.CategoryName,
         UnitName = x.UnitName,
         Dimension = x.Dimension,
@@ -226,6 +232,7 @@ public sealed class MobileOfflineStore
     {
         Id = x.Id,
         FullName = x.FullName,
+        SearchFold = SearchFolding.Fuzzy(x.FullName),
         Phone = x.Phone,
         CardBarcode = x.CardBarcode,
         DiscountPct = x.DiscountPct,
@@ -237,6 +244,7 @@ public sealed class MobileOfflineStore
     {
         Id = x.Id,
         Name = x.Name,
+        SearchFold = SearchFolding.Fuzzy(x.Name),
         Phone = x.Phone
     };
 
@@ -260,6 +268,7 @@ public sealed class MobileOfflineStore
             PartyId = x.PartyId,
             PartnerCode = x.PartnerCode,
             FullName = x.FullName,
+            SearchFold = SearchFolding.Fuzzy(x.FullName),
             Phone = x.Phone,
             CustomerId = x.CustomerId
         }));
@@ -519,19 +528,33 @@ public sealed class MobileOfflineStore
     {
         await InitializeAsync();
         var normalized = term.Trim().ToLowerInvariant();
-        return await _db.Table<MobileOfflineProduct>()
-            .Where(x => x.ProductName.ToLower().Contains(normalized))
-            .OrderBy(x => x.ProductName).Take(limit).ToListAsync();
+        var folded = SearchFolding.Fuzzy(term);
+        var strict = SearchFolding.Strict(term);
+        var rows = await _db.Table<MobileOfflineProduct>()
+            .Where(x => x.ProductName.ToLower().Contains(normalized)
+                || (folded.Length > 0 && x.SearchFold != null && x.SearchFold.Contains(folded)))
+            .ToListAsync();
+        return rows.OrderBy(x => NameRank(x.ProductName, strict))
+            .ThenBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.VariantId)
+            .Take(limit).ToList();
     }
 
     public async Task<List<MobileOfflineCustomer>> SearchCustomersAsync(string term, int limit)
     {
         await InitializeAsync();
         var normalized = term.Trim().ToLowerInvariant();
-        return await _db.Table<MobileOfflineCustomer>()
+        var folded = SearchFolding.Fuzzy(term);
+        var strict = SearchFolding.Strict(term);
+        var rows = await _db.Table<MobileOfflineCustomer>()
             .Where(x => x.FullName.ToLower().Contains(normalized)
+                || (folded.Length > 0 && x.SearchFold != null && x.SearchFold.Contains(folded))
                 || (x.Phone != null && x.Phone.Contains(normalized)))
-            .OrderBy(x => x.FullName).Take(limit).ToListAsync();
+            .ToListAsync();
+        return rows.OrderBy(x => NameRank(x.FullName, strict))
+            .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Id)
+            .Take(limit).ToList();
     }
 
     public async Task<MobileOfflineCustomer?> GetCustomerAsync(long customerId)
@@ -550,10 +573,17 @@ public sealed class MobileOfflineStore
     {
         await InitializeAsync();
         var normalized = term.Trim().ToLowerInvariant();
-        return await _db.Table<MobileOfflinePartner>()
+        var folded = SearchFolding.Fuzzy(term);
+        var strict = SearchFolding.Strict(term);
+        var rows = await _db.Table<MobileOfflinePartner>()
             .Where(x => x.FullName.ToLower().Contains(normalized)
+                || (folded.Length > 0 && x.SearchFold != null && x.SearchFold.Contains(folded))
                 || (x.Phone != null && x.Phone.Contains(normalized)))
-            .OrderBy(x => x.FullName).Take(limit).ToListAsync();
+            .ToListAsync();
+        return rows.OrderBy(x => NameRank(x.FullName, strict))
+            .ThenBy(x => x.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.PartnerId)
+            .Take(limit).ToList();
     }
 
     public async Task<MobileOfflinePartner?> FindPartnerByCustomerAsync(long customerId)
@@ -567,10 +597,17 @@ public sealed class MobileOfflineStore
     {
         await InitializeAsync();
         var normalized = term.Trim().ToLowerInvariant();
+        var folded = SearchFolding.Fuzzy(term);
+        var strict = SearchFolding.Strict(term);
         var query = _db.Table<MobileOfflineSupplier>();
         if (normalized.Length > 0)
-            query = query.Where(x => x.Name.ToLower().Contains(normalized));
-        return await query.OrderBy(x => x.Name).Take(limit).ToListAsync();
+            query = query.Where(x => x.Name.ToLower().Contains(normalized)
+                || (folded.Length > 0 && x.SearchFold != null && x.SearchFold.Contains(folded)));
+        var rows = await query.ToListAsync();
+        return rows.OrderBy(x => NameRank(x.Name, strict))
+            .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Id)
+            .Take(limit).ToList();
     }
 
     public async Task<List<MobileOfflineOutbox>> GetPendingAsync(long leaseId, long epoch, int limit)
@@ -715,6 +752,13 @@ public sealed class MobileOfflineStore
 
     private static void Put(SQLiteConnection connection, string key, string value) =>
         connection.InsertOrReplace(new MobileOfflineMeta { Key = key, Value = value });
+
+    private static int NameRank(string name, string strictQuery)
+    {
+        var strictName = SearchFolding.Strict(name);
+        if (strictName.StartsWith(strictQuery, StringComparison.Ordinal)) return 0;
+        return strictName.Contains(strictQuery, StringComparison.Ordinal) ? 1 : 2;
+    }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 }

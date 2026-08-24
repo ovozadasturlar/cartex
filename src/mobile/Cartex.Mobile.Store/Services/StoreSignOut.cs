@@ -6,17 +6,23 @@ namespace Cartex.Mobile.Store.Services;
 // savati, ombori va hub ulanishi keyingi sessiyaga o'tib ketmasligi kerak.
 public sealed class StoreSignOut(
     MobileAuthService auth,
+    AccessState access,
     OrderingHubService orderingHub,
     CartStore cart,
     SupplyCartStore supplyCart,
     WarehouseContext warehouse,
-    HubLinkService hubLink)
+    HubLinkService hubLink,
+    MobileHubHostService hubHost,
+    SmsGatewayHostService smsGateway)
 {
     public async Task RunAsync()
     {
         AppLock.Disable();
         await auth.LogoutAsync();
+        access.Clear();
         await orderingHub.StopAsync();
+        await smsGateway.StopAsync();
+        await hubHost.ApplyAsync();
         cart.Clear();
         supplyCart.Clear();
         warehouse.Reset();

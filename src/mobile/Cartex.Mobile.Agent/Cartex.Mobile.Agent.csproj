@@ -11,8 +11,8 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ApplicationTitle>Cartex Agent</ApplicationTitle>
 		<ApplicationId>uz.cartex.agent</ApplicationId>
-		<ApplicationDisplayVersion>0.0.1</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>0.0.2</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<NoWarn>$(NoWarn);XA4301</NoWarn>
 	</PropertyGroup>

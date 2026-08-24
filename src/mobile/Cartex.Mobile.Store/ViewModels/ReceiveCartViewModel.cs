@@ -9,14 +9,13 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class ReceiveCartViewModel : ObservableObject
+public partial class ReceiveCartViewModel : AccessAwareViewModel
 {
     private readonly SupplyCartStore _cart;
     private readonly WarehouseContext _warehouse;
     private readonly ISuppliesApi _suppliesApi;
     private readonly ISuppliersApi _suppliersApi;
     private readonly MobileOfflineService _offline;
-    private readonly SalesPolicyCache _policy;
     private CancellationTokenSource? _searchCts;
 
     public ObservableCollection<SupplyCartLine> Lines { get; } = [];
@@ -34,23 +33,26 @@ public partial class ReceiveCartViewModel : ObservableObject
     [ObservableProperty] private bool _isLineModalOpen;
     [ObservableProperty] private SupplyCartLine? _selectedLine;
     [ObservableProperty] private string _selectedQtyText = "";
+    public bool CanReceiveStock => Access.CanReceiveStock;
 
     // Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
     // yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
     public Func<bool>? RowInteracted { get; set; }
 
-    public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi, MobileOfflineService offline, SalesPolicyCache policy)
+    public ReceiveCartViewModel(SupplyCartStore cart, WarehouseContext warehouse, ISuppliesApi suppliesApi, ISuppliersApi suppliersApi, MobileOfflineService offline, AccessState access)
+        : base(access)
     {
         _cart = cart;
         _warehouse = warehouse;
         _suppliesApi = suppliesApi;
         _suppliersApi = suppliersApi;
         _offline = offline;
-        _policy = policy;
+        ObserveAccess(nameof(CanReceiveStock));
     }
 
     public void Appear()
     {
+        if (!CanReceiveStock) return;
         _cart.Changed += Refresh;
         Refresh();
     }
@@ -337,7 +339,7 @@ public partial class ReceiveCartViewModel : ObservableObject
             Ui.Toast(Loc.Instance["offline_capability_off"]);
             return;
         }
-        if (_policy.Current.RequireSupplier && _cart.SupplierId is null)
+        if (Access.SalesPolicy.RequireSupplier && _cart.SupplierId is null)
         {
             Ui.Toast(Loc.Instance["err_select_supplier"]);
             return;

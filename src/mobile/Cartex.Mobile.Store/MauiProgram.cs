@@ -9,6 +9,8 @@ namespace Cartex.Mobile.Store;
 
 public static class MauiProgram
 {
+    private static int _handlingUnauthorized;
+
     internal static Task LocInit { get; private set; } = Task.CompletedTask;
 
     public static MauiApp CreateMauiApp()
@@ -30,6 +32,7 @@ public static class MauiProgram
             handler.PlatformView.BackgroundTintList =
                 Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
         Platforms.Android.HubForegroundBootstrap.Register();
+        Platforms.Android.SmsForegroundBootstrap.Register();
 #endif
 
         var session = new SessionStore();
@@ -39,6 +42,7 @@ public static class MauiProgram
             () => session.ServerUrl,
             () => session.AccessToken,
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
+            ct => Resolve<MobileAuthService>().ForceRefreshAsync(ct),
             OnUnauthorized,
             "store",
             TimeSpan.FromSeconds(20),
@@ -47,7 +51,11 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<MobilePermissions>();
-        builder.Services.AddSingleton<AppCapabilities>();
+        builder.Services.AddSingleton<MobileFeaturesCache>();
+        builder.Services.AddSingleton<SalesPolicyCache>();
+        builder.Services.AddSingleton<MobileAccessStateLoader>();
+        builder.Services.AddSingleton<IAccessStateLoader>(services => services.GetRequiredService<MobileAccessStateLoader>());
+        builder.Services.AddSingleton<AccessState>();
         builder.Services.AddSingleton<ImageUrlBuilder>();
         builder.Services.AddSingleton<CartStore>();
         builder.Services.AddSingleton<SupplyCartStore>();
@@ -55,8 +63,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<OrderingHubService>();
         builder.Services.AddSingleton<MobilePrintDispatcher>();
         builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
-        builder.Services.AddSingleton<SalesPolicyCache>();
-        builder.Services.AddSingleton<MobileFeaturesCache>();
         builder.Services.AddSingleton<MobileOfflineStore>();
         builder.Services.AddSingleton<HubIdentityService>();
         builder.Services.AddSingleton<HubLinkService>();
@@ -65,6 +71,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<StoreSignOut>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
         builder.Services.AddSingleton<StartupService>();
+#if ANDROID
+        builder.Services.AddSingleton<ISmsGatewayPlatform, Platforms.Android.AndroidSmsGatewayPlatform>();
+#endif
+        builder.Services.AddSingleton<SmsGatewayHostService>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<PinViewModel>();
@@ -90,6 +100,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReceiveCartViewModel>();
         builder.Services.AddTransient<ProductEditViewModel>();
         builder.Services.AddTransient<BarcodeAttachViewModel>();
+        builder.Services.AddTransient<SmsGatewayViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<ServerScanPage>();
@@ -117,8 +128,11 @@ public static class MauiProgram
         builder.Services.AddTransient<ReceiveCartPage>();
         builder.Services.AddTransient<ProductEditPage>();
         builder.Services.AddTransient<BarcodeAttachPage>();
+        builder.Services.AddTransient<SmsGatewayPage>();
+        builder.Services.AddTransient<SmsGatewaySettingsPage>();
 
         var app = builder.Build();
+        app.Services.GetRequiredService<MobileAccessStateLoader>().StartConnectivityWatch();
         Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
         Warm(app.Services);
         return app;
@@ -130,8 +144,7 @@ public static class MauiProgram
     {
         services.GetRequiredService<CartStore>();
         services.GetRequiredService<SupplyCartStore>();
-        services.GetRequiredService<SalesPolicyCache>();
-        services.GetRequiredService<MobileFeaturesCache>();
+        services.GetRequiredService<AccessState>();
         services.GetRequiredService<WarehouseContext>();
     });
 
@@ -140,7 +153,32 @@ public static class MauiProgram
 
     private static void OnUnauthorized()
     {
+        if (Interlocked.Exchange(ref _handlingUnauthorized, 1) != 0) return;
+        if (!SessionStore.HasSession)
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+            return;
+        }
         Resolve<SessionStore>().Clear();
-        MainThread.BeginInvokeOnMainThread(() => _ = Shell.Current.GoToAsync("//login"));
+        Resolve<AccessState>().Clear();
+        MainThread.BeginInvokeOnMainThread(() => _ = NavigateToLoginAsync());
+    }
+
+    private static async Task NavigateToLoginAsync()
+    {
+        try
+        {
+            if (Shell.Current is { } shell
+                && !shell.CurrentState.Location.OriginalString.Contains("login", StringComparison.Ordinal))
+                await shell.GoToAsync("//login");
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
+        finally
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+        }
     }
 }

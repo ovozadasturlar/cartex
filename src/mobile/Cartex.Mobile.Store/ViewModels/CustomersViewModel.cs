@@ -12,22 +12,20 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class CustomersViewModel(
     ICustomersApi customersApi,
-    MobilePermissions permissions,
+    AccessState access,
     MobileOfflineService offline,
-    MobileAuthService auth,
-    SalesPolicyCache policy) : ObservableObject
+    MobileAuthService auth) : AccessAwareViewModel(access)
 {
     private const int PageSize = 30;
     public RangeObservableCollection<StoreCustomerRow> Customers { get; } = [];
 
     [ObservableProperty] private string _search = "";
-    [ObservableProperty] private bool _hasAccess;
-    [ObservableProperty] private bool _canCreate;
     [ObservableProperty] private bool _isCreateModalOpen;
     [ObservableProperty] private string _newCustomerName = "";
     [ObservableProperty] private string _newCustomerPhone = "";
     // SOZ-02a: bo'sh qoldirilsa limit cheklanmagan bo'ladi, 0 esa qarzni butunlay yopadi.
     [ObservableProperty] private string _newCustomerCreditLimit = "";
+    [ObservableProperty] private bool _newCustomerAllowMarketingSms;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoadingMore;
@@ -39,6 +37,8 @@ public partial class CustomersViewModel(
     [ObservableProperty] private string _offlinePayDebtText = "";
 
     public bool HasCustomers => Customers.Count > 0;
+    public bool HasAccess => Access.CanViewCustomers;
+    public bool CanCreate => Access.CanCreateCustomer;
     public bool IsOfflinePayCash => OfflinePayMethod == "Cash";
     public bool IsOfflinePayCard => OfflinePayMethod == "Card";
 
@@ -47,6 +47,7 @@ public partial class CustomersViewModel(
     private int _page;
     private bool _hasMore = true;
     private DateTime _lastLoadedAt;
+    private bool _observingAccess;
 
     partial void OnOfflinePayMethodChanged(string value)
     {
@@ -57,8 +58,12 @@ public partial class CustomersViewModel(
     public async Task AppearAsync()
     {
         _ = offline.StartAsync();
-        HasAccess = permissions.Has("customers.view");
-        CanCreate = permissions.Has("customers.create");
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(HasAccess), nameof(CanCreate));
+            _observingAccess = true;
+        }
         if (!HasAccess) return;
         if (Customers.Count == 0 || DateTime.UtcNow - _lastLoadedAt > TimeSpan.FromSeconds(20))
             await LoadAsync(reset: true, CancellationToken.None);
@@ -100,7 +105,7 @@ public partial class CustomersViewModel(
     {
         if (offline.ShouldUseOffline)
         {
-            if (!permissions.Has("customer_payments.create"))
+            if (!Access.CanReceiveCustomerPayment)
                 Ui.Toast(Loc.Instance["offline_detail_requires_internet"]);
             else if (!offline.PaymentsCapability)
                 Ui.Toast(Loc.Instance["offline_capability_off"]);
@@ -185,8 +190,9 @@ public partial class CustomersViewModel(
         }
         NewCustomerName = "";
         NewCustomerPhone = "";
+        NewCustomerAllowMarketingSms = false;
         // SOZ-17: forma do'kon standarti bilan ochiladi, kassir uni tozalab cheksiz qila oladi.
-        NewCustomerCreditLimit = policy.Current.DefaultCreditLimit?.ToString("0.##") ?? "";
+        NewCustomerCreditLimit = Access.SalesPolicy.DefaultCreditLimit?.ToString("0.##") ?? "";
         IsCreateModalOpen = true;
     }
 
@@ -213,7 +219,8 @@ public partial class CustomersViewModel(
             var limitText = NewCustomerCreditLimit.Replace(" ", "");
             decimal? creditLimit = decimal.TryParse(limitText, out var parsed) ? parsed : null;
             var id = await customersApi.CreateAsync(
-                new CreateCustomerRequest(name, NewCustomerPhone.Trim(), null, 0, CreditLimit: creditLimit));
+                new CreateCustomerRequest(name, NewCustomerPhone.Trim(), null, 0, CreditLimit: creditLimit,
+                    AllowMarketingSms: NewCustomerAllowMarketingSms));
             IsCreateModalOpen = false;
             await Shell.Current.GoToAsync($"customer/detail?id={id}");
         }

@@ -17,4 +17,20 @@ public partial class ProductEditPage : ContentPage
         base.OnAppearing();
         _ = _vm.AppearAsync();
     }
+
+    private void OnEntryCompleted(object? sender, EventArgs e)
+    {
+        var next = sender switch
+        {
+            Entry entry when entry == ProductNameEntry => _vm.CanChoosePriceCurrency ? PriceWithCurrencyEntry : PriceEntry,
+            Entry entry when entry == PriceWithCurrencyEntry || entry == PriceEntry => CodeEntry,
+            Entry entry when entry == NewBarcodeEntry => NewBarcodePackQtyEntry,
+            _ => null
+        };
+
+        if (next is not null)
+            next.Focus();
+        else if (sender is Entry entry)
+            entry.Unfocus();
+    }
 }

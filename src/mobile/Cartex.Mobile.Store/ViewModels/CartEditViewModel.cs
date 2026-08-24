@@ -19,7 +19,8 @@ public partial class CartEditViewModel(
     IOrderingApi orderingApi,
     IProductsApi productsApi,
     ICustomersApi customersApi,
-    IRatesApi ratesApi) : ObservableObject, IQueryAttributable
+    IRatesApi ratesApi,
+    AccessState access) : AccessAwareViewModel(access), IQueryAttributable
 {
     public ObservableCollection<CartEditLine> Lines { get; } = [];
     public ObservableCollection<CartEditSearchRow> SearchResults { get; } = [];
@@ -41,6 +42,7 @@ public partial class CartEditViewModel(
     public bool HasCustomers => Customers.Count > 0;
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
     public bool IsEmpty => Lines.Count == 0;
+    public bool CanUseCart => Access.CanUseCart;
 
     private string _code = "";
     private CartDto? _cart;
@@ -57,6 +59,9 @@ public partial class CartEditViewModel(
 
     public async Task AppearAsync()
     {
+        await Access.EnsureLoadedAsync();
+        ObserveAccess(nameof(CanUseCart));
+        if (!CanUseCart) return;
         if (!IsLoaded && !IsLoading)
             await LoadAsync();
     }

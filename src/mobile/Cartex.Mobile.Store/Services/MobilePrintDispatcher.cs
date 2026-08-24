@@ -9,12 +9,12 @@ namespace Cartex.Mobile.Store.Services;
 public sealed class MobilePrintDispatcher(
     IPrintingApi printingApi,
     MobileAuthService auth,
-    MobilePermissions permissions)
+    AccessState access)
 {
-    public bool CanPrintBarcode => Allowed("printing.barcodes.print");
-    public bool CanPrintReceipt => Allowed("printing.receipts.print");
-    public bool CanReprintReceipt => Allowed("printing.receipts.reprint");
-    public bool CanPrintZReport => Allowed("printing.z_reports.print");
+    public bool CanPrintBarcode => access.CanPrintBarcode;
+    public bool CanPrintReceipt => access.CanPrintReceipt;
+    public bool CanReprintReceipt => access.CanReprintReceipt;
+    public bool CanPrintZReport => access.CanPrintZReport;
 
     public Task PrintBarcodeAsync(string code, string name, int copies, string? priceText, string? sku, bool withPrice, bool showSku) =>
         CreateAsync(
@@ -65,9 +65,6 @@ public sealed class MobilePrintDispatcher(
             false,
             null,
             $"issue-note:{issueId}:mobile:{Guid.NewGuid():N}");
-
-    private bool Allowed(string permission) =>
-        permissions.Has("printing.remote.use") && permissions.Has(permission);
 
     private Task CreateAsync(
         PrintJobKind kind,

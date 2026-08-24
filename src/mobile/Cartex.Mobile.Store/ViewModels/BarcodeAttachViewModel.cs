@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class BarcodeAttachViewModel : ObservableObject, IQueryAttributable
+public partial class BarcodeAttachViewModel : AccessAwareViewModel, IQueryAttributable
 {
     private const int PageSize = 30;
 
@@ -30,17 +30,19 @@ public partial class BarcodeAttachViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty] private bool _isLoadingMore;
     [ObservableProperty] private bool _isDetailsOpen;
     [ObservableProperty] private AttachRow? _selectedRow;
-    [ObservableProperty] private bool _canEditProduct;
     [ObservableProperty] private string? _error;
 
     public ObservableCollection<AttachRow> Results { get; } = [];
 
-    public BarcodeAttachViewModel(IProductsApi products, IBarcodesApi barcodes, ImageUrlBuilder images, MobilePermissions permissions)
+    public bool CanEditProduct => Access.CanCreateBarcode;
+
+    public BarcodeAttachViewModel(IProductsApi products, IBarcodesApi barcodes, ImageUrlBuilder images, AccessState access)
+        : base(access)
     {
         _products = products;
         _barcodes = barcodes;
         _images = images;
-        CanEditProduct = permissions.Has("barcodes.create");
+        ObserveAccess(nameof(CanEditProduct));
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)

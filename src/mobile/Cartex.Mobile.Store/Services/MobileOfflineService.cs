@@ -362,7 +362,7 @@ public sealed class MobileOfflineService(
     {
         // Tarmoq almashdi: oldingi tarmoqda yig'ilgan kutish oralig'i bu yerga tegishli emas.
         ResetHubProbe();
-        if (e.NetworkAccess != NetworkAccess.Internet || !IsEnabled) return;
+        if (auth.UserId is null || e.NetworkAccess != NetworkAccess.Internet || !IsEnabled) return;
         _ = Task.Run(() => SyncAsync(), _lifetime.Token);
     }
 
@@ -373,6 +373,7 @@ public sealed class MobileOfflineService(
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
+                if (auth.UserId is null) continue;
                 var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
                 // HUB-05: guvohnoma bilan birga joriy `epoch` keladi. Uzoq onlayn turgan telefon
                 // uni yangilamasa, vakolat boshqa qurilmaga o'tganidan keyin ham eski HUB'ni
@@ -450,7 +451,7 @@ public sealed class MobileOfflineService(
 
     public async Task<bool> SyncAsync()
     {
-        if (!IsEnabled || Connectivity.Current.NetworkAccess != NetworkAccess.Internet) return false;
+        if (auth.UserId is null || !IsEnabled || Connectivity.Current.NetworkAccess != NetworkAccess.Internet) return false;
         if (!await _syncLock.WaitAsync(0)) return true;
         try
         {
@@ -477,6 +478,7 @@ public sealed class MobileOfflineService(
 
     private async Task HeartbeatAsync()
     {
+        if (auth.UserId is null) return;
         if (!await _syncLock.WaitAsync(0)) return;
         try
         {

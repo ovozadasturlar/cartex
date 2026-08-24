@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class CartViewModel(AgentDb db, SyncService sync, CartService cart, AppCapabilities caps) : ObservableObject
+public partial class CartViewModel(AgentDb db, SyncService sync, CartService cart, AccessState access) : AccessAwareViewModel(access)
 {
     private long _warehouseId;
     private LocalCustomer? _customer;
@@ -23,7 +23,8 @@ public partial class CartViewModel(AgentDb db, SyncService sync, CartService car
     [ObservableProperty] private string? _error;
 
     public CartService Cart => cart;
-    public bool CanOverridePrice => caps.CanOverridePrice;
+    public bool CanUseCart => Access.CanAgentUseCart;
+    public bool CanOverridePrice => Access.CanAgentUseCart && Access.CanOverridePrice;
 
     public string CustomerLabel => _customer?.FullName ?? Loc.Instance["cash_customer"];
     public decimal Paid => Money.Parse(PaidText);
@@ -35,6 +36,7 @@ public partial class CartViewModel(AgentDb db, SyncService sync, CartService car
 
     public async Task AppearAsync()
     {
+        ObserveAccess(nameof(CanUseCart), nameof(CanOverridePrice));
         cart.Currency = await db.GetMetaAsync("base_currency") ?? "";
         _warehouseId = long.TryParse(await db.GetMetaAsync("warehouse_id"), out var w) ? w : 0;
         cart.PropertyChanged += OnCartChanged;

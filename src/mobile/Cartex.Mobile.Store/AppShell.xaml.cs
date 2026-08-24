@@ -27,6 +27,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("offline-settings", typeof(OfflineSettingsPage));
         Routing.RegisterRoute("pin", typeof(PinPage));
         Routing.RegisterRoute("security", typeof(SecurityPage));
+        Routing.RegisterRoute("sms-gateway", typeof(SmsGatewayPage));
+        Routing.RegisterRoute("sms-gateway-settings", typeof(SmsGatewaySettingsPage));
         Routing.RegisterRoute("server-scan", typeof(ServerScanPage));
         if (SessionStore.HasSession) CurrentItem = MainTab;
     }

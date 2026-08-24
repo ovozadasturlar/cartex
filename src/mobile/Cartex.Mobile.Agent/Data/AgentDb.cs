@@ -1,5 +1,5 @@
 using SQLite;
-using Cartex.Mobile.Core;
+using SearchFolding = Cartex.Shared.Search.SearchFold;
 
 namespace Cartex.Mobile.Agent.Data;
 
@@ -22,20 +22,26 @@ public sealed class AgentDb
     public async Task ReplaceCustomersAsync(IEnumerable<LocalCustomer> customers)
     {
         await InitAsync();
+        var rows = customers.ToList();
+        foreach (var row in rows)
+            row.SearchFold = SearchFolding.Fuzzy(row.FullName);
         await _db.RunInTransactionAsync(c =>
         {
             c.DeleteAll<LocalCustomer>();
-            c.InsertAll(customers);
+            c.InsertAll(rows);
         });
     }
 
     public async Task ReplaceVanStockAsync(IEnumerable<LocalVanStock> stock)
     {
         await InitAsync();
+        var rows = stock.ToList();
+        foreach (var row in rows)
+            row.SearchFold = SearchFolding.Fuzzy(row.ProductName);
         await _db.RunInTransactionAsync(c =>
         {
             c.DeleteAll<LocalVanStock>();
-            c.InsertAll(stock);
+            c.InsertAll(rows);
         });
     }
 
@@ -82,26 +88,42 @@ public sealed class AgentDb
         var all = await _db.Table<LocalCustomer>().OrderBy(c => c.FullName).ToListAsync();
         if (string.IsNullOrWhiteSpace(query)) return all;
         var tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select(UzText.Fold).Where(t => t.Length > 0).ToList();
+            .Select(SearchFolding.Fuzzy).Where(t => t.Length > 0).ToList();
         if (tokens.Count == 0) return all;
-        return all.Where(c =>
-        {
-            var fields = new[] { UzText.Fold(c.FullName), UzText.Fold(c.Address ?? ""), UzText.Fold(c.Phone ?? "") };
-            var digits = string.Concat((c.Phone ?? "").Where(char.IsDigit));
-            return tokens.All(t => fields.Any(f => f.Contains(t)) || (t.All(char.IsDigit) && digits.Contains(t)));
-        }).ToList();
+        var folded = SearchFolding.Fuzzy(query);
+        var strict = SearchFolding.Strict(query);
+        return all.Where(c => (folded.Length > 0
+                && c.SearchFold?.Contains(folded, StringComparison.Ordinal) == true)
+            || CustomerFieldsMatch(c, tokens))
+            .OrderBy(c => NameRank(c.FullName, strict))
+            .ThenBy(c => c.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.Id)
+            .ToList();
     }
 
     public async Task<List<LocalVanStock>> SearchVanStockAsync(string? query)
     {
         await InitAsync();
-        var q = _db.Table<LocalVanStock>();
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            var term = query.Trim().ToLowerInvariant();
-            q = q.Where(s => s.ProductName.ToLower().Contains(term));
-        }
-        return await q.OrderBy(s => s.ProductName).ToListAsync();
+        var all = await _db.Table<LocalVanStock>().ToListAsync();
+        return FilterVanStock(all, query);
+    }
+
+    public static List<LocalVanStock> FilterVanStock(IEnumerable<LocalVanStock> stock, string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return stock.OrderBy(s => s.ProductName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(s => s.VariantId).ToList();
+        var term = query.Trim();
+        var folded = SearchFolding.Fuzzy(query);
+        var strict = SearchFolding.Strict(query);
+        return stock.Where(s => s.ProductName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || (folded.Length > 0
+                    && s.SearchFold?.Contains(folded, StringComparison.Ordinal) == true)
+                || s.Code?.Contains(term, StringComparison.OrdinalIgnoreCase) == true)
+            .OrderBy(s => NameRank(s.ProductName, strict))
+            .ThenBy(s => s.ProductName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(s => s.VariantId)
+            .ToList();
     }
 
     public async Task<LocalVanStock?> FindByBarcodeAsync(string code)
@@ -221,5 +243,25 @@ public sealed class AgentDb
     {
         await InitAsync();
         await _db.DeleteAsync<LocalOrder>(localId);
+    }
+
+    private static bool CustomerFieldsMatch(LocalCustomer customer, IReadOnlyList<string> tokens)
+    {
+        var fields = new[]
+        {
+            SearchFolding.Fuzzy(customer.FullName),
+            SearchFolding.Fuzzy(customer.Address),
+            SearchFolding.Fuzzy(customer.Phone)
+        };
+        var digits = string.Concat((customer.Phone ?? "").Where(char.IsDigit));
+        return tokens.All(token => fields.Any(field => field.Contains(token, StringComparison.Ordinal))
+            || (token.All(char.IsDigit) && digits.Contains(token, StringComparison.Ordinal)));
+    }
+
+    private static int NameRank(string name, string strictQuery)
+    {
+        var strictName = SearchFolding.Strict(name);
+        if (strictName.StartsWith(strictQuery, StringComparison.Ordinal)) return 0;
+        return strictName.Contains(strictQuery, StringComparison.Ordinal) ? 1 : 2;
     }
 }

@@ -7,7 +7,7 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ScanViewModel(ISessionsApi sessionsApi, AgentDb db, CartService cart, SessionStore session, MobileAuthService auth) : ObservableObject
+public partial class ScanViewModel(ISessionsApi sessionsApi, AgentDb db, CartService cart, SessionStore session, MobileAuthService auth, AccessState access) : ObservableObject
 {
     [ObservableProperty] private bool _isDetecting = true;
     [ObservableProperty] private string? _status = Loc.Instance["scan_hint"];
@@ -109,6 +109,7 @@ public partial class ScanViewModel(ISessionsApi sessionsApi, AgentDb db, CartSer
         // yuqorida tekshirilgani uchun bu yerda hech narsa yo'qolmaydi.
         AppLock.Disable();
         await auth.LogoutAsync();
+        access.Clear();
         await db.ClearCacheAsync();
         cart.Clear();
         session.ServerUrl = url;

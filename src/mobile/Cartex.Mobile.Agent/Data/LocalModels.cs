@@ -6,6 +6,7 @@ public class LocalCustomer
 {
     [PrimaryKey] public long Id { get; set; }
     public string FullName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     public string? Address { get; set; }
     public decimal DebtBalance { get; set; }
@@ -19,6 +20,7 @@ public class LocalVanStock
 {
     [PrimaryKey] public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public long? CategoryId { get; set; }
     public string? CategoryName { get; set; }
     public string UnitName { get; set; } = "";

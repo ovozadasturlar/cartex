@@ -11,7 +11,7 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class CustomerStatementViewModel(
     ICustomersApi customersApi,
-    MobilePermissions permissions) : ObservableObject, IQueryAttributable
+    AccessState access) : AccessAwareViewModel(access), IQueryAttributable
 {
     public ObservableCollection<CustomerStatementBalanceDto> Balances { get; } = [];
     public ObservableCollection<CustomerStatementDisplayRow> Rows { get; } = [];
@@ -33,7 +33,7 @@ public partial class CustomerStatementViewModel(
     [ObservableProperty] private DateTime _fromDate = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     [ObservableProperty] private DateTime _toDate = DateTime.Today;
     [ObservableProperty] private CustomerStatementScopeChoice? _selectedScope;
-    [ObservableProperty] private bool _canExport;
+    public bool CanExport => Access.CanExportCustomerStatement;
 
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
 
@@ -48,7 +48,7 @@ public partial class CustomerStatementViewModel(
     public async Task AppearAsync()
     {
         if (IsLoaded || IsLoading || _customerId <= 0) return;
-        CanExport = permissions.Has("statements.export");
+        ObserveAccess(nameof(CanExport));
         SelectedScope = Scopes[0];
         IsLoading = true;
         Error = null;

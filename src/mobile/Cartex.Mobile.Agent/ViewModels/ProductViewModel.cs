@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProductViewModel(AgentDb db, CartService cart, AppCapabilities caps) : ObservableObject, IQueryAttributable
+public partial class ProductViewModel(AgentDb db, CartService cart, AccessState access) : AccessAwareViewModel(access), IQueryAttributable
 {
     private long _variantId;
     private string _currency = "";
@@ -15,7 +15,7 @@ public partial class ProductViewModel(AgentDb db, CartService cart, AppCapabilit
     [ObservableProperty] private decimal _quantity = 1;
 
     public CartService Cart => cart;
-    public bool CanManageProducts => caps.CanManageProducts;
+    public bool CanManageProducts => Access.CanAgentEditProduct;
 
     public string Name => Stock?.ProductName ?? "";
     public string? ImageUrl => Stock?.ImageUrl;
@@ -38,6 +38,7 @@ public partial class ProductViewModel(AgentDb db, CartService cart, AppCapabilit
 
     public async Task AppearAsync()
     {
+        ObserveAccess(nameof(CanManageProducts));
         _currency = await db.GetMetaAsync("base_currency") ?? "";
         Stock = (await db.GetVanStockAsync()).FirstOrDefault(s => s.VariantId == _variantId);
         foreach (var name in (string[])[nameof(Name), nameof(ImageUrl), nameof(PriceText), nameof(StockText),

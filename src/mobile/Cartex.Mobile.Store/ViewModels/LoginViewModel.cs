@@ -9,8 +9,10 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class LoginViewModel(
     MobileAuthService auth,
+    AccessState access,
     SessionStore session,
-    MobileOfflineService offline) : ObservableObject, IQueryAttributable
+    MobileOfflineService offline,
+    SmsGatewayHostService smsGateway) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
@@ -104,7 +106,14 @@ public partial class LoginViewModel(
         {
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
+            await access.RefreshAsync();
+            if (!SessionStore.HasSession)
+            {
+                Error = Loc.Instance["access_session_error"];
+                return;
+            }
             await offline.StartAsync();
+            _ = StartSmsGatewayAsync();
             Password = "";
             await Shell.Current.GoToAsync("//main");
             _ = OfferPinSetupAsync();
@@ -121,6 +130,18 @@ public partial class LoginViewModel(
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task StartSmsGatewayAsync()
+    {
+        try
+        {
+            await smsGateway.StartAsync();
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
         }
     }
 }

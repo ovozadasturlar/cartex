@@ -8,7 +8,7 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:CheckoutViewModel"
     Title="{svc:T checkout}">
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto" IsVisible="{Binding CanUseCart}">
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
                 

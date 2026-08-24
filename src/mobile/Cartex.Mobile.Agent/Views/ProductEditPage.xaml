@@ -57,7 +57,7 @@
                             <Label Text="{svc:T category}" Style="{StaticResource TxCaption}" />
                             <Border Style="{StaticResource InputWrap}">
                                 <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}"
-                                        ItemDisplayBinding="{Binding Name, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
+                                        ItemDisplayBinding="{Binding TreeDisplayName, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
                     </VerticalStackLayout>

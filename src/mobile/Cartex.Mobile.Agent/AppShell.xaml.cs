@@ -1,12 +1,18 @@
 using Cartex.Mobile.Agent.Views;
+using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent;
 
 public partial class AppShell : Shell
 {
+    private readonly AccessState _access;
+
     public AppShell()
     {
         InitializeComponent();
+        _access = IPlatformApplication.Current!.Services.GetRequiredService<AccessState>();
+        _access.Changed += RefreshAccess;
+        RefreshAccess();
         Routing.RegisterRoute("home", typeof(HomePage));
         Routing.RegisterRoute("vanstock", typeof(VanStockPage));
         Routing.RegisterRoute("transfers", typeof(TransfersPage));
@@ -29,6 +35,14 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("security", typeof(SecurityPage));
         Routing.RegisterRoute("server-scan", typeof(ServerScanPage));
     }
+
+    private async void RefreshAccess() => await Dispatcher.DispatchAsync(() =>
+    {
+        CatalogTab.IsVisible = _access.CanAgentViewCatalog;
+        CartTab.IsVisible = _access.CanAgentUseCart;
+        CustomersTab.IsVisible = _access.CanAgentViewCustomers;
+        OrdersTab.IsVisible = _access.CanAgentViewOrders;
+    });
 
     protected override void OnNavigated(ShellNavigatedEventArgs args)
     {

@@ -5,7 +5,7 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SessionStore session) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AccessState access, AgentDb db, SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -100,6 +100,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
             return;
         AppLock.Disable();
         await auth.LogoutAsync();
+        access.Clear();
         await db.ClearCacheAsync();
         await Shell.Current.GoToAsync("//login");
     }

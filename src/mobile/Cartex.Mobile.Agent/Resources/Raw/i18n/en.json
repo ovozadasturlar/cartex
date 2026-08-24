@@ -1,4 +1,5 @@
 {
+  "access_stale_fmt": "No connection — data is current as of {0}",
   "actions": "Actions",
   "active_sessions": "Active sessions",
   "add_customer": "Add customer",
@@ -211,7 +212,7 @@
   "search_product": "Search products",
   "seconds": "sec",
   "security": "Security",
-  "security_hint": "Protect app access with a PIN and fingerprint",
+  "security_hint": "After PIN is enabled, the app locks after 2 minutes by default. You can change the delay below.",
   "select_customer": "Select customer",
   "server": "Server",
   "server_already_connected": "Already connected to this server",

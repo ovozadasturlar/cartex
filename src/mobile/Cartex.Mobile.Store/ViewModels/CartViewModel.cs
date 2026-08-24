@@ -10,12 +10,11 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class CartViewModel : ObservableObject
+public partial class CartViewModel : AccessAwareViewModel
 {
     private readonly CartStore _cart;
     private readonly ICustomersApi _customersApi;
     private readonly IPartnersApi _partnersApi;
-    private readonly MobilePermissions _permissions;
     private readonly MobileOfflineService _offline;
 
     public RangeObservableCollection<CartLine> Lines { get; } = [];
@@ -48,7 +47,6 @@ public partial class CartViewModel : ObservableObject
     [ObservableProperty] private string _selectedProductImage = "";
     [ObservableProperty] private string _selectedQuantityText = "";
     [ObservableProperty] private string _selectedPriceText = "";
-    [ObservableProperty] private bool _canOverridePrice;
     [ObservableProperty] private string _selectedOriginalPriceText = "";
     [ObservableProperty] private bool _hasPriceOverride;
 
@@ -78,6 +76,8 @@ public partial class CartViewModel : ObservableObject
     private bool _rolesLoaded;
 
     public bool HasParticipantRoles => ParticipantRoles.Count > 0;
+    public bool CanUseCart => Access.CanUseCart;
+    public bool CanOverridePrice => Access.CanOverridePrice;
     public bool CanUseBuyerForSelectedRole =>
         SelectedParticipantRole?.CanEqualBuyer == true && _cart.CustomerId.HasValue;
 
@@ -85,17 +85,16 @@ public partial class CartViewModel : ObservableObject
         CartStore cart,
         ICustomersApi customersApi,
         IPartnersApi partnersApi,
-        MobilePermissions permissions,
+        AccessState access,
         ImageUrlBuilder images,
-        MobileOfflineService offline)
+        MobileOfflineService offline) : base(access)
     {
         _cart = cart;
         _customersApi = customersApi;
         _partnersApi = partnersApi;
-        _permissions = permissions;
         _images = images;
         _offline = offline;
-        CanOverridePrice = permissions.Has("sales.priceOverride");
+        ObserveAccess(nameof(CanUseCart), nameof(CanOverridePrice));
     }
 
     public async Task AppearAsync()
@@ -321,7 +320,7 @@ public partial class CartViewModel : ObservableObject
             var partner = _offline.ShouldUseOffline
                 ? await _offline.FindPartnerByCustomerAsync(_cart.CustomerId.Value)
                 : matches.FirstOrDefault(x => x.CustomerId == _cart.CustomerId);
-            if (partner is null && _permissions.Has("partners.edit"))
+            if (partner is null && Access.CanEditPartners)
             {
                 if (_offline.ShouldUseOffline)
                 {
@@ -494,7 +493,7 @@ public partial class CartViewModel : ObservableObject
     private async Task LoadParticipantRolesAsync()
     {
         _rolesLoaded = true;
-        if (!_permissions.Has("partners.view")) return;
+        if (!Access.CanViewPartners) return;
         try
         {
             var roles = _offline.ShouldUseOffline

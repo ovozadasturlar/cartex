@@ -73,14 +73,16 @@ public partial class SecurityViewModel(IBiometricAuth biometric) : ObservableObj
         }
     }
 
-    private static readonly int[] LockOptions = [0, 30, 60, 300];
+    private static readonly int[] LockOptions = [0, 60, 120, 300, 900];
 
     private static string LockName(int seconds) => seconds switch
     {
         0 => Loc.Instance["lock_now"],
-        30 => "30 " + Loc.Instance["seconds"],
         60 => "1 " + Loc.Instance["minute"],
-        _ => "5 " + Loc.Instance["minute"]
+        120 => "2 " + Loc.Instance["minute"],
+        300 => "5 " + Loc.Instance["minute"],
+        900 => "15 " + Loc.Instance["minute"],
+        _ => throw new ArgumentOutOfRangeException(nameof(seconds))
     };
 
     [RelayCommand]

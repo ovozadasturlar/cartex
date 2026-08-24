@@ -20,10 +20,9 @@ public partial class CustomerDetailViewModel(
     ICustomerRefundsApi customerRefundsApi,
     ICustomerReturnsApi customerReturnsApi,
     IRatesApi ratesApi,
-    MobilePermissions permissions,
+    AccessState access,
     MobileAuthService auth,
-    SalesPolicyCache policy,
-    MobileOfflineService offline) : ObservableObject, IQueryAttributable
+    MobileOfflineService offline) : AccessAwareViewModel(access), IQueryAttributable
 {
     public ObservableCollection<CurrencyBalanceRow> Debts { get; } = [];
     public ObservableCollection<CurrencyBalanceRow> Credits { get; } = [];
@@ -47,12 +46,7 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private string _paymentMethod = "Cash";
     [ObservableProperty] private string _writeOffAmount = "";
     [ObservableProperty] private string _writeOffReason = "";
-    [ObservableProperty] private bool _canWriteOffDebt;
     [ObservableProperty] private CurrencyDto? _selectedCurrency;
-    [ObservableProperty] private bool _canReceivePayment;
-    [ObservableProperty] private bool _canMessage;
-    [ObservableProperty] private bool _canRefund;
-    [ObservableProperty] private bool _canViewStatement;
 
     public bool IsOverview => SelectedTab == "overview";
     public bool IsTimeline => SelectedTab == "timeline";
@@ -69,6 +63,11 @@ public partial class CustomerDetailViewModel(
     public bool HasReturns => Returns.Count > 0;
     public bool HasRefunds => Refunds.Count > 0;
     public bool HasError => !string.IsNullOrWhiteSpace(Error);
+    public bool CanReceivePayment => Access.CanReceiveCustomerPayment;
+    public bool CanWriteOffDebt => Access.CanWriteOffDebt;
+    public bool CanMessage => Access.CanMessageCustomer;
+    public bool CanViewStatement => Access.CanViewCustomerStatement;
+    public bool CanRefund => Access.CanRefundCustomer && Customer?.CreditBalances.Any(x => x.Amount > 0) == true;
     public bool IsCash => PaymentMethod == "Cash";
     public bool IsCard => PaymentMethod == "Card";
 
@@ -137,6 +136,7 @@ public partial class CustomerDetailViewModel(
     private bool _timelineLoaded;
     private bool _financeLoaded;
     private string _paymentIdempotencyKey = Guid.NewGuid().ToString("N");
+    private bool _observingAccess;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -146,6 +146,13 @@ public partial class CustomerDetailViewModel(
 
     public async Task AppearAsync()
     {
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(CanReceivePayment), nameof(CanWriteOffDebt), nameof(CanMessage),
+                nameof(CanViewStatement), nameof(CanRefund), nameof(ShowWriteOff));
+            _observingAccess = true;
+        }
         if (!IsLoading)
             await LoadAsync();
     }
@@ -312,11 +319,6 @@ public partial class CustomerDetailViewModel(
 
         try
         {
-            CanReceivePayment = permissions.Has("customer_payments.create");
-            CanWriteOffDebt = permissions.Has("customer_payments.writeOffDebt") && policy.Current.AllowDebtWriteOff;
-            CanMessage = permissions.Has("customers.message");
-            CanViewStatement = permissions.Has("statements.view");
-
             var customerTask = customersApi.GetByIdAsync(_customerId);
             var salesTask = salesApi.QueryAsync(QueryRequest.Create().Page(1, 30).Sort("CreatedAt", true)
                 .With("customerId", _customerId).Build());
@@ -333,7 +335,7 @@ public partial class CustomerDetailViewModel(
             Replace(Sales, ((await salesTask).Content ?? []).Select(x => new CustomerSaleRow(x)));
             Replace(Currencies, (await currenciesTask).Where(x => x.IsEnabled));
             SelectedCurrency ??= Currencies.FirstOrDefault(x => x.IsBase) ?? Currencies.FirstOrDefault();
-            CanRefund = permissions.Has("customers.refund") && Customer.CreditBalances.Any(x => x.Amount > 0);
+            OnPropertyChanged(nameof(CanRefund));
             IsLoaded = true;
         }
         catch (Exception ex)
@@ -377,13 +379,13 @@ public partial class CustomerDetailViewModel(
         _financeLoaded = true;
         try
         {
-            var paymentsTask = permissions.Has("customer_payments.view")
+            var paymentsTask = Access.CanViewCustomerPayments
                 ? customerPaymentsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
                 : Task.FromResult(new List<CustomerPaymentListDto>());
-            var returnsTask = permissions.Has("returns.view")
+            var returnsTask = Access.CanViewReturns
                 ? customerReturnsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
                 : Task.FromResult(new List<CustomerReturnListDto>());
-            var refundsTask = permissions.Has("customers.view")
+            var refundsTask = Access.CanViewCustomers
                 ? customerRefundsApi.GetAsync(customerId: _customerId, page: 1, pageSize: 30)
                 : Task.FromResult(new List<CustomerRefundListDto>());
 

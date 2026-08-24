@@ -27,10 +27,7 @@ public partial class VanStockViewModel(AgentDb db, SyncService sync) : Observabl
 
     private async Task LoadAsync()
     {
-        var stock = await db.GetVanStockAsync();
-        var query = Search.Trim();
-        if (query.Length > 0)
-            stock = stock.Where(s => s.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        var stock = await db.SearchVanStockAsync(Search);
 
         Items.Clear();
         foreach (var s in stock)

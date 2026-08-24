@@ -1,4 +1,5 @@
 {
+  "access_stale_fmt": "Aloqa yo'q — ma'lumot {0} holatiga tegishli",
   "actions": "Amallar",
   "active_sessions": "Faol seanslar",
   "add_customer": "Mijoz qo'shish",
@@ -211,7 +212,7 @@
   "search_product": "Tovar qidirish",
   "seconds": "soniya",
   "security": "Xavfsizlik",
-  "security_hint": "Ilovaga kirishni PIN kod va barmoq izi bilan himoyalang",
+  "security_hint": "PIN yoqilganda ilova standart bo'yicha 2 daqiqadan keyin qulflanadi. Muddatni quyida o'zgartirishingiz mumkin.",
   "select_customer": "Mijozni tanlang",
   "server": "Server",
   "server_already_connected": "Siz allaqachon shu serverdasiz",

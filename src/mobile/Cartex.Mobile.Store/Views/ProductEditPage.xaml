@@ -7,7 +7,9 @@
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
     xmlns:cat="clr-namespace:Cartex.Shared.Models.Categories;assembly=Cartex.Shared"
+    xmlns:loyalty="clr-namespace:Cartex.Shared.Models.Loyalty;assembly=Cartex.Shared"
     xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
+    xmlns:units="clr-namespace:Cartex.Shared.Models.Units;assembly=Cartex.Shared"
     x:DataType="vm:ProductEditViewModel"
     Title="{svc:T edit_product}">
 
@@ -24,7 +26,8 @@
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <Border Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding ImageLinkText}" Placeholder="{svc:T image_link}" Keyboard="Url" VerticalOptions="Center" />
+                                <Entry x:Name="ImageLinkEntry" Text="{Binding ImageLinkText}" Placeholder="{svc:T image_link}" Keyboard="Url"
+                                       ReturnType="Done" Completed="OnEntryCompleted" VerticalOptions="Center" />
                             </Border>
                             <Button Grid.Column="1" Text="{svc:T apply}" Style="{StaticResource BtnOutline}" Command="{Binding ApplyLinkCommand}" />
                         </Grid>
@@ -36,7 +39,8 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{svc:T name}" Style="{StaticResource TxCaption}" />
                             <Border Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding Name}" VerticalOptions="Center" />
+                                <Entry x:Name="ProductNameEntry" Text="{Binding Name}" ReturnType="Next"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -44,7 +48,8 @@
                             <Label Text="{svc:T price}" Style="{StaticResource TxCaption}" />
                             <Grid ColumnDefinitions="*,112" ColumnSpacing="8" IsVisible="{Binding CanChoosePriceCurrency}">
                                 <Border Style="{StaticResource InputWrap}">
-                                    <Entry Text="{Binding PriceText}" Keyboard="Numeric" VerticalOptions="Center" />
+                                    <Entry x:Name="PriceWithCurrencyEntry" Text="{Binding PriceText}" Keyboard="Numeric" ReturnType="Next"
+                                           Completed="OnEntryCompleted" VerticalOptions="Center" />
                                 </Border>
                                 <Border Grid.Column="1" Style="{StaticResource InputWrap}">
                                     <Picker ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding PriceCurrency}"
@@ -52,23 +57,55 @@
                                 </Border>
                             </Grid>
                             <Border Style="{StaticResource InputWrap}" IsVisible="{Binding CanChoosePriceCurrency, Converter={StaticResource Invert}}">
-                                <Entry Text="{Binding PriceText}" Keyboard="Numeric" VerticalOptions="Center" />
+                                <Entry x:Name="PriceEntry" Text="{Binding PriceText}" Keyboard="Numeric" ReturnType="Next"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{svc:T code}" Style="{StaticResource TxCaption}" />
                             <Border Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding Code}" VerticalOptions="Center" />
+                                <Entry x:Name="CodeEntry" Text="{Binding Code}" ReturnType="Done"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
                             </Border>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="{svc:T category}" Style="{StaticResource TxCaption}" />
+                            <Grid ColumnDefinitions="*,44" ColumnSpacing="8">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}"
+                                            ItemDisplayBinding="{Binding TreeDisplayName, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
+                                </Border>
+                                <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding AddCategoryCommand}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T unit}" Style="{StaticResource TxCaption}" />
                             <Border Style="{StaticResource InputWrap}">
-                                <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}"
-                                        ItemDisplayBinding="{Binding Name, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
+                                <Picker ItemsSource="{Binding Units}" SelectedItem="{Binding Unit}"
+                                        ItemDisplayBinding="{Binding Name, x:DataType=units:UnitDto}" VerticalOptions="Center" />
                             </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T manufacturer}" Style="{StaticResource TxCaption}" />
+                            <Grid ColumnDefinitions="*,Auto,44" ColumnSpacing="8">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding Manufacturer}"
+                                            ItemDisplayBinding="{Binding Name, x:DataType=loyalty:ManufacturerDto}" VerticalOptions="Center" />
+                                </Border>
+                                <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding ClearManufacturerCommand}"
+                                        IsVisible="{Binding Manufacturer, Converter={StaticResource NotEmpty}}" />
+                                <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding AddManufacturerCommand}" />
+                            </Grid>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </Border>
@@ -100,10 +137,12 @@
 
                         <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8" IsVisible="{Binding CanCreateBarcode}">
                             <Border Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" Keyboard="Numeric" VerticalOptions="Center" />
+                                <Entry x:Name="NewBarcodeEntry" Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" Keyboard="Numeric"
+                                       ReturnType="Next" Completed="OnEntryCompleted" VerticalOptions="Center" />
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource InputWrap}">
-                                <Entry Text="{Binding NewBarcodePackQtyText}" Placeholder="{svc:T pack_qty}" Keyboard="Numeric" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                                <Entry x:Name="NewBarcodePackQtyEntry" Text="{Binding NewBarcodePackQtyText}" Placeholder="{svc:T pack_qty}" Keyboard="Numeric"
+                                       ReturnType="Done" Completed="OnEntryCompleted" HorizontalTextAlignment="Center" VerticalOptions="Center" />
                             </Border>
                             <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
                                     WidthRequest="44" HeightRequest="44" CornerRadius="22"

@@ -6,7 +6,7 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class LoginViewModel(MobileAuthService auth, SessionStore session) : ObservableObject, IQueryAttributable
+public partial class LoginViewModel(MobileAuthService auth, AccessState access, SessionStore session) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
@@ -77,6 +77,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             if (!restored) IsChecking = false;
         }
         if (!restored) return;
+        await access.EnsureLoadedAsync();
         await Shell.Current.GoToAsync("//catalog", false);
         _ = auth.ValidateSessionAsync();
         if (AppLock.PinEnabled)
@@ -117,6 +118,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         {
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
+            await access.RefreshAsync();
             Password = "";
             await Shell.Current.GoToAsync("//catalog");
             _ = OfferPinSetupAsync();

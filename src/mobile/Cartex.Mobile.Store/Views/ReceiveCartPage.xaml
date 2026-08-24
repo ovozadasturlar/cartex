@@ -10,7 +10,7 @@
     x:DataType="vm:ReceiveCartViewModel"
     xmlns:suppliers="clr-namespace:Cartex.Shared.Models.Suppliers;assembly=Cartex.Shared"
     Title="{svc:T receive_stock}">
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding CanReceiveStock}">
         <VerticalStackLayout Margin="16,10,16,0" Spacing="8">
             <VerticalStackLayout.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnOutsideTapped" />

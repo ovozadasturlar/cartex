@@ -12,7 +12,7 @@
     Title="{svc:T cart}">
 
     <Grid>
-        <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto" IsVisible="{Binding CanUseCart}">
 
             <ScrollView>
                 <VerticalStackLayout Padding="16" Spacing="10">

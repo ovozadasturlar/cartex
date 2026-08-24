@@ -144,15 +144,18 @@
                 IsVisible="{Binding IsLoaded}">
             <!-- Ustunlar `Auto`: yashirilgan tugma joy egallamaydi, aks holda ko'rinib
                  turgan tugmalar siqilib matni kesiladi ("Mahsulot qaytarish" → "Mahsulot"). -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="8" HorizontalOptions="Center">
+            <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6" HorizontalOptions="Center">
                 <Button Text="{svc:T print}" Style="{StaticResource BtnOutline}"
                         IsVisible="{Binding CanPrint}" Command="{Binding PrintCommand}"
                         IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
-                <Button Grid.Column="1" Text="{svc:T send}" Style="{StaticResource BtnOutline}"
-                        IsVisible="{Binding CanResend}" Command="{Binding ResendCommand}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button x:Name="SendReceiptSmsButton" Grid.Column="1" Text="{svc:T send_receipt_sms}" Style="{StaticResource BtnOutline}"
+                        IsVisible="{Binding CanResend}" Clicked="SendReceiptSmsClicked"
+                        IsEnabled="{Binding CustomerPhone, Converter={StaticResource NotEmpty}}" />
                 <Button Grid.Column="2" Text="{svc:T create_return}" Style="{StaticResource BtnPrimary}"
                         IsVisible="{Binding CanCreateReturn}" Command="{Binding CreateReturnCommand}" />
+                <Label x:Name="SmsMissingReason" Grid.Row="1" Grid.ColumnSpan="3"
+                       Text="{svc:T customer_phone_missing}" Style="{StaticResource MutedLabel}"
+                       HorizontalTextAlignment="Center" IsVisible="False" />
             </Grid>
         </Border>
 

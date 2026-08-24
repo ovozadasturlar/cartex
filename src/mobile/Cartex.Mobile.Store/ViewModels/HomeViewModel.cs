@@ -9,27 +9,18 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class HomeViewModel(
     MobileAuthService auth,
-    MobilePermissions perms,
+    AccessState access,
     WarehouseContext warehouse,
     CartStore cart,
     SupplyCartStore supplyCart,
     IOrderingApi ordering,
-    ISalesApi sales,
-    SalesPolicyCache policy,
-    MobileFeaturesCache features,
-    SessionStore session) : ObservableObject
+    ISalesApi sales) : AccessAwareViewModel(access)
 {
     [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
     [ObservableProperty] private string _initials = "";
-    [ObservableProperty] private bool _hasAccess = true;
-    [ObservableProperty] private bool _showQueue;
-    [ObservableProperty] private bool _showStats;
-    [ObservableProperty] private bool _hasCart;
     [ObservableProperty] private int _cartCount;
     [ObservableProperty] private int _supplyCount;
-    [ObservableProperty] private bool _canReceiveStock;
-    [ObservableProperty] private bool _canSell;
     [ObservableProperty] private string _cartSummary = "";
     [ObservableProperty] private int _openCarts;
     [ObservableProperty] private string _todayCountText = "";
@@ -44,31 +35,34 @@ public partial class HomeViewModel(
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string? _error;
 
+    public bool HasAccess => Access.CanViewHome;
+    public bool ShowStats => Access.CanViewSales;
+    public bool CanReceiveStock => Access.CanReceiveStock;
+    public bool ShowQueue => Access.CanQueue;
+    public bool CanSell => Access.CanSell;
+    public bool CanUseCart => Access.CanUseCart;
+    public bool HasCart => Access.CanUseCart && cart.Count > 0;
+
+    private bool _observingAccess;
+
     public async Task AppearAsync()
     {
-        await session.LoadAsync();
-        HasAccess = perms.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(HasAccess), nameof(ShowStats), nameof(CanReceiveStock),
+                nameof(ShowQueue), nameof(CanSell), nameof(CanUseCart), nameof(HasCart));
+            _observingAccess = true;
+        }
         if (!HasAccess) return;
-        ShowStats = perms.HasAny("sales.view", "sales.viewAll");
         var name = auth.FullName;
         Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);
         Initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => char.ToUpper(x[0])));
         WarehouseName = warehouse.WarehouseName is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
-        CanReceiveStock = perms.Has("supplies.create");
         CartCount = cart.Count;
         SupplyCount = supplyCart.Count;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
-        // NAVBAT-06: navbat do'kon siyosati yoki modul bilan o'chirilgan bo'lsa, ilovada u
-        // haqda hech narsa ko'rinmasligi kerak — shuning uchun ko'rinish shu ikkisi
-        // yuklangandan keyin hisoblanadi.
-        await Task.WhenAll(policy.RefreshAsync(), features.RefreshAsync());
-        ShowQueue = perms.HasAny("sales.pick", "sales.view")
-            && policy.Current.AllowSaleQueue && features.CartsEnabled;
-        // RUXSAT-04: bu ilovada savdo savat orqali ketadi, ya'ni u modul o'chiq bo'lsa umuman
-        // mumkin emas. Shunday holatda savdo tugmalari ko'rsatilmaydi — aks holda kassir savat
-        // yig'ib, faqat oxirida "ruxsat yo'q" degan javob olardi.
-        CanSell = perms.HasAny("sales.create", "sales.checkout") && features.CartsEnabled;
-        HasCart = CanSell && cart.Count > 0;
+        OnPropertyChanged(nameof(HasCart));
         if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }
@@ -150,7 +144,7 @@ public partial class HomeViewModel(
     private void NewCart() => Views.MainPage.Current?.Show(2);
 
     [RelayCommand]
-    private Task OpenCartAsync() => Shell.Current.GoToAsync("cart");
+    private Task OpenCartAsync() => CanUseCart ? Shell.Current.GoToAsync("cart") : Task.CompletedTask;
 
     [RelayCommand]
     private void OpenQueue() => Views.MainPage.Current?.Show(1);
@@ -159,7 +153,7 @@ public partial class HomeViewModel(
     private void OpenSales() => Views.MainPage.Current?.Show(1, "sales");
 
     [RelayCommand]
-    private Task OpenSupplyCartAsync() => Shell.Current.GoToAsync("receive_cart");
+    private Task OpenSupplyCartAsync() => CanReceiveStock ? Shell.Current.GoToAsync("receive_cart") : Task.CompletedTask;
 
     [RelayCommand]
     private void OpenCustomers() => Views.MainPage.Current?.Show(3);

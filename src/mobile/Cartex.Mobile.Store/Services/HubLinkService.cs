@@ -61,6 +61,7 @@ public sealed class HubLinkService(IOfflineCacheApi offlineApi, MobileAuthServic
     // ushlab olgan begona qurilma TLS'da kalitni ko'rsata olmaydi.
     public async Task RefreshAttestationAsync()
     {
+        if (auth.UserId is null) return;
         try
         {
             var key = await identity.KeyAsync();
@@ -71,8 +72,9 @@ public sealed class HubLinkService(IOfflineCacheApi offlineApi, MobileAuthServic
             await SecureStorage.SetAsync(AttestationKey, JsonSerializer.Serialize(_attestation, Json));
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException
-                                              or JsonException)
+                                               or JsonException or Refit.ApiException)
         {
+            System.Diagnostics.Debug.WriteLine(exception);
         }
     }
 

@@ -7,7 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService cart, AppCapabilities caps) : ObservableObject
+public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService cart, AccessState access) : AccessAwareViewModel(access)
 {
     private List<LocalVanStock> _all = [];
     private string _currency = "";
@@ -23,7 +23,7 @@ public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService 
     [ObservableProperty] private bool _isGrid = Preferences.Get("catalog_grid", true);
     [ObservableProperty] private string _resultText = "";
 
-    public bool CanManageProducts => caps.CanManageProducts;
+    public bool CanManageProducts => Access.CanAgentEditProduct;
     public bool IsEmpty => !IsLoading && Items.Count == 0;
     public CartService Cart => cart;
 
@@ -33,6 +33,7 @@ public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService 
 
     public async Task AppearAsync()
     {
+        ObserveAccess(nameof(CanManageProducts));
         if (_all.Count == 0) await LoadAsync();
         cart.Refresh();
     }
@@ -84,14 +85,13 @@ public partial class CatalogViewModel(AgentDb db, SyncService sync, CartService 
             query = query.Where(s => s.CategoryId == id);
 
         var text = Search.Trim();
-        if (text.Length > 0)
-            query = query.Where(s =>
-                s.ProductName.Contains(text, StringComparison.OrdinalIgnoreCase) ||
-                (s.Code?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false));
+        var stock = text.Length > 0
+            ? AgentDb.FilterVanStock(query, text)
+            : query.OrderByDescending(s => s.Quantity > 0)
+                .ThenBy(s => s.ProductName)
+                .ToList();
 
-        var list = query
-            .OrderByDescending(s => s.Quantity > 0)
-            .ThenBy(s => s.ProductName)
+        var list = stock
             .Select(s => new ProductCard(s, _currency))
             .ToList();
 
