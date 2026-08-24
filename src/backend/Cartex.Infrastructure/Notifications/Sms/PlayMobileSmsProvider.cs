@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,7 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
 {
     public string Name => "playmobile";
 
-    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, SmsSendContext context, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://send.smsxabar.uz" : settings.BaseUrl.TrimEnd('/');
         var client = httpClientFactory.CreateClient();

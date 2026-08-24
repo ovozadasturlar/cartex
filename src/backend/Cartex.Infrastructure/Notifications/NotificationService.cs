@@ -5,6 +5,7 @@ using Cartex.Application.Sales.Queries;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Infrastructure.Notifications;
 
@@ -113,7 +114,8 @@ public sealed class NotificationService(
                 NotificationChannel.Email =>
                     await email.SendAsync(message.Recipient, subject, content, cancellationToken, attachment),
                 NotificationChannel.Sms =>
-                    await sms.SendAsync(message.Recipient, content, cancellationToken),
+                    await sms.SendAsync(message.Recipient, content,
+                        await SmsContextAsync(message, delivery.Id, attempt.Id, cancellationToken), cancellationToken),
                 _ => null
             };
 
@@ -128,14 +130,17 @@ public sealed class NotificationService(
             }
             else
             {
-                delivery.Status = NotificationDeliveryStatus.Accepted;
-                delivery.AcceptedAt = now;
                 attempt.Provider = result.Provider;
                 attempt.ProviderMessageId = result.ProviderMessageId;
                 attempt.Units = Math.Max(1, result.Units);
-                attempt.Status = NotificationDeliveryStatus.Accepted;
-                attempt.AcceptedAt = now;
-                attempt.CompletedAt = now;
+                if (!result.Pending)
+                {
+                    delivery.Status = NotificationDeliveryStatus.Accepted;
+                    delivery.AcceptedAt = now;
+                    attempt.Status = NotificationDeliveryStatus.Accepted;
+                    attempt.AcceptedAt = now;
+                    attempt.CompletedAt = now;
+                }
             }
             await db.SaveChangesAsync(cancellationToken);
         }
@@ -165,6 +170,30 @@ public sealed class NotificationService(
             _ => "unknown"
         };
 
+    private async Task<SmsSendContext> SmsContextAsync(
+        NotificationMessage message,
+        long deliveryId,
+        long attemptId,
+        CancellationToken cancellationToken)
+    {
+        long? branchId = null;
+        if (message.Data.TryGetValue("receiptToken", out var token))
+            branchId = await db.Sales.Where(x => x.ReceiptToken == token).Select(x => (long?)x.BranchId).FirstOrDefaultAsync(cancellationToken);
+        if (branchId is null && message.CustomerId is long customerId)
+        {
+            branchId = await db.Accounts.Where(x => x.CustomerId == customerId && x.BranchId != null)
+                .OrderByDescending(x => x.Balance).Select(x => x.BranchId).FirstOrDefaultAsync(cancellationToken);
+            branchId ??= await db.Sales.Where(x => x.CustomerId == customerId).OrderByDescending(x => x.CreatedAt)
+                .Select(x => (long?)x.BranchId).FirstOrDefaultAsync(cancellationToken);
+        }
+        var kind = message.Template == "sale_receipt"
+            ? SmsGatewayJobKind.ReceiptLink
+            : message.Template.StartsWith("debt_", StringComparison.Ordinal)
+                ? SmsGatewayJobKind.DebtReminder
+                : SmsGatewayJobKind.Manual;
+        return new SmsSendContext(branchId, kind, message.CustomerId, $"notification:{deliveryId}", deliveryId, attemptId);
+    }
+
     private async Task<string> BuildTextAsync(NotificationMessage message, CancellationToken cancellationToken)
     {
         var name = message.Data.GetValueOrDefault("name", "");
@@ -191,6 +220,7 @@ public sealed class NotificationService(
             "debt_reminder" => $"Hurmatli {name}! Do'kondan qarzingiz: {balance} {currency} ({days} kundan beri). Iltimos, to'lovni amalga oshiring.",
             "debt_due_soon" => $"Hurmatli {name}! {balance} {currency} qarzingizni to'lash muddati {dueDate}.",
             "debt_due_today" => $"Hurmatli {name}! {balance} {currency} qarzingizni to'lash muddati bugun.",
+            "sms_quota_low" => $"{message.Data.GetValueOrDefault("device", "SMS shlyuzi")}: oylik limitdan {message.Data.GetValueOrDefault("remaining", "0")} / {message.Data.GetValueOrDefault("limit", "0")} qoldi.",
             _ => message.Template
         };
     }

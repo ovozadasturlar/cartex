@@ -10,11 +10,10 @@ public sealed class SmsService(
     ISecretProtector protector,
     ILogger<SmsService> logger) : ISmsService
 {
-    private static readonly HashSet<char> GsmBasic =
-        [.. "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"];
-    private static readonly HashSet<char> GsmExtended = [.. "^{}\\[~]|€"];
-
     public async Task<NotificationProviderResult?> SendAsync(string phone, string text, CancellationToken cancellationToken = default)
+        => await SendAsync(phone, text, new SmsSendContext(), cancellationToken);
+
+    public async Task<NotificationProviderResult?> SendAsync(string phone, string text, SmsSendContext context, CancellationToken cancellationToken = default)
     {
         var cfg = await settings.GetAsync<SmsSettings>(SettingKeys.Sms, cancellationToken);
         if (cfg is null || !cfg.Enabled || string.IsNullOrWhiteSpace(phone))
@@ -31,23 +30,12 @@ public sealed class SmsService(
         }
 
         var password = string.IsNullOrWhiteSpace(cfg.Password) ? "" : protector.Unprotect(cfg.Password);
-        var result = await provider.SendAsync(cfg, password, phone, text, cancellationToken);
-        return new NotificationProviderResult(provider.Name, result.ProviderMessageId, CountSegments(text));
+        var result = await provider.SendAsync(cfg, password, phone, text, context, cancellationToken);
+        return new NotificationProviderResult(provider.Name, result.ProviderMessageId, CountSegments(text), result.Pending);
     }
 
     public static int CountSegments(string text)
     {
-        var septets = 0;
-        foreach (var character in text)
-        {
-            if (GsmBasic.Contains(character))
-                septets++;
-            else if (GsmExtended.Contains(character))
-                septets += 2;
-            else
-                return text.Length <= 70 ? 1 : (int)Math.Ceiling((double)text.Length / 67);
-        }
-
-        return septets <= 160 ? 1 : (int)Math.Ceiling((double)septets / 153);
+        return Cartex.Application.Sms.SmsTextSegments.Count(text);
     }
 }

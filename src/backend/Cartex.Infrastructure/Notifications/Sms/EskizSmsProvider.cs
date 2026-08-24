@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +11,7 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
 {
     public string Name => "eskiz";
 
-    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, SmsSendContext context, CancellationToken cancellationToken)
     {
         var baseUrl = BaseUrl(settings);
         var client = httpClientFactory.CreateClient();
