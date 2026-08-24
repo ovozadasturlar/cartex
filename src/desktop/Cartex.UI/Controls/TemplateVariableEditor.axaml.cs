@@ -17,6 +17,9 @@ public partial class TemplateVariableEditor : UserControl
         AvaloniaProperty.Register<TemplateVariableEditor, string?>(nameof(PlaceholderText));
     public static readonly StyledProperty<string?> DragHintProperty =
         AvaloniaProperty.Register<TemplateVariableEditor, string?>(nameof(DragHint));
+    public static readonly StyledProperty<IReadOnlyList<string>> VariablesProperty =
+        AvaloniaProperty.Register<TemplateVariableEditor, IReadOnlyList<string>>(
+            nameof(Variables), ["{name}", "{balance}", "{currency}", "{days}", "{dueDate}"]);
 
     public string? Label
     {
@@ -42,8 +45,11 @@ public partial class TemplateVariableEditor : UserControl
         set => SetValue(DragHintProperty, value);
     }
 
-    public IReadOnlyList<string> Variables { get; } =
-        ["{name}", "{balance}", "{currency}", "{days}", "{dueDate}"];
+    public IReadOnlyList<string> Variables
+    {
+        get => GetValue(VariablesProperty);
+        set => SetValue(VariablesProperty, value);
+    }
 
     public TemplateVariableEditor() => InitializeComponent();
 
