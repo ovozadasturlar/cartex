@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cartex.Api;
 using Cartex.Api.Hubs;
 using Cartex.Api.Middleware;
 using Cartex.Api.Services;
@@ -12,6 +13,7 @@ using Cartex.Infrastructure.Web;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -23,13 +25,16 @@ builder.Host.UseSerilog((context, config) => config
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "cartex-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14));
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = BootstrapConfiguration.Validate(
+    builder.Configuration,
+    builder.Environment.IsDevelopment());
 
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddAuth(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHealthChecks()
+    .AddCheck<BootstrapConfigurationHealthCheck>("configuration");
 
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, Cartex.Api.Authorization.FeatureAwareAuthorizationResultHandler>();
 
@@ -40,6 +45,7 @@ builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
 builder.Services.AddSingleton<IPrintJobNotifier, SignalRPrintJobNotifier>();
+builder.Services.AddSingleton<ISmsGatewayNotifier, SignalRSmsGatewayNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
 builder.Services.AddHostedService<PrintJobRecoveryService>();
 
@@ -119,10 +125,6 @@ var app = builder.Build();
 
 var developerPassword = builder.Configuration["Seed:DeveloperPassword"];
 var adminPassword = builder.Configuration["Seed:AdminPassword"];
-if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(developerPassword))
-    throw new InvalidOperationException("Seed:DeveloperPassword production muhitida majburiy.");
-if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(adminPassword))
-    throw new InvalidOperationException("Seed:AdminPassword production muhitida majburiy.");
 
 using (var scope = app.Services.CreateScope())
 {
@@ -199,8 +201,9 @@ app.MapControllers();
 
 app.MapHub<OrderingHub>("/hubs/ordering");
 app.MapHub<PrintingHub>("/hubs/printing");
+app.MapHub<SmsGatewayHub>("/hubs/sms-gateway");
 
-app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 if (hasWebUi)
 {

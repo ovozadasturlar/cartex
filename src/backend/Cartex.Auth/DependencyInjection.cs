@@ -1,4 +1,3 @@
-using System.Text;
 using Cartex.Auth.Authorization;
 using Cartex.Auth.Services;
 using Cartex.Auth.Settings;
@@ -15,11 +14,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddAuth(this IServiceCollection services, IConfiguration configuration)
     {
-        var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()
-            ?? throw new InvalidOperationException("Jwt configuration section is missing.");
-
-        if (string.IsNullOrWhiteSpace(jwtSettings.Key) || Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
-            throw new InvalidOperationException("Jwt:Key is missing or shorter than 32 bytes. Set it via user-secrets or environment variables.");
+        var jwtSettings = JwtConfiguration.GetValidated(configuration);
 
         services.AddSingleton(jwtSettings);
 
@@ -41,7 +36,7 @@ public static class DependencyInjection
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 ClockSkew = TimeSpan.Zero
             };
             options.Events = new JwtBearerEvents
@@ -87,7 +82,7 @@ public static class DependencyInjection
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.CustomerAudience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 ClockSkew = TimeSpan.Zero
             };
         });
