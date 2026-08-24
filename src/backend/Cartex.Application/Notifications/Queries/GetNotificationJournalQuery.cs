@@ -19,6 +19,8 @@ public record GetNotificationJournalQuery : FilteringRequest, IRequest<IReadOnly
     public string? Provider { get; init; }
     public string? Status { get; init; }
     public string? Purpose { get; init; }
+    public long? CustomerId { get; init; }
+    public long? DeviceId { get; init; }
 }
 
 public sealed class GetNotificationJournalQueryHandler(
@@ -73,7 +75,16 @@ public sealed class GetNotificationJournalQueryHandler(
                     d.CreatedAt,
                     d.AcceptedAt,
                     d.DeliveredAt,
-                    d.CompletedAt),
+                    d.CompletedAt,
+                    d.SmsGatewayJobs.OrderByDescending(j => j.CreatedAt).Select(j => (long?)j.Id).FirstOrDefault(),
+                    d.SmsGatewayJobs.OrderByDescending(j => j.CreatedAt).Select(j => j.AssignedDeviceId).FirstOrDefault(),
+                    d.SmsGatewayJobs.OrderByDescending(j => j.CreatedAt)
+                        .Select(j => j.AssignedDevice == null ? null
+                            : (j.AssignedDevice.PhoneLabel ?? j.AssignedDevice.SimOperator) + " · SIM " + (j.AssignedDevice.SimSlot + 1))
+                        .FirstOrDefault(),
+                    d.SmsGatewayJobs.OrderByDescending(j => j.CreatedAt)
+                        .Select(j => j.AssignedDevice == null ? (int?)null : j.AssignedDevice.SimSlot).FirstOrDefault(),
+                    d.SmsGatewayJobs.OrderByDescending(j => j.CreatedAt).Select(j => j.WaitingReason).FirstOrDefault()),
                 writer,
                 cancellationToken);
     }
@@ -101,6 +112,10 @@ internal static class NotificationJournalFilters
             query = query.Where(x => x.Attempts.Any(a => a.Provider == request.Provider));
         if (!string.IsNullOrWhiteSpace(request.Purpose))
             query = query.Where(x => x.Purpose == request.Purpose);
+        if (request.CustomerId is long customerId)
+            query = query.Where(x => x.CustomerId == customerId);
+        if (request.DeviceId is long deviceId)
+            query = query.Where(x => x.SmsGatewayJobs.Any(j => j.AssignedDeviceId == deviceId));
         return query;
     }
 

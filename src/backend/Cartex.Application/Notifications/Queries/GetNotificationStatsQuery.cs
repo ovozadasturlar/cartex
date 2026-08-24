@@ -43,6 +43,7 @@ public sealed class GetNotificationStatsQueryHandler(IApplicationDbContext db)
         int Count(NotificationDeliveryStatus status) => rows.FirstOrDefault(x => x.Status == status)?.Count ?? 0;
         var billable = rows
             .Where(x => x.Status is NotificationDeliveryStatus.Accepted
+                or NotificationDeliveryStatus.Sent
                 or NotificationDeliveryStatus.Delivered
                 or NotificationDeliveryStatus.Undelivered)
             .Sum(x => x.Units);

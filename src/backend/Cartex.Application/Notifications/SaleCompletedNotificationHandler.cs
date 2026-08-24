@@ -43,7 +43,7 @@ public sealed class SaleCompletedNotificationHandler(
             await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload, sale.CustomerId), cancellationToken);
         }
 
-        foreach (var channel in config.Channels.Distinct())
+        foreach (var channel in config.Channels.Distinct().Where(x => x != NotificationChannel.Sms))
         {
             var recipient = channel switch
             {
