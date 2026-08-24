@@ -425,7 +425,8 @@ public sealed class UpdateReceiptPrintPolicyCommandValidator : AbstractValidator
         RuleFor(x => x.Request.BranchOverride).NotNull().When(x => x.Request.UseBranchOverride);
         When(x => x.Request.BranchOverride is not null, () =>
         {
-            RuleFor(x => x.Request.BranchOverride!.PaperWidth).Must(x => x is 32 or 42 or 48);
+            RuleFor(x => x.Request.BranchOverride!.PaperWidth).Must(x => x == 0 || ReceiptPaper.IsValid(x));
+            RuleFor(x => x.Request.BranchOverride!.Language).Must(Cartex.Shared.Localization.ReceiptTexts.Languages.Contains);
             RuleFor(x => x.Request.BranchOverride!.PaperFormat).Must(x => x is "Thermal" or "A5" or "A4");
             RuleFor(x => x.Request.BranchOverride!.HeaderText).MaximumLength(200);
             RuleFor(x => x.Request.BranchOverride!.FooterText).MaximumLength(200);
@@ -500,7 +501,7 @@ public sealed class CreatePrintJobCommandHandler(
         var request = command.Request;
         PrintingGuard.EnsureBranch(currentUser, request.BranchId);
         PrintingGuard.EnsurePrintPermission(currentUser, request.Kind, request.IsReprint);
-        if (!currentUser.HasPermission(AppPermissions.Printing.RemoteUse))
+        if (!request.CompletedLocally && !currentUser.HasPermission(AppPermissions.Printing.RemoteUse))
             throw new ForbiddenException("Remote printing permission is required.");
 
         if (string.IsNullOrWhiteSpace(request.SourceType) || string.IsNullOrWhiteSpace(request.SourceId))
@@ -542,8 +543,9 @@ public sealed class CreatePrintJobCommandHandler(
                 && x.RequestedByUserId == currentUser.UserId && x.CreatedAt >= since)
             .GroupBy(_ => 1).Select(x => new { Jobs = x.Count(), Copies = x.Sum(j => j.Copies) })
             .FirstOrDefaultAsync(cancellationToken);
-        if ((recent?.Jobs ?? 0) >= policy.MaxJobsPerMinute
-            || (recent?.Copies ?? 0) + request.Copies > policy.MaxCopiesPerMinute)
+        var rateLimitExceeded = (recent?.Jobs ?? 0) >= policy.MaxJobsPerMinute
+            || (recent?.Copies ?? 0) + request.Copies > policy.MaxCopiesPerMinute;
+        if (rateLimitExceeded && !request.CompletedLocally)
             throw new BusinessRuleException("Printing rate limit exceeded.");
 
         var now = DateTime.UtcNow;
@@ -603,7 +605,7 @@ public sealed class CreatePrintJobCommandHandler(
             CorrelationId = currentUser.CorrelationId,
             OriginNodeId = originNodeId
         };
-        if (!trustedRequester)
+        if (!trustedRequester && !request.CompletedLocally)
         {
             job.Status = DomainJobStatus.Rejected;
             job.ErrorCode = "REQUEST_DEVICE_NOT_APPROVED";
@@ -641,8 +643,19 @@ public sealed class CreatePrintJobCommandHandler(
                 job.SourceType,
                 job.SourceId,
                 job.Copies,
-                job.RequestedDeviceId
+                job.RequestedDeviceId,
+                RequesterDeviceTrusted = trustedRequester,
+                RateLimitExceeded = rateLimitExceeded
             }, "Chop etish serversiz lokal bajarilgan", job.BranchId);
+            if (rateLimitExceeded)
+                audit.Add("print.local_rate_limit_exceeded", "print_jobs", job.Id, new
+                {
+                    policy.MaxJobsPerMinute,
+                    policy.MaxCopiesPerMinute,
+                    RecentJobs = recent?.Jobs ?? 0,
+                    RecentCopies = recent?.Copies ?? 0,
+                    job.Copies
+                });
             return PrintingMapper.Job(job);
         }
 

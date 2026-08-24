@@ -110,7 +110,8 @@ public sealed class ReceiptPrintPolicyService(
         value.PublicReceiptBaseUrl,
         value.ShowLogo,
         value.ShowCustomerPhone,
-        value.ShowCustomerEmail);
+        value.ShowCustomerEmail,
+        value.Language ?? "uz-latn");
 
     public static ReceiptSettings FromDto(ReceiptSettingsDto value) => new()
     {
@@ -130,7 +131,8 @@ public sealed class ReceiptPrintPolicyService(
         ShowElectronicLink = value.ShowElectronicLink,
         ShowLogo = value.ShowLogo,
         ShowCustomerPhone = value.ShowCustomerPhone,
-        ShowCustomerEmail = value.ShowCustomerEmail
+        ShowCustomerEmail = value.ShowCustomerEmail,
+        Language = value.Language
     };
 
     public static string SerializeOverride(ReceiptSettingsDto value) =>

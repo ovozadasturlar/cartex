@@ -15,7 +15,15 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
             .ThenInclude(x => x.PrintNode)
             .FirstOrDefaultAsync(x => x.BranchId == branchId && x.Kind == kind, cancellationToken);
 
-        if (policy is not null) return policy;
+        if (policy is not null)
+        {
+            if (!Enum.IsDefined(policy.RoutingMode))
+            {
+                policy.RoutingMode = PrintRoutingMode.LocalFirst;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            return policy;
+        }
 
         policy = new PrintRoutingPolicy
         {
@@ -102,15 +110,12 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
     {
         if (endpoints.Count == 0) return null;
 
-        if (policy.RoutingMode is PrintRoutingMode.LocalFirst or PrintRoutingMode.LocalOnly)
+        if (policy.RoutingMode == PrintRoutingMode.LocalFirst)
         {
             var local = job.OriginNodeId is null
                 ? null
                 : endpoints.FirstOrDefault(x => x.PrintNodeId == job.OriginNodeId);
             if (local is not null) return local;
-            // LocalOnly must never leak to another machine, including for devices
-            // (phones, web) that have no print node of their own.
-            if (policy.RoutingMode == PrintRoutingMode.LocalOnly) return null;
         }
 
         if (IsStickyValid(policy))

@@ -93,7 +93,7 @@ public sealed class PrintingController(ISender sender) : ControllerBase
     }
 
     [HttpGet("routes")]
-    [HasPermission(AppPermissions.Printing.RoutesView)]
+    [HasPermission(AppPermissions.Printing.RoutesView, AppPermissions.Printing.RemoteUse)]
     public async Task<ActionResult<IReadOnlyList<PrintRoutingPolicyDto>>> GetRoutes(long branchId, CancellationToken cancellationToken) =>
         Ok(await sender.Send(new GetPrintRoutingPoliciesQuery(branchId), cancellationToken));
 
@@ -119,7 +119,12 @@ public sealed class PrintingController(ISender sender) : ControllerBase
         Ok(await sender.Send(new UpdateReceiptPrintPolicyCommand(branchId, request), cancellationToken));
 
     [HttpPost("jobs")]
-    [HasPermission(AppPermissions.Printing.RemoteUse)]
+    [HasPermission(
+        AppPermissions.Printing.RemoteUse,
+        AppPermissions.Printing.ReceiptPrint,
+        AppPermissions.Printing.BarcodePrint,
+        AppPermissions.Printing.ZReportPrint,
+        AppPermissions.Printing.DocumentPrint)]
     public async Task<ActionResult<PrintJobDto>> CreateJob(CreatePrintJobRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.Send(new CreatePrintJobCommand(request), cancellationToken);
