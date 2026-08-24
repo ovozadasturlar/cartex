@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Localization;
 using Cartex.Shared.Models.Rates;
 using Cartex.Shared.Models.Printing;
 using Cartex.Shared.Models.Sales;
@@ -40,6 +41,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         SalesCount = 18
     };
     private bool _isLoadingLabelSettings;
+    private bool _isLoadingReceiptSettings;
 
     private sealed record PrinterCalibrationProfile(int Dpi, int Rotation, decimal Density, decimal Speed);
 
@@ -54,6 +56,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private readonly IRatesApi _ratesApi;
     private readonly IReceiptApi _receiptApi;
     private readonly ISalesApi _salesApi;
+    private readonly PrintPolicyCache _printPolicyCache;
+    private readonly PrintLogoCache _logoCache;
     private List<CurrencyDto> _labelPreviewCurrencies =
     [
         new("UZS", "Uzbek so'mi", true, true, true, true, 1, DateTime.UtcNow, "so'm", "Suffix", 0),
@@ -62,7 +66,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     public bool CanEditReceiptContent => _auth.HasPermission("settings.receipt");
     public bool CanEditLabelContent => _auth.HasPermission("settings.barcodeLabel");
-    public bool CanEditAutoPrint => _auth.HasPermission("printing.routes.edit");
+    public bool CanEditAutoPrint => _auth.HasPermission("printing.routes.edit") && RemotePrintingActive;
+
+    /// RUXSAT-04: wildcard foydalanuvchining ruxsatlari modul o'chiq bo'lsa ham qolaveradi,
+    /// server esa yopiq — shuning uchun server bilan ishlaydigan har bir yo'l modul holatini
+    /// alohida so'raydi.
+    private static bool RemotePrintingActive => SettingsService.Instance.IsFeatureOn("remote_printing");
 
     public ObservableCollection<string> Printers { get; } = [];
 
@@ -161,9 +170,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _labelShowSku;
     [ObservableProperty] private string? _selectedLabelPreset;
     [ObservableProperty] private string _receiptMode = "thermal";
-    [ObservableProperty] private string _receiptPaperWidth = "default";
+    [ObservableProperty] private string _receiptPaperWidth = "auto";
     [ObservableProperty] private string _cartMode = "thermal";
-    [ObservableProperty] private int _cartPaperWidth = 32;
+    [ObservableProperty] private string _cartPaperWidth = "32";
     [ObservableProperty] private string _cartHeaderText = string.Empty;
     [ObservableProperty] private string _cartFooterText = string.Empty;
     [ObservableProperty] private bool _cartShowBusinessName = true;
@@ -183,7 +192,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private int _zReportDocumentPagesPerSheet = 1;
     [ObservableProperty] private string _headerText = string.Empty;
     [ObservableProperty] private string _footerText = string.Empty;
-    [ObservableProperty] private int _businessPaperWidth = 32;
+    [ObservableProperty] private string _businessPaperWidth = "32";
     [ObservableProperty] private bool _showBusinessName = true;
     [ObservableProperty] private bool _showBranchName = true;
     [ObservableProperty] private bool _showAddress = true;
@@ -206,6 +215,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _previewAddress = string.Empty;
     [ObservableProperty] private string _previewPhone = string.Empty;
     [ObservableProperty] private string _previewCashierName = "Akmal";
+    [ObservableProperty] private IReadOnlyList<ReceiptPreviewLine> _receiptPreviewBeforeQr = [];
+    [ObservableProperty] private IReadOnlyList<ReceiptPreviewLine> _receiptPreviewAfterQr = [];
     [ObservableProperty] private bool _documentPrinterSupportsColor;
     [ObservableProperty] private bool _zReportPrinterSupportsColor;
     [ObservableProperty] private Bitmap? _labelPreview;
@@ -221,7 +232,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public double CartPreviewPaperWidth => IsCartThermal ? 250 : IsCartPaperA5 ? 270 : 310;
     public double CartPreviewPaperHeight => IsCartThermal ? 470 : IsCartPaperA5 ? 380 : 438;
     private ProformaPrintOptions CartOptions() => new(
-        null, null, CartPaperWidth, IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4");
+        null, null, CartWidthSetting, IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4");
     public string CartPreviewPrinterName => _printer.ProformaTarget(CartOptions()).Printer ?? L["printer_not_set"];
     public bool IsCartFallbackActive
     {
@@ -239,8 +250,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public IBrush CartPreviewLineBrush => IsCartPreviewColor ? ColorLineBrush : MonochromeLineBrush;
     public IBrush CartPreviewFaintBrush => IsCartPreviewColor ? ColorFaintBrush : MonochromeFaintBrush;
     public IBrush CartPreviewAccentBrush => IsCartPreviewColor ? ColorAccentBrush : MonochromeInkBrush;
+    public string CartPreviewHeaderText =>
+        string.IsNullOrWhiteSpace(CartHeaderText) ? HeaderText : CartHeaderText;
     public string CartPreviewFooterText =>
-        string.IsNullOrWhiteSpace(CartFooterText) ? L["receipt_footer_example"] : CartFooterText;
+        string.IsNullOrWhiteSpace(CartFooterText)
+            ? string.IsNullOrWhiteSpace(FooterText) ? L["receipt_footer_example"] : FooterText
+            : CartFooterText;
     public string PrintingSyncText => PrintingSettingsOffline
         ? PrintingLastSyncedAt is { } cached
             ? $"Offline · oxirgi sinxronizatsiya {cached.ToLocalTime():dd.MM HH:mm}"
@@ -251,6 +266,22 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public bool HasPublicReceiptBaseUrl => !string.IsNullOrWhiteSpace(PublicReceiptBaseUrl);
     public bool CanPreviewQrCode => ShowQrCode && HasPublicReceiptBaseUrl;
     public bool CanPreviewElectronicLink => ShowElectronicLink && HasPublicReceiptBaseUrl;
+    public bool IsForcedUzbekCyrillicText =>
+        ReceiptLanguageOption?.Key == "uz-cyrl" && ReceiptPrintModeOption?.Key == "text";
+    public bool IsNarrowTableTemplate =>
+        ReceiptTemplateOption?.Key == "table" && EffectiveReceiptWidth <= 42;
+    public bool IsReceiptGraphicOutput
+    {
+        get
+        {
+            var document = PrinterService.FormatReceiptDocument(CreatePreviewReceipt(), PreviewReceiptOptions());
+            return NeedsGraphicForTextSize || EscPos.ResolveOutputMode(
+                ReceiptPrintModeOption?.Key,
+                document.Text,
+                ReceiptCharsetOption,
+                ReceiptFoldCyrillic) == "graphic";
+        }
+    }
     public string PreviewElectronicReceiptLink => HasPublicReceiptBaseUrl
         ? $"{PublicReceiptBaseUrl!.TrimEnd('/')}/r/1048"
         : string.Empty;
@@ -379,12 +410,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public string ZReportPreviewDebtPayIn => $"{PreviewZReport.DebtPayIn:N0}";
     public string ZReportPreviewSupplyPayOut => $"-{PreviewZReport.SupplyPayOut:N0}";
     public double ZReportPreviewPaperWidth => IsZReportThermal
-        ? ZReportPaperWidth switch
-        {
-            "48" => 340,
-            "42" => 300,
-            _ => 240
-        }
+        ? 240 + (ReceiptPaper.Sanitize(int.TryParse(ZReportPaperWidth, out var w) ? w : 0) - 32) * 6.25
         : IsZReportLandscape
             ? IsZReportDocumentPaperA5 ? 380 : 430
             : IsZReportDocumentPaperA5 ? 270 : 310;
@@ -403,8 +429,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             : !string.IsNullOrWhiteSpace(IsZReportThermal ? ReceiptPrinter : DocumentPrinter)
                 ? (IsZReportThermal ? ReceiptPrinter : DocumentPrinter)!
                 : L["printer_not_set"];
+    /// Preview varag'i belgi soniga qarab kengayadi: 48 belgili jadval shabloni 32 belgi
+    /// uchun o'lchangan kenglikka sig'may, oxirgi ustunni kesib qo'yardi.
+    public double ReceiptPreviewSheetWidth => NominalReceiptWidth * 5.2 + 40;
+
     public double PreviewPaperWidth => IsThermal
-        ? 250
+        ? 250 + (NominalReceiptWidth - 32) * 5
         : IsLandscape
             ? IsDocumentPaperA5 ? 380 : 430
             : IsDocumentPaperA5 ? 270 : 310;
@@ -416,6 +446,21 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public string PreviewFooterText =>
         string.IsNullOrWhiteSpace(FooterText) ? L["receipt_footer_example"] : FooterText;
 
+    /// Qog'ozning o'z kengligi: yozuv o'lchami belgilar sonini kamaytiradi, qog'ozni emas.
+    private int NominalReceiptWidth =>
+        _printer.DriverReceiptPaper(ReceiptPrinter)?.Columns ?? BusinessWidth;
+
+    private bool NeedsGraphicForTextSize =>
+        ReceiptPrintModeOption?.Key != "text"
+        && ReceiptPaper.ApplyTextSize(48, ReceiptTextSizeOption?.Key) != 48;
+
+    private int EffectiveReceiptWidth =>
+        int.TryParse(ReceiptPaperWidth, out var width) && ReceiptPaper.IsValid(width)
+            ? width
+            : ReceiptPaper.Sanitize(NeedsGraphicForTextSize
+                ? ReceiptPaper.ApplyTextSize(NominalReceiptWidth, ReceiptTextSizeOption?.Key)
+                : NominalReceiptWidth / ReceiptPaper.TextMagnification(ReceiptTextSizeOption?.Key));
+
     partial void OnReceiptModeChanged(string value)
     {
         OnPropertyChanged(nameof(IsThermal));
@@ -426,8 +471,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     }
 
     partial void OnCartModeChanged(string value) => NotifyCartPreviewChanged();
+    partial void OnCartHeaderTextChanged(string value) => OnPropertyChanged(nameof(CartPreviewHeaderText));
     partial void OnCartFooterTextChanged(string value) => OnPropertyChanged(nameof(CartPreviewFooterText));
-
     private void NotifyCartPreviewChanged()
     {
         OnPropertyChanged(nameof(IsCartThermal));
@@ -450,14 +495,21 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
 
     partial void OnReceiptPrinterChanged(string? value)
     {
+        OnPropertyChanged(nameof(AutoWidthText));
+        OnPropertyChanged(nameof(ZReportAutoWidthText));
         if (IsThermal)
             OnPropertyChanged(nameof(PreviewPrinterName));
         if (IsZReportThermal)
             RefreshZReportPrinterPreview();
         OnPropertyChanged(nameof(CartPreviewPrinterName));
+        RefreshReceiptPreview();
     }
 
-    partial void OnZReportPrinterChanged(string? value) => RefreshZReportPrinterPreview();
+    partial void OnZReportPrinterChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ZReportAutoWidthText));
+        RefreshZReportPrinterPreview();
+    }
 
     partial void OnDocumentPrinterChanged(string? value)
     {
@@ -481,11 +533,51 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanPreviewQrCode));
         OnPropertyChanged(nameof(CanPreviewElectronicLink));
         OnPropertyChanged(nameof(PreviewElectronicReceiptLink));
+        RefreshReceiptPreview();
     }
 
-    partial void OnShowQrCodeChanged(bool value) => OnPropertyChanged(nameof(CanPreviewQrCode));
-    partial void OnShowElectronicLinkChanged(bool value) => OnPropertyChanged(nameof(CanPreviewElectronicLink));
-    partial void OnFooterTextChanged(string value) => OnPropertyChanged(nameof(PreviewFooterText));
+    partial void OnShowQrCodeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanPreviewQrCode));
+        RefreshReceiptPreview();
+    }
+
+    partial void OnShowElectronicLinkChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanPreviewElectronicLink));
+        RefreshReceiptPreview();
+    }
+
+    partial void OnFooterTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(PreviewFooterText));
+        OnPropertyChanged(nameof(CartPreviewFooterText));
+        RefreshReceiptPreview();
+    }
+
+    partial void OnHeaderTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(CartPreviewHeaderText));
+        RefreshReceiptPreview();
+    }
+
+    partial void OnReceiptPaperWidthChanged(string value) => RefreshReceiptPreview();
+    partial void OnShowBusinessNameChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowBranchNameChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowAddressChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowPhoneChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowCashierChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowCustomerChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowReceiptNumberChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowPaymentDetailsChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowLogoChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowCustomerPhoneChanged(bool value) => RefreshReceiptPreview();
+    partial void OnShowCustomerEmailChanged(bool value) => RefreshReceiptPreview();
+    partial void OnPreviewBusinessNameChanged(string value) => RefreshReceiptPreview();
+    partial void OnPreviewBranchNameChanged(string value) => RefreshReceiptPreview();
+    partial void OnPreviewAddressChanged(string value) => RefreshReceiptPreview();
+    partial void OnPreviewPhoneChanged(string value) => RefreshReceiptPreview();
+    partial void OnPreviewCashierNameChanged(string value) => RefreshReceiptPreview();
 
     partial void OnDocumentPaperSizeChanged(string value)
     {
@@ -605,10 +697,88 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     public string[] LabelCurrencyCases { get; } = ["original", "upper", "lower"];
     public string[] LabelPriceCurrencyModes { get; } = ["product", "default"];
     public string[] LabelNameLineOptions { get; } = ["1", "2", "all"];
-    public string[] ReceiptPaperWidths { get; } = ["default", "32", "42", "48"];
-    public int[] BusinessPaperWidths { get; } = [32, 42, 48];
+    public string[] ReceiptPaperWidths { get; } = ["auto", .. ReceiptPaper.CommonWidths.Select(w => w.ToString())];
+    public string[] BusinessPaperWidths { get; } = ["auto", .. ReceiptPaper.CommonWidths.Select(w => w.ToString())];
+    public string[] CartPaperWidths { get; } = ["auto", .. ReceiptPaper.CommonWidths.Select(w => w.ToString())];
     public string[] SendFormats { get; } = ["Thermal", "A5", "A4"];
     [ObservableProperty] private string _sendFormat = "Thermal";
+    public IReadOnlyList<EscPosCharset> CharsetOptions { get; } = EscPos.Charsets;
+    public IReadOnlyList<PrintChoice> CutModeOptions { get; }
+    public IReadOnlyList<PrintChoice> ReceiptPrintModeOptions { get; }
+    public IReadOnlyList<PrintChoice> ReceiptTemplateOptions { get; }
+    public IReadOnlyList<PrintChoice> ReceiptDarknessOptions { get; }
+    public IReadOnlyList<PrintChoice> ReceiptTextSizeOptions { get; }
+    public IReadOnlyList<PrintChoice> ReceiptQualityOptions { get; }
+    [ObservableProperty] private EscPosCharset _receiptCharsetOption = EscPos.Charsets[0];
+    [ObservableProperty] private PrintChoice? _receiptCutModeOption;
+    [ObservableProperty] private PrintChoice? _receiptPrintModeOption;
+    [ObservableProperty] private PrintChoice? _receiptDarknessOption;
+    [ObservableProperty] private PrintChoice? _receiptTextSizeOption;
+    [ObservableProperty] private PrintChoice? _receiptQualityOption;
+    [ObservableProperty] private bool _receiptFoldCyrillic;
+    [ObservableProperty] private PrintChoice? _receiptTemplateOption;
+    [ObservableProperty] private decimal _receiptCodeTable;
+    [ObservableProperty] private decimal _receiptRasterWidthDots;
+    [ObservableProperty] private decimal _receiptFeedBeforeCut = 4;
+
+    public bool IsCodeTableVisible => ReceiptCharsetOption.CodePage != 65001;
+
+    public IReadOnlyList<PrintChoice> ReceiptLanguageOptions { get; } =
+    [
+        new PrintChoice("uz-latn", "O'zbek (lotin)"),
+        new PrintChoice("uz-cyrl", "Ўзбек (кирилл)"),
+        new PrintChoice("ru", "Русский"),
+        new PrintChoice("en", "English")
+    ];
+    public IReadOnlyList<PrintChoice> ZReportLanguageOptions { get; }
+    [ObservableProperty] private PrintChoice? _receiptLanguageOption;
+    [ObservableProperty] private PrintChoice? _zReportLanguageOption;
+
+    partial void OnReceiptCharsetOptionChanged(EscPosCharset value)
+    {
+        ReceiptCodeTable = Math.Max(0, value.CodeTable);
+        OnPropertyChanged(nameof(IsCodeTableVisible));
+        RefreshReceiptPreview();
+    }
+
+    partial void OnReceiptLanguageOptionChanged(PrintChoice? value)
+    {
+        if (!_isLoadingReceiptSettings && value is not null)
+            ApplyLanguageCharset(value.Key);
+        RefreshReceiptPreview();
+    }
+
+    partial void OnReceiptPrintModeOptionChanged(PrintChoice? value) => RefreshReceiptPreview();
+    partial void OnReceiptTemplateOptionChanged(PrintChoice? value) => RefreshReceiptPreview();
+    partial void OnReceiptTextSizeOptionChanged(PrintChoice? value) => RefreshReceiptPreview();
+    partial void OnReceiptQualityOptionChanged(PrintChoice? value) => RefreshReceiptPreview();
+    partial void OnReceiptFoldCyrillicChanged(bool value) => RefreshReceiptPreview();
+
+    partial void OnReceiptCodeTableChanged(decimal value) => RefreshReceiptPreview();
+
+    private int BusinessWidthSetting => int.TryParse(BusinessPaperWidth, out var width) && ReceiptPaper.IsValid(width) ? width : 0;
+    private int BusinessWidth => ReceiptPaper.Sanitize(BusinessWidthSetting);
+    private int CartWidthSetting => int.TryParse(CartPaperWidth, out var width) && ReceiptPaper.IsValid(width) ? width : 0;
+
+    public string AutoWidthText => BuildAutoWidthText(ReceiptPrinter);
+
+    public string ZReportAutoWidthText =>
+        BuildAutoWidthText(string.IsNullOrWhiteSpace(ZReportPrinter) ? ReceiptPrinter : ZReportPrinter);
+
+    private string BuildAutoWidthText(string? printerName)
+    {
+        var paper = _printer.DriverReceiptPaper(printerName);
+        var auto = paper is null
+            ? string.Format(L["receipt_width_auto_fallback_fmt"], BusinessWidth)
+            : string.Format(L["receipt_width_auto_fmt"], paper.WidthMm, paper.Columns);
+        return $"{auto} {L["receipt_width_hint"]}";
+    }
+
+    partial void OnBusinessPaperWidthChanged(string value)
+    {
+        OnPropertyChanged(nameof(AutoWidthText));
+        RefreshReceiptPreview();
+    }
 
     partial void OnSelectedLabelPresetChanged(string? value)
     {
@@ -752,7 +922,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         IPrintingApi printingApi,
         IRatesApi ratesApi,
         IReceiptApi receiptApi,
-        ISalesApi salesApi)
+        ISalesApi salesApi,
+        PrintPolicyCache printPolicyCache,
+        PrintLogoCache logoCache)
     {
         _printer = printer;
         _toast = toast;
@@ -765,14 +937,70 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _ratesApi = ratesApi;
         _receiptApi = receiptApi;
         _salesApi = salesApi;
+        _printPolicyCache = printPolicyCache;
+        _logoCache = logoCache;
+        CutModeOptions =
+        [
+            new PrintChoice("partial", L["cut_partial"]),
+            new PrintChoice("full", L["cut_full"]),
+            new PrintChoice("none", L["cut_none"])
+        ];
+        ReceiptPrintModeOptions =
+        [
+            new PrintChoice("auto", L["receipt_print_mode_auto"]),
+            new PrintChoice("text", L["receipt_print_mode_text"]),
+            new PrintChoice("graphic", L["receipt_print_mode_graphic"])
+        ];
+        ReceiptTemplateOptions =
+        [
+            new PrintChoice("auto", L["receipt_template_auto"]),
+            new PrintChoice("lines", L["receipt_template_lines"]),
+            new PrintChoice("compact", L["receipt_template_compact"]),
+            new PrintChoice("table", L["receipt_template_table"])
+        ];
+        ReceiptQualityOptions =
+        [
+            new PrintChoice("fast", L["receipt_quality_fast"]),
+            new PrintChoice("standard", L["receipt_quality_standard"]),
+            new PrintChoice("high", L["receipt_quality_high"])
+        ];
+        ReceiptTextSizeOptions =
+        [
+            new PrintChoice("normal", L["receipt_text_size_normal"]),
+            new PrintChoice("large", L["receipt_text_size_large"]),
+            new PrintChoice("xlarge", L["receipt_text_size_xlarge"]),
+            new PrintChoice("double", L["receipt_text_size_double"])
+        ];
+        ReceiptDarknessOptions =
+        [
+            new PrintChoice("light", L["receipt_darkness_light"]),
+            new PrintChoice("medium", L["receipt_darkness_medium"]),
+            new PrintChoice("dark", L["receipt_darkness_dark"])
+        ];
+        ReceiptDarknessOption = ReceiptDarknessOptions[1];
+        ReceiptTextSizeOption = ReceiptTextSizeOptions[0];
+        ReceiptQualityOption = ReceiptQualityOptions[1];
+        ReceiptCutModeOption = CutModeOptions[0];
+        ReceiptPrintModeOption = ReceiptPrintModeOptions[0];
+        ReceiptTemplateOption = ReceiptTemplateOptions[0];
+        ZReportLanguageOptions = [new PrintChoice("interface", L["interface_language"]), .. ReceiptLanguageOptions];
+        ReceiptLanguageOption = ReceiptLanguageOptions[0];
+        ZReportLanguageOption = ZReportLanguageOptions[0];
     }
 
     public async Task LoadAsync()
     {
+        OnPropertyChanged(nameof(CanViewPrintNetwork));
         _printer.EnsureAutoSetup();
+        // Tanlovlar ro'yxatdan OLDIN o'rnatilsa Avalonia bo'sh ItemsSource'ga qarab tanlovni
+        // nullga tushiradi va keyingi saqlash printerni o'chirib yuboradi — ro'yxat birinchi.
+        var installed = _printer.GetInstalledPrinters();
+        Printers.Clear();
+        foreach (var name in installed) Printers.Add(name);
         var s = _printer.GetSettings();
 
         _isLoadingLabelSettings = true;
+        _isLoadingReceiptSettings = true;
         try
         {
             ReceiptPrinter = s.ReceiptPrinter;
@@ -784,10 +1012,34 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             AutoPrintZReport = s.AutoPrintZReport;
             ReceiptCopies = Math.Clamp(s.ReceiptCopies, 1, 5);
             ReceiptMode = s.ReceiptMode is "a4" or "a5" ? s.ReceiptMode : "thermal";
-            ReceiptPaperWidth = s.ReceiptPaperWidth is 32 or 42 or 48 ? s.ReceiptPaperWidth.ToString() : "default";
+            ReceiptPaperWidth = ReceiptPaper.IsValid(s.ReceiptPaperWidth) ? s.ReceiptPaperWidth.ToString() : "auto";
             HeaderText = s.ReceiptHeaderText ?? string.Empty;
             FooterText = s.ReceiptFooterText ?? string.Empty;
-            BusinessPaperWidth = s.ReceiptContentWidth is 42 or 48 ? s.ReceiptContentWidth : 32;
+            BusinessPaperWidth = s.ReceiptContentWidth == 0 ? "auto" : ReceiptPaper.Sanitize(s.ReceiptContentWidth).ToString();
+            ReceiptLanguageOption = ReceiptLanguageOptions.FirstOrDefault(x => x.Key == s.ReceiptLanguage) ?? ReceiptLanguageOptions[0];
+            ZReportLanguageOption = ZReportLanguageOptions.FirstOrDefault(x => x.Key == s.ZReportLanguage) ?? ZReportLanguageOptions[0];
+            ReceiptCharsetOption = string.IsNullOrWhiteSpace(s.ReceiptCharset)
+                ? CharsetForLanguage(ReceiptLanguageOption?.Key)
+                : EscPos.ResolveCharset(s.ReceiptCharset);
+            ReceiptCodeTable = s.ReceiptCodeTable is >= 0 and <= 255
+                ? s.ReceiptCodeTable
+                : Math.Max(0, ReceiptCharsetOption.CodeTable);
+            ReceiptPrintModeOption = ReceiptPrintModeOptions.FirstOrDefault(x => x.Key == s.ReceiptPrintMode)
+                ?? ReceiptPrintModeOptions[0];
+            ReceiptTemplateOption = ReceiptTemplateOptions.FirstOrDefault(x => x.Key == s.ReceiptTemplate)
+                ?? ReceiptTemplateOptions[0];
+            ReceiptRasterWidthDots = s.ReceiptRasterWidthDots is >= 128 and <= 2048
+                ? s.ReceiptRasterWidthDots
+                : 0;
+            ReceiptDarknessOption = ReceiptDarknessOptions.FirstOrDefault(x => x.Key == s.ReceiptDarkness)
+                ?? ReceiptDarknessOptions[1];
+            ReceiptTextSizeOption = ReceiptTextSizeOptions.FirstOrDefault(x => x.Key == s.ReceiptTextSize)
+                ?? ReceiptTextSizeOptions[0];
+            ReceiptQualityOption = ReceiptQualityOptions.FirstOrDefault(x => x.Key == s.ReceiptQuality)
+                ?? ReceiptQualityOptions[1];
+            ReceiptFoldCyrillic = s.ReceiptFoldCyrillic;
+            ReceiptCutModeOption = CutModeOptions.FirstOrDefault(x => x.Key == s.ReceiptCutMode) ?? CutModeOptions[0];
+            ReceiptFeedBeforeCut = Math.Clamp(s.ReceiptFeedBeforeCut, 0, 12);
             ShowBusinessName = s.ReceiptShowBusinessName;
             ShowBranchName = s.ReceiptShowBranchName;
             ShowAddress = s.ReceiptShowAddress;
@@ -807,7 +1059,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             DocumentOrientation = s.DocumentOrientation == "landscape" ? "landscape" : "portrait";
             DocumentPagesPerSheet = s.DocumentPagesPerSheet is 2 or 4 ? s.DocumentPagesPerSheet : 1;
             ZReportMode = s.ZReportMode is "a4" or "a5" ? s.ZReportMode : "thermal";
-            ZReportPaperWidth = s.ZReportPaperWidth is 32 or 42 or 48
+            ZReportPaperWidth = ReceiptPaper.IsValid(s.ZReportPaperWidth)
                 ? s.ZReportPaperWidth.ToString()
                 : ReceiptPaperWidth;
             ZReportDocumentPaperSize = s.ZReportDocumentPaperSize is "a4" or "a5"
@@ -859,12 +1111,15 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         finally
         {
             _isLoadingLabelSettings = false;
+            _isLoadingReceiptSettings = false;
         }
 
         // Cached values are applied before the first await, so opening this page
         // never flashes default/off values while network calls are in flight.
         PrintingBootstrapDto? bootstrap = null;
-        if (_branch.CurrentBranchId is { } bootstrapBranchId)
+        if (RemotePrintingActive
+            && _auth.HasPermission("printing.routes.view|printing.receipts.print|printing.remote.use")
+            && _branch.CurrentBranchId is { } bootstrapBranchId)
         {
             try
             {
@@ -882,13 +1137,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             }
         }
 
-        var printers = await Task.Run(_printer.GetInstalledPrinters);
-        Printers.Clear();
-        foreach (var p in printers) Printers.Add(p);
         await LoadLabelPreviewCurrenciesAsync();
         RefreshZReportPrinterPreview();
         NotifyZReportPreviewChanged();
         RefreshLabelPreview();
+        RefreshReceiptPreview();
 
         try
         {
@@ -923,7 +1176,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _printer.ReceiptOptions = new ReceiptPrintOptions(
             string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
             string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-            BusinessPaperWidth,
+            BusinessWidthSetting,
             ShowBusinessName,
             ShowBranchName,
             ShowAddress,
@@ -937,7 +1190,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             PublicReceiptBaseUrl,
             ShowLogo,
             ShowCustomerPhone,
-            ShowCustomerEmail);
+            ShowCustomerEmail,
+            Template: ReceiptTemplateOption?.Key ?? "auto");
         SaveLocalPrinterSettings();
 
         var currentBranch = _branch.SelectedBranch;
@@ -953,6 +1207,14 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             PreviewBusinessName = business.Name;
             PreviewAddress = currentBranch?.Address ?? business.Address ?? PreviewAddress;
             PreviewPhone = currentBranch?.Phone ?? business.Phone ?? PreviewPhone;
+            var imageKey = !string.IsNullOrWhiteSpace(business.MonochromeLogoImageKey)
+                ? business.MonochromeLogoImageKey
+                : business.LogoImageKey;
+            var target = _printer.ReceiptTarget();
+            if (target.Printer is not null)
+                _ = _logoCache.WarmAsync(
+                    imageKey,
+                    _printer.ReceiptRasterWidth(target.Printer, _printer.ReceiptOptions?.Width));
         }
         catch
         {
@@ -989,7 +1251,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             await _settingsApi.UpdateProformaAsync(new UpdateProformaSettingsRequest(
                 string.IsNullOrWhiteSpace(CartHeaderText) ? null : CartHeaderText.Trim(),
                 string.IsNullOrWhiteSpace(CartFooterText) ? null : CartFooterText.Trim(),
-                CartPaperWidth,
+                CartWidthSetting,
                 IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4",
                 CartShowBusinessName,
                 CartShowAddress,
@@ -1010,7 +1272,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             await _settingsApi.UpdateReceiptAsync(new UpdateReceiptSettingsRequest(
                 string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
                 string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-                BusinessPaperWidth,
+                BusinessWidthSetting,
                 SendFormat,
                 ShowBusinessName,
                 ShowBranchName,
@@ -1024,7 +1286,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
                 ShowElectronicLink,
                 ShowLogo,
                 ShowCustomerPhone,
-                ShowCustomerEmail));
+                ShowCustomerEmail,
+                ReceiptLanguageOption?.Key ?? "uz-latn"));
         }
         catch (Exception ex)
         {
@@ -1053,7 +1316,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         _printer.ReceiptOptions = new ReceiptPrintOptions(
             string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
             string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-            BusinessPaperWidth,
+            BusinessWidthSetting,
             ShowBusinessName,
             ShowBranchName,
             ShowAddress,
@@ -1067,8 +1330,10 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             PublicReceiptBaseUrl,
             ShowLogo,
             ShowCustomerPhone,
-            ShowCustomerEmail);
+            ShowCustomerEmail,
+            Template: ReceiptTemplateOption?.Key ?? "auto");
         ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Receipt);
+        await _printPolicyCache.RefreshAsync();
         _toast.Success(L["success"]);
     }
 
@@ -1232,15 +1497,104 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         }
     }
 
+    private void RefreshReceiptPreview()
+    {
+        var document = PrinterService.FormatReceiptDocument(CreatePreviewReceipt(), PreviewReceiptOptions());
+        var mode = NeedsGraphicForTextSize
+            ? "graphic"
+            : EscPos.ResolveOutputMode(
+                ReceiptPrintModeOption?.Key, document.Text, ReceiptCharsetOption, ReceiptFoldCyrillic);
+        ReceiptPreviewBeforeQr = PreviewLines(document.BeforeQr, mode);
+        ReceiptPreviewAfterQr = PreviewLines(document.AfterQr, mode);
+        OnPropertyChanged(nameof(IsForcedUzbekCyrillicText));
+        OnPropertyChanged(nameof(IsNarrowTableTemplate));
+        OnPropertyChanged(nameof(IsReceiptGraphicOutput));
+        OnPropertyChanged(nameof(PreviewPaperWidth));
+        OnPropertyChanged(nameof(PreviewPaperHeight));
+        OnPropertyChanged(nameof(ReceiptPreviewSheetWidth));
+    }
+
+    private IReadOnlyList<ReceiptPreviewLine> PreviewLines(
+        IReadOnlyList<ReceiptTextLine> lines,
+        string mode) => lines.Select(line => new ReceiptPreviewLine(
+            EscPos.PreviewText(line.Text, mode, ReceiptCharsetOption, ReceiptFoldCyrillic),
+            line.Style == ReceiptTextStyle.Total ? Brushes.White : Brushes.Black,
+            line.Style == ReceiptTextStyle.Total ? Brushes.Black : Brushes.Transparent,
+            FittedPreviewFontSize(line),
+            line.Style is ReceiptTextStyle.Title or ReceiptTextStyle.Total or ReceiptTextStyle.Strong
+                ? FontWeight.Bold
+                : FontWeight.Normal,
+            line.Centered ? TextAlignment.Center : TextAlignment.Left)).ToArray();
+
+    /// Ko'rinish qog'ozni ko'rsatishi kerak, shuning uchun shrift rasterdagi kabi
+    /// ustunlar sonidan hisoblanadi: bir qatorga aynan shuncha belgi sig'adi.
+    /// Uslub nisbatlari raster bilan bir xil (21 asosida: sarlavha +8, jami +3, qalin +1).
+    /// 0.98 — hinting sababli haqiqiy belgi eni nazariydan bir oz katta chiqadi va
+    /// zaxirasiz oxirgi belgi kesilib qolardi.
+    private double PreviewNormalFontSize =>
+        (ReceiptPreviewSheetWidth - 38) * 0.98 / (Math.Max(1, EffectiveReceiptWidth) * ConsolasAdvanceRatio);
+
+    private double FittedPreviewFontSize(ReceiptTextLine line)
+    {
+        var size = PreviewNormalFontSize * line.Style switch
+        {
+            ReceiptTextStyle.Title => 29d / 21d,
+            ReceiptTextStyle.Total => 24d / 21d,
+            ReceiptTextStyle.Strong => 22d / 21d,
+            _ => 1d
+        };
+        if (line.Text.Length == 0) return size;
+        var available = ReceiptPreviewSheetWidth - 38;
+        return Math.Min(size, available / (line.Text.Length * ConsolasAdvanceRatio));
+    }
+
+    private const double ConsolasAdvanceRatio = 0.5498;
+
+    private ReceiptPrintOptions PreviewReceiptOptions() => new(
+        string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
+        string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
+        EffectiveReceiptWidth,
+        ShowBusinessName,
+        ShowBranchName,
+        ShowAddress,
+        ShowPhone,
+        ShowCashier,
+        ShowCustomer,
+        ShowReceiptNumber,
+        ShowPaymentDetails,
+        ShowQrCode,
+        ShowElectronicLink,
+        PublicReceiptBaseUrl,
+        ShowLogo,
+        ShowCustomerPhone,
+        ShowCustomerEmail,
+        Template: ReceiptTemplateOption?.Key ?? "auto");
+
+    private void ApplyLanguageCharset(string language)
+    {
+        ReceiptCharsetOption = CharsetForLanguage(language);
+        ReceiptCodeTable = Math.Max(0, ReceiptCharsetOption.CodeTable);
+    }
+
+    private static EscPosCharset CharsetForLanguage(string? language) => language switch
+    {
+        "uz-latn" => EscPos.ResolveCharset("cp1252"),
+        "uz-cyrl" => EscPos.ResolveCharset("cp1251"),
+        "ru" => EscPos.ResolveCharset("cp866"),
+        "en" => EscPos.ResolveCharset("cp437"),
+        _ => EscPos.ResolveCharset("cp1252")
+    };
+
     private ReceiptDto CreatePreviewReceipt()
     {
+        var language = ReceiptLanguageOption?.Key ?? "uz-latn";
         var items = new List<ReceiptItemDto>
         {
-            new(L["receipt_preview_item_one"], 2, L["unit"], 12_500, 25_000),
-            new(L["receipt_preview_item_two"], 1, L["unit"], 8_000, 8_000),
-            new(L["receipt_preview_item_three"], 1.5m, L["unit"], 14_000, 21_000),
-            new(L["receipt_preview_item_four"], 2, L["unit"], 9_500, 19_000),
-            new(L["receipt_preview_item_five"], 1, L["unit"], 11_000, 11_000)
+            new(ReceiptTexts.Get("sample_item_one", language), 2, ReceiptTexts.Get("unit_piece", language), 12_500, 25_000),
+            new(ReceiptTexts.Get("sample_item_two", language), 1, ReceiptTexts.Get("unit_piece", language), 8_000, 8_000),
+            new(ReceiptTexts.Get("sample_item_three", language), 1.5m, ReceiptTexts.Get("unit_piece", language), 14_000, 21_000, 3_000),
+            new(ReceiptTexts.Get("sample_item_four", language), 2, ReceiptTexts.Get("unit_piece", language), 9_500, 19_000),
+            new(ReceiptTexts.Get("sample_item_five", language), 1, ReceiptTexts.Get("unit_piece", language), 11_000, 11_000)
         };
         return new ReceiptDto(
             "preview-1048",
@@ -1249,9 +1603,9 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             PreviewAddress,
             PreviewPhone,
             DateTime.Now,
-            84_000,
-            0,
-            84_000,
+            81_000,
+            3_000,
+            81_000,
             0,
             0,
             0,
@@ -1259,18 +1613,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             0,
             PreviewCashierName,
             items,
-            [new ReceiptPaymentDto("Cash", "UZS", 84_000, 1, 84_000)],
+            [new ReceiptPaymentDto("Cash", "UZS", 81_000, 1, 81_000)],
             1048,
             "Dilshod",
             PreviewCustomerPhone,
             PreviewCustomerEmail,
-            LocalizationManager.Instance.CurrentLanguage switch
-            {
-                AppLanguage.Ru => "ru",
-                AppLanguage.UzCyrl => "uz-cyrl",
-                AppLanguage.En => "en",
-                _ => "uz-latn"
-            });
+            language,
+            PreviewPhone);
     }
 
     private void ApplyPrinterCalibrationProfile()
@@ -1325,11 +1674,11 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             LabelWidthMm = (double)LabelWidthMm,
             LabelHeightMm = (double)LabelHeightMm,
             ReceiptMode = ReceiptMode,
-            ReceiptPaperWidth = int.TryParse(ReceiptPaperWidth, out var width) ? width : 0,
+            ReceiptPaperWidth = int.TryParse(ReceiptPaperWidth, out var width) ? ReceiptPaper.Sanitize(width, 0) : 0,
             ReceiptCopies = (int)Math.Clamp(ReceiptCopies, 1, 5),
             ReceiptHeaderText = string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
             ReceiptFooterText = string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-            ReceiptContentWidth = BusinessPaperWidth,
+            ReceiptContentWidth = BusinessWidthSetting,
             ReceiptShowBusinessName = ShowBusinessName,
             ReceiptShowBranchName = ShowBranchName,
             ReceiptShowAddress = ShowAddress,
@@ -1347,7 +1696,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             CachedPrintingBranchId = _branch.CurrentBranchId,
             CachedPrintingRevision = null,
             PrintingLastSyncedAtUtc = PrintingLastSyncedAt,
-            CentralAutoPrint = !PrintingSettingsOffline && AutoPrintReceipt,
+            CentralAutoPrint = RemotePrintingActive && !PrintingSettingsOffline && AutoPrintReceipt,
             AutoPrintZReport = AutoPrintZReport,
             LabelMode = LabelMode,
             LabelGapMm = (double)LabelGapMm,
@@ -1369,12 +1718,12 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             DocumentOrientation = DocumentOrientation,
             DocumentPagesPerSheet = DocumentPagesPerSheet,
             ZReportMode = ZReportMode,
-            ZReportPaperWidth = int.TryParse(ZReportPaperWidth, out var zWidth) ? zWidth : 0,
+            ZReportPaperWidth = int.TryParse(ZReportPaperWidth, out var zWidth) ? ReceiptPaper.Sanitize(zWidth, 0) : 0,
             ZReportDocumentPaperSize = ZReportDocumentPaperSize,
             ZReportDocumentOrientation = ZReportDocumentOrientation,
             ZReportDocumentPagesPerSheet = ZReportDocumentPagesPerSheet,
             ProformaPaperFormat = IsCartThermal ? "Thermal" : IsCartPaperA5 ? "A5" : "A4",
-            ProformaPaperWidth = CartPaperWidth,
+            ProformaPaperWidth = CartWidthSetting,
             ProformaHeaderText = string.IsNullOrWhiteSpace(CartHeaderText) ? null : CartHeaderText.Trim(),
             ProformaFooterText = string.IsNullOrWhiteSpace(CartFooterText) ? null : CartFooterText.Trim(),
             ProformaShowBusinessName = CartShowBusinessName,
@@ -1384,6 +1733,21 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             ProformaShowCustomer = CartShowCustomer,
             ProformaShowNote = CartShowNote,
             ProformaShowCartCode = CartShowCartCode,
+            ReceiptLanguage = ReceiptLanguageOption?.Key,
+            ZReportLanguage = ZReportLanguageOption is { Key: not "interface" } zLang ? zLang.Key : null,
+            ReceiptCharset = ReceiptCharsetOption.Key,
+            ReceiptCodeTable = (int)Math.Clamp(ReceiptCodeTable, 0, 255),
+            ReceiptPrintMode = ReceiptPrintModeOption?.Key,
+            ReceiptTemplate = ReceiptTemplateOption?.Key,
+            ReceiptDarkness = ReceiptDarknessOption?.Key,
+            ReceiptTextSize = ReceiptTextSizeOption?.Key,
+            ReceiptQuality = ReceiptQualityOption?.Key,
+            ReceiptFoldCyrillic = ReceiptFoldCyrillic,
+            ReceiptRasterWidthDots = ReceiptRasterWidthDots is >= 128 and <= 2048
+                ? (int)ReceiptRasterWidthDots / 8 * 8
+                : 0,
+            ReceiptCutMode = ReceiptCutModeOption?.Key,
+            ReceiptFeedBeforeCut = (int)Math.Clamp(ReceiptFeedBeforeCut, 0, 12),
             AutoSetupSignature = _printer.GetSettings().AutoSetupSignature
         });
     }
@@ -1391,7 +1755,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private void ApplyProformaSettings(ProformaSettingsDto cfg)
     {
         CartMode = cfg.PaperFormat == "A4" ? "a4" : cfg.PaperFormat == "A5" ? "a5" : "thermal";
-        CartPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
+        CartPaperWidth = cfg.PaperWidth == 0 ? "auto" : ReceiptPaper.Sanitize(cfg.PaperWidth).ToString();
         CartHeaderText = cfg.HeaderText ?? string.Empty;
         CartFooterText = cfg.FooterText ?? string.Empty;
         CartShowBusinessName = cfg.ShowBusinessName;
@@ -1436,7 +1800,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     {
         HeaderText = cfg.HeaderText ?? string.Empty;
         FooterText = cfg.FooterText ?? string.Empty;
-        BusinessPaperWidth = cfg.PaperWidth is 42 or 48 ? cfg.PaperWidth : 32;
+        BusinessPaperWidth = cfg.PaperWidth == 0 ? "auto" : ReceiptPaper.Sanitize(cfg.PaperWidth).ToString();
+        ReceiptLanguageOption = ReceiptLanguageOptions.FirstOrDefault(x => x.Key == cfg.Language) ?? ReceiptLanguageOptions[0];
         SendFormat = SendFormats.Contains(cfg.PaperFormat) ? cfg.PaperFormat : "Thermal";
         ShowBusinessName = cfg.ShowBusinessName;
         ShowBranchName = cfg.ShowBranchName;
@@ -1457,7 +1822,7 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
     private ReceiptSettingsDto CurrentReceiptSettings() => new(
         string.IsNullOrWhiteSpace(HeaderText) ? null : HeaderText.Trim(),
         string.IsNullOrWhiteSpace(FooterText) ? null : FooterText.Trim(),
-        BusinessPaperWidth,
+        BusinessWidthSetting,
         SendFormat,
         ShowBusinessName,
         ShowBranchName,
@@ -1472,7 +1837,8 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
         PublicReceiptBaseUrl,
         ShowLogo,
         ShowCustomerPhone,
-        ShowCustomerEmail);
+        ShowCustomerEmail,
+        ReceiptLanguageOption?.Key ?? "uz-latn");
 
     private static bool IsPdfPrinter(string? value) =>
         !string.IsNullOrWhiteSpace(value)
@@ -1480,3 +1846,13 @@ public partial class PrintingViewModel : ViewModelBase, ILoadable
             || value.Contains("Save to PDF", StringComparison.OrdinalIgnoreCase)
             || value.Contains("XPS", StringComparison.OrdinalIgnoreCase));
 }
+
+public sealed record PrintChoice(string Key, string Label);
+
+public sealed record ReceiptPreviewLine(
+    string Text,
+    IBrush Foreground,
+    IBrush Background,
+    double FontSize,
+    FontWeight FontWeight,
+    TextAlignment TextAlignment);

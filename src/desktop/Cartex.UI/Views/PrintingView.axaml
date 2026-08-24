@@ -5,81 +5,46 @@
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:print="using:Cartex.Shared.Models.Printing"
+             xmlns:svc="using:Cartex.UI.Services"
              x:Class="Cartex.UI.Views.PrintingView"
              x:DataType="vm:PrintingViewModel"
              x:CompileBindings="True">
 
     <UserControl.Resources>
         <DataTemplate x:Key="ThermalReceiptPreview" x:DataType="vm:PrintingViewModel">
-            <Border Width="210" Height="500" Background="White" Padding="14">
-                <StackPanel Spacing="4">
+            <Border Width="{Binding ReceiptPreviewSheetWidth}" Background="White" Padding="16">
+                <StackPanel Spacing="5">
                     <Border Width="42" Height="32" CornerRadius="5" Background="#F1F5F9"
                             HorizontalAlignment="Center" IsVisible="{Binding ShowLogo}">
                         <mi:MaterialIcon Kind="Domain" Width="22" Height="22" HorizontalAlignment="Center"
-                                         VerticalAlignment="Center" Foreground="{Binding PreviewInkBrush}" />
+                                         VerticalAlignment="Center" Foreground="#111111" />
                     </Border>
-                    <TextBlock Text="{Binding PreviewBusinessName}" IsVisible="{Binding ShowBusinessName}"
-                               Foreground="{Binding PreviewInkBrush}" FontSize="14" FontWeight="Bold" TextAlignment="Center" />
-                    <TextBlock Text="{Binding PreviewBranchName}" IsVisible="{Binding ShowBranchName}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="10" TextAlignment="Center" />
-                    <TextBlock Text="{Binding PreviewAddress}" IsVisible="{Binding ShowAddress}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
-                    <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding ShowPhone}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
-                    <TextBlock Text="{Binding HeaderText}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                    <TextBlock Text="29.07.2026 15:30" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <TextBlock Text="№ 1048" IsVisible="{Binding ShowReceiptNumber}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <TextBlock Text="{Binding L[receipt_preview_cashier]}" IsVisible="{Binding ShowCashier}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <TextBlock Text="{Binding L[receipt_preview_customer]}" IsVisible="{Binding ShowCustomer}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <TextBlock Text="{Binding PreviewCustomerPhone}" IsVisible="{Binding ShowCustomerPhone}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <TextBlock Text="{Binding PreviewCustomerEmail}" IsVisible="{Binding ShowCustomerEmail}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
-                    <TextBlock Text="{Binding L[receipt_preview_item_one]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="2 × 12 500" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="25 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
-                    </Grid>
-                    <TextBlock Text="{Binding L[receipt_preview_item_two]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="1 × 8 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="8 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
-                    </Grid>
-                    <TextBlock Text="{Binding L[receipt_preview_item_three]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="1.5 × 14 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="21 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
-                    </Grid>
-                    <TextBlock Text="{Binding L[receipt_preview_item_four]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="2 × 9 500" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="19 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
-                    </Grid>
-                    <TextBlock Text="{Binding L[receipt_preview_item_five]}" Foreground="{Binding PreviewInkBrush}" FontSize="9" FontWeight="SemiBold" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="1 × 11 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="11 000" Foreground="{Binding PreviewInkBrush}" FontSize="8" />
-                    </Grid>
-                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding L[total]}" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
-                        <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewInkBrush}" FontSize="11" FontWeight="Bold" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShowPaymentDetails}">
-                        <TextBlock Text="{Binding L[cash]}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                        <TextBlock Grid.Column="1" Text="84 000" Foreground="{Binding PreviewMutedBrush}" FontSize="8" />
-                    </Grid>
-                    <Border Height="1" Background="{Binding PreviewLineBrush}" Margin="0,2" />
-                    <TextBlock Text="{Binding PreviewFooterText}" Foreground="{Binding PreviewMutedBrush}" FontSize="8" TextAlignment="Center"
-                               TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding ReceiptPreviewBeforeQr}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ReceiptPreviewLine">
+                                <Border Background="{Binding Background}" Padding="3,1">
+                                    <TextBlock Text="{Binding Text}" Foreground="{Binding Foreground}"
+                                               FontFamily="Consolas" FontSize="{Binding FontSize}"
+                                               FontWeight="{Binding FontWeight}" TextAlignment="{Binding TextAlignment}"
+                                               TextWrapping="NoWrap" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <mi:MaterialIcon Kind="Qrcode" Width="48" Height="48" HorizontalAlignment="Center"
-                                     Foreground="{Binding PreviewInkBrush}" IsVisible="{Binding CanPreviewQrCode}" />
-                    <TextBlock Text="{Binding PreviewElectronicReceiptLink}" IsVisible="{Binding CanPreviewElectronicLink}"
-                               Foreground="{Binding PreviewMutedBrush}" FontSize="6.5" TextAlignment="Center" />
+                                     Foreground="#111111" IsVisible="{Binding CanPreviewQrCode}" />
+                    <ItemsControl ItemsSource="{Binding ReceiptPreviewAfterQr}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ReceiptPreviewLine">
+                                <Border Background="{Binding Background}" Padding="3,1">
+                                    <TextBlock Text="{Binding Text}" Foreground="{Binding Foreground}"
+                                               FontFamily="Consolas" FontSize="{Binding FontSize}"
+                                               FontWeight="{Binding FontWeight}" TextAlignment="{Binding TextAlignment}"
+                                               TextWrapping="NoWrap" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -405,7 +370,7 @@
                                Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
                     <TextBlock Text="{Binding PreviewPhone}" IsVisible="{Binding CartShowPhone}"
                                Foreground="{Binding CartPreviewMutedBrush}" FontSize="8" TextAlignment="Center" />
-                    <TextBlock Text="{Binding CartHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8"
+                    <TextBlock Text="{Binding CartPreviewHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="8"
                                TextAlignment="Center" TextWrapping="Wrap" />
                     <Border Height="2" Background="{Binding CartPreviewInkBrush}" Margin="0,2" />
                     <TextBlock Text="{Binding L[preview_not_receipt]}" Foreground="{Binding CartPreviewInkBrush}"
@@ -485,7 +450,7 @@
                         </StackPanel>
                     </Grid>
                     <StackPanel Grid.Row="1" Spacing="3" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding CartHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CartPreviewHeaderText}" Foreground="{Binding CartPreviewMutedBrush}" FontSize="7" TextWrapping="Wrap" />
                         <Border Height="2" Background="{Binding CartPreviewInkBrush}" />
                     </StackPanel>
                     <StackPanel Grid.Row="2" Margin="0,8,0,0" Spacing="5">
@@ -734,7 +699,9 @@
                                 <Grid ColumnDefinitions="*,12,*">
                                     <StackPanel Spacing="5">
                                         <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width]}" />
-                                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ReceiptPaperWidth}" />
+                                        <AutoCompleteBox ItemsSource="{Binding ReceiptPaperWidths}" Text="{Binding ReceiptPaperWidth, Mode=TwoWay}"
+                                                         FilterMode="None" MinimumPrefixLength="0" MinHeight="34"
+                                                         c:FormBehaviors.OpenOnFocus="True" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Spacing="5">
                                         <TextBlock Classes="fieldlabel" Text="{Binding L[print_copies]}" />
@@ -742,10 +709,143 @@
                                                        Minimum="1" Maximum="5" FormatString="0" MinHeight="34" />
                                     </StackPanel>
                                 </Grid>
+                                <TextBlock Text="{Binding AutoWidthText}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
                                 <StackPanel Spacing="5" IsVisible="{Binding CanEditReceiptContent}">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
-                                    <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding BusinessPaperWidth}" />
+                                    <AutoCompleteBox ItemsSource="{Binding BusinessPaperWidths}" Text="{Binding BusinessPaperWidth, Mode=TwoWay}"
+                                                         FilterMode="None" MinimumPrefixLength="0" MinHeight="34"
+                                                         c:FormBehaviors.OpenOnFocus="True" />
                                 </StackPanel>
+
+                                <Grid ColumnDefinitions="*,12,*">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_print_mode]}" />
+                                        <ComboBox ItemsSource="{Binding ReceiptPrintModeOptions}"
+                                                  SelectedItem="{Binding ReceiptPrintModeOption}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:PrintChoice">
+                                                    <TextBlock Text="{Binding Label}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_template]}" />
+                                        <ComboBox ItemsSource="{Binding ReceiptTemplateOptions}"
+                                                  SelectedItem="{Binding ReceiptTemplateOption}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:PrintChoice">
+                                                    <TextBlock Text="{Binding Label}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_quality]}" />
+                                    <ComboBox ItemsSource="{Binding ReceiptQualityOptions}"
+                                              SelectedItem="{Binding ReceiptQualityOption}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:PrintChoice">
+                                                <TextBlock Text="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Classes="hint" TextWrapping="Wrap" Text="{Binding L[receipt_quality_hint]}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="5">
+                                    <CheckBox IsChecked="{Binding ReceiptFoldCyrillic}"
+                                              Content="{Binding L[receipt_fold_cyrillic]}" />
+                                    <TextBlock Classes="hint" TextWrapping="Wrap" Text="{Binding L[receipt_fold_cyrillic_hint]}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_text_size]}" />
+                                    <ComboBox ItemsSource="{Binding ReceiptTextSizeOptions}"
+                                              SelectedItem="{Binding ReceiptTextSizeOption}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:PrintChoice">
+                                                <TextBlock Text="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Classes="hint" TextWrapping="Wrap" Text="{Binding L[receipt_text_size_hint]}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_darkness]}" />
+                                    <ComboBox ItemsSource="{Binding ReceiptDarknessOptions}"
+                                              SelectedItem="{Binding ReceiptDarknessOption}"
+                                              HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:PrintChoice">
+                                                <TextBlock Text="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Classes="hint" TextWrapping="Wrap" Text="{Binding L[receipt_darkness_hint]}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="5">
+                                    <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_raster_width]}" />
+                                    <NumericUpDown Value="{Binding ReceiptRasterWidthDots, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                   Minimum="0" Maximum="2048" Increment="8" FormatString="0" MinHeight="34" />
+                                    <TextBlock Text="{Binding L[receipt_raster_width_hint]}" Foreground="{DynamicResource TextMuted}"
+                                               FontSize="11.5" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="10"
+                                        IsVisible="{Binding IsForcedUzbekCyrillicText}">
+                                    <TextBlock Text="{Binding L[receipt_cyrillic_text_warning]}"
+                                               Foreground="{DynamicResource WarningBrush}" FontSize="11.5" TextWrapping="Wrap" />
+                                </Border>
+                                <Border Background="{DynamicResource WarningBg}" CornerRadius="8" Padding="10"
+                                        IsVisible="{Binding IsNarrowTableTemplate}">
+                                    <TextBlock Text="{Binding L[receipt_narrow_table_warning]}"
+                                               Foreground="{DynamicResource WarningBrush}" FontSize="11.5" TextWrapping="Wrap" />
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,12,*">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_charset]}" />
+                                        <ComboBox ItemsSource="{Binding CharsetOptions}" SelectedItem="{Binding ReceiptCharsetOption}"
+                                                  HorizontalAlignment="Stretch">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="svc:EscPosCharset">
+                                                    <TextBlock Text="{Binding Label}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5" IsVisible="{Binding IsCodeTableVisible}">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_code_table]}" />
+                                        <NumericUpDown Value="{Binding ReceiptCodeTable, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                       Minimum="0" Maximum="255" FormatString="0" MinHeight="34" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,12,*">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_cut]}" />
+                                        <ComboBox ItemsSource="{Binding CutModeOptions}" SelectedItem="{Binding ReceiptCutModeOption}"
+                                                  HorizontalAlignment="Stretch">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:PrintChoice">
+                                                    <TextBlock Text="{Binding Label}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="5">
+                                        <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_feed_before_cut]}" />
+                                        <NumericUpDown Value="{Binding ReceiptFeedBeforeCut, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                                       Minimum="0" Maximum="12" FormatString="0" MinHeight="34" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding L[receipt_protocol_hint]}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
 
                             <StackPanel Spacing="14" IsVisible="{Binding IsDocument}">
@@ -880,6 +980,17 @@
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding UseBranchReceiptOverride}"
                                               VerticalAlignment="Center" />
                             </Grid>
+                            <StackPanel Spacing="5">
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_language]}" />
+                                <ComboBox ItemsSource="{Binding ReceiptLanguageOptions}" SelectedItem="{Binding ReceiptLanguageOption}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PrintChoice">
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
                             <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
@@ -1409,8 +1520,12 @@
                             </StackPanel>
 
                             <StackPanel Spacing="5" IsVisible="{Binding IsCartThermal}">
-                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width_business]}" />
-                                <ComboBox ItemsSource="{Binding BusinessPaperWidths}" SelectedItem="{Binding CartPaperWidth}" />
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_width]}" />
+                                <AutoCompleteBox ItemsSource="{Binding CartPaperWidths}" Text="{Binding CartPaperWidth, Mode=TwoWay}"
+                                                         FilterMode="None" MinimumPrefixLength="0" MinHeight="34"
+                                                         c:FormBehaviors.OpenOnFocus="True" />
+                                <TextBlock Text="{Binding AutoWidthText}" Foreground="{DynamicResource TextMuted}"
+                                           FontSize="11.5" TextWrapping="Wrap" />
                             </StackPanel>
 
                             <StackPanel Spacing="7" IsVisible="{Binding IsCartDocument}">
@@ -1457,11 +1572,11 @@
                             <Grid ColumnDefinitions="*,12,*">
                                 <StackPanel Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_header]}" />
-                                    <TextBox Text="{Binding CartHeaderText}" MinHeight="36" />
+                                    <TextBox Text="{Binding CartHeaderText}" PlaceholderText="{Binding HeaderText}" MinHeight="36" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="5">
                                     <TextBlock Classes="fieldlabel" Text="{Binding L[receipt_footer]}" />
-                                    <TextBox Text="{Binding CartFooterText}" MinHeight="36" />
+                                    <TextBox Text="{Binding CartFooterText}" PlaceholderText="{Binding FooterText}" MinHeight="36" />
                                 </StackPanel>
                             </Grid>
                             <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,Auto,Auto,Auto">
@@ -1612,7 +1727,23 @@
 
                     <StackPanel Spacing="5" IsVisible="{Binding IsZReportThermal}">
                         <TextBlock Classes="fieldlabel" Text="{Binding L[zreport_paper_width]}" />
-                        <ComboBox ItemsSource="{Binding ReceiptPaperWidths}" SelectedItem="{Binding ZReportPaperWidth}" />
+                        <AutoCompleteBox ItemsSource="{Binding ReceiptPaperWidths}" Text="{Binding ZReportPaperWidth, Mode=TwoWay}"
+                                                         FilterMode="None" MinimumPrefixLength="0" MinHeight="34"
+                                                         c:FormBehaviors.OpenOnFocus="True" />
+                        <TextBlock Text="{Binding ZReportAutoWidthText}" Foreground="{DynamicResource TextMuted}"
+                                   FontSize="11.5" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Classes="fieldlabel" Text="{Binding L[zreport_language]}" />
+                        <ComboBox ItemsSource="{Binding ZReportLanguageOptions}" SelectedItem="{Binding ZReportLanguageOption}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PrintChoice">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
 
                     <StackPanel Spacing="14" IsVisible="{Binding IsZReportDocument}">
@@ -1882,8 +2013,8 @@
             <Border Grid.Column="0" Classes="printcard" Width="420" IsVisible="{Binding CanViewPrintRoutes}">
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                     <StackPanel Spacing="4">
-                        <TextBlock Classes="sectiontitle" Text="Qurilmalar" />
-                        <TextBlock Text="Bir marta ishonchli deb belgilang — qurilma print so‘rovi yuborishi va o‘z printerlarini tarmoqqa berishi mumkin bo‘ladi. Dastur qayta o‘rnatilsa ham ishonch saqlanadi."
+                        <TextBlock Classes="sectiontitle" Text="{Binding L[printing_host_question]}" />
+                        <TextBlock Text="{Binding L[printing_host_scope_hint]}"
                                    Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" FontSize="12" />
                     </StackPanel>
                     <Border Grid.Row="1" Margin="0,12,0,0" Padding="10" CornerRadius="8"
@@ -1925,11 +2056,11 @@
                                                         <mi:MaterialIcon Kind="MonitorSmall" Width="16" Height="16"
                                                                          VerticalAlignment="Center"
                                                                          Foreground="{DynamicResource TextSecondary}"
-                                                                         IsVisible="{Binding !IsHost}" />
+                                                                         IsVisible="{Binding !HasNode}" />
                                                         <mi:MaterialIcon Kind="Printer" Width="16" Height="16"
                                                                          VerticalAlignment="Center"
                                                                          Foreground="{DynamicResource TextSecondary}"
-                                                                         IsVisible="{Binding IsHost}"
+                                                                         IsVisible="{Binding HasNode}"
                                                                          ToolTip.Tip="Bu qurilmada printer bor" />
                                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                         <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"
@@ -1954,13 +2085,22 @@
                                                     </Button>
                                                 </StackPanel>
                                             </Grid>
-                                            <ItemsControl ItemsSource="{Binding Endpoints}" IsVisible="{Binding IsHost}">
+                                            <TextBlock IsVisible="{Binding HostEnabled}"
+                                                       Text="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).L[printing_host_enabled]}"
+                                                       FontSize="11" Foreground="{DynamicResource SuccessBrush}" />
+                                            <TextBlock IsVisible="{Binding !HostEnabled}"
+                                                       Text="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).L[printing_host_disabled]}"
+                                                       FontSize="11" Foreground="{DynamicResource TextMuted}" />
+                                            <ItemsControl ItemsSource="{Binding Endpoints}" IsVisible="{Binding HasNode}">
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="print:PrinterEndpointDto">
-                                                        <Grid ColumnDefinitions="*,Auto" Margin="23,2,0,0">
+                                                    <DataTemplate x:DataType="vm:NetworkDeviceEndpointItem">
+                                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="23,2,0,0">
                                                             <TextBlock Text="{Binding DisplayName}" FontSize="11.5" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="10.5"
                                                                        Foreground="{DynamicResource TextSecondary}" />
+                                                            <ToggleSwitch Grid.Column="2" Margin="8,0,0,0" IsChecked="{Binding IsEnabled}"
+                                                                          IsEnabled="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).CanManagePrintNodes}"
+                                                                          ToolTip.Tip="{Binding $parent[UserControl].((vm:PrintingViewModel)DataContext).L[printing_endpoint_enabled]}" />
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -1980,7 +2120,11 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="14" IsVisible="{Binding CanViewPrintRoutes}">
-                        <TextBlock Classes="sectiontitle" Text="Print turi bo‘yicha yo‘naltirish" VerticalAlignment="Center" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="sectiontitle" Text="{Binding L[printing_route_question]}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding L[printing_route_scope_hint]}" Foreground="{DynamicResource TextSecondary}"
+                                       TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
                             <Grid ColumnDefinitions="*,*,*,*,*">
                                 <Button Classes="kindtab" Classes.active="{Binding IsNetworkReceipt}" Content="Chek"
@@ -2001,9 +2145,14 @@
                                        Text="Hozir bu tur uchun printerli birorta ishonchli kompyuter onlayn emas — topshiriqlar navbatda kutib turadi. Printer ulangan kompyuterni yoqing yoki qurilmani ishonchli qiling." />
                         </Border>
                         <StackPanel Spacing="6">
-                                <TextBlock Classes="fieldlabel" Text="Yo‘naltirish rejimi" />
-                                <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingMode}"
-                                          ToolTip.Tip="Lokal printer, qat’iy prioritet yoki faqat lokal ishlash tartibini belgilaydi" />
+                                <TextBlock Classes="fieldlabel" Text="{Binding L[printing_routing_mode]}" />
+                                <ComboBox ItemsSource="{Binding NetworkRoutingModes}" SelectedItem="{Binding NetworkRoutingModeOption}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PrintChoice">
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                         </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="Bu print turi faol" VerticalAlignment="Center" />
