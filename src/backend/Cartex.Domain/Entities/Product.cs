@@ -17,6 +17,7 @@ public class Product : SoftDeleteEntity
     public Manufacturer? Manufacturer { get; set; }
 
     public string Name { get; set; } = null!;
+    public string? SearchFold { get; set; }
     public decimal MinStock { get; set; }
     public bool? TracksExpiryOverride { get; set; }
     public bool? FractionalOverride { get; set; }

@@ -7,6 +7,7 @@ public class Customer : SoftDeleteEntity
     public long PartyId { get; set; }
     public Party Party { get; set; } = null!;
     public string FullName { get; set; } = null!;
+    public string? SearchFold { get; set; }
     public string? LastName { get; set; }
     public string? Address { get; set; }
     public string? Phone { get; set; }
@@ -23,6 +24,7 @@ public class Customer : SoftDeleteEntity
     /// Bo'sh — qarz chegarasi yo'q, 0 — bu mijozga qarzga sotilmaydi (SOZ-02a).
     public decimal? CreditLimit { get; set; }
     public bool NotificationsOptOut { get; set; }
+    public bool AllowMarketingSms { get; set; }
 
     public ICollection<Account> Accounts { get; set; } = [];
     public ICollection<Sale> Sales { get; set; } = [];

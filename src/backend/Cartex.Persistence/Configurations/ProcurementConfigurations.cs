@@ -10,6 +10,7 @@ public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
     {
         builder.ToTable("suppliers");
         builder.Property(x => x.Name).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_suppliers_search_fold_trgm").HasDatabaseName("ix_suppliers_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.Phone).HasMaxLength(20);
     }
 }

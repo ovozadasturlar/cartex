@@ -23,7 +23,8 @@ public static class DatabaseSeeder
         AppPermissions.Stocks.View, AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Devices.View, AppPermissions.Devices.Revoke,
         AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ZReportPrint,
-        AppPermissions.Printing.RemoteUse, AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
+        AppPermissions.Printing.RemoteUse, AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn,
+        AppPermissions.SmsGateway.Host
     ];
 
     public static readonly string[] AgentPermissions =
@@ -60,7 +61,8 @@ public static class DatabaseSeeder
         AppPermissions.Branches.View, AppPermissions.Warehouses.View,
         AppPermissions.Printing.ReceiptPrint, AppPermissions.Printing.ReceiptReprint,
         AppPermissions.Printing.ZReportPrint, AppPermissions.Printing.RemoteUse,
-        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn
+        AppPermissions.Printing.Host, AppPermissions.Printing.JobsViewOwn,
+        AppPermissions.SmsGateway.Host
     ];
 
     public static readonly string[] AccountantPermissions =

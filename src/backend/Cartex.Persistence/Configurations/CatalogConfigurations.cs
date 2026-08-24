@@ -10,6 +10,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         builder.ToTable("categories");
         builder.Property(x => x.Name).IsRequired();
+        builder.Property(x => x.SortOrder).HasDefaultValue(0);
+        builder.HasIndex(x => new { x.ParentId, x.SortOrder });
+        builder.HasIndex(x => x.SearchFold, "ix_categories_search_fold_trgm").HasDatabaseName("ix_categories_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 
         builder.HasOne(x => x.Parent)
             .WithMany(c => c.Children)
@@ -49,6 +52,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
     {
         builder.ToTable("products");
         builder.Property(x => x.Name).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_products_search_fold_trgm").HasDatabaseName("ix_products_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.MinStock).HasPrecision(12, 3);
         builder.Property(x => x.Attributes).HasColumnType("jsonb");
         builder.Property(x => x.IkpuCode).HasMaxLength(30);

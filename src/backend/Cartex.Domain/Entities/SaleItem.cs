@@ -15,6 +15,7 @@ public class SaleItem : BaseEntity
 
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+    public decimal EnteredUnitPrice { get; set; }
 
     /// Every discount that landed on this row: price cut, automatic rule, manual and rounding.
     /// The row's net is <c>Quantity * UnitPrice - DiscountAmount</c>, and the rows always

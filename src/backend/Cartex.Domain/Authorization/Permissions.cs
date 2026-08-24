@@ -310,6 +310,12 @@ public static class AppPermissions
         public const string AuditExport = "printing.audit.export";
     }
 
+    public static class SmsGateway
+    {
+        public const string Edit = "sms.gateway.edit";
+        public const string Host = "sms.gateway.host";
+    }
+
     public static class Features
     {
         public const string View = "features.view";
@@ -485,6 +491,8 @@ public static class AppPermissions
             P(Printing.RoutesEdit, "Configure printer routing", true, Printing.RoutesView, Printing.NodesManage),
             P(Printing.AuditView, "View print audit trail", true, Printing.JobsViewBranch),
             P(Printing.AuditExport, "Export print audit trail", true, Printing.AuditView),
+            P(SmsGateway.Edit, "Trust and configure SMS gateway devices", true, Notifications.View),
+            P(SmsGateway.Host, "Run a consented SMS gateway host", true),
             P(Features.View, "View tariff and feature state"),
             P(Features.Edit, "Edit tariff and feature state", false, Features.View),
             P(Keys.View, "View hardware login keys"),

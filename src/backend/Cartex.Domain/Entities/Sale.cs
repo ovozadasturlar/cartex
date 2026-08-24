@@ -18,6 +18,7 @@ public class Sale : SoftDeleteEntity, IBranchScoped
 
     public decimal TotalAmount { get; set; }
     public decimal DiscountAmount { get; set; }
+    public decimal ManualDiscountAmount { get; set; }
 
     /// How much of <see cref="DiscountAmount"/> came from rounding the payable down.
     /// Reporting only: the total is already net of it.

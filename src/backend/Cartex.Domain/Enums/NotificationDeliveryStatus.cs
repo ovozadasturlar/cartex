@@ -4,8 +4,11 @@ public enum NotificationDeliveryStatus
 {
     Pending,
     Accepted,
+    Sent,
     Delivered,
     Undelivered,
     Failed,
-    Skipped
+    Skipped,
+    Simulated,
+    Cancelled
 }

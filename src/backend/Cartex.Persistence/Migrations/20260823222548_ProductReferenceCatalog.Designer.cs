@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823222548_ProductReferenceCatalog")]
+    partial class ProductReferenceCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1016,12 +1019,6 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("search_fold");
 
-                    b.Property<int>("SortOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("sort_order");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1033,8 +1030,8 @@ namespace Cartex.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_categories");
 
-                    b.HasIndex("ParentId", "SortOrder")
-                        .HasDatabaseName("ix_categories_parent_id_sort_order");
+                    b.HasIndex("ParentId")
+                        .HasDatabaseName("ix_categories_parent_id");
 
                     b.HasIndex(new[] { "SearchFold" }, "ix_categories_search_fold_trgm")
                         .HasDatabaseName("ix_categories_search_fold_trgm");
@@ -1123,10 +1120,6 @@ namespace Cartex.Persistence.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)")
                         .HasColumnName("address");
-
-                    b.Property<bool>("AllowMarketingSms")
-                        .HasColumnType("boolean")
-                        .HasColumnName("allow_marketing_sms");
 
                     b.Property<long?>("AssignedUserId")
                         .HasColumnType("bigint")
@@ -1939,47 +1932,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_customer_sessions_token_hash");
 
                     b.ToTable("customer_sessions", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSmsRoute", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<long>("CustomerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_id");
-
-                    b.Property<long>("LastDeviceId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_device_id");
-
-                    b.Property<DateTime>("LastSentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_sent_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_sms_routes");
-
-                    b.HasIndex("CustomerId")
-                        .HasDatabaseName("ix_customer_sms_routes_customer_id");
-
-                    b.HasIndex("LastDeviceId")
-                        .HasDatabaseName("ix_customer_sms_routes_last_device_id");
-
-                    b.HasIndex("BranchId", "CustomerId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_sms_routes_branch_id_customer_id");
-
-                    b.ToTable("customer_sms_routes", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.DebtReminderLog", b =>
@@ -6006,391 +5958,6 @@ namespace Cartex.Persistence.Migrations
                     b.ToTable("shift_cash", (string)null);
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.SmsGatewayDevice", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<string>("Client")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("client");
-
-                    b.Property<DateTime?>("ConsentedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("consented_at");
-
-                    b.Property<int>("ConsentedMaxPerHour")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(60)
-                        .HasColumnName("consented_max_per_hour");
-
-                    b.Property<int>("ConsentedMinIntervalSeconds")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(4)
-                        .HasColumnName("consented_min_interval_seconds");
-
-                    b.Property<int?>("ConsentedMonthlyQuota")
-                        .HasColumnType("integer")
-                        .HasColumnName("consented_monthly_quota");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CreatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("CredentialHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("credential_hash");
-
-                    b.Property<DateTime>("CredentialIssuedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("credential_issued_at");
-
-                    b.Property<string>("DeviceId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("device_id");
-
-                    b.Property<string>("DeviceName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("device_name");
-
-                    b.Property<bool>("IsConsented")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_consented");
-
-                    b.Property<bool>("IsEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_enabled");
-
-                    b.Property<bool>("IsTrusted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_trusted");
-
-                    b.Property<string>("LastError")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("last_error");
-
-                    b.Property<DateTime?>("LastSeenAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_seen_at");
-
-                    b.Property<DateTime?>("LastSentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_sent_at");
-
-                    b.Property<long?>("LastUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_user_id");
-
-                    b.Property<int>("LowQuotaWarnPercent")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(10)
-                        .HasColumnName("low_quota_warn_percent");
-
-                    b.Property<DateTime?>("LowQuotaWarnedPeriodStartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("low_quota_warned_period_started_at");
-
-                    b.Property<int>("MaxPerHour")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(60)
-                        .HasColumnName("max_per_hour");
-
-                    b.Property<int>("MinIntervalSeconds")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(4)
-                        .HasColumnName("min_interval_seconds");
-
-                    b.Property<int?>("MonthlyQuota")
-                        .HasColumnType("integer")
-                        .HasColumnName("monthly_quota");
-
-                    b.Property<DateTime?>("PausedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("paused_at");
-
-                    b.Property<DateTime>("PeriodStartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("period_started_at");
-
-                    b.Property<string>("PhoneLabel")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("phone_label");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer")
-                        .HasColumnName("priority");
-
-                    b.Property<int>("QuotaResetDay")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("quota_reset_day");
-
-                    b.Property<int>("SentThisPeriod")
-                        .HasColumnType("integer")
-                        .HasColumnName("sent_this_period");
-
-                    b.Property<string>("SimOperator")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("sim_operator");
-
-                    b.Property<int>("SimSlot")
-                        .HasColumnType("integer")
-                        .HasColumnName("sim_slot");
-
-                    b.Property<string>("SimSubscriptionId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("sim_subscription_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<long?>("UpdatedBy")
-                        .HasColumnType("bigint")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_sms_gateway_devices");
-
-                    b.HasIndex("LastUserId")
-                        .HasDatabaseName("ix_sms_gateway_devices_last_user_id");
-
-                    b.HasIndex("BranchId", "DeviceId", "SimSlot")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sms_gateway_devices_branch_id_device_id_sim_slot");
-
-                    b.HasIndex("BranchId", "IsTrusted", "IsConsented", "IsEnabled", "LastSeenAt")
-                        .HasDatabaseName("ix_sms_gateway_devices_branch_id_is_trusted_is_consented_is_en");
-
-                    b.ToTable("sms_gateway_devices", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_sms_gateway_consented_max_hour", "consented_max_per_hour BETWEEN 1 AND 300");
-
-                            t.HasCheckConstraint("ck_sms_gateway_consented_min_interval", "consented_min_interval_seconds >= 2");
-
-                            t.HasCheckConstraint("ck_sms_gateway_low_quota_warn", "low_quota_warn_percent BETWEEN 1 AND 100");
-
-                            t.HasCheckConstraint("ck_sms_gateway_max_hour", "max_per_hour BETWEEN 1 AND 300");
-
-                            t.HasCheckConstraint("ck_sms_gateway_min_interval", "min_interval_seconds >= 2");
-
-                            t.HasCheckConstraint("ck_sms_gateway_monthly_quota", "monthly_quota IS NULL OR monthly_quota >= 0");
-
-                            t.HasCheckConstraint("ck_sms_gateway_quota_reset_day", "quota_reset_day BETWEEN 1 AND 28");
-
-                            t.HasCheckConstraint("ck_sms_gateway_sent_period", "sent_this_period >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.SmsGatewayJob", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime?>("AssignedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("assigned_at");
-
-                    b.Property<long?>("AssignedDeviceId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("assigned_device_id");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("attempt_count");
-
-                    b.Property<DateTime?>("AvailableAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("available_at");
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<long?>("CustomerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_id");
-
-                    b.Property<DateTime?>("DeliveredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("delivered_at");
-
-                    b.Property<string>("ErrorCode")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("error_code");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("error_message");
-
-                    b.Property<string>("FallbackMessageId")
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)")
-                        .HasColumnName("fallback_message_id");
-
-                    b.Property<string>("FallbackProvider")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("fallback_provider");
-
-                    b.Property<string>("IdempotencyKey")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("kind");
-
-                    b.Property<DateTime?>("LeaseExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lease_expires_at");
-
-                    b.Property<string>("LeaseToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("lease_token");
-
-                    b.Property<long?>("NotificationDeliveryAttemptId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("notification_delivery_attempt_id");
-
-                    b.Property<long?>("NotificationDeliveryId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("notification_delivery_id");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("phone");
-
-                    b.Property<long?>("RetryOfJobId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("retry_of_job_id");
-
-                    b.Property<int>("SegmentCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("segment_count");
-
-                    b.Property<DateTime?>("SentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("sent_at");
-
-                    b.Property<DateTime?>("SimulatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("simulated_at");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("status");
-
-                    b.Property<long?>("StickyDeviceId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sticky_device_id");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
-                        .HasColumnName("text");
-
-                    b.Property<string>("WaitingReason")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("waiting_reason");
-
-                    b.HasKey("Id")
-                        .HasName("pk_sms_gateway_jobs");
-
-                    b.HasIndex("CustomerId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_customer_id");
-
-                    b.HasIndex("IdempotencyKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sms_gateway_jobs_idempotency_key");
-
-                    b.HasIndex("NotificationDeliveryAttemptId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sms_gateway_jobs_notification_delivery_attempt_id");
-
-                    b.HasIndex("NotificationDeliveryId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_notification_delivery_id");
-
-                    b.HasIndex("RetryOfJobId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_retry_of_job_id");
-
-                    b.HasIndex("StickyDeviceId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_sticky_device_id");
-
-                    b.HasIndex("AssignedDeviceId", "Status")
-                        .HasDatabaseName("ix_sms_gateway_jobs_assigned_device_id_status");
-
-                    b.HasIndex("BranchId", "CustomerId", "CreatedAt")
-                        .HasDatabaseName("ix_sms_gateway_jobs_branch_id_customer_id_created_at");
-
-                    b.HasIndex("BranchId", "Status", "CreatedAt")
-                        .HasDatabaseName("ix_sms_gateway_jobs_branch_id_status_created_at");
-
-                    b.ToTable("sms_gateway_jobs", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_sms_gateway_job_segments", "segment_count > 0");
-                        });
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.SmsMessage", b =>
                 {
                     b.Property<long>("Id")
@@ -7838,36 +7405,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSmsRoute", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayDevice", "LastDevice")
-                        .WithMany()
-                        .HasForeignKey("LastDeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_sms_gateway_devices_last_device_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("LastDevice");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.DiscountRule", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
@@ -8704,86 +8241,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Shift");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.SmsGatewayDevice", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_sms_gateway_devices_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.User", "LastUser")
-                        .WithMany()
-                        .HasForeignKey("LastUserId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_devices_users_last_user_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("LastUser");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.SmsGatewayJob", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayDevice", "AssignedDevice")
-                        .WithMany()
-                        .HasForeignKey("AssignedDeviceId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_sms_gateway_devices_assigned_device_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_sms_gateway_jobs_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.NotificationDeliveryAttempt", "NotificationDeliveryAttempt")
-                        .WithMany("SmsGatewayJobs")
-                        .HasForeignKey("NotificationDeliveryAttemptId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_sms_gateway_jobs_notification_delivery_attempts_notificatio");
-
-                    b.HasOne("Cartex.Domain.Entities.NotificationDelivery", "NotificationDelivery")
-                        .WithMany("SmsGatewayJobs")
-                        .HasForeignKey("NotificationDeliveryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_sms_gateway_jobs_notification_deliveries_notification_deliv");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayJob", "RetryOfJob")
-                        .WithMany()
-                        .HasForeignKey("RetryOfJobId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_sms_gateway_jobs_retry_of_job_id");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayDevice", "StickyDevice")
-                        .WithMany()
-                        .HasForeignKey("StickyDeviceId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_sms_gateway_devices_sticky_device_id");
-
-                    b.Navigation("AssignedDevice");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("NotificationDelivery");
-
-                    b.Navigation("NotificationDeliveryAttempt");
-
-                    b.Navigation("RetryOfJob");
-
-                    b.Navigation("StickyDevice");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.Stock", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Branch", null)
@@ -9201,13 +8658,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
                 {
                     b.Navigation("Attempts");
-
-                    b.Navigation("SmsGatewayJobs");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDeliveryAttempt", b =>
-                {
-                    b.Navigation("SmsGatewayJobs");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>

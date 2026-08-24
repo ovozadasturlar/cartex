@@ -3,6 +3,7 @@ using System;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cartex.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824172342_SmsGatewayQuotaConsent")]
+    partial class SmsGatewayQuotaConsent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1939,47 +1942,6 @@ namespace Cartex.Persistence.Migrations
                         .HasDatabaseName("ix_customer_sessions_token_hash");
 
                     b.ToTable("customer_sessions", (string)null);
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSmsRoute", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("BranchId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("branch_id");
-
-                    b.Property<long>("CustomerId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("customer_id");
-
-                    b.Property<long>("LastDeviceId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_device_id");
-
-                    b.Property<DateTime>("LastSentAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_sent_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_sms_routes");
-
-                    b.HasIndex("CustomerId")
-                        .HasDatabaseName("ix_customer_sms_routes_customer_id");
-
-                    b.HasIndex("LastDeviceId")
-                        .HasDatabaseName("ix_customer_sms_routes_last_device_id");
-
-                    b.HasIndex("BranchId", "CustomerId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_customer_sms_routes_branch_id_customer_id");
-
-                    b.ToTable("customer_sms_routes", (string)null);
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.DebtReminderLog", b =>
@@ -6193,9 +6155,9 @@ namespace Cartex.Persistence.Migrations
                     b.HasIndex("LastUserId")
                         .HasDatabaseName("ix_sms_gateway_devices_last_user_id");
 
-                    b.HasIndex("BranchId", "DeviceId", "SimSlot")
+                    b.HasIndex("BranchId", "DeviceId", "SimSubscriptionId")
                         .IsUnique()
-                        .HasDatabaseName("ix_sms_gateway_devices_branch_id_device_id_sim_slot");
+                        .HasDatabaseName("ix_sms_gateway_devices_branch_id_device_id_sim_subscription_id");
 
                     b.HasIndex("BranchId", "IsTrusted", "IsConsented", "IsEnabled", "LastSeenAt")
                         .HasDatabaseName("ix_sms_gateway_devices_branch_id_is_trusted_is_consented_is_en");
@@ -6240,10 +6202,6 @@ namespace Cartex.Persistence.Migrations
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer")
                         .HasColumnName("attempt_count");
-
-                    b.Property<DateTime?>("AvailableAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("available_at");
 
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint")
@@ -6302,23 +6260,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("lease_token");
 
-                    b.Property<long?>("NotificationDeliveryAttemptId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("notification_delivery_attempt_id");
-
-                    b.Property<long?>("NotificationDeliveryId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("notification_delivery_id");
-
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("phone");
-
-                    b.Property<long?>("RetryOfJobId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("retry_of_job_id");
 
                     b.Property<int>("SegmentCount")
                         .HasColumnType("integer")
@@ -6338,20 +6284,11 @@ namespace Cartex.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("status");
 
-                    b.Property<long?>("StickyDeviceId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("sticky_device_id");
-
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("text");
-
-                    b.Property<string>("WaitingReason")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("waiting_reason");
 
                     b.HasKey("Id")
                         .HasName("pk_sms_gateway_jobs");
@@ -6363,24 +6300,8 @@ namespace Cartex.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_sms_gateway_jobs_idempotency_key");
 
-                    b.HasIndex("NotificationDeliveryAttemptId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sms_gateway_jobs_notification_delivery_attempt_id");
-
-                    b.HasIndex("NotificationDeliveryId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_notification_delivery_id");
-
-                    b.HasIndex("RetryOfJobId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_retry_of_job_id");
-
-                    b.HasIndex("StickyDeviceId")
-                        .HasDatabaseName("ix_sms_gateway_jobs_sticky_device_id");
-
                     b.HasIndex("AssignedDeviceId", "Status")
                         .HasDatabaseName("ix_sms_gateway_jobs_assigned_device_id_status");
-
-                    b.HasIndex("BranchId", "CustomerId", "CreatedAt")
-                        .HasDatabaseName("ix_sms_gateway_jobs_branch_id_customer_id_created_at");
 
                     b.HasIndex("BranchId", "Status", "CreatedAt")
                         .HasDatabaseName("ix_sms_gateway_jobs_branch_id_status_created_at");
@@ -7838,36 +7759,6 @@ namespace Cartex.Persistence.Migrations
                     b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("Cartex.Domain.Entities.CustomerSmsRoute", b =>
-                {
-                    b.HasOne("Cartex.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_branches_branch_id");
-
-                    b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_customers_customer_id");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayDevice", "LastDevice")
-                        .WithMany()
-                        .HasForeignKey("LastDeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_customer_sms_routes_sms_gateway_devices_last_device_id");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("LastDevice");
-                });
-
             modelBuilder.Entity("Cartex.Domain.Entities.DiscountRule", b =>
                 {
                     b.HasOne("Cartex.Domain.Entities.Customer", "Customer")
@@ -8745,43 +8636,11 @@ namespace Cartex.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_sms_gateway_jobs_customers_customer_id");
 
-                    b.HasOne("Cartex.Domain.Entities.NotificationDeliveryAttempt", "NotificationDeliveryAttempt")
-                        .WithMany("SmsGatewayJobs")
-                        .HasForeignKey("NotificationDeliveryAttemptId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_sms_gateway_jobs_notification_delivery_attempts_notificatio");
-
-                    b.HasOne("Cartex.Domain.Entities.NotificationDelivery", "NotificationDelivery")
-                        .WithMany("SmsGatewayJobs")
-                        .HasForeignKey("NotificationDeliveryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_sms_gateway_jobs_notification_deliveries_notification_deliv");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayJob", "RetryOfJob")
-                        .WithMany()
-                        .HasForeignKey("RetryOfJobId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_sms_gateway_jobs_retry_of_job_id");
-
-                    b.HasOne("Cartex.Domain.Entities.SmsGatewayDevice", "StickyDevice")
-                        .WithMany()
-                        .HasForeignKey("StickyDeviceId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sms_gateway_jobs_sms_gateway_devices_sticky_device_id");
-
                     b.Navigation("AssignedDevice");
 
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
-
-                    b.Navigation("NotificationDelivery");
-
-                    b.Navigation("NotificationDeliveryAttempt");
-
-                    b.Navigation("RetryOfJob");
-
-                    b.Navigation("StickyDevice");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.Stock", b =>
@@ -9201,13 +9060,6 @@ namespace Cartex.Persistence.Migrations
             modelBuilder.Entity("Cartex.Domain.Entities.NotificationDelivery", b =>
                 {
                     b.Navigation("Attempts");
-
-                    b.Navigation("SmsGatewayJobs");
-                });
-
-            modelBuilder.Entity("Cartex.Domain.Entities.NotificationDeliveryAttempt", b =>
-                {
-                    b.Navigation("SmsGatewayJobs");
                 });
 
             modelBuilder.Entity("Cartex.Domain.Entities.OfflineAuthorityLease", b =>

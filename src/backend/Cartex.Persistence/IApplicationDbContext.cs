@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<Unit> Units { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<Product> Products { get; }
+    DbSet<ProductReference> ProductReferences { get; }
     DbSet<ProductVariant> ProductVariants { get; }
     DbSet<Barcode> Barcodes { get; }
     DbSet<ProductPack> ProductPacks { get; }
@@ -70,6 +71,9 @@ public interface IApplicationDbContext
     DbSet<PrintRequesterDevice> PrintRequesterDevices { get; }
     DbSet<PrintJob> PrintJobs { get; }
     DbSet<PrintAttempt> PrintAttempts { get; }
+    DbSet<SmsGatewayDevice> SmsGatewayDevices { get; }
+    DbSet<SmsGatewayJob> SmsGatewayJobs { get; }
+    DbSet<CustomerSmsRoute> CustomerSmsRoutes { get; }
     DbSet<CustomerPaymentDocument> CustomerPaymentDocuments { get; }
     DbSet<CustomerPaymentTender> CustomerPaymentTenders { get; }
     DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations { get; }

@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cartex.Domain\Cartex.Domain.csproj" />
+    <ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -30,6 +30,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductReference> ProductReferences => Set<ProductReference>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<ProductPack> ProductPacks => Set<ProductPack>();
@@ -83,6 +84,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PrintRequesterDevice> PrintRequesterDevices => Set<PrintRequesterDevice>();
     public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
     public DbSet<PrintAttempt> PrintAttempts => Set<PrintAttempt>();
+    public DbSet<SmsGatewayDevice> SmsGatewayDevices => Set<SmsGatewayDevice>();
+    public DbSet<SmsGatewayJob> SmsGatewayJobs => Set<SmsGatewayJob>();
+    public DbSet<CustomerSmsRoute> CustomerSmsRoutes => Set<CustomerSmsRoute>();
     public DbSet<CustomerPaymentDocument> CustomerPaymentDocuments => Set<CustomerPaymentDocument>();
     public DbSet<CustomerPaymentTender> CustomerPaymentTenders => Set<CustomerPaymentTender>();
     public DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations => Set<CustomerPaymentAllocation>();

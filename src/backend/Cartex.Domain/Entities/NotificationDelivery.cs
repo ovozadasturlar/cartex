@@ -18,4 +18,5 @@ public class NotificationDelivery : BaseEntity
     public DateTime? DeliveredAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public ICollection<NotificationDeliveryAttempt> Attempts { get; set; } = [];
+    public ICollection<SmsGatewayJob> SmsGatewayJobs { get; set; } = [];
 }

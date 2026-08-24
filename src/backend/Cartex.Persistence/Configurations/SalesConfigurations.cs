@@ -10,6 +10,7 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         builder.ToTable("customers");
         builder.Property(x => x.FullName).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_customers_search_fold_trgm").HasDatabaseName("ix_customers_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.LastName).HasMaxLength(120);
         builder.Property(x => x.Address).HasMaxLength(250);
         builder.Property(x => x.Phone).HasMaxLength(20);
@@ -35,6 +36,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.ToTable("sales");
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
         builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+        builder.Property(x => x.ManualDiscountAmount).HasPrecision(18, 2).HasDefaultValue(0m);
         builder.Property(x => x.CashbackEarned).HasPrecision(18, 2);
         builder.Property(x => x.PaidCash).HasPrecision(18, 2);
         builder.Property(x => x.PaidCard).HasPrecision(18, 2);
@@ -91,6 +93,7 @@ public class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.ToTable("sale_items");
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.UnitPrice).HasPrecision(14, 2);
+        builder.Property(x => x.EnteredUnitPrice).HasPrecision(14, 2).HasDefaultValue(0m);
         builder.Property(x => x.DiscountAmount).HasPrecision(14, 2);
         builder.Property(x => x.PriceCurrency).HasMaxLength(3);
         builder.Property(x => x.PriceRate).HasPrecision(18, 6);
