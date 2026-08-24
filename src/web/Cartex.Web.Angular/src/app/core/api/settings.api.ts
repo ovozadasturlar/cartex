@@ -9,6 +9,36 @@ export interface LicenseStatus {
   enabledFeatures: string[];
 }
 
+export interface ProductReferenceSettings {
+  isEnabled: boolean;
+  sourceType: string;
+  spreadsheetId: string;
+  sheetName: string;
+  barcodeColumn: string;
+  nameColumn: string;
+  unitColumn: string;
+  categoryColumn: string;
+  manufacturerColumn: string;
+  packQtyColumn: string;
+  priceColumn: string;
+  autoFillPrice: boolean;
+  syncSchedule: string;
+  lastSyncedAt: string | null;
+  lastReadCount: number;
+  lastUpdatedCount: number;
+  lastErrorCount: number;
+  rowCount: number;
+  lastError: string | null;
+}
+
+export interface ProductReferenceSyncResult {
+  read: number;
+  updated: number;
+  errors: number;
+  total: number;
+  syncedAt: string;
+}
+
 export interface LicenseFeature {
   code: string;
   name: string;
@@ -45,6 +75,26 @@ export interface SmsSettings {
   sender: string | null;
   baseUrl: string | null;
   hasPassword: boolean;
+  fallbackProvider: string;
+  fallbackAfterMinutes: number;
+  debtReminderEnabled: boolean;
+  receiptLinkEnabled: boolean;
+  promotionEnabled: boolean;
+  manualEnabled: boolean;
+  sendReceiptOnSale: boolean;
+  debtReminderTemplate: string | null;
+  receiptLinkTemplate: string | null;
+  promotionTemplate: string | null;
+  manualTemplate: string | null;
+  testMode: boolean;
+  testAllowedNumbers: string[];
+  debtReminderStickyWaitMinutes: number;
+  receiptLinkStickyWaitMinutes: number;
+  promotionStickyWaitMinutes: number;
+  manualStickyWaitMinutes: number;
+  quietHoursEnabled: boolean;
+  sendWindowStart: string;
+  sendWindowEnd: string;
 }
 
 export interface NotificationSettings {
@@ -67,6 +117,11 @@ export interface ReceiptSettings {
   footerText: string | null;
   paperWidth: number;
   paperFormat: string;
+  language?: string | null;
+}
+
+export interface ReceiptPreview {
+  text: string;
 }
 
 export interface SalesPolicy {
@@ -196,6 +251,19 @@ export class SettingsApi {
     password: string | null;
     sender: string | null;
     baseUrl: string | null;
+    fallbackProvider: string;
+    fallbackAfterMinutes: number;
+    debtReminderEnabled: boolean;
+    receiptLinkEnabled: boolean;
+    promotionEnabled: boolean;
+    manualEnabled: boolean;
+    sendReceiptOnSale: boolean;
+    debtReminderTemplate: string | null;
+    receiptLinkTemplate: string | null;
+    promotionTemplate: string | null;
+    manualTemplate: string | null;
+    testMode: boolean;
+    testAllowedNumbers: string[];
   }): Observable<void> {
     return this.http.put<void>('/api/settings/sms', body);
   }
@@ -228,6 +296,18 @@ export class SettingsApi {
     return this.http.put<void>('/api/settings/sales-policy', body);
   }
 
+  productReference(): Observable<ProductReferenceSettings> {
+    return this.http.get<ProductReferenceSettings>('/api/settings/product-reference');
+  }
+
+  updateProductReference(body: ProductReferenceSettings): Observable<void> {
+    return this.http.put<void>('/api/settings/product-reference', body);
+  }
+
+  syncProductReference(): Observable<ProductReferenceSyncResult> {
+    return this.http.post<ProductReferenceSyncResult>('/api/settings/product-reference/sync', {});
+  }
+
   loginMethods(): Observable<LoginMethods> {
     return this.http.get<LoginMethods>('/api/settings/login-methods');
   }
@@ -242,6 +322,10 @@ export class SettingsApi {
 
   updateReceipt(body: ReceiptSettings): Observable<void> {
     return this.http.put<void>('/api/settings/receipt', body);
+  }
+
+  previewReceipt(body: ReceiptSettings): Observable<ReceiptPreview> {
+    return this.http.post<ReceiptPreview>('/api/settings/receipt/preview', body);
   }
 
   barcodeLabel(): Observable<BarcodeLabelSettings> {

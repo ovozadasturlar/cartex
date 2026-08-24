@@ -123,6 +123,7 @@ export class CustomersApi {
     discountPct: number;
     creditLimit: number | null;
     notificationsOptOut: boolean;
+    allowMarketingSms: boolean;
     openingBalance: number;
   }): Observable<number> {
     return this.http.post<number>('/api/customers', body);
@@ -140,6 +141,7 @@ export class CustomersApi {
       discountPct: number;
       creditLimit: number | null;
       notificationsOptOut: boolean;
+      allowMarketingSms: boolean;
     },
   ): Observable<void> {
     return this.http.put<void>(`/api/customers/${id}`, body);

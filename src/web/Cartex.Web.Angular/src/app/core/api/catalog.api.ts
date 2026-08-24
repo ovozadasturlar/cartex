@@ -113,6 +113,12 @@ export interface Category {
   description: string | null;
   parentId: number | null;
   parentName: string | null;
+  sortOrder: number;
+  fullPath: string | null;
+  descendantProductCount: number;
+  depth: number;
+  isMatch: boolean;
+  productCount: number;
 }
 
 export interface Unit {
@@ -209,8 +215,8 @@ export class ProductsCatalogApi {
 export class CategoriesApi {
   private readonly http = inject(HttpClient);
 
-  all(): Observable<Category[]> {
-    return this.http.get<Category[]>('/api/categories');
+  all(search?: string): Observable<Category[]> {
+    return this.http.get<Category[]>('/api/categories', { params: search ? { Search: search } : {} });
   }
 
   create(r: { name: string; parentId: number | null; description: string | null }): Observable<number> {
@@ -219,6 +225,14 @@ export class CategoriesApi {
 
   update(id: number, r: { name: string; parentId: number | null; description: string | null }): Observable<void> {
     return this.http.put<void>(`/api/categories/${id}`, r);
+  }
+
+  move(id: number, r: { parentId: number | null; sortOrder: number }): Observable<void> {
+    return this.http.put<void>(`/api/categories/${id}/move`, r);
+  }
+
+  merge(id: number, targetId: number): Observable<number> {
+    return this.http.post<number>(`/api/categories/${id}/merge`, { targetId });
   }
 }
 

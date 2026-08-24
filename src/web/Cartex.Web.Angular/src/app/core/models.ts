@@ -64,6 +64,7 @@ export interface Sale {
   status: string;
   receiptToken: string;
   customerName: string | null;
+  customerPhone: string | null;
   userName: string;
   items: SaleLine[];
 }
@@ -110,6 +111,7 @@ export interface Customer {
   cardBarcode: string | null;
   discountPct: number;
   notificationsOptOut: boolean;
+  allowMarketingSms: boolean;
   cashbackBalance: number;
   debtBalance: number;
   creditLimit: number | null;
@@ -262,6 +264,7 @@ export interface Receipt {
   baseCurrency: string;
   userName: string;
   customerName: string | null;
+  customerPhone: string | null;
   note: string | null;
   items: {
     productName: string;

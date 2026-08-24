@@ -22,6 +22,11 @@ export interface NotificationDelivery {
   acceptedAt: string | null;
   deliveredAt: string | null;
   completedAt: string | null;
+  smsGatewayJobId: number | null;
+  deviceId: number | null;
+  deviceLabel: string | null;
+  simSlot: number | null;
+  waitingReason: string | null;
 }
 
 export interface NotificationStats {
@@ -53,6 +58,10 @@ export class NotificationsApi {
         observe: 'response',
       })
       .pipe(map(toPaged));
+  }
+
+  customerHistory(customerId: number): Observable<NotificationDelivery[]> {
+    return this.http.get<NotificationDelivery[]>(`/api/customers/${customerId}/messages`);
   }
 
   stats(params: Record<string, string>): Observable<NotificationStats> {

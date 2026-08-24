@@ -13,6 +13,8 @@ public sealed class MobilePermissions(SessionStore session)
 
     public bool HasAny(params string[] permissions) => permissions.Any(Has);
 
+    public IReadOnlySet<string> Snapshot() => new HashSet<string>(Current(), StringComparer.Ordinal);
+
     private HashSet<string> Current()
     {
         var token = session.AccessToken;

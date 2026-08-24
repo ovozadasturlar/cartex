@@ -12,6 +12,7 @@ export interface WarehouseOption {
 export interface CategoryOption {
   id: number;
   name: string;
+  fullPath: string | null;
 }
 
 export interface UnitOption {

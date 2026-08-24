@@ -22,10 +22,10 @@ export class FeaturesService {
 
   /// Ro'yxat hali yuklanmagan bo'lsa modul yopiq deb qaralmaydi: aks holda sahifa birinchi
   /// ochilishida foydalanuvchi o'ziga tegishli bo'limdan haydab yuborilardi.
-  has(code: string | undefined): boolean {
-    if (!code) return true;
+  has(expression: string | undefined): boolean {
+    if (!expression) return true;
     const set = this.enabled();
-    return !set || set.has(code);
+    return !set || expression.split('|').some((code) => set.has(code));
   }
 
   reset(): void {

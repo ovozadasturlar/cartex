@@ -59,6 +59,7 @@ public sealed class SessionStore
         // boshqa do'konga kirilganda eskisi ishlatilmasligi kerak.
         Preferences.Remove("enabled_features");
         Preferences.Remove("sales_policy");
+        Preferences.Remove("access_last_refresh");
         SecureStorage.Remove("access_token");
         SecureStorage.Remove("refresh_token");
     }

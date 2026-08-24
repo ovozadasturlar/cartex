@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Cartex.ApiClient;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Auth;
 
@@ -9,6 +11,7 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private TokenClaims? _claims;
+    private long _lastRefreshTimestamp;
 
     public string DeviceName => MobileDeviceIdentity.DeviceName;
     public string DeviceId => MobileDeviceIdentity.DeviceId;
@@ -57,27 +60,33 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
 
     public event Action? SessionInvalidated;
 
-    // Refresh tokeni har yangilashda aylanadi, shuning uchun tekshirish ham aynan shu qulf
-    // ostidagi yo'ldan o'tadi: eskirgan token bilan ikkinchi urinish 401 qaytarib
-    // foydalanuvchini bekordan-bekorga tizimdan chiqarib yuborardi.
     public Task ValidateSessionAsync() => EnsureFreshTokenAsync(CancellationToken.None);
 
-    public async Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken)
+    public Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken) =>
+        RefreshAsync(false, cancellationToken);
+
+    public Task<string?> ForceRefreshAsync(CancellationToken cancellationToken) =>
+        RefreshAsync(true, cancellationToken);
+
+    private async Task<string?> RefreshAsync(bool force, CancellationToken cancellationToken)
     {
         await session.LoadAsync();
         var token = session.AccessToken;
         if (token is null) return null;
-        if (!IsExpiringSoon(token)) return token;
+        if (!force && !IsExpiringSoon(token)) return token;
         if (string.IsNullOrEmpty(session.RefreshToken)) return token;
 
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
             token = session.AccessToken;
-            if (token is not null && !IsExpiringSoon(token)) return token;
+            if (force && WasRefreshedRecently()) return token;
+            if (!force && token is not null && !IsExpiringSoon(token)) return token;
             var refresh = session.RefreshToken;
             if (string.IsNullOrEmpty(refresh)) return token;
-            var response = await authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName, DeviceId));
+            var response = await authApi.RefreshAsync(
+                new RefreshRequest(refresh, DeviceName, DeviceId), cancellationToken);
+            _lastRefreshTimestamp = Stopwatch.GetTimestamp();
             await session.SaveAsync(response.Token, response.RefreshToken);
             return response.Token;
         }
@@ -86,6 +95,10 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
             session.Clear();
             SessionInvalidated?.Invoke();
             return null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
@@ -96,6 +109,10 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
             _refreshLock.Release();
         }
     }
+
+    private bool WasRefreshedRecently() =>
+        _lastRefreshTimestamp != 0
+        && Stopwatch.GetElapsedTime(_lastRefreshTimestamp) < TimeSpan.FromSeconds(5);
 
     // Bekor qilish kutiladi: aks holda so'rov hali yo'ldayligida chaqiruvchi server
     // manzilini almashtirsa, refresh token yangi (ishonchsiz) hostga ketishi mumkin.
@@ -114,5 +131,5 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
     }
 
     private bool IsExpiringSoon(string token) =>
-        ClaimsFor(token).ValidTo <= DateTime.UtcNow.AddSeconds(60);
+        ServerClock.IsExpiringSoon(ClaimsFor(token).ValidTo);
 }
