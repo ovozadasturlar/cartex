@@ -68,6 +68,16 @@ public class SalesController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id:long}/receipt-sms")]
+    [HasPermission(AppPermissions.Customers.Message)]
+    public async Task<ActionResult<ReceiptSmsResultDto>> SendReceiptSms(long id, SendReceiptSmsRequest request) =>
+        Ok(await sender.Send(new SendReceiptSmsCommand(id, request.ConfirmationToken)));
+
+    [HttpGet("{id:long}/receipt-sms-preview")]
+    [HasPermission(AppPermissions.Customers.Message)]
+    public async Task<ActionResult<ReceiptSmsPreviewDto>> GetReceiptSmsPreview(long id) =>
+        Ok(await sender.Send(new GetReceiptSmsPreviewQuery(id)));
+
     [HttpGet("variant-prices/{variantId:long}")]
     [HasPermission(AppPermissions.Sales.View)]
     public async Task<ActionResult<IReadOnlyCollection<VariantSalePriceDto>>> VariantPrices(

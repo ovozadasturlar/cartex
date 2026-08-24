@@ -72,6 +72,7 @@ public class ReceiptController(ISender sender, IObjectStorage storage) : Control
             ? await sender.Send(new GetPrintJobReceiptSettingsQuery(jobId, token))
             : null;
         var effectiveSettings = renderSettings ?? ToRenderSettings(receiptSettings);
+        effectiveSettings.PaperWidth = Cartex.Shared.Models.Printing.ReceiptPaper.Sanitize(effectiveSettings.PaperWidth);
         receipt = await WithLogoAsync(receipt, effectiveSettings, monochrome, HttpContext.RequestAborted);
         var images = pdfRenderer.RenderDocumentImages(
             receipt,

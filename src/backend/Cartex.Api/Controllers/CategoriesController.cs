@@ -37,4 +37,19 @@ public class CategoriesController(ISender sender) : ControllerBase
         await sender.Send(command with { Id = id });
         return NoContent();
     }
+
+    [HttpPut("{id:long}/move")]
+    [HasPermission(AppPermissions.Categories.Edit)]
+    public async Task<IActionResult> MoveCategory(long id, MoveCategoryRequest request)
+    {
+        await sender.Send(new MoveCategoryCommand(id, request.ParentId, request.SortOrder));
+        return NoContent();
+    }
+
+    [HttpPost("{id:long}/merge")]
+    [HasPermission(AppPermissions.Categories.Edit)]
+    public async Task<ActionResult<int>> MergeCategory(long id, MergeCategoryRequest request)
+    {
+        return Ok(await sender.Send(new MergeCategoryCommand(id, request.TargetId)));
+    }
 }

@@ -1,8 +1,10 @@
 ﻿using Cartex.Application.Customers.Commands;
 using Cartex.Application.Customers.Queries;
+using Cartex.Application.Notifications.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Notifications;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +54,20 @@ public class CustomersController(ISender sender) : ControllerBase
     {
         var customer = await sender.Send(new GetCustomerByIdQuery(id));
         return customer is null ? NotFound() : Ok(customer);
+    }
+
+    [HttpGet("{id:long}/messages")]
+    [HasPermission(AppPermissions.Customers.View)]
+    public async Task<ActionResult<IReadOnlyCollection<NotificationDeliveryDto>>> GetMessages(long id)
+    {
+        var result = await sender.Send(new GetNotificationJournalQuery
+        {
+            CustomerId = id,
+            Channel = "Sms",
+            Page = 1,
+            PageSize = 100
+        });
+        return Ok(result);
     }
 
     [HttpGet("{id}/ledger")]

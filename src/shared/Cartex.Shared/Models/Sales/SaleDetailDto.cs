@@ -10,6 +10,7 @@ public sealed record SaleDetailItemDto(
     decimal ReturnedQuantity,
     decimal ReturnableQuantity,
     decimal UnitPrice,
+    decimal EnteredUnitPrice,
     string PriceCurrency,
     decimal PriceRate,
     decimal LineTotal,
@@ -41,6 +42,10 @@ public sealed record SaleReturnSummaryDto(
     decimal RefundAmount,
     string Status);
 
+public sealed record ReceiptSmsResultDto(long JobId, string Status);
+public sealed record ReceiptSmsPreviewDto(string Recipient, string Text, string ConfirmationToken);
+public sealed record SendReceiptSmsRequest(string ConfirmationToken);
+
 public sealed record SaleDetailDto(
     long Id,
     string DocumentNumber,
@@ -58,11 +63,13 @@ public sealed record SaleDetailDto(
     string? CustomerPhone,
     decimal TotalAmount,
     decimal DiscountAmount,
+    decimal ManualDiscountAmount,
     decimal PaidCash,
     decimal PaidCard,
     decimal PaidBonus,
     decimal PaidAdvance,
     decimal DebtAmount,
+    DateOnly? DebtDueDate,
     string DebtCurrency,
     decimal ChangeAmount,
     decimal CreditAmount,

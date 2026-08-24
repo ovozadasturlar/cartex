@@ -31,6 +31,15 @@ public class StocksController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("on-hand/by-variants")]
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<ActionResult<IReadOnlyList<StockOnHandDto>>> GetOnHandByVariants(
+        [FromQuery] long warehouseId, [FromBody] IReadOnlyList<long> variantIds)
+    {
+        var result = await sender.Send(new GetStockOnHandByVariantsQuery(warehouseId, variantIds));
+        return Ok(result);
+    }
+
     [HttpGet("expiring")]
     [HasPermission(AppPermissions.Stocks.View)]
     public async Task<ActionResult<IReadOnlyCollection<ExpiringStockDto>>> GetExpiring([FromQuery] int withinDays = 30)

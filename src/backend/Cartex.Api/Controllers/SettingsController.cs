@@ -3,7 +3,9 @@ using Cartex.Application.Settings.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Settings;
+using Cartex.Shared.Models.Products;
 using Cartex.Application.Common.Messaging;
+using Cartex.Application.ProductReference.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -72,6 +74,84 @@ public class SettingsController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new GetReceiptSettingsQuery());
         return Ok(result);
+    }
+
+    [HttpPost("receipt/preview")]
+    [HasPermission(AppPermissions.Settings.Receipt)]
+    public ActionResult<object> PreviewReceipt(ReceiptSettingsDto settings)
+    {
+        var receipt = new Cartex.Shared.Models.Sales.ReceiptDto(
+            "preview-1048",
+            "Cartex Market",
+            "Chilonzor",
+            "Toshkent shahri",
+            null,
+            new DateTime(2026, 8, 24, 14, 30, 0),
+            84_000,
+            0,
+            84_000,
+            0,
+            0,
+            0,
+            0,
+            0,
+            "Akmal",
+            [
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_one", settings.Language),
+                    2,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    12_500,
+                    25_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_two", settings.Language),
+                    1,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    8_000,
+                    8_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_three", settings.Language),
+                    1.5m,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    14_000,
+                    21_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_five", settings.Language),
+                    2,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    15_000,
+                    30_000)
+            ],
+            [new Cartex.Shared.Models.Sales.ReceiptPaymentDto("Cash", "UZS", 84_000, 1, 84_000)],
+            1048,
+            "Dilshod",
+            "+998 90 555 12 34",
+            null,
+            settings.Language,
+            "+998 71 200 00 00");
+        var options = new Cartex.Application.Common.Settings.ReceiptSettings
+        {
+            HeaderText = settings.HeaderText,
+            FooterText = settings.FooterText,
+            PaperWidth = settings.PaperWidth,
+            PaperFormat = settings.PaperFormat,
+            ShowBusinessName = settings.ShowBusinessName,
+            ShowBranchName = settings.ShowBranchName,
+            ShowAddress = settings.ShowAddress,
+            ShowPhone = settings.ShowPhone,
+            ShowCashier = settings.ShowCashier,
+            ShowCustomer = settings.ShowCustomer,
+            ShowReceiptNumber = settings.ShowReceiptNumber,
+            ShowPaymentDetails = settings.ShowPaymentDetails,
+            ShowQrCode = settings.ShowQrCode,
+            ShowElectronicLink = settings.ShowElectronicLink,
+            ShowLogo = settings.ShowLogo,
+            ShowCustomerPhone = settings.ShowCustomerPhone,
+            ShowCustomerEmail = settings.ShowCustomerEmail,
+            Language = settings.Language,
+            PublicReceiptBaseUrl = settings.PublicReceiptBaseUrl
+        };
+        return Ok(new { text = Cartex.Infrastructure.Notifications.ReceiptTextRenderer.Render(receipt, options) });
     }
 
     [HttpPut("receipt")]
@@ -147,6 +227,24 @@ public class SettingsController(ISender sender) : ControllerBase
         var result = await sender.Send(new GetStorageSettingsQuery());
         return Ok(result);
     }
+
+    [HttpGet("product-reference")]
+    [HasPermission(AppPermissions.Settings.SalesPolicy)]
+    public async Task<ActionResult<ProductReferenceSettingsDto>> GetProductReferenceSettings() =>
+        Ok(await sender.Send(new GetProductReferenceSettingsQuery()));
+
+    [HttpPut("product-reference")]
+    [HasPermission(AppPermissions.Settings.SalesPolicy)]
+    public async Task<IActionResult> UpdateProductReferenceSettings(ProductReferenceSettingsDto settings)
+    {
+        await sender.Send(new UpdateProductReferenceSettingsCommand(settings));
+        return NoContent();
+    }
+
+    [HttpPost("product-reference/sync")]
+    [HasPermission(AppPermissions.Settings.SalesPolicy)]
+    public async Task<ActionResult<ProductReferenceSyncResultDto>> SyncProductReference() =>
+        Ok(await sender.Send(new SyncProductReferenceCommand()));
 
     [HttpPut("storage")]
     [HasPermission(AppPermissions.Settings.Integrations)]

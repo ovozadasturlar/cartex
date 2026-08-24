@@ -2,13 +2,29 @@
 
 public record TelegramSettingsDto(bool Enabled, string? ChatId, bool HasBotToken, int BotTokenLength);
 public record EmailSettingsDto(bool Enabled, string? Host, int Port, bool UseSsl, string? Username, string? FromAddress, string? FromName, bool HasPassword);
-public record SmsSettingsDto(bool Enabled, string Provider, string? Login, string? Sender, string? BaseUrl, bool HasPassword);
+public record SmsSettingsDto(bool Enabled, string Provider, string? Login, string? Sender, string? BaseUrl, bool HasPassword,
+    string FallbackProvider = "none", int FallbackAfterMinutes = 30, bool DebtReminderEnabled = true,
+    bool ReceiptLinkEnabled = false, bool PromotionEnabled = false, bool ManualEnabled = true,
+    string? DebtReminderTemplate = null, string? ReceiptLinkTemplate = null,
+    string? PromotionTemplate = null, string? ManualTemplate = null, bool SendReceiptOnSale = false,
+    bool TestMode = true, IReadOnlyList<string>? TestAllowedNumbers = null,
+    int DebtReminderStickyWaitMinutes = 15, int ReceiptLinkStickyWaitMinutes = 0,
+    int PromotionStickyWaitMinutes = 60, int ManualStickyWaitMinutes = 0,
+    bool QuietHoursEnabled = true, string SendWindowStart = "09:00", string SendWindowEnd = "21:00");
 public record NotificationSettingsDto(List<string> Channels, bool CopyToAdmin, string? PublicBaseUrl, string TelegramFormat, string EmailFormat);
 public record SettingsDto(TelegramSettingsDto Telegram, EmailSettingsDto Email, SmsSettingsDto Sms, NotificationSettingsDto Notification);
 
 public record UpdateTelegramSettingsRequest(bool Enabled, string? ChatId, string? BotToken, bool ClearToken = false);
 public record UpdateEmailSettingsRequest(bool Enabled, string? Host, int Port, bool UseSsl, string? Username, string? Password, string? FromAddress, string? FromName);
-public record UpdateSmsSettingsRequest(bool Enabled, string Provider, string? Login, string? Password, string? Sender, string? BaseUrl);
+public record UpdateSmsSettingsRequest(bool Enabled, string Provider, string? Login, string? Password, string? Sender, string? BaseUrl,
+    string FallbackProvider = "none", int FallbackAfterMinutes = 30, bool DebtReminderEnabled = true,
+    bool ReceiptLinkEnabled = false, bool PromotionEnabled = false, bool ManualEnabled = true,
+    string? DebtReminderTemplate = null, string? ReceiptLinkTemplate = null,
+    string? PromotionTemplate = null, string? ManualTemplate = null, bool SendReceiptOnSale = false,
+    bool TestMode = true, IReadOnlyList<string>? TestAllowedNumbers = null,
+    int DebtReminderStickyWaitMinutes = 15, int ReceiptLinkStickyWaitMinutes = 0,
+    int PromotionStickyWaitMinutes = 60, int ManualStickyWaitMinutes = 0,
+    bool QuietHoursEnabled = true, string SendWindowStart = "09:00", string SendWindowEnd = "21:00");
 public record UpdateNotificationSettingsRequest(List<string> Channels, bool CopyToAdmin, string? PublicBaseUrl, string? TelegramFormat = null, string? EmailFormat = null);
 
 public record ReminderSettingsDto(
@@ -59,7 +75,8 @@ public record ReceiptSettingsDto(
     string? PublicReceiptBaseUrl = null,
     bool ShowLogo = true,
     bool ShowCustomerPhone = true,
-    bool ShowCustomerEmail = false);
+    bool ShowCustomerEmail = false,
+    string Language = "uz-latn");
 public record UpdateReceiptSettingsRequest(
     string? HeaderText,
     string? FooterText,
@@ -77,7 +94,8 @@ public record UpdateReceiptSettingsRequest(
     bool ShowElectronicLink = true,
     bool ShowLogo = true,
     bool ShowCustomerPhone = true,
-    bool ShowCustomerEmail = false);
+    bool ShowCustomerEmail = false,
+    string? Language = null);
 public record BarcodeLabelSettingsDto(
     bool DefaultWithPrice = false,
     bool AllowPriceOverride = true,

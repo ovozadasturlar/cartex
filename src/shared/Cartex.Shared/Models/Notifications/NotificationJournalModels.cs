@@ -18,7 +18,12 @@ public record NotificationDeliveryDto(
     DateTime CreatedAt,
     DateTime? AcceptedAt,
     DateTime? DeliveredAt,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    long? SmsGatewayJobId,
+    long? DeviceId,
+    string? DeviceLabel,
+    int? SimSlot,
+    string? WaitingReason);
 
 public record NotificationStatsDto(
     int Deliveries,
