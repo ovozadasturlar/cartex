@@ -42,8 +42,7 @@ public enum PrinterEndpointStatus
 public enum PrintRoutingMode
 {
     LocalFirst,
-    PriorityOnly,
-    LocalOnly
+    PriorityOnly
 }
 
 public enum PrintStickyMode
