@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.SmsGatewayPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:sms="clr-namespace:Cartex.Shared.Models.SmsGateway;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:SmsGatewayViewModel"
+    Title="{svc:T sms_gateway_title}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem IconImageSource="tab_settings.png" Text="{svc:T sms_gateway_settings}"
+                     Command="{Binding OpenSettingsCommand}" Order="Primary" Priority="0"
+                     IsEnabled="{Binding IsRegistered}" />
+    </ContentPage.ToolbarItems>
+    <ScrollView>
+        <VerticalStackLayout Padding="20,18,20,28" Spacing="14">
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{svc:T sms_gateway_status}" Style="{StaticResource MutedLabel}" />
+                    <Label Text="{Binding StatusReason}" FontSize="17" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Border IsVisible="{Binding TestMode}" Padding="10" StrokeThickness="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}">
+                        <Label Text="{svc:T sms_gateway_test_mode_banner}" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Devices}" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MobileSmsGatewayCard">
+                        <Border Style="{StaticResource Card}" Padding="16">
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{Binding Title}" FontSize="17" FontAttributes="Bold" />
+                                    <Label Grid.Column="1" Text="{Binding Status}" Style="{StaticResource MutedLabel}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{Binding Usage}" />
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="{svc:T sms_gateway_remaining}" Style="{StaticResource MutedLabel}" />
+                                        <Label Text="{Binding Remaining}" FontAttributes="Bold" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+                                <ProgressBar IsVisible="{Binding ShowProgress}" Progress="{Binding Progress}"
+                                             HeightRequest="7" ProgressColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource SuccessDark}}">
+                                    <ProgressBar.Triggers>
+                                        <DataTrigger TargetType="ProgressBar" Binding="{Binding IsWarning}" Value="True">
+                                            <Setter Property="ProgressColor" Value="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="ProgressBar" Binding="{Binding IsOrange}" Value="True">
+                                            <Setter Property="ProgressColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="ProgressBar" Binding="{Binding IsDanger}" Value="True">
+                                            <Setter Property="ProgressColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                        </DataTrigger>
+                                    </ProgressBar.Triggers>
+                                </ProgressBar>
+                                <Label Text="{Binding Detail}" Style="{StaticResource MutedLabel}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+
+            <Border Style="{StaticResource Card}" Padding="16" IsVisible="{Binding IsUnregistered}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="{svc:T sms_gateway_settings}" FontAttributes="Bold" />
+                    <VerticalStackLayout Spacing="4" IsVisible="{Binding IsUnregistered}">
+                        <Label Text="{svc:T sms_gateway_sim}" Style="{StaticResource MutedLabel}" />
+                        <Picker ItemsSource="{Binding Sims}" ItemDisplayBinding="{Binding DisplayName}" SelectedItem="{Binding SelectedSim}" />
+                        <Entry Text="{Binding PhoneLabel}" Placeholder="{svc:T sms_gateway_phone_label}" Keyboard="Telephone" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T sms_gateway_quota}" Style="{StaticResource MutedLabel}" />
+                        <Entry Text="{Binding MonthlyQuota}" IsEnabled="{Binding IsLimitEnabled}"
+                               Keyboard="Numeric" Placeholder="{svc:T sms_gateway_limit_required}" />
+                        <Label Text="{svc:T sms_gateway_quota_hint}" Style="{StaticResource MutedLabel}" />
+                        <HorizontalStackLayout Spacing="8">
+                            <CheckBox IsChecked="{Binding IsUnlimited}" />
+                            <Label Text="{svc:T unlimited}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{svc:T sms_gateway_reset_day}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding QuotaResetDay}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_reset_day_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_interval}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding MinIntervalSeconds}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_interval_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_max_hour}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding MaxPerHour}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_max_hour_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Grid.Column="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_low_warning}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding LowQuotaWarnPercent}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_low_warning_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Text="{svc:T sms_gateway_register}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding RegisterCommand}" IsVisible="{Binding IsUnregistered}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Padding="16" IsVisible="{Binding IsRegistered}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{svc:T sms_gateway_recent}" FontAttributes="Bold" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Jobs}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="sms:SmsGatewayJobDto">
+                                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                                    <Label Text="{Binding CreatedAt, StringFormat='{0:dd.MM HH:mm}'}" Style="{StaticResource MutedLabel}" />
+                                    <Label Grid.Column="1" Text="{Binding PhoneMasked}" />
+                                    <Label Grid.Column="2" Text="{Binding Status}" FontAttributes="Bold" />
+                                    <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Kind}" Style="{StaticResource MutedLabel}" />
+                                    <Label Grid.Row="1" Grid.Column="2" Text="{Binding SegmentCount, StringFormat='{0} SMS'}" Style="{StaticResource MutedLabel}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="{Binding Status}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

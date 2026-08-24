@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.SmsGatewaySettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:SmsGatewayViewModel"
+    Title="{svc:T sms_gateway_settings}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20,18,20,28" Spacing="14">
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T sms_gateway_quota}" Style="{StaticResource MutedLabel}" />
+                        <Entry Text="{Binding MonthlyQuota}" IsEnabled="{Binding IsLimitEnabled}"
+                               Keyboard="Numeric" Placeholder="{svc:T sms_gateway_limit_required}" />
+                        <Label Text="{svc:T sms_gateway_quota_hint}" Style="{StaticResource MutedLabel}" />
+                        <HorizontalStackLayout Spacing="8">
+                            <CheckBox IsChecked="{Binding IsUnlimited}" />
+                            <Label Text="{svc:T unlimited}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                    <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,12,Auto">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{svc:T sms_gateway_reset_day}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding QuotaResetDay}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_reset_day_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_interval}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding MinIntervalSeconds}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_interval_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_max_hour}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding MaxPerHour}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_max_hour_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Row="2" Grid.Column="2" Spacing="4">
+                            <Label Text="{svc:T sms_gateway_low_warning}" Style="{StaticResource MutedLabel}" />
+                            <Entry Text="{Binding LowQuotaWarnPercent}" Keyboard="Numeric" />
+                            <Label Text="{svc:T sms_gateway_low_warning_hint}" Style="{StaticResource MutedLabel}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Text="{svc:T save}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding SaveSettingsCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="7">
+                    <Label Text="{svc:T sms_gateway_message_types}" FontAttributes="Bold" />
+                    <Label Text="{Binding MessageTypes}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{svc:T sms_gateway_test_sms}" FontAttributes="Bold" />
+                    <Entry Text="{Binding TestPhone}" Keyboard="Telephone" Placeholder="+998" />
+                    <Button Text="{svc:T sms_gateway_send_test}" Style="{StaticResource BtnOutline}" Command="{Binding SendTestCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="{Binding PauseAction}" Style="{StaticResource BtnOutline}" Command="{Binding TogglePauseCommand}" />
+
+            <Border Style="{StaticResource Card}" Padding="16"
+                    Stroke="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{svc:T sms_gateway_revoke_hint}" Style="{StaticResource MutedLabel}" />
+                    <Button Text="{svc:T sms_gateway_revoke}" Command="{Binding RevokeCommand}" BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="{Binding Status}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
