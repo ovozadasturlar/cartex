@@ -58,7 +58,7 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
               <mat-select [(ngModel)]="categoryId">
                 <mat-option [value]="null">—</mat-option>
                 @for (c of categories(); track c.id) {
-                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                  <mat-option [value]="c.id">{{ c.fullPath || c.name }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -301,7 +301,7 @@ export class ProductDialog implements OnInit {
       this.currencies.set(currencies);
       this.priceCurrency ??= business.currency;
       if (this.product) {
-        this.categoryId = categories.find((c) => c.name === this.product!.categoryName)?.id ?? null;
+        this.categoryId = categories.find((c) => (c.fullPath || c.name) === this.product!.categoryName)?.id ?? null;
         const currentUnit = units.find((u) => u.name === this.product!.unitName);
         this.unitDimension = currentUnit?.dimension ?? this.product.dimension ?? 'Count';
         this.originalDimension = this.unitDimension;

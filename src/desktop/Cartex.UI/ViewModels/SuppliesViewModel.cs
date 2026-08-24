@@ -95,6 +95,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly ISuppliersApi _suppliersApi;
     private readonly IWarehousesApi _warehousesApi;
     private readonly IProductsApi _productsApi;
+    private readonly IProductReferenceApi _productReferenceApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IBarcodesApi _barcodesApi;
     private readonly IStorageApi _storageApi;
@@ -395,6 +396,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _lineProduct;
     [ObservableProperty] private string _lineProductText = "";
     [ObservableProperty] private SupplyEntryOption? _lineEntry;
+    private bool _addQuickProductAsLine;
 
     public event Action? FocusProductRequested;
 
@@ -412,8 +414,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
 
         if (!IsOfflineMode && await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
         {
-            await QuickProduct.OpenCommand.ExecuteAsync(null);
-            QuickProduct.Name = name;
+            await OpenQuickProductAsync(name, null, null, false);
             return;
         }
 
@@ -712,7 +713,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(HasItems));
     }
 
-    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
+    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi, IProductReferenceApi productReferenceApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
         IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog, PrintDispatchService printDispatch,
         IFilePickerService filePicker)
@@ -727,6 +728,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _suppliersApi = suppliersApi;
         _warehousesApi = warehousesApi;
         _productsApi = productsApi;
+        _productReferenceApi = productReferenceApi;
         _unitsApi = unitsApi;
         _barcodesApi = barcodesApi;
         _storageApi = storageApi;
@@ -737,6 +739,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
+        QuickProduct.ExistingSelected += OnQuickProductExistingSelected;
         QuickProduct.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuickProductViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
@@ -970,7 +973,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch { }
     }
 
-    private async void OnQuickProductCreated(long variantId, string name)
+    private async Task OnQuickProductCreated(long variantId, string name)
     {
         if (QuickProduct.SelectedUnit is { } su)
         {
@@ -981,6 +984,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         AddProductOption(option);
         LineProduct = option;
 
+        if (_addQuickProductAsLine)
+        {
+            _addQuickProductAsLine = false;
+            if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+            var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;
+            await AddOrMergeAsync(variantId, name, LineQuantity, warehouseId,
+                entry, PricePerStockingUnit, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
+                LineExpiry is { } expiry ? DateOnly.FromDateTime(expiry.Date) : null);
+            ResetLine();
+        }
+
         if (!string.IsNullOrWhiteSpace(QuickProduct.Barcode)) return;
         try
         {
@@ -989,6 +1003,26 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             await _printDispatch.PrintBarcodeAsync(code, name, 1, null, null, false, false);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task OpenQuickProductAsync(string? name, string? barcode, decimal? sellingPrice, bool addAsLine,
+        ProductReferenceDto? reference = null)
+    {
+        _addQuickProductAsLine = addAsLine;
+        await QuickProduct.OpenCommand.ExecuteAsync(null);
+        QuickProduct.LookupWarehouseId = SelectedWarehouse?.Id ?? 0;
+        QuickProduct.Name = name ?? string.Empty;
+        QuickProduct.Barcode = barcode ?? string.Empty;
+        QuickProduct.SellingPrice = sellingPrice;
+        if (reference is not null) QuickProduct.ApplyReference(reference);
+    }
+
+    private async Task OnQuickProductExistingSelected(ProductLookupDto product)
+    {
+        if (SelectedWarehouse?.Id is not { } warehouseId) return;
+        AddProductOption(new IdOption(product.VariantId, product.ProductName));
+        await AddOrMergeAsync(product.VariantId, product.ProductName, product.PackQty > 1 ? product.PackQty : 1,
+            warehouseId, entry: null);
     }
 
     private void RaisePermissions()
@@ -1136,8 +1170,17 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            await QuickProduct.OpenCommand.ExecuteAsync(null);
-            QuickProduct.Barcode = code;
+            try
+            {
+                var reference = await _productReferenceApi.GetByBarcodeAsync(code);
+                await OpenQuickProductAsync(null, code, null, false, reference);
+            }
+            catch (ApiException referenceException) when (referenceException.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _toast.Warning(L["barcode_not_found"]);
+                await OpenQuickProductAsync(null, code, null, false);
+            }
+            catch (Exception referenceException) { _toast.Error(ApiErrors.Describe(referenceException)); }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -1203,10 +1246,27 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task AddLineAsync()
     {
-        if (LineProduct?.Id is not { } variantId) { _toast.Warning(L["err_select_product"]); return; }
+        var name = LineProductText.Trim();
+        var barcode = LineBarcode.Trim();
+        if (LineProduct is null && name.Length == 0 && barcode.Length == 0)
+        {
+            _toast.Warning(L["err_select_product"]);
+            return;
+        }
         if (LineQuantity <= 0) { _toast.Warning(L["err_qty_positive"]); return; }
         if (LinePrice < 0) { _toast.Warning(L["err_price_negative"]); return; }
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+        if (LineProduct?.Id is not { } variantId)
+        {
+            if (IsOfflineMode)
+            {
+                _toast.Warning(L["err_select_product"]);
+                return;
+            }
+
+            await OpenQuickProductAsync(name, barcode, LineSellingPrice > 0 ? LineSellingPrice : null, true);
+            return;
+        }
         if (!await ConfirmPriceAsync(variantId)) return;
 
         var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;

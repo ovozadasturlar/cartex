@@ -12,14 +12,9 @@ public static class NavRegistry
     /// yashirgan sahifa boshqasidan ochilib qolardi.
     public static bool IsAvailable(this NavDef def, Func<string, bool> hasPermission) =>
         (def.Permission is null || hasPermission(def.Permission))
-        && (def.Feature is null || IsFeatureOn(def.Feature));
+        && (def.Feature is null || AccessCapabilities.FeatureEnabled(def.Feature));
 
-    /// Ro'yxat hali ma'lum bo'lmasa (birinchi ishga tushirish yoki server javob bermadi) modul
-    /// yopiq deb qaralmaydi: aks holda aloqasiz ochilgan dastur menyusining yarmini yashirib
-    /// qo'yardi. Ro'yxat kelgach menyu qayta quriladi.
-    public static bool IsFeatureOn(string feature) =>
-        SettingsService.Instance.EnabledFeatures is not { Count: > 0 } enabled
-        || enabled.Contains(feature, StringComparer.OrdinalIgnoreCase);
+    public static bool IsFeatureOn(string feature) => AccessCapabilities.FeatureEnabled(feature);
 
     public static readonly (string Key, string TitleKey)[] SidebarSections =
     [
@@ -32,7 +27,7 @@ public static class NavRegistry
     public static readonly NavDef[] SidebarPages =
     [
         new("main", "dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), "reports.view", "reports"),
-        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create|sales.checkout"),
+        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create|sales.checkout|sales.pick|sales.view", "ordering|store"),
         new("sales", "shift", MaterialIconKind.CashClock, typeof(ShiftViewModel), "shifts.view"),
         new("sales", "sale_history", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view"),
         new("sales", "orders", MaterialIconKind.ClipboardTextClockOutline, typeof(OrdersViewModel), "sales.view", "ordering"),
@@ -64,6 +59,7 @@ public static class NavRegistry
         new("catalog", "units", MaterialIconKind.RulerSquare, typeof(UnitsViewModel), "units.view"),
         new("catalog", "product_types", MaterialIconKind.TagOutline, typeof(ProductTypesViewModel), "product_types.view"),
         new("catalog", "manufacturers", MaterialIconKind.Factory, typeof(ManufacturersViewModel), "manufacturers.view"),
+        new("catalog", "product_reference", MaterialIconKind.BookSearchOutline, typeof(ProductReferenceSettingsViewModel), "settings.salesPolicy"),
         new("organization", "business", MaterialIconKind.Domain, typeof(BusinessSettingsViewModel), "business.edit"),
         new("organization", "sales_policy", MaterialIconKind.ScaleBalance, typeof(SalesPolicyViewModel), "settings.salesPolicy"),
         new("organization", "modules", MaterialIconKind.ToggleSwitchOutline, typeof(ModulesViewModel), "business.edit"),
@@ -76,8 +72,9 @@ public static class NavRegistry
         new("system", "expense_categories", MaterialIconKind.CashMinus, typeof(ExpenseCategoriesViewModel), "expense_categories.view"),
         new("system", "audit", MaterialIconKind.History, typeof(AuditViewModel), "audit.view", "audit"),
         new("system", "rates", MaterialIconKind.CurrencyUsd, typeof(RatesViewModel), "rates.view", "multicurrency"),
-        new("system", "reminders", MaterialIconKind.BellRingOutline, typeof(RemindersViewModel), "notifications.view"),
+        new("system", "customer_messages", MaterialIconKind.MessageTextOutline, typeof(RemindersViewModel), "notifications.view|sms.gateway.edit|settings.integrations"),
         new("system", "notification_journal", MaterialIconKind.MessageBadgeOutline, typeof(NotificationJournalViewModel), "notifications.journal.view"),
+        new("system", "sms", MaterialIconKind.MessageProcessingOutline, typeof(SmsGatewayViewModel), "sms.gateway.edit"),
         new("system", "printing", MaterialIconKind.Printer, typeof(PrintingViewModel), "settings.receipt|settings.barcodeLabel|printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch"),
         new("system", "devices", MaterialIconKind.Devices, typeof(DevicesViewModel), "devices.view"),
         new("system", "app_settings", MaterialIconKind.Cog, typeof(SettingsViewModel), null),

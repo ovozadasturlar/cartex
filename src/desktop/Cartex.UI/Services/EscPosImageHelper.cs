@@ -11,16 +11,17 @@ public static class EscPosImageHelper
             using var bitmap = SKBitmap.Decode(imageBytes);
             if (bitmap == null) return [];
 
-            var width = targetWidth;
-            var height = (int)((double)bitmap.Height / bitmap.Width * width);
+            var width = (Math.Max(8, targetWidth) + 7) / 8 * 8;
+            var contentHeight = Math.Max(1, (int)Math.Round((double)bitmap.Height / bitmap.Width * width));
+            var height = (contentHeight + 7) / 8 * 8;
 
-            using var resized = bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear));
+            using var resized = bitmap.Resize(new SKImageInfo(width, contentHeight), new SKSamplingOptions(SKFilterMode.Linear));
             if (resized == null) return [];
 
             int widthBytes = (width + 7) / 8;
             var rasterData = new byte[widthBytes * height];
 
-            for (var y = 0; y < height; y++)
+            for (var y = 0; y < contentHeight; y++)
             {
                 for (var x = 0; x < width; x++)
                 {

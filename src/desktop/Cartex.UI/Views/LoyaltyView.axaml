@@ -283,7 +283,8 @@
 
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                                <StackPanel Spacing="16" IsEnabled="{Binding CanManage}">
+                                <StackPanel Classes="form" Spacing="16" IsEnabled="{Binding CanManage}"
+                                            c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
                                     <TextBlock Text="{Binding L[bonus]}" FontWeight="SemiBold" FontSize="15"
                                                Foreground="{DynamicResource TextPrimary}" />
                                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -317,9 +318,11 @@
 
         <Border IsVisible="{Binding IsRuleOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelRuleCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveRuleCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelRuleCommand}">
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[cashback_rules]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
@@ -332,7 +335,7 @@
                     <StackPanel Spacing="5" IsVisible="{Binding IsProductScope}">
                         <TextBlock Text="{Binding L[product]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding RuleProduct}" HorizontalAlignment="Stretch">
-                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Spacing="5" IsVisible="{Binding !IsProductScope}">
@@ -368,9 +371,11 @@
 
         <Border IsVisible="{Binding IsDiscountOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelDiscountCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="680"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="680"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
+                    HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveDiscountCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelDiscountCommand}">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="24,20,24,14"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -411,13 +416,13 @@
                                     <StackPanel Spacing="5" IsVisible="{Binding IsDiscountProductScope}">
                                         <TextBlock Text="{Binding L[product]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                         <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding DiscountProduct}" HorizontalAlignment="Stretch" MinHeight="38">
-                                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </StackPanel>
                                     <StackPanel Spacing="5" IsVisible="{Binding IsDiscountCategoryScope}">
                                         <TextBlock Text="{Binding L[category]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                                         <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding DiscountCategory}" HorizontalAlignment="Stretch" MinHeight="38">
-                                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </StackPanel>
                                     <StackPanel Spacing="5" IsVisible="{Binding IsDiscountManufacturerScope}">

@@ -13,7 +13,6 @@ namespace Cartex.UI.Services;
 
 public sealed class PrintHostService
 {
-    private static readonly HttpClient ImageHttpClient = new();
     private readonly IPrintingApi _printingApi;
     private readonly IReceiptApi _receiptApi;
     private readonly IShiftsApi _shiftsApi;
@@ -29,13 +28,23 @@ public sealed class PrintHostService
     private readonly PrintHostJournal _journal;
     private readonly PrintHostCredentialStore _credentialStore;
     private readonly IFilePickerService _filePicker;
+    private readonly PrintLogoCache _logoCache;
+    private readonly PrintPolicyCache _policyCache;
+    private readonly IToastService _toast;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private readonly SemaphoreSlim _processLock = new(1, 1);
+    private readonly Lock _endpointCacheLock = new();
     private CancellationTokenSource? _lifetime;
     private HubConnection? _connection;
     private long? _registeredBranchId;
     private string? _hostToken;
     private string? _reportedFailure;
+    private bool _hubSubscribed;
+    private int _processPending;
+    private IReadOnlyList<PrinterEndpointRegistration> _cachedEndpoints = [];
+    private DateTime _endpointsLoadedAt;
+    private bool _endpointsInvalidated = true;
+    private int _endpointPolicyRefreshPending = 1;
 
     /// The host used to retry a rejected registration forever without saying anything, so
     /// a till looked healthy while nothing could ever print. The reason is surfaced once.
@@ -74,7 +83,10 @@ public sealed class PrintHostService
         BranchContextService branch,
         PrintHostJournal journal,
         PrintHostCredentialStore credentialStore,
-        IFilePickerService filePicker)
+        IFilePickerService filePicker,
+        PrintLogoCache logoCache,
+        PrintPolicyCache policyCache,
+        IToastService toast)
     {
         _printingApi = printingApi;
         _receiptApi = receiptApi;
@@ -91,9 +103,13 @@ public sealed class PrintHostService
         _journal = journal;
         _credentialStore = credentialStore;
         _filePicker = filePicker;
+        _logoCache = logoCache;
+        _policyCache = policyCache;
+        _toast = toast;
         _hostToken = credentialStore.Load();
         _auth.LoggedOut += () => _ = StopAsync();
         _branch.PropertyChanged += BranchChanged;
+        _printer.SettingsChanged += InvalidateEndpointCache;
     }
 
     public async Task StartAsync()
@@ -105,6 +121,7 @@ public sealed class PrintHostService
             if (_lifetime is not null) return;
             _lifetime = new CancellationTokenSource();
             _ = RunAsync(_lifetime.Token);
+            _ = RunHubAsync(_lifetime.Token);
         }
         finally
         {
@@ -136,13 +153,7 @@ public sealed class PrintHostService
                     continue;
                 }
 
-                await EnsureHubAsync(cancellationToken);
-
-                // If SignalR is disconnected, fallback to HTTP polling
-                if (_connection is null || _connection.State != HubConnectionState.Connected)
-                {
-                    await ProcessAssignedAsync(cancellationToken);
-                }
+                await ProcessAssignedAsync(cancellationToken);
 
                 // A full healthy cycle means whatever was shown in the settings banner
                 // (e.g. rejected while the device was still untrusted) is over.
@@ -157,6 +168,48 @@ public sealed class PrintHostService
             {
                 ReportHostFailure(exception);
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+            }
+        }
+    }
+
+    private async Task RunHubAsync(CancellationToken cancellationToken)
+    {
+        var delay = TimeSpan.FromSeconds(1);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (!_auth.IsAuthenticated
+                    || !_auth.HasPermission("printing.host")
+                    || !SettingsService.Instance.IsFeatureOn("remote_printing")
+                    || _registeredBranchId is null
+                    || string.IsNullOrWhiteSpace(_hostToken))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    continue;
+                }
+
+                if (await EnsureHubAsync(cancellationToken))
+                    await ProcessAssignedAsync(cancellationToken);
+                delay = TimeSpan.FromSeconds(1);
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                ReportHostFailure(exception);
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
             }
         }
     }
@@ -184,6 +237,7 @@ public sealed class PrintHostService
             }
 
             _registeredBranchId = branchId;
+            SchedulePolicyRefresh();
             ClearHostFailure();
             return true;
         }
@@ -194,6 +248,8 @@ public sealed class PrintHostService
                 _auth.DeviceId,
                 endpoints,
                 _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
+            if (Interlocked.Exchange(ref _endpointPolicyRefreshPending, 0) != 0)
+                SchedulePolicyRefresh();
         }
         catch (Refit.ApiException api) when (api.StatusCode
             is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.NotFound)
@@ -209,24 +265,58 @@ public sealed class PrintHostService
 
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
     {
-        // Unconfigured roles are filled from what the machine actually has, and every
-        // capability is announced on the printer the type will really come out of.
-        try { _printer.EnsureAutoSetup(); } catch { }
-        var settings = _printer.GetSettings();
-        var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
-        Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
-        Add(endpoints, settings.DocumentPrinter, PrintCapability.Document);
-        Add(endpoints, _printer.ReceiptTarget().Printer, PrintCapability.Receipt);
-        Add(endpoints, _printer.ProformaTarget(ProformaPrintOptions.Resolve(settings)).Printer, PrintCapability.CartProforma);
-        Add(endpoints, _printer.ZReportTarget().Printer, PrintCapability.ZReport);
+        lock (_endpointCacheLock)
+        {
+            if (!_endpointsInvalidated
+                && DateTime.UtcNow - _endpointsLoadedAt < TimeSpan.FromSeconds(60))
+                return _cachedEndpoints;
 
-        return endpoints.Select(x => new PrinterEndpointRegistration(
-            StableKey(x.Key),
-            x.Key,
-            x.Key,
-            x.Value,
-            _printer.GetPrinterStatus(x.Key),
-            JsonSerializer.Serialize(new { configured = true }))).ToList();
+            try { _printer.EnsureAutoSetup(); } catch { }
+            var settings = _printer.GetSettings();
+            var endpoints = new Dictionary<string, PrintCapability>(StringComparer.OrdinalIgnoreCase);
+            Add(endpoints, settings.BarcodePrinter, PrintCapability.BarcodeLabel);
+            Add(endpoints, settings.DocumentPrinter, PrintCapability.Document);
+            Add(endpoints, _printer.ReceiptTarget().Printer, PrintCapability.Receipt);
+            Add(endpoints, _printer.ProformaTarget(ProformaPrintOptions.Resolve(settings)).Printer, PrintCapability.CartProforma);
+            Add(endpoints, _printer.ZReportTarget().Printer, PrintCapability.ZReport);
+
+            _cachedEndpoints = endpoints.Select(x => new PrinterEndpointRegistration(
+                StableKey(x.Key),
+                x.Key,
+                x.Key,
+                x.Value,
+                _printer.GetPrinterStatus(x.Key),
+                JsonSerializer.Serialize(new { configured = true }))).ToList();
+            _endpointsLoadedAt = DateTime.UtcNow;
+            _endpointsInvalidated = false;
+            return _cachedEndpoints;
+        }
+    }
+
+    private void InvalidateEndpointCache()
+    {
+        lock (_endpointCacheLock)
+            _endpointsInvalidated = true;
+        Interlocked.Exchange(ref _endpointPolicyRefreshPending, 1);
+    }
+
+    private void SchedulePolicyRefresh()
+    {
+        Interlocked.Exchange(ref _endpointPolicyRefreshPending, 0);
+        _policyCache.Invalidate();
+        _ = RefreshPolicySafeAsync();
+    }
+
+    private async Task RefreshPolicySafeAsync()
+    {
+        try
+        {
+            await _policyCache.RefreshAsync();
+        }
+        catch
+        {
+            _policyCache.Invalidate();
+        }
     }
 
     private static void Add(IDictionary<string, PrintCapability> endpoints, string? printer, PrintCapability capability)
@@ -244,7 +334,7 @@ public sealed class PrintHostService
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private async Task EnsureHubAsync(CancellationToken cancellationToken)
+    private async Task<bool> EnsureHubAsync(CancellationToken cancellationToken)
     {
         if (_connection is null)
         {
@@ -258,20 +348,50 @@ public sealed class PrintHostService
                 })
                 .WithAutomaticReconnect()
                 .Build();
-            _connection.On<long>("PrintJobAvailable", jobId =>
+            _connection.On<long>("PrintJobAvailable", ignoredJobId =>
             {
                 _ = ProcessAssignedAsync(CancellationToken.None);
             });
-            _connection.Reconnected += async _ =>
+            _connection.Reconnecting += _ =>
             {
-                await _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken);
-                await ProcessAssignedAsync(CancellationToken.None);
+                _hubSubscribed = false;
+                return Task.CompletedTask;
+            };
+            _connection.Reconnected += _ => OnHubReconnectedAsync();
+            _connection.Closed += _ =>
+            {
+                _hubSubscribed = false;
+                return Task.CompletedTask;
             };
         }
+        var subscribedNow = false;
         if (_connection.State == HubConnectionState.Disconnected)
         {
             await _connection.StartAsync(cancellationToken);
+            _hubSubscribed = false;
+        }
+        // Obuna alohida kuzatiladi: ulanish tirik qolib obuna yiqilgan bo'lsa (masalan o'sha
+        // paytda qurilma hali ishonchli emas edi) keyingi aylanishda qayta uriniladi.
+        if (!_hubSubscribed)
+        {
             await _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken, cancellationToken);
+            _hubSubscribed = true;
+            subscribedNow = true;
+        }
+        return subscribedNow;
+    }
+
+    private async Task OnHubReconnectedAsync()
+    {
+        _hubSubscribed = false;
+        try
+        {
+            if (await EnsureHubAsync(CancellationToken.None))
+                await ProcessAssignedAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            ReportHostFailure(exception);
         }
     }
 
@@ -279,26 +399,36 @@ public sealed class PrintHostService
     {
         if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host")
             || !SettingsService.Instance.EnabledFeatures.Contains("remote_printing")) return;
+        Interlocked.Exchange(ref _processPending, 1);
         if (!_processLock.Wait(0)) return;
         try
         {
-            var jobs = await _printingApi.GetAssignedAsync(_auth.DeviceId, _hostToken!, cancellationToken);
-            foreach (var job in jobs)
-                await ProcessAsync(job, cancellationToken);
+            do
+            {
+                Interlocked.Exchange(ref _processPending, 0);
+                var jobs = await _printingApi.GetAssignedAsync(_auth.DeviceId, _hostToken!, cancellationToken);
+                foreach (var job in jobs)
+                    await ProcessAsync(job, cancellationToken);
+            }
+            while (Volatile.Read(ref _processPending) == 1);
         }
-        catch
+        catch (Exception exception)
         {
+            ReportHostFailure(exception);
         }
         finally
         {
             _processLock.Release();
         }
+        if (Volatile.Read(ref _processPending) == 1)
+            await ProcessAssignedAsync(cancellationToken);
     }
 
     private async Task ProcessAsync(AssignedPrintJobDto job, CancellationToken cancellationToken)
     {
         var lease = new PrintJobLeaseRequest(_auth.DeviceId, job.LeaseToken, _hostToken!);
-        var journalState = await _journal.GetStateAsync(job.Id);
+        var journalKey = $"{job.Id}:{job.SourceType}:{job.SourceId}";
+        var journalState = await _journal.GetStateAsync(journalKey);
         if (journalState == PrintHostJournalState.Completed)
         {
             await _printingApi.AcceptAsync(job.Id, lease, cancellationToken);
@@ -326,16 +456,16 @@ public sealed class PrintHostService
         {
             await _printingApi.AcceptAsync(job.Id, lease, cancellationToken);
             var execute = await PrepareAsync(job, cancellationToken);
-            await _journal.MarkStartedAsync(job.Id);
+            await _journal.MarkStartedAsync(journalKey);
             printingStarted = true;
             execute();
             await _printingApi.SubmittedAsync(job.Id, new PrintJobSubmittedRequest(_auth.DeviceId, job.LeaseToken, _hostToken!, null), cancellationToken);
-            await _journal.MarkCompletedAsync(job.Id);
+            await _journal.MarkCompletedAsync(journalKey);
             await _printingApi.CompleteAsync(job.Id, lease, cancellationToken);
         }
         catch (Exception exception)
         {
-            if (await _journal.GetStateAsync(job.Id) == PrintHostJournalState.Completed) return;
+            if (await _journal.GetStateAsync(journalKey) == PrintHostJournalState.Completed) return;
             try
             {
                 await _printingApi.FailAsync(job.Id, new PrintJobFailedRequest(
@@ -398,23 +528,15 @@ public sealed class PrintHostService
         
         if (receiptOptions?.ShowLogo == true && !string.IsNullOrWhiteSpace(receipt.LogoImageKey))
         {
-            try
-            {
-                var storageApi = Avalonia.Controls.Design.IsDesignMode ? null : ServiceLocator.Resolve<IStorageApi>();
-                if (storageApi != null)
-                {
-                    var logoKey = !string.IsNullOrWhiteSpace(receipt.MonochromeLogoImageKey)
-                        ? receipt.MonochromeLogoImageKey
-                        : receipt.LogoImageKey;
-                    var file = await storageApi.GetUrlAsync(logoKey!);
-                    var imageBytes = await ImageHttpClient.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
-                    
-                    int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);
-                    var rasterBytes = EscPosImageHelper.BinarizeToEscPosRaster(imageBytes, width);
-                    receiptOptions = receiptOptions with { LogoRasterBytes = rasterBytes };
-                }
-            }
-            catch { }
+            var logoKey = !string.IsNullOrWhiteSpace(receipt.MonochromeLogoImageKey)
+                ? receipt.MonochromeLogoImageKey
+                : receipt.LogoImageKey;
+            var width = _printer.ReceiptRasterWidth(actualPrinter, receiptOptions.Width);
+            var raster = await _logoCache.GetForPrintAsync(logoKey!, width, cancellationToken);
+            if (raster is null)
+                _toast.Warning(LocalizationManager.Instance["print_logo_unavailable"]);
+            else
+                receiptOptions = receiptOptions with { LogoRasterBytes = raster };
         }
 
         var receiptFilePath = await GetPdfOutputPathAsync(actualPrinter, $"Chek_{token}");
@@ -439,20 +561,12 @@ public sealed class PrintHostService
             : business?.LogoImageKey;
         if (receiptOptions?.ShowLogo == true && !string.IsNullOrWhiteSpace(logoKey))
         {
-            try
-            {
-                var storageApi = Avalonia.Controls.Design.IsDesignMode ? null : ServiceLocator.Resolve<IStorageApi>();
-                if (storageApi != null)
-                {
-                    var file = await storageApi.GetUrlAsync(logoKey);
-                    var imageBytes = await ImageHttpClient.GetByteArrayAsync(ImageUrl.Absolute(file.Url), cancellationToken);
-
-                    int width = receiptOptions.Width is 48 ? 576 : (receiptOptions.Width is 42 ? 504 : 384);
-                    var rasterBytes = EscPosImageHelper.BinarizeToEscPosRaster(imageBytes, width);
-                    receiptOptions = receiptOptions with { LogoRasterBytes = rasterBytes };
-                }
-            }
-            catch { }
+            var width = _printer.ReceiptRasterWidth(actualPrinter, receiptOptions.Width);
+            var raster = await _logoCache.GetForPrintAsync(logoKey, width, cancellationToken);
+            if (raster is null)
+                _toast.Warning(LocalizationManager.Instance["print_logo_unavailable"]);
+            else
+                receiptOptions = receiptOptions with { LogoRasterBytes = raster };
         }
 
         var returnFilePath = await GetPdfOutputPathAsync(actualPrinter, $"Qaytarish_{returnId}");
@@ -598,6 +712,8 @@ public sealed class PrintHostService
                 _printer.GetPrinterCapabilities(printer).SupportsColor);
             return () => WindowsImagePrinter.Print(printer, pages, target.Paper, target.Paper, "portrait", 1, job.Copies, path);
         }
+        if (!ReceiptPaper.IsValid(options.Width))
+            options = options with { Width = _printer.ReceiptWidth(printer) };
         var bytes = _printer.FormatProforma(document, cartCode, options, business);
         return () => _printer.PrintRawBytes(printer, bytes, path);
     }
@@ -609,7 +725,7 @@ public sealed class PrintHostService
         return new ProformaPrintOptions(
             Text(settings, "headerText"),
             Text(settings, "footerText"),
-            (int)Math.Clamp(Number(settings, "paperWidth") ?? 32, 24, 120),
+            ReceiptPaper.Sanitize((int)(Number(settings, "paperWidth") ?? 32)),
             Text(settings, "paperFormat") ?? "Thermal",
             Boolean(settings, "showBusinessName") ?? true,
             Boolean(settings, "showAddress") ?? true,
@@ -693,7 +809,7 @@ public sealed class PrintHostService
         return new ReceiptPrintOptions(
             Text(settings, "headerText"),
             Text(settings, "footerText"),
-            (int)Math.Clamp(Number(settings, "paperWidth") ?? fallback?.Width ?? 32, 24, 120),
+            ReceiptPaper.Sanitize((int)(Number(settings, "paperWidth") ?? fallback?.Width ?? 32)),
             Boolean(settings, "showBusinessName") ?? true,
             Boolean(settings, "showBranchName") ?? true,
             Boolean(settings, "showAddress") ?? true,
@@ -707,7 +823,8 @@ public sealed class PrintHostService
             Text(settings, "publicReceiptBaseUrl"),
             Boolean(settings, "showLogo") ?? true,
             Boolean(settings, "showCustomerPhone") ?? true,
-            Boolean(settings, "showCustomerEmail") ?? false);
+            Boolean(settings, "showCustomerEmail") ?? false,
+            Template: fallback?.Template ?? "auto");
     }
 
     private void BranchChanged(object? sender, PropertyChangedEventArgs args)
@@ -725,6 +842,7 @@ public sealed class PrintHostService
         _lifetime = null;
         _connection = null;
         _registeredBranchId = null;
+        _hubSubscribed = false;
         _startLock.Release();
         lifetime?.Cancel();
         lifetime?.Dispose();

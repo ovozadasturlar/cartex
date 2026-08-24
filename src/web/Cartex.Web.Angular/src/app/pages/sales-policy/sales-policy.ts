@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
+import { FeaturesApi, OwnerModule } from '../../core/api/misc.api';
 import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
@@ -31,11 +32,22 @@ import { PageHeader } from '../../shared/page-header';
 })
 export class SalesPolicySettings implements OnInit {
   private readonly api = inject(SettingsApi);
+  private readonly featuresApi = inject(FeaturesApi);
   private readonly notify = inject(NotifyService);
+  private readonly auth = inject(AuthService);
 
-  readonly canManage = inject(AuthService).hasPermission('settings.salesPolicy');
+  readonly canManage = this.auth.hasPermission('settings.salesPolicy');
+  readonly canManageModules = this.auth.hasPermission('business.edit');
   readonly loading = signal(true);
   readonly busy = signal(false);
+  readonly multicurrencyLicensed = signal(false);
+  readonly pricingMulticurrencyEnabled = signal(false);
+  readonly salesMulticurrencyEnabled = signal(false);
+  readonly pricingMulticurrencyAvailable = signal(false);
+  readonly salesMulticurrencyAvailable = signal(false);
+
+  private pricingMulticurrencyModule: OwnerModule | null = null;
+  private salesMulticurrencyModule: OwnerModule | null = null;
 
   readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
   readonly correctionWindows = ['Off', 'Shift', 'BusinessDay', 'Days', 'Always'];
@@ -122,8 +134,15 @@ export class SalesPolicySettings implements OnInit {
   async ngOnInit(): Promise<void> {
     this.model = { ...this.defaults } as typeof this.model;
     try {
-      this.loaded = await lastValueFrom(this.api.salesPolicy());
+      const policyTask = lastValueFrom(this.api.salesPolicy());
+      const enabledTask = lastValueFrom(this.featuresApi.enabled());
+      const modulesTask = this.canManageModules
+        ? lastValueFrom(this.featuresApi.modules())
+        : Promise.resolve([] as OwnerModule[]);
+      const [policy, enabled, modules] = await Promise.all([policyTask, enabledTask, modulesTask]);
+      this.loaded = policy;
       this.model = { ...this.defaults, ...this.loaded } as typeof this.model;
+      this.applyCurrencyFeatures(enabled, modules);
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -149,6 +168,43 @@ export class SalesPolicySettings implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  async toggleMulticurrency(kind: 'pricing' | 'sales', message: string): Promise<void> {
+    const module = kind === 'pricing' ? this.pricingMulticurrencyModule : this.salesMulticurrencyModule;
+    const available = kind === 'pricing'
+      ? this.pricingMulticurrencyAvailable()
+      : this.salesMulticurrencyAvailable();
+    if (!this.canManage || !this.canManageModules || !this.multicurrencyLicensed() || !available || !module) return;
+
+    this.busy.set(true);
+    try {
+      await lastValueFrom(this.featuresApi.setModule(module.code, !module.isEnabled));
+      await this.loadCurrencyFeatures();
+      this.notify.success(message);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private async loadCurrencyFeatures(): Promise<void> {
+    const [enabled, modules] = await Promise.all([
+      lastValueFrom(this.featuresApi.enabled()),
+      lastValueFrom(this.featuresApi.modules()),
+    ]);
+    this.applyCurrencyFeatures(enabled, modules);
+  }
+
+  private applyCurrencyFeatures(enabled: string[], modules: OwnerModule[]): void {
+    this.multicurrencyLicensed.set(enabled.includes('multicurrency'));
+    this.pricingMulticurrencyEnabled.set(enabled.includes('multicurrency_pricing'));
+    this.salesMulticurrencyEnabled.set(enabled.includes('multicurrency_sales'));
+    this.pricingMulticurrencyModule = modules.find((module) => module.code === 'multicurrency_pricing') ?? null;
+    this.salesMulticurrencyModule = modules.find((module) => module.code === 'multicurrency_sales') ?? null;
+    this.pricingMulticurrencyAvailable.set(this.pricingMulticurrencyModule?.available ?? false);
+    this.salesMulticurrencyAvailable.set(this.salesMulticurrencyModule?.available ?? false);
   }
 
   private clamp(value: number, min: number, max: number, fallback: number): number {

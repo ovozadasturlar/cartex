@@ -15,7 +15,13 @@ public abstract class ViewModelBase : ObservableObject
 {
     private LocalizationLookup _l = new();
     private readonly Action _refreshAction;
+    private PageLoadState _loadState;
     public LocalizationLookup L => _l;
+    public PageLoadState LoadState
+    {
+        get => _loadState;
+        internal set => SetProperty(ref _loadState, value);
+    }
 
     protected ViewModelBase()
     {

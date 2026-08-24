@@ -37,20 +37,33 @@ export class ReceiptSettings implements OnInit {
   readonly canManage = inject(AuthService).hasPermission('settings.receipt');
   readonly loading = signal(true);
   readonly busy = signal(false);
+  readonly previewBusy = signal(false);
+  readonly previewText = signal('');
+  private previewTimer: number | undefined;
 
   headerText = '';
   footerText = '';
-  paperWidth = 32;
+  paperWidth = 0;
   paperFormat = 'Thermal';
+  language = 'uz-latn';
   readonly paperFormats = ['Thermal', 'A5', 'A4'];
+  readonly paperWidths = [0, 32, 40, 42, 48, 64];
+  readonly languages = [
+    { code: 'uz-latn', name: "O'zbek (lotin)" },
+    { code: 'uz-cyrl', name: 'Ўзбек (кирилл)' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'en', name: 'English' },
+  ];
 
   async ngOnInit(): Promise<void> {
     try {
       const s = await lastValueFrom(this.api.receipt());
       this.headerText = s.headerText ?? '';
       this.footerText = s.footerText ?? '';
-      this.paperWidth = s.paperWidth;
+      this.paperWidth = this.paperWidths.includes(s.paperWidth) ? s.paperWidth : 0;
       this.paperFormat = s.paperFormat || 'Thermal';
+      this.language = s.language ?? 'uz-latn';
+      await this.refreshPreview();
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -69,6 +82,27 @@ export class ReceiptSettings implements OnInit {
       this.notify.error(e);
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  schedulePreview(): void {
+    if (this.previewTimer !== undefined) window.clearTimeout(this.previewTimer);
+    this.previewTimer = window.setTimeout(() => {
+      void this.refreshPreview();
+    }, 200);
+  }
+
+  private async refreshPreview(): Promise<void> {
+    this.previewBusy.set(true);
+    try {
+      const result = await lastValueFrom(
+        this.api.previewReceipt(buildReceiptSettingsRequest(this)),
+      );
+      this.previewText.set(result.text);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.previewBusy.set(false);
     }
   }
 }

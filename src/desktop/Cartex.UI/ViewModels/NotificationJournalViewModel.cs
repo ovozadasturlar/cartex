@@ -44,6 +44,8 @@ public partial class NotificationJournalViewModel : ViewModelBase, ILoadable
     public bool IsEmpty => Deliveries.Count == 0;
     public bool CanExport { get; }
 
+    public void SelectSmsChannel() => SelectedChannel = "Sms";
+
     public NotificationJournalViewModel(
         INotificationsApi api,
         IToastService toast,

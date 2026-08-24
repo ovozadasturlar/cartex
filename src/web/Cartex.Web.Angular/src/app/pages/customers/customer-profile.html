@@ -84,6 +84,20 @@
       </div>
     }
 
+    <section class="cx-card message-history">
+      <h3>{{ t('sms_gateway_customer_history') }}</h3>
+      @for (message of messages(); track message.id) {
+        <div class="message-row">
+          <span>{{ message.createdAt | cxDate }}</span>
+          <strong>{{ message.purpose }}</strong>
+          <span>{{ message.deviceLabel || message.provider }}</span>
+          <span class="cx-chip">{{ message.status }}</span>
+        </div>
+      } @empty {
+        <cx-empty-state icon="sms" [message]="t('no_data')" />
+      }
+    </section>
+
     @if (canViewSales) {
       <div class="cx-seg tabs">
         <button type="button" [class.active]="tab() === 'ledger'" (click)="setTab('ledger')">

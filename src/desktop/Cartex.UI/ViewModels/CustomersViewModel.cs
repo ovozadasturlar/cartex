@@ -66,6 +66,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _editDiscountPct;
     [ObservableProperty] private decimal? _editCreditLimit;
     [ObservableProperty] private bool _editNotificationsOptOut;
+    [ObservableProperty] private bool _editAllowMarketingSms;
     [ObservableProperty] private decimal _editOpeningBalance;
     [ObservableProperty] private int _editOpeningKindIndex;
     [ObservableProperty] private string? _editOpeningCurrency;
@@ -720,6 +721,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditDiscountPct = 0;
         EditCreditLimit = null;
         EditNotificationsOptOut = false;
+        EditAllowMarketingSms = false;
         EditLanguage = "uz-latn";
         await EnsureCurrenciesAsync();
         EditOpeningBalance = 0;
@@ -747,6 +749,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditDiscountPct = customer.DiscountPct;
         EditCreditLimit = customer.CreditLimit;
         EditNotificationsOptOut = customer.NotificationsOptOut;
+        EditAllowMarketingSms = customer.AllowMarketingSms;
         EditLanguage = customer.PreferredLanguage ?? "uz-latn";
         IsEditOpen = true;
     }
@@ -777,11 +780,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
                 {
                     var opening = EditOpeningKindIndex == 1 ? -EditOpeningBalance : EditOpeningBalance;
                     targetId = await _api.CreateAsync(new CreateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut,
-                        opening, IsMulticurrency ? EditOpeningCurrency : null, EditLanguage, Note: note));
+                        opening, IsMulticurrency ? EditOpeningCurrency : null, EditLanguage, Note: note, AllowMarketingSms: EditAllowMarketingSms));
                 }
                 else
                 {
-                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage, note));
+                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage, note, EditAllowMarketingSms));
                     targetId = _editId;
                 }
             }

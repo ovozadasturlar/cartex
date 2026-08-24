@@ -17,6 +17,7 @@ import type { CustomerStatement } from '../../core/api.service';
 import { RatesApi } from '../../core/api/finance.api';
 import { CustomerPartner, PartnersApi } from '../../core/api/partners.api';
 import { SettingsApi } from '../../core/api/settings.api';
+import { NotificationDelivery, NotificationsApi } from '../../core/api/notifications.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxEnumPipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
@@ -69,6 +70,7 @@ const consentOptions = [
 export class CustomerProfile implements OnInit {
   private readonly api = inject(CustomersApi);
   private readonly salesApi = inject(SalesApi);
+  private readonly notificationsApi = inject(NotificationsApi);
   private readonly partnersApi = inject(PartnersApi);
   private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
@@ -107,6 +109,7 @@ export class CustomerProfile implements OnInit {
   readonly salesLoading = signal(false);
   readonly sales = signal<Paged<Sale> | null>(null);
   readonly saleCols = ['date', 'user', 'total', 'debt', 'status'];
+  readonly messages = signal<NotificationDelivery[]>([]);
 
   readonly title = computed(() => {
     const c = this.customer();
@@ -133,6 +136,7 @@ export class CustomerProfile implements OnInit {
     void this.load();
     void this.loadLedger();
     void this.loadPartner();
+    void this.loadMessages();
   }
 
   back(): void {
@@ -374,6 +378,14 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
       this.ledgerLoading.set(false);
     }
   }
+
+  private async loadMessages(): Promise<void> {
+    try {
+      this.messages.set(await lastValueFrom(this.notificationsApi.customerHistory(this.id)));
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
 }
 
 @Component({
@@ -431,6 +443,7 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
           <mat-label>{{ t('description') }}</mat-label>
           <textarea matInput rows="3" [(ngModel)]="note"></textarea>
         </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="allowMarketingSms">{{ t('allow_marketing_sms') }}</mat-slide-toggle>
       </div>
       <div mat-dialog-actions align="end">
         <button matButton mat-dialog-close>{{ t('cancel') }}</button>
@@ -458,6 +471,7 @@ export class CustomerEditDialog {
   discountPct = this.customer?.discountPct ?? 0;
   creditLimit: number | null = this.customer?.creditLimit ?? null;
   note = this.customer?.note ?? '';
+  allowMarketingSms = this.customer?.allowMarketingSms ?? false;
 
   async save(message: string): Promise<void> {
     this.busy.set(true);
@@ -472,6 +486,7 @@ export class CustomerEditDialog {
           discountPct: this.discountPct || 0,
           creditLimit: this.creditLimit ?? null,
           notificationsOptOut: this.customer?.notificationsOptOut ?? false,
+          allowMarketingSms: this.allowMarketingSms,
           note: this.note.trim() || null,
       };
       if (this.customer)

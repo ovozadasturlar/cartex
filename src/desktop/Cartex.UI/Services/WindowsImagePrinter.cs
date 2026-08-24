@@ -82,6 +82,28 @@ internal static class WindowsImagePrinter
         }
     }
 
+    public static int? PrintableWidthDots(string? printerName)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(printerName))
+            return null;
+        var dc = IntPtr.Zero;
+        try
+        {
+            dc = CreateDC("WINSPOOL", printerName, null, IntPtr.Zero);
+            if (dc == IntPtr.Zero) return null;
+            var width = GetDeviceCaps(dc, HorzRes);
+            return width > 0 ? width : null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (dc != IntPtr.Zero) DeleteDC(dc);
+        }
+    }
+
     public static string? DefaultPrinter()
     {
         if (!OperatingSystem.IsWindows()) return null;

@@ -20,6 +20,8 @@ interface PrinterEndpoint {
   capabilities: string;
   status: string;
   isEnabled: boolean;
+  profileJson: string | null;
+  originalIsEnabled?: boolean;
 }
 
 interface PrintNode {
@@ -27,6 +29,7 @@ interface PrintNode {
   deviceId: string;
   name: string;
   isTrusted: boolean;
+  hostEnabled: boolean;
   status: string;
   lastSeenAt: string | null;
   endpoints: PrinterEndpoint[];
@@ -100,7 +103,8 @@ interface PrintJob {
       <div class="layout" [class.jobs-only]="!canViewRoutes">
         @if (canViewRoutes) {
         <section class="cx-card panel">
-          <div class="head"><h3>Tarmoq qurilmalari</h3><mat-icon>devices</mat-icon></div>
+          <div class="head"><h3>{{ t('printing_host_question') }}</h3><mat-icon>devices</mat-icon></div>
+          <p class="muted device-note">{{ t('printing_host_scope_hint') }}</p>
           <div class="kind-tabs device-tabs">
             <button type="button" [class.active]="deviceTab === 'hosts'" (click)="deviceTab = 'hosts'">Printerlar</button>
             <button type="button" [class.active]="deviceTab === 'requesters'" (click)="deviceTab = 'requesters'">So‘rov qurilmalari</button>
@@ -112,8 +116,9 @@ interface PrintJob {
                 <div class="node-title"><strong>{{ node.name }}</strong><span>{{ node.status }}</span></div>
                 <small>{{ node.deviceId }}</small>
                 <mat-slide-toggle [(ngModel)]="node.isTrusted" [disabled]="!canManageNodes" title="O‘chirilsa bu kompyuterdagi printerlar yo‘naltirishda ishlatilmaydi">Ishonchli</mat-slide-toggle>
+                <small>{{ t(node.hostEnabled ? 'printing_host_enabled' : 'printing_host_disabled') }}</small>
                 @for (endpoint of node.endpoints; track endpoint.id) {
-                  <div class="endpoint"><span>{{ endpoint.displayName }}</span><small>{{ endpoint.capabilities }} · {{ endpoint.status }}</small></div>
+                  <div class="endpoint"><span>{{ endpoint.displayName }}</span><small>{{ endpoint.capabilities }} · {{ endpoint.status }}</small><mat-slide-toggle [(ngModel)]="endpoint.isEnabled" [disabled]="!canManageNodes" [title]="t('printing_endpoint_enabled')" /></div>
                 }
               </article>
             }
@@ -138,13 +143,14 @@ interface PrintJob {
 
         <section class="cx-card panel route">
           @if (canViewRoutes) {
-          <div class="head"><h3>Print turi bo‘yicha yo‘naltirish</h3><mat-icon>alt_route</mat-icon></div>
+          <div class="head"><h3>{{ t('printing_route_question') }}</h3><mat-icon>alt_route</mat-icon></div>
+          <p class="muted device-note">{{ t('printing_route_scope_hint') }}</p>
           <div class="kind-tabs">
             @for (item of kinds; track item) {
               <button type="button" [class.active]="kind === item" (click)="selectKind(item)">{{ kindLabel(item) }}</button>
             }
           </div>
-          <label>Yo‘naltirish rejimi<select [(ngModel)]="policy.routingMode" title="Lokal printer, qat’iy prioritet yoki faqat lokal ishlash tartibi">@for (item of routingModes; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+          <label>{{ t('printing_routing_mode') }}<select [(ngModel)]="policy.routingMode">@for (item of routingModes; track item) { <option [value]="item">{{ t(item === 'LocalFirst' ? 'printing_routing_mode_local_first' : 'printing_routing_mode_priority_only') }}</option> }</select></label>
           <div class="switches">
             <mat-slide-toggle [(ngModel)]="policy.isEnabled">Bu print turi faol</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.allowFallback">Mos printerga avtomatik o‘tish</mat-slide-toggle>
@@ -245,7 +251,7 @@ export class Printing implements OnInit {
   readonly choices = signal<EndpointChoice[]>([]);
   readonly jobs = signal<PrintJob[]>([]);
   readonly kinds = ['Receipt', 'CartProforma', 'BarcodeLabel', 'ZReport', 'Document'];
-  readonly routingModes = ['LocalFirst', 'PriorityOnly', 'LocalOnly'];
+  readonly routingModes = ['LocalFirst', 'PriorityOnly'];
   readonly stickyModes = ['Disabled', 'Duration', 'UntilFailure', 'Permanent'];
   private policies: RoutingPolicy[] = [];
   private branchId = 0;
@@ -266,7 +272,11 @@ export class Printing implements OnInit {
           lastValueFrom(this.http.get<PrintRequesterDevice[]>('/api/printing/requesters', { params: { branchId: this.branchId } })),
           lastValueFrom(this.http.get<RoutingPolicy[]>('/api/printing/routes', { params: { branchId: this.branchId } })),
         ]);
-        this.nodes.set(nodes.map((node) => ({ ...node, originalIsTrusted: node.isTrusted })));
+        this.nodes.set(nodes.map((node) => ({
+          ...node,
+          originalIsTrusted: node.isTrusted,
+          endpoints: node.endpoints.map((endpoint) => ({ ...endpoint, originalIsEnabled: endpoint.isEnabled })),
+        })));
         this.requesterDevices.set(requesterDevices.map((device) => ({ ...device, originalIsTrusted: device.isTrusted })));
         this.policies = policies;
         this.applyPolicy();
@@ -332,6 +342,15 @@ export class Printing implements OnInit {
       for (const node of this.nodes().filter((item) => item.isTrusted !== item.originalIsTrusted)) {
         await lastValueFrom(this.http.put(`/api/printing/nodes/${node.id}`, { isTrusted: node.isTrusted }));
         node.originalIsTrusted = node.isTrusted;
+      }
+      for (const endpoint of this.nodes().flatMap((node) => node.endpoints).filter((item) => item.isEnabled !== item.originalIsEnabled)) {
+        await lastValueFrom(this.http.put(`/api/printing/endpoints/${endpoint.id}`, {
+          isEnabled: endpoint.isEnabled,
+          capabilities: endpoint.capabilities,
+          displayName: endpoint.displayName,
+          profileJson: endpoint.profileJson,
+        }));
+        endpoint.originalIsEnabled = endpoint.isEnabled;
       }
       this.notify.success(this.transloco.translate('success'));
     } catch (error) { this.notify.error(error); }

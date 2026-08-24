@@ -128,9 +128,14 @@ table {
 }
 
 .pcat {
+  overflow: hidden;
   color: var(--cx-text-2);
   font-size: 12px;
   margin-top: 2px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
 }
 
 .more {

@@ -99,6 +99,7 @@ public sealed class OfflineSyncService(
     private void OnConnectivityChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(ConnectivityService.IsOnline)) return;
+        if (!auth.IsAuthenticated) return;
         if (connectivity.IsOnline)
         {
             if (IsEnabled) _ = Task.Run(() => SyncAsync(), _lifetime.Token);
@@ -217,6 +218,7 @@ public sealed class OfflineSyncService(
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
+                if (!auth.IsAuthenticated) continue;
                 await RefreshAttestationAsync(force: false);
                 if (IsSatellite)
                 {
@@ -247,7 +249,7 @@ public sealed class OfflineSyncService(
     /// oflayn qolganda bulutdan o'qilgan eski `epoch` bilan eskirgan HUB'ni qabul qilardi.
     private async Task RefreshAttestationAsync(bool force)
     {
-        if (!connectivity.IsOnline) return;
+        if (!auth.IsAuthenticated || !connectivity.IsOnline) return;
         // Davriy yangilash faqat guvohnomasi bor qurilmada: uni olishga ruxsati yo'q foydalanuvchi
         // har besh daqiqada rad javob olib, tarmoqni bekorga bezovta qilardi.
         if (!force && (DateTime.UtcNow - _lastAttestation < AttestationInterval || hubClient.Credential is null))
@@ -301,7 +303,7 @@ public sealed class OfflineSyncService(
 
     public async Task<bool> SyncAsync()
     {
-        if (!IsEnabled || !connectivity.IsOnline) return false;
+        if (!auth.IsAuthenticated || !IsEnabled || !connectivity.IsOnline) return false;
         if (!await _lock.WaitAsync(0)) return true;
         try
         {
@@ -329,6 +331,7 @@ public sealed class OfflineSyncService(
 
     private async Task HeartbeatAsync()
     {
+        if (!auth.IsAuthenticated) return;
         if (!await _lock.WaitAsync(0)) return;
         try
         {

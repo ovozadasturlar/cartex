@@ -433,7 +433,7 @@
 
         <c:ModalCard IsOpen="{Binding IsEditOpen}" Title="{Binding EditTitle}" CardWidth="560"
                      CancelCommand="{Binding CancelEditCommand}" SaveCommand="{Binding SaveCommand}">
-                <StackPanel Spacing="14">
+                <StackPanel Classes="form" Spacing="14">
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Grid.Column="0" Spacing="5">
                             <c:FieldLabel Text="{Binding L[first_name]}" Required="True" />
@@ -485,6 +485,7 @@
                                  MinHeight="70" MaxHeight="140" />
                     </StackPanel>
                     <CheckBox IsChecked="{Binding EditNotificationsOptOut}" Content="{Binding L[notifications_opt_out]}" />
+                    <CheckBox IsChecked="{Binding EditAllowMarketingSms}" Content="{Binding L[allow_marketing_sms]}" />
                     <StackPanel Spacing="5" IsVisible="{Binding CanEnterOpeningBalance}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">

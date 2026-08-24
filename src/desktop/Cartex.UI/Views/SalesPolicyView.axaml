@@ -120,6 +120,38 @@
                 </Border>
 
                 <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[currency_policy_section]}" Classes="section" Margin="0,0,0,4" />
+
+                        <TextBlock Text="{Binding L[multicurrency_not_in_tariff]}" Classes="hint" Margin="0,4,0,6"
+                                   IsVisible="{Binding !MulticurrencyLicensed}" />
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[multicurrency_pricing_policy]}" Classes="field"
+                                           VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PricingMulticurrencyEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding CanTogglePricingMulticurrency}"
+                                              Command="{Binding TogglePricingMulticurrencyCommand}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[multicurrency_sales_policy]}" Classes="field"
+                                           VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding SalesMulticurrencyEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding CanToggleSalesMulticurrency}"
+                                              Command="{Binding ToggleSalesMulticurrencyCommand}" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="{Binding L[currency_rates_reminder]}" Classes="hint" Margin="0,8,0,0"
+                                   IsVisible="{Binding MulticurrencyLicensed}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
                     <StackPanel Spacing="12">
                         <TextBlock Text="{Binding L[sales_policy_limits]}" Classes="section" />
                         <Grid ColumnDefinitions="*,12,*,12,*">

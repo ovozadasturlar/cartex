@@ -17,6 +17,7 @@ import { PageHeader } from '../../shared/page-header';
   styleUrl: './modules.scss',
 })
 export class Modules implements OnInit {
+  private static readonly salesPolicyCodes = new Set(['multicurrency_pricing', 'multicurrency_sales']);
   private readonly api = inject(FeaturesApi);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
@@ -24,6 +25,7 @@ export class Modules implements OnInit {
   readonly canEdit = inject(AuthService).hasPermission('business.edit');
   readonly loading = signal(true);
   readonly modules = signal<OwnerModule[]>([]);
+  readonly multicurrencyLicensed = signal(false);
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -43,7 +45,12 @@ export class Modules implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.modules.set(await lastValueFrom(this.api.modules()));
+      const [modules, enabled] = await Promise.all([
+        lastValueFrom(this.api.modules()),
+        lastValueFrom(this.api.enabled()),
+      ]);
+      this.modules.set(modules.filter((module) => !Modules.salesPolicyCodes.has(module.code)));
+      this.multicurrencyLicensed.set(enabled.includes('multicurrency'));
     } catch (e) {
       this.notify.error(e);
     } finally {

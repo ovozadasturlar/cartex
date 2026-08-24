@@ -152,6 +152,16 @@
             <mat-icon>edit</mat-icon>{{ t('correct_sale') }}
           </button>
         }
+        @if (showReceiptSms) {
+          <button matButton="outlined" (click)="sendReceiptSms()"
+                  [disabled]="!receipt.customerPhone"
+                  [title]="receipt.customerPhone ? '' : t('customer_phone_missing')">
+            <mat-icon>sms</mat-icon>{{ t('send_receipt_sms') }}
+          </button>
+          @if (!receipt.customerPhone) {
+            <small class="muted">{{ t('customer_phone_missing') }}</small>
+          }
+        }
         @if (canReturn) {
           <button matButton="outlined" class="danger" (click)="returnSale()">
             <mat-icon>undo</mat-icon>{{ t('return') }}

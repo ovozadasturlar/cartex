@@ -15,6 +15,12 @@ public partial class MainViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly Cartex.ApiClient.Api.IBusinessApi _businessApi;
     private readonly Action _langChangedHandler;
+    private PeriodicTimer? _bootstrapRetryTimer;
+    private PeriodicTimer? _pageRetryTimer;
+    private ViewModelBase? _failedPage;
+    private int _bootstrapGeneration;
+    private int _bootstrapRetryAttempt;
+    private int _pageRetryAttempt;
 
     public BranchContextService Branch { get; }
     public IBusyService Busy { get; }
@@ -98,6 +104,7 @@ public partial class MainViewModel : ViewModelBase
         _dialogService = dialogService;
         _businessApi = businessApi;
         _featuresApi = featuresApi;
+        _authService.LoggedOut += OnSessionEnded;
         Branch = branch;
         Branch.PropertyChanged += OnBranchPropertyChanged;
         Busy = busy;
@@ -107,12 +114,22 @@ public partial class MainViewModel : ViewModelBase
         _currentLanguage = SettingsService.Instance.Language;
 
         _navigationService.MenuNavigationRequested += OnMenuNavigationRequested;
+        _navigationService.FeaturesRefreshRequested += LoadFeaturesAsync;
         _navigationService.PageNavigationRequested += OnPageNavigationRequested;
         if (dialogService is DialogService dialogs)
             dialogs.OpenChanged += open => Avalonia.Threading.Dispatcher.UIThread.Post(() => IsDialogOpen = open);
         ThemeManager.Instance.ThemeChanged += OnThemeManagedChanged;
         _langChangedHandler = OnLanguageManagedChanged;
         LocalizationManager.Instance.LanguageChanged += _langChangedHandler;
+    }
+
+    private void OnSessionEnded()
+    {
+        _bootstrapGeneration++;
+        CancelBootstrapRetry();
+        CancelPageRetry();
+        ServiceLocator.TryResolve<Cartex.ApiClient.PageRequestScope>()?.CancelPending();
+        CurrentPage?.OnNavigatedFrom();
     }
 
     private void OnBranchPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -130,8 +147,10 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             await Branch.LoadAsync();
-            if (CurrentPage is ILoadable loadable)
-                await loadable.LoadAsync();
+            if (_failedPage is { } failed)
+                await RetryFailedPageAsync(failed);
+            else if (CurrentPage is ILoadable)
+                await LoadCurrentPageAsync(CurrentPage);
         }
         catch
         {
@@ -156,26 +175,108 @@ public partial class MainViewModel : ViewModelBase
 
     public void Initialize()
     {
+        var generation = ++_bootstrapGeneration;
         UserDisplayName = _authService.UserInfo?.FullName ?? _authService.UserInfo?.Username ?? "";
         UserRole = string.Join(", ", _authService.Roles);
         OnPropertyChanged(nameof(UserInitial));
 
-        BuildMenu();
-        CanOpenSettings = NavRegistry.SettingsPages.Any(p => p.Permission is not null && p.IsAvailable(_authService.HasPermission));
-        OnPropertyChanged(nameof(CanOpenSettings));
-        BuildPalette();
-        _ = LoadFeaturesAsync();
         Connectivity.Start();
         ServiceLocator.Resolve<OfflineSyncService>().Start();
+        ShowBootstrapLoading();
+        _ = InitializeAsync(generation);
+    }
+
+    private async Task InitializeAsync(int generation)
+    {
+        try
+        {
+            await CompleteBootstrapAsync(RefreshFeaturesAsync(), Branch.LoadAsync(), () =>
+            {
+                if (generation != _bootstrapGeneration) return;
+                BuildMenu();
+                CanOpenSettings = NavRegistry.SettingsPages.Any(p =>
+                    p.Permission is not null && p.IsAvailable(_authService.HasPermission));
+                OnPropertyChanged(nameof(CanOpenSettings));
+                BuildPalette();
+                SelectLanding();
+            });
+        }
+        catch (Exception exception)
+        {
+            if (generation != _bootstrapGeneration) return;
+            ShowBootstrapFailure(exception, generation);
+            return;
+        }
+
+        if (generation != _bootstrapGeneration) return;
+        CancelBootstrapRetry();
+        _bootstrapRetryAttempt = 0;
         var hub = ServiceLocator.Resolve<HubHostService>();
         hub.Start();
-        _ = hub.RefreshAttestationAsync();
-        _ = ServiceLocator.Resolve<PrintHostService>().StartAsync();
-        _ = ServiceLocator.Resolve<PrintStatusHubService>().EnsureStartedAsync();
-        _ = Branch.LoadAsync();
-        _ = CheckOnboardingAsync();
+        RunBackground(hub.RefreshAttestationAsync);
+        RunBackground(ServiceLocator.Resolve<PrintHostService>().StartAsync);
+        RunBackground(ServiceLocator.Resolve<PrintStatusHubService>().EnsureStartedAsync);
+        RunBackground(ServiceLocator.Resolve<PrintLogoCache>().WarmCurrentAsync);
+        RunBackground(CheckOnboardingAsync);
+    }
 
-        SelectLanding();
+    internal static async Task CompleteBootstrapAsync(Task features, Task branch, Action selectLanding)
+    {
+        await Task.WhenAll(features, branch);
+        selectLanding();
+    }
+
+    private void ShowBootstrapLoading()
+    {
+        CurrentPageTitle = L["loading"];
+        CurrentPage = new PageStatusViewModel(L["loading"], string.Empty, true);
+    }
+
+    private void ShowBootstrapFailure(Exception exception, int generation)
+    {
+        CurrentPageTitle = L["bootstrap_failed_title"];
+        CurrentPage = new PageStatusViewModel(
+            L["bootstrap_failed_title"],
+            ApiErrors.Describe(exception),
+            false,
+            () => RetryBootstrapAsync(generation));
+        ScheduleBootstrapRetry(generation);
+    }
+
+    private Task RetryBootstrapAsync(int generation)
+    {
+        if (generation != _bootstrapGeneration) return Task.CompletedTask;
+        CancelBootstrapRetry();
+        ShowBootstrapLoading();
+        return InitializeAsync(generation);
+    }
+
+    private void ScheduleBootstrapRetry(int generation)
+    {
+        CancelBootstrapRetry();
+        var delay = TimeSpan.FromSeconds(Math.Min(Math.Pow(2, _bootstrapRetryAttempt++), 30));
+        var timer = _bootstrapRetryTimer = new PeriodicTimer(delay);
+        _ = RetryBootstrapAfterAsync(timer, generation);
+    }
+
+    private async Task RetryBootstrapAfterAsync(
+        PeriodicTimer timer,
+        int generation)
+    {
+        try
+        {
+            if (await timer.WaitForNextTickAsync())
+                await RetryBootstrapAsync(generation);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void CancelBootstrapRetry()
+    {
+        _bootstrapRetryTimer?.Dispose();
+        _bootstrapRetryTimer = null;
     }
 
     private async Task CheckOnboardingAsync()
@@ -282,20 +383,23 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            var enabled = await _featuresApi.GetEnabledAsync();
-            // Menyu keshdagi ro'yxat bilan allaqachon qurilgan: ro'yxat o'zgarmagan bo'lsa qayta
-            // qurish faqat tanlovni uzadi (ItemsSource almashadi) va sahifani bekorga qayta yaratadi.
-            if (enabled is not { Count: > 0 } || _enabledFeatures.SetEquals(enabled)) return;
-
-            _enabledFeatures.Clear();
-            foreach (var code in enabled) _enabledFeatures.Add(code);
-            SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
+            if (!await RefreshFeaturesAsync()) return;
             var openKey = SelectedMenuItem?.Key;
             BuildMenu();
             RestoreSelection(openKey);
             BuildPalette();
         }
         catch { }
+    }
+
+    private async Task<bool> RefreshFeaturesAsync()
+    {
+        var enabled = await _featuresApi.GetEnabledAsync();
+        if (_enabledFeatures.SetEquals(enabled)) return false;
+        _enabledFeatures.Clear();
+        foreach (var code in enabled) _enabledFeatures.Add(code);
+        SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
+        return true;
     }
 
     /// Menyu qayta qurilgach ro'yxatdagi obyektlar almashadi va tanlov uziladi; ochiq sahifa
@@ -339,7 +443,7 @@ public partial class MainViewModel : ViewModelBase
     private void OnPageNavigationRequested(ViewModelBase page)
     {
         CurrentPage = page;
-        StartPageLoad(page);
+        StartCurrentPageLoad(page);
     }
 
     partial void OnCurrentPageChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -350,7 +454,8 @@ public partial class MainViewModel : ViewModelBase
             _dialogService.CloseOverlay();
         }
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
-        (oldValue as IDisposable)?.Dispose();
+        if (oldValue != _failedPage)
+            (oldValue as IDisposable)?.Dispose();
         OnPropertyChanged(nameof(BlurCurrentPage));
         if (newValue is SettingsHubViewModel settings)
             settings.IsDialogOpen = IsDialogOpen;
@@ -365,12 +470,12 @@ public partial class MainViewModel : ViewModelBase
         newValue.IsActive = true;
         // Menyu qayta qurilganda band obyekti almashadi; ayni sahifa ochiq bo'lsa uni qayta
         // yaratish savat kabi to'ldirilgan holatni yo'qotardi.
-        if (oldValue?.Key == newValue.Key && CurrentPage?.GetType() == newValue.ViewModelType)
+        if (CanReusePage(oldValue?.Key, newValue.Key, newValue.ViewModelType, CurrentPage))
             return;
         RememberPage(newValue.Key);
         CurrentPage = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
         CurrentPageTitle = newValue.Title;
-        StartPageLoad(CurrentPage);
+        StartCurrentPageLoad(CurrentPage);
     }
 
     [RelayCommand]
@@ -382,14 +487,122 @@ public partial class MainViewModel : ViewModelBase
         RememberPage("__settings");
         CurrentPage = ServiceLocator.Resolve<SettingsHubViewModel>();
         CurrentPageTitle = L["settings"];
-        StartPageLoad(CurrentPage);
+        StartCurrentPageLoad(CurrentPage);
     }
 
-    internal static void StartPageLoad(object? page)
+    internal static bool CanReusePage(string? oldKey, string newKey, Type pageType, object? page) =>
+        oldKey == newKey
+        && page?.GetType() == pageType
+        && page is ILoadable { LoadState: PageLoadState.Loaded };
+
+    internal static async Task LoadPageAsync(object? page)
     {
         if (page is not ILoadable loadable) return;
-        using (ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().BeginPageRequest())
-            _ = loadable.LoadAsync();
+        if (page is ViewModelBase viewModel)
+            viewModel.LoadState = PageLoadState.Loading;
+        try
+        {
+            var scope = ServiceLocator.TryResolve<Cartex.ApiClient.PageRequestScope>();
+            if (scope is null)
+                await loadable.LoadAsync();
+            else
+                using (scope.BeginPageRequest())
+                    await loadable.LoadAsync();
+            if (page is ViewModelBase loaded)
+                loaded.LoadState = PageLoadState.Loaded;
+        }
+        catch (OperationCanceledException)
+        {
+            if (page is ViewModelBase cancelled)
+                cancelled.LoadState = PageLoadState.NotLoaded;
+            throw;
+        }
+        catch
+        {
+            if (page is ViewModelBase failed)
+                failed.LoadState = PageLoadState.Failed;
+            throw;
+        }
+    }
+
+    private void StartCurrentPageLoad(ViewModelBase? page) => _ = LoadCurrentPageAsync(page);
+
+    private async Task LoadCurrentPageAsync(ViewModelBase? page)
+    {
+        CancelPageRetry();
+        if (_failedPage is IDisposable disposable && _failedPage != page)
+            disposable.Dispose();
+        _failedPage = null;
+        try
+        {
+            await LoadPageAsync(page);
+            _pageRetryAttempt = 0;
+        }
+        catch (Exception exception) when (ApiErrors.IsCancelled(exception))
+        {
+        }
+        catch (Exception exception)
+        {
+            if (page is null || CurrentPage != page) return;
+            _failedPage = page;
+            var status = new PageStatusViewModel(
+                L["page_load_failed_title"],
+                ApiErrors.Describe(exception),
+                false,
+                () => RetryFailedPageAsync(page));
+            CurrentPage = status;
+            SchedulePageRetry(page, status);
+        }
+    }
+
+    private async Task RetryFailedPageAsync(ViewModelBase page)
+    {
+        CancelPageRetry();
+        CurrentPage = page;
+        await LoadCurrentPageAsync(page);
+    }
+
+    private void SchedulePageRetry(ViewModelBase page, PageStatusViewModel status)
+    {
+        CancelPageRetry();
+        var delay = TimeSpan.FromSeconds(Math.Min(Math.Pow(2, _pageRetryAttempt++), 30));
+        var timer = _pageRetryTimer = new PeriodicTimer(delay);
+        _ = RetryPageAfterAsync(timer, page, status);
+    }
+
+    private async Task RetryPageAfterAsync(
+        PeriodicTimer timer,
+        ViewModelBase page,
+        PageStatusViewModel status)
+    {
+        try
+        {
+            if (await timer.WaitForNextTickAsync() && CurrentPage == status)
+                await RetryFailedPageAsync(page);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void CancelPageRetry()
+    {
+        _pageRetryTimer?.Dispose();
+        _pageRetryTimer = null;
+    }
+
+    private static void RunBackground(Func<Task> work) => _ = RunBackgroundAsync(work);
+
+    private static async Task RunBackgroundAsync(Func<Task> work)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
     }
 
     partial void OnCurrentThemeChanged(AppTheme value)

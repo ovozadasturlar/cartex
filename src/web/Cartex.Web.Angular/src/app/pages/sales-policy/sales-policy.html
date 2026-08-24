@@ -38,6 +38,38 @@
     </div>
 
     <div class="cx-card section">
+      <h2>{{ t('currency_policy_section') }}</h2>
+      @if (!multicurrencyLicensed()) {
+        <p class="hint tariff-warning">{{ t('multicurrency_not_in_tariff') }}</p>
+      }
+      <div class="rows">
+        <label class="row">
+          <span class="what">
+            <span class="name">{{ t('multicurrency_pricing_policy') }}</span>
+          </span>
+          <mat-slide-toggle
+            [checked]="pricingMulticurrencyEnabled()"
+            [disabled]="!canManage || !canManageModules || !multicurrencyLicensed() || !pricingMulticurrencyAvailable()"
+            (change)="toggleMulticurrency('pricing', t('success'))"
+          />
+        </label>
+        <label class="row">
+          <span class="what">
+            <span class="name">{{ t('multicurrency_sales_policy') }}</span>
+          </span>
+          <mat-slide-toggle
+            [checked]="salesMulticurrencyEnabled()"
+            [disabled]="!canManage || !canManageModules || !multicurrencyLicensed() || !salesMulticurrencyAvailable()"
+            (change)="toggleMulticurrency('sales', t('success'))"
+          />
+        </label>
+      </div>
+      @if (multicurrencyLicensed()) {
+        <p class="hint">{{ t('currency_rates_reminder') }}</p>
+      }
+    </div>
+
+    <div class="cx-card section">
       <h2>{{ t('sales_policy_limits') }}</h2>
       <div class="triple">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">

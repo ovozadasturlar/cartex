@@ -2,12 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:categories="using:Cartex.Shared.Models.Categories"
+             xmlns:units="using:Cartex.Shared.Models.Units"
+             xmlns:loyalty="using:Cartex.Shared.Models.Loyalty"
              x:Class="Cartex.UI.Views.QuickProductView"
-             x:CompileBindings="False">
+             x:DataType="vm:QuickProductViewModel">
 
     <Border Background="#30000000" IsVisible="{Binding IsOpen}"
             c:OverlayBehaviors.DismissCommand="{Binding CancelCommand}">
-        <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
+        <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="520"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 BoxShadow="0 18 50 0 #33000000" Padding="24"
@@ -25,28 +29,75 @@
                 <Grid ColumnDefinitions="*,12,*">
                     <StackPanel Grid.Column="0" Spacing="6">
                         <TextBlock Text="{Binding L[unit]}" Classes="caption" />
-                        <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit}"
-                                  HorizontalAlignment="Stretch" PlaceholderText="—">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <Grid ColumnDefinitions="*,6,Auto">
+                            <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="units:UnitDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding CreateUnitCommand}"
+                                    Content="+" MinWidth="40" IsVisible="{Binding CanCreateUnit}"
+                                    ToolTip.Tip="{Binding L[quick_create_unit]}" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding UnitHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                            <TextBlock Text="{Binding UnitHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                        </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="6">
                         <TextBlock Text="{Binding L[category]}" Classes="caption" />
-                        <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
-                                  HorizontalAlignment="Stretch" PlaceholderText="—">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <Grid ColumnDefinitions="*,6,Auto">
+                            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
+                                      HorizontalAlignment="Stretch" PlaceholderText="—">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="categories:CategoryDto"><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding CreateCategoryCommand}"
+                                    Content="+" MinWidth="40" IsVisible="{Binding CanCreateCategory}"
+                                    ToolTip.Tip="{Binding L[quick_create_category]}" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding CategoryHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                            <TextBlock Text="{Binding CategoryHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
 
                 <StackPanel Spacing="6">
-                    <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
-                    <TextBox Text="{Binding Barcode, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001" />
+                    <TextBlock Text="{Binding L[manufacturer]}" Classes="caption" />
+                    <ComboBox ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding SelectedManufacturer}"
+                              HorizontalAlignment="Stretch" PlaceholderText="—">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="loyalty:ManufacturerDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" Spacing="4"
+                                IsVisible="{Binding ManufacturerHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                        <TextBlock Text="{Binding ManufacturerHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                    </StackPanel>
                 </StackPanel>
+
+                <Grid ColumnDefinitions="*,12,140">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <TextBox Text="{Binding Barcode, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001"
+                                     c:FormBehaviors.LostFocusCommand="{Binding LookupBarcodeCommand}" />
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding LookupBarcodeCommand}"
+                                    Content="{Binding L[find]}" MinHeight="40" />
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="6">
+                        <TextBlock Text="{Binding L[pack_qty]}" Classes="caption" />
+                        <NumericUpDown Value="{Binding PackQty}" Minimum="1" Increment="1" FormatString="0.###"
+                                       ShowButtonSpinner="False" MinHeight="40" />
+                    </StackPanel>
+                </Grid>
 
                 <Grid ColumnDefinitions="*,12,*">
                     <StackPanel Grid.Column="0" Spacing="6">
@@ -57,6 +108,8 @@
                         <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
                         <NumericUpDown Value="{Binding SellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N2"
                                        ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
+                        <TextBlock Text="{Binding L[product_reference_price_source]}" IsVisible="{Binding IsReferencePrice}"
+                                   Classes="caption" Foreground="{DynamicResource TextMuted}" />
                     </StackPanel>
                 </Grid>
 

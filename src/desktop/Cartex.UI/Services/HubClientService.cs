@@ -12,7 +12,10 @@ namespace Cartex.UI.Services;
 /// HUB-03: vakolati yo'q kompyuter ham do'kon HUB'iga ulanib ishlashda davom etadi.
 /// Ishonch va manzil shu yerda; savdo mantig'i oflayn rejim bilan bir xil qoladi.
 public sealed class HubClientService(
-    IOfflineCacheApi offlineApi, HubIdentityService identity, HubCredentialStore credentials)
+    IOfflineCacheApi offlineApi,
+    HubIdentityService identity,
+    HubCredentialStore credentials,
+    AuthService auth)
 {
     // Qo'lda kiritilgan manzil topish chegarasida sinaladi: umumiy klient kutish vaqti katalog
     // uchun o'lchangan, o'lik manzilda esa foydalanuvchi 15 soniya javobsiz qolardi.
@@ -90,6 +93,7 @@ public sealed class HubClientService(
     /// javobda esa joriy vakolat `epoch`i keladi, ya'ni ikkinchi so'rov kerak emas.
     public async Task RefreshAttestationAsync()
     {
+        if (!auth.IsAuthenticated) return;
         try
         {
             var key = await identity.KeyAsync();
@@ -97,8 +101,10 @@ public sealed class HubClientService(
             credentials.Save(new HubCredential(
                 attestation.Token, attestation.PublicKey, attestation.Epoch, credentials.Load()?.Endpoint));
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException
+                                               or JsonException or Refit.ApiException)
         {
+            System.Diagnostics.Debug.WriteLine(exception);
         }
     }
 

@@ -327,8 +327,15 @@
                                     <DataGrid ItemsSource="{Binding SalesByCategory}" AutoGenerateColumns="False" IsReadOnly="True"
                                               GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
-                                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTemplateColumn Width="*"
+                                                                    Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding CategoryName}" TextTrimming="PrefixCharacterEllipsis"
+                                                                   VerticalAlignment="Center" Margin="12,0" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                                             <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
                                                                 Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
                                             <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"

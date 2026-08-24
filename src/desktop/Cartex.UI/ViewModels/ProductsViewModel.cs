@@ -23,6 +23,7 @@ namespace Cartex.UI.ViewModels;
 public partial class ProductsViewModel : ViewModelBase, ILoadable
 {
     private readonly IProductsApi _productsApi;
+    private readonly IProductReferenceApi _productReferenceApi;
     private readonly ICategoriesApi _categoriesApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IProductTypesApi _typesApi;
@@ -55,6 +56,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private ProductTypeDto? _editProductType;
     [ObservableProperty] private decimal _editMinStock;
     [ObservableProperty] private ManufacturerDto? _editManufacturer;
+    [ObservableProperty] private string? _editUnitHint;
+    [ObservableProperty] private string? _editCategoryHint;
+    [ObservableProperty] private string? _editManufacturerHint;
+    [ObservableProperty] private bool _editReferencePrice;
+    [ObservableProperty] private bool _hasExistingBarcode;
     [ObservableProperty] private bool _isAddingManufacturer;
     [ObservableProperty] private string _newManufacturerName = string.Empty;
 
@@ -162,7 +168,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public ProductImportViewModel Import { get; }
 
-    public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
+    public ProductsViewModel(IProductsApi productsApi, IProductReferenceApi productReferenceApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IFilePickerService filePicker, IPrinterService printer, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog,
         IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import, PrintDispatchService printDispatch)
@@ -175,6 +181,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             if (e.PropertyName == nameof(ProductImportViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen));
         };
         _productsApi = productsApi;
+        _productReferenceApi = productReferenceApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
         _typesApi = typesApi;
@@ -707,7 +714,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 else
                 {
                     FilterCategories.Clear();
-                    FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
+                    FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
                     FilterCategory = FilterCategories[0];
                 }
                 await LoadProductsAsync();
@@ -728,7 +735,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         var categories = await categoriesTask;
         Categories.Clear();
         FilterCategories.Clear();
-        FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
+        FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
         foreach (var category in categories)
         {
             Categories.Add(category);
@@ -848,6 +855,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         finally { _suppressReload = false; }
 
         OpenCreateCore(barcode, isSaleCreate);
+        if (!string.IsNullOrWhiteSpace(barcode)) await LookupEditBarcodeAsync();
     }
 
     private void OpenCreateCore(string? barcode, bool isSaleCreate)
@@ -863,6 +871,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         _pendingAttributeValues = null;
         EditProductType = null;
         EditManufacturer = null;
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        EditReferencePrice = false;
+        HasExistingBarcode = false;
         EditAttributes.Clear();
         OnPropertyChanged(nameof(HasAttributes));
         EditMinStock = _defaultMinStock;
@@ -884,6 +897,101 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         BuildPackKinds();
         ResetPackForm();
         IsEditOpen = true;
+    }
+
+    [RelayCommand]
+    private async Task LookupEditBarcodeAsync()
+    {
+        if (!IsNew || ExtractLookupBarcode(EditBarcodes) is not { } code) return;
+
+        HasExistingBarcode = false;
+        try
+        {
+            var existing = await _productsApi.GetByBarcodeAsync(code, 0);
+            HasExistingBarcode = true;
+            var useExisting = await _dialog.ConfirmAsync(string.Format(L["barcode_already_used"], existing.ProductName), L["warning"]);
+            if (!useExisting) return;
+
+            var product = (await _productsApi.GetAllAsync(variantId: existing.VariantId)).FirstOrDefault();
+            if (product is null) return;
+            if (IsSaleCreate)
+            {
+                CreatedForSale?.Invoke(product);
+                IsEditOpen = false;
+                IsSaleCreate = false;
+            }
+            else if (CanEdit)
+            {
+                OpenEditCore(product);
+            }
+            return;
+        }
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+
+        try
+        {
+            ApplyProductReference(await _productReferenceApi.GetByBarcodeAsync(code));
+        }
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private static string? ExtractLookupBarcode(string value)
+    {
+        var first = value.Split(',', 2, StringSplitOptions.TrimEntries)[0];
+        var code = first.Split('*', 2, StringSplitOptions.TrimEntries)[0];
+        return string.IsNullOrWhiteSpace(code) ? null : code;
+    }
+
+    private void ApplyProductReference(ProductReferenceDto reference)
+    {
+        if (string.IsNullOrWhiteSpace(EditName)) EditName = reference.Name;
+        EditBarcodes = reference.PackQty is > 0 and not 1
+            ? $"{reference.Barcode}*{reference.PackQty.Value:0.###}"
+            : reference.Barcode;
+
+        if (!string.IsNullOrWhiteSpace(reference.UnitHint))
+        {
+            var unit = _allUnits.FirstOrDefault(item =>
+                string.Equals(item.Name, reference.UnitHint, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.ShortName, reference.UnitHint, StringComparison.OrdinalIgnoreCase));
+            if (unit is not null)
+            {
+                EditDimension = unit.Dimension;
+                ApplyUnitFilter(EditDimension, unit.Id);
+                EditUnitHint = null;
+            }
+            else
+            {
+                EditUnit = null;
+                EditUnitHint = reference.UnitHint;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(reference.CategoryHint))
+        {
+            EditCategory = Categories.FirstOrDefault(item =>
+                string.Equals(item.Name, reference.CategoryHint, StringComparison.OrdinalIgnoreCase));
+            EditCategoryHint = EditCategory is null ? reference.CategoryHint : null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reference.ManufacturerHint))
+        {
+            EditManufacturer = Manufacturers.FirstOrDefault(item =>
+                string.Equals(item.Name, reference.ManufacturerHint, StringComparison.OrdinalIgnoreCase));
+            EditManufacturerHint = EditManufacturer is null ? reference.ManufacturerHint : null;
+        }
+
+        if (reference.SuggestedPrice is { } price && EditSellingPrice is null)
+        {
+            EditSellingPrice = price;
+            EditReferencePrice = true;
+        }
     }
 
     [RelayCommand]
@@ -917,7 +1025,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         IsSaleCreate = false;
         _editId = product.Id;
         EditName = product.Name;
-        EditCategory = Categories.FirstOrDefault(c => c.Name == product.CategoryName);
+        EditCategory = Categories.FirstOrDefault(c => (c.FullPath ?? c.Name) == product.CategoryName);
         var currentUnit = _allUnits.FirstOrDefault(u => u.Id == product.UnitId)
             ?? _allUnits.FirstOrDefault(u => u.Name == product.UnitName);
         _originalDimension = currentUnit?.Dimension ?? product.Dimension ?? "Count";
@@ -927,6 +1035,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditProductType = null;
         EditProductType = ProductTypes.FirstOrDefault(t => t.Id == product.ProductTypeId);
         EditManufacturer = Manufacturers.FirstOrDefault(m => m.Id == product.ManufacturerId);
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        EditReferencePrice = false;
+        HasExistingBarcode = false;
         EditMinStock = product.MinStock;
         EditBarcodes = string.Join(", ", product.Barcodes);
         EditCode = product.Code ?? string.Empty;
@@ -986,6 +1099,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditCode = string.Empty;
         EditIkpuCode = string.Empty;
         EditSellingPrice = null;
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        EditReferencePrice = false;
+        HasExistingBarcode = false;
         EditImageKey = null;
         EditImagePreview = null;
         EditImageUrl = null;
@@ -1004,6 +1122,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Warning(L["name"]); return false; }
         if (EditUnit is null) { _toast.Warning(L["unit"]); return false; }
         if (IsNew && EditSellingPrice is null) { _toast.Warning(L["selling_price"]); return false; }
+        if (IsNew && ExtractLookupBarcode(EditBarcodes) is not null)
+        {
+            await LookupEditBarcodeAsync();
+            if (HasExistingBarcode || !IsEditOpen || !IsNew) return false;
+        }
 
         var dimensionChanged = !IsNew && EditDimension != _originalDimension;
         if (dimensionChanged && !await _dialog.ConfirmDangerAsync(L["unit_dimension_change_confirm"], L["unit_group"]))

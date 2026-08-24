@@ -197,6 +197,9 @@
     <Style Selector=":is(Control).form :is(CalendarDatePicker)">
         <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
     </Style>
+    <Style Selector=":is(Control).form :is(DatePicker)">
+        <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
+    </Style>
 
     <!-- Avalonia kalitga "On"/"Off" ni o'zi yozadi; ular til fayllaridan o'tmaydi. -->
     <Style Selector="ToggleSwitch">

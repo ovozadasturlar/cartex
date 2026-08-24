@@ -51,7 +51,7 @@ export class Integrations implements OnInit {
     ];
   }
   readonly busy = signal(false);
-  readonly smsProviders = ['eskiz', 'playmobile'];
+  readonly smsProviders = ['device', 'eskiz', 'playmobile'];
   readonly receiptFormats = ['Auto', 'Link', 'Pdf', 'Text'];
 
   tgEnabled = false;
@@ -92,6 +92,7 @@ export class Integrations implements OnInit {
   smsPassword = '';
   smsSender = '';
   smsBaseUrl = '';
+  private smsSettings: Settings['sms'] | null = null;
 
   storageEnabled = false;
   storageProvider = 'local';
@@ -152,6 +153,13 @@ export class Integrations implements OnInit {
   saveSms(message: string): Promise<void> {
     return this.run(
       this.api.updateSms({
+        ...(this.smsSettings ?? {
+          fallbackProvider: 'none', fallbackAfterMinutes: 30, debtReminderEnabled: true,
+          receiptLinkEnabled: false, promotionEnabled: false, manualEnabled: true,
+          sendReceiptOnSale: false,
+          testMode: true, testAllowedNumbers: [],
+          debtReminderTemplate: null, receiptLinkTemplate: null, promotionTemplate: null, manualTemplate: null,
+        }),
         enabled: this.smsEnabled,
         provider: this.smsProvider,
         login: this.smsLogin.trim() || null,
@@ -244,6 +252,7 @@ export class Integrations implements OnInit {
     this.emailFromName = s.email.fromName ?? '';
 
     this.smsEnabled = s.sms.enabled;
+    this.smsSettings = s.sms;
     this.smsProvider = s.sms.provider || 'eskiz';
     this.smsLogin = s.sms.login ?? '';
     this.smsPassword = '';

@@ -75,7 +75,7 @@
             </Border>
 
             <Panel Grid.Column="2">
-                <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="16" HorizontalAlignment="Left" VerticalAlignment="Top"
+                <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="16" HorizontalAlignment="Left" VerticalAlignment="Top"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         IsVisible="{Binding HasSelection}">
                     <Grid RowDefinitions="Auto,16,Auto">

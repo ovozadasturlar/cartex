@@ -120,6 +120,8 @@
                                         <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
                                                   MinHeight="42" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
                                     </Grid>
+                                    <TextBlock Text="{Binding L[product_reference_price_source]}" IsVisible="{Binding EditReferencePrice}"
+                                               Classes="caption" Foreground="{DynamicResource TextMuted}" />
                                 </StackPanel>
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="{Binding L[image_url]}" Classes="caption" />
@@ -149,9 +151,14 @@
                             <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding EditCategory}"
                                       HorizontalAlignment="Stretch" PlaceholderText="—">
                                 <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="categories:CategoryDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                    <DataTemplate x:DataType="categories:CategoryDto"><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                        IsVisible="{Binding EditCategoryHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                                <TextBlock Text="{Binding EditCategoryHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
 
@@ -167,6 +174,11 @@
                             <Button Grid.Column="2" Classes="outline" Command="{Binding ToggleAddManufacturerCommand}"
                                     Content="+" MinWidth="36" />
                         </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding EditManufacturerHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                            <TextBlock Text="{Binding EditManufacturerHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,6,Auto" IsVisible="{Binding IsAddingManufacturer}">
                             <TextBox Text="{Binding NewManufacturerName}" PlaceholderText="{Binding L[manufacturer]}" MinHeight="34" />
                             <Button Grid.Column="2" Classes="brand" Command="{Binding AddManufacturerCommand}"
@@ -194,6 +206,11 @@
                                     <DataTemplate x:DataType="units:UnitDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                        IsVisible="{Binding EditUnitHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{Binding L[product_reference_suggestion]}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                                <TextBlock Text="{Binding EditUnitHint}" Classes="caption" Foreground="{DynamicResource WarningBrush}" />
+                            </StackPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="4" Spacing="6">
                             <TextBlock Text="{Binding L[min_stock]}" Classes="caption" />
@@ -209,7 +226,13 @@
 
                     <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
                         <TextBlock Text="{Binding L[barcode]}" Classes="caption" />
-                        <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40" PlaceholderText="4780000000001, 4780000000002*6, ..." />
+                        <Grid ColumnDefinitions="*,8,Auto">
+                            <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40"
+                                     PlaceholderText="4780000000001, 4780000000002*6, ..."
+                                     c:FormBehaviors.LostFocusCommand="{Binding LookupEditBarcodeCommand}" />
+                            <Button Grid.Column="2" Classes="outline" Command="{Binding LookupEditBarcodeCommand}"
+                                    Content="{Binding L[find]}" MinHeight="40" />
+                        </Grid>
                     </StackPanel>
 
                     <StackPanel Spacing="6" IsVisible="{Binding !IsNew}">

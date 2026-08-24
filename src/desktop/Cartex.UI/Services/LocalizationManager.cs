@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
@@ -121,19 +122,39 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             return;
         }
 
+        _strings = LoadTable(lang);
+        _cache[lang] = _strings;
+    }
+
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Assembly ichiga joylangan resurs — disk I/O emas; chaqiruvchilar sinxron indekser va Get.")]
+    private static Dictionary<string, string> LoadTable(AppLanguage lang)
+    {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = $"Cartex.UI.Assets.Languages.{GetLanguageCode(lang)}.json";
-
         using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
-        {
-            _strings = new Dictionary<string, string>();
-            return;
-        }
+        if (stream is null) return new Dictionary<string, string>();
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? new();
+    }
 
-        using var reader = new StreamReader(stream);
-        var json = reader.ReadToEnd();
-        _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
-        _cache[lang] = _strings;
+    /// Hujjat tili interfeys tilidan farq qilishi mumkin (masalan, Z-hisobot) — jadval
+    /// madaniyatni almashtirmasdan olinadi.
+    public string Get(string? languageCode, string key)
+    {
+        var lang = languageCode switch
+        {
+            "en" => AppLanguage.En,
+            "ru" => AppLanguage.Ru,
+            "uz-latn" => AppLanguage.UzLatn,
+            "uz-cyrl" => AppLanguage.UzCyrl,
+            _ => _currentLanguage
+        };
+        if (lang == _currentLanguage) return this[key];
+        if (!_cache.TryGetValue(lang, out var table))
+        {
+            table = LoadTable(lang);
+            _cache[lang] = table;
+        }
+        return table.TryGetValue(key, out var value) ? value : $"[{key}]";
     }
 }

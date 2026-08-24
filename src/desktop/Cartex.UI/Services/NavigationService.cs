@@ -10,6 +10,7 @@ public sealed partial class NavigationService : ObservableObject
 
     public event Action<string>? MenuNavigationRequested;
     public event Action<ViewModelBase>? PageNavigationRequested;
+    public event Func<Task>? FeaturesRefreshRequested;
 
     public void NavigateTo(ViewModelBase viewModel) => CurrentView = viewModel;
 
@@ -21,6 +22,11 @@ public sealed partial class NavigationService : ObservableObject
 
     public void RequestMenuNavigation(string menuKey) =>
         MenuNavigationRequested?.Invoke(menuKey);
+
+    /// Modul yoqilgan/o'chirilganda menyu va bo'limlar qayta o'qilsin — dasturni qayta
+    /// ochishni kutmasdan.
+    public Task RequestFeaturesRefreshAsync() =>
+        FeaturesRefreshRequested?.Invoke() ?? Task.CompletedTask;
 
     public void RequestPageNavigation(ViewModelBase viewModel) =>
         PageNavigationRequested?.Invoke(viewModel);

@@ -42,19 +42,20 @@ public sealed partial class BranchContextService : ObservableObject
         }
         catch
         {
-            await TrySeedOfflineAsync();
+            if (!await TrySeedOfflineAsync())
+                throw;
         }
     }
 
     // Sovuq-startda server yetib bo'lmasa vakolat ombori kontekst bo'lib xizmat qiladi —
     // aks holda kassa oflaynda ochilmay qoladi.
-    private async Task TrySeedOfflineAsync()
+    private async Task<bool> TrySeedOfflineAsync()
     {
-        if (Warehouses.Count > 0) return;
+        if (Warehouses.Count > 0) return true;
         var sync = ServiceLocator.Resolve<OfflineSyncService>();
         // HUB-03: yo'ldosh rejimida ham ombor kerak — u HUB vakolatidan olinadi.
-        if (!sync.IsEnabled && !sync.IsSatellite) return;
-        if (sync.ActiveWarehouseId is not { } warehouseId) return;
+        if (!sync.IsEnabled && !sync.IsSatellite) return false;
+        if (sync.ActiveWarehouseId is not { } warehouseId) return false;
         var store = ServiceLocator.Resolve<OfflineStore>();
         var warehouseName = await store.GetMetaAsync("offline_warehouse_name") ?? "Ombor";
         var branchName = await store.GetMetaAsync("offline_branch_name") is { } name
@@ -69,6 +70,7 @@ public sealed partial class BranchContextService : ObservableObject
         SelectedBranch = Branches.FirstOrDefault();
         SelectedWarehouse = Warehouses[0];
         OnPropertyChanged(nameof(HasMultipleWarehouses));
+        return true;
     }
 
     partial void OnSelectedBranchChanged(BranchDto? value)

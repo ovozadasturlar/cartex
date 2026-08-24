@@ -7,7 +7,8 @@
              x:CompileBindings="False">
 
     <ScrollViewer>
-        <StackPanel Margin="24" Spacing="16" MaxWidth="620" HorizontalAlignment="Left">
+        <StackPanel Classes="form" Margin="24" Spacing="16" MaxWidth="620" HorizontalAlignment="Left"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
 
             <c:PageHeader Title="{Binding L[business]}" />
 

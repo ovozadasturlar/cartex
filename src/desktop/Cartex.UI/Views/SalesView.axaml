@@ -533,7 +533,7 @@
                                        Foreground="{DynamicResource TextPrimary}" />
                         </Grid>
 
-                        <StackPanel Spacing="10" ClipToBounds="True" Classes="payment-panel" Classes.open="{Binding IsPaymentPanelOpen}">
+                        <StackPanel Spacing="10" ClipToBounds="True" Classes="form payment-panel" Classes.open="{Binding IsPaymentPanelOpen}">
                             <StackPanel.Styles>
                                 <Style Selector="StackPanel.payment-panel">
                                     <Setter Property="MaxHeight" Value="0" />
@@ -552,40 +552,6 @@
                                     <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut" />
                                 </Transitions>
                             </StackPanel.Transitions>
-
-
-                        <Grid ColumnDefinitions="*,110,150,Auto">
-                            <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center" />
-                            <NumericUpDown Grid.Column="1" Value="{Binding DiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100"
-                                           FormatString="0.00" ShowButtonSpinner="False" MinHeight="34" ToolTip.Tip="%">
-                                <NumericUpDown.InnerRightContent>
-                                    <TextBlock Text="%" VerticalAlignment="Center" Margin="0,0,8,0"
-                                               Foreground="{DynamicResource TextMuted}" />
-                                </NumericUpDown.InnerRightContent>
-                            </NumericUpDown>
-                            <NumericUpDown Grid.Column="2" Value="{Binding DiscountAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
-                                           FormatString="N0" ShowButtonSpinner="False" MinHeight="34" Margin="6,0,0,0">
-                                <NumericUpDown.InnerRightContent>
-                                    <TextBlock Text="{Binding L[currency_sum]}" VerticalAlignment="Center" Margin="0,0,8,0"
-                                               Foreground="{DynamicResource TextMuted}" />
-                                </NumericUpDown.InnerRightContent>
-                            </NumericUpDown>
-                            <Button Grid.Column="3" Classes="icon" Margin="6,0,0,0" MinHeight="34"
-                                    IsVisible="{Binding CanDiscount}" IsEnabled="{Binding HasShortfall}"
-                                    Command="{Binding FillDiscountFromTenderCommand}"
-                                    ToolTip.Tip="{Binding L[discount_fill_shortfall]}">
-                                <TextBlock Text="=" FontSize="16" FontWeight="SemiBold" />
-                            </Button>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAutoDiscount}">
-                            <TextBlock Text="{Binding L[loyalty_discount]}" Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
-                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
-                        </Grid>
-
                         <Separator Background="{DynamicResource BorderBrush}" Height="1" />
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -680,6 +646,38 @@
                                 </Button>
                             </Grid>
                         </StackPanel>
+
+                        <Grid ColumnDefinitions="*,110,150,Auto">
+                            <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding DiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100"
+                                           FormatString="0.00" ShowButtonSpinner="False" MinHeight="34" ToolTip.Tip="%">
+                                <NumericUpDown.InnerRightContent>
+                                    <TextBlock Text="%" VerticalAlignment="Center" Margin="0,0,8,0"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </NumericUpDown.InnerRightContent>
+                            </NumericUpDown>
+                            <NumericUpDown Grid.Column="2" Value="{Binding DiscountAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
+                                           FormatString="N0" ShowButtonSpinner="False" MinHeight="34" Margin="6,0,0,0">
+                                <NumericUpDown.InnerRightContent>
+                                    <TextBlock Text="{Binding L[currency_sum]}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </NumericUpDown.InnerRightContent>
+                            </NumericUpDown>
+                            <Button Grid.Column="3" Classes="icon" Margin="6,0,0,0" MinHeight="34"
+                                    IsVisible="{Binding CanDiscount}" IsEnabled="{Binding HasShortfall}"
+                                    Command="{Binding FillDiscountFromTenderCommand}"
+                                    ToolTip.Tip="{Binding L[discount_fill_shortfall]}">
+                                <TextBlock Text="=" FontSize="16" FontWeight="SemiBold" />
+                            </Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAutoDiscount}">
+                            <TextBlock Text="{Binding L[loyalty_discount]}" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
+                        </Grid>
 
                         <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"

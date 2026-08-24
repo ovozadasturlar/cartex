@@ -44,6 +44,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cartex.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets\logo.png" />
     <AvaloniaResource Include="Themes\**\*.axaml" />
   </ItemGroup>

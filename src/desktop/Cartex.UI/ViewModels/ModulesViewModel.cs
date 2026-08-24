@@ -12,9 +12,13 @@ namespace Cartex.UI.ViewModels;
 public partial class ModulesViewModel(IFeaturesApi api, IToastService toast, IBusyService busy, AuthService auth)
     : ViewModelBase, ILoadable
 {
+    private static readonly HashSet<string> SalesPolicyCodes =
+        ["multicurrency_pricing", "multicurrency_sales"];
+
     public ObservableCollection<OwnerModuleDto> Modules { get; } = [];
 
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _multicurrencyLicensed;
 
     public bool CanEdit => auth.HasPermission("business.edit");
 
@@ -23,9 +27,16 @@ public partial class ModulesViewModel(IFeaturesApi api, IToastService toast, IBu
         IsLoading = true;
         try
         {
-            var modules = await api.GetModulesAsync();
+            var modulesTask = api.GetModulesAsync();
+            var enabledTask = api.GetEnabledAsync();
+            await Task.WhenAll(modulesTask, enabledTask);
+
             Modules.Clear();
-            foreach (var module in modules) Modules.Add(module);
+            foreach (var module in await modulesTask)
+                if (!SalesPolicyCodes.Contains(module.Code))
+                    Modules.Add(module);
+
+            MulticurrencyLicensed = (await enabledTask).Contains("multicurrency", StringComparer.Ordinal);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
         finally { IsLoading = false; }
@@ -43,6 +54,7 @@ public partial class ModulesViewModel(IFeaturesApi api, IToastService toast, IBu
             // Kassa yoqilgan modullar ro'yxatini keshdan o'qiydi. Keshni bo'shatmasak,
             // o'chirilgan modulning tugmasi yana 10 daqiqa ko'rinib turadi.
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features);
+            await ServiceLocator.Resolve<NavigationService>().RequestFeaturesRefreshAsync();
             await LoadAsync();
             toast.Success(L["success"]);
         }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Supplies;
+using SearchFolding = Cartex.Shared.Search.SearchFold;
 
 namespace Cartex.UI.Services;
 
@@ -10,6 +11,7 @@ public class OfflineProduct
 {
     [PrimaryKey] public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? CategoryName { get; set; }
     public string UnitName { get; set; } = "";
     public decimal Quantity { get; set; }
@@ -29,6 +31,7 @@ public class OfflineCustomer
 {
     [PrimaryKey] public long Id { get; set; }
     public string FullName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     [Indexed] public string? CardBarcode { get; set; }
     public decimal DiscountPct { get; set; }
@@ -40,6 +43,7 @@ public class OfflineSupplier
 {
     [PrimaryKey] public long Id { get; set; }
     public string Name { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
 }
 
@@ -102,6 +106,16 @@ public sealed class OfflineStore
         await _db.CreateTableAsync<OfflineSupplier>();
         await _db.CreateTableAsync<OfflineOutboxItem>();
         await _db.CreateTableAsync<OfflineMeta>();
+        await _db.RunInTransactionAsync(c =>
+        {
+            var products = c.Table<OfflineProduct>().Where(x => x.SearchFold == null).ToList();
+            var customers = c.Table<OfflineCustomer>().Where(x => x.SearchFold == null).ToList();
+            var suppliers = c.Table<OfflineSupplier>().Where(x => x.SearchFold == null).ToList();
+            FillSearchFolds(products, customers, suppliers);
+            foreach (var product in products) c.Update(product);
+            foreach (var customer in customers) c.Update(customer);
+            foreach (var supplier in suppliers) c.Update(supplier);
+        });
     }
 
     public async Task ReplaceSnapshotAsync(
@@ -114,16 +128,20 @@ public sealed class OfflineStore
         long snapshotVersion)
     {
         await InitAsync();
+        var productRows = products.ToList();
+        var customerRows = customers.ToList();
+        var supplierRows = suppliers.ToList();
+        FillSearchFolds(productRows, customerRows, supplierRows);
         await _db.RunInTransactionAsync(c =>
         {
             c.DeleteAll<OfflineProduct>();
-            c.InsertAll(products);
+            c.InsertAll(productRows);
             c.DeleteAll<OfflineBarcode>();
             c.InsertAll(barcodes);
             c.DeleteAll<OfflineCustomer>();
-            c.InsertAll(customers);
+            c.InsertAll(customerRows);
             c.DeleteAll<OfflineSupplier>();
-            c.InsertAll(suppliers);
+            c.InsertAll(supplierRows);
 
             // A wholesale server refresh must not erase local effects of events
             // which are still only local. Reapply the current lease projection.
@@ -146,6 +164,7 @@ public sealed class OfflineStore
         long snapshotVersion)
     {
         await InitAsync();
+        FillSearchFolds(products, customers, suppliers);
         await _db.RunInTransactionAsync(c =>
         {
             foreach (var id in removed.ProductIds) c.Delete<OfflineProduct>(id);
@@ -253,12 +272,22 @@ public sealed class OfflineStore
     {
         await InitAsync();
         var q = _db.Table<OfflineProduct>();
+        string? strict = null;
         if (!string.IsNullOrWhiteSpace(query))
         {
             var term = query.Trim().ToLowerInvariant();
-            q = q.Where(p => p.ProductName.ToLower().Contains(term));
+            var folded = SearchFolding.Fuzzy(query);
+            strict = SearchFolding.Strict(query);
+            q = q.Where(p => p.ProductName.ToLower().Contains(term)
+                || (folded.Length > 0 && p.SearchFold != null && p.SearchFold.Contains(folded)));
         }
-        return await q.OrderBy(p => p.ProductName).Take(limit).ToListAsync();
+        var rows = await q.ToListAsync();
+        return rows
+            .OrderBy(p => strict is null ? 0 : NameRank(p.ProductName, strict))
+            .ThenBy(p => p.ProductName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.VariantId)
+            .Take(limit)
+            .ToList();
     }
 
     public async Task<OfflineProduct?> GetProductAsync(long variantId)
@@ -283,12 +312,23 @@ public sealed class OfflineStore
     {
         await InitAsync();
         var q = _db.Table<OfflineCustomer>();
+        string? strict = null;
         if (!string.IsNullOrWhiteSpace(query))
         {
             var term = query.Trim().ToLowerInvariant();
-            q = q.Where(c => c.FullName.ToLower().Contains(term) || (c.Phone != null && c.Phone.Contains(term)));
+            var folded = SearchFolding.Fuzzy(query);
+            strict = SearchFolding.Strict(query);
+            q = q.Where(c => c.FullName.ToLower().Contains(term)
+                || (folded.Length > 0 && c.SearchFold != null && c.SearchFold.Contains(folded))
+                || (c.Phone != null && c.Phone.Contains(term)));
         }
-        return await q.OrderBy(c => c.FullName).Take(limit).ToListAsync();
+        var rows = await q.ToListAsync();
+        return rows
+            .OrderBy(c => strict is null ? 0 : NameRank(c.FullName, strict))
+            .ThenBy(c => c.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.Id)
+            .Take(limit)
+            .ToList();
     }
 
     public async Task PrepareLeaseAsync(OfflineLeaseCredential credential)
@@ -632,4 +672,25 @@ public sealed class OfflineStore
         "supply" => "supply.create",
         var normalized => normalized
     };
+
+    private static void FillSearchFolds(
+        IEnumerable<OfflineProduct> products,
+        IEnumerable<OfflineCustomer> customers,
+        IEnumerable<OfflineSupplier> suppliers)
+    {
+        foreach (var product in products)
+            product.SearchFold = SearchFolding.Fuzzy(product.ProductName);
+        foreach (var customer in customers)
+            customer.SearchFold = SearchFolding.Fuzzy(customer.FullName);
+        foreach (var supplier in suppliers)
+            supplier.SearchFold = SearchFolding.Fuzzy(supplier.Name);
+    }
+
+    private static int NameRank(string name, string strictQuery)
+    {
+        var strictName = SearchFolding.Strict(name);
+        if (strictName.StartsWith(strictQuery, StringComparison.Ordinal))
+            return 0;
+        return strictName.Contains(strictQuery, StringComparison.Ordinal) ? 1 : 2;
+    }
 }

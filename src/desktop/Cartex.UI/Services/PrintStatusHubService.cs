@@ -4,14 +4,25 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Cartex.UI.Services;
 
-public sealed class PrintStatusHubService(AuthService auth, IToastService toast)
+public sealed class PrintStatusHubService
 {
+    private readonly AuthService _auth;
+    private readonly IToastService _toast;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private HubConnection? _connection;
 
+    public PrintStatusHubService(AuthService auth, IToastService toast)
+    {
+        _auth = auth;
+        _toast = toast;
+        _auth.LoggedOut += Stop;
+    }
+
     public async Task EnsureStartedAsync()
     {
-        if (!auth.HasPermission("printing.remote.use") || string.IsNullOrWhiteSpace(auth.DeviceId)) return;
+        if (!_auth.HasPermission("printing.remote.use")
+            || !SettingsService.Instance.IsFeatureOn("remote_printing")
+            || string.IsNullOrWhiteSpace(_auth.DeviceId)) return;
         await _startLock.WaitAsync();
         try
         {
@@ -19,7 +30,7 @@ public sealed class PrintStatusHubService(AuthService auth, IToastService toast)
             if (_connection.State == HubConnectionState.Disconnected)
             {
                 await _connection.StartAsync();
-                await _connection.InvokeAsync("SubscribeRequester", auth.DeviceId);
+                await _connection.InvokeAsync("SubscribeRequester", _auth.DeviceId);
             }
         }
         catch
@@ -36,10 +47,10 @@ public sealed class PrintStatusHubService(AuthService auth, IToastService toast)
         var connection = new HubConnectionBuilder()
             .WithUrl(SettingsService.Instance.ApiBaseUrl.TrimEnd('/') + "/hubs/printing", options =>
             {
-                options.AccessTokenProvider = () => auth.EnsureFreshTokenAsync(CancellationToken.None);
+                options.AccessTokenProvider = () => _auth.EnsureFreshTokenAsync(CancellationToken.None);
                 options.Headers["X-Client"] = "desktop";
-                options.Headers["X-Device-Id"] = auth.DeviceId;
-                options.Headers["X-Device-Name"] = auth.DeviceName;
+                options.Headers["X-Device-Id"] = _auth.DeviceId;
+                options.Headers["X-Device-Name"] = _auth.DeviceName;
             })
             .WithAutomaticReconnect()
             .Build();
@@ -47,7 +58,7 @@ public sealed class PrintStatusHubService(AuthService auth, IToastService toast)
             Dispatcher.UIThread.Post(() => Show(update)));
         connection.Reconnected += async _ =>
         {
-            await connection.InvokeAsync("SubscribeRequester", auth.DeviceId);
+            await connection.InvokeAsync("SubscribeRequester", _auth.DeviceId);
         };
         return connection;
     }
@@ -57,11 +68,28 @@ public sealed class PrintStatusHubService(AuthService auth, IToastService toast)
         var kind = PrintNotificationText.Kind(update.Kind);
         var printer = string.IsNullOrWhiteSpace(update.PrinterName) ? string.Empty : $" · {update.PrinterName}";
         if (update.Status == PrintJobStatus.Completed)
-            toast.Success(string.Format(LocalizationManager.Instance["print_completed"], kind, printer));
+            _toast.Success(string.Format(LocalizationManager.Instance["print_completed"], kind, printer));
         else if (update.Status == PrintJobStatus.ManualReview)
-            toast.Warning(string.Format(LocalizationManager.Instance["print_result_unknown"], kind, update.ErrorMessage ?? string.Empty));
+            _toast.Warning(string.Format(LocalizationManager.Instance["print_result_unknown"], kind, update.ErrorMessage ?? string.Empty));
         else if (update.Status is PrintJobStatus.Failed or PrintJobStatus.Cancelled or PrintJobStatus.Rejected)
-            toast.Error(string.Format(LocalizationManager.Instance["print_failed"], kind, update.ErrorMessage ?? string.Empty));
+            _toast.Error(string.Format(LocalizationManager.Instance["print_failed"], kind, update.ErrorMessage ?? string.Empty));
+    }
+
+    private void Stop() => _ = StopAsync();
+
+    private async Task StopAsync()
+    {
+        var connection = _connection;
+        _connection = null;
+        if (connection is null) return;
+        try
+        {
+            await connection.DisposeAsync();
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
     }
 }
 

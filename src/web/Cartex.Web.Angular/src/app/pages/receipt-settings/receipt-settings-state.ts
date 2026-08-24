@@ -5,11 +5,13 @@ export function buildReceiptSettingsRequest(settings: {
   footerText: string;
   paperWidth: number;
   paperFormat: string;
+  language: string;
 }) {
   return {
     headerText: settings.headerText.trim() || null,
     footerText: settings.footerText.trim() || null,
     paperWidth: settings.paperWidth,
     paperFormat: settings.paperFormat,
+    language: settings.language,
   };
 }

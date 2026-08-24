@@ -50,12 +50,11 @@ export class Shell {
   );
   readonly user = this.auth.currentUser;
   private readonly featuresService = inject(FeaturesService);
-  readonly enabledFeatures = this.featuresService.enabled;
   readonly navSections = computed(() => NAV_SECTIONS.map((s) => ({
     ...s,
     items: s.items.filter((i) =>
       (i.permission === null || this.auth.hasPermission(i.permission))
-      && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)
+      && this.featuresService.has(i.feature)
       && (!i.requiresMultipleWarehouses || this.wh.warehouses().length > 1)),
   })).filter((s) => s.items.length > 0));
   /// RUXSAT-04: sozlamalar tugmasi faqat ichida ochiq sahifa bo'lsa ko'rinadi — modul yopiq
@@ -63,7 +62,7 @@ export class Shell {
   readonly canOpenSettings = computed(() => SETTINGS_SECTIONS.some((s) =>
     s.items.some((i) =>
       (i.permission === null || this.auth.hasPermission(i.permission))
-      && (!i.feature || this.enabledFeatures()?.has(i.feature) !== false)),
+      && this.featuresService.has(i.feature)),
   ));
   readonly languages = APP_LANGUAGES;
   readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
@@ -79,7 +78,7 @@ export class Shell {
     .flatMap((section) => section.items)
     .filter((item) =>
       (!item.permission || this.auth.hasPermission(item.permission))
-      && (!item.feature || this.enabledFeatures()?.has(item.feature) !== false)
+      && this.featuresService.has(item.feature)
       && (!item.requiresMultipleWarehouses || this.wh.warehouses().length > 1)));
   readonly searchResults = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();

@@ -68,6 +68,7 @@ export class PosReceiptDialog implements OnInit {
     this.saleId !== null;
   readonly canCorrect = this.isOpen && this.auth.hasPermission('sales.void') && this.saleId !== null;
   readonly canReturn = this.isOpen && this.auth.hasPermission('returns.create') && !this.isPosCheckout;
+  readonly showReceiptSms = this.auth.hasPermission('customers.message') && this.saleId !== null;
 
   async ngOnInit(): Promise<void> {
     try {
@@ -92,6 +93,7 @@ export class PosReceiptDialog implements OnInit {
     try {
       await lastValueFrom(this.salesApi.assignCustomer(this.saleId, picked.id));
       this.receipt.customerName = picked.fullName;
+      this.receipt.customerPhone = picked.phone;
       this.notify.success(this.transloco.translate('success'));
     } catch (e) {
       this.notify.error(e);
@@ -119,6 +121,26 @@ export class PosReceiptDialog implements OnInit {
   returnSale(): void {
     this.ref.close('return');
     void this.router.navigate(['/returns']);
+  }
+
+  async sendReceiptSms(): Promise<void> {
+    if (this.saleId === null || !this.receipt.customerPhone) return;
+    try {
+      const preview = await lastValueFrom(
+        this.http.get<{ recipient: string; text: string; confirmationToken: string }>(
+          `/api/sales/${this.saleId}/receipt-sms-preview`,
+        ),
+      );
+      if (!window.confirm(this.transloco.translate('receipt_sms_confirm', preview))) return;
+      await lastValueFrom(
+        this.http.post<{ jobId: number; status: string }>(`/api/sales/${this.saleId}/receipt-sms`, {
+          confirmationToken: preview.confirmationToken,
+        }),
+      );
+      this.notify.success(this.transloco.translate('receipt_sms_queued'));
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   async print(): Promise<void> {

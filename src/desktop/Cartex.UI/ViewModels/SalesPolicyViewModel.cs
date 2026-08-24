@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Features;
 using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,16 +11,26 @@ namespace Cartex.UI.ViewModels;
 public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 {
     private readonly ISettingsApi _settingsApi;
+    private readonly IFeaturesApi _featuresApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
+    private readonly PrintPolicyCache _printPolicyCache;
 
-    public SalesPolicyViewModel(ISettingsApi settingsApi, IToastService toast, IBusyService busy, AuthService auth)
+    public SalesPolicyViewModel(
+        ISettingsApi settingsApi,
+        IFeaturesApi featuresApi,
+        IToastService toast,
+        IBusyService busy,
+        AuthService auth,
+        PrintPolicyCache printPolicyCache)
     {
         _settingsApi = settingsApi;
+        _featuresApi = featuresApi;
         _toast = toast;
         _busy = busy;
         _auth = auth;
+        _printPolicyCache = printPolicyCache;
         // A ComboBox bound to an empty ItemsSource coerces SelectedIndex to -1 and writes it
         // back, so the options must exist before the view binds — not once loading finishes.
         FillOptions(ShiftPolicies, ShiftPolicyCodes, code => L[$"shift_policy_{code.ToLowerInvariant()}"]);
@@ -114,6 +125,18 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AllowSaleQueueHint))]
     private bool _allowSaleQueue = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTogglePricingMulticurrency))]
+    [NotifyPropertyChangedFor(nameof(CanToggleSalesMulticurrency))]
+    private bool _multicurrencyLicensed;
+    [ObservableProperty] private bool _pricingMulticurrencyEnabled;
+    [ObservableProperty] private bool _salesMulticurrencyEnabled;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTogglePricingMulticurrency))]
+    private OwnerModuleDto? _pricingMulticurrencyModule;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanToggleSalesMulticurrency))]
+    private OwnerModuleDto? _salesMulticurrencyModule;
 
     /// Har kalitning ostida uning hozirgi holati nimani anglatishi yozilib turadi — egasi
     /// tugmani bosmasdan oldin oqibatini o'qiy oladi.
@@ -143,6 +166,10 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
+    public bool CanTogglePricingMulticurrency =>
+        CanEdit && _auth.HasPermission("business.edit") && MulticurrencyLicensed && PricingMulticurrencyModule?.Available == true;
+    public bool CanToggleSalesMulticurrency =>
+        CanEdit && _auth.HasPermission("business.edit") && MulticurrencyLicensed && SalesMulticurrencyModule?.Available == true;
 
     partial void OnCorrectionWindowIndexChanged(int value) => OnPropertyChanged(nameof(ShowCorrectionDays));
 
@@ -153,7 +180,17 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
         try
         {
             using (_busy.Begin(L["loading"]))
-                _loaded = await _settingsApi.GetSalesPolicyAsync();
+            {
+                var policyTask = _settingsApi.GetSalesPolicyAsync();
+                var enabledTask = _featuresApi.GetEnabledAsync();
+                var modulesTask = _auth.HasPermission("business.edit")
+                    ? _featuresApi.GetModulesAsync()
+                    : Task.FromResult(new List<OwnerModuleDto>());
+                await Task.WhenAll(policyTask, enabledTask, modulesTask);
+
+                _loaded = await policyTask;
+                ApplyCurrencyFeatures(await enabledTask, await modulesTask);
+            }
 
             ShiftPolicyIndex = Math.Max(0, Array.IndexOf(ShiftPolicyCodes, _loaded.ShiftPolicy));
             CorrectionWindowIndex = Math.Max(0, Array.IndexOf(CorrectionWindowCodes, _loaded.SaleCorrectionWindow));
@@ -242,9 +279,51 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 
             _loaded = policy;
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.SalesPolicy);
+            await _printPolicyCache.RefreshAsync();
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private Task TogglePricingMulticurrencyAsync() =>
+        ToggleMulticurrencyAsync(PricingMulticurrencyModule, CanTogglePricingMulticurrency);
+
+    [RelayCommand]
+    private Task ToggleSalesMulticurrencyAsync() =>
+        ToggleMulticurrencyAsync(SalesMulticurrencyModule, CanToggleSalesMulticurrency);
+
+    private async Task ToggleMulticurrencyAsync(OwnerModuleDto? module, bool canToggle)
+    {
+        if (!canToggle || module is null) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _featuresApi.SetModuleAsync(module.Code, new SetFeatureRequest(!module.IsEnabled));
+
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features);
+            await ServiceLocator.Resolve<NavigationService>().RequestFeaturesRefreshAsync();
+            await LoadCurrencyFeaturesAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task LoadCurrencyFeaturesAsync()
+    {
+        var enabledTask = _featuresApi.GetEnabledAsync();
+        var modulesTask = _featuresApi.GetModulesAsync();
+        await Task.WhenAll(enabledTask, modulesTask);
+        ApplyCurrencyFeatures(await enabledTask, await modulesTask);
+    }
+
+    private void ApplyCurrencyFeatures(IReadOnlyCollection<string> enabled, IEnumerable<OwnerModuleDto> modules)
+    {
+        MulticurrencyLicensed = enabled.Contains("multicurrency", StringComparer.Ordinal);
+        PricingMulticurrencyEnabled = enabled.Contains("multicurrency_pricing", StringComparer.Ordinal);
+        SalesMulticurrencyEnabled = enabled.Contains("multicurrency_sales", StringComparer.Ordinal);
+        PricingMulticurrencyModule = modules.FirstOrDefault(x => x.Code == "multicurrency_pricing");
+        SalesMulticurrencyModule = modules.FirstOrDefault(x => x.Code == "multicurrency_sales");
     }
 
     private static string CodeAt(string[] codes, int index, string fallback) =>

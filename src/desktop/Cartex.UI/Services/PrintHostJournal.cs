@@ -9,11 +9,15 @@ public enum PrintHostJournalState
     Completed
 }
 
+/// Chop etish boshlangach jarayon o'lib qolsa, xuddi shu ish qayta kelganda ikkinchi marta
+/// qog'oz chiqarmaslik uchun jurnal. Kalit hujjatning o'ziga bog'lanadi (id:tur:manba) —
+/// yalang'och ish raqami bo'lsa, baza qayta tiklanganda yangi ishlar eski raqamlarga to'g'ri
+/// kelib, chop etilmasdan "bajarildi" deb yuborilardi.
 public sealed class PrintHostJournal
 {
     private readonly string _path;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private Dictionary<long, PrintHostJournalState>? _entries;
+    private Dictionary<string, PrintHostJournalState>? _entries;
 
     public PrintHostJournal()
     {
@@ -22,13 +26,13 @@ public sealed class PrintHostJournal
         _path = Path.Combine(directory, "print-host-journal.json");
     }
 
-    public async Task<PrintHostJournalState> GetStateAsync(long jobId)
+    public async Task<PrintHostJournalState> GetStateAsync(string key)
     {
         await _lock.WaitAsync();
         try
         {
             await LoadAsync();
-            return _entries!.GetValueOrDefault(jobId);
+            return _entries!.GetValueOrDefault(key);
         }
         finally
         {
@@ -36,18 +40,18 @@ public sealed class PrintHostJournal
         }
     }
 
-    public Task MarkStartedAsync(long jobId) => SetStateAsync(jobId, PrintHostJournalState.Started);
-    public Task MarkCompletedAsync(long jobId) => SetStateAsync(jobId, PrintHostJournalState.Completed);
+    public Task MarkStartedAsync(string key) => SetStateAsync(key, PrintHostJournalState.Started);
+    public Task MarkCompletedAsync(string key) => SetStateAsync(key, PrintHostJournalState.Completed);
 
-    private async Task SetStateAsync(long jobId, PrintHostJournalState state)
+    private async Task SetStateAsync(string key, PrintHostJournalState state)
     {
         await _lock.WaitAsync();
         try
         {
             await LoadAsync();
-            _entries![jobId] = state;
+            _entries![key] = state;
             if (_entries.Count > 5000)
-                _entries = _entries.OrderByDescending(x => x.Key).Take(2500).ToDictionary();
+                _entries = _entries.Skip(_entries.Count - 2500).ToDictionary();
             var temporary = _path + ".tmp";
             await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(_entries));
             File.Move(temporary, _path, true);
@@ -69,19 +73,14 @@ public sealed class PrintHostJournal
         try
         {
             var json = await File.ReadAllTextAsync(_path);
-            _entries = JsonSerializer.Deserialize<Dictionary<long, PrintHostJournalState>>(json) ?? [];
+            var raw = JsonSerializer.Deserialize<Dictionary<string, PrintHostJournalState>>(json) ?? [];
+            // Eski format kalitlari (yalang'och raqamlar) boshqa bazaning ishlariga to'g'ri
+            // kelib qolmasligi uchun yuk paytida tashlab yuboriladi.
+            _entries = raw.Where(x => x.Key.Contains(':')).ToDictionary();
         }
         catch
         {
-            try
-            {
-                var completed = JsonSerializer.Deserialize<HashSet<long>>(await File.ReadAllTextAsync(_path)) ?? [];
-                _entries = completed.ToDictionary(x => x, _ => PrintHostJournalState.Completed);
-            }
-            catch
-            {
-                _entries = [];
-            }
+            _entries = [];
         }
     }
 }

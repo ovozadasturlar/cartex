@@ -488,7 +488,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     {
         (string Scope, long Id, string Name)? picked = ExceptionScope?.Value switch
         {
-            "Category" when ExceptionCategory is { } c => ("Category", c.Id, c.Name),
+            "Category" when ExceptionCategory is { } c => ("Category", c.Id, c.FullPath ?? c.Name),
             "Manufacturer" when ExceptionManufacturer is { } m => ("Manufacturer", m.Id, m.Name),
             _ when ExceptionProduct is { } p => ("Product", p.Id, p.Name),
             _ => null

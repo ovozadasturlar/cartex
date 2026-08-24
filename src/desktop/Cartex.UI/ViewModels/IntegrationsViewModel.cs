@@ -11,6 +11,7 @@ public sealed record SmtpPreset(string Name, string? Host, int Port, bool Ssl);
 
 public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast, IBusyService busy) : ViewModelBase, ILoadable
 {
+    private SmsSettingsDto? _smsSettings;
     public ObservableCollection<string> SmsProviders { get; } = ["eskiz", "playmobile"];
 
     public ObservableCollection<SmtpPreset> SmtpPresets { get; } =
@@ -128,6 +129,7 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
                 SmsBaseUrl = s.Sms.BaseUrl;
                 SmsHasPassword = s.Sms.HasPassword;
                 SmsPassword = null;
+                _smsSettings = s.Sms;
 
                 ChannelTelegram = s.Notification.Channels.Contains("Telegram");
                 ChannelSms = s.Notification.Channels.Contains("Sms");
@@ -276,7 +278,15 @@ public partial class IntegrationsViewModel(ISettingsApi api, IToastService toast
         try
         {
             using (busy.Begin(L["loading"]))
-                await api.UpdateSmsAsync(new UpdateSmsSettingsRequest(SmsEnabled, SmsProvider, SmsLogin, SmsPassword, SmsSender, SmsBaseUrl));
+            {
+                var sms = _smsSettings ?? new SmsSettingsDto(false, "device", null, null, null, false);
+                await api.UpdateSmsAsync(new UpdateSmsSettingsRequest(
+                    SmsEnabled, SmsProvider, SmsLogin, SmsPassword, SmsSender, SmsBaseUrl,
+                    sms.FallbackProvider, sms.FallbackAfterMinutes, sms.DebtReminderEnabled,
+                    sms.ReceiptLinkEnabled, sms.PromotionEnabled, sms.ManualEnabled,
+                    sms.DebtReminderTemplate, sms.ReceiptLinkTemplate, sms.PromotionTemplate,
+                    sms.ManualTemplate, sms.SendReceiptOnSale, sms.TestMode, sms.TestAllowedNumbers));
+            }
             toast.Success(L["success"]);
             await LoadAsync();
         }

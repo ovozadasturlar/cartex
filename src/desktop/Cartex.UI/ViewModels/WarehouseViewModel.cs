@@ -111,7 +111,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
                 _suppressReload = true;
                 var categories = await categoriesTask;
                 FilterCategories.Clear();
-                FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
+                FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
                 foreach (var c in categories) FilterCategories.Add(c);
                 FilterCategory = FilterCategories[0];
                 _suppressReload = false;

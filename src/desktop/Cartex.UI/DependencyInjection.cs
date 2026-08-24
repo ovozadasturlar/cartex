@@ -15,6 +15,7 @@ public static class DependencyInjection
             () => SettingsService.Instance.ApiBaseUrl,
             () => ServiceLocator.Resolve<AuthService>().Token,
             ct => ServiceLocator.Resolve<AuthService>().EnsureFreshTokenAsync(ct),
+            ct => ServiceLocator.Resolve<AuthService>().ForceRefreshAsync(ct),
             OnUnauthorized,
             deviceIdProvider: () => SettingsService.Instance.DeviceId,
             deviceNameProvider: () => Environment.MachineName);
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddSingleton<PrintHostJournal>();
         services.AddSingleton<OfflinePrintJournal>();
         services.AddSingleton<PrintHostCredentialStore>();
+        services.AddSingleton<PrintLogoCache>();
+        services.AddSingleton<PrintPolicyCache>();
         services.AddSingleton<PrintHostService>();
         services.AddSingleton<PrintStatusHubService>();
         services.AddSingleton<PrintDispatchService>();
@@ -105,6 +108,8 @@ public static class DependencyInjection
         services.AddTransient<PrintingViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
         services.AddTransient<SalesPolicyViewModel>();
+        services.AddTransient<ProductReferenceSettingsViewModel>();
+        services.AddTransient<SmsGatewayViewModel>();
         services.AddTransient<ModulesViewModel>();
         services.AddTransient<BarcodePrintViewModel>();
         services.AddTransient<HardwareKeysViewModel>();

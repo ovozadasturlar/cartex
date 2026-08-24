@@ -20,7 +20,7 @@ export const routes: Routes = [
       {
         path: 'pos',
         canActivate: [permissionGuard],
-        data: { permission: 'sales.create|sales.checkout' },
+        data: { permission: 'sales.create|sales.checkout|sales.pick|sales.view', feature: 'ordering|store' },
         loadComponent: () => import('./pages/pos/pos').then((m) => m.Pos),
       },
       {
@@ -172,6 +172,12 @@ export const routes: Routes = [
               import('./pages/manufacturers/manufacturers').then((m) => m.Manufacturers),
           },
           {
+            path: 'product-reference',
+            data: { permission: 'settings.salesPolicy' },
+            loadComponent: () =>
+              import('./pages/product-reference/product-reference').then((m) => m.ProductReferenceSettingsPage),
+          },
+          {
             path: 'business',
             data: { permission: 'business.edit' },
             loadComponent: () =>
@@ -251,6 +257,11 @@ export const routes: Routes = [
               import('./pages/notification-journal/notification-journal').then(
                 (m) => m.NotificationJournal,
               ),
+          },
+          {
+            path: 'sms-gateway',
+            data: { permission: 'sms.gateway.edit' },
+            loadComponent: () => import('./pages/sms-gateway/sms-gateway').then((m) => m.SmsGateway),
           },
           {
             path: 'license',

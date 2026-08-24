@@ -59,6 +59,21 @@
                             </StackPanel>
                         </Button>
 
+                        <Button Classes="outline" MinHeight="40" Padding="14,0"
+                                Command="{Binding SendReceiptSmsCommand}"
+                                IsVisible="{Binding ShowReceiptSms}"
+                                IsEnabled="{Binding CanSendReceiptSms}"
+                                ToolTip.Tip="{Binding ReceiptSmsDisabledReason}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <mi:MaterialIcon Kind="MessageTextOutline" Width="15" Height="15" />
+                                <TextBlock Text="{Binding L[send_receipt_sms]}" VerticalAlignment="Center" FontSize="12.5" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{Binding ReceiptSmsDisabledReason}"
+                                   IsVisible="{Binding ShowReceiptSms}"
+                                   Foreground="{DynamicResource TextMuted}" FontSize="11"
+                                   VerticalAlignment="Center" />
+
                         <Button Classes="danger" MinHeight="40" Padding="14,0"
                                 Command="{Binding ReturnSaleCommand}"
                                 IsVisible="{Binding CanReturnSale}">

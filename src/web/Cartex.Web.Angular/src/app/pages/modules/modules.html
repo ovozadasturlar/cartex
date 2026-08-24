@@ -6,6 +6,17 @@
   }
 
   <div class="list">
+    <div class="cx-card row" [class.off]="!multicurrencyLicensed()">
+      <div class="who">
+        <span class="name">{{ t('multicurrency_license') }}</span>
+        <span class="code">multicurrency</span>
+        @if (!multicurrencyLicensed()) {
+          <span class="code">{{ t('multicurrency_not_in_tariff') }}</span>
+        }
+      </div>
+      <mat-slide-toggle [checked]="multicurrencyLicensed()" disabled />
+    </div>
+
     @for (m of modules(); track m.code) {
       <div class="cx-card row" [class.off]="!m.available">
         <div class="who">
@@ -16,7 +27,7 @@
           }
         </div>
         <mat-slide-toggle
-          [checked]="m.isEnabled"
+          [checked]="m.available && m.isEnabled"
           [disabled]="!canEdit || !m.available"
           (change)="toggle(m)"
         />

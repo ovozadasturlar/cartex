@@ -44,6 +44,11 @@ public partial class TariffFeaturesViewModel(
             {
                 var options = await licenseApi.GetOptionsAsync();
                 var status = await licenseApi.GetAsync();
+                // Litsenziya ro'yxati va features jadvali ikkalasi ham sotuvchi darvozasi —
+                // sahifa ikkisining kesishmasini (amaldagi holatni) ko'rsatadi, aks holda
+                // bazada o'chiq modul yoniq bo'lib ko'rinadi.
+                var vendorOff = (await featuresApi.GetAllAsync())
+                    .Where(f => !f.IsEnabled).Select(f => f.Code).ToHashSet();
 
                 _includedTariffs = options.Features.ToDictionary(f => f.Code, f => f.IncludedTariffs);
                 var enabled = status.EnabledFeatures.Count > 0
@@ -60,7 +65,7 @@ public partial class TariffFeaturesViewModel(
                         Code = f.Code,
                         Name = f.Name,
                         Impact = f.Permissions.Count > 0 ? string.Join(", ", f.Permissions) : L[$"feature_effect_{f.Code}"],
-                        IsEnabled = enabled.Contains(f.Code)
+                        IsEnabled = enabled.Contains(f.Code) && !vendorOff.Contains(f.Code)
                     });
                 IsActive = status.IsActive;
                 Tariff = options.Tariffs.Contains(status.Tariff) ? status.Tariff : options.Tariffs.FirstOrDefault();
@@ -92,6 +97,7 @@ public partial class TariffFeaturesViewModel(
                     await featuresApi.SetAsync(f.Code, new SetFeatureRequest(f.IsEnabled));
             }
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features, CacheKeys.Business, CacheKeys.Rates, CacheKeys.SalesPolicy);
+            await ServiceLocator.Resolve<NavigationService>().RequestFeaturesRefreshAsync();
             toast.Success(L["success"]);
             await LoadAsync();
         }

@@ -19,7 +19,9 @@ public sealed partial class NetworkDeviceItem : ObservableObject
         NodeId = source.NodeId;
         NodeStatus = source.NodeStatus;
         HostEnabled = source.HostEnabled;
-        Endpoints = source.Endpoints;
+        Endpoints = [.. source.Endpoints.Select(x => new NetworkDeviceEndpointItem(x))];
+        foreach (var endpoint in Endpoints)
+            endpoint.PropertyChanged += (_, _) => OnPropertyChanged(nameof(HasChanges));
         Detail = string.Join(" · ", new[] { source.LastUsername, source.Client }
             .Where(x => !string.IsNullOrWhiteSpace(x)));
         LastSeenText = source.LastSeenAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? string.Empty;
@@ -32,13 +34,15 @@ public sealed partial class NetworkDeviceItem : ObservableObject
     public long? NodeId { get; }
     public PrintNodeStatus? NodeStatus { get; }
     public bool HostEnabled { get; }
-    public IReadOnlyList<PrinterEndpointDto> Endpoints { get; }
+    public IReadOnlyList<NetworkDeviceEndpointItem> Endpoints { get; }
     public string Detail { get; }
     public string LastSeenText { get; }
-    public bool IsHost => NodeId is not null && HostEnabled && Endpoints.Count > 0;
+    public bool HasNode => NodeId is not null;
+    public bool IsHost => HasNode && HostEnabled && Endpoints.Count > 0;
     public bool IsOnlineHost => IsHost && NodeStatus == PrintNodeStatus.Online;
     public string StatusText => NodeStatus?.ToString() ?? string.Empty;
-    public bool HasChanges => IsTrusted != _savedIsTrusted;
+    public bool TrustHasChanges => IsTrusted != _savedIsTrusted;
+    public bool HasChanges => TrustHasChanges || Endpoints.Any(x => x.HasChanges);
     [ObservableProperty] private bool _isTrusted;
 
     partial void OnIsTrustedChanged(bool value) => OnPropertyChanged(nameof(HasChanges));
@@ -46,11 +50,35 @@ public sealed partial class NetworkDeviceItem : ObservableObject
     public void AcceptChanges()
     {
         _savedIsTrusted = IsTrusted;
+        foreach (var endpoint in Endpoints) endpoint.AcceptChanges();
         OnPropertyChanged(nameof(HasChanges));
     }
 }
 
-public sealed partial class NetworkRouteEndpointItem(PrinterEndpointDto endpoint, string deviceName) : ObservableObject
+public sealed partial class NetworkDeviceEndpointItem(PrinterEndpointDto source) : ObservableObject
+{
+    private bool _savedIsEnabled = source.IsEnabled;
+
+    public long Id => source.Id;
+    public string DisplayName => source.DisplayName;
+    public PrintCapability Capabilities => source.Capabilities;
+    public PrinterEndpointStatus Status => source.Status;
+    public string? ProfileJson => source.ProfileJson;
+    public bool HasChanges => IsEnabled != _savedIsEnabled;
+    [ObservableProperty] private bool _isEnabled = source.IsEnabled;
+
+    partial void OnIsEnabledChanged(bool value) => OnPropertyChanged(nameof(HasChanges));
+
+    public SetPrinterEndpointRequest ToRequest() => new(IsEnabled, Capabilities, DisplayName, ProfileJson);
+
+    public void AcceptChanges()
+    {
+        _savedIsEnabled = IsEnabled;
+        OnPropertyChanged(nameof(HasChanges));
+    }
+}
+
+public sealed partial class NetworkRouteEndpointItem(NetworkDeviceEndpointItem endpoint, string deviceName) : ObservableObject
 {
     public long EndpointId => endpoint.Id;
     public string DeviceName => deviceName;
@@ -121,7 +149,11 @@ public partial class PrintingViewModel
     public ObservableCollection<NetworkDeviceItem> NetworkDevices { get; } = [];
     public ObservableCollection<NetworkRouteEndpointItem> NetworkEndpoints { get; } = [];
     public ObservableCollection<NetworkPrintJobItem> NetworkJobs { get; } = [];
-    public IReadOnlyList<PrintRoutingMode> NetworkRoutingModes { get; } = Enum.GetValues<PrintRoutingMode>();
+    public IReadOnlyList<PrintChoice> NetworkRoutingModes =>
+    [
+        new(nameof(PrintRoutingMode.LocalFirst), L["printing_routing_mode_local_first"]),
+        new(nameof(PrintRoutingMode.PriorityOnly), L["printing_routing_mode_priority_only"])
+    ];
     public IReadOnlyList<PrintStickyMode> NetworkStickyModes { get; } = Enum.GetValues<PrintStickyMode>();
     private List<PrintRoutingPolicyDto> _networkPolicies = [];
 
@@ -137,6 +169,18 @@ public partial class PrintingViewModel
     [ObservableProperty] private decimal _networkAssignmentTimeoutSeconds = 20;
     [ObservableProperty] private bool _networkAvailable;
     [ObservableProperty] private bool _autoTrustNewDevices;
+
+    public PrintChoice? NetworkRoutingModeOption
+    {
+        get => NetworkRoutingModes.First(x => x.Key == NetworkRoutingMode.ToString());
+        set
+        {
+            if (value is not null && Enum.TryParse<PrintRoutingMode>(value.Key, out var mode)) NetworkRoutingMode = mode;
+        }
+    }
+
+    partial void OnNetworkRoutingModeChanged(PrintRoutingMode value) =>
+        OnPropertyChanged(nameof(NetworkRoutingModeOption));
 
     public bool IsNetworkReceipt => SelectedNetworkKind == PrintJobKind.Receipt;
     public bool IsNetworkBarcode => SelectedNetworkKind == PrintJobKind.BarcodeLabel;
@@ -306,7 +350,10 @@ public partial class PrintingViewModel
         {
             foreach (var device in NetworkDevices.Where(x => x.HasChanges))
             {
-                await _printingApi.SetDeviceTrustAsync(new SetPrintDeviceTrustRequest(branchId, device.DeviceId, device.IsTrusted));
+                if (device.TrustHasChanges)
+                    await _printingApi.SetDeviceTrustAsync(new SetPrintDeviceTrustRequest(branchId, device.DeviceId, device.IsTrusted));
+                foreach (var endpoint in device.Endpoints.Where(x => x.HasChanges))
+                    await _printingApi.SetEndpointAsync(endpoint.Id, endpoint.ToRequest());
                 device.AcceptChanges();
             }
             await LoadNetworkPrintingAsync();
@@ -380,6 +427,7 @@ public partial class PrintingViewModel
             if (index >= 0) _networkPolicies[index] = updated;
             else _networkPolicies.Add(updated);
             ApplyNetworkPolicy();
+            await _printPolicyCache.RefreshAsync();
             _toast.Success(L["success"]);
         }
         catch (Exception exception)

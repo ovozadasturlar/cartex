@@ -19,7 +19,8 @@ public sealed class HubHostService(
     HubIdentityService identity,
     OfflineStore store,
     OfflineSyncService sync,
-    ConnectivityService connectivity)
+    ConnectivityService connectivity,
+    AuthService auth)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
     private HubServer? _server;
@@ -45,6 +46,7 @@ public sealed class HubHostService(
         if (_hooked) return;
         _hooked = true;
         connectivity.PropertyChanged += OnConnectivityChanged;
+        auth.LoggedOut += OnLoggedOut;
         _ = ApplyAsync();
     }
 
@@ -72,6 +74,7 @@ public sealed class HubHostService(
 
     private bool ShouldServe() =>
         SettingsService.Instance.HubEnabled
+        && auth.IsAuthenticated
         && sync.IsEnabled
         && !connectivity.IsOnline
         && hubClient.Credential is { Token.Length: > 0, ServerKey.Length: > 0 };
@@ -131,9 +134,11 @@ public sealed class HubHostService(
     private void OnConnectivityChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(ConnectivityService.IsOnline)) return;
-        if (connectivity.IsOnline) _ = RefreshAttestationAsync();
+        if (connectivity.IsOnline && auth.IsAuthenticated) _ = RefreshAttestationAsync();
         _ = ApplyAsync();
     }
+
+    private void OnLoggedOut() => _ = ApplyAsync();
 }
 
 /// HUB-09/HUB-06: katalog vakolat egasining keshidan, hodisa esa uning navbatiga.

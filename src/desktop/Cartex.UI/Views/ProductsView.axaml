@@ -55,7 +55,7 @@
                               MinWidth="180">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
@@ -103,8 +103,15 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Width="2.1*" MinWidth="160" Binding="{Binding Name}"
                                                 Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="1.3*" MinWidth="100" Binding="{Binding CategoryName}"
-                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="1.3*" MinWidth="100"
+                                                    Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding CategoryName}" TextTrimming="PrefixCharacterEllipsis"
+                                                   VerticalAlignment="Center" Margin="12,0" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="75" Binding="{Binding UnitName}"
                                                 Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="82" Binding="{Binding OnHand, Mode=OneWay, StringFormat='{}{0:N0}'}"
@@ -229,10 +236,12 @@
         </Border>
 
         <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}" c:OverlayBehaviors.DismissCommand="{Binding CancelVariantEditCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    BoxShadow="0 18 50 0 #33000000" Padding="24">
+                    BoxShadow="0 18 50 0 #33000000" Padding="24"
+                    c:FormBehaviors.EnterSubmits="{Binding SaveVariantCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelVariantEditCommand}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="14">
                         <TextBlock Text="{Binding L[add_variant]}" Classes="h2" />

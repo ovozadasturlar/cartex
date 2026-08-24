@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.PageStatusView"
+             x:DataType="vm:PageStatusViewModel">
+    <Grid>
+        <Border Classes="card" Padding="32" MaxWidth="520"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Spacing="16" HorizontalAlignment="Center">
+                <ProgressBar IsVisible="{Binding IsLoading}" IsIndeterminate="True" Width="220" />
+                <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold"
+                           TextAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
+                <TextBlock Text="{Binding Message}" IsVisible="{Binding HasError}"
+                           MaxWidth="440" TextWrapping="Wrap" TextAlignment="Center"
+                           Foreground="{DynamicResource TextSecondary}" />
+                <Button Content="{Binding L[retry]}" IsVisible="{Binding HasError}"
+                        Command="{Binding RetryCommand}" Classes="brand"
+                        HorizontalAlignment="Center" MinWidth="150" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

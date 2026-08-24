@@ -9,12 +9,14 @@ describe('buildReceiptSettingsRequest', () => {
         footerText: '  Rahmat!  ',
         paperWidth: 32,
         paperFormat: 'A4',
+        language: 'ru',
       }),
     ).toEqual({
       headerText: 'Cartex market',
       footerText: 'Rahmat!',
       paperWidth: 32,
       paperFormat: 'A4',
+      language: 'ru',
     });
   });
 
@@ -25,12 +27,14 @@ describe('buildReceiptSettingsRequest', () => {
         footerText: '',
         paperWidth: 48,
         paperFormat: 'Thermal',
+        language: 'uz-latn',
       }),
     ).toEqual({
       headerText: null,
       footerText: null,
       paperWidth: 48,
       paperFormat: 'Thermal',
+      language: 'uz-latn',
     });
   });
 });

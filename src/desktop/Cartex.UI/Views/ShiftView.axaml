@@ -48,9 +48,10 @@
         <StackPanel Margin="24" Spacing="16">
             <c:PageHeader Title="{Binding L[shift]}" />
 
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    IsVisible="{Binding NoShift}">
+                    IsVisible="{Binding NoShift}"
+                    c:FormBehaviors.EnterSubmits="{Binding OpenShiftCommand}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="{Binding L[no_open_shift]}" Foreground="{DynamicResource TextSecondary}" />
                     <Grid ColumnDefinitions="Auto,12,240,*,Auto">
@@ -170,7 +171,7 @@
                         </Border>
                     </Grid>
 
-                    <Border Classes="inset">
+                    <Border Classes="inset form">
                         <Grid ColumnDefinitions="Auto,12,*,8,220,8,160,8,Auto,8,Auto">
                             <TextBlock Text="{Binding L[cash_movement]}" Classes="caption" VerticalAlignment="Center" />
                             <TextBox Grid.Column="2" Text="{Binding MovementReason}" PlaceholderText="{Binding L[movement_reason]}"
@@ -188,7 +189,8 @@
                         </Grid>
                     </Border>
 
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                    <Border Classes="form" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0"
+                            c:FormBehaviors.EnterSubmits="{Binding CloseShiftCommand}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding L[counted_cash]}" Classes="caption" FontWeight="SemiBold" />
                             <Grid ColumnDefinitions="60,8,240,12,170,12,*">

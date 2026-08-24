@@ -38,6 +38,7 @@ import { ProductDialog } from '../products/product-dialog';
 import { CartLine, PaymentRow, PosCartState, shortfallDiscount } from './pos-state';
 import { ScanFeedback, ScannerDialog } from '../../shared/scanner.dialog';
 import { LayoutService } from '../../core/layout.service';
+import { AccessCapabilitiesService } from '../../core/access-capabilities.service';
 
 const VIEW_KEY = 'cartex.pos.viewMode';
 const PAGE_SIZE = 40;
@@ -76,6 +77,7 @@ export class Pos implements OnInit {
   /// Kamera tugmasi faqat u haqiqatan ishlaydigan qurilmada ko'rinadi (`https` + dvigatel).
   readonly cameraScan = inject(BarcodeScannerService).supported;
   private readonly auth = inject(AuthService);
+  private readonly access = inject(AccessCapabilitiesService);
   private readonly features = inject(FeaturesApi);
   private readonly remotePrint = inject(RemotePrintService);
   private readonly wh = inject(WarehouseContextService);
@@ -119,10 +121,14 @@ export class Pos implements OnInit {
   readonly shift = signal<CurrentShift | null>(null);
   readonly canOpenShift = this.auth.hasPermission('shifts.open');
   readonly canOverridePrice = this.auth.hasPermission('sales.priceOverride');
-  readonly canCreateCart = this.auth.hasPermission('sales.create');
-  readonly canCheckout = this.auth.hasPermission('sales.checkout');
+  get canCreateCart(): boolean {
+    return this.access.canUseCart(this.policy()?.allowSaleQueue ?? true);
+  }
+  get canCheckout(): boolean {
+    return this.access.canSell();
+  }
   readonly queue = signal<CartListItem[]>([]);
-  private queueAvailable = this.auth.hasPermission('sales.view');
+  private queueAvailable = false;
   private activeQueueCode: string | null = null;
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
 
@@ -142,7 +148,7 @@ export class Pos implements OnInit {
   readonly canPrepack = signal(false);
 
   /// NAVBAT-06: navbat o'chirilgan bo'lsa uning ikonalari umuman chizilmaydi.
-  readonly queueAllowed = computed(() => this.policy()?.allowSaleQueue ?? true);
+  readonly queueAllowed = computed(() => this.access.canQueue(this.policy()?.allowSaleQueue ?? true));
   readonly proformaAllowed = computed(() => this.policy()?.printCartProforma ?? true);
   readonly canManageRates = this.auth.hasPermission('rates.edit');
 
@@ -294,6 +300,7 @@ export class Pos implements OnInit {
       this.categories.set(categories);
       this.shift.set(shift);
       this.policy.set(policy);
+      this.queueAvailable = this.access.canQueue(policy?.allowSaleQueue ?? true);
       void this.loadPrepackAccess();
       if (business) {
         this.baseCurrency.set(business.currency);
