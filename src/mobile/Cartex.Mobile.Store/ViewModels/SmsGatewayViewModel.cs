@@ -100,8 +100,8 @@ public partial class SmsGatewayViewModel(SmsGatewayHostService host, ISmsGateway
         }
     }
 
-    /// Birinchi ekran faqat holatni ko'rsatadi; sozlamalar, sinov xabari va rozilikni
-    /// bekor qilish alohida sahifada — shunda kundalik ish uchun ochilgan sahifa toza qoladi.
+    // Birinchi ekran faqat holatni ko'rsatadi; sozlamalar, sinov xabari va rozilikni
+    // bekor qilish alohida sahifada — shunda kundalik ish uchun ochilgan sahifa toza qoladi.
     [RelayCommand]
     private Task OpenSettingsAsync() => Shell.Current.GoToAsync("sms-gateway-settings");
 
@@ -356,7 +356,7 @@ public sealed class MobileSmsGatewayCard
     public string Remaining { get; }
     public double Progress { get; }
     public bool ShowProgress { get; }
-    /// Rang qolgan ulushga qarab: yashil -> sariq -> to'q sariq -> qizil.
+    // Rang qolgan ulushga qarab: yashil -> sariq -> to'q sariq -> qizil.
     public bool IsWarning { get; }
     public bool IsOrange { get; }
     public bool IsDanger { get; }

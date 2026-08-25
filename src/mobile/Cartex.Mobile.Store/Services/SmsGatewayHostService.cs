@@ -214,9 +214,9 @@ public sealed class SmsGatewayHostService(
         }
     }
 
-    /// Yuborilgan ish soni qaytariladi: bir narsa ketgan bo'lsa qurilma tezlik
-    /// chegarasiga tushadi va navbatdagi ish tayinlanmay qoladi, shuning uchun
-    /// chaqiruvchi 60 soniyani kutmasdan qisqa vaqtdan keyin qayta so'raydi.
+    // Yuborilgan ish soni qaytariladi: bir narsa ketgan bo'lsa qurilma tezlik
+    // chegarasiga tushadi va navbatdagi ish tayinlanmay qoladi, shuning uchun
+    // chaqiruvchi 60 soniyani kutmasdan qisqa vaqtdan keyin qayta so'raydi.
     private async Task<int> PollAsync(
         IReadOnlyList<SmsGatewayRegistration> registrations,
         CancellationToken cancellationToken)
