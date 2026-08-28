@@ -427,3 +427,10 @@ deploy/installer/output/
 
 # Repograph tool cache
 .repograph/
+
+# Katalog asbobi: maxfiy kalit va yig'ilgan paketlar hech qachon repoga tushmaydi
+*.pem
+catalog.csv
+issues.csv
+catalog-*.db
+catalog-*.json

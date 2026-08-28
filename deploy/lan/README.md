@@ -53,11 +53,30 @@ emas; u faqat fayllarni S3 uslubida alohida xizmatda saqlash kerak bo'lsa
 Ma'lumot ikki joyda: baza (savdolar) va fayllar (suratlar). Ikkalasini birga oling:
 
 ```bash
-docker compose exec db pg_dump -U cartex -Fc cartex > cartex-$(date +%F).dump
+docker compose exec db pg_dump -U postgres -Fc cartex > cartex-$(date +%F).dump
 docker run --rm -v lan_cartex-storage:/data -v %cd%:/backup alpine tar czf /backup/storage-backup.tgz -C /data .
 ```
 
 Zaxira faylini boshqa qurilmaga (flesh/boshqa kompyuter) ko'chirib qo'ying.
+
+## Zaxiradan tiklash (boshqa qurilmada / bazani almashtirish)
+
+Baza foydalanuvchisi standart `postgres` bo'lib, standart `postgres` bazasiga ulanadi —
+shu sabab `cartex` ilova bazasini undan ulanib turib erkin DROP/CREATE qilish mumkin
+(Postgres o'zi ulangan turgan bazani drop qilishga yo'l qo'ymaydi, shuning uchun bu ataylab shunday).
+
+```bash
+# 1. Zaxira faylini konteynerga nusxalang
+docker cp cartex-2026-08-25.dump <loyiha>-db-1:/tmp/restore.dump
+
+# 2. Ilova bazasini almashtiring (postgres bazasiga ulangan holda)
+docker compose exec db psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS cartex;"
+docker compose exec db psql -U postgres -d postgres -c "CREATE DATABASE cartex OWNER postgres;"
+docker compose exec db pg_restore -U postgres -d cartex --no-owner --no-privileges /tmp/restore.dump
+
+# 3. API'ni qayta ishga tushiring — u avtomatik ravishda kerakli migratsiyalarni qo'llaydi
+docker compose restart api
+```
 
 ## Yangilash
 
