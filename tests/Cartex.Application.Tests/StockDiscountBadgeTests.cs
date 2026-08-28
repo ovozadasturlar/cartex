@@ -66,7 +66,8 @@ public class StockDiscountBadgeTests(DatabaseFixture fixture) : DatabaseTest(fix
             new NoStorage(),
             scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>(),
             scope.ServiceProvider.GetRequiredService<ISettingsService>(),
-            scope.ServiceProvider.GetRequiredService<ICurrencyService>());
+            scope.ServiceProvider.GetRequiredService<ICurrencyService>(),
+            scope.ServiceProvider.GetRequiredService<IProductPopularity>());
         var page = await handler.Handle(new GetStockOnHandQuery(warehouseId), default);
         return page.Items;
     }

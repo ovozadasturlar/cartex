@@ -204,8 +204,8 @@ public sealed class ReceiptSmsTests(DatabaseFixture fixture) : DatabaseTest(fixt
         long? customerId = null;
         if (withCustomer)
         {
-            var customer = await db.Customers.FirstAsync();
-            customer.Phone = withPhone ? "+998901234567" : null;
+            var customer = await db.Customers.Include(x => x.Party).FirstAsync();
+            customer.Party.Phone = withPhone ? "+998901234567" : null;
             customer.AllowMarketingSms = false;
             customerId = customer.Id;
             await db.SaveChangesAsync();

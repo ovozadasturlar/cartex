@@ -214,16 +214,17 @@ public sealed class CustomerDocumentTests(DatabaseFixture fixture) : DatabaseTes
         Assert.Equal(InventoryDisposition.Quarantine, line.Disposition);
         Assert.Equal(2, document.Settlements.Count);
         Assert.Equal(50_000m, document.Settlements.Sum(x => x.AmountBase));
-        Assert.Equal(1m, await db.InventoryPositions
+        Assert.Equal(1m, -await db.InventoryMovements
             .Where(x => x.BranchId == branchId
-                        && x.LocationKind == InventoryLocationKind.Quarantine
-                        && x.LocationId == warehouseId
-                        && x.VariantId == variantId)
-            .Select(x => x.Quantity)
-            .SingleAsync());
+                        && x.VariantId == variantId
+                        && (x.ToLocationKind == InventoryLocationKind.Quarantine
+                            || x.FromLocationKind == InventoryLocationKind.Quarantine)
+                        && x.WarehouseId == warehouseId)
+            .SumAsync(x => x.Quantity));
         var movement = await db.InventoryMovements.SingleAsync(x =>
-            x.SourceType == "CustomerReturn" && x.SourceId == documentId);
-        Assert.Equal(InventoryLocationKind.Quarantine, movement.ToLocationKind);
+            x.SourceType == "CustomerReturn" && x.SourceId == documentId
+            && x.ToLocationKind == InventoryLocationKind.Quarantine);
+        Assert.Equal(-1m, movement.Quantity);
         Assert.Equal(20_000m, await db.Accounts
             .Where(x => x.CustomerId == customerId && x.Type == AccountType.CustomerAdvance)
             .Select(x => x.Balance)

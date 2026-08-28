@@ -4,6 +4,7 @@ using Cartex.Application.Tests.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -29,6 +30,8 @@ public class AccountConcurrencyTests(DatabaseFixture fixture) : DatabaseTest(fix
             db.ProductVariants.Add(variant);
             await db.SaveChangesAsync();
             db.ProductPrices.Add(new ProductPrice { VariantId = variant.Id, WarehouseId = null, SellingPrice = 385000, Currency = "UZS" });
+            scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+                new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
             db.Stocks.Add(new Stock { BranchId = branch1, WarehouseId = warehouse1, VariantId = variant.Id, Quantity = 100, PurchasePrice = 100 });
             await db.SaveChangesAsync();
             return variant.Id;

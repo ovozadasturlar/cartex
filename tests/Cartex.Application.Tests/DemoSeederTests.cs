@@ -31,7 +31,8 @@ public sealed class DemoSeederTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Database.MigrateAsync();
         await DatabaseSeeder.SeedAsync(db, p => p);
-        await DemoDataSeeder.SeedAsync(db);
+        await DemoDataSeeder.SeedAsync(db,
+            scope.ServiceProvider.GetRequiredService<Cartex.Persistence.Services.InventoryReasonState>());
     }
 
     public async ValueTask DisposeAsync()

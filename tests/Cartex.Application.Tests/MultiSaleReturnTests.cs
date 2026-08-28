@@ -226,10 +226,11 @@ public class MultiSaleReturnTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             .SumAsync(x => x.Quantity);
         Assert.Equal(stockBefore, stockAfter);
 
-        var claimed = await verify.InventoryPositions
+        var claimed = -await verify.InventoryMovements
             .Where(x => x.VariantId == setup.VariantId
-                        && x.LocationKind == InventoryLocationKind.SupplierClaim
-                        && x.LocationId == setup.WarehouseId)
+                        && x.WarehouseId == setup.WarehouseId
+                        && (x.ToLocationKind == InventoryLocationKind.SupplierClaim
+                            || x.FromLocationKind == InventoryLocationKind.SupplierClaim))
             .SumAsync(x => x.Quantity);
         Assert.Equal(1m, claimed);
     }

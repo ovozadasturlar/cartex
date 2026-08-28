@@ -1,8 +1,10 @@
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Application.Tests.Common;
+using Cartex.Domain.Enums;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -56,6 +58,9 @@ public sealed class SearchTransliterationTests(DatabaseFixture fixture) : Databa
         var branch = await db.Branches.FirstAsync();
         var warehouse = await db.Warehouses.FirstAsync(x => x.BranchId == branch.Id);
         var unitId = await db.Units.Select(x => x.Id).FirstAsync();
+
+        scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+            new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
 
         foreach (var (name, barcode) in products)
         {

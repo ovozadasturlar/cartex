@@ -74,14 +74,16 @@ public sealed class DeleteCustomerBalanceTests(DatabaseFixture fixture) : Databa
         return await db.Customers.AnyAsync(c => c.Id == customerId);
     }
 
-    // QARZ-21
+    // QARZ-21: to'siq operatsiya bo'lgan mijozga tegishli. Faqat boshlang'ich qoldiq
+    // kiritilgan, hali hech narsa bo'lmagan mijoz `QARZ-24` bo'yicha o'chiriladi.
     [Fact]
     public async Task QARZ_21_customer_with_open_debt_is_not_deleted()
     {
         await StartAsync();
         var customerId = await CreateCustomerAsync(Debt);
+        await RepayAsync(customerId, 10_000m);
 
-        Assert.Equal(Debt, await BalanceAsync(customerId, AccountType.Debt));
+        Assert.Equal(Debt - 10_000m, await BalanceAsync(customerId, AccountType.Debt));
         Assert.Equal(0m, await BalanceAsync(customerId, AccountType.CustomerAdvance));
 
         var error = await Assert.ThrowsAnyAsync<DomainException>(() => DeleteAsync(customerId));

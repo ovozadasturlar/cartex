@@ -80,7 +80,7 @@ public sealed class SmsGatewayTests(DatabaseFixture fixture) : DatabaseTest(fixt
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var service = scope.ServiceProvider.GetRequiredService<SmsGatewayService>();
-        var customer = new Customer { Party = new Party { BusinessId = context.BusinessId, FullName = "Mijoz" }, FullName = "Mijoz", AllowMarketingSms = false };
+        var customer = new Customer { Party = new Party { BusinessId = context.BusinessId, FullName = "Mijoz" }, AllowMarketingSms = false };
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
 
@@ -610,6 +610,28 @@ public sealed class SmsGatewayTests(DatabaseFixture fixture) : DatabaseTest(fixt
         Assert.True(await db.AuditLogs.AnyAsync(x => x.Action == "sms.gateway_job_cancelled"));
     }
 
+    /// SMS-33: shlyuz tinglayaptimi degan savolga jonli hub ulanishi javob beradi.
+    [Fact]
+    public async Task SMS_33_A_gateway_that_is_not_connected_is_not_assigned()
+    {
+        var context = await SeedContextAsync();
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var service = scope.ServiceProvider.GetRequiredService<SmsGatewayService>();
+        var device = Device(context.BranchId, "asleep", 1);
+        db.SmsGatewayDevices.Add(device);
+        await db.SaveChangesAsync();
+        Fixture.HubPresence.SmsGatewayOffline(device.DeviceId, device.SimSlot);
+
+        var job = await service.CreateAsync(context.BranchId, SmsGatewayJobKind.Manual, "+998901234567",
+            "Do'kon: xabar", 1, "sms-33", null, default);
+
+        Assert.NotNull(job);
+        Assert.Equal(SmsGatewayJobStatus.Pending, job.Status);
+        Assert.Null(job.AssignedDeviceId);
+        Assert.Equal("no_device", job.WaitingReason);
+    }
+
     private async Task<(long BranchId, long BusinessId)> SeedContextAsync()
     {
         using var scope = Fixture.CreateScope();
@@ -623,8 +645,7 @@ public sealed class SmsGatewayTests(DatabaseFixture fixture) : DatabaseTest(fixt
 
     private static Customer Customer(long businessId) => new()
     {
-        Party = new Party { BusinessId = businessId, FullName = "Mijoz" },
-        FullName = "Mijoz"
+        Party = new Party { BusinessId = businessId, FullName = "Mijoz" }
     };
 
     /// Telefon qayta o'rnatilganda lokal credential yo'qoladi. Agar server yozuvni

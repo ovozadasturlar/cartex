@@ -1,8 +1,9 @@
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Customers.Commands;
+using Cartex.Application.Customers.Queries;
 using Cartex.Application.Tests.Common;
-using Cartex.Domain.Authorization;
 using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -11,119 +12,199 @@ using Xunit;
 
 namespace Cartex.Application.Tests;
 
-/// QARZ-23: boshlang'ich qoldiq defterga yozadi, shuning uchun u `customers.create` bilan emas,
-/// o'zining ruxsati bilan ochiladi. Testlar hujjat qoidasidan yozilgan.
+/// QARZ-24: hali hech qanday operatsiya bo'lmagan mijoz - kiritish xatosi, biznes tarixi emas.
 [Collection("database")]
-public class CustomerOpeningBalanceTests(DatabaseFixture fixture) : DatabaseTest(fixture)
+public sealed class CustomerOpeningBalanceTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
-    private sealed record Setup(long Branch, long Business, long Admin);
-
-    private async Task<Setup> SetupAsync()
+    [Fact]
+    public async Task QARZ_24_Opening_debt_can_be_corrected_while_the_customer_is_untouched()
     {
-        using var scope = Fixture.CreateScope();
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+
+        await UpdateAsync(scope, customerId, openingBalance: 300_000m);
+
+        Assert.Equal(300_000m, await DebtAsync(scope, customerId));
+        Assert.Equal(1, await OpeningEntryCountAsync(scope, customerId));
+    }
+
+    [Fact]
+    public async Task QARZ_24_Correction_can_flip_debt_into_credit()
+    {
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+
+        await UpdateAsync(scope, customerId, openingBalance: -200_000m);
+
+        Assert.Equal(0m, await DebtAsync(scope, customerId));
+        Assert.Equal(200_000m, await BalanceAsync(scope, customerId, AccountType.CustomerAdvance));
+    }
+
+    [Fact]
+    public async Task QARZ_24_Correction_to_zero_leaves_no_opening_entry()
+    {
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+
+        await UpdateAsync(scope, customerId, openingBalance: 0m);
+
+        Assert.Equal(0m, await DebtAsync(scope, customerId));
+        Assert.Equal(0, await OpeningEntryCountAsync(scope, customerId));
+    }
+
+    [Fact]
+    public async Task QARZ_24_Untouched_customer_is_deleted_together_with_the_opening_entry()
+    {
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(new DeleteCustomerCommand(customerId));
+
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return new Setup(
-            (await db.Branches.FirstAsync(x => x.Name == "Asosiy filial")).Id,
-            (await db.Businesses.FirstAsync()).Id,
-            (await db.Users.FirstAsync(x => x.Username == "admin")).Id);
+        db.ChangeTracker.Clear();
+        Assert.True(await db.Customers.IgnoreQueryFilters().Where(x => x.Id == customerId).Select(x => x.IsDeleted).SingleAsync());
+        Assert.Equal(0m, await DebtAsync(scope, customerId));
+        Assert.Equal(0, await OpeningEntryCountAsync(scope, customerId));
     }
 
-    private void AsUser(Setup s, params string[] permissions)
+    [Fact]
+    public async Task QARZ_24_Activity_closes_both_the_correction_and_the_deletion()
     {
-        Fixture.CurrentUser.AsCashier(s.Admin, s.Business, s.Branch);
-        foreach (var permission in permissions)
-            Fixture.CurrentUser.Granted.Add(permission);
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+        await AddSaleAsync(scope, customerId);
+
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var correction = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => UpdateAsync(scope, customerId, openingBalance: 100_000m));
+        var deletion = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => sender.Send(new DeleteCustomerCommand(customerId)));
+
+        Assert.Equal("customer_has_activity", correction.Code);
+        Assert.Equal("customer_balance_open", deletion.Code);
+        Assert.Equal(500_000m, await DebtAsync(scope, customerId));
     }
 
-    private Task<long> CreateAsync(decimal openingBalance) =>
-        Send(x => x.Send(new CreateCustomerCommand(
-            "Qoldiqli Mijoz", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m,
-            OpeningBalance: openingBalance)));
-
-    private async Task<decimal> BalanceAsync(long customerId, AccountType type)
+    [Fact]
+    public async Task QARZ_24_Reading_a_customer_reports_whether_the_opening_balance_is_still_editable()
     {
-        using var scope = Fixture.CreateScope();
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        var before = await sender.Send(new GetCustomerByIdQuery(customerId));
+        await AddSaleAsync(scope, customerId);
+        var after = await sender.Send(new GetCustomerByIdQuery(customerId));
+
+        Assert.True(before!.IsUntouched);
+        Assert.Equal(500_000m, before.OpeningBalance);
+        Assert.False(after!.IsUntouched);
+        Assert.Equal(0m, after.OpeningBalance);
+    }
+
+    /// QARZ-21: bonus pul emas - uning yozuvi boshlang'ich qoldiq tuzatishida yo'qolmaydi.
+    [Fact]
+    public async Task QARZ_24_Correction_does_not_touch_the_bonus_ledger()
+    {
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        await sender.Send(new GiveCustomerBonusCommand(customerId, 5_000m, "sovg'a"));
+
+        var error = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => UpdateAsync(scope, customerId, openingBalance: 100_000m));
+
+        Assert.Equal("customer_has_activity", error.Code);
+        Assert.Equal(5_000m, await BalanceAsync(scope, customerId, AccountType.Bonus));
+        Assert.Equal(500_000m, await DebtAsync(scope, customerId));
+    }
+
+    /// QARZ-24: tugallanmagan savat amal emas - o'chirishni to'smaydi va mijoz bilan yopiladi.
+    [Fact]
+    public async Task QARZ_24_An_unfinished_cart_does_not_block_the_deletion()
+    {
+        using var scope = await LoginAsync();
+        var customerId = await CreateAsync(scope, openingBalance: 500_000m);
+        await AddCartAsync(scope, customerId);
+
+        await scope.ServiceProvider.GetRequiredService<ISender>().Send(new DeleteCustomerCommand(customerId));
+
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return (await db.Accounts.FirstOrDefaultAsync(a => a.CustomerId == customerId && a.Type == type))?.Balance ?? 0m;
+        db.ChangeTracker.Clear();
+        Assert.False(await db.Carts.AnyAsync(x => x.CustomerId == customerId));
+        Assert.Equal(0m, await DebtAsync(scope, customerId));
     }
 
-    private async Task<int> CustomerCountAsync()
+    private async Task<IServiceScope> LoginAsync()
     {
-        using var scope = Fixture.CreateScope();
+        var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return await db.Customers.CountAsync();
+        var branchId = await db.Branches.Where(x => x.Name == "Asosiy filial").Select(x => x.Id).SingleAsync();
+        var businessId = await db.Businesses.Select(x => x.Id).SingleAsync();
+        var adminId = await db.Users.Where(x => x.Username == "admin").Select(x => x.Id).SingleAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branchId);
+        return scope;
     }
 
-    private async Task<T> Send<T>(Func<ISender, Task<T>> action)
+    private static Task<long> CreateAsync(IServiceScope scope, decimal openingBalance) =>
+        scope.ServiceProvider.GetRequiredService<ISender>().Send(new CreateCustomerCommand(
+            "Toza mijoz", "+998901112233", null, 0) { OpeningBalance = openingBalance });
+
+    private static Task UpdateAsync(IServiceScope scope, long customerId, decimal openingBalance) =>
+        scope.ServiceProvider.GetRequiredService<ISender>().Send(new UpdateCustomerCommand(
+            customerId, "Toza mijoz", "+998901112233", null, 0) { OpeningBalance = openingBalance });
+
+    private static Task<decimal> DebtAsync(IServiceScope scope, long customerId) =>
+        BalanceAsync(scope, customerId, AccountType.Debt);
+
+    private static async Task<decimal> BalanceAsync(IServiceScope scope, long customerId, AccountType type)
     {
-        using var scope = Fixture.CreateScope();
-        return await action(scope.ServiceProvider.GetRequiredService<ISender>());
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.ChangeTracker.Clear();
+        return await db.Accounts.Where(x => x.CustomerId == customerId && x.Type == type)
+            .SumAsync(x => (decimal?)x.Balance) ?? 0m;
     }
 
-    // QARZ-23: `customers.create` boshlang'ich qoldiq uchun yetarli emas.
-    [Fact]
-    public async Task Creating_a_customer_in_debt_without_the_opening_balance_permission_is_refused()
+    private static async Task<int> OpeningEntryCountAsync(IServiceScope scope, long customerId)
     {
-        var s = await SetupAsync();
-        AsUser(s, AppPermissions.Customers.Create, AppPermissions.Customers.View);
-        var before = await CustomerCountAsync();
-
-        var error = await Assert.ThrowsAsync<ForbiddenException>(() => CreateAsync(500_000m));
-
-        Assert.Equal("opening_balance_forbidden", error.Code);
-        Assert.Equal(before, await CustomerCountAsync());
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.ChangeTracker.Clear();
+        return await db.Transactions.CountAsync(x => x.Description == "Boshlang'ich qoldiq"
+            && ((x.FromAccount != null && x.FromAccount.CustomerId == customerId)
+                || (x.ToAccount != null && x.ToAccount.CustomerId == customerId)));
     }
 
-    // QARZ-23: manfiy qoldiq do'konni qarzdor qiladi — u ham bir xil eshikdan o'tadi.
-    [Fact]
-    public async Task Creating_a_customer_the_shop_owes_without_the_permission_is_refused()
+    private static async Task AddCartAsync(IServiceScope scope, long customerId)
     {
-        var s = await SetupAsync();
-        AsUser(s, AppPermissions.Customers.Create, AppPermissions.Customers.View);
-        var before = await CustomerCountAsync();
-
-        var error = await Assert.ThrowsAsync<ForbiddenException>(() => CreateAsync(-500_000m));
-
-        Assert.Equal("opening_balance_forbidden", error.Code);
-        Assert.Equal(before, await CustomerCountAsync());
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var warehouse = await db.Warehouses.FirstAsync();
+        db.Carts.Add(new Cart
+        {
+            BranchId = warehouse.BranchId,
+            WarehouseId = warehouse.Id,
+            CustomerId = customerId,
+            AggregateCode = Guid.NewGuid().ToString("N")[..8]
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
     }
 
-    // QARZ-23: qoldiqsiz mijoz yaratish oddiy ma'lumot kiritish — qo'shimcha ruxsat talab qilmaydi.
-    [Fact]
-    public async Task A_customer_without_an_opening_balance_needs_no_extra_permission()
+    /// Savdo yozuvi mijozga biznes tarixi paydo bo'lganini bildiradi.
+    private static async Task AddSaleAsync(IServiceScope scope, long customerId)
     {
-        var s = await SetupAsync();
-        AsUser(s, AppPermissions.Customers.Create, AppPermissions.Customers.View);
-
-        var id = await CreateAsync(0m);
-
-        Assert.True(id > 0);
-        Assert.Equal(0m, await BalanceAsync(id, AccountType.Debt));
-    }
-
-    // QARZ-23: ruxsat berilganda qoldiq defterga tushadi — musbat qarz bo'lib.
-    [Fact]
-    public async Task The_permission_lets_a_debt_opening_balance_through()
-    {
-        var s = await SetupAsync();
-        AsUser(s, AppPermissions.Customers.Create, AppPermissions.Customers.View,
-            AppPermissions.Customers.OpeningBalance);
-
-        var id = await CreateAsync(500_000m);
-
-        Assert.Equal(500_000m, await BalanceAsync(id, AccountType.Debt));
-    }
-
-    // QARZ-23: manfiy qoldiq mijoz avansiga yoziladi.
-    [Fact]
-    public async Task The_permission_lets_an_advance_opening_balance_through()
-    {
-        var s = await SetupAsync();
-        AsUser(s, AppPermissions.Customers.Create, AppPermissions.Customers.View,
-            AppPermissions.Customers.OpeningBalance);
-
-        var id = await CreateAsync(-500_000m);
-
-        Assert.Equal(500_000m, await BalanceAsync(id, AccountType.CustomerAdvance));
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var warehouse = await db.Warehouses.FirstAsync();
+        var userId = await db.Users.Where(x => x.Username == "admin").Select(x => x.Id).SingleAsync();
+        db.Sales.Add(new Sale
+        {
+            BranchId = warehouse.BranchId,
+            WarehouseId = warehouse.Id,
+            CustomerId = customerId,
+            UserId = userId,
+            DocumentNumber = Guid.NewGuid().ToString("N")[..10],
+            ReceiptToken = Guid.NewGuid().ToString("N")
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
     }
 }

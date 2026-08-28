@@ -22,8 +22,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private Respawner _respawner = null!;
 
     public TestCurrentUser CurrentUser { get; } = new();
-    public TestProductReferenceSource ProductReferenceSource { get; } = new();
     public RecordingNotificationService Notifications { get; } = new();
+    public TestHubPresence HubPresence { get; } = new();
+    public RecordingMessageChannels MessageChannels { get; } = new();
+    public RecordingCartNotifier CartNotifier { get; } = new();
 
     public async ValueTask InitializeAsync()
     {
@@ -35,16 +37,21 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<ICurrentUser>(CurrentUser);
         services.AddScoped<IFeatureStateProvider, TestFeatureStates>();
         services.AddScoped<Cartex.Application.Common.Interfaces.ISettingsService, TestSettingsService>();
-        services.AddSingleton<Cartex.Application.Common.Interfaces.IProductReferenceSource>(ProductReferenceSource);
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPagingMetadataWriter, NoopPagingWriter>();
-        services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier, NullCartNotifier>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ICartNotifier>(CartNotifier);
         services.AddSingleton<Cartex.Application.Common.Interfaces.IPrintJobNotifier, NullPrintJobNotifier>();
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IHubPresence>(HubPresence);
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ITelegramService>(MessageChannels);
+        services.AddSingleton<Cartex.Application.Common.Interfaces.ISmsService>(MessageChannels);
+        services.AddSingleton<Cartex.Application.Common.Interfaces.IEmailService>(MessageChannels);
         services.AddSingleton<Cartex.Application.Common.Interfaces.ISmsGatewayNotifier, NullSmsGatewayNotifier>();
         services.AddSingleton<INotificationService>(Notifications);
         services.AddSingleton<Cartex.Application.Common.Interfaces.ISpreadsheetService, Cartex.Infrastructure.Import.ClosedXmlSpreadsheetService>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IRemoteImageFetcher, NullRemoteImageFetcher>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IImageProcessor, NullImageProcessor>();
         services.AddSingleton<Cartex.Application.Common.Interfaces.IObjectStorage, MemoryObjectStorage>();
+        services.AddMemoryCache();
+        services.AddScoped<IProductPopularity, Cartex.Infrastructure.Catalog.ProductPopularityProvider>();
         services.AddScoped<Cartex.Auth.Services.IPasswordHasher, Cartex.Auth.Services.PasswordHasher>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();
@@ -70,8 +77,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async ValueTask ResetAsync()
     {
         CurrentUser.Reset();
-        ProductReferenceSource.Reset();
         Notifications.Clear();
+        HubPresence.Reset();
+        MessageChannels.Clear();
+        CartNotifier.Sent.Clear();
 
         await using (var connection = new NpgsqlConnection(_container.GetConnectionString()))
         {
@@ -83,7 +92,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await DatabaseSeeder.SeedAsync(db, p => p);
         await DatabaseSeeder.SyncCurrenciesAsync(db);
-        await DemoDataSeeder.SeedCatalogAsync(db);
+        await DemoDataSeeder.SeedCatalogAsync(db,
+            scope.ServiceProvider.GetRequiredService<Cartex.Persistence.Services.InventoryReasonState>());
     }
 
     public IServiceScope CreateScope() => _services.CreateScope();
@@ -93,9 +103,15 @@ public sealed class DatabaseFixture : IAsyncLifetime
         public void Write(PagedListMetadata metadata) { }
     }
 
-    private sealed class NullCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier
+    public sealed class RecordingCartNotifier : Cartex.Application.Common.Interfaces.ICartNotifier
     {
-        public Task CartsChangedAsync(string kind, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public List<(long BranchId, string Kind)> Sent { get; } = [];
+
+        public Task CartsChangedAsync(long branchId, string kind, CancellationToken cancellationToken = default)
+        {
+            Sent.Add((branchId, kind));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NullPrintJobNotifier : Cartex.Application.Common.Interfaces.IPrintJobNotifier

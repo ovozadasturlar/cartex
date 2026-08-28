@@ -1,6 +1,7 @@
 using Cartex.Application.Suppliers.Commands;
 using Cartex.Application.Suppliers.Queries;
 using Cartex.Application.Supplies.Commands;
+using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
@@ -42,6 +43,12 @@ public class SupplierLedgerTests(DatabaseFixture fixture) : DatabaseTest(fixture
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new CreateSupplyCommand(supplierId, warehouse1, DateOnly.FromDateTime(DateTime.Today),
                 [new CreateSupplyItemDto(variantId, 5, 8000m, null)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(15_000m, IsPayOut: false));
         }
 
         using (var scope = Fixture.CreateScope())

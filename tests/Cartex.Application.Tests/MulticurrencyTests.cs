@@ -232,6 +232,12 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new Cartex.Application.Shifts.Commands.AddCashMovementCommand(120_000m, IsPayOut: false));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, DebtCurrency: "USD", PayCurrency: "UZS"));
         }
 

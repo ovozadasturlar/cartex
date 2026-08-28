@@ -11,7 +11,6 @@ using Xunit;
 using DomainEndpointStatus = Cartex.Domain.Enums.PrinterEndpointStatus;
 using DomainJobKind = Cartex.Domain.Enums.PrintJobKind;
 using DomainJobStatus = Cartex.Domain.Enums.PrintJobStatus;
-using DomainNodeStatus = Cartex.Domain.Enums.PrintNodeStatus;
 using DomainCapability = Cartex.Domain.Enums.PrintCapability;
 
 namespace Cartex.Application.Tests;
@@ -62,9 +61,7 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
 
         var issued = await sender.Send(new RegisterPrintNodeCommand(Registration("dev-lost", branchId)));
         await sender.Send(new SetPrintDeviceTrustCommand(new SetPrintDeviceTrustRequest(branchId, "dev-lost", true)));
-        var registered = await db.PrintNodes.SingleAsync(x => x.DeviceId == "dev-lost");
-        registered.LastSeenAt = DateTime.UtcNow.AddMinutes(-10);
-        await db.SaveChangesAsync();
+        Fixture.HubPresence.PrintHostOffline("dev-lost");
 
         var again = await sender.Send(new RegisterPrintNodeCommand(Registration("dev-lost", branchId, "wrong-token")));
         Assert.False(string.IsNullOrWhiteSpace(again.HostToken));
@@ -231,8 +228,7 @@ public sealed class PrintDeviceTrustTests(DatabaseFixture fixture) : DatabaseTes
             Name = "Sleepy till",
             IsTrusted = true,
             HostEnabled = true,
-            Status = DomainNodeStatus.Online,
-            LastSeenAt = DateTime.UtcNow,
+                LastSeenAt = DateTime.UtcNow,
             Endpoints =
             {
                 new PrinterEndpoint

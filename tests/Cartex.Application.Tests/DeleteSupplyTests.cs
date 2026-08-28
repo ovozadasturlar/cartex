@@ -65,6 +65,12 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var (branch1, warehouse1, _, _, variantId, supplierId) = await SetupAsync();
         var shiftId = await TestShift.OpenAsync(Fixture);
 
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(30_000m, IsPayOut: false));
+        }
+
         decimal cashBefore;
         long supplyId;
         using (var scope = Fixture.CreateScope())
@@ -114,7 +120,7 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender2 = check.ServiceProvider.GetRequiredService<ISender>();
         var report = await sender2.Send(new CloseShiftCommand(shiftId, 0));
         Assert.Equal(0m, report.SupplyPayOut);
-        Assert.Equal(0m, report.ExpectedCash);
+        Assert.Equal(30_000m, report.ExpectedCash);
     }
 
     [Fact]

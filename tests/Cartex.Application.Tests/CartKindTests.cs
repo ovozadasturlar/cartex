@@ -38,6 +38,20 @@ public class CartKindTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         });
     }
 
+    /// NAVBAT-08: navbat signali savatning filialiga boradi, hamma klientga emas.
+    [Fact]
+    public async Task NAVBAT_08_Queue_signal_carries_the_carts_branch()
+    {
+        var warehouseId = await LoginAsync();
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var branchId = await db.Warehouses.Where(x => x.Id == warehouseId).Select(x => x.BranchId).SingleAsync();
+
+        await SubmitAsync(scope, warehouseId);
+
+        Assert.Equal(branchId, Assert.Single(Fixture.CartNotifier.Sent).BranchId);
+    }
+
     [Fact]
     public async Task Submit_DefaultsToQueue()
     {

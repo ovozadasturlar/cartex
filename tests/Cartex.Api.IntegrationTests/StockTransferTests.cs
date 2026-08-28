@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -45,6 +46,8 @@ public class StockTransferTests(CartexApiFactory factory)
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var branchId = await db.Warehouses.Where(w => w.Id == fromId).Select(w => w.BranchId).FirstAsync();
+            scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+                new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
             db.Stocks.Add(new Stock { BranchId = branchId, WarehouseId = fromId, VariantId = variantId, Quantity = 5, PurchasePrice = 1000 });
             await db.SaveChangesAsync();
         }
@@ -120,6 +123,8 @@ public class StockTransferTests(CartexApiFactory factory)
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var branchId = await db.Warehouses.Where(w => w.Id == fromId).Select(w => w.BranchId).FirstAsync();
+            scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+                new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
             db.Stocks.Add(new Stock { BranchId = branchId, WarehouseId = fromId, VariantId = variantId, Quantity = 10, PurchasePrice = 1000 });
             await db.SaveChangesAsync();
         }

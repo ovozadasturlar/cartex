@@ -1,4 +1,5 @@
 using Cartex.Shared.Models.Printing;
+using Cartex.Shared.Models.Settings;
 using Cartex.UI.Services;
 using Xunit;
 
@@ -40,7 +41,25 @@ public sealed class LocalPrintRoutingTests
             hasLocalPrinter: true, salesPolicyAllows: true));
     }
 
-    private static PrintRoutingPolicyDto Policy(PrintRoutingMode mode, bool isEnabled) =>
-        new(1, 1, PrintJobKind.Receipt, isEnabled, mode, true, PrintStickyMode.Disabled, 0,
-            null, null, 10, 30, 60, 20, []);
+    [Fact]
+    public void CHOP_10_LocalOnly_prints_locally_only_on_the_selected_printers_machine()
+    {
+        var owner = Policy(PrintRoutingMode.LocalOnly, isEnabled: true, pinnedToThisDevice: true);
+        var other = Policy(PrintRoutingMode.LocalOnly, isEnabled: true);
+
+        Assert.True(LocalPrintRouting.ShouldPrintLocally(owner, canPrintLocally: true,
+            hasLocalPrinter: true, salesPolicyAllows: true));
+        Assert.False(LocalPrintRouting.ShouldPrintLocally(other, canPrintLocally: true,
+            hasLocalPrinter: true, salesPolicyAllows: true));
+    }
+
+    private static LocalPrintPolicy Policy(
+        PrintRoutingMode mode,
+        bool isEnabled,
+        bool pinnedToThisDevice = false) =>
+        new(new PrintRoutingPolicyDto(1, 1, PrintJobKind.Receipt, isEnabled, mode, true,
+                PrintStickyMode.Disabled, 0, null, null, 10, 30, 60, 20, []),
+            new SalesPolicyDto(),
+            HasEnabledLocalEndpoint: true,
+            PinnedToThisDevice: pinnedToThisDevice);
 }

@@ -2,8 +2,10 @@ using Cartex.Application.Common.Messaging;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Enums;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -29,6 +31,8 @@ public class StockConcurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixtu
         await db.SaveChangesAsync();
 
         db.ProductPrices.Add(new ProductPrice { VariantId = variant.Id, WarehouseId = null, SellingPrice = 385000, Currency = "UZS" });
+        scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+            new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
         db.Stocks.Add(new Stock { BranchId = branch1, WarehouseId = warehouse1, VariantId = variant.Id, Quantity = stock, PurchasePrice = 100 });
         await db.SaveChangesAsync();
 

@@ -41,7 +41,9 @@ public partial class WebTranslationKeyTests
             .ToList();
 
         Assert.True(missing.Count == 0,
-            $"The web client uses keys that no language file defines:{Environment.NewLine}  "
+            $"The web client uses keys that no language file defines. Add them to "
+            + $"src/web/Cartex.Web.Angular/src/i18n (web-only) or to the desktop base; "
+            + $"public/i18n is generated and any edit there is lost:{Environment.NewLine}  "
             + string.Join(Environment.NewLine + "  ", missing));
     }
 
