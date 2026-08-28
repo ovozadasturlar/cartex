@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import {
   CategoryOption, ExpiringStock, InventoryApi, LowStock, StockOnHandPage, WarehouseOption,
@@ -20,6 +20,7 @@ import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PagingMeta } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -52,6 +53,7 @@ export class Warehouse implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
@@ -60,6 +62,30 @@ export class Warehouse implements OnInit {
   readonly categories = signal<CategoryOption[]>([]);
   readonly warehouseId = signal<number | null>(null);
   readonly tab = signal<'onHand' | 'lowStock' | 'expiring'>('onHand');
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  // Ochiq turgan bo'lim eksport qilinadi: qoldiq, kam qolgan yoki muddati yaqin.
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    if (this.tab() === 'lowStock') {
+      downloadCsv(t('low_stock'), this.lowStock(), [
+        { header: t('product'), value: (x) => x.productName },
+        { header: t('warehouse'), value: (x) => x.warehouseName },
+        { header: t('on_hand'), value: (x) => x.onHand },
+        { header: t('min_stock'), value: (x) => x.minStock },
+      ]);
+      return;
+    }
+    downloadCsv(t('warehouse'), this.onHand()?.items ?? [], [
+      { header: t('product'), value: (x) => x.productName },
+      { header: t('category'), value: (x) => x.categoryName },
+      { header: t('unit'), value: (x) => x.unitName },
+      { header: t('quantity'), value: (x) => x.quantity },
+      { header: t('price'), value: (x) => x.sellingPrice },
+      { header: t('code'), value: (x) => x.code },
+    ]);
+  }
   readonly onHand = signal<StockOnHandPage | null>(null);
   readonly lowStock = signal<LowStock[]>([]);
   readonly expiring = signal<ExpiringStock[]>([]);

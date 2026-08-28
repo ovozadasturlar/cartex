@@ -8,7 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoModule } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { SettingsApi } from '../../core/api/settings.api';
+import { ReceiptSettings as ReceiptSettingsDto, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
@@ -40,6 +40,9 @@ export class ReceiptSettings implements OnInit {
   readonly previewBusy = signal(false);
   readonly previewText = signal('');
   private previewTimer: number | undefined;
+  // Forma faqat pastdagi 5 maydonni tahrirlaydi; qolgan (Show*/QR/logo) bayroqlar shu yerda
+  // saqlanib, saqlashda qayta yuboriladi - aks holda server ularni standart qiymatga qaytaradi.
+  private loaded: ReceiptSettingsDto | null = null;
 
   headerText = '';
   footerText = '';
@@ -58,6 +61,7 @@ export class ReceiptSettings implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const s = await lastValueFrom(this.api.receipt());
+      this.loaded = s;
       this.headerText = s.headerText ?? '';
       this.footerText = s.footerText ?? '';
       this.paperWidth = this.paperWidths.includes(s.paperWidth) ? s.paperWidth : 0;
@@ -72,11 +76,12 @@ export class ReceiptSettings implements OnInit {
   }
 
   async save(message: string): Promise<void> {
+    if (!this.loaded) return;
     this.busy.set(true);
     try {
-      await lastValueFrom(
-        this.api.updateReceipt(buildReceiptSettingsRequest(this)),
-      );
+      const body: ReceiptSettingsDto = { ...this.loaded, ...buildReceiptSettingsRequest(this) };
+      await lastValueFrom(this.api.updateReceipt(body));
+      this.loaded = body;
       this.notify.success(message);
     } catch (e) {
       this.notify.error(e);
@@ -93,10 +98,11 @@ export class ReceiptSettings implements OnInit {
   }
 
   private async refreshPreview(): Promise<void> {
+    if (!this.loaded) return;
     this.previewBusy.set(true);
     try {
       const result = await lastValueFrom(
-        this.api.previewReceipt(buildReceiptSettingsRequest(this)),
+        this.api.previewReceipt({ ...this.loaded, ...buildReceiptSettingsRequest(this) }),
       );
       this.previewText.set(result.text);
     } catch (e) {

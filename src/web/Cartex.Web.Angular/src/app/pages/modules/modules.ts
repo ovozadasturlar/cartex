@@ -5,6 +5,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { FeaturesApi, OwnerModule } from '../../core/api/misc.api';
 import { AuthService } from '../../core/auth.service';
+import { FeaturesService } from '../../core/features.service';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
 
@@ -19,6 +20,7 @@ import { PageHeader } from '../../shared/page-header';
 export class Modules implements OnInit {
   private static readonly salesPolicyCodes = new Set(['multicurrency_pricing', 'multicurrency_sales']);
   private readonly api = inject(FeaturesApi);
+  private readonly features = inject(FeaturesService);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
 
@@ -35,7 +37,10 @@ export class Modules implements OnInit {
     if (!this.canEdit || !module.available) return;
     try {
       await lastValueFrom(this.api.setModule(module.code, !module.isEnabled));
-      await this.load();
+      // RUXSAT-04a: bitta joyda o'zgargan imkoniyat butun ilovaga - menyu, qorovullar - darhol
+      // yetib borishi kerak, aks holda to'liq qayta yuklashgacha eskirgan holatda qoladi.
+      this.features.reset();
+      await Promise.all([this.load(), this.features.ensureLoaded()]);
       this.notify.success(this.transloco.translate('success'));
     } catch (e) {
       this.notify.error(e);

@@ -12,6 +12,7 @@ import { lastValueFrom } from 'rxjs';
 import { FeaturesApi } from '../../core/api/misc.api';
 import { LicenseApi, LicenseOptions, LicenseStatus } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
+import { FeaturesService } from '../../core/features.service';
 import { isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
@@ -43,6 +44,7 @@ interface FeatureRow {
 export class License implements OnInit {
   private readonly api = inject(LicenseApi);
   private readonly featuresApi = inject(FeaturesApi);
+  private readonly features = inject(FeaturesService);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
 
@@ -116,7 +118,11 @@ export class License implements OnInit {
       for (const r of this.rows()) {
         await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
       }
+      // RUXSAT-04a: tarif o'zgarishi imkoniyatlar ro'yxatini eskirtiradi - menyu va qorovullar
+      // shu yerdan darhol yangilanishi kerak.
+      this.features.reset();
       this.status.set(await lastValueFrom(this.api.get()));
+      await this.features.ensureLoaded();
       this.notify.success(message);
     } catch (e) {
       this.notify.error(e);

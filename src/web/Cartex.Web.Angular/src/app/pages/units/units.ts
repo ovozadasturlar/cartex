@@ -14,6 +14,7 @@ import { lastValueFrom } from 'rxjs';
 import { Unit, UnitsApi } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -34,6 +35,7 @@ import { PageHeader } from '../../shared/page-header';
 })
 export class Units implements OnInit {
   private readonly api = inject(UnitsApi);
+  private readonly transloco = inject(TranslocoService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
@@ -43,6 +45,18 @@ export class Units implements OnInit {
   readonly canToggle = this.auth.hasPermission('units.toggle');
   readonly loading = signal(true);
   readonly all = signal<Unit[]>([]);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('units'), this.all(), [
+      { header: t('name'), value: (u) => u.name },
+      { header: t('short_name'), value: (u) => u.shortName },
+      { header: t('active'), value: (u) => u.isEnabled },
+      { header: t('default'), value: (u) => u.isDefault },
+    ]);
+  }
   readonly search = signal('');
   readonly dimensions = ['Count', 'Weight', 'Volume', 'Length'];
   readonly groups = computed(() => {
@@ -89,7 +103,7 @@ export class Units implements OnInit {
 
   private openDialog(unit: Unit | null, dimension?: string): void {
     this.dialog
-      .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: false })
+      .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.load();
@@ -131,7 +145,7 @@ export class Units implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('short_name') }}</mat-label>

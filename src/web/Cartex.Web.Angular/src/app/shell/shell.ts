@@ -10,8 +10,9 @@ import { TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
 import { FeaturesService } from '../core/features.service';
 import { LayoutService } from '../core/layout.service';
-import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS, phoneNavItems } from '../core/nav';
+import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS, isNavItemOpen, phoneNavItems } from '../core/nav';
 import { APP_LANGUAGES, PreferencesService } from '../core/preferences.service';
+import { SalesPolicyService } from '../core/sales-policy.service';
 import { WarehouseContextService } from '../core/warehouse-context.service';
 import { Logo } from '../shared/logo';
 
@@ -50,22 +51,21 @@ export class Shell {
   );
   readonly user = this.auth.currentUser;
   private readonly featuresService = inject(FeaturesService);
+  private readonly policyService = inject(SalesPolicyService);
+  private readonly open = (item: NavItem): boolean =>
+    isNavItemOpen(item, (p) => this.auth.hasPermission(p), (f) => this.featuresService.has(f),
+      (p) => this.policyService.has(p), this.wh.warehouses().length);
   readonly navSections = computed(() => NAV_SECTIONS.map((s) => ({
     ...s,
-    items: s.items.filter((i) =>
-      (i.permission === null || this.auth.hasPermission(i.permission))
-      && this.featuresService.has(i.feature)
-      && (!i.requiresMultipleWarehouses || this.wh.warehouses().length > 1)),
+    items: s.items.filter((i) => this.open(i)),
   })).filter((s) => s.items.length > 0));
-  /// RUXSAT-04: sozlamalar tugmasi faqat ichida ochiq sahifa bo'lsa ko'rinadi — modul yopiq
-  /// bo'lsa o'sha sahifa hisobga olinmaydi.
-  readonly canOpenSettings = computed(() => SETTINGS_SECTIONS.some((s) =>
-    s.items.some((i) =>
-      (i.permission === null || this.auth.hasPermission(i.permission))
-      && this.featuresService.has(i.feature)),
-  ));
+  /// RUXSAT-04: sozlamalar tugmasi faqat ichida ochiq sahifa bo'lsa ko'rinadi — modul yoki
+  /// siyosat yopiq bo'lsa o'sha sahifa hisobga olinmaydi.
+  readonly canOpenSettings = computed(() => SETTINGS_SECTIONS.some((s) => s.items.some((i) => this.open(i))));
   readonly languages = APP_LANGUAGES;
-  readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
+  readonly canPickWarehouse = this.auth.hasPermission('sales.create')
+    || this.auth.hasPermission('sales.checkout')
+    || this.auth.hasPermission('stocks.view');
   /// Telefonda pastki panelga 4 ta joy bor, shuning uchun sahifalar menyudagi tartibda emas,
   /// telefonda haqiqatan kerak bo'ladigan tartibda tanlanadi (`PHONE_NAV_ORDER`). Ro'yxat
   /// foydalanuvchiga moslashadi: hisobot ruxsati yo'q kassir kassa/savdo/mijoz/mahsulotni
@@ -76,10 +76,7 @@ export class Shell {
   readonly searchQuery = signal('');
   readonly searchItems = computed(() => [...NAV_SECTIONS, ...SETTINGS_SECTIONS]
     .flatMap((section) => section.items)
-    .filter((item) =>
-      (!item.permission || this.auth.hasPermission(item.permission))
-      && this.featuresService.has(item.feature)
-      && (!item.requiresMultipleWarehouses || this.wh.warehouses().length > 1)));
+    .filter((item) => this.open(item)));
   readonly searchResults = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
     return query
@@ -94,6 +91,7 @@ export class Shell {
   constructor() {
     if (this.canPickWarehouse) void this.wh.load();
     void this.featuresService.ensureLoaded();
+    void this.policyService.ensureLoaded();
   }
 
   onWarehouse(e: Event): void {

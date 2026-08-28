@@ -16,7 +16,7 @@ export class FeaturesService {
     if (this.enabled()) return Promise.resolve();
     return (this.loading ??= lastValueFrom(this.api.enabled())
       .then((codes) => this.enabled.set(new Set(codes)))
-      .catch(() => this.enabled.set(new Set()))
+      .catch(() => undefined)
       .finally(() => (this.loading = null)));
   }
 

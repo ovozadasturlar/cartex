@@ -108,7 +108,9 @@ export class PosProductDialog {
         return;
       }
       const changed = await lastValueFrom(
-        this.dialog.open<ProductDialog, unknown, boolean>(ProductDialog, { data: product, width: '640px' }).afterClosed(),
+        this.dialog
+          .open<ProductDialog, unknown, boolean>(ProductDialog, { data: { product }, width: '640px' })
+          .afterClosed(),
       );
       if (changed) this.ref.close('reload');
     } catch (e) {

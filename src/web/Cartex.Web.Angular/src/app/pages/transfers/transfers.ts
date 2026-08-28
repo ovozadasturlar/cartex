@@ -17,6 +17,7 @@ import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { LayoutService } from '../../core/layout.service';
@@ -54,6 +55,21 @@ export class Transfers implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly paged = signal<Paged<StockTransfer> | null>(null);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('transfers'), this.paged()?.items ?? [], [
+      { header: t('date'), value: (x) => x.createdAt },
+      { header: t('product'), value: (x) => x.productName },
+      { header: t('quantity'), value: (x) => x.quantity },
+      { header: t('from'), value: (x) => x.fromWarehouse },
+      { header: t('to'), value: (x) => x.toWarehouse },
+      { header: t('status'), value: (x) => x.status },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   readonly page = signal(1);
   readonly pageSize = signal(20);
   readonly canCreate = this.auth.hasPermission('stock_transfers.create');

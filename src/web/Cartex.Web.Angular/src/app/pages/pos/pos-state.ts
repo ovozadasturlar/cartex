@@ -3,6 +3,7 @@ import { Customer } from '../../core/models';
 
 export interface CartLine {
   variantId: number;
+  prepackId?: number;
   name: string;
   unitName: string;
   price: number;
@@ -65,6 +66,32 @@ export class PosCartState {
     this.payments.set([]);
     this.note.set('');
     this.dueDate.set('');
+  }
+
+  // Savdoni tuzatish: bekor qilingan savdoning savati, narxlari, mijozi, to'lovi va
+  // chegirmasi qaytariladi - kassir xatoni tuzatib qayta yakunlaydi.
+  restoreCorrection(state: {
+    cart: CartLine[];
+    customer: Customer | null;
+    cash: number;
+    card: number;
+    bonus: number;
+    discount: number;
+    note: string;
+    dueDate: string;
+    payments: PaymentRow[];
+  }): void {
+    this.cart.set(state.cart);
+    this.customer.set(state.customer);
+    this.cash.set(state.cash);
+    this.card.set(state.card);
+    this.bonus.set(state.bonus);
+    this.discountByPercent.set(false);
+    this.discountPercent.set(0);
+    this.discountManual.set(state.discount);
+    this.note.set(state.note);
+    this.dueDate.set(state.dueDate);
+    this.payments.set(state.payments);
   }
 
   clearAll(): void {

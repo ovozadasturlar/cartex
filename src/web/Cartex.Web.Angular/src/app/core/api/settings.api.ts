@@ -9,36 +9,6 @@ export interface LicenseStatus {
   enabledFeatures: string[];
 }
 
-export interface ProductReferenceSettings {
-  isEnabled: boolean;
-  sourceType: string;
-  spreadsheetId: string;
-  sheetName: string;
-  barcodeColumn: string;
-  nameColumn: string;
-  unitColumn: string;
-  categoryColumn: string;
-  manufacturerColumn: string;
-  packQtyColumn: string;
-  priceColumn: string;
-  autoFillPrice: boolean;
-  syncSchedule: string;
-  lastSyncedAt: string | null;
-  lastReadCount: number;
-  lastUpdatedCount: number;
-  lastErrorCount: number;
-  rowCount: number;
-  lastError: string | null;
-}
-
-export interface ProductReferenceSyncResult {
-  read: number;
-  updated: number;
-  errors: number;
-  total: number;
-  syncedAt: string;
-}
-
 export interface LicenseFeature {
   code: string;
   name: string;
@@ -117,6 +87,19 @@ export interface ReceiptSettings {
   footerText: string | null;
   paperWidth: number;
   paperFormat: string;
+  showBusinessName: boolean;
+  showBranchName: boolean;
+  showAddress: boolean;
+  showPhone: boolean;
+  showCashier: boolean;
+  showCustomer: boolean;
+  showReceiptNumber: boolean;
+  showPaymentDetails: boolean;
+  showQrCode: boolean;
+  showElectronicLink: boolean;
+  showLogo: boolean;
+  showCustomerPhone: boolean;
+  showCustomerEmail: boolean;
   language?: string | null;
 }
 
@@ -156,8 +139,26 @@ export interface SalesPolicy {
   allowFreeReturnLines: boolean;
   requireReturnReason: boolean;
   allowSaleQueue: boolean;
+  trackWriteOff: boolean;
   creditLimitEnforcement: string;
   defaultCreditLimit: number | null;
+}
+
+export type CatalogSourceMode = 'Off' | 'Online' | 'File';
+
+export interface CatalogPack {
+  shopType: string;
+  version: number;
+  rowCount: number;
+  uploadedAt: string;
+}
+
+export interface CatalogSettings {
+  mode: CatalogSourceMode;
+  endpointBaseUrl: string;
+  imageBaseUrl: string;
+  pack: CatalogPack | null;
+  lastError: string | null;
 }
 
 export interface LoginMethods {
@@ -296,16 +297,23 @@ export class SettingsApi {
     return this.http.put<void>('/api/settings/sales-policy', body);
   }
 
-  productReference(): Observable<ProductReferenceSettings> {
-    return this.http.get<ProductReferenceSettings>('/api/settings/product-reference');
+  catalog(): Observable<CatalogSettings> {
+    return this.http.get<CatalogSettings>('/api/settings/catalog');
   }
 
-  updateProductReference(body: ProductReferenceSettings): Observable<void> {
-    return this.http.put<void>('/api/settings/product-reference', body);
+  updateCatalog(body: { mode: CatalogSourceMode; endpointBaseUrl: string; imageBaseUrl: string }): Observable<void> {
+    return this.http.put<void>('/api/settings/catalog', body);
   }
 
-  syncProductReference(): Observable<ProductReferenceSyncResult> {
-    return this.http.post<ProductReferenceSyncResult>('/api/settings/product-reference/sync', {});
+  uploadCatalogPack(pack: File, manifest: File): Observable<CatalogPack> {
+    const form = new FormData();
+    form.append('pack', pack, pack.name);
+    form.append('manifest', manifest, manifest.name);
+    return this.http.post<CatalogPack>('/api/settings/catalog/pack', form);
+  }
+
+  deleteCatalogPack(): Observable<void> {
+    return this.http.delete<void>('/api/settings/catalog/pack');
   }
 
   loginMethods(): Observable<LoginMethods> {

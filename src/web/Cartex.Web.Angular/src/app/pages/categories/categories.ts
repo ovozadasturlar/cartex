@@ -14,6 +14,7 @@ import { CategoriesApi, Category } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 type DropPosition = 'before' | 'after' | 'child';
@@ -41,6 +42,7 @@ type MovePlan = { parentId: number | null; sortOrder: number };
 })
 export class Categories implements OnInit, OnDestroy {
   private readonly api = inject(CategoriesApi);
+  private readonly transloco = inject(TranslocoService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
@@ -53,6 +55,17 @@ export class Categories implements OnInit, OnDestroy {
   readonly canEdit = this.auth.hasPermission('categories.edit');
   readonly loading = signal(true);
   readonly all = signal<Category[]>([]);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('categories'), this.all(), [
+      { header: t('name'), value: (c) => c.name },
+      { header: t('description'), value: (c) => c.description },
+      { header: t('products'), value: (c) => c.productCount },
+    ]);
+  }
   readonly catalog = signal<Category[]>([]);
   readonly query = signal('');
   readonly expanded = signal(new Set(this.readExpanded()));
@@ -131,7 +144,7 @@ export class Categories implements OnInit, OnDestroy {
         data: { source: category, targets },
         width: '500px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -212,7 +225,7 @@ export class Categories implements OnInit, OnDestroy {
         data: { category, all: this.catalog() },
         width: '480px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -334,7 +347,7 @@ export class Categories implements OnInit, OnDestroy {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('parent') }}</mat-label>

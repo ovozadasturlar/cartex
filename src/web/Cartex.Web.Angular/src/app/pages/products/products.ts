@@ -15,6 +15,8 @@ import { CxCurrencyPipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
+import { VariantsDialog } from './variants.dialog';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -51,6 +53,31 @@ export class Products implements OnInit, OnDestroy {
   private readonly transloco = inject(TranslocoService);
 
   private readonly auth = inject(AuthService);
+
+  // Bir mahsulotning bir nechta ko'rinishi (rang, o'lcham) - desktopdagi variantlar oynasi.
+  openVariants(product: CatalogProduct): void {
+    this.dialog.open(VariantsDialog, { data: product, width: '560px', maxWidth: '94vw', autoFocus: 'first-tabbable' });
+  }
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.list({ page: 0, pageSize: 0, sortBy: 'Name' }));
+      downloadCsv(t('products'), all.items, [
+        { header: t('name'), value: (x) => x.name },
+        { header: t('category'), value: (x) => x.categoryName },
+        { header: t('unit'), value: (x) => x.unitName },
+        { header: t('code'), value: (x) => x.code },
+        { header: t('barcodes'), value: (x) => x.barcodes.join(' ') },
+        { header: t('min_stock'), value: (x) => x.minStock },
+        { header: t('active'), value: (x) => x.isEnabled },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
   readonly canCreate = this.auth.hasPermission('products.create');
   readonly canEdit = this.auth.hasPermission('products.edit');
   readonly canImport = this.auth.hasPermission('products.import');
@@ -167,7 +194,7 @@ export class Products implements OnInit, OnDestroy {
 
   private openDialog(product: CatalogProduct | null): void {
     this.dialog
-      .open(ProductDialog, { data: product, width: '760px', maxWidth: '94vw', autoFocus: false })
+      .open(ProductDialog, { data: { product }, width: '760px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.load();

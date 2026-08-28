@@ -1,16 +1,19 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule } from '@jsverse/transloco';
 import { CustomerReturnDocument } from '../../core/api/returns.api';
 import { CxDatePipe, CxEnumPipe, CxMoneyPipe } from '../../core/format';
+import { RemotePrintService } from '../../core/remote-print.service';
 
 @Component({
   selector: 'app-return-detail-dialog',
   imports: [
     MatButtonModule,
     MatDialogModule,
+    MatIconModule,
     MatTableModule,
     TranslocoModule,
     CxDatePipe,
@@ -67,6 +70,11 @@ import { CxDatePipe, CxEnumPipe, CxMoneyPipe } from '../../core/format';
         </div>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
+        @if (canPrint) {
+          <button matButton [disabled]="printing()" (click)="print()">
+            <mat-icon>print</mat-icon>{{ t('print') }}
+          </button>
+        }
         <button matButton mat-dialog-close>{{ t('close') }}</button>
       </mat-dialog-actions>
     </ng-container>
@@ -99,6 +107,25 @@ import { CxDatePipe, CxEnumPipe, CxMoneyPipe } from '../../core/format';
   `,
 })
 export class ReturnDetailDialog {
+  private readonly remotePrint = inject(RemotePrintService);
   readonly doc = inject<CustomerReturnDocument>(MAT_DIALOG_DATA);
   readonly cols = ['product', 'quantity', 'price', 'total', 'reason'];
+  readonly canPrint = this.remotePrint.can('printing.documents.print');
+  readonly printing = signal(false);
+
+  // Qaytarish cheki desktopdagi kabi tarmoq printeriga yuboriladi.
+  async print(): Promise<void> {
+    this.printing.set(true);
+    try {
+      await this.remotePrint.send({
+        kind: 'Receipt',
+        permission: 'printing.documents.print',
+        sourceType: 'customer_return',
+        sourceId: String(this.doc.id),
+        payload: { returnId: this.doc.id },
+      });
+    } finally {
+      this.printing.set(false);
+    }
+  }
 }

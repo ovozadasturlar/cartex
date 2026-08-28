@@ -170,5 +170,10 @@
   "customer_phone_missing": "Customer phone number is missing",
   "send_receipt_on_sale": "Send receipt SMS after sale",
   "send_receipt_on_sale_hint": "Off by default. Enabling it may incur carrier charges.",
-  "category_merge_confirm": "Move {{ count }} direct products from '{{ source }}' to '{{ target }}', move its child categories, and archive the source category?"
+  "category_merge_confirm": "Move {{ count }} direct products from '{{ source }}' to '{{ target }}', move its child categories, and archive the source category?",
+  "barcodes": "Barcodes",
+  "record": "Record",
+  "table": "Table",
+  "barcode_taken_by": "This barcode already belongs to '{{ product }}': {{ code }}",
+  "write_offs_subtitle": "Broken, expired, lost and stolen goods"
 }

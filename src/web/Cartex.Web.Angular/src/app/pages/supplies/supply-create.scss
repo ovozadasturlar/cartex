@@ -71,6 +71,11 @@
   color: var(--cx-text-2);
 }
 
+.scan-field {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

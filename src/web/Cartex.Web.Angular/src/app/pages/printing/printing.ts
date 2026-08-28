@@ -150,7 +150,7 @@ interface PrintJob {
               <button type="button" [class.active]="kind === item" (click)="selectKind(item)">{{ kindLabel(item) }}</button>
             }
           </div>
-          <label>{{ t('printing_routing_mode') }}<select [(ngModel)]="policy.routingMode">@for (item of routingModes; track item) { <option [value]="item">{{ t(item === 'LocalFirst' ? 'printing_routing_mode_local_first' : 'printing_routing_mode_priority_only') }}</option> }</select></label>
+          <label>{{ t('printing_routing_mode') }}<select [(ngModel)]="policy.routingMode">@for (item of routingModes; track item) { <option [value]="item">{{ t('printing_routing_mode_' + (item === 'LocalFirst' ? 'local_first' : item === 'PriorityOnly' ? 'priority_only' : 'local_only')) }}</option> }</select></label>
           <div class="switches">
             <mat-slide-toggle [(ngModel)]="policy.isEnabled">Bu print turi faol</mat-slide-toggle>
             <mat-slide-toggle [(ngModel)]="policy.allowFallback">Mos printerga avtomatik o‘tish</mat-slide-toggle>
@@ -251,7 +251,7 @@ export class Printing implements OnInit {
   readonly choices = signal<EndpointChoice[]>([]);
   readonly jobs = signal<PrintJob[]>([]);
   readonly kinds = ['Receipt', 'CartProforma', 'BarcodeLabel', 'ZReport', 'Document'];
-  readonly routingModes = ['LocalFirst', 'PriorityOnly'];
+  readonly routingModes = ['LocalFirst', 'PriorityOnly', 'LocalOnly'];
   readonly stickyModes = ['Disabled', 'Duration', 'UntilFailure', 'Permanent'];
   private policies: RoutingPolicy[] = [];
   private branchId = 0;

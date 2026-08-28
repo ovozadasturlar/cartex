@@ -49,7 +49,13 @@ export interface CreateSalePayload {
   paidCash: number;
   paidCard: number;
   paidBonus: number;
-  items: { variantId: number; quantity: number; unitPrice?: number | null; expectedUnitPrice?: number | null }[];
+  items: {
+    variantId: number;
+    quantity: number;
+    unitPrice?: number | null;
+    expectedUnitPrice?: number | null;
+    prepackId?: number | null;
+  }[];
   debtDueDate?: string | null;
   idempotencyKey: string;
   applyAutoDiscount: boolean;
@@ -139,8 +145,9 @@ export class PosApi {
     return this.http.get<StockOnHandPage>('/api/stocks/on-hand', { params });
   }
 
-  byBarcode(code: string, warehouseId: number): Observable<ProductLookup> {
-    return this.http.get<ProductLookup>('/api/products/by-barcode', { params: { code, warehouseId, forSale: true } });
+  /// TUZ-06: savat tiklanganda har qator uchun joriy qoldiq shu yerdan aniq so'raladi.
+  onHandByVariants(warehouseId: number, variantIds: number[]): Observable<StockOnHand[]> {
+    return this.http.post<StockOnHand[]>('/api/stocks/on-hand/by-variants', variantIds, { params: { warehouseId } });
   }
 
   customers(q: ListQuery): Observable<Paged<Customer>> {

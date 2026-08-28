@@ -17,6 +17,7 @@ import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 
@@ -47,6 +48,7 @@ export class Users implements OnInit {
 
   private readonly auth = inject(AuthService);
   readonly canCreate = this.auth.hasPermission('users.create');
+  readonly canExport = this.auth.hasPermission('reports.export');
   readonly canEdit = this.auth.hasPermission('users.edit');
   readonly canDelete = this.auth.hasPermission('users.delete');
   readonly loading = signal(true);
@@ -67,6 +69,24 @@ export class Users implements OnInit {
         this.page = 1;
         void this.reload();
       });
+  }
+
+  // Eksport joriy sahifani emas, butun ro'yxatni oladi - desktopdagi bilan bir xil.
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.users({ page: 0, pageSize: 0, sortBy: 'FullName' }));
+      downloadCsv(t('users'), all.items, [
+        { header: t('full_name'), value: (u) => u.fullName },
+        { header: t('username'), value: (u) => u.username },
+        { header: t('roles'), value: (u) => u.roleNames.join(', ') },
+        { header: t('default_branch'), value: (u) => u.defaultBranchName },
+        { header: t('active'), value: (u) => u.isActive },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
   }
 
   async ngOnInit(): Promise<void> {

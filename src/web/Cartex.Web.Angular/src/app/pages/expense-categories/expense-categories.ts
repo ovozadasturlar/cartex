@@ -49,7 +49,7 @@ export class ExpenseCategories implements OnInit {
   open(category?: ExpenseCategory): void {
     if (category ? !this.canEdit : !this.canCreate) return;
     this.dialog
-      .open(ExpenseCategoryDialog, { data: category ?? null, width: '420px', maxWidth: '94vw', autoFocus: false })
+      .open(ExpenseCategoryDialog, { data: category ?? null, width: '420px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.reload();
@@ -74,7 +74,7 @@ export class ExpenseCategories implements OnInit {
       <mat-dialog-content>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" required />
+          <input matInput cdkFocusInitial [(ngModel)]="name" required />
         </mat-form-field>
       </mat-dialog-content>
       <mat-dialog-actions align="end">

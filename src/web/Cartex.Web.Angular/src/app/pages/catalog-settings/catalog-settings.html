@@ -1,0 +1,101 @@
+<ng-container *transloco="let t">
+  <div class="sticky-head">
+    <cx-page-header [title]="t('product_reference')" [subtitle]="t('product_reference_description')">
+      @if (canManage && !loading()) {
+        <button matButton="filled" [disabled]="busy()" (click)="save()">{{ t('save') }}</button>
+      }
+    </cx-page-header>
+  </div>
+
+  <div class="scroll-body">
+    @if (loading() || busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (!loading()) {
+      <div class="cx-card section">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="mode">
+          <mat-label>{{ t('catalog_mode') }}</mat-label>
+          <mat-select [value]="mode()" [disabled]="!canManage" (valueChange)="mode.set($event)">
+            @for (m of modes; track m) {
+              <mat-option [value]="m">{{ t('catalog_mode_' + m.toLowerCase()) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <p class="hint">{{ t(modeHint()) }}</p>
+
+        @if (mode() === 'Online') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('catalog_endpoint_url') }}</mat-label>
+            <input matInput [(ngModel)]="endpointBaseUrl" [disabled]="!canManage" />
+          </mat-form-field>
+        }
+        @if (mode() !== 'Off') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ t('catalog_image_base_url') }}</mat-label>
+            <input matInput [(ngModel)]="imageBaseUrl" [disabled]="!canManage" />
+          </mat-form-field>
+        }
+      </div>
+
+      @if (mode() === 'File') {
+        <div class="cx-card section">
+          <h2>{{ t('catalog_pack') }}</h2>
+          <p class="hint">{{ t('catalog_pack_hint') }}</p>
+
+          @if (pack(); as current) {
+            <div class="facts">
+              <div class="fact">
+                <span>{{ t('catalog_pack_version') }}</span>
+                <strong>{{ current.version }}</strong>
+              </div>
+              <div class="fact">
+                <span>{{ t('total_rows') }}</span>
+                <strong>{{ current.rowCount }}</strong>
+              </div>
+              <div class="fact">
+                <span>{{ t('catalog_pack_uploaded_at') }}</span>
+                <strong>{{ current.uploadedAt | cxDate }}</strong>
+              </div>
+            </div>
+          } @else {
+            <p class="hint">{{ t('catalog_pack_none') }}</p>
+          }
+
+          @if (lastError(); as reason) {
+            <div class="rejected">
+              <div class="title">
+                <mat-icon>error_outline</mat-icon>
+                <strong>{{ t('catalog_pack_rejected') }}</strong>
+              </div>
+              <p>{{ reason }}</p>
+              @if (pack()) {
+                <p class="hint">{{ t('catalog_pack_kept') }}</p>
+              }
+            </div>
+          }
+
+          @if (canManage) {
+            <div class="pickers">
+              <button matButton="outlined" type="button" (click)="db.click()">
+                <mat-icon>database</mat-icon>{{ packFile?.name || '.db' }}
+              </button>
+              <input #db type="file" accept=".db" hidden (change)="onFile(db, 'pack')" />
+              <button matButton="outlined" type="button" (click)="json.click()">
+                <mat-icon>description</mat-icon>{{ manifestFile?.name || 'manifest.json' }}
+              </button>
+              <input #json type="file" accept=".json" hidden (change)="onFile(json, 'manifest')" />
+              <button matButton="filled" [disabled]="busy() || !packFile || !manifestFile" (click)="uploadPack()">
+                {{ pack() ? t('catalog_pack_replace') : t('catalog_pack_upload') }}
+              </button>
+              @if (pack()) {
+                <button matButton [disabled]="busy()" (click)="deletePack()">
+                  <mat-icon>delete_outline</mat-icon>{{ t('delete') }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</ng-container>

@@ -48,6 +48,10 @@ export class SalesApi {
     return this.http.post<void>(`/api/sales/${id}/resend-receipt`, {});
   }
 
+  void(id: number, reason: string): Observable<void> {
+    return this.http.post<void>(`/api/sales/${id}/void`, { reason });
+  }
+
   detail(id: number): Observable<SaleDetail> {
     return this.http.get<SaleDetail>(`/api/sales/${id}`);
   }
@@ -61,7 +65,7 @@ export class SalesApi {
   }
 
   assignCustomer(id: number, customerId: number): Observable<void> {
-    return this.http.post<void>(`/api/sales/${id}/customer/${customerId}`, {});
+    return this.http.put<void>(`/api/sales/${id}/customer/${customerId}`, {});
   }
 }
 
@@ -142,6 +146,8 @@ export class CustomersApi {
       creditLimit: number | null;
       notificationsOptOut: boolean;
       allowMarketingSms: boolean;
+      openingBalance?: number | null;
+      openingCurrency?: string | null;
     },
   ): Observable<void> {
     return this.http.put<void>(`/api/customers/${id}`, body);
@@ -149,6 +155,10 @@ export class CustomersApi {
 
   remove(id: number): Observable<void> {
     return this.http.delete<void>(`/api/customers/${id}`);
+  }
+
+  voidPayment(paymentId: number, reason: string): Observable<void> {
+    return this.http.post<void>(`/api/customer-payments/${paymentId}/void`, { reason });
   }
 
   repayDebt(

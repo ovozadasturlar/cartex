@@ -9,19 +9,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
+import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { SalesApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { LayoutService } from '../../core/layout.service';
 import { CxDatePipe, CxMoneyPipe, newUuid, utcRange } from '../../core/format';
-import { Receipt, Sale, SaleDetail, SalesTotals } from '../../core/models';
+import { Customer, Receipt, Sale, SaleDetail, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { PosCartState } from '../pos/pos-state';
 
 const statusKeys: Record<string, string> = {
   Completed: 'status_completed',
@@ -52,6 +55,7 @@ const statusKeys: Record<string, string> = {
 export class Sales implements OnInit {
   private readonly api = inject(SalesApi);
   private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialog = inject(MatDialog);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -60,6 +64,21 @@ export class Sales implements OnInit {
   readonly busy = signal(false);
   readonly totals = signal<SalesTotals | null>(null);
   readonly paged = signal<Paged<Sale>>({ items: [], meta: { totalCount: 0, page: 1, pageSize: 20, totalPages: 0 } });
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('sales'), this.paged().items, [
+      { header: t('date'), value: (x) => x.saleDate },
+      { header: t('receipt'), value: (x) => x.receiptToken },
+      { header: t('customer'), value: (x) => x.customerName },
+      { header: t('total'), value: (x) => x.totalAmount },
+      { header: t('debt'), value: (x) => x.debtAmount },
+      { header: t('status'), value: (x) => x.status },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
@@ -233,6 +252,12 @@ this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, widt
           <mat-icon>open_in_new</mat-icon>
           {{ t('open_receipt') }}
         </button>
+        @if (canCorrect()) {
+          <button matButton [disabled]="correcting()" (click)="correct()">
+            <mat-icon>edit</mat-icon>
+            {{ t('correct_sale') }}
+          </button>
+        }
         <button matButton="filled" [disabled]="resending()" (click)="resend(t('receipt_resent'))">
           <mat-icon>send</mat-icon>
           {{ t('resend_receipt') }}
@@ -288,13 +313,73 @@ this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, widt
     .footer { margin: 10px 0 0; font-size: 12px; color: var(--cx-text-3); }
   `,
 })
-export class ReceiptDialog {
+export class ReceiptDialog implements OnInit {
   private readonly api = inject(SalesApi);
   private readonly notify = inject(NotifyService);
   private readonly remotePrint = inject(RemotePrintService);
+  private readonly ref = inject(MatDialogRef<ReceiptDialog>);
+  private readonly router = inject(Router);
+  private readonly pos = inject(PosCartState);
+  private readonly transloco = inject(TranslocoService);
   readonly data = inject<{ receipt: Receipt; saleId: number }>(MAT_DIALOG_DATA);
   readonly resending = signal(false);
   readonly printing = signal(false);
+  readonly correcting = signal(false);
+  readonly canCorrect = signal(false);
+  private detail: SaleDetail | null = null;
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.detail = await lastValueFrom(this.api.detail(this.data.saleId));
+      this.canCorrect.set(this.detail.allowedActions.includes('correctSale'));
+    } catch {
+      this.canCorrect.set(false);
+    }
+  }
+
+  // Savdoni tuzatish: eski savdo sababi bilan bekor qilinadi va uning savati POS'ga
+  // qaytariladi - narx, mijoz, to'lov va chegirma bilan birga (desktop bilan bir xil).
+  async correct(): Promise<void> {
+    const sale = this.detail;
+    if (!sale || this.correcting()) return;
+    const t = (k: string): string => this.transloco.translate(k);
+    const reason = window.prompt(t('correct_sale_confirm'), '')?.trim();
+    if (!reason) return;
+    this.correcting.set(true);
+    try {
+      await lastValueFrom(this.api.void(sale.id, reason));
+      this.pos.restoreCorrection({
+        cart: sale.items.map((i) => ({
+          variantId: i.variantId,
+          name: i.productName,
+          unitName: i.unitName,
+          price: i.enteredUnitPrice > 0 ? i.enteredUnitPrice : i.unitPrice,
+          originalPrice: i.unitPrice,
+          qty: i.quantity,
+          available: 0,
+          allowsAmountEntry: false,
+          allowsFractional: i.allowsFractional,
+        })),
+        customer: sale.customerId
+          ? ({ id: sale.customerId, fullName: sale.customerName ?? '' } as Customer)
+          : null,
+        cash: sale.paidCash,
+        card: sale.paidCard,
+        bonus: sale.paidBonus,
+        discount: sale.manualDiscountAmount,
+        note: sale.note ?? '',
+        dueDate: sale.debtDueDate ?? '',
+        payments: sale.payments.map((p) => ({ method: p.method, currency: p.currency, amount: p.amount })),
+      });
+      this.notify.success(t('sale_voided'));
+      this.ref.close(true);
+      void this.router.navigate(['/pos']);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.correcting.set(false);
+    }
+  }
 
   async print(): Promise<void> {
     this.printing.set(true);

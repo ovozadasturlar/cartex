@@ -6,13 +6,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Transaction, TransactionsApi, TransactionsTotals } from '../../core/api/finance.api';
 import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
+import { AuthService } from '../../core/auth.service';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -41,12 +43,29 @@ import { LayoutService } from '../../core/layout.service';
 })
 export class Transactions implements OnInit {
   private readonly api = inject(TransactionsApi);
+  private readonly transloco = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<TransactionsTotals | null>(null);
   readonly paged = signal<Paged<Transaction> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('transactions'), this.paged()?.items ?? [], [
+      { header: t('date'), value: (x) => x.createdAt },
+      { header: t('operation'), value: (x) => x.operationType },
+      { header: t('amount'), value: (x) => x.amount },
+      { header: t('currency'), value: (x) => x.currency },
+      { header: t('from'), value: (x) => x.fromAccountName },
+      { header: t('to'), value: (x) => x.toAccountName },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   private readonly layout = inject(LayoutService);
   readonly columns = computed(() => this.layout.isPhone()
     ? ['date', 'type', 'amount']

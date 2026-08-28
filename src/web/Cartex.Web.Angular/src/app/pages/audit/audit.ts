@@ -8,13 +8,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { AdminApi, AuditLog, AuditOptions } from '../../core/api/admin.api';
 import { CxDatePipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
+import { AuthService } from '../../core/auth.service';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 
@@ -47,12 +49,27 @@ export function actionTone(action: string): string {
 })
 export class Audit implements OnInit {
   private readonly api = inject(AdminApi);
+  private readonly transloco = inject(TranslocoService);
+  private readonly auth = inject(AuthService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly paged = signal<Paged<AuditLog> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('audit'), this.paged()?.items ?? [], [
+      { header: t('date'), value: (x) => x.createdAt },
+      { header: t('user'), value: (x) => x.userName },
+      { header: t('action'), value: (x) => x.action },
+      { header: t('table'), value: (x) => x.tableName },
+      { header: t('record'), value: (x) => x.recordId },
+    ]);
+  }
   readonly options = signal<AuditOptions | null>(null);
   readonly cols = ['date', 'user', 'client', 'action', 'table', 'record'];
   readonly tone = actionTone;

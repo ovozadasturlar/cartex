@@ -14,10 +14,14 @@ import { lastValueFrom } from 'rxjs';
 import {
   CreateSupplyItem, InventoryApi, ProductOption, Supplier, UnitOption, VariantPriceInfo, WarehouseOption,
 } from '../../core/api/inventory.api';
+import { CategoriesApi, ManufacturersApi, ProductsCatalogApi } from '../../core/api/catalog.api';
+import { CatalogReference, CatalogReferenceApi, sameName } from '../../core/api/scan.api';
 import { SettingsApi } from '../../core/api/settings.api';
 import { CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
+import { ScanIndicator } from '../../core/scan-indicator';
 import { EmptyState } from '../../shared/empty-state';
+import { ScanIndicatorView } from '../../shared/scan-indicator';
 
 interface SupplyLine {
   variantId: number;
@@ -45,12 +49,17 @@ interface SupplyLine {
     TranslocoModule,
     CxMoneyPipe,
     EmptyState,
+    ScanIndicatorView,
   ],
   templateUrl: './supply-create.html',
   styleUrl: './supply-create.scss',
 })
 export class SupplyCreate implements OnInit {
   private readonly api = inject(InventoryApi);
+  private readonly catalogApi = inject(ProductsCatalogApi);
+  private readonly categoriesApi = inject(CategoriesApi);
+  private readonly manufacturersApi = inject(ManufacturersApi);
+  private readonly catalogRef = inject(CatalogReferenceApi);
   private readonly settings = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
@@ -63,6 +72,7 @@ export class SupplyCreate implements OnInit {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly scanIndicator = new ScanIndicator();
   readonly requireSupplier = signal(true);
   readonly suppliers = signal<Supplier[]>([]);
   readonly warehouses = signal<WarehouseOption[]>([]);
@@ -190,6 +200,119 @@ export class SupplyCreate implements OnInit {
     }
   }
 
+  async onScanBarcode(input: HTMLInputElement): Promise<void> {
+    const code = input.value.trim();
+    if (!code) return;
+    input.value = '';
+    let known: ProductOption | null;
+    try {
+      known = await this.findByBarcode(code);
+    } catch (e) {
+      this.notify.error(e);
+      return;
+    }
+    if (known) {
+      await this.pickScanned(known, 1);
+      return;
+    }
+    await this.receiveFromCatalog(code);
+  }
+
+  private async findByBarcode(code: string): Promise<ProductOption | null> {
+    const page = await lastValueFrom(this.catalogApi.list({ page: 1, pageSize: 5, search: `barcode:${code}` }));
+    const owner = page.items.find((p) => p.barcodes.includes(code));
+    if (!owner) return null;
+    const known = this.products().find((p) => p.defaultVariantId === owner.defaultVariantId);
+    if (known) return known;
+    const unit = this.units().find((u) => sameName(u.name, owner.unitName) || sameName(u.shortName, owner.unitName));
+    return {
+      id: owner.id,
+      defaultVariantId: owner.defaultVariantId,
+      name: owner.name,
+      dimension: unit?.dimension ?? owner.dimension,
+      unitId: unit?.id ?? null,
+      unitShortName: unit?.shortName ?? owner.unitName,
+    };
+  }
+
+  private async receiveFromCatalog(code: string): Promise<void> {
+    let reference: CatalogReference | null;
+    try {
+      reference = await this.scanIndicator.track(lastValueFrom(this.catalogRef.byBarcode(code)));
+    } catch (e) {
+      this.notify.error(e);
+      return;
+    }
+    if (!reference) {
+      this.notify.error(this.transloco.translate('barcode_not_found'));
+      return;
+    }
+
+    const created = await this.createFromReference(reference, code);
+    if (!created) return;
+    this.products.update((list) => [created, ...list]);
+    this.notify.success(this.transloco.translate('catalog_reference_found'));
+    await this.pickScanned(created, reference.packQty && reference.packQty > 1 ? reference.packQty : 1);
+  }
+
+  private async createFromReference(reference: CatalogReference, code: string): Promise<ProductOption | null> {
+    const unit = reference.unit
+      ? this.units().find((u) => sameName(u.name, reference.unit) || sameName(u.shortName, reference.unit))
+      : undefined;
+    const stocking = unit
+      ?? this.units().find((u) => u.isDefault && u.dimension === 'Count')
+      ?? this.units().find((u) => u.isDefault)
+      ?? this.units()[0];
+    if (!stocking) {
+      this.notify.error(new Error(this.transloco.translate('unit')));
+      return null;
+    }
+
+    try {
+      const categoryName = reference.categoryChild ?? reference.categoryParent;
+      const [categories, manufacturers] = await Promise.all([
+        categoryName ? lastValueFrom(this.categoriesApi.all()) : Promise.resolve([]),
+        reference.manufacturer ? lastValueFrom(this.manufacturersApi.all()) : Promise.resolve([]),
+      ]);
+      const productId = await lastValueFrom(this.catalogApi.create({
+        name: reference.name,
+        categoryId: categories.find((c) => sameName(c.name, categoryName))?.id ?? null,
+        unitId: stocking.id,
+        minStock: 0,
+        barcodes: [{ code, packQty: reference.packQty && reference.packQty > 0 ? reference.packQty : 1 }],
+        productTypeId: null,
+        attributes: null,
+        imageKey: null,
+        code: null,
+        ikpuCode: null,
+        vatRate: null,
+        sellingPrice: null,
+        priceCurrency: null,
+        manufacturerId: manufacturers.find((m) => sameName(m.name, reference.manufacturer))?.id ?? null,
+        amountEntryEnabled: false,
+      }));
+      const variants = await lastValueFrom(this.catalogApi.variants(productId));
+      const variantId = variants.find((v) => v.isDefault)?.id ?? variants[0]?.id;
+      if (!variantId) return null;
+      return {
+        id: productId,
+        defaultVariantId: variantId,
+        name: reference.name,
+        dimension: stocking.dimension,
+        unitId: stocking.id,
+        unitShortName: stocking.shortName,
+      };
+    } catch (e) {
+      this.notify.error(e);
+      return null;
+    }
+  }
+
+  private async pickScanned(option: ProductOption, packQty: number): Promise<void> {
+    await this.onProductSelected(option);
+    this.quantity = packQty;
+  }
+
   private applyPriceInfo(info: VariantPriceInfo): void {
     if (info.lastUnitId && this.unitOptions().some((u) => u.id === info.lastUnitId)) this.unitId = info.lastUnitId;
     this.price = (info.lastPurchasePrice ?? 0) * this.ratio();
@@ -200,7 +323,7 @@ export class SupplyCreate implements OnInit {
     const options: UnitOption[] = [];
     const stocking = p.unitId ? this.units().find((u) => u.id === p.unitId) : undefined;
     if (stocking) options.push(stocking);
-    else if (p.unitId) options.push({ id: p.unitId, name: p.unitShortName ?? '', shortName: p.unitShortName ?? '', dimension: p.dimension ?? 'Count', factor: 0, isEnabled: true });
+    else if (p.unitId) options.push({ id: p.unitId, name: p.unitShortName ?? '', shortName: p.unitShortName ?? '', dimension: p.dimension ?? 'Count', factor: 0, isEnabled: true, isDefault: false });
     if (p.dimension && p.dimension !== 'Count')
       for (const u of this.units()) if (u.dimension === p.dimension && u.id !== p.unitId) options.push(u);
     this.unitOptions.set(options);

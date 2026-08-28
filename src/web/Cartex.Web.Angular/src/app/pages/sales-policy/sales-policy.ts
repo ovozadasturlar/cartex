@@ -12,6 +12,7 @@ import { FeaturesApi, OwnerModule } from '../../core/api/misc.api';
 import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
+import { SalesPolicyService } from '../../core/sales-policy.service';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -35,6 +36,7 @@ export class SalesPolicySettings implements OnInit {
   private readonly featuresApi = inject(FeaturesApi);
   private readonly notify = inject(NotifyService);
   private readonly auth = inject(AuthService);
+  private readonly policyService = inject(SalesPolicyService);
 
   readonly canManage = this.auth.hasPermission('settings.salesPolicy');
   readonly canManageModules = this.auth.hasPermission('business.edit');
@@ -87,6 +89,7 @@ export class SalesPolicySettings implements OnInit {
     { key: 'show_unlisted_products', field: 'showUnlistedProducts' },
     { key: 'allow_insufficient_stock_sales', field: 'allowInsufficientStockSales' },
     { key: 'allow_negative_stock_offline', field: 'allowNegativeStockWhenOffline' },
+    { key: 'track_write_off', field: 'trackWriteOff' },
   ] as const;
 
   // The loaded document is kept whole. Saving spreads over it, so a field this screen does not
@@ -129,6 +132,7 @@ export class SalesPolicySettings implements OnInit {
     allowFreeReturnLines: true,
     requireReturnReason: false,
     allowSaleQueue: true,
+    trackWriteOff: false,
   };
 
   async ngOnInit(): Promise<void> {
@@ -162,6 +166,8 @@ export class SalesPolicySettings implements OnInit {
       };
       await lastValueFrom(this.api.updateSalesPolicy(body));
       this.loaded = body;
+      // BRAK-06: chiqim bo'limi shu kalitga bog'liq — menyu darhol qayta hisoblansin.
+      this.policyService.policy.set(body);
       this.notify.success(message);
     } catch (e) {
       this.notify.error(e);

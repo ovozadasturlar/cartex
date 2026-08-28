@@ -17,9 +17,17 @@ import {
   CategoriesApi, Manufacturer, ManufacturersApi, ProductType, ProductTypesApi,
   ProductsCatalogApi, StorageApi, Unit, UnitsApi,
 } from '../../core/api/catalog.api';
+import { CatalogReference, CatalogReferenceApi, sameName } from '../../core/api/scan.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
+import { ScanIndicator } from '../../core/scan-indicator';
+import { ScanIndicatorView } from '../../shared/scan-indicator';
 import { downloadProductImage, ProductImageDialog } from './product-image-dialog';
+
+export interface ProductDialogData {
+  product: CatalogProduct | null;
+  reference?: CatalogReference | null;
+}
 
 @Component({
   selector: 'app-product-dialog',
@@ -36,6 +44,7 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
     MatSelectModule,
     MatTooltipModule,
     TranslocoModule,
+    ScanIndicatorView,
   ],
   styleUrl: './products.scss',
   template: `
@@ -48,10 +57,34 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
         @if (loading()) {
           <mat-progress-bar mode="indeterminate" />
         } @else {
+          @if (!product) {
+            <div class="catalog-search">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
+                <mat-label>{{ t('catalog_search_by_name') }}</mat-label>
+                <input matInput [(ngModel)]="catalogQuery" (keydown.enter)="searchCatalog()" />
+                <cx-scan-indicator matSuffix [state]="scanIndicator.state()" />
+              </mat-form-field>
+              <button mat-stroked-button type="button" [disabled]="!catalogQuery.trim()" (click)="searchCatalog()">
+                <mat-icon>search</mat-icon>
+              </button>
+            </div>
+            @if (catalogMatches().length) {
+              <div class="catalog-matches">
+                @for (m of catalogMatches(); track m.barcode) {
+                  <button type="button" class="match" (click)="pickCatalogMatch(m)">
+                    <span class="mname">{{ m.name }}</span>
+                    <span class="mmeta">{{ m.manufacturer }} · {{ m.barcode }}</span>
+                  </button>
+                }
+              </div>
+            } @else if (catalogSearched()) {
+              <p class="hint">{{ t('catalog_no_matches') }}</p>
+            }
+          }
           <div class="form-grid">
             <mat-form-field appearance="outline" class="span2" subscriptSizing="dynamic">
               <mat-label>{{ t('name') }}</mat-label>
-              <input matInput [(ngModel)]="name" />
+              <input matInput cdkFocusInitial [(ngModel)]="name" />
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('category') }}</mat-label>
@@ -61,6 +94,9 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
                   <mat-option [value]="c.id">{{ c.fullPath || c.name }}</mat-option>
                 }
               </mat-select>
+              @if (categoryHint(); as suggestion) {
+                <mat-hint>{{ suggestion }}</mat-hint>
+              }
             </mat-form-field>
             <div class="unit-row span2">
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -78,6 +114,9 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
                     <mat-option [value]="u.id">{{ u.name }}</mat-option>
                   }
                 </mat-select>
+                @if (unitHint(); as suggestion) {
+                  <mat-hint>{{ suggestion }}</mat-hint>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>{{ t('min_stock') }}</mat-label>
@@ -106,6 +145,9 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
                   <mat-option [value]="m.id">{{ m.name }}</mat-option>
                 }
               </mat-select>
+              @if (manufacturerHint(); as suggestion) {
+                <mat-hint>{{ suggestion }}</mat-hint>
+              }
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('code') }}</mat-label>
@@ -168,6 +210,9 @@ import { downloadProductImage, ProductImageDialog } from './product-image-dialog
           </mat-form-field>
 
           <h3>{{ t('barcode') }}</h3>
+          @if (barcodeOwner(); as owner) {
+            <p class="hint taken">{{ t('barcode_taken_by', { product: owner, code: newCode }) }}</p>
+          }
           <div class="barcodes">
             @for (b of barcodes(); track b.id) {
               <div class="brow">
@@ -227,7 +272,11 @@ export class ProductDialog implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
 
-  readonly product = inject<CatalogProduct | null>(MAT_DIALOG_DATA);
+  private readonly catalogRef = inject(CatalogReferenceApi);
+  private readonly data = inject<ProductDialogData>(MAT_DIALOG_DATA);
+
+  readonly product = this.data.product;
+  readonly scanIndicator = new ScanIndicator();
   readonly canCreateBarcode = this.auth.hasPermission('barcodes.create');
   readonly canDeleteBarcode = this.auth.hasPermission('barcodes.delete');
   readonly loading = signal(true);
@@ -242,6 +291,13 @@ export class ProductDialog implements OnInit {
   readonly multicurrency = signal(false);
   readonly barcodes = signal<Barcode[]>([]);
   readonly preview = signal<string | null>(this.product?.imageUrl ?? null);
+  readonly catalogMatches = signal<CatalogReference[]>([]);
+  readonly catalogSearched = signal(false);
+  readonly unitHint = signal<string | null>(null);
+  readonly categoryHint = signal<string | null>(null);
+  readonly manufacturerHint = signal<string | null>(null);
+  readonly barcodeOwner = signal<string | null>(null);
+  catalogQuery = '';
 
   name = this.product?.name ?? '';
   categoryId: number | null = null;
@@ -310,6 +366,7 @@ export class ProductDialog implements OnInit {
       } else {
         this.unitId = units.find((u) => u.isDefault && u.dimension === 'Count')?.id
           ?? units.find((u) => u.isDefault)?.id ?? units[0]?.id ?? null;
+        if (this.data.reference) this.applyReference(this.data.reference);
       }
     } catch (e) {
       this.notify.error(e);
@@ -341,7 +398,7 @@ export class ProductDialog implements OnInit {
       data: { name: this.name, url },
       width: '900px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
   }
 
@@ -382,8 +439,10 @@ export class ProductDialog implements OnInit {
     if (!code) return;
     const packQty = this.newPackQty > 0 ? this.newPackQty : 1;
     if (!this.product) {
+      if (await this.isBarcodeTaken(code)) return;
       this.barcodes.update((list) => [...list, { id: this.localId--, code, packQty }]);
       this.resetBarcodeInputs();
+      await this.prefillFromCatalog(code);
       return;
     }
     this.busy.set(true);
@@ -464,6 +523,84 @@ export class ProductDialog implements OnInit {
       this.notify.error(e);
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  async searchCatalog(): Promise<void> {
+    const query = this.catalogQuery.trim();
+    if (!query) return;
+    try {
+      const matches = await this.scanIndicator.track(
+        lastValueFrom(this.catalogRef.search(query)),
+        (found) => found.length > 0,
+      );
+      this.catalogMatches.set(matches);
+      this.catalogSearched.set(true);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  async pickCatalogMatch(match: CatalogReference): Promise<void> {
+    this.catalogMatches.set([]);
+    this.catalogSearched.set(false);
+    if (await this.isBarcodeTaken(match.barcode)) return;
+    this.applyReference(match);
+  }
+
+  private async isBarcodeTaken(code: string): Promise<boolean> {
+    this.barcodeOwner.set(null);
+    try {
+      const found = await lastValueFrom(this.api.list({ page: 1, pageSize: 5, search: `barcode:${code}` }));
+      const owner = found.items.find((p) => p.barcodes.includes(code));
+      if (!owner) return false;
+      this.barcodeOwner.set(owner.name);
+      this.notify.error(this.transloco.translate('barcode_taken_by', { product: owner.name, code }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async prefillFromCatalog(code: string): Promise<void> {
+    try {
+      const reference = await this.scanIndicator.track(lastValueFrom(this.catalogRef.byBarcode(code)));
+      if (reference) this.applyReference(reference);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  private applyReference(reference: CatalogReference): void {
+    this.notify.success(this.transloco.translate('catalog_reference_found'));
+    if (!this.name.trim()) this.name = reference.name;
+    if (!this.barcodes().some((b) => b.code === reference.barcode)) {
+      const packQty = reference.packQty && reference.packQty > 0 ? reference.packQty : 1;
+      this.barcodes.update((list) => [...list, { id: this.localId--, code: reference.barcode, packQty }]);
+    }
+
+    if (reference.unit) {
+      const unit = this.units().find((u) => sameName(u.name, reference.unit) || sameName(u.shortName, reference.unit));
+      if (unit) {
+        this.unitDimension = unit.dimension;
+        this.unitId = unit.id;
+      } else {
+        this.unitId = null;
+      }
+      this.unitHint.set(unit ? null : reference.unit);
+    }
+
+    const category = reference.categoryChild ?? reference.categoryParent;
+    if (category) {
+      const match = this.categories().find((c) => sameName(c.name, category));
+      this.categoryId = match?.id ?? null;
+      this.categoryHint.set(match ? null : category);
+    }
+
+    if (reference.manufacturer) {
+      const match = this.manufacturers().find((m) => sameName(m.name, reference.manufacturer));
+      this.manufacturerId = match?.id ?? null;
+      this.manufacturerHint.set(match ? null : reference.manufacturer);
     }
   }
 

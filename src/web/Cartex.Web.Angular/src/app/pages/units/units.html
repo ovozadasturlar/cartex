@@ -1,5 +1,11 @@
 <div class="page" *transloco="let t">
-  <cx-page-header [title]="t('units')" [subtitle]="t('units_subtitle')" />
+  <cx-page-header [title]="t('units')" [subtitle]="t('units_subtitle')">
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+  </cx-page-header>
 
   <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
     <mat-icon matPrefix>search</mat-icon>

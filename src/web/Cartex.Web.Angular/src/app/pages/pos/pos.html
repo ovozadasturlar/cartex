@@ -15,6 +15,7 @@
               [placeholder]="t('scan_barcode')"
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
+            <cx-scan-indicator matSuffix [state]="scanIndicator.state()" />
           </mat-form-field>
           @if (cameraScan) {
             <button matIconButton class="camera-btn" [disabled]="!canCreateCart"

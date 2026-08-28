@@ -67,7 +67,7 @@ export class Warehouses implements OnInit {
         data: { warehouse, branches: this.branches },
         width: '460px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -107,7 +107,7 @@ export class Warehouses implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         @if (!warehouse) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">

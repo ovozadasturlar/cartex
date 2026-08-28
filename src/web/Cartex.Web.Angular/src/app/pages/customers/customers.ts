@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { Subject, debounceTime, distinctUntilChanged, lastValueFrom } from 'rxjs';
 import { CustomersApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -18,6 +18,7 @@ import { Customer, CustomerTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -50,12 +51,32 @@ export class Customers implements OnInit {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private readonly search$ = new Subject<string>();
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<CustomerTotals | null>(null);
   readonly paged = signal<Paged<Customer> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.list({ page: 0, pageSize: 0, sortBy: 'FullName' }));
+      downloadCsv(t('customers'), all.items, [
+        { header: t('full_name'), value: (x) => x.fullName },
+        { header: t('phone'), value: (x) => x.phone },
+        { header: t('email'), value: (x) => x.email },
+        { header: t('debt'), value: (x) => x.debtBalance },
+        { header: t('cashback'), value: (x) => x.cashbackBalance },
+        { header: t('credit_limit'), value: (x) => x.creditLimit },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
   private readonly layout = inject(LayoutService);
   /// Telefonda eng kerakli uchtasi qoladi; qolgani mijoz kartasida ko'rinadi.
   readonly cols = computed(() => this.layout.isPhone()
@@ -113,7 +134,7 @@ export class Customers implements OnInit {
   openCreate(): void {
     if (!this.canCreate) return;
     this.dialog
-      .open(CustomerEditDialog, { data: null, width: '560px', maxWidth: '94vw', autoFocus: false })
+      .open(CustomerEditDialog, { data: null, width: '560px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.reload();

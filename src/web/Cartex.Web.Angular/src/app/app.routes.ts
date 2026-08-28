@@ -117,6 +117,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/transfers/transfers').then((m) => m.Transfers),
       },
       {
+        path: 'write-offs',
+        canActivate: [permissionGuard],
+        data: { permission: 'stocks.view|stocks.writeOff', policy: 'trackWriteOff' },
+        loadComponent: () => import('./pages/write-offs/write-offs').then((m) => m.WriteOffs),
+      },
+      {
         path: 'accounts',
         canActivate: [permissionGuard],
         data: { permission: 'accounts.view' , feature: 'accounts' },
@@ -172,10 +178,10 @@ export const routes: Routes = [
               import('./pages/manufacturers/manufacturers').then((m) => m.Manufacturers),
           },
           {
-            path: 'product-reference',
-            data: { permission: 'settings.salesPolicy' },
+            path: 'catalog',
+            data: { permission: 'settings.integrations' },
             loadComponent: () =>
-              import('./pages/product-reference/product-reference').then((m) => m.ProductReferenceSettingsPage),
+              import('./pages/catalog-settings/catalog-settings').then((m) => m.CatalogSettingsPage),
           },
           {
             path: 'business',

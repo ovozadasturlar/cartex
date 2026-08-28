@@ -60,6 +60,7 @@ export class BusinessSettings implements OnInit {
   website = '';
   address = '';
   private logoImageKey: string | null = null;
+  private monochromeLogoImageKey: string | null = null;
 
   qrEnabled = false;
   qrRefreshSeconds = 120;
@@ -117,6 +118,7 @@ export class BusinessSettings implements OnInit {
           website: this.website.trim() || null,
           address: this.address.trim() || null,
           logoImageKey: this.logoImageKey,
+          monochromeLogoImageKey: this.monochromeLogoImageKey,
         }),
       );
       this.notify.success(message);
@@ -170,6 +172,7 @@ export class BusinessSettings implements OnInit {
     this.website = b.website ?? '';
     this.address = b.address ?? '';
     this.logoImageKey = b.logoImageKey;
+    this.monochromeLogoImageKey = b.monochromeLogoImageKey;
     if (b.logoImageKey) this.logoPreview.set(`/api/storage/content?key=${encodeURIComponent(b.logoImageKey)}`);
     this.pricingMulticurrency.set(b.pricingMulticurrency);
     this.salesMulticurrency.set(b.salesMulticurrency);

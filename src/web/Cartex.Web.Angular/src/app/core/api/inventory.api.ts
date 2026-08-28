@@ -22,6 +22,7 @@ export interface UnitOption {
   dimension: string;
   factor: number;
   isEnabled: boolean;
+  isDefault: boolean;
 }
 
 export interface ProductOption {

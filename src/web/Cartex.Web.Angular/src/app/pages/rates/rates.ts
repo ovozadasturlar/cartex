@@ -130,7 +130,7 @@ export class Rates implements OnInit {
     event.stopPropagation();
     if (!this.canDeleteCurrency) return;
     this.dialog
-      .open(ConfirmDialog, { data: 'delete_currency_confirm', width: '380px', autoFocus: false })
+      .open(ConfirmDialog, { data: 'delete_currency_confirm', width: '380px', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe(async (ok) => {
         if (!ok) return;
@@ -147,7 +147,7 @@ export class Rates implements OnInit {
   openAdd(): void {
     if (!this.canCreateCurrency) return;
     this.dialog
-      .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: false })
+      .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.reload();
@@ -191,7 +191,7 @@ export class Rates implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('code') }}</mat-label>
-          <input matInput maxlength="3" [(ngModel)]="code" style="text-transform: uppercase" />
+          <input matInput cdkFocusInitial maxlength="3" [(ngModel)]="code" style="text-transform: uppercase" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>

@@ -1,5 +1,10 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('warehouse')" [subtitle]="t('warehouse_subtitle')">
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
     <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wh-select">
       <mat-select [value]="warehouseId()" (valueChange)="onWarehouse($event)" [placeholder]="t('select_warehouse')">
         @for (w of warehouses(); track w.id) {

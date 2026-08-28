@@ -17,6 +17,7 @@ import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -59,12 +60,26 @@ export class Supplies implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SuppliesTotals | null>(null);
   readonly paged = signal<Paged<Supply> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('supplies'), this.paged()?.items ?? [], [
+      { header: t('date'), value: (x) => x.supplyDate },
+      { header: t('supplier'), value: (x) => x.supplierName },
+      { header: t('warehouse'), value: (x) => x.warehouseName },
+      { header: t('total'), value: (x) => x.totalAmount },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   readonly suppliers = signal<Supplier[]>([]);
   readonly supplierId = signal<number | null>(null);
   readonly page = signal(1);

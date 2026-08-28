@@ -14,6 +14,7 @@ import { ProductType, ProductTypesApi } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -34,6 +35,7 @@ import { PageHeader } from '../../shared/page-header';
 })
 export class ProductTypes implements OnInit {
   private readonly api = inject(ProductTypesApi);
+  private readonly transloco = inject(TranslocoService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
@@ -42,6 +44,16 @@ export class ProductTypes implements OnInit {
   readonly canEdit = this.auth.hasPermission('product_types.edit');
   readonly loading = signal(true);
   readonly all = signal<ProductType[]>([]);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('product_types'), this.all(), [
+      { header: t('name'), value: (x) => x.name },
+      { header: t('tracks_expiry'), value: (x) => x.tracksExpiry },
+    ]);
+  }
   readonly search = signal('');
   readonly items = computed(() => {
     const q = this.search().toLowerCase();
@@ -64,7 +76,7 @@ export class ProductTypes implements OnInit {
 
   private openDialog(type: ProductType | null): void {
     this.dialog
-      .open(ProductTypeDialog, { data: type, width: '440px', maxWidth: '94vw', autoFocus: false })
+      .open(ProductTypeDialog, { data: type, width: '440px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.load();
@@ -105,7 +117,7 @@ export class ProductTypes implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-checkbox [(ngModel)]="tracksExpiry">{{ t('tracks_expiry') }}</mat-checkbox>
       </div>

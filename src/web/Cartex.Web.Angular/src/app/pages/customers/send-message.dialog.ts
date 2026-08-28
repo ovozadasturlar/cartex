@@ -61,8 +61,11 @@ export class SendMessageDialog {
   private readonly customer = inject<Customer>(MAT_DIALOG_DATA);
 
   readonly busy = signal(false);
+  // SMS-34: `auto` da serverning o'zi yoqilgan birinchi mos kanalni tanlaydi - klient
+  // qaysi kanal sozlanganini bilishi shart emas, shuning uchun u birinchi turadi.
   readonly channels = signal<string[]>(
     [
+      'auto',
       this.customer.hasTelegram ? 'telegram' : null,
       this.customer.phone ? 'sms' : null,
       this.customer.email ? 'email' : null,
@@ -72,7 +75,7 @@ export class SendMessageDialog {
   channel = this.channels()[0] ?? '';
   text = '';
 
-  readonly canSend = computed(() => this.channels().length > 0);
+  readonly canSend = computed(() => this.channels().length > 1);
 
   async send(message: string): Promise<void> {
     if (!this.channel || !this.text.trim()) return;

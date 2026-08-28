@@ -151,6 +151,17 @@ export interface Barcode {
   packQty: number;
 }
 
+export interface ProductVariant {
+  id: number;
+  productId: number;
+  name: string | null;
+  code: string | null;
+  attributes: string | null;
+  imageKey: string | null;
+  isDefault: boolean;
+  barcodes: { id: number; code: string; packQty: number }[];
+}
+
 export interface BusinessInfo {
   currency: string;
   multicurrency: boolean;
@@ -166,6 +177,22 @@ export class ProductsCatalogApi {
     return this.http
       .get<CatalogProduct[]>('/api/products', { params: listParams(q), observe: 'response' })
       .pipe(map(toPaged));
+  }
+
+  variants(productId: number): Observable<ProductVariant[]> {
+    return this.http.get<ProductVariant[]>(`/api/products/${productId}/variants`);
+  }
+
+  createVariant(productId: number, body: { name: string | null; code: string | null }): Observable<number> {
+    return this.http.post<number>(`/api/products/${productId}/variants`, { ...body, attributes: null, imageKey: null, barcodes: null });
+  }
+
+  updateVariant(id: number, body: { name: string | null; code: string | null }): Observable<void> {
+    return this.http.put<void>(`/api/products/variants/${id}`, { ...body, attributes: null, imageKey: null, barcodes: null });
+  }
+
+  deleteVariant(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/products/variants/${id}`);
   }
 
   totals(search?: string, minPrice?: number, maxPrice?: number): Observable<ProductsTotals> {

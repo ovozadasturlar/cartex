@@ -16,6 +16,7 @@ import { AdminApi, Permission, PermissionBundle, Role, START_PAGES } from '../..
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -46,6 +47,18 @@ export class Roles implements OnInit {
   readonly canDelete = this.auth.hasPermission('roles.delete');
   readonly loading = signal(true);
   readonly roles = signal<Role[]>([]);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('roles'), this.roles(), [
+      { header: t('name'), value: (r) => r.name },
+      { header: t('priority'), value: (r) => r.priority },
+      { header: t('permissions'), value: (r) => r.permissions.length },
+      { header: t('active'), value: (r) => r.isActive },
+    ]);
+  }
   readonly cols = ['name', 'description', 'priority', 'status', 'permissions', ...(this.canDelete ? ['actions'] : [])];
 
   private permissions: Permission[] = [];
@@ -81,7 +94,7 @@ export class Roles implements OnInit {
         },
         width: '640px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -159,7 +172,7 @@ interface PermGroup {
         <div class="row">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
             <mat-label>{{ t('name') }}</mat-label>
-            <input matInput [(ngModel)]="name" [disabled]="!canEditMetadata" />
+            <input matInput cdkFocusInitial [(ngModel)]="name" [disabled]="!canEditMetadata" />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="prio">
             <mat-label>{{ t('priority') }}</mat-label>

@@ -21,6 +21,7 @@ import { NotificationDelivery, NotificationsApi } from '../../core/api/notificat
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxEnumPipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer, LedgerEntry, Sale } from '../../core/models';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
@@ -77,11 +78,45 @@ export class CustomerProfile implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly remotePrint = inject(RemotePrintService);
   private readonly money = new CxMoneyPipe();
   private readonly id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
   readonly canEdit = this.auth.hasPermission('customers.edit');
   readonly canDelete = this.auth.hasPermission('customers.delete');
+  readonly canVoidPayment = this.auth.hasPermission('customer_payments.void');
+
+  // Defter yozuvidan uch amal: savdoni ochish, kvitansiyani qayta chop etish va
+  // to'lovni bekor qilish - desktopdagi tranzaksiya oynasi bilan bir xil.
+  openLedgerSale(entry: LedgerEntry): void {
+    if (entry.saleId) void this.router.navigate(['/sales'], { queryParams: { saleId: entry.saleId } });
+  }
+
+  async printLedgerPayment(entry: LedgerEntry): Promise<void> {
+    if (!entry.paymentDocumentId) return;
+    await this.remotePrint.send({
+      kind: 'Receipt',
+      permission: 'printing.documents.print',
+      sourceType: 'customer_payment',
+      sourceId: String(entry.paymentDocumentId),
+      payload: { paymentId: entry.paymentDocumentId },
+    });
+  }
+
+  async voidLedgerPayment(entry: LedgerEntry): Promise<void> {
+    if (!entry.paymentDocumentId || !this.canVoidPayment) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    const reason = window.prompt(t('void_payment') + ' — ' + (entry.paymentNumber ?? ''), '')?.trim();
+    if (!reason) return;
+    try {
+      await lastValueFrom(this.api.voidPayment(entry.paymentDocumentId, reason));
+      this.notify.success(t('success'));
+      void this.load();
+      void this.loadLedger();
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
   readonly canRepay = this.auth.hasPermission('customers.receivePayment');
   readonly canPayOut = this.auth.hasPermission('customers.refund');
   readonly canViewSales = this.auth.hasPermission('sales.view');
@@ -99,7 +134,7 @@ export class CustomerProfile implements OnInit {
   readonly customer = signal<Customer | null>(null);
   readonly ledgerLoading = signal(true);
   readonly ledger = signal<Paged<LedgerEntry> | null>(null);
-  readonly cols = ['date', 'op', 'account', 'change', 'after'];
+  readonly cols = ['date', 'op', 'account', 'change', 'after', 'actions'];
   readonly tab = signal<'ledger' | 'sales' | 'statement'>('ledger');
   readonly statementLoading = signal(false);
   readonly statement = signal<CustomerStatement | null>(null);
@@ -249,7 +284,7 @@ export class CustomerProfile implements OnInit {
   async edit(): Promise<void> {
     if (!this.canEdit) return;
     const saved: boolean | undefined = await lastValueFrom(
-this.dialog.open<CustomerEditDialog, unknown, boolean>(CustomerEditDialog, { data: this.customer(), width: '560px', maxWidth: '94vw', autoFocus: false })
+this.dialog.open<CustomerEditDialog, unknown, boolean>(CustomerEditDialog, { data: this.customer(), width: '560px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
         .afterClosed(),
     );
     if (saved) void this.load();
@@ -390,7 +425,7 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
 
 @Component({
   selector: 'app-customer-edit-dialog',
-  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatSlideToggleModule, TranslocoModule],
   styleUrl: './customer-profile.scss',
   template: `
     <div class="edit-dlg" *transloco="let t">
@@ -402,7 +437,7 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
         <div class="pair">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('first_name') }}</mat-label>
-            <input matInput [(ngModel)]="fullName" required />
+            <input matInput cdkFocusInitial [(ngModel)]="fullName" required />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('last_name') }}</mat-label>
@@ -439,6 +474,22 @@ this.dialog.open<ConfirmDialog, unknown, boolean>(ConfirmDialog, { data: 'delete
             <input matInput type="number" min="0" [(ngModel)]="creditLimit" [placeholder]="t('unlimited')" />
           </mat-form-field>
         </div>
+        @if (canOpeningBalance) {
+          <div class="pair">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('opening_balance') }}</mat-label>
+              <input matInput type="number" min="0" [(ngModel)]="openingAmount" />
+              <mat-hint>{{ t('opening_balance_hint') }}</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ t('type') }}</mat-label>
+              <mat-select [(ngModel)]="openingKind">
+                <mat-option value="debt">{{ t('opening_kind_debt') }}</mat-option>
+                <mat-option value="credit">{{ t('opening_kind_credit') }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        }
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('description') }}</mat-label>
           <textarea matInput rows="3" [(ngModel)]="note"></textarea>
@@ -473,6 +524,14 @@ export class CustomerEditDialog {
   note = this.customer?.note ?? '';
   allowMarketingSms = this.customer?.allowMarketingSms ?? false;
 
+  // QARZ-23/QARZ-24: qoldiq defterga yozadi, shuning uchun alohida ruxsat talab qiladi;
+  // tahrirlashda esa faqat hali hech qanday operatsiya bo'lmagan mijozda ochiq.
+  readonly canOpeningBalance =
+    inject(AuthService).hasPermission('customers.openingBalance')
+    && (this.isNew || this.customer?.isUntouched === true);
+  openingAmount = Math.abs(this.customer?.openingBalance ?? 0);
+  openingKind: 'debt' | 'credit' = (this.customer?.openingBalance ?? 0) < 0 ? 'credit' : 'debt';
+
   async save(message: string): Promise<void> {
     this.busy.set(true);
     try {
@@ -489,10 +548,16 @@ export class CustomerEditDialog {
           allowMarketingSms: this.allowMarketingSms,
           note: this.note.trim() || null,
       };
+      const opening = this.openingKind === 'credit' ? -this.openingAmount : this.openingAmount;
       if (this.customer)
-        await lastValueFrom(this.api.update(this.customer.id, { ...body, phone: body.phone ?? '' }));
+        await lastValueFrom(this.api.update(this.customer.id, {
+          ...body,
+          phone: body.phone ?? '',
+          openingBalance: this.canOpeningBalance ? opening : null,
+          openingCurrency: this.customer.openingCurrency ?? null,
+        }));
       else
-        await lastValueFrom(this.api.create({ ...body, openingBalance: 0 }));
+        await lastValueFrom(this.api.create({ ...body, openingBalance: this.canOpeningBalance ? opening : 0 }));
       this.notify.success(message);
       this.ref.close(true);
     } catch (e) {

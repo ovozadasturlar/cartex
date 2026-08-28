@@ -1,15 +1,35 @@
+import { SalesPolicy } from './api/settings.api';
+
 export interface NavItem {
   labelKey: string;
   icon: string;
   route: string;
   permission: string | null;
   feature?: string;
+  /// BRAK-06: ruxsat va modul yetarli bo'lmagan bo'limlar uchun do'kon siyosati kaliti.
+  policy?: keyof SalesPolicy;
   requiresMultipleWarehouses?: boolean;
 }
 
 export interface NavSection {
   labelKey: string | null;
   items: NavItem[];
+}
+
+/// RUXSAT-04a: imkoniyat bitta joyda aniqlanadi. Menyu (shell) va marshrut qorovullari
+/// (landingGuard) bir xil qoidadan foydalanishi shart - aks holda bir ekranda yashiringan
+/// bo'lim boshqasida (mas. saqlangan boshlang'ich sahifa sifatida) ko'rinib qolishi mumkin.
+export function isNavItemOpen(
+  item: NavItem,
+  hasPermission: (permission: string) => boolean,
+  hasFeature: (expression: string | undefined) => boolean,
+  hasPolicy: (policy: NavItem['policy']) => boolean,
+  warehouseCount: number,
+): boolean {
+  return (item.permission === null || hasPermission(item.permission))
+    && hasFeature(item.feature)
+    && hasPolicy(item.policy)
+    && (!item.requiresMultipleWarehouses || warehouseCount > 1);
 }
 
 /// Telefonning pastki panelidagi tartib. Ro'yxat menyu tartibidan farq qiladi: kichik ekranda
@@ -109,6 +129,13 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: 'stock_transfers.view',
         requiresMultipleWarehouses: true,
       },
+      {
+        labelKey: 'write_offs',
+        icon: 'delete_sweep',
+        route: '/write-offs',
+        permission: 'stocks.view|stocks.writeOff',
+        policy: 'trackWriteOff',
+      },
     ],
   },
   {
@@ -159,8 +186,8 @@ export const SETTINGS_SECTIONS: NavSection[] = [
       {
         labelKey: 'product_reference',
         icon: 'menu_book',
-        route: '/settings/product-reference',
-        permission: 'settings.salesPolicy',
+        route: '/settings/catalog',
+        permission: 'settings.integrations',
       },
     ],
   },

@@ -170,5 +170,10 @@
   "customer_phone_missing": "Mijoz telefon raqami yo'q",
   "send_receipt_on_sale": "Savdo yakunlanganda chek SMS yuborish",
   "send_receipt_on_sale_hint": "Standart o'chiq. Yoqilsa operator xarajati bo'lishi mumkin.",
-  "category_merge_confirm": "'{{ source }}' dagi {{ count }} ta bevosita mahsulotni '{{ target }}' ga ko'chirish, ichki kategoriyalarini o'tkazish va manba kategoriyani arxivlash kerakmi?"
+  "category_merge_confirm": "'{{ source }}' dagi {{ count }} ta bevosita mahsulotni '{{ target }}' ga ko'chirish, ichki kategoriyalarini o'tkazish va manba kategoriyani arxivlash kerakmi?",
+  "barcodes": "Barkodlar",
+  "record": "Yozuv",
+  "table": "Jadval",
+  "barcode_taken_by": "Bu shtrix kod «{{ product }}» mahsulotiga tegishli: {{ code }}",
+  "write_offs_subtitle": "Sinib qolgan, muddati o'tgan, yo'qolgan va o'g'irlangan tovar"
 }

@@ -50,7 +50,7 @@ export class Branches implements OnInit {
   open(branch: Branch | null): void {
     if (branch ? !this.canEdit : !this.canCreate) return;
     this.dialog
-      .open(BranchDialog, { data: branch, width: '460px', maxWidth: '94vw', autoFocus: false })
+      .open(BranchDialog, { data: branch, width: '460px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.reload();
@@ -88,7 +88,7 @@ export class Branches implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('address') }}</mat-label>

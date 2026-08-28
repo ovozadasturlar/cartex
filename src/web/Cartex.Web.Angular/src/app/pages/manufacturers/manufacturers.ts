@@ -66,7 +66,7 @@ export class Manufacturers implements OnInit {
     event.stopPropagation();
     if (!this.canDelete) return;
     this.dialog
-      .open(ConfirmDialog, { data: manufacturer.name, width: '360px', maxWidth: '94vw', autoFocus: false })
+      .open(ConfirmDialog, { data: manufacturer.name, width: '360px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe(async (confirmed) => {
         if (!confirmed) return;
@@ -81,7 +81,7 @@ export class Manufacturers implements OnInit {
 
   private openDialog(manufacturer: Manufacturer | null): void {
     this.dialog
-      .open(ManufacturerDialog, { data: manufacturer, width: '400px', maxWidth: '94vw', autoFocus: false })
+      .open(ManufacturerDialog, { data: manufacturer, width: '400px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.load();
@@ -113,7 +113,7 @@ export class Manufacturers implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" (keydown.enter)="save()" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" (keydown.enter)="save()" />
         </mat-form-field>
       </div>
       <div mat-dialog-actions align="end">

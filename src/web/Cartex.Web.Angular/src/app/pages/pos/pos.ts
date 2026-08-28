@@ -13,12 +13,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { Category, CurrentShift, PosApi, PriceChange, ProductLookup, StockOnHand } from '../../core/api/pos.api';
+import { CatalogReference, ScanApi, ScanResult } from '../../core/api/scan.api';
+import { PrepackLookup } from '../../core/api/prepacks.api';
 import { SalesPolicy, SettingsApi } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe, isoDay, newUuid } from '../../core/format';
 import { Customer } from '../../core/models';
 import { MoneyInputDirective } from '../../core/money-input.directive';
-import { CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
+import { Cart, CartListItem, LoyaltyApi, OrderingApi } from '../../core/api/misc.api';
 import { BusinessApi } from '../../core/api/misc.api';
 import { Currency, RatesApi } from '../../core/api/finance.api';
 import { BarcodeScannerService } from '../../core/barcode-scanner.service';
@@ -36,7 +38,10 @@ import { FeaturesApi } from '../../core/api/misc.api';
 import { PosProductDialog, PrepackDialog, QuickRatesDialog } from './pos-tools';
 import { ProductDialog } from '../products/product-dialog';
 import { CartLine, PaymentRow, PosCartState, shortfallDiscount } from './pos-state';
+import { ReferenceDialog, ReferenceDialogData } from './reference-dialog';
 import { ScanFeedback, ScannerDialog } from '../../shared/scanner.dialog';
+import { ScanIndicator } from '../../core/scan-indicator';
+import { ScanIndicatorView } from '../../shared/scan-indicator';
 import { LayoutService } from '../../core/layout.service';
 import { AccessCapabilitiesService } from '../../core/access-capabilities.service';
 
@@ -60,12 +65,14 @@ const PAGE_SIZE = 40;
     CxMoneyPipe,
     EmptyState,
     MoneyInputDirective,
+    ScanIndicatorView,
   ],
   templateUrl: './pos.html',
   styleUrl: './pos.scss',
 })
 export class Pos implements OnInit {
   private readonly api = inject(PosApi);
+  private readonly scanApi = inject(ScanApi);
   private readonly settingsApi = inject(SettingsApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
@@ -91,6 +98,7 @@ export class Pos implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly scanBox = viewChild<ElementRef<HTMLInputElement>>('scan');
   private searchTimer?: ReturnType<typeof setTimeout>;
+  readonly scanIndicator = new ScanIndicator();
 
   readonly loading = signal(true);
   readonly busy = signal(false);
@@ -130,6 +138,9 @@ export class Pos implements OnInit {
   readonly queue = signal<CartListItem[]>([]);
   private queueAvailable = false;
   private activeQueueCode: string | null = null;
+  /// NAVBAT-02: yakunlashda "o'zgarmagan" chegirmani `null` yuborish uchun tiklangan qiymat
+  /// bilan solishtiriladi — server shu holda savatdagi qiymatni saqlab qoladi.
+  private restoredDiscount = 0;
   readonly hasMore = computed(() => this.tiles().length < this.totalCount());
 
   readonly cart = this.state.cart;
@@ -210,6 +221,7 @@ export class Pos implements OnInit {
 
   private search = '';
   private page = 1;
+  private tilesToken = 0;
 
   holdSale(): void {
     this.state.hold();
@@ -234,7 +246,13 @@ export class Pos implements OnInit {
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M2 5h2v14H2V5m3 0h1v14H5V5m2 0h2v14H7V5m3 0h1v14h-1V5m3 0h2v14h-2V5m3 0h1v14h-1V5m2 0h3v14h-3V5Z"/></svg>`,
     ));
     effect(() => {
-      if (this.wh.selectedWarehouseId()) untracked(() => this.reset());
+      if (this.wh.selectedWarehouseId()) untracked(() => {
+        this.reset();
+        // RUXSAT-06: kontekst `sales.checkout`-only kassirga kech kelishi mumkin (W5) — navbat
+        // ulanishi ham shu yerdan qayta boshlanadi, faqat `ngOnInit`dagi bir martalik urinishga
+        // qolib ketmaydi.
+        if (this.queueAvailable) void this.queueHub.ensureStarted();
+      });
     });
     effect(() => {
       const id = this.customer()?.id ?? null;
@@ -339,29 +357,81 @@ export class Pos implements OnInit {
       return;
     }
     try {
-      const cart = await lastValueFrom(this.orderingApi.byCode(item.aggregateCode));
-      this.cart.set(cart.items.map((i) => ({
-        variantId: i.variantId,
-        name: i.productName,
-        unitName: '',
-        price: i.unitPrice,
-        originalPrice: i.unitPrice,
-        qty: i.quantity,
-        available: Number.MAX_SAFE_INTEGER,
-        allowsAmountEntry: false,
-        allowsFractional: i.allowsFractional ?? false,
-      })));
-      if (cart.customerId) {
-        try {
-          this.customer.set(await lastValueFrom(this.api.customer(cart.customerId)));
-        } catch {
-          // The cart still opens without the customer card; the sale carries the id anyway.
-        }
-      }
-      await lastValueFrom(this.orderingApi.updateStatus(item.aggregateCode, 'Confirmed'));
-      this.activeQueueCode = item.aggregateCode;
-      this.queue.update((q) => q.filter((c) => c.aggregateCode !== item.aggregateCode));
+      await this.loadCart(await lastValueFrom(this.orderingApi.byCode(item.aggregateCode)));
     } catch (e) {
+      this.notify.error(e);
+    }
+  }
+
+  private async loadCart(cart: Cart): Promise<boolean> {
+    if (cart.status === 'CheckedOut' || cart.status === 'Cancelled') {
+      this.notify.warn(this.transloco.translate('cart_already_done'));
+      return false;
+    }
+    if (this.cart().length) {
+      this.notify.error(this.transloco.translate('cart_not_empty'));
+      return false;
+    }
+    // NAVBAT-01/TUZ-02: `originalUnitPrice` — kassir ko'rgan katalog narxi; `unitPrice` esa
+    // haqiqatan olinadigan narx (o'ralgan bo'lsa o'sha, aks holda katalog narxining o'zi).
+    // Ikkalasini tenglashtirib qo'ysak, oldin kiritilgan narx o'zgartirilmagan deb hisoblanadi
+    // va checkout paytida yo'qolib qoladi.
+    this.cart.set(cart.items.map((i) => ({
+      variantId: i.variantId,
+      prepackId: i.prepackId ?? undefined,
+      name: i.productName,
+      unitName: '',
+      price: i.unitPrice,
+      originalPrice: i.originalUnitPrice ?? i.unitPrice,
+      qty: i.quantity,
+      available: Number.MAX_SAFE_INTEGER,
+      allowsAmountEntry: false,
+      allowsFractional: i.allowsFractional ?? false,
+    })));
+    this.note.set(cart.note ?? '');
+    this.restoredDiscount = cart.discountAmount ?? 0;
+    this.onDiscountAmount(this.restoredDiscount);
+    await this.recheckStock();
+    if (cart.customerId) {
+      try {
+        this.customer.set(await lastValueFrom(this.api.customer(cart.customerId)));
+      } catch {
+        // The cart still opens without the customer card; the sale carries the id anyway.
+      }
+    }
+    if (cart.status === 'Open') {
+      try {
+        await lastValueFrom(this.orderingApi.updateStatus(cart.aggregateCode, 'Confirmed'));
+      } catch {
+        // The cashier already holds the cart on screen; a lost status change must not undo that.
+      }
+    }
+    this.activeQueueCode = cart.aggregateCode;
+    this.queue.update((q) => q.filter((c) => c.aggregateCode !== cart.aggregateCode));
+    return true;
+  }
+
+  /// TUZ-06: savatga tushgan har bir variant uchun joriy qoldiq aniq so'raladi — ro'yxatda
+  /// ko'rinib turgan-turmagani natijaga ta'sir qilmaydi. TUZ-07: tekshirib bo'lmasa taxmin
+  /// qilinmaydi — qatorlar yetmagan deb belgilanadi va kassirga aniq aytiladi.
+  private async recheckStock(): Promise<void> {
+    const warehouseId = this.warehouseId();
+    const variantIds = [...new Set(this.cart().map((l) => l.variantId))];
+    if (!warehouseId || !variantIds.length) return;
+    try {
+      const stock = await lastValueFrom(this.api.onHandByVariants(warehouseId, variantIds));
+      const byVariant = new Map(stock.map((s) => [s.variantId, s.quantity]));
+      const missing = new Set<string>();
+      this.cart.update((cart) => cart.map((l) => {
+        const available = byVariant.get(l.variantId);
+        if (available === undefined) missing.add(l.name);
+        return { ...l, available: available ?? 0 };
+      }));
+      if (missing.size) {
+        this.notify.warn(this.transloco.translate('cart_restore_stock_missing').replace('{0}', [...missing].join(', ')));
+      }
+    } catch (e) {
+      this.cart.update((cart) => cart.map((l) => ({ ...l, available: 0 })));
       this.notify.error(e);
     }
   }
@@ -421,23 +491,13 @@ export class Pos implements OnInit {
     }, 300);
   }
 
-  /// Kamera USB skaner bilan bir xil yo'ldan ketadi: kod topiladi va o'sha `addLookup` ga
-  /// beriladi — savdo mantig'i o'zgarmaydi, faqat kodni kiritish usuli qo'shiladi.
+  /// Kamera USB skaner bilan bir xil yo'ldan ketadi: kod o'sha `resolveScan` ga beriladi —
+  /// savdo mantig'i o'zgarmaydi, faqat kodni kiritish usuli qo'shiladi.
   openCameraScan(): void {
     const warehouseId = this.warehouseId();
     if (!warehouseId || !this.canCreateCart) return;
     this.dialog.open(ScannerDialog, {
-      data: {
-        handle: async (code: string): Promise<ScanFeedback> => {
-          try {
-            const found = await lastValueFrom(this.api.byBarcode(code, warehouseId));
-            this.addLookup(found);
-            return { ok: true, message: found.productName };
-          } catch {
-            return { ok: false, message: this.transloco.translate('barcode_not_found') };
-          }
-        },
-      },
+      data: { handle: (code: string): Promise<ScanFeedback> => this.resolveScan(code, warehouseId) },
       panelClass: 'cx-scanner-panel',
       width: '100vw',
       maxWidth: '100vw',
@@ -451,20 +511,93 @@ export class Pos implements OnInit {
     const warehouseId = this.warehouseId();
     if (!code || !warehouseId) return;
     clearTimeout(this.searchTimer);
-    try {
-      const found = await lastValueFrom(this.api.byBarcode(code, warehouseId));
-      this.addLookup(found);
-      input.value = '';
-      if (this.search) {
-        this.search = '';
-        this.reset();
-      }
-    } catch {
-      input.value = '';
-      this.playScanError();
-      this.notify.error(this.transloco.translate('barcode_not_found'));
-      this.focusScan();
+    input.value = '';
+    if (this.search) {
+      this.search = '';
+      this.reset();
     }
+    await this.resolveScan(code, warehouseId);
+    this.focusScan();
+  }
+
+  private async resolveScan(code: string, warehouseId: number): Promise<ScanFeedback> {
+    const t = (key: string) => this.transloco.translate(key);
+    let result: ScanResult;
+    try {
+      result = await this.scanIndicator.track(
+        lastValueFrom(this.scanApi.resolve(code, warehouseId, true)),
+        (found) => found.kind !== 'none',
+      );
+    } catch (e) {
+      this.notify.error(e);
+      return { ok: false, message: t('err_server_error') };
+    }
+
+    switch (result.kind) {
+      case 'product': {
+        const product = result.product!;
+        this.addLookup(product, result.quantity);
+        return { ok: true, message: product.productName };
+      }
+      case 'prepack':
+        return this.addPrepack(result.prepack!);
+      case 'customer': {
+        const customer = result.customer!;
+        this.customer.set(customer);
+        this.notify.success(customer.fullName);
+        return { ok: true, message: customer.fullName };
+      }
+      case 'cart': {
+        const cart = result.cart!;
+        return { ok: await this.loadCart(cart), message: cart.aggregateCode };
+      }
+      case 'reference': {
+        const reference = result.reference!;
+        await this.openReference(reference);
+        return { ok: true, message: reference.name };
+      }
+      default:
+        this.playScanError();
+        this.notify.error(t('barcode_not_found'));
+        return { ok: false, message: t('barcode_not_found') };
+    }
+  }
+
+  private async openReference(reference: CatalogReference): Promise<void> {
+    const add: boolean | undefined = await lastValueFrom(
+      this.dialog
+        .open<ReferenceDialog, ReferenceDialogData, boolean>(ReferenceDialog, {
+          data: { reference, canAdd: this.canCreateProduct },
+          maxWidth: '94vw',
+        })
+        .afterClosed(),
+    );
+    if (add) await this.newProduct(reference);
+  }
+
+  private addPrepack(prepack: PrepackLookup): ScanFeedback {
+    if (!this.canCreateCart) return { ok: false, message: '' };
+    if (this.cart().some((line) => line.prepackId === prepack.prepackId)) {
+      this.notify.error(this.transloco.translate('prepack_in_cart'));
+      return { ok: false, message: this.transloco.translate('prepack_in_cart') };
+    }
+    const name = `${prepack.productName} (${prepack.quantity} ${prepack.unitName})`;
+    this.cart.update((cart) => [
+      ...cart,
+      {
+        variantId: prepack.variantId,
+        prepackId: prepack.prepackId,
+        name,
+        unitName: prepack.unitName,
+        price: prepack.unitPrice,
+        originalPrice: prepack.unitPrice,
+        qty: prepack.quantity,
+        available: prepack.quantity,
+        allowsAmountEntry: false,
+        allowsFractional: true,
+      },
+    ]);
+    return { ok: true, message: name };
   }
 
   private playScanError(): void {
@@ -531,8 +664,11 @@ export class Pos implements OnInit {
     this.activeQueueCode = null;
   }
 
+  // Maydon bo'sh qoldirilsa xato emas, narx nolga tushadi. Narxsiz qator savdoni
+  // yakunlashda to'xtatiladi - bepul mahsulot sotuvga qo'yilmaydi.
   onPrice(line: CartLine, v: number): void {
-    if (v > 0) this.cart.update((c) => c.map((l) => (l === line ? { ...l, price: v } : l)));
+    const price = Number.isFinite(v) && v > 0 ? v : 0;
+    this.cart.update((c) => c.map((l) => (l === line ? { ...l, price } : l)));
   }
 
   onLineAmount(line: CartLine, value: number): void {
@@ -659,9 +795,11 @@ export class Pos implements OnInit {
     if (saved) await this.refreshTiles();
   }
 
-  async newProduct(): Promise<void> {
+  async newProduct(reference: CatalogReference | null = null): Promise<void> {
     const created = await lastValueFrom(
-      this.dialog.open<ProductDialog, unknown, boolean>(ProductDialog, { data: null, width: '640px' }).afterClosed(),
+      this.dialog
+        .open<ProductDialog, unknown, boolean>(ProductDialog, { data: { product: null, reference }, width: '640px' })
+        .afterClosed(),
     );
     if (created) await this.refreshTiles();
   }
@@ -717,6 +855,12 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
     const warehouseId = this.warehouseId();
     const t = (k: string) => this.transloco.translate(k);
     if (this.paying() || !warehouseId || !this.cart().length) return;
+    // Bepul mahsulot sotuvga qo'yilmaydi: narxsiz qator savdoni to'xtatadi.
+    const priceless = this.cart().find((l) => l.price <= 0);
+    if (priceless) {
+      this.notify.error(t('cart_price_required').replace('{0}', priceless.name));
+      return;
+    }
     if (this.card() + this.bonus() > this.total()) {
       this.notify.error(t('paid_exceeds_total'));
       return;
@@ -754,17 +898,25 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           {
             payments: this.wirePayments(),
             customerId: this.customer()?.id ?? null,
+            // NAVBAT-05/NARX-04: navbatdagi savatga ruxsatli sotuvchi kiritgan narx yakunlovchidan
+            // qayta ruxsat talab qilmaydi — oldindan ruxsatlangan, shuning uchun `canOverridePrice`
+            // bilan cheklanmasdan har doim yuboriladi. Server buni o'zi (`PreauthorizedPrices`)
+            // tekshiradi.
             items: this.cart().map((l) => ({
               variantId: l.variantId,
+              prepackId: l.prepackId ?? null,
               quantity: l.qty,
-              unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+              unitPrice: l.prepackId ? null : l.price !== l.originalPrice ? l.price : null,
               // NARX-09: ekranda ko'rsatilgan katalog narxi — server o'zinikiga solishtiradi.
               expectedUnitPrice: l.originalPrice,
             })),
-            discountAmount: this.discount(),
+            // NAVBAT-02: kassir chegirma/kreditga tegmagan bo'lsa `null` yuboriladi — server
+            // `request ?? cart` bo'yicha savatdagi qiymatni saqlab qoladi. Qiymat o'zgargan
+            // bo'lsa aniq son yuboriladi va o'zgargani uchun ruxsat serverda tekshiriladi.
+            discountAmount: this.discount() === this.restoredDiscount ? null : this.discount(),
             note: this.note().trim() || null,
             debtDueDate: this.debt() > 0 && this.dueDate() ? this.dueDate() : null,
-            creditAmount: this.creditAmount(),
+            creditAmount: this.change() > 0 ? this.creditAmount() : null,
           },
         ));
         this.activeQueueCode = null;
@@ -803,6 +955,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
         payments: this.wirePayments(),
         items: this.cart().map((l) => ({
           variantId: l.variantId,
+          prepackId: l.prepackId ?? null,
           quantity: l.qty,
           unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
           // NARX-09: ekranda ko'rsatilgan katalog narxi — server o'zinikiga solishtiradi.
@@ -902,7 +1055,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           this.orderingApi.submit({
             warehouseId,
             customerId: this.customer()?.id ?? null,
-            items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
+            items: this.cart().map((line) => this.queueLine(line)),
             idempotencyKey: newUuid(),
             note: this.note().trim() || null,
             discountAmount: this.discount(),
@@ -924,6 +1077,10 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
     }
   }
 
+  private queueLine(line: CartLine): { variantId: number; quantity: number; prepackId: number | null } {
+    return { variantId: line.variantId, quantity: line.qty, prepackId: line.prepackId ?? null };
+  }
+
   private async queueCart(successKey: string): Promise<string | null> {
     const warehouseId = this.warehouseId();
     if (!this.canCreateCart || !warehouseId || !this.cart().length || this.paying()) return null;
@@ -934,7 +1091,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
         code = await lastValueFrom(this.orderingApi.submit({
           warehouseId,
           customerId: this.customer()?.id ?? null,
-          items: this.cart().map((line) => ({ variantId: line.variantId, quantity: line.qty })),
+          items: this.cart().map((line) => this.queueLine(line)),
           idempotencyKey: newUuid(),
           note: this.note().trim() || null,
           discountAmount: this.discount(),
@@ -958,8 +1115,8 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
     await this.loadTiles(true);
   }
 
-  private addLookup(p: ProductLookup): void {
-    const qty = p.packQty > 1 ? p.packQty : 1;
+  private addLookup(p: ProductLookup, scannedQty: number | null = null): void {
+    const qty = scannedQty ?? (p.packQty > 1 ? p.packQty : 1);
     this.addLine({
       variantId: p.variantId,
       name: p.productName,
@@ -976,7 +1133,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
   private addLine(line: CartLine): void {
     if (!this.canCreateCart) return;
     this.cart.update((cart) => {
-      const existing = cart.find((l) => l.variantId === line.variantId);
+      const existing = cart.find((l) => l.variantId === line.variantId && !l.prepackId);
       if (existing) return cart.map((l) => (l === existing ? { ...l, qty: l.qty + line.qty } : l));
       return [...cart, line];
     });
@@ -1000,15 +1157,19 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
   private async loadTiles(append = false): Promise<void> {
     const warehouseId = this.warehouseId();
     if (!warehouseId) return;
+    // Desktopdagi kabi avlod hisoblagichi: eskirgan javob yangi plitkalarni bosib qolmasin —
+    // qidiruv/sahifa tez almashsa so'rovlar tartibsiz qaytishi mumkin.
+    const token = ++this.tilesToken;
     this.busy.set(true);
     try {
       const res = await lastValueFrom(this.api.onHand(warehouseId, this.categoryId(), this.search, this.page, PAGE_SIZE));
+      if (token !== this.tilesToken) return;
       this.tiles.update((t) => (append ? [...t, ...res.items] : res.items));
       this.totalCount.set(res.totalCount);
     } catch (e) {
-      this.notify.error(e);
+      if (token === this.tilesToken) this.notify.error(e);
     } finally {
-      this.busy.set(false);
+      if (token === this.tilesToken) this.busy.set(false);
     }
   }
 

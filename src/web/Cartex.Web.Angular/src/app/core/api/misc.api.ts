@@ -21,9 +21,13 @@ export interface CartItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  /// NARX-09: kassir ekranda ko'rgan katalog narxi - qator ustiga o'ralgan narx (agar bo'lsa)
+  /// shundan alohida saqlanadi.
+  originalUnitPrice?: number | null;
   lineTotal: number;
   unitName?: string;
   allowsFractional?: boolean;
+  prepackId?: number | null;
 }
 
 export interface Cart {
@@ -34,6 +38,8 @@ export interface Cart {
   total: number;
   items: CartItem[];
   note: string | null;
+  /// NAVBAT-01/05: sotuvchi kiritgan chegirma - tiklashda qaytariladi.
+  discountAmount?: number;
 }
 
 export interface CartLoadItem {
@@ -117,6 +123,7 @@ export interface Business {
   phone: string | null;
   address: string | null;
   logoImageKey: string | null;
+  monochromeLogoImageKey: string | null;
   multicurrency: boolean;
   pricingMulticurrency: boolean;
   salesMulticurrency: boolean;
@@ -163,7 +170,7 @@ export class OrderingApi {
   submit(body: {
     warehouseId: number;
     customerId: number | null;
-    items: { variantId: number; quantity: number }[];
+    items: { variantId: number; quantity: number; prepackId?: number | null }[];
     idempotencyKey: string;
     note: string | null;
     discountAmount?: number;
@@ -183,11 +190,20 @@ export class OrderingApi {
     extra?: {
       payments?: { method: string; currency: string; amount: number }[] | null;
       customerId: number | null;
-      items: { variantId: number; quantity: number; unitPrice: number | null }[];
-      discountAmount: number;
+      items: {
+        variantId: number;
+        quantity: number;
+        unitPrice: number | null;
+        /// NARX-09/10: server shu narxni katalog bilan solishtiradi.
+        expectedUnitPrice?: number | null;
+        prepackId?: number | null;
+      }[];
+      // NAVBAT-02: null - savatdagi qiymat saqlanadi (server `request ?? cart` bo'yicha
+      // birlashtiradi); son - kassir uni ataylab o'zgartirgan.
+      discountAmount: number | null;
       note: string | null;
       debtDueDate: string | null;
-      creditAmount?: number;
+      creditAmount?: number | null;
     },
   ): Observable<CreateSaleResult> {
     return this.http.post<CreateSaleResult>(`/api/ordering/carts/${code}/checkout`, {
@@ -277,6 +293,7 @@ export class BusinessApi {
     phone: string | null;
     address: string | null;
     logoImageKey: string | null;
+    monochromeLogoImageKey: string | null;
     telegram: string | null;
     website: string | null;
   }): Observable<void> {

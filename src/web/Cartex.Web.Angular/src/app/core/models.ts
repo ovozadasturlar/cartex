@@ -15,18 +15,37 @@ export interface SaleDetailLine {
   returnedQuantity: number;
   returnableQuantity: number;
   unitPrice: number;
+  enteredUnitPrice: number;
   discountAmount: number;
   netTotal: number;
+  allowsFractional: boolean;
+}
+
+export interface SaleDetailPayment {
+  method: string;
+  currency: string;
+  amount: number;
 }
 
 export interface SaleDetail {
   id: number;
   warehouseId: number;
   customerId: number | null;
+  customerName: string | null;
   status: string;
   saleDate: string;
   receiptToken: string;
+  note: string | null;
+  manualDiscountAmount: number;
+  paidCash: number;
+  paidCard: number;
+  paidBonus: number;
+  creditAmount: number;
+  debtCurrency: string;
+  debtDueDate: string | null;
   items: SaleDetailLine[];
+  payments: SaleDetailPayment[];
+  allowedActions: string[];
 }
 
 export interface CustomerReturnLine {
@@ -118,6 +137,10 @@ export interface Customer {
   hasTelegram: boolean;
   debtBalances: CurrencyAmount[];
   note?: string | null;
+  // QARZ-24: faqat bitta mijoz so'ralganda to'ldiriladi (`GET /api/customers/{id}`).
+  isUntouched?: boolean;
+  openingBalance?: number;
+  openingCurrency?: string | null;
 }
 
 export interface CustomerTotals {
@@ -133,6 +156,10 @@ export interface LedgerEntry {
   change: number;
   balanceAfter: number;
   currency: string | null;
+  transactionId: number;
+  paymentDocumentId: number | null;
+  paymentNumber: string | null;
+  saleId: number | null;
 }
 
 export interface TopProduct {

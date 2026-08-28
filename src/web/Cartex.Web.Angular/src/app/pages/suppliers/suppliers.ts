@@ -18,6 +18,7 @@ import { LedgerEntry } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
@@ -54,12 +55,29 @@ export class Suppliers implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SupplierTotals | null>(null);
   readonly paged = signal<Paged<Supplier> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.suppliers({ page: 0, pageSize: 0, sortBy: 'Name' }));
+      downloadCsv(t('suppliers'), all.items, [
+        { header: t('name'), value: (x) => x.name },
+        { header: t('phone'), value: (x) => x.phone },
+        { header: t('payable'), value: (x) => x.payable },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
@@ -97,7 +115,7 @@ export class Suppliers implements OnInit {
       data: supplier ?? null,
       width: '420px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
     if (await lastValueFrom(ref.afterClosed())) {
       void this.load();
@@ -111,7 +129,7 @@ export class Suppliers implements OnInit {
       data: supplier,
       width: '420px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
     if (await lastValueFrom(ref.afterClosed())) {
       void this.load();
@@ -124,7 +142,7 @@ export class Suppliers implements OnInit {
       data: supplier,
       width: '640px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
   }
 
@@ -167,7 +185,7 @@ export class Suppliers implements OnInit {
         <div class="fields">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('name') }}</mat-label>
-            <input matInput [(ngModel)]="name" />
+            <input matInput cdkFocusInitial [(ngModel)]="name" />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('phone') }}</mat-label>
